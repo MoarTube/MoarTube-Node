@@ -1,0 +1,1 @@
+{"nodeConfig":{"httpPort":"80","expressSessionName":"","expressSessionSecret":""},"indexerConfig":{"httpProtocol":"http","host":"indexer.moartube.com","port":80},"aliaserConfig":{"httpProtocol":"http","host":"aliaser.moartube.com","port":80}}
