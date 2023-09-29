@@ -1,0 +1,583 @@
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<title>MoarTube</title>
+		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+		<link href="/css/bootstrap.min-5.3.0.css" rel="stylesheet" />
+		<script src="/javascript/jquery-3.6.4.min.js"></script>
+		<script src="/javascript/bootstrap-5.3.0.min.js"></script>
+		<script src="/javascript/clamp.js"></script>
+		<style>
+			body {
+				background: #f9f9f9;
+				font-family: Arial, sans-serif;
+				margin: 0;
+				padding: 0;
+				margin-bottom: 100px;
+			}
+				
+			#node-avatar {
+				border-radius: 50%;
+			}
+			
+			.btn-primary {
+				--bs-btn-color: #fff;
+				--bs-btn-bg: #cb0c9f;
+				--bs-btn-border-color: #cb0c9f;
+				--bs-btn-hover-color: #fff;
+				--bs-btn-hover-bg: #cb0c9f;
+				--bs-btn-hover-border-color: #cb0c9f;
+				--bs-btn-focus-shadow-rgb: 49,132,253;
+				--bs-btn-active-color: #cb0c9f;
+				--bs-btn-active-bg: white;
+				--bs-btn-active-border-color: #cb0c9f;
+				--bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+				--bs-btn-disabled-color: #fff;
+				--bs-btn-disabled-bg: #cb0c9f;
+				--bs-btn-disabled-border-color: #cb0c9f;
+			}
+			
+			.btn-outline-primary {
+				--bs-btn-color: #cb0c9f;
+				--bs-btn-border-color: #cb0c9f;
+				--bs-btn-hover-color: #cb0c9f;
+				--bs-btn-hover-bg: #cb0c9f;
+				--bs-btn-hover-border-color: #cb0c9f;
+				--bs-btn-focus-shadow-rgb: 13,110,253;
+				--bs-btn-active-color: #fff;
+				--bs-btn-active-bg: #cb0c9f;
+				--bs-btn-active-border-color: #cb0c9f;
+				--bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+				--bs-btn-disabled-color: #cb0c9f;
+				--bs-btn-disabled-bg: transparent;
+				--bs-btn-disabled-border-color: #cb0c9f;
+				--bs-gradient: none;
+			}
+		
+			.content-button.active, .content-button:first-child:active {
+				--bs-btn-active-color: #cb0c9f;
+				--bs-btn-active-bg: white;
+			}
+
+			.content-button-selected.active, .content-button-selected:first-child:active {
+				--bs-btn-active-color: #fff;
+				--bs-btn-active-bg: #cb0c9f;
+			}
+		
+			.content-button-selected {
+				--bs-btn-color: #fff;
+				--bs-btn-bg: #cb0c9f;
+				--bs-btn-border-color: #cb0c9f;
+				--bs-btn-hover-color: #fff;
+				--bs-btn-hover-bg: #cb0c9f;
+				--bs-btn-hover-border-color: #cb0c9f;
+				--bs-btn-focus-shadow-rgb: 49,132,253;
+				--bs-btn-active-color: #cb0c9f;
+				--bs-btn-active-bg: white;
+				--bs-btn-active-border-color: #cb0c9f;
+				--bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
+				--bs-btn-disabled-color: #fff;
+				--bs-btn-disabled-bg: #cb0c9f;
+				--bs-btn-disabled-border-color: #cb0c9f;
+			}
+
+			.btn-outline-primary:hover {
+				background-color: inherit;
+				text-decoration: none;
+			}
+		
+			.content-button-selected:hover {
+				background-color: #cb0c9f;
+			}
+					
+			.content-button-selected:hover {
+				color: white;
+			}
+		
+			.content-button {
+				font-size: 13px;
+			}
+
+			.container {
+				max-width: 1100px;
+			}
+
+			.videos-container-inner {
+				border-radius: 0 0 5px 5px;
+				border: 1px solid #cb0c9f40;
+				border-top: 0;
+			}
+
+			.videos-container-inner-tag-title a {
+				text-decoration: none;
+				color: #cb0c9f;
+			}
+
+			.videos-container-outer .row {
+				margin-left: 0px;
+				margin-right: 0px;
+			}
+
+			.input-group .form-control:focus {
+				border-left: 1px solid #e293d3!important;
+				border-right: 1px solid #e293d3!important
+			}
+
+			.form-control:focus {
+				color: #495057;
+				background-color: #fff;
+				border-color: #e293d3;
+				outline: 0;
+				box-shadow: 0 0 0 2px #e9aede
+			}
+		</style>
+	</head>
+	<body>
+		<nav class="navbar navbar-expand-xl navbar-light">
+			<div class="container-fluid w-100">
+				<a class="navbar-brand" href="http://www.moartube.com">
+					<svg viewBox="169.022 81.466 89.186 20.228" xmlns="http://www.w3.org/2000/svg" style="width: 90px; height: 20px;">
+					<g transform="matrix(1, 0, 0, 1, 169.021713, 81.694077)">
+					<path d="M27.9727 3.12324C27.6435 1.89323 26.6768 0.926623 25.4468 0.597366C23.2197 2.24288e-07 14.285 0 14.285 0C14.285 0 5.35042 2.24288e-07 3.12323 0.597366C1.89323 0.926623 0.926623 1.89323 0.597366 3.12324C2.24288e-07 5.35042 0 10 0 10C0 10 2.24288e-07 14.6496 0.597366 16.8768C0.926623 18.1068 1.89323 19.0734 3.12323 19.4026C5.35042 20 14.285 20 14.285 20C14.285 20 23.2197 20 25.4468 19.4026C26.6768 19.0734 27.6435 18.1068 27.9727 16.8768C28.5701 14.6496 28.5701 10 28.5701 10C28.5701 10 28.5677 5.35042 27.9727 3.12324Z" fill="#cb0c9f"></path>
+					<path d="M 14.425 14.285 L 21.848 10 L 14.425 5.715 L 14.425 14.285 Z" fill="white"></path>
+					<path d="M 8.425 14.285 L 15.848 10 L 8.425 5.715 L 8.425 14.285 Z" fill="white"></path>
+					</g>
+					<path d="M 204.012 71.432 L 204.012 60.552 L 207.3 60.552 L 209.274 67.973 L 211.226 60.552 L 214.522 60.552 L 214.522 71.432 L 212.481 71.432 L 212.481 62.867 L 210.321 71.432 L 208.206 71.432 L 206.053 62.867 L 206.053 71.432 Z M 215.202 67.38 Q 215.202 66.341 215.714 65.368 Q 216.226 64.396 217.165 63.884 Q 218.104 63.372 219.262 63.372 Q 221.05 63.372 222.193 64.533 Q 223.336 65.695 223.336 67.469 Q 223.336 69.257 222.182 70.434 Q 221.028 71.61 219.276 71.61 Q 218.193 71.61 217.209 71.12 Q 216.226 70.63 215.714 69.684 Q 215.202 68.738 215.202 67.38 Z M 217.339 67.491 Q 217.339 68.664 217.896 69.287 Q 218.453 69.911 219.269 69.911 Q 220.085 69.911 220.638 69.287 Q 221.191 68.664 221.191 67.476 Q 221.191 66.318 220.638 65.695 Q 220.085 65.071 219.269 65.071 Q 218.453 65.071 217.896 65.695 Q 217.339 66.318 217.339 67.491 Z M 225.529 65.955 L 223.636 65.613 Q 223.955 64.47 224.735 63.921 Q 225.514 63.372 227.05 63.372 Q 228.446 63.372 229.128 63.702 Q 229.811 64.032 230.09 64.541 Q 230.368 65.049 230.368 66.407 L 230.346 68.842 Q 230.346 69.881 230.446 70.374 Q 230.546 70.868 230.821 71.432 L 228.757 71.432 Q 228.676 71.224 228.557 70.816 Q 228.505 70.63 228.483 70.571 Q 227.948 71.091 227.34 71.35 Q 226.731 71.61 226.041 71.61 Q 224.824 71.61 224.122 70.95 Q 223.421 70.289 223.421 69.28 Q 223.421 68.612 223.74 68.088 Q 224.059 67.565 224.634 67.287 Q 225.21 67.009 226.293 66.801 Q 227.755 66.526 228.319 66.289 L 228.319 66.081 Q 228.319 65.48 228.023 65.224 Q 227.726 64.968 226.902 64.968 Q 226.345 64.968 226.033 65.186 Q 225.722 65.405 225.529 65.955 Z M 228.319 67.647 Q 227.919 67.78 227.05 67.966 Q 226.182 68.152 225.915 68.33 Q 225.507 68.619 225.507 69.064 Q 225.507 69.502 225.833 69.821 Q 226.16 70.141 226.664 70.141 Q 227.228 70.141 227.741 69.769 Q 228.119 69.487 228.238 69.079 Q 228.319 68.812 228.319 68.062 Z M 233.418 71.432 L 231.333 71.432 L 231.333 63.55 L 233.27 63.55 L 233.27 64.671 Q 233.767 63.877 234.164 63.624 Q 234.561 63.372 235.066 63.372 Q 235.779 63.372 236.439 63.765 L 235.793 65.584 Q 235.266 65.242 234.814 65.242 Q 234.376 65.242 234.071 65.483 Q 233.767 65.725 233.593 66.355 Q 233.418 66.986 233.418 68.998 Z M 238.801 71.432 L 238.801 62.392 L 235.572 62.392 L 235.572 60.552 L 244.219 60.552 L 244.219 62.392 L 240.998 62.392 L 240.998 71.432 Z M 248.679 71.432 L 248.679 70.252 Q 248.249 70.883 247.547 71.246 Q 246.846 71.61 246.067 71.61 Q 245.272 71.61 244.642 71.261 Q 244.011 70.912 243.729 70.282 Q 243.447 69.651 243.447 68.537 L 243.447 63.55 L 245.532 63.55 L 245.532 67.172 Q 245.532 68.834 245.647 69.209 Q 245.762 69.584 246.067 69.803 Q 246.371 70.022 246.838 70.022 Q 247.373 70.022 247.796 69.729 Q 248.219 69.436 248.375 69.001 Q 248.531 68.567 248.531 66.875 L 248.531 63.55 L 250.616 63.55 L 250.616 71.432 Z M 251.685 71.432 L 251.685 60.552 L 253.77 60.552 L 253.77 64.47 Q 254.735 63.372 256.056 63.372 Q 257.496 63.372 258.439 64.415 Q 259.381 65.457 259.381 67.409 Q 259.381 69.428 258.42 70.519 Q 257.459 71.61 256.086 71.61 Q 255.411 71.61 254.754 71.272 Q 254.097 70.935 253.622 70.274 L 253.622 71.432 Z M 253.755 67.32 Q 253.755 68.545 254.141 69.131 Q 254.683 69.962 255.581 69.962 Q 256.271 69.962 256.758 69.372 Q 257.244 68.782 257.244 67.513 Q 257.244 66.162 256.754 65.565 Q 256.264 64.968 255.5 64.968 Q 254.75 64.968 254.253 65.55 Q 253.755 66.133 253.755 67.32 Z M 264.621 68.923 L 266.699 69.272 Q 266.298 70.415 265.434 71.013 Q 264.569 71.61 263.27 71.61 Q 261.214 71.61 260.227 70.267 Q 259.448 69.191 259.448 67.55 Q 259.448 65.591 260.472 64.481 Q 261.496 63.372 263.062 63.372 Q 264.821 63.372 265.838 64.533 Q 266.855 65.695 266.81 68.092 L 261.585 68.092 Q 261.608 69.02 262.09 69.536 Q 262.572 70.052 263.292 70.052 Q 263.782 70.052 264.116 69.784 Q 264.45 69.517 264.621 68.923 Z M 264.74 66.816 Q 264.717 65.91 264.272 65.439 Q 263.827 64.968 263.188 64.968 Q 262.506 64.968 262.06 65.465 Q 261.615 65.962 261.622 66.816 Z" transform="matrix(0.915771, 0, 0, 1.777663, 13.868996, -26.174692)" style="white-space: pre;"></path>
+					</svg>
+				</a>
+				<div class="collapse navbar-collapse" id="navbarSupportedContent">
+					<ul class="navbar-nav me-auto mb-2 mb-lg-0 mt-3">
+						<li class="nav-item">
+
+						</li>
+					</ul>
+				</div>
+			</div>
+		</nav>
+		<div class="container-fluid p-0 mt-2">
+			<div class="row m-0"> 
+				<div class="col-12 p-0">
+					<img class="img-fluid" src="/images/banner.jpg"/>
+				</div>
+			</div>
+			<div class="container">
+			<div class="row m-0 pt-3 align-items-center justify-content-center align-items-sm-start justify-content-sm-start"> 
+				<div class="col-auto p-0 text-end">
+					<img id="node-avatar" class="img-fluid" src="/images/avatar.jpg"/>
+				</div>
+				<div class="col-auto p-0">
+					<div class="container-fluid mt-2 p-0">
+						<div class="row m-0"> 
+							<h2><span id="node-name">........</span></h2>
+						</div>
+						<div class="row m-0"> 
+							<h5><span id="node-video-count">........</span></h5>
+						</div>
+						<div class="row m-0"> 
+							<span id="node-about">........</span>
+						</div>
+					</div>
+				</div>
+			</div>
+			</div>
+			<hr>
+			<div id="sort-buttons" class="container p-0 mt-2"> 
+				<button id="sort-button-latest" type="button" class="btn btn-outline-primary sort-button content-button" data-sortterm="latest" style="white-space: nowrap;" onclick="sortButtonClicked(this);">latest</button>
+				<button id="sort-button-popular" type="button" class="btn btn-outline-primary sort-button content-button" data-sortterm="popular" style="white-space: nowrap;" onclick="sortButtonClicked(this);">popular</button>
+				<button id="sort-button-oldest" type="button" class="btn btn-outline-primary sort-button content-button" data-sortterm="oldest" style="white-space: nowrap;" onclick="sortButtonClicked(this);">oldest</button>
+			</div>
+			<div id="tag-buttons" class="container p-0 mt-1"> 
+			
+			</div>
+			<div id="search-container" class="input-group container p-0 mt-2"> 
+				<input type="text" id="search-input" class="form-control" placeholder="Search here..." oninput="searchInputEntered(this)">
+			</div>
+			<div id="videos-container">
+
+			</div>
+		</div>
+		<script>
+			var CURRENT_SEARCH_TERM;
+			var CURRENT_SORT_TERM;
+			var CURRENT_TAG_TERM;
+			var CURRENT_TAG_LIMIT;
+		
+			$(document).ready(function() {
+				const params = new URL(window.location.href).searchParams;
+				
+				var searchTerm = params.get('se');
+				var sortTerm = params.get('so');
+				var tagTerm = params.get('ta');
+				var tagLimit = params.get('tl');
+				
+				if(searchTerm == null) {
+					searchTerm = '';
+				}
+				
+				if(sortTerm == null) {
+					sortTerm = 'latest';
+					$('#sort-button-latest').addClass('content-button-selected');
+				}
+				else if(sortTerm == 'latest') {
+					$('#sort-button-latest').addClass('content-button-selected');
+					
+				}
+				else if(sortTerm == 'popular') {
+					$('#sort-button-popular').addClass('content-button-selected');
+					
+				}
+				else if(sortTerm == 'oldest') {
+					$('#sort-button-oldest').addClass('content-button-selected');
+					
+				}
+				else {
+					sortTerm = 'latest';
+					$('#sort-button-latest').addClass('content-button-selected');
+				}
+				
+				if(tagTerm == null) {
+					tagTerm = '';
+				}
+				
+				if(tagLimit == null) {
+					tagLimit = 4;
+				}
+				
+				CURRENT_SEARCH_TERM = searchTerm;
+				CURRENT_SORT_TERM = sortTerm;
+				CURRENT_TAG_TERM = tagTerm;
+				CURRENT_TAG_LIMIT = tagLimit;
+				
+				$('#search-input').val(searchTerm);
+				
+				getNodeInformation();
+				getTags();
+				getVideos(searchTerm, sortTerm, tagTerm, tagLimit);
+			});
+			
+			function getNodeInformation() {
+				$.ajax({type: 'GET', url: '/api/information'})
+				.done(function (data, textStatus, xhr)
+				{
+					if(data.isError) {
+						alert(data.message);
+					}
+					else {
+						const nodeName = data.nodeName;
+						const nodeVideoCount = data.nodeVideoCount;
+						const nodeAbout = data.nodeAbout;
+						
+						const nodeAboutHtml = nodeAbout.replace(/(?:\r\n|\r|\n)/g, '<br>');
+						
+						var nodeVideoCountDescriptor = '';
+						
+						if(nodeVideoCount != 1) {
+							nodeVideoCountDescriptor = ' videos';
+						}
+						else {
+							nodeVideoCountDescriptor = ' video';
+						}
+						
+						$('#node-name').text(nodeName);
+						$('#node-video-count').text(nodeVideoCount + nodeVideoCountDescriptor);
+						$('#node-about').html(nodeAboutHtml);
+						
+						if(nodeName != '') {
+							document.title = nodeName + ' - MoarTube';
+						}
+					}
+				})
+				.fail(function()
+				{
+					alert('unable to communicate with node');
+				});
+			}
+			
+			function getTags() {
+				$.ajax({type: 'GET', url: '/videos/tags'})
+				.done(function (data, textStatus, xhr)
+				{
+					if(data.isError) {
+						console.log(data.message);
+					}
+					else {
+						const tags = data.tags;
+						
+						$('#tag-buttons').append('<button id="tag-button-all" type="button" class="btn btn-outline-primary tag-button content-button me-1" data-tagterm="" style="white-space: nowrap;" onclick="tagButtonSelected(this);">all</button>');
+						
+						tags.forEach(function(tag) {
+							$('#tag-buttons').append('<button id="tag-button-' + tag + '" type="button" class="btn btn-outline-primary tag-button content-button me-1" data-tagterm="' + tag + '" style="white-space: nowrap;" onclick="tagButtonSelected(this);">' + tag + '</button>');
+						});
+						
+						if(CURRENT_TAG_TERM === '') {
+							$('#tag-button-all').addClass('content-button-selected');
+						}
+						else {
+							$('#tag-button-' + CURRENT_TAG_TERM).addClass('content-button-selected');
+						}
+					}
+				})
+				.fail(function()
+				{
+					console.log('unable to communicate with node');
+				});
+			}
+			
+			function getVideos(searchTerm, sortTerm, tagTerm, tagLimit) {
+				$('#videos-container').empty();
+				
+				$.ajax({type: 'GET', url: '/videos/search', data: { searchTerm: searchTerm, sortTerm: sortTerm, tagTerm: tagTerm, tagLimit: tagLimit }})
+				.done(function (data, textStatus, xhr)
+				{
+					if(data.isError) {
+						alert(data.message);
+					}
+					else {
+						const tags = [];
+						
+						data.searchResults.forEach(function(row) {
+							const videoId = row.video_id;
+							const thumbnail = '/videos/' + videoId + '/thumbnail';
+							const title = row.title;
+							var tags = row.tags;
+							const lengthTimestamp = row.length_timestamp;
+							const views = row.views;
+							const isLive = row.is_live;
+							const isStreaming = row.is_streaming;
+							const comments = row.comments;
+							const likes = row.likes;
+							const dislikes = row.dislikes;
+							const bandwidth = row.bandwidth;
+							const isIndexed = row.is_indexed;
+							const lengthSeconds = row.length_seconds;
+							const creationTimestamp = row.creation_timestamp;
+							
+							const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
+							const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
+							
+							const durationIndicator = '<i style="position: absolute; right: 5px; bottom: 5px; background-color: rgba(0, 0, 0, 0.8); color: white; border-radius: 4px; padding: 3px; font-size: 11px; font-weight: 500;width: unset;">' + durationFormatted + '</i>';
+							
+							var liveStreamIndicator = '';
+							
+							if(isLive) {
+								if(isStreaming) {
+									liveStreamIndicator = '<i style="position: absolute; left: 5px; bottom: 5px; background-color: #cb0c9f; color: white; border-radius: 4px; padding: 3px; font-size: 10px; font-weight: 500; width: unset;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-broadcast" viewBox="0 0 16 16"><path d="M3.05 3.05a7 7 0 0 0 0 9.9.5.5 0 0 1-.707.707 8 8 0 0 1 0-11.314.5.5 0 0 1 .707.707zm2.122 2.122a4 4 0 0 0 0 5.656.5.5 0 1 1-.708.708 5 5 0 0 1 0-7.072.5.5 0 0 1 .708.708zm5.656-.708a.5.5 0 0 1 .708 0 5 5 0 0 1 0 7.072.5.5 0 1 1-.708-.708 4 4 0 0 0 0-5.656.5.5 0 0 1 0-.708zm2.122-2.12a.5.5 0 0 1 .707 0 8 8 0 0 1 0 11.313.5.5 0 0 1-.707-.707 7 7 0 0 0 0-9.9.5.5 0 0 1 0-.707zM10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>&nbspLIVE</i>';
+								}
+								else {
+									liveStreamIndicator = '<i style="position: absolute; left: 5px; bottom: 5px; background-color: #cb0c9f; color: white; border-radius: 4px; padding: 3px; font-size: 10px; font-weight: 500; width: unset;">STREAMED</i>';
+								}
+							}
+							
+							if(tagTerm === '') {
+								if($('#videos-container-all').length === 0) {
+									$('#videos-container').append('\
+										<div id="videos-container-all" class="container videos-container-outer p-0 pb-1 mt-2">\
+											<div class="videos-container-inner-tag-title row justify-content-end pe-1" style=" background-color: #cb0c9f08; border: 1px solid #cb0c9f40; border-radius: 5px 5px 0 0; color: #cb0c9f; font-size: 13px;"><span class="text-end p-0"><a href="?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=&tl=' + CURRENT_TAG_LIMIT + '" >all</a></span></div>\
+											<div id="videos-container-inner-all" class="videos-container-inner row row-cols-sm-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4">\
+											</div>\
+										</div>'
+									);
+								}
+								
+								$('#videos-container-inner-all').append('\
+									<div class="col pt-1 pb-1 ps-1 pe-1">\
+										<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
+											<div class="card">\
+												<div class="position-relative ratio-16x9">\
+													<img src="/videos/' + videoId + '/preview" class="card-img-top" alt="...">\
+													' + durationIndicator + '\
+													' + liveStreamIndicator + '\
+												</div>\
+												<div class="card-body">\
+													<h6 class="card-title row">' + title + '</h6>\
+													<small class="card-text row">' + views + ' views &#x2022 ' + creationTimestampFormatted + '</small>\
+												</div>\
+											</div>\
+										</a>\
+									</div>'
+								);
+							}
+							else {
+								if($('#videos-container-' + tagTerm).length === 0) {
+									$('#videos-container').append('\
+										<div id="videos-container-' + tagTerm + '" class="container videos-container-outer p-0 pb-1 mt-2">\
+											<div class="videos-container-inner-tag-title row justify-content-end pe-1" style=" background-color: #cb0c9f08; border: 1px solid #cb0c9f40; border-radius: 5px 5px 0 0; color: #cb0c9f; font-size: 13px;"><span class="text-end p-0"><a href="?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=' + tagTerm + '&tl=' + CURRENT_TAG_LIMIT + '" >' + tagTerm + '</a></span></div>\
+											<div id="videos-container-inner-' + tagTerm + '" class="videos-container-inner row row-cols-sm-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4">\
+											</div>\
+										</div>'
+									);
+								}
+								
+								$('#videos-container-inner-' + tagTerm).append('\
+									<div class="col pt-1 pb-1 ps-1 pe-1">\
+										<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
+											<div class="card">\
+												<div class="position-relative ratio-16x9">\
+													<img src="/videos/' + videoId + '/preview" class="card-img-top" alt="...">\
+													' + durationIndicator + '\
+													' + liveStreamIndicator + '\
+												</div>\
+												<div class="card-body">\
+													<h6 class="card-title row">' + title + '</h6>\
+													<small class="card-text row">' + views + ' views &#x2022 ' + creationTimestampFormatted + '</small>\
+												</div>\
+											</div>\
+										</a>\
+									</div>'
+								);
+							}
+						});
+					}
+				})
+				.fail(function()
+				{
+					alert('unable to communicate with node');
+				});
+			}
+			
+			function sortButtonClicked(sortButton) {
+				$('.sort-button').removeClass('content-button-selected');
+				$(sortButton).addClass('content-button-selected');
+				
+				const sortTerm = $(sortButton).data('sortterm');
+				const tagTerm = $('.tag-button.content-button-selected').eq(0).data('tagterm');
+				
+				CURRENT_SORT_TERM = sortTerm;
+				
+				updateAddressBar();
+				
+				getVideos(CURRENT_SEARCH_TERM, CURRENT_SORT_TERM, CURRENT_TAG_TERM, CURRENT_TAG_LIMIT);
+			}
+			
+			function tagButtonSelected(tagButton) {
+				$('.tag-button').removeClass('content-button-selected');
+				$(tagButton).addClass('content-button-selected');
+				
+				const tagTerm = $(tagButton).data('tagterm');
+				const sortTerm = $('.sort-button.content-button-selected').eq(0).data('sortterm');
+				
+				CURRENT_TAG_TERM = tagTerm;
+				
+				updateAddressBar();
+				
+				getVideos(CURRENT_SEARCH_TERM, CURRENT_SORT_TERM, CURRENT_TAG_TERM, CURRENT_TAG_LIMIT);
+			}
+			
+			var searchInputTimer;
+			function searchInputEntered(input) {
+				const value = input.value;
+				
+				CURRENT_SEARCH_TERM = value;
+				
+				clearTimeout(searchInputTimer);
+				
+				searchInputTimer = setTimeout(function() {
+					updateAddressBar();
+					
+					getVideos(CURRENT_SEARCH_TERM, CURRENT_SORT_TERM, CURRENT_TAG_TERM, CURRENT_TAG_LIMIT);
+				}, 500);
+			}
+			
+			function updateAddressBar() {
+				const stateString = '?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=' + CURRENT_TAG_TERM + '&tl=' + CURRENT_TAG_LIMIT;
+				
+				window.history.replaceState({}, '', stateString);
+			}
+			
+			function getCreationTimestampFormatted(creationTimestamp) {
+				var timeElapsed = '';
+				
+				const timeDifference = Date.now() - creationTimestamp;
+				
+				if (timeDifference < 60000) {
+					timeElapsed = "just now"
+				} else if (timeDifference < 3600000) {
+					const minutes = Math.floor(timeDifference / 60000);
+					if (minutes === 1) {
+						timeElapsed = "1 minute ago"
+					} else if (minutes === 0 || minutes > 1) {
+						timeElapsed = minutes + " minutes ago"
+					}
+				} else if (timeDifference < 86400000) {
+					const hours = Math.floor(timeDifference / 3600000);
+					if (hours === 1) {
+						timeElapsed = "1 hour ago"
+					} else if (hours === 0 || hours > 1) {
+						timeElapsed = hours + " hours ago"
+					}
+				} else if (timeDifference < 2592000000) {
+					const days = Math.floor(timeDifference / 86400000);
+					if (days === 1) {
+						timeElapsed = "1 day ago"
+					} else if (days === 0 || days > 1) {
+						timeElapsed = days + " days ago"
+					}
+				} else if (timeDifference < 31536000000) {
+					const months = Math.floor(timeDifference / 2592000000);
+					if (months === 1) {
+						timeElapsed = "1 month ago"
+					} else if (months === 0 || months > 1) {
+						timeElapsed = months + " months ago"
+					}
+				} else {
+					const years = Math.floor(timeDifference / 31536000000);
+					if (years === 1) {
+						timeElapsed = "1 year ago"
+					} else if (years === 0 || years > 1) {
+						timeElapsed = years + " years ago"
+					}
+				}
+				
+				return timeElapsed;
+			}
+			
+			function convertSecondsToDurationFormatted(seconds) {
+				seconds = Math.floor(seconds);
+				
+				const years = Math.floor(seconds / (3600 * 24 * 365));
+				
+				seconds -= years * (3600 * 24 * 365);
+
+				const days = Math.floor(seconds / (3600 * 24));
+				
+				seconds -= days * (3600 * 24);
+
+				const hours = Math.floor(seconds / 3600);
+				
+				seconds -= hours * 3600;
+
+				const minutes = Math.floor(seconds / 60);
+				
+				seconds -= minutes * 60;
+
+				let durationFormatted = '';
+
+				if (years > 0) {
+					durationFormatted += years + ' years, ';
+				}
+
+				if (days > 0) {
+					durationFormatted += days + ' days, ';
+				}
+
+				if (hours > 0 || years > 0 || days > 0) {
+					durationFormatted += hours + ':';
+				}
+
+				if (minutes < 10 && (hours > 0 || years > 0 || days > 0)) {
+					durationFormatted += '0';
+				}
+				
+				durationFormatted += minutes + ':';
+
+				if (seconds < 10) {
+					durationFormatted += '0';
+				}
+				
+				durationFormatted += seconds;
+
+				return durationFormatted;
+			}
+		</script>
+	</body>
+</html>
