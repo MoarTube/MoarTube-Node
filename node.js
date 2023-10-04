@@ -55,22 +55,6 @@ if(cluster.isMaster) {
 	.then((database) => {
 		const mutex = new Mutex();
 		
-		if (!fs.existsSync(path.join(__dirname, '/_node_settings.json'))) {
-			fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify({
-				"isNodeConfigured":false,
-				"isNodeConfigurationSkipped":false,
-				"isSecure":false,
-				"publicNodeProtocol":"http",
-				"publicNodeAddress":"",
-				"publicNodePort":"",
-				"nodeName":"moartube node",
-				"nodeAbout":"just a MoarTube node",
-				"nodeId":"",
-				"username":"JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL",
-				"password":"JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX"
-			}));
-		}
-		
 		const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
 		
 		if(nodeSettings.nodeId === '') {
@@ -6205,13 +6189,26 @@ function loadConfig() {
 	MOARTUBE_ALIASER_IP = config.aliaserConfig.host;
 	MOARTUBE_ALIASER_PORT = config.aliaserConfig.port;
 	
-	if(config.nodeConfig.expressSessionName === '' && config.nodeConfig.expressSessionSecret === '') {
-		config.nodeConfig.expressSessionName = crypto.randomBytes(64).toString('hex');
-		config.nodeConfig.expressSessionSecret = crypto.randomBytes(64).toString('hex');
-		
-		fs.writeFileSync(path.join(__dirname, CONFIG_FILE_NAME), JSON.stringify(config));
+	if(!fs.existsSync(path.join(__dirname, '/_node_settings.json'))) {
+		fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify({
+			"isNodeConfigured":false,
+			"isNodeConfigurationSkipped":false,
+			"isSecure":false,
+			"publicNodeProtocol":"http",
+			"publicNodeAddress":"",
+			"publicNodePort":"",
+			"nodeName":"moartube node",
+			"nodeAbout":"just a MoarTube node",
+			"nodeId":"",
+			"username":"JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL",
+			"password":"JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX",
+			"expressSessionName": crypto.randomBytes(64).toString('hex'),
+			"expressSessionSecret": crypto.randomBytes(64).toString('hex')
+		}));
 	}
 	
-	EXPRESS_SESSION_NAME = config.nodeConfig.expressSessionName;
-	EXPRESS_SESSION_SECRET = config.nodeConfig.expressSessionSecret;
+	const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+	
+	EXPRESS_SESSION_NAME = nodeSettings.expressSessionName;
+	EXPRESS_SESSION_SECRET = nodeSettings.expressSessionSecret;
 }
