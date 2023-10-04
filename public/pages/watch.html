@@ -620,7 +620,7 @@
 				<div id="video-comments-outer" class="col-xl-9 col-lg-9 col-md-12">
 					<div id="video-comments-inner">
 						<div id="video-player-container" class="ratio ratio-16x9 d-flex align-items-center justify-content-center" style="background: black; color: white;">
-							<div id="mtp-video-overlay" class="ratio ratio-16x9" style="position: absolute; z-index: 9;width: 100%;" role="button">
+							<div id="mtp-video-overlay" class="ratio ratio-16x9 hidden-elem" style="position: absolute; z-index: 9;width: 100%;" role="button">
 								<div id="big-play-button-poster-container" class="ratio ratio-16x9">
 									<button class="mtp-button mtp-large-play-button">
 										<svg version="1.1" viewBox="0 0 68 48" width="100%" height="100%">
@@ -1254,15 +1254,19 @@
 					}
 				}
 				else {
+					var message = '';
+					
 					if(isPublishing) {
 						message = 'this video is currently publishing, please check back later';
 					}
 					else if(isStreamed) {
-						message = 'this live stream has ended';
+						message = 'this live stream has ended and has not been published yet';
 					}
 					else {
 						message = 'this video is unavailable';
 					}
+					
+					$('#video-player-container').append(message);
 				}
 				
 				async function initializeShakaPlayer(adaptiveSources) {
@@ -1391,6 +1395,8 @@
 						})
 						.catch(function(error) {
 							console.log(error);
+							
+							$('#mtp-video-overlay').removeClass('hidden-elem');
 						});
 					} catch (error) {
 						console.log(error);
