@@ -581,6 +581,16 @@
 				border-width: 0.15rem;
 			}
 
+.video-js.vjs-paused:not(.vjs-has-started) .vjs-loading-spinner {
+    display: block;
+    visibility: visible;
+}
+
+.video-js.vjs-paused:not(.vjs-has-started) .vjs-loading-spinner,
+.video-js.vjs-paused:not(.vjs-has-started) .vjs-loading-spinner {
+    -webkit-animation: vjs-spinner-spin 1.1s cubic-bezier(0.6, 0.2, 0, 0.8) infinite, vjs-spinner-fade 1.1s linear infinite;
+    animation: vjs-spinner-spin 1.1s cubic-bezier(0.6, 0.2, 0, 0.8) infinite, vjs-spinner-fade 1.1s linear infinite;
+}
 		</style>
 	</head>
 	<body>
@@ -1326,6 +1336,14 @@
 								console.log('not buffering');
 								
 								eventManager.unlisten(player, 'buffering');
+								
+								adaptiveVideoPlayer.play().then(() => {
+									console.log('Video started playing');
+								}).catch(error => {
+									console.error('Autoplay failed:', error);
+									
+									$('#mtp-video-overlay').removeClass('hidden-elem');
+								});
 							}
 							else {
 								console.log('buffering');
@@ -1333,6 +1351,8 @@
 						});
 						
 						eventManager.listen(adaptiveVideoPlayer, 'playing', () => {
+							console.log('playing');
+							
 							eventManager.unlisten(adaptiveVideoPlayer, 'playing');
 							
 							$('#mtp-video-overlay').remove();
@@ -1362,7 +1382,7 @@
 									
 									player.load(masterManifestUrl)
 									.then(function() {
-										console.log('manifest reloaded');
+										console.log('manifest reloaded from error');
 									})
 									.catch(function(error) {
 										console.log(error);
@@ -1377,8 +1397,9 @@
 							$('#mtp-video-overlay').remove();
 							
 							if(!buffered) {
-								player.load(masterManifestUrl).then(function() {
-								
+								player.load(masterManifestUrl)
+								.then(function() {
+									console.log('manifest reloaded from big play');
 								})
 								.catch(function(error) {
 									console.log(error);
@@ -1391,12 +1412,10 @@
 						
 						player.load(masterManifestUrl)
 						.then(function() {
-							
+							console.log('manifest loaded');
 						})
 						.catch(function(error) {
 							console.log(error);
-							
-							$('#mtp-video-overlay').removeClass('hidden-elem');
 						});
 					} catch (error) {
 						console.log(error);
@@ -1617,9 +1636,11 @@
 						}
 					};
 					
+					/*
 					player.on(["loadstart", "firstplay", "pause", "ended", "adplay", "adplaying", "adfirstplay", "adpause", "adended", "contentplay", "contentplaying", "contentfirstplay", "contentpause", "contentended", "contentupdate"], function(e) {
 						//console.log(e);
 					});
+					*/
 					
 					player.on(["fullscreenchange"], function(e) {
 						if(player.isFullscreen()) {
@@ -1637,6 +1658,8 @@
 						})
 						.catch(function(error) {
 							console.log(error);
+							
+							$('#mtp-video-overlay').removeClass('hidden-elem');
 						});
 					});
 					
