@@ -605,83 +605,102 @@ else {
 						ws.on('message', (message) => {
 							const parsedMessage = JSON.parse(message);
 							
-							if(parsedMessage.eventName === 'echo') {
-								if(parsedMessage.data.eventName === 'video_status') {
-									const payload = parsedMessage.data.payload;
-									
-									const type = payload.type;
-									const videoId = payload.videoId;
-									
-									if(isVideoIdValid(videoId)) {
-										if(type === 'importing') {
-											const progress = payload.progress;
-											
-											websocketServerBroadcast(parsedMessage);
-										}
-										else if(type === 'imported') {
-											const lengthTimestamp = payload.lengthTimestamp;
-											
-											websocketServerBroadcast(parsedMessage);
-										}
-										else if(type === 'publishing') {
-											const format = payload.format;
-											const resolution = payload.resolution;
-											const progress = payload.progress;
-											
-											websocketServerBroadcast(parsedMessage);
-										}
-										else if(type === 'published') {
-											const lengthTimestamp = payload.lengthTimestamp;
-											const lengthSeconds = payload.lengthSeconds;
-											
-											websocketServerBroadcast(parsedMessage);
-										}
-										else if(type === 'streaming') {
-											const lengthTimestamp = payload.lengthTimestamp;
-											const bandwidth = payload.bandwidth;
-											
-											websocketServerBroadcast(parsedMessage);
-										}
-										else if(type === 'importing_stopping') {
-											websocketServerBroadcast(parsedMessage);
-										}
-										else if(type === 'importing_stopped') {
-											websocketServerBroadcast(parsedMessage);
-										}
-										else if(type === 'publishing_stopping') {
-											if(publishVideoUploadingTracker.hasOwnProperty(videoId)) {
-												publishVideoUploadingTracker[videoId].stopping = true;
-											}
-											
-											websocketServerBroadcast(parsedMessage);
-										}
-										else if(type === 'publishing_stopped') {
-											if(publishVideoUploadingTracker.hasOwnProperty(videoId)) {
-												const uploadRequests = publishVideoUploadingTracker[videoId].uploadRequests;
+							const jwtToken = parsedMessage.jwtToken;
+							
+							if(jwtToken != null) {
+								// attempting a websocket message that expects authentication
+								
+								getAuthenticationStatus(jwtToken)
+								.then((isAuthenticated) => {
+									if(isAuthenticated) {
+										if(parsedMessage.eventName === 'echo') {
+											if(parsedMessage.data.eventName === 'video_status') {
+												const payload = parsedMessage.data.payload;
 												
-												uploadRequests.forEach(function(uploadRequest) {
-													uploadRequest.destroy();
-												});
+												const type = payload.type;
+												const videoId = payload.videoId;
 												
-												delete publishVideoUploadingTracker[videoId];
+												if(isVideoIdValid(videoId)) {
+													if(type === 'importing') {
+														const progress = payload.progress;
+														
+														websocketNodeBroadcast(parsedMessage);
+													}
+													else if(type === 'imported') {
+														const lengthTimestamp = payload.lengthTimestamp;
+														
+														websocketNodeBroadcast(parsedMessage);
+													}
+													else if(type === 'publishing') {
+														const format = payload.format;
+														const resolution = payload.resolution;
+														const progress = payload.progress;
+														
+														websocketNodeBroadcast(parsedMessage);
+													}
+													else if(type === 'published') {
+														const lengthTimestamp = payload.lengthTimestamp;
+														const lengthSeconds = payload.lengthSeconds;
+														
+														websocketNodeBroadcast(parsedMessage);
+													}
+													else if(type === 'streaming') {
+														const lengthTimestamp = payload.lengthTimestamp;
+														const bandwidth = payload.bandwidth;
+														
+														websocketNodeBroadcast(parsedMessage);
+													}
+													else if(type === 'importing_stopping') {
+														websocketNodeBroadcast(parsedMessage);
+													}
+													else if(type === 'importing_stopped') {
+														websocketNodeBroadcast(parsedMessage);
+													}
+													else if(type === 'publishing_stopping') {
+														if(publishVideoUploadingTracker.hasOwnProperty(videoId)) {
+															publishVideoUploadingTracker[videoId].stopping = true;
+														}
+														
+														websocketNodeBroadcast(parsedMessage);
+													}
+													else if(type === 'publishing_stopped') {
+														if(publishVideoUploadingTracker.hasOwnProperty(videoId)) {
+															const uploadRequests = publishVideoUploadingTracker[videoId].uploadRequests;
+															
+															uploadRequests.forEach(function(uploadRequest) {
+																uploadRequest.destroy();
+															});
+															
+															delete publishVideoUploadingTracker[videoId];
+														}
+														
+														websocketNodeBroadcast(parsedMessage);
+													}
+													else if(type === 'streaming_stopping') {
+														websocketNodeBroadcast(parsedMessage);
+													}
+													else if(type === 'streaming_stopped') {
+														websocketNodeBroadcast(parsedMessage);
+													}
+													else if(type === 'finalized') {
+														websocketNodeBroadcast(parsedMessage);
+													}
+												}
 											}
-											
-											websocketServerBroadcast(parsedMessage);
-										}
-										else if(type === 'streaming_stopping') {
-											websocketServerBroadcast(parsedMessage);
-										}
-										else if(type === 'streaming_stopped') {
-											websocketServerBroadcast(parsedMessage);
-										}
-										else if(type === 'finalized') {
-											websocketServerBroadcast(parsedMessage);
+											else if(parsedMessage.data.eventName === 'video_data') {
+												websocketNodeBroadcast(parsedMessage);
+											}
 										}
 									}
-								}
-								else if(parsedMessage.data.eventName === 'video_data') {
-									websocketServerBroadcast(parsedMessage);
-								}
+								})
+								.catch(error => {
+									logDebugMessageToConsole('', new Error(error).stack, true);
+								});
+							}
+							else {
+								// attempting a websocket message that does not expect authentication (chat)
+								// rate limit
+								
 							}
 						});
 					});
@@ -906,7 +925,7 @@ else {
 								res.send({isError: true, message: 'error communicating with the MoarTube node'});
 							}
 							else {
-								websocketServerBroadcast({
+								websocketNodeBroadcast({
 									eventName: 'echo', 
 									data: {
 										eventName: 'video_data', 
@@ -1159,7 +1178,7 @@ else {
 									if((currentPublishTimestamp - lastPublishTimestamp > 1000) || uploadProgress === 100) {
 										lastPublishTimestamp = currentPublishTimestamp;
 										
-										websocketServerBroadcast({eventName: 'echo', data: {eventName: 'video_status', payload: { type: 'publishing', videoId: videoId, format: format, resolution: resolution, progress: uploadProgress }}});
+										websocketNodeBroadcast({eventName: 'echo', data: {eventName: 'video_status', payload: { type: 'publishing', videoId: videoId, format: format, resolution: resolution, progress: uploadProgress }}});
 									}
 								}
 							});
@@ -1611,7 +1630,7 @@ else {
 								res.send({isError: true, message: 'error communicating with the MoarTube node'});
 							}
 							else {
-								websocketServerBroadcast({eventName: 'echo', data: {eventName: 'video_data', payload: { 
+								websocketNodeBroadcast({eventName: 'echo', data: {eventName: 'video_data', payload: { 
 										videoId: videoId, 
 										thumbnail: '', 
 										title: title, 
@@ -5704,7 +5723,8 @@ else {
 			return (reportMessage != null && (reportMessage.length <= 1000));
 		}
 		
-		function websocketServerBroadcast(message) {
+		function websocketNodeBroadcast(message) {
+			
 			process.send({ cmd: 'websocket_broadcast', message: message });
 		}
 		
