@@ -1,4 +1,4 @@
-Copyright (c) 2023 Christopher Conley. All Rights Reserved.
+Copyright (c) 2023 MoarTube, LLC. All Rights Reserved.
 
 Permission is hereby granted to any person obtaining a copy of this software to use the software for its intended purposes. Redistribution, modification, derivative works, sublicensing, and any form of distribution of this software or its parts are expressly prohibited.
 
