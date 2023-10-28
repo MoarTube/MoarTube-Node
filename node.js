@@ -55,6 +55,8 @@ if(cluster.isMaster) {
 	.then((database) => {
 		const mutex = new Mutex();
 		
+		var liveStreamWorkerStats = {};
+		
 		const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
 		
 		if(nodeSettings.nodeId === '') {
@@ -95,6 +97,13 @@ if(cluster.isMaster) {
 						worker.send({ cmd: 'websocket_broadcast_response', message: message });
 					});
 				}
+				else if (msg.cmd && msg.cmd === 'websocket_broadcast_chat') {
+					const message = msg.message;
+					
+					Object.values(cluster.workers).forEach((worker) => {
+						worker.send({ cmd: 'websocket_broadcast_chat_response', message: message });
+					});
+				}
 				else if (msg.cmd && msg.cmd === 'database_write_job') {
 					const release = await mutex.acquire();
 					
@@ -120,6 +129,12 @@ if(cluster.isMaster) {
 					finally {
 						release();
 					}
+				}
+				else if (msg.cmd && msg.cmd === 'live_stream_worker_stats_response') {
+					const workerId = msg.workerId;
+					const liveStreamStats = msg.liveStreamStats;
+					
+					liveStreamWorkerStats[workerId] = liveStreamStats;
 				}
 			});
 		}
@@ -212,6 +227,18 @@ if(cluster.isMaster) {
 				}
 			});
 		}, 3000);
+		
+		setInterval(function() {
+			Object.values(cluster.workers).forEach((worker) => {
+				worker.send({ cmd: 'live_stream_worker_stats_request' });
+			});
+		}, 1000);
+		
+		setInterval(function() {
+			Object.values(cluster.workers).forEach((worker) => {
+				worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWorkerStats: liveStreamWorkerStats });
+			});
+		}, 1000);
 	})
 	.catch(error => {
 		logDebugMessageToConsole('', new Error(error).stack, true);
@@ -479,13 +506,28 @@ else {
 		
 		process.on('message', (msg) => {
 			if (msg.cmd === 'websocket_broadcast_response') {
-				const message = msg.message;
-				
-				httpServerWrapper.websocketServer.clients.forEach(function each(client) {
-					if (client.readyState === webSocket.OPEN) {
-						client.send(JSON.stringify(message));
-					}
-				});
+				if(httpServerWrapper != null) {
+					const message = msg.message;
+					
+					httpServerWrapper.websocketServer.clients.forEach(function each(client) {
+						if (client.readyState === webSocket.OPEN) {
+							client.send(JSON.stringify(message));
+						}
+					});
+				}
+			}
+			else if (msg.cmd === 'websocket_broadcast_chat_response') {
+				if(httpServerWrapper != null) {
+					const message = msg.message;
+					
+					httpServerWrapper.websocketServer.clients.forEach(function each(client) {
+						if (client.readyState === webSocket.OPEN) {
+							if(client.socketType === 'node_peer' && client.videoId === message.videoId) {
+								client.send(JSON.stringify(message));
+							}
+						}
+					});
+				}
 			}
 			else if (msg.cmd === 'get_jwt_secret_response') {
 				JWT_SECRET = msg.jwtSecret;
@@ -501,6 +543,57 @@ else {
 				delete PENDING_DATABASE_WRITE_JOBS[timestamp];
 				
 				callback(isError);
+			}
+			else if (msg.cmd === 'live_stream_worker_stats_request') {
+				if(httpServerWrapper != null) {
+					const liveStreamStats = {};
+					
+					httpServerWrapper.websocketServer.clients.forEach(function each(client) {
+						if (client.readyState === webSocket.OPEN) {
+							if(client.socketType === 'node_peer') {
+								const videoId = client.videoId;
+								
+								if(!liveStreamStats.hasOwnProperty(videoId)) {
+									liveStreamStats[videoId] = 0;
+								}
+								
+								liveStreamStats[videoId]++;
+							}
+						}
+					});
+					
+					process.send({ cmd: 'live_stream_worker_stats_response', workerId: cluster.worker.id, liveStreamStats: liveStreamStats });
+				}
+			}
+			else if (msg.cmd === 'live_stream_worker_stats_update') {
+				if(httpServerWrapper != null) {
+					const liveStreamWorkerStats = msg.liveStreamWorkerStats;
+					
+					const liveStreamStats = {};
+					
+					for (const worker in liveStreamWorkerStats) {
+						for (const videoId in liveStreamWorkerStats[worker]) {
+							if (liveStreamStats.hasOwnProperty(videoId)) {
+								liveStreamStats[videoId] += liveStreamWorkerStats[worker][videoId];
+							}
+							else {
+								liveStreamStats[videoId] = liveStreamWorkerStats[worker][videoId];
+							}
+						}
+					}
+					
+					httpServerWrapper.websocketServer.clients.forEach(function each(client) {
+						if (client.readyState === webSocket.OPEN) {
+							if(client.socketType === 'node_peer') {
+								const videoId = client.videoId;
+								
+								if(liveStreamStats.hasOwnProperty(videoId)) {
+									client.send(JSON.stringify({eventName: 'stats', watchingCount: liveStreamStats[videoId]}));
+								}
+							}
+						}
+					});
+				}
 			}
 		});
 		
@@ -613,7 +706,16 @@ else {
 								getAuthenticationStatus(jwtToken)
 								.then((isAuthenticated) => {
 									if(isAuthenticated) {
-										if(parsedMessage.eventName === 'echo') {
+										if(parsedMessage.eventName === 'register') {
+											const socketType = parsedMessage.socketType;
+											
+											if(socketType === 'moartube_client') {
+												ws.socketType = socketType;
+												
+												// ws.send(JSON.stringify({eventName: 'registered'}));
+											}
+										}
+										else if(parsedMessage.eventName === 'echo') {
 											if(parsedMessage.data.eventName === 'video_status') {
 												const payload = parsedMessage.data.payload;
 												
@@ -698,9 +800,96 @@ else {
 								});
 							}
 							else {
-								// attempting a websocket message that does not expect authentication (chat)
-								// rate limit
-								
+								if(parsedMessage.eventName === 'register') {
+									const socketType = parsedMessage.socketType;
+									
+									if(socketType === 'node_peer') {
+										ws.socketType = socketType;
+										
+										ws.send(JSON.stringify({eventName: 'registered'}));
+									}
+								}
+								else if(parsedMessage.eventName === 'chat') {
+									if(ws.socketType != null) {
+										if(parsedMessage.type === 'join') {
+											const videoId = parsedMessage.videoId;
+											
+											if(isVideoIdValid(videoId)) {
+												ws.videoId = videoId;
+												
+												ws.rateLimiter = {
+													timestamps: [],
+													rateLimitTimestamp: 0,
+													rateLimitLevel: -1,
+													isRateLimited: false
+												};
+												
+												ws.send(JSON.stringify({eventName: 'joined'}));
+											}
+										}
+										else if(parsedMessage.type === 'message') {
+											const videoId = parsedMessage.videoId;
+											const chatMessageContent = sanitizeHtml(parsedMessage.chatMessageContent, {allowedTags: [], allowedAttributes: {}});
+											
+											if(isVideoIdValid(videoId) && isChatMessageContentValid(chatMessageContent)) {
+												const rateLimiter = ws.rateLimiter;
+												
+												const timestamp = Date.now();
+												
+												const BASE_RATE_LIMIT_PENALTY_MILLISECONDS = 5000;
+												const BASE_RATE_LIMIT_PENALTY_SECONDS = BASE_RATE_LIMIT_PENALTY_MILLISECONDS / 1000;
+												const RATE_LIMIT_EAGERNESS_PENALTY_MILLISECONDS = 3000;
+												
+												if(rateLimiter.isRateLimited) {
+													const rateLimitThreshold = BASE_RATE_LIMIT_PENALTY_MILLISECONDS + (rateLimiter.rateLimitLevel * BASE_RATE_LIMIT_PENALTY_MILLISECONDS);
+													
+													if((timestamp - rateLimiter.rateLimitTimestamp) > rateLimitThreshold) {
+														if((timestamp - rateLimiter.rateLimitTimestamp) < (rateLimitThreshold + RATE_LIMIT_EAGERNESS_PENALTY_MILLISECONDS)) {
+															rateLimiter.rateLimitTimestamp = timestamp;
+															rateLimiter.rateLimitLevel++;
+															
+															ws.send(JSON.stringify({eventName: 'limited', rateLimitSeconds: BASE_RATE_LIMIT_PENALTY_SECONDS + (rateLimiter.rateLimitLevel * BASE_RATE_LIMIT_PENALTY_SECONDS)}));
+														}
+														else {
+															rateLimiter.isRateLimited = false;
+															rateLimiter.rateLimitLevel = -1;
+														}
+													}
+													else {
+														return;
+													}
+												}
+												
+												if(rateLimiter.timestamps.length < 3) {
+													rateLimiter.timestamps.push(timestamp);
+												}
+												else if(rateLimiter.timestamps.length === 3) {
+													rateLimiter.timestamps.shift();
+													rateLimiter.timestamps.push(timestamp);
+												}
+												
+												if(rateLimiter.timestamps.length === 3) {
+													const firstTimestamp = rateLimiter.timestamps[0];
+													const lastTimestamp = rateLimiter.timestamps[rateLimiter.timestamps.length - 1];
+													
+													const timeEllapsed = lastTimestamp - firstTimestamp;
+													
+													if(timeEllapsed < BASE_RATE_LIMIT_PENALTY_MILLISECONDS) {
+														rateLimiter.rateLimitTimestamp = timestamp;
+														rateLimiter.isRateLimited = true;
+														rateLimiter.rateLimitLevel++;
+														
+														ws.send(JSON.stringify({eventName: 'limited', rateLimitSeconds: BASE_RATE_LIMIT_PENALTY_SECONDS}));
+													}
+												}
+												
+												ws.rateLimiter = rateLimiter;
+												
+												websocketChatBroadcast({eventName: 'message', videoId: videoId, chatMessageContent: chatMessageContent});
+											}
+										}
+									}
+								}
 							}
 						});
 					});
@@ -1598,7 +1787,7 @@ else {
 					else if(!isPortValid(rtmpPort)) {
 						res.send({isError: true, message: 'rtmp port not valid'});
 					}
-					else if(!isUuidv4Valid(uuid)) {
+					else if(uuid !== 'moartube') {
 						res.send({isError: true, message: 'uuid not valid'});
 					}
 					else if(!isBooleanValid(isRecordingStreamRemotely)) {
@@ -5723,9 +5912,22 @@ else {
 			return (reportMessage != null && (reportMessage.length <= 1000));
 		}
 		
+		function isChatMessageContentValid(chatMessageContent) {
+			return (chatMessageContent != null && chatMessageContent.length > 0 && chatMessageContent.length <= 500);
+		}
+		
+		
+		
+		
+		
+		
+		
 		function websocketNodeBroadcast(message) {
-			
 			process.send({ cmd: 'websocket_broadcast', message: message });
+		}
+		
+		function websocketChatBroadcast(message) {
+			process.send({ cmd: 'websocket_broadcast_chat', message: message });
 		}
 		
 		function updateHlsVideoMasterManifestFile(videoId) {

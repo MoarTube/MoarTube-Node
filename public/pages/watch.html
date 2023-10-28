@@ -712,7 +712,9 @@
 						</div>
 						<div id="video-information-section" class="row align-items-center m-0">
 							<div id="video-information-container" class="col-12 mt-2 mb-2" style="background: #cb0c9f12; border-radius: 10px; padding-top: 0.5rem; padding-bottom: 0.5rem;">
-								<span id="video-information-views" class="fw-bold">........</span>&nbsp;&nbsp;<span id="video-information-date" class="fw-bold">........</span>
+								<div id="video-information-views-date">
+									<span id="video-information-views" class="fw-bold">........</span>&nbsp;&nbsp;<span id="video-information-date" class="fw-bold">........</span>
+								</div>
 								<div id="video-information-description">........</div>
 							</div>
 						</div>
@@ -777,6 +779,25 @@
 					</div>
 				</div>
 				<div id="recommended-videos-list-container" class="col-xl-3 col-lg-3 col-md-12">
+					<div id="live-stream-chat-container" class="card mb-2 hidden-elem" style="height: 800px;">
+						<div class="row g-0" style="height: 100%;">
+							<div class="col-12 d-flex flex-column" style="height: 100%;">
+								<div id="chat-messages-container" class="position-relative flex-grow-1 overflow-auto p-1">
+									<div id="chat-messages" class="chat-messages p-1" style="overflow-y: auto;">
+									
+									</div>
+								</div>
+								
+								<div id="chat-input-container" class="py-1 px-1 border-top">
+									<div class="">
+										<input id="send-chat-message-input" type="text" class="form-control" placeholder="...connecting..." maxlength=500 disabled>
+										<button id="send-chat-message-button" class="btn btn-primary w-100 my-1" disabled>Send</button>
+									</div>
+								</div>
+								
+							</div>
+						</div>
+					</div>
 					<div id="recommended-videos-tag-slider" class="keen-slider pb-1">
 						<div class="keen-slider__slide number-slide1">
 							<button type="button" class="btn btn-outline-primary recommendation-category-button recommendation-category-button-selected" data-tagterm="" style="white-space: nowrap;">all</button>
@@ -862,6 +883,112 @@
 					startCommentsSectionInterval();
 				}
 			});
+			
+			function connectWebsocket() {
+				var connectWebsocketClient = function() {
+					try {
+						$('#live-stream-chat-container').removeClass('hidden-elem');
+						
+						const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+						const hostname = window.location.hostname;
+						const port = window.location.port;
+						
+						const ws = new WebSocket(protocol + '//' + hostname + ':' + port);
+						
+						ws.onopen = () => {
+							ws.send(JSON.stringify({eventName: 'register', socketType: 'node_peer'}));
+						};
+						
+						ws.onclose = () => {
+							setTimeout(() => {
+								connectWebsocketClient();
+							}, 3000);
+						};
+
+						ws.onmessage = (message) => {
+							const data = JSON.parse(message.data);
+							
+							if(data.eventName === 'registered') {
+								ws.send(JSON.stringify({eventName: 'chat', type: 'join', videoId: VIDEO_ID}));
+							}
+							else if(data.eventName === 'joined') {
+								$('#send-chat-message-input').prop('placeholder', 'Type your message');
+								$('#send-chat-message-input').prop('disabled', false);
+								$('#send-chat-message-button').prop('disabled', false);
+								
+								$('#send-chat-message-button').off('click').on('click', function(event) {
+									broadcastChatMessageContent();
+								});
+								
+								$('#send-chat-message-input').off('keypress').on('keypress', function(event) {
+									if (event.keyCode === 13) {
+										broadcastChatMessageContent();
+									}
+								});
+								
+								function broadcastChatMessageContent() {
+									const chatMessageContent = $('#send-chat-message-input').val();
+									
+									$('#send-chat-message-input').val('');
+									
+									ws.send(JSON.stringify({eventName: 'chat', type: 'message', videoId: VIDEO_ID, chatMessageContent: chatMessageContent}));
+								}
+							}
+							else if(data.eventName === 'message') {
+								const chatMessageContent = data.chatMessageContent;
+								
+								appendMessageAndConditionallyScroll(chatMessageContent);
+							}
+							else if(data.eventName === 'stats') {
+								const watchingCount = data.watchingCount;
+								
+								$('#video-information-views').text(watchingCount + ' watching now');
+							}
+							else if(data.eventName === 'limited') {
+								var rateLimitSeconds = data.rateLimitSeconds;
+								
+								$('#send-chat-message-input').prop('disabled', true);
+								$('#send-chat-message-button').prop('disabled', true);
+								
+								$('#send-chat-message-button').text('Send (' + rateLimitSeconds + ')');
+							
+								const interval = setInterval(function() {
+									rateLimitSeconds--;
+									
+									$('#send-chat-message-button').text('Send (' + rateLimitSeconds + ')');
+									
+									if(rateLimitSeconds === 0) {
+										clearInterval(interval);
+										
+										$('#send-chat-message-button').text('Send');
+										
+										$('#send-chat-message-input').prop('disabled', false);
+										$('#send-chat-message-button').prop('disabled', false);
+									}
+								}, 1000);
+							}
+						};
+						
+						function appendMessageAndConditionallyScroll(chatMessageContent) {
+							const chatMessagesContainer = $("#chat-messages-container");
+							const chatMessages = $("#chat-messages");
+							
+							$(chatMessages).append('<div class="chat-message pb-2"><div class="flex-shrink-1 bg-light rounded"><b>Anonymous</b>: ' + chatMessageContent + '</div></div>');
+							
+							const isNearBottom = $(chatMessagesContainer)[0].scrollHeight - $(chatMessagesContainer).scrollTop() - $(chatMessagesContainer).outerHeight() < 100;
+							
+							if (isNearBottom) {
+								$(chatMessagesContainer).scrollTop($(chatMessagesContainer)[0].scrollHeight);
+							}
+						}
+					}
+					catch(error) {
+					
+					}
+				};
+				
+				connectWebsocketClient();
+			}
 			
 			function getNodeInformation() {
 				$.ajax({type: 'GET', url: '/api/information'})
@@ -1231,6 +1358,10 @@
 				const viewsFormatted = getViewsFormatted(views);
 				const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
 				
+				if(isLive && isStreaming) {
+					connectWebsocket();
+				}
+				
 				document.title = title + ' - MoarTube';
 				
 				$('#node-name').text(nodeName);
@@ -1239,8 +1370,31 @@
 				$('#video-dislike-count').text(dislikes);
 				
 				$('#video-title').text(title);
-				$('#video-information-views').text(viewsFormatted);
-				$('#video-information-date').text(creationTimestampFormatted);
+				
+				if(isLive) {
+					if(isStreaming) {
+						// websocket event 'stats' will update this
+					}
+					else {
+						$('#video-information-views').text(viewsFormatted);
+					}
+				}
+				else {
+					$('#video-information-views').text(viewsFormatted);
+				}
+				
+				if(isLive) {
+					if(isStreaming) {
+						$('#video-information-date').text('Started streaming ' + creationTimestampFormatted);
+					}
+					else {
+						$('#video-information-date').text('Streamed live ' + creationTimestampFormatted);
+					}
+				}
+				else {
+					$('#video-information-date').text(creationTimestampFormatted);
+				}
+				
 				$('#video-information-description').text(description);
 				
 				$('#comment-section-counter').text(comments);
