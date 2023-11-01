@@ -15,7 +15,7 @@ const crypto = require('crypto');
 const sanitizeHtml = require('sanitize-html');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
-const { v4: uuidv4 } = require('uuid');
+const { v1: uuidv1, v4: uuidv4 } = require('uuid');
 const httpTerminator = require('http-terminator');
 const cluster = require('cluster');
 const { Mutex } = require('async-mutex');
@@ -109,7 +109,7 @@ if(cluster.isMaster) {
 					
 					const query = msg.query;
 					const parameters = msg.parameters;
-					const timestamp = msg.timestamp;
+					const databaseWriteJobId = msg.databaseWriteJobId;
 					
 					const databaseWriteJob = {
 						query: query,
@@ -119,12 +119,12 @@ if(cluster.isMaster) {
 					try {
 						await performDatabaseWriteJob(databaseWriteJob);
 						
-						worker.send({ cmd: 'database_write_job_result', timestamp: timestamp, isError: false });
+						worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, isError: false });
 					}
 					catch(error) {
 						logDebugMessageToConsole('', new Error(error).stack, true);
 						
-						worker.send({ cmd: 'database_write_job_result', timestamp: timestamp, isError: true });
+						worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, isError: true });
 					}
 					finally {
 						release();
@@ -533,16 +533,18 @@ else {
 				JWT_SECRET = msg.jwtSecret;
 			}
 			else if (msg.cmd === 'database_write_job_result') {
-				const timestamp = msg.timestamp;
+				const databaseWriteJobId = msg.databaseWriteJobId;
 				const isError = msg.isError;
 				
-				const pendingDatabaseWriteJob = PENDING_DATABASE_WRITE_JOBS[timestamp];
-				
-				const callback = pendingDatabaseWriteJob.callback;
-				
-				delete PENDING_DATABASE_WRITE_JOBS[timestamp];
-				
-				callback(isError);
+				if(PENDING_DATABASE_WRITE_JOBS.hasOwnProperty(databaseWriteJobId)) {
+					const pendingDatabaseWriteJob = PENDING_DATABASE_WRITE_JOBS[databaseWriteJobId];
+					
+					const callback = pendingDatabaseWriteJob.callback;
+					
+					delete PENDING_DATABASE_WRITE_JOBS[databaseWriteJobId];
+					
+					callback(isError);
+				}
 			}
 			else if (msg.cmd === 'live_stream_worker_stats_request') {
 				if(httpServerWrapper != null) {
@@ -817,6 +819,8 @@ else {
 											if(isVideoIdValid(videoId)) {
 												ws.videoId = videoId;
 												
+												ws.colorCode = ('000000' + Math.floor(Math.random()*16777215).toString(16)).slice(-6);
+												
 												ws.rateLimiter = {
 													timestamps: [],
 													rateLimitTimestamp: 0,
@@ -883,9 +887,11 @@ else {
 													}
 												}
 												
+												const colorCode = ws.colorCode;
+												
 												ws.rateLimiter = rateLimiter;
 												
-												websocketChatBroadcast({eventName: 'message', videoId: videoId, chatMessageContent: chatMessageContent});
+												websocketChatBroadcast({eventName: 'message', videoId: videoId, chatMessageContent: chatMessageContent, colorCode: colorCode});
 											}
 										}
 									}
@@ -1906,6 +1912,9 @@ else {
 		});
 
 		// Serve a video manifest file
+
+		var manifestBandwidthCounter = 0;
+		var manifestBandwidthIncrementTimer;
 		app.get('/:videoId/adaptive/:format/manifests/:manifestName', (req, res) => {
 			const videoId = req.params.videoId;
 			const format = req.params.format;
@@ -1919,14 +1928,24 @@ else {
 						if (error) {
 							logDebugMessageToConsole('', new Error(error).stack, true);
 						} else {
-							submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [stats.size, videoId], function(isError) {
-								if(isError) {
-									// do nothing
-								}
-								else {
-									// do nothing
-								}
-							});
+							manifestBandwidthCounter += stats.size;
+				
+							clearTimeout(manifestBandwidthIncrementTimer);
+
+							manifestBandwidthIncrementTimer = setTimeout(function() {
+								const manifestBandwidthCounterTemp = manifestBandwidthCounter;
+								
+								manifestBandwidthCounter = 0;
+								
+								submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [manifestBandwidthCounterTemp, videoId], function(isError) {
+									if(isError) {
+										// do nothing
+									}
+									else {
+										// do nothing
+									}
+								});
+							}, 100);
 						}
 					});
 					
@@ -1946,6 +1965,9 @@ else {
 		});
 		
 		// Serve the video segments corresponding to the videoId
+
+		var segmentBandwidthCounter = 0;
+		var segmentBandwidthIncrementTimer;
 		app.get('/:videoId/adaptive/:format/:resolution/segments/:segmentName', (req, res) => {
 			const videoId = req.params.videoId;
 			const format = req.params.format;
@@ -1960,14 +1982,24 @@ else {
 						if (error) {
 							logDebugMessageToConsole('', new Error(error).stack, true);
 						} else {
-							submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [stats.size, videoId], function(isError) {
-								if(isError) {
-									// do nothing
-								}
-								else {
-									// do nothing
-								}
-							});
+							segmentBandwidthCounter += stats.size;
+				
+							clearTimeout(segmentBandwidthIncrementTimer);
+
+							segmentBandwidthIncrementTimer = setTimeout(function() {
+								const segmentBandwidthCounterTemp = segmentBandwidthCounter;
+								
+								segmentBandwidthCounter = 0;
+
+								submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [segmentBandwidthCounterTemp, videoId], function(isError) {
+									if(isError) {
+										// do nothing
+									}
+									else {
+										// do nothing
+									}
+								});
+							}, 100);
 						}
 					});
 					
@@ -1995,24 +2027,22 @@ else {
 					const resolution = req.params.resolution;
 					
 					if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isResolutionValid(resolution)) {
-						var nextExpectedSegmentIndex = 0;
+						var nextExpectedSegmentIndex = -1;
 						
 						const segmentsDirectoryPath = path.join(__dirname, 'public/media/videos/' + videoId + '/adaptive/' + format + '/' + resolution);
 						
 						if (fs.existsSync(segmentsDirectoryPath) && fs.statSync(segmentsDirectoryPath).isDirectory()) {
-							var latestBirthTime = 0;
 							fs.readdirSync(segmentsDirectoryPath).forEach(segmentFileName => {
-								const segmentFilePath = path.join(segmentsDirectoryPath, segmentFileName);
-								const stat = fs.statSync(segmentFilePath);
-								if (!stat.isDirectory() && stat.birthtimeMs > latestBirthTime) {
-									const segmentFileNameArray = segmentFileName.split('-');
-									nextExpectedSegmentIndex = Number(segmentFileNameArray[2].split('.')[0]);
-									latestBirthTime = stat.birthtimeMs;
-									
-									nextExpectedSegmentIndex++;
+								const segmentFileNameArray = segmentFileName.split('-');
+								const nextExpectedSegmentIndexTemp = Number(segmentFileNameArray[2].split('.')[0]);
+
+								if(nextExpectedSegmentIndexTemp > nextExpectedSegmentIndex) {
+									nextExpectedSegmentIndex = nextExpectedSegmentIndexTemp;
 								}
 							});
 						}
+						
+						nextExpectedSegmentIndex++;
 						
 						res.send({isError: false, nextExpectedSegmentIndex: nextExpectedSegmentIndex});
 					}
@@ -2066,6 +2096,8 @@ else {
 			});
 		});
 		
+		var progressiveBandwidthCounter = 0;
+		var progressiveBandwidthIncrementTimer;
 		app.get('/:videoId/progressive/:format/:resolution', (req, res) => {
 			const videoId = req.params.videoId;
 			const format = req.params.format;
@@ -2087,14 +2119,24 @@ else {
 						const chunkSize = (end - start) + 1;
 						const file = fs.createReadStream(filePath, { start, end });
 						
-						submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [chunkSize, videoId], function(isError) {
-							if(isError) {
-								// do nothing
-							}
-							else {
-								// do nothing
-							}
-						});
+						progressiveBandwidthCounter += chunkSize;
+				
+						clearTimeout(progressiveBandwidthIncrementTimer);
+
+						progressiveBandwidthIncrementTimer = setTimeout(function() {
+							const progressiveBandwidthCounterTemp = progressiveBandwidthCounter;
+								
+							progressiveBandwidthCounter = 0;
+
+							submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [progressiveBandwidthCounterTemp, videoId], function(isError) {
+								if(isError) {
+									// do nothing
+								}
+								else {
+									// do nothing
+								}
+							});
+						}, 100);
 						
 						res.writeHead(206, {
 							'Content-Range': `bytes ${start}-${end}/${fileSize}`,
@@ -5556,7 +5598,7 @@ else {
 		
 		
 		
-		app.get('/embed/videos/:videoId', async (req, res) => {
+		app.get('/embed/video/:videoId', async (req, res) => {
 			const videoId = req.params.videoId;
 			
 			if(isVideoIdValid(videoId)) {
@@ -5569,7 +5611,24 @@ else {
 				fileStream.pipe(res);
 			}
 			else {
-				res.status(404).send('embed not found');
+				res.status(404).send('embed video not found');
+			}
+		});
+		
+		app.get('/embed/chat/:videoId', async (req, res) => {
+			const videoId = req.params.videoId;
+			
+			if(isVideoIdValid(videoId)) {
+				const pagePath = path.join(path.join(__dirname, '/public/pages'), 'embed-chat.html');
+				
+				const fileStream = fs.createReadStream(pagePath);
+				
+				res.setHeader('Content-Type', 'text/html');
+				
+				fileStream.pipe(res);
+			}
+			else {
+				res.status(404).send('embed chat not found');
 			}
 		});
 		
@@ -5587,15 +5646,14 @@ else {
 		
 		
 		
-		
 		function submitDatabaseWriteJob(query, parameters, callback) {
-			const timestamp = Date.now();
+			const databaseWriteJobId = uuidv1() + '-' + uuidv4();
 			
-			PENDING_DATABASE_WRITE_JOBS[timestamp] = {
+			PENDING_DATABASE_WRITE_JOBS[databaseWriteJobId] = {
 				callback: callback
 			};
 			
-			process.send({ cmd: 'database_write_job', query: query, parameters: parameters, timestamp: timestamp });
+			process.send({ cmd: 'database_write_job', query: query, parameters: parameters, databaseWriteJobId: databaseWriteJobId });
 		}
 		
 		function isVideoIdValid(videoId) {
