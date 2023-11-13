@@ -1,2 +1,2 @@
 # MoarTube-Node
-A repository containing the node software for the MoarTube platform.
+A repository containing the node software for the [MoarTube platform](http://www.moartube.com).
