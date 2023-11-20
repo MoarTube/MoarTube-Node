@@ -1459,7 +1459,8 @@
 					
 					const ui = new shaka.ui.Overlay(new shaka.Player(adaptiveVideoPlayer), document.getElementById("video-player-container"), adaptiveVideoPlayer);
 					
-					shaka.ui.Controls.registerElement("theater", new TheaterButton.Factory());
+					const theaterButton = new TheaterButton.Factory();
+					shaka.ui.Controls.registerElement("theater", theaterButton);
 					
 					const config = {
 						seekBarColors: {
@@ -1507,6 +1508,8 @@
 					window.ui = ui;
 					
 					$('.shaka-fullscreen-button').click(function(event) {
+						theaterButton.exitTheaterMode();
+						
 						if($(adaptiveVideoPlayer).hasClass('shaka-fullscreen')) {
 							$(adaptiveVideoPlayer).removeClass('shaka-fullscreen');
 							$(this).parent().find('.shaka-theater-button').removeClass('hidden-elem');

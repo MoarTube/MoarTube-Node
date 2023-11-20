@@ -611,18 +611,28 @@
 			const params = new URL(window.location.href).searchParams;
 			
 			const showChatInput = params.get('sci') === 'true';
-			IS_DARK_MODE = params.get('dm') === 'true';
+			let backgroundColor = params.get('bgc');
+			let chatTextColor = params.get('ctc');
 			
 			if(!showChatInput) {
 				document.write('<style>#chat-input-container {display: none;}</style>');
 			}
 			
-			if(IS_DARK_MODE) {
-				document.write('<style>#live-stream-chat-container {background-color: black;color: white;}</style>');
+			if(chatTextColor) {
+				chatTextColor = '#' + chatTextColor;
 			}
 			else {
-				document.write('<style>#live-stream-chat-container {background-color: #f9f9f9;color: black;}</style>');
+				chatTextColor = '#CB0C9F';
 			}
+			
+			if(backgroundColor) {
+				backgroundColor = '#' + backgroundColor;
+			}
+			else {
+				backgroundColor = '#000000';
+			}
+			
+			document.write('<style>#live-stream-chat-container {background-color: ' + backgroundColor + ';color: ' + chatTextColor + ';}</style>');
 		</script>
 	</head>
 	<body>
@@ -756,15 +766,9 @@
 							const chatMessagesContainer = $("#chat-messages-container");
 							const chatMessages = $("#chat-messages");
 							
-							var backgroundColor;
-							
 							$(chatMessages).append('<div class="chat-message pb-2"><div class="flex-shrink-1 rounded px-2" style=" font-family: sans-serif; font-weight: 600; font-size: 4vw; "><b style="color:#' + colorCode + ';">Anonymous</b>: <span>' + chatMessageContent + '</span></div></div>');
 							
-							const isNearBottom = $(chatMessagesContainer)[0].scrollHeight - $(chatMessagesContainer).scrollTop() - $(chatMessagesContainer).outerHeight() < 100;
-							
-							if (isNearBottom) {
-								$(chatMessagesContainer).scrollTop($(chatMessagesContainer)[0].scrollHeight);
-							}
+							$(chatMessagesContainer).scrollTop($(chatMessagesContainer)[0].scrollHeight);
 						}
 					}
 					catch(error) {

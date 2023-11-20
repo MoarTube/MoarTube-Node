@@ -5602,7 +5602,7 @@ else {
 			const videoId = req.params.videoId;
 			
 			if(isVideoIdValid(videoId)) {
-				const pagePath = path.join(path.join(__dirname, '/public/pages'), 'embed.html');
+				const pagePath = path.join(path.join(__dirname, '/public/pages'), 'embed-video.html');
 				
 				const fileStream = fs.createReadStream(pagePath);
 				
