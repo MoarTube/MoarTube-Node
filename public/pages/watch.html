@@ -935,6 +935,26 @@
 									
 									ws.send(JSON.stringify({eventName: 'chat', type: 'message', videoId: VIDEO_ID, chatMessageContent: chatMessageContent}));
 								}
+								
+								$.ajax({type: 'GET', url: '/stream/' + VIDEO_ID + '/chat/history'})
+								.done(function (data) {
+									if(data.isError) {
+										console.log(data.message);
+									}
+									else {
+										const chatHistory = data.chatHistory;
+										
+										for(const chatMessage of chatHistory) {
+											const chatMessageContent = chatMessage.chat_message;
+											const colorCode = chatMessage.username_color_hex_code;
+											
+											appendMessageAndConditionallyScroll(chatMessageContent, colorCode);
+										}
+									}
+								})
+								.fail(function() {
+									console.log('unable to communicate with node');
+								});
 							}
 							else if(data.eventName === 'message') {
 								const chatMessageContent = data.chatMessageContent;
@@ -1024,7 +1044,7 @@
 				.done(function (data, textStatus, xhr)
 				{
 					if(data.isError) {
-						console.log(data.message);
+						$('#video-player-container').append(data.message);
 					}
 					else {
 						initialize(data.videoData);
@@ -1363,8 +1383,6 @@
 				
 				if(isLive && isStreaming) {
 					connectWebsocket();
-					
-					
 				}
 				
 				document.title = title + ' - MoarTube';

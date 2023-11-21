@@ -52,7 +52,9 @@ if(cluster.isMaster) {
 	logDebugMessageToConsole('starting node', '', true);
 
 	provisionSqliteDatabase(path.join(__dirname, '/public/db/node_db.sqlite'))
-	.then((database) => {
+	.then(async (database) => {
+		await performDatabaseMaintenance();
+		
 		const mutex = new Mutex();
 		
 		var liveStreamWorkerStats = {};
@@ -239,6 +241,19 @@ if(cluster.isMaster) {
 				worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWorkerStats: liveStreamWorkerStats });
 			});
 		}, 1000);
+		
+		function performDatabaseMaintenance() {
+			return new Promise(function(resolve, reject) {
+				database.run('DELETE FROM liveChatMessages', function(error) {
+					if(error) {
+						reject();
+					}
+					else {
+						resolve();
+					}
+				});
+			});
+		}
 	})
 	.catch(error => {
 		logDebugMessageToConsole('', new Error(error).stack, true);
@@ -330,36 +345,44 @@ if(cluster.isMaster) {
 																					
 																					reject();
 																				} else {
-																					database.run('UPDATE videos SET is_streamed = ? WHERE is_streaming = ?', [1, 1], function (error) {
+																					database.run('CREATE TABLE IF NOT EXISTS liveChatMessages(chat_message_id INTEGER PRIMARY KEY, video_id TEXT, username_color_hex_code TEXT, chat_message TEXT, timestamp INTEGER)', function (error) {
 																						if (error) {
 																							logDebugMessageToConsole('', new Error(error).stack, true);
 																							
 																							reject();
 																						} else {
-																							database.run('UPDATE videos SET is_importing = ?, is_publishing = ?, is_streaming = ?', [0, 0, 0], function (error) {
+																							database.run('UPDATE videos SET is_streamed = ? WHERE is_streaming = ?', [1, 1], function (error) {
 																								if (error) {
 																									logDebugMessageToConsole('', new Error(error).stack, true);
 																									
 																									reject();
 																								} else {
-																									maintainFilesystem(database)
-																									.then(function() {
-																										setInterval(function() {
+																									database.run('UPDATE videos SET is_importing = ?, is_publishing = ?, is_streaming = ?', [0, 0, 0], function (error) {
+																										if (error) {
+																											logDebugMessageToConsole('', new Error(error).stack, true);
+																											
+																											reject();
+																										} else {
 																											maintainFilesystem(database)
 																											.then(function() {
-																												// do nothing
+																												setInterval(function() {
+																													maintainFilesystem(database)
+																													.then(function() {
+																														// do nothing
+																													})
+																													.catch(function(error) {
+																														logDebugMessageToConsole('', new Error(error).stack, true);
+																													});
+																												}, 5000);
+																												
+																												resolve(database);
 																											})
 																											.catch(function(error) {
 																												logDebugMessageToConsole('', new Error(error).stack, true);
+																												
+																												reject();
 																											});
-																										}, 5000);
-																										
-																										resolve(database);
-																									})
-																									.catch(function(error) {
-																										logDebugMessageToConsole('', new Error(error).stack, true);
-																										
-																										reject();
+																										}
 																									});
 																								}
 																							});
@@ -679,8 +702,9 @@ else {
 				else {
 					httpServer = http.createServer(app);
 				}
-
+				
 				httpServer.requestTimeout = 0; // needed for long duration requests (streaming, large uploads)
+				httpServer.keepAliveTimeout = 10000;
 				
 				httpServer.listen(MOARTUBE_NODE_HTTP_PORT, function() {
 					logDebugMessageToConsole('MoarTube Node is listening on port ' + MOARTUBE_NODE_HTTP_PORT, '', true);
@@ -892,6 +916,43 @@ else {
 												ws.rateLimiter = rateLimiter;
 												
 												websocketChatBroadcast({eventName: 'message', videoId: videoId, chatMessageContent: chatMessageContent, colorCode: colorCode});
+												
+												database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, videoData) {
+													if(error) {
+														logDebugMessageToConsole('', new Error(error).stack, true);
+														
+														res.send({isError: true, message: 'error retrieving video data'});
+													}
+													else {
+														if(videoData != null) {
+															const meta = JSON.parse(videoData.meta);
+															
+															const isChatHistoryEnabled = meta.chatSettings.isChatHistoryEnabled;
+															
+															if(isChatHistoryEnabled) {
+																const chatHistoryLimit = meta.chatSettings.chatHistoryLimit;
+																
+																submitDatabaseWriteJob('INSERT INTO liveChatMessages(video_id, username_color_hex_code, chat_message, timestamp) VALUES (?, ?, ?, ?)', [videoId, colorCode, chatMessageContent, timestamp], function(isError) {
+																	if(isError) {
+																		
+																	}
+																	else {
+																		if(chatHistoryLimit !== 0) {
+																			submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM liveChatMessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
+																				if(isError) {
+																					
+																				}
+																				else {
+																					
+																				}
+																			});
+																		}
+																	}
+																});
+															}
+														}
+													}
+												});
 											}
 										}
 									}
@@ -1809,7 +1870,7 @@ else {
 						isRecordingStreamRemotely = isRecordingStreamRemotely ? 1 : 0;
 						isRecordingStreamLocally = isRecordingStreamLocally ? 1 : 0;
 						
-						const meta = JSON.stringify({rtmpPort: rtmpPort, uuid: uuid});
+						const meta = JSON.stringify({chatSettings: {isChatHistoryEnabled: true, chatHistoryLimit: 0}, rtmpPort: rtmpPort, uuid: uuid});
 						
 						const tagsSanitized = sanitizeTagsSpaces(tags);
 						
@@ -1889,6 +1950,15 @@ else {
 								const m3u8DirectoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/m3u8');
 								
 								deleteDirectoryRecursive(m3u8DirectoryPath);
+								
+								submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE video_id = ?', [videoId], function(isError) {
+									if(isError) {
+										
+									}
+									else {
+										
+									}
+								});
 								
 								res.send({isError: false});
 							}
@@ -5488,7 +5558,87 @@ else {
 			});
 		});
 		
+		app.post('/stream/:videoId/chat/settings', async (req, res) => {
+			const videoId = req.params.videoId;
+			const isChatHistoryEnabled = req.body.isChatHistoryEnabled;
+			const chatHistoryLimit = req.body.chatHistoryLimit;
+			
+			if(isVideoIdValid(videoId) && isBooleanValid(isChatHistoryEnabled) && isChatHistoryLimitValid(chatHistoryLimit)) {
+				database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, videoData) {
+					if(error) {
+						logDebugMessageToConsole('', new Error(error).stack, true);
+						
+						res.send({isError: true, message: 'error retrieving video data'});
+					}
+					else {
+						if(videoData != null) {
+							const meta = JSON.parse(videoData.meta);
+							
+							meta.chatSettings.isChatHistoryEnabled = isChatHistoryEnabled;
+							meta.chatSettings.chatHistoryLimit = chatHistoryLimit;
+							
+							submitDatabaseWriteJob('UPDATE videos SET meta = ? WHERE video_id = ?', [JSON.stringify(meta), videoId], function(isError) {
+								if(isError) {
+									res.send({isError: true, message: 'error communicating with the MoarTube node'});
+								}
+								else {
+									if(!isChatHistoryEnabled) {
+										submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE video_id = ?', [videoId], function(isError) {
+											if(isError) {
+												
+											}
+											else {
+												
+											}
+										});
+									}
+									else if(chatHistoryLimit !== 0) {
+										submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM liveChatMessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
+											if(isError) {
+												
+											}
+											else {
+												
+											}
+										});
+									}
+									
+									res.send({isError: false});
+								}
+							});
+						}
+						else {
+							res.send({isError: true, message: 'that video does not exist'});
+						}
+					}
+				});
+			}
+			else {
+				res.send({isError: true, message: 'invalid parameters'});
+			}
+		});
 		
+		app.get('/stream/:videoId/chat/history', async (req, res) => {
+			const videoId = req.params.videoId;
+			
+			if(isVideoIdValid(videoId)) {
+				database.all('SELECT * FROM liveChatMessages WHERE video_id = ?', videoId, function(error, chatHistory) {
+					if(error) {
+						logDebugMessageToConsole('', new Error(error).stack, true);
+						
+						res.send({isError: true, message: 'error retrieving chat history'});
+					}
+					else {
+						
+						
+						res.send({isError: false, chatHistory: chatHistory});
+					}
+				});
+			}
+			else {
+				res.send({isError: true, message: 'invalid parameters'});
+			}
+		});
 		
 		
 		
@@ -5974,6 +6124,9 @@ else {
 			return (chatMessageContent != null && chatMessageContent.length > 0 && chatMessageContent.length <= 500);
 		}
 		
+		function isChatHistoryLimitValid(chatHistoryLimit) {
+			return (chatHistoryLimit != null && chatHistoryLimit >= 0 && chatHistoryLimit <= 50);
+		}
 		
 		
 		
