@@ -186,7 +186,10 @@ if(cluster.isMaster) {
 								const isStreaming = (row.is_streaming === 1);
 								const lengthSeconds = row.length_seconds;
 								
-								indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds)
+								const nodeIconBase64 = fs.readFileSync(path.join(__dirname, 'public/images/icon.jpg')).toString('base64');
+								const videoPreviewImageBase64 = fs.readFileSync(path.join(__dirname, 'public/media/videos/' + videoId + '/images/preview.jpg')).toString('base64');
+								
+								indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
 								.then(async indexerResponseData => {
 									if(indexerResponseData.isError) {
 										logDebugMessageToConsole(indexerResponseData.message, new Error().stack, true);
@@ -2585,6 +2588,9 @@ else {
 													const lengthSeconds = video.length_seconds;
 													const creationTimestamp = video.creation_timestamp;
 													
+													const nodeIconBase64 = fs.readFileSync(path.join(__dirname, 'public/images/icon.jpg')).toString('base64');
+													const videoPreviewImageBase64 = fs.readFileSync(path.join(__dirname, 'public/media/videos/' + videoId + '/images/preview.jpg')).toString('base64');
+													
 													const data = {
 														videoId: videoId,
 														nodeId: nodeId,
@@ -2603,7 +2609,9 @@ else {
 														lengthSeconds: lengthSeconds,
 														creationTimestamp: creationTimestamp,
 														captchaResponse: captchaResponse,
-														containsAdultContent: containsAdultContent
+														containsAdultContent: containsAdultContent,
+														nodeIconBase64: nodeIconBase64,
+														videoPreviewImageBase64: videoPreviewImageBase64
 													};
 													
 													indexer_addVideoToIndex(data)
@@ -6573,7 +6581,7 @@ function indexer_doNodeIdentificationRefresh(nodeIdentifier, nodeIdentifierProof
 	});
 }
 
-function indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds) {
+function indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64) {
 	return new Promise(function(resolve, reject) {
 		axios.post(MOARTUBE_INDEXER_HTTP_PROTOCOL + '://' + MOARTUBE_INDEXER_IP + ':' + MOARTUBE_INDEXER_PORT + '/index/video/update', {
 			nodeIdentifier: nodeIdentifier,
@@ -6583,7 +6591,9 @@ function indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, tit
 			tags: tags,
 			views: views,
 			isStreaming: isStreaming,
-			lengthSeconds: lengthSeconds
+			lengthSeconds: lengthSeconds,
+			nodeIconBase64: nodeIconBase64,
+			videoPreviewImageBase64: videoPreviewImageBase64
 		})
 		.then(response => {
 			const data = response.data;
