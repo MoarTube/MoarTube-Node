@@ -537,8 +537,7 @@
 						});
 						
 						$('#big-play-button-poster-container').click(async function(event) {
-							$('#big-play-button-poster-container').remove();
-							$('#live-stream-indicator').remove();
+							$('#mtp-video-overlay').remove();
 							
 							$('#video-player-container').mouseenter(function() {
 								$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-out');
