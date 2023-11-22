@@ -5462,65 +5462,47 @@ else {
 					const publicNodeAddress = req.body.publicNodeAddress;
 					const publicNodePort = req.body.publicNodePort;
 					
-					if(isPublicNodeProtocolValid(publicNodeProtocol) && (isPublicNodeAddressValid(publicNodeAddress) || isDomainNameValid(publicNodeAddress)) && isPortValid(publicNodePort)) {
-						indexer_doNodeConfigurationValidation(publicNodeProtocol, publicNodeAddress, publicNodePort)
-						.then(indexerResponseData => {
-							if(indexerResponseData.isError) {
-								res.send({ isError: true, message: indexerResponseData.message });
-							}
-							else {
-								if(indexerResponseData.isNodeConfigurationValid) {
-									indexer_performNodeIdentification()
-									.then(() => {
-										const nodeIdentification = getNodeIdentification();
-										
-										const nodeIdentifier = nodeIdentification.nodeIdentifier;
-										const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
-										
-										indexer_doNodeExternalNetworkUpdate(nodeIdentifier, nodeIdentifierProof, publicNodeProtocol, publicNodeAddress, publicNodePort)
-										.then(indexerResponseData => {
-											if(indexerResponseData.isError) {
-												res.send({isError: true, message: indexerResponseData.message});
-											}
-											else {
-												const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
-												
-												nodeSettings.publicNodeProtocol = publicNodeProtocol;
-												nodeSettings.publicNodeAddress = publicNodeAddress;
-												nodeSettings.publicNodePort = publicNodePort;
-												
-												nodeSettings.isNodeConfigured = true;
-												
-												fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
-												
-												res.send({ isError: false });
-											}
-										})
-										.catch(error => {
-											console.log(error);
-											
-											logDebugMessageToConsole('', new Error(error).stack, true);
-											
-											res.send({isError: true, message: 'an unknown error occurred'});
-										});
-									})
-									.catch(error => {
-										console.log(error);
-										
-										logDebugMessageToConsole('', new Error(error).stack, true);
-										
-										res.send({isError: true, message: 'an unknown error occurred'});
-									});
+					if(isPublicNodeProtocolValid(publicNodeProtocol) && isPublicNodeAddressValid(publicNodeAddress) && isPortValid(publicNodePort)) {
+						indexer_performNodeIdentification()
+						.then(() => {
+							const nodeIdentification = getNodeIdentification();
+							
+							const nodeIdentifier = nodeIdentification.nodeIdentifier;
+							const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+							
+							indexer_doNodeExternalNetworkUpdate(nodeIdentifier, nodeIdentifierProof, publicNodeProtocol, publicNodeAddress, publicNodePort)
+							.then(indexerResponseData => {
+								if(indexerResponseData.isError) {
+									res.send({isError: true, message: indexerResponseData.message});
 								}
 								else {
-									res.send({isError: true, message: 'that external network configuration was not valid'});
+									const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+									
+									nodeSettings.publicNodeProtocol = publicNodeProtocol;
+									nodeSettings.publicNodeAddress = publicNodeAddress;
+									nodeSettings.publicNodePort = publicNodePort;
+									
+									nodeSettings.isNodeConfigured = true;
+									
+									fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
+									
+									res.send({ isError: false });
 								}
-							}
+							})
+							.catch(error => {
+								console.log(error);
+								
+								logDebugMessageToConsole('', new Error(error).stack, true);
+								
+								res.send({isError: true, message: 'an unknown error occurred'});
+							});
 						})
 						.catch(error => {
+							console.log(error);
+							
 							logDebugMessageToConsole('', new Error(error).stack, true);
 							
-							res.send({ isError: true, message: 'your node was unable to communicate with the MoarTube indexer' });
+							res.send({isError: true, message: 'an unknown error occurred'});
 						});
 					}
 					else {
@@ -5851,25 +5833,7 @@ else {
 		}
 		
 		function isPublicNodeAddressValid(publicNodeAddress) {
-			var result = false;
-			
-			if(publicNodeAddress === 'localhost' || publicNodeAddress === '127.0.0.1' || publicNodeAddress === '::1') {
-				result = true;
-			}
-			else {
-				const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
-				const ipv6Regex = /^(([0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}|([0-9A-Fa-f]{1,4}:){1,6}:|::([0-9A-Fa-f]{1,4}:){0,6})$/;
-				
-				result = (ipv4Regex.test(publicNodeAddress) || ipv6Regex.test(publicNodeAddress));
-			}
-			
-			return result;
-		}
-		
-		function isDomainNameValid(domainName) {
-			const regex = /^([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,6}$/;
-			
-			return domainName != null && regex.test(domainName);
+			return publicNodeAddress != null && publicNodeAddress.length > 0 && publicNodeAddress.length <= 100;
 		}
 		
 		function isPortValid(port) {
