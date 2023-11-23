@@ -946,9 +946,10 @@
 										
 										for(const chatMessage of chatHistory) {
 											const chatMessageContent = chatMessage.chat_message;
-											const colorCode = chatMessage.username_color_hex_code;
+											const username = chatMessage.username;
+											const usernameColorCode = chatMessage.username_color_hex_code;
 											
-											appendMessageAndConditionallyScroll(chatMessageContent, colorCode);
+											appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode);
 										}
 									}
 								})
@@ -958,9 +959,10 @@
 							}
 							else if(data.eventName === 'message') {
 								const chatMessageContent = data.chatMessageContent;
-								const colorCode = data.colorCode;
+								const username = data.username;
+								const usernameColorCode = data.usernameColorCode;
 								
-								appendMessageAndConditionallyScroll(chatMessageContent, colorCode);
+								appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode);
 							}
 							else if(data.eventName === 'stats') {
 								const watchingCount = data.watchingCount;
@@ -992,11 +994,11 @@
 							}
 						};
 						
-						function appendMessageAndConditionallyScroll(chatMessageContent, colorCode) {
+						function appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode) {
 							const chatMessagesContainer = $("#chat-messages-container");
 							const chatMessages = $("#chat-messages");
 							
-							$(chatMessages).append('<div class="chat-message pb-2"><div class="flex-shrink-1 rounded px-2"><b style="color:#' + colorCode + ';">Anonymous</b>: ' + chatMessageContent + '</div></div>');
+							$(chatMessages).append('<div class="chat-message pb-2"><div class="flex-shrink-1 rounded px-2"><b style="color:#' + usernameColorCode + ';">' + username + '</b>: ' + chatMessageContent + '</div></div>');
 							
 							const isNearBottom = $(chatMessagesContainer)[0].scrollHeight - $(chatMessagesContainer).scrollTop() - $(chatMessagesContainer).outerHeight() < 100;
 							
@@ -1103,6 +1105,7 @@
 							
 							$('#recommended-videos-list').empty();
 							
+							stopRecommendedVideosInterval();
 							startRecommendedVideosInterval();
 						});
 					}

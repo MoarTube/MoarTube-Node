@@ -348,7 +348,7 @@ if(cluster.isMaster) {
 																					
 																					reject();
 																				} else {
-																					database.run('CREATE TABLE IF NOT EXISTS liveChatMessages(chat_message_id INTEGER PRIMARY KEY, video_id TEXT, username_color_hex_code TEXT, chat_message TEXT, timestamp INTEGER)', function (error) {
+																					database.run('CREATE TABLE IF NOT EXISTS liveChatMessages(chat_message_id INTEGER PRIMARY KEY, video_id TEXT, username TEXT, username_color_hex_code TEXT, chat_message TEXT, timestamp INTEGER)', function (error) {
 																						if (error) {
 																							logDebugMessageToConsole('', new Error(error).stack, true);
 																							
@@ -846,7 +846,15 @@ else {
 											if(isVideoIdValid(videoId)) {
 												ws.videoId = videoId;
 												
-												ws.colorCode = ('000000' + Math.floor(Math.random()*16777215).toString(16)).slice(-6);
+												var username = '';
+												
+												const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+												for (var i = 0; i < 8; i++) {
+													username += chars[Math.floor(Math.random() * chars.length)];
+												}
+												
+												ws.username = username;
+												ws.usernameColorCode = ('000000' + Math.floor(Math.random()*16777215).toString(16)).slice(-6);
 												
 												ws.rateLimiter = {
 													timestamps: [],
@@ -914,11 +922,12 @@ else {
 													}
 												}
 												
-												const colorCode = ws.colorCode;
+												const username = ws.username;
+												const usernameColorCode = ws.usernameColorCode;
 												
 												ws.rateLimiter = rateLimiter;
 												
-												websocketChatBroadcast({eventName: 'message', videoId: videoId, chatMessageContent: chatMessageContent, colorCode: colorCode});
+												websocketChatBroadcast({eventName: 'message', videoId: videoId, chatMessageContent: chatMessageContent, username: username, usernameColorCode: usernameColorCode});
 												
 												database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, videoData) {
 													if(error) {
@@ -935,7 +944,7 @@ else {
 															if(isChatHistoryEnabled) {
 																const chatHistoryLimit = meta.chatSettings.chatHistoryLimit;
 																
-																submitDatabaseWriteJob('INSERT INTO liveChatMessages(video_id, username_color_hex_code, chat_message, timestamp) VALUES (?, ?, ?, ?)', [videoId, colorCode, chatMessageContent, timestamp], function(isError) {
+																submitDatabaseWriteJob('INSERT INTO liveChatMessages(video_id, username, username_color_hex_code, chat_message, timestamp) VALUES (?, ?, ?, ?, ?)', [videoId, username, usernameColorCode, chatMessageContent, timestamp], function(isError) {
 																	if(isError) {
 																		
 																	}
@@ -6155,15 +6164,6 @@ else {
 			
 			fs.writeFileSync(masterManifestFilePath, manifestFileString);
 		}
-		
-		function timestampToSeconds(timestamp) {
-		  const parts = timestamp.split(':');
-		  const hours = parseInt(parts[0]);
-		  const minutes = parseInt(parts[1]);
-		  const seconds = parseFloat(parts[2]);
-		  
-		  return (hours * 3600) + (minutes * 60) + seconds;
-		}
 
 		function deleteDirectoryRecursive(directoryPath) {
 			if(fs.existsSync(directoryPath)) {
@@ -6426,18 +6426,21 @@ function generateVideoId() {
 		
 		for (let i = 0; i < length; i++) {
 			const randomChar = characters.charAt(Math.floor(Math.random() * characters.length));
+			
 			if (randomChar === '-') {
 				hyphenCount++;
 				if (hyphenCount > 1) {
 					continue;
 				}
 			}
+			
 			if (randomChar === '_') {
 				underscoreCount++;
 				if (underscoreCount > 1) {
 					continue;
 				}
 			}
+			
 			result += randomChar;
 		}
 	} while (hyphenCount > 1 || underscoreCount > 1);
