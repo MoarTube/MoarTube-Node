@@ -6200,30 +6200,6 @@ else {
 			});
 		}
 		
-		
-		
-		
-		
-		
-		
-		function indexer_doNodeConfigurationValidation(publicNodeProtocol, publicNodeAddress, publicNodePort) {
-			return new Promise(function(resolve, reject) {
-				axios.post(MOARTUBE_INDEXER_HTTP_PROTOCOL + '://' + MOARTUBE_INDEXER_IP + ':' + MOARTUBE_INDEXER_PORT + '/node/configuration/validate', {
-					publicNodeProtocol: publicNodeProtocol,
-					publicNodeAddress: publicNodeAddress,
-					publicNodePort: publicNodePort
-				})
-				.then(response => {
-					const data = response.data;
-					
-					resolve(data);
-				})
-				.catch(error => {
-					resolve({isError: true, message: 'error'});
-				});
-			});
-		}
-		
 		function indexer_doNodeExternalNetworkUpdate(nodeIdentifier, nodeIdentifierProof, publicNodeProtocol, publicNodeAddress, publicNodePort) {
 			return new Promise(function(resolve, reject) {
 				axios.post(MOARTUBE_INDEXER_HTTP_PROTOCOL + '://' + MOARTUBE_INDEXER_IP + ':' + MOARTUBE_INDEXER_PORT + '/index/node/network/update', {
