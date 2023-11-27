@@ -4784,7 +4784,8 @@ else {
 								const format = adaptiveFormat.format;
 								const type = adaptiveFormat.type;
 								
-								const adaptiveVideoMasterManifestPath = path.join(adaptiveVideosDirectoryPath, format + '/manifest-master.' + format);
+								const adaptiveVideoFormatPath = path.join(adaptiveVideosDirectoryPath, format);
+								const adaptiveVideoMasterManifestPath = path.join(adaptiveVideoFormatPath, 'manifest-master.' + format);
 								
 								if(fs.existsSync(adaptiveVideoMasterManifestPath)) {
 									if(format === 'm3u8') {
