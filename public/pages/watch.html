@@ -1499,9 +1499,8 @@
 					const controls = ui.getControls();
 					const player = controls.getPlayer();
 					
-					player.configure({
+					const playerConfig = {
 						streaming: {
-							lowLatencyMode: (isLive && isStreaming) ? true : false,
 							bufferBehind: 6,
 							bufferingGoal: 12,
 							rebufferingGoal: 2,
@@ -1513,7 +1512,16 @@
 								fuzzFactor: 0.5
 							},
 						}
-					});
+					};
+					
+					if(isLive && isStreaming) {
+						playerConfig.streaming.lowLatencyMode = true;
+						playerConfig.streaming.inaccurateManifestTolerance = 0;
+						playerConfig.streaming.rebufferingGoal = 0.01;
+						playerConfig.streaming.segmentPrefetchLimit = 2;
+					}
+					
+					player.configure(playerConfig);
 					
 					window.player = player;
 					window.ui = ui;
