@@ -1440,7 +1440,7 @@
 						shaka.polyfill.installAll();
 						
 						if(shaka.Player.isBrowserSupported()) {
-							document.addEventListener("shaka-ui-loaded", initializeShakaPlayer(adaptiveSources));
+							document.addEventListener("shaka-ui-loaded", initializeShakaPlayer(adaptiveSources, isLive, isStreaming));
 						}
 						else if(isMp4Available || isWebmAvailable || isOgvAvailable) {
 							initializeVideoJsPlayer(PROGRESSIVE_SOURCES);
@@ -1472,7 +1472,7 @@
 					$('#video-player-container').append(message);
 				}
 				
-				async function initializeShakaPlayer(adaptiveSources) {
+				async function initializeShakaPlayer(adaptiveSources, isLive, isStreaming) {
 					const masterManifestUrl = adaptiveSources[0].src;
 					
 					const adaptiveVideoPlayer = document.getElementById("adaptive-video-player");
@@ -1501,21 +1501,11 @@
 					
 					player.configure({
 						streaming: {
-							lowLatencyMode: true,
-							
-							// Given the 3-second segments, a reasonable buffer behind might be around 9 seconds.
-							bufferBehind: 9,
-
-							// With 3-second segments, a buffering goal of 9 seconds means the player will try to keep 2 segments buffered.
-							bufferingGoal: 6, 
-
-							// Start closer to the live edge but provide a little room for network hiccups.
-							rebufferingGoal: 6,
-
-							// Ensure this is set to 'true' for live streaming. This makes the player periodically refresh the manifest.
+							lowLatencyMode: (isLive && isStreaming) ? true : false,
+							bufferBehind: 6,
+							bufferingGoal: 12,
+							rebufferingGoal: 2,
 							ignoreTextStreamFailures: true,
-
-							// Retry settings to recover from temporary failures.
 							retryParameters: {
 								maxAttempts: 2,
 								baseDelay: 1000, // 1 second
