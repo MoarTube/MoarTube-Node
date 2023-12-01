@@ -17,6 +17,8 @@ Run the command **node node.js**
 
 Open a terminal within the MoarTube-Node directory
 
+Stop the Moartube Node software if it is running
+
 Run the command **npm install pm2 -g**
 
 Run the command **pm2 start node.js**
@@ -32,10 +34,14 @@ pm2 restart node
 pm2 delete node
 
 ## Ubuntu Autostart Guide (advanced)
+
+Stop the Moartube Node software if it is running
+
 Run the command **sudo nano /etc/systemd/system/moartube-node.service**
 
-Below is an example of a moartube-node daemon.
-Make any necessary changes and paste into the nano text editor.
+Below is an example of a moartube-node daemon
+
+Make any necessary changes and paste into the nano text editor
 
 ```
 [Unit]
@@ -45,7 +51,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/snap/bin/node /home/moartube/node.js
+ExecStart=/snap/bin/node /home/Moartube-Node/node.js
 Restart=on-failure
 
 [Install]
