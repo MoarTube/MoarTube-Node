@@ -165,72 +165,76 @@ if(cluster.isMaster) {
 		
 		// if any node data related to indexing is updated, then update the indexer with that data
 		setInterval(function() {
-			database.all('SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1', function(error, rows) {
-				if(error) {
-					logDebugMessageToConsole('', new Error(error).stack, true);
-				}
-				else {
-					if(rows.length > 0) {
-						indexer_performNodeIdentification()
-						.then(() => {
-							const nodeIdentification = getNodeIdentification();
-							
-							const nodeIdentifier = nodeIdentification.nodeIdentifier;
-							const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
-							
-							rows.forEach(function(row) {
-								const videoId = row.video_id;
-								const title = row.title;
-								const tags = row.tags;
-								const views = row.views;
-								const isStreaming = (row.is_streaming === 1);
-								const lengthSeconds = row.length_seconds;
-								
-								const nodeIconBase64 = fs.readFileSync(path.join(__dirname, 'public/images/icon.jpg')).toString('base64');
-								const videoPreviewImageBase64 = fs.readFileSync(path.join(__dirname, 'public/media/videos/' + videoId + '/images/preview.jpg')).toString('base64');
-								
-								indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
-								.then(async indexerResponseData => {
-									if(indexerResponseData.isError) {
-										logDebugMessageToConsole(indexerResponseData.message, new Error().stack, true);
-									}
-									else {
-										const release = await mutex.acquire();
-										
-										const type = 'update';
-										const query = 'UPDATE videos SET is_index_outdated = 0 WHERE video_id = ?';
-										const parameters = [videoId];
-										
-										const databaseWriteJob = {
-											type: type, // insert, update, delete
-											query: query, // sql query
-											parameters: parameters // sql query parameters (if insert or update, otherwise empty array)
-										};
-										
-										try {
-											await performDatabaseWriteJob(databaseWriteJob);
-											
-											logDebugMessageToConsole('updated video id with index successfully: ' + videoId, '', true);
-										}
-										catch(error) {
-											logDebugMessageToConsole('', new Error(error).stack, true);
-										}
-										finally {
-											release();
-										}
-									}
-								})
-								.catch(error => {
-									logDebugMessageToConsole('', new Error(error).stack, true);
-								});
-							});
-						})
-						.catch(error => {
-							logDebugMessageToConsole('', new Error(error).stack, true);
-						});
+			const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+			
+			if(nodeSettings.isNodeConfigured) {
+				database.all('SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1', function(error, rows) {
+					if(error) {
+						logDebugMessageToConsole('', new Error(error).stack, true);
 					}
-				}
-			});
+					else {
+						if(rows.length > 0) {
+							indexer_performNodeIdentification()
+							.then(() => {
+								const nodeIdentification = getNodeIdentification();
+								
+								const nodeIdentifier = nodeIdentification.nodeIdentifier;
+								const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+								
+								rows.forEach(function(row) {
+									const videoId = row.video_id;
+									const title = row.title;
+									const tags = row.tags;
+									const views = row.views;
+									const isStreaming = (row.is_streaming === 1);
+									const lengthSeconds = row.length_seconds;
+									
+									const nodeIconBase64 = fs.readFileSync(path.join(__dirname, 'public/images/icon.jpg')).toString('base64');
+									const videoPreviewImageBase64 = fs.readFileSync(path.join(__dirname, 'public/media/videos/' + videoId + '/images/preview.jpg')).toString('base64');
+									
+									indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
+									.then(async indexerResponseData => {
+										if(indexerResponseData.isError) {
+											logDebugMessageToConsole(indexerResponseData.message, new Error().stack, true);
+										}
+										else {
+											const release = await mutex.acquire();
+											
+											const type = 'update';
+											const query = 'UPDATE videos SET is_index_outdated = 0 WHERE video_id = ?';
+											const parameters = [videoId];
+											
+											const databaseWriteJob = {
+												type: type, // insert, update, delete
+												query: query, // sql query
+												parameters: parameters // sql query parameters (if insert or update, otherwise empty array)
+											};
+											
+											try {
+												await performDatabaseWriteJob(databaseWriteJob);
+												
+												logDebugMessageToConsole('updated video id with index successfully: ' + videoId, '', true);
+											}
+											catch(error) {
+												logDebugMessageToConsole('', new Error(error).stack, true);
+											}
+											finally {
+												release();
+											}
+										}
+									})
+									.catch(error => {
+										logDebugMessageToConsole('', new Error(error).stack, true);
+									});
+								});
+							})
+							.catch(error => {
+								logDebugMessageToConsole('', new Error(error).stack, true);
+							});
+						}
+					}
+				});
+			}
 		}, 3000);
 		
 		setInterval(function() {
