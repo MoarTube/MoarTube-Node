@@ -5,7 +5,7 @@ A repository containing the node software for the [MoarTube platform](http://www
 <br/>
 ## Setup Guide (Ubuntu Linux) (automated)
 
-Run the command **bash <(wget -O - https://www.moartube.com/bash/install/node)**
+Run the command ***bash <(wget -O - https://www.moartube.com/bash/install/node)***
 
 Your MoarTube node is now ready! :tada:
 <br/>
