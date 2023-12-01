@@ -41,7 +41,7 @@ Run the command **sudo nano /etc/systemd/system/moartube-node.service**
 
 Below is an example of a moartube-node systemd service unit file
 
-Make any necessary changes and paste into the nano text editor
+Make any necessary changes and paste it into the nano text editor
 
 ```
 [Unit]
