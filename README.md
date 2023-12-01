@@ -39,7 +39,7 @@ Stop the Moartube Node software if it is running
 
 Run the command **sudo nano /etc/systemd/system/moartube-node.service**
 
-Below is an example of a moartube-node daemon
+Below is an example of a moartube-node systemd service unit file
 
 Make any necessary changes and paste into the nano text editor
 
