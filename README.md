@@ -5,7 +5,7 @@ A repository containing the node software for the [MoarTube platform](http://www
 
 Run the command **sudo snap install node --classic --channel=20**
 
-Git Clone the MoarTube-Node repository
+**git clone** the MoarTube-Node repository
 
 Open a terminal within the MoarTube-Node directory
 
