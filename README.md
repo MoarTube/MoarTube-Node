@@ -13,7 +13,25 @@ Run the command **npm install**
 
 Run the command **node node.js**
 
-## Ubuntu Autostart Guide
+## Ubuntu Autostart Guide (easy)
+
+Open a terminal within the MoarTube-Node directory
+
+Run the command **npm install pm2 -g**
+
+Run the command **pm2 start node.js**
+
+### pm2 Commands That You Might Need
+
+pm2 list
+
+pm2 stop node
+
+pm2 restart node
+
+pm2 delete node
+
+## Ubuntu Autostart Guide (advanced)
 Run the command **sudo nano /etc/systemd/system/moartube-node.service**
 
 Below is an example of a moartube-node daemon.
