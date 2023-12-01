@@ -1,12 +1,16 @@
 # MoarTube-Node
 A repository containing the node software for the [MoarTube platform](http://www.moartube.com).
-
+<br/>
+<br/>
+<br/>
 ## Setup Guide (Ubuntu Linux) (automated)
 
 Run the command **bash <(wget -O - https://www.moartube.com/bash/install/node)**
 
 Your MoarTube node is now ready! :tada:
-
+<br/>
+<br/>
+<br/>
 ## Setup Guide (Ubuntu Linux) (manual)
 
 Run the command **sudo snap install node --classic --channel=20**
