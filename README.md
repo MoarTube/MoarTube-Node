@@ -5,7 +5,7 @@ A repository containing the node software for the [MoarTube platform](http://www
 
 Run the command **bash <(wget -O - https://www.moartube.com/bash/install/node)**
 
-Run the command **sudo systemctl status moartube-node** to view the status of the moartube-node service
+Your MoarTube node is now ready! :tada:
 
 ## Setup Guide (Ubuntu Linux) (manual)
 
