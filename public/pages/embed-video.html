@@ -2,15 +2,10 @@
 	<head>
 		<title>MoarTube</title>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
-		<link href="/css/fonts.google-family.material.icons.sharp.css" rel="stylesheet" type="text/css"/> <!--shaka youtube theme dependency-->
-		<link href="/css/shaka-player-controls-4.5.0.css" rel="stylesheet" type="text/css"/>
-		<link href="/css/youtube-shaka-theme.css" rel="stylesheet" type="text/css"/>
 		<link href="/css/videojs-8.3.0.css" rel="stylesheet" type="text/css"/>
 		<link href="/css/youtube-videojs-theme.css" rel="stylesheet" type="text/css"/>
 		<link href="/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
 		<script src="/javascript/jquery-3.6.4.min.js"></script>
-		<script src="/javascript/shaka-player.ui-4.5.0.js"></script>
-		<script src="/javascript/mux-6.3.0.min.js"></script>
 		<script src="/javascript/videojs-8.3.0.min.js"></script>
 		<script src="/javascript/bootstrap-5.3.0.min.js"></script>
 		<style>
@@ -18,10 +13,6 @@
 				font-family: Arial, sans-serif;
 				margin: 0;
 				padding: 0;
-			}
-
-			#video-player {
-				width: 100%;
 			}
 
 			#recommended-videos {
@@ -320,18 +311,13 @@
 				width: auto;
 			}
 
-			.adaptive-video-player-theater-mode {
-				width: 100%;
-				max-height: calc(100vh - 10vh) !important;
-			}
-
-			.progressive-video-player-theater-mode {
+			.video-player-theater-mode {
 				width: 100%;
 				max-height: calc(100vh - 10vh) !important;
 				position: unset;
 			}
 
-			.progressive-video-player-dimensions.vjs-fluid:not(.vjs-audio-only-mode) {
+			.video-player-dimensions.vjs-fluid:not(.vjs-audio-only-mode) {
 				padding-top: calc(100vh - 10vh) !important
 			}
 
@@ -510,73 +496,26 @@
 						<img id="video-poster" />
 					</div>
 				</div>
-				<video id="adaptive-video-player" class="video-player hidden-elem" preload="auto" autoplay></video>
-				<video id="progressive-video-player" class="video-js video-player hidden-elem" preload="auto" autoplay></video>
+				<video id="video-player" class="video-js video-player" preload="auto" autoplay></video>
 			</div>
 		</div>
 		<script>
-			var SHAKA_PLAYER_WRAPPER;
-			var VIDEO_JS_PLAYER_WRAPPER;
-			
+			var VIDEO_ID;
+
 			$(document).ready(function() {
 				const embeddedValue = window.location.pathname.split('/');
 				
 				if(embeddedValue.length === 4) {
-					const videoId = embeddedValue[3];
+					VIDEO_ID = embeddedValue[3];
 					
-					if(videoId != null) {
-						$('#mtp-video-link').attr('href', '/watch?v=' + videoId);
-						$('#video-poster').attr('src', '/videos/' + videoId + '/poster');
-						
-						$('#mtp-channel-link').click(async function(event) {
-							event.stopPropagation();
-						});
-						
-						$('#mtp-video-link').click(async function(event) {
-							event.stopPropagation();
-						});
-						
-						$('#big-play-button-poster-container').click(async function(event) {
-							$('#mtp-video-overlay').remove();
-							
-							$('#video-player-container').mouseenter(function() {
-								$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-out');
-								$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-in');
-							});
-							
-							$('#video-player-container').mouseleave(function() {
-								$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-in');
-								$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-out');
-							});
-							
-							if(SHAKA_PLAYER_WRAPPER != null) {
-								try {
-									const player = SHAKA_PLAYER_WRAPPER.player;
-									const sources = SHAKA_PLAYER_WRAPPER.sources;
-									
-									await player.load(sources);
-									
-									$('.shaka-controls-container').get(0).style.setProperty('display', 'flex', 'important');
-								} catch (error) {
-									console.log(error);
-								}
-							}
-							else if(VIDEO_JS_PLAYER_WRAPPER != null) {
-								const player = VIDEO_JS_PLAYER_WRAPPER.player;
-								const sources = VIDEO_JS_PLAYER_WRAPPER.sources;
-								
-								player.src(sources);
-								player.play();
-							}
-						});
-						
-						getVideo(videoId);
+					if(VIDEO_ID != null) {
+						getVideo();
 					}
 				}
 			});
 			
-			function getVideo(videoId) {
-				$.ajax({type: 'GET', url: '/videos/' + videoId + '/watch'})
+			function getVideo() {
+				$.ajax({type: 'GET', url: '/videos/' + VIDEO_ID + '/watch'})
 				.done(function (data, textStatus, xhr)
 				{
 					if(data.isError) {
@@ -622,118 +561,79 @@
 				}
 				
 				$('#mtp-video-title').html(title);
-				
-				if(isHlsAvailable) {
-					shaka.polyfill.installAll();
-					if(shaka.Player.isBrowserSupported()) {
-						document.addEventListener("shaka-ui-loaded", initializeShakaPlayer(adaptiveSources));
-					}
-					else if(isMp4Available || isWebmAvailable || isOggAvailable) {
-						initializeVideoJsPlayer(progressiveSources);
-					}
-					else {
-						$('#video-player-container').css('background', 'black').css('color', 'white').text("this video hasn't been published yet");
-					}
-				}
-				else if(isMp4Available || isWebmAvailable || isOggAvailable) {
-					initializeVideoJsPlayer(progressiveSources);
+
+				if(adaptiveSources.length > 0 || progressiveSources.length > 0) {
+					initializeVideoJsPlayer(adaptiveSources, progressiveSources);
 				}
 				else {
-					$('#video-player-container').css('background', 'black').css('color', 'white').text("this video hasn't been published yet");
-				}
-				
-				async function initializeShakaPlayer(adaptiveSources) {
-					const adaptiveVideoPlayer = document.getElementById("adaptive-video-player");
+					var message = '';
 					
-					$(adaptiveVideoPlayer).removeClass("hidden-elem");
-
-					const player = new shaka.Player();
-  					await player.attach(adaptiveVideoPlayer);
-					
-					const ui = new shaka.ui.Overlay(player, document.getElementById("video-player-container"), adaptiveVideoPlayer);
-					
-					const config = {
-						seekBarColors: {
-							base: "rgba(255,255,255,.2)",
-							buffered: "rgba(255,255,255,.4)",
-							played: "rgb(203,12,159)",
-						},
-						controlPanelElements: ["play_pause","time_and_duration","spacer","mute","volume","fullscreen","overflow_menu"],
-						overflowMenuButtons : ["quality", "playback_rate"],
-						playbackRates: [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
-					};
-					
-					ui.configure(config);
-					
-					//const controls = ui.getControls();
-					//const player = controls.getPlayer();
-
-					const playerConfig = {
-						streaming: {
-							bufferBehind: 6,
-							bufferingGoal: 12,
-							rebufferingGoal: 2,
-							ignoreTextStreamFailures: true,
-							retryParameters: {
-								maxAttempts: 2,
-								baseDelay: 1000, // 1 second
-								backoffFactor: 2,
-								fuzzFactor: 0.5
-							},
-						}
-					};
-					
-					if(isLive && isStreaming) {
-						playerConfig.streaming.lowLatencyMode = true;
-						playerConfig.streaming.inaccurateManifestTolerance = 0;
-						playerConfig.streaming.rebufferingGoal = 0.01;
-						playerConfig.streaming.segmentPrefetchLimit = 2;
+					if(isPublishing) {
+						message = 'this video is currently publishing, please check back later';
+					}
+					else if(isStreamed) {
+						message = 'this live stream has ended and has not been published yet';
+					}
+					else {
+						message = 'this video is unavailable';
 					}
 					
-					player.configure(playerConfig);
-					
-					window.player = player;
-					window.ui = ui;
-					
-					const eventManager = new shaka.util.EventManager();
-					
-					eventManager.listen(player, 'buffering', (event) => {
-						console.log('buffering!');
-					});
-					
-					eventManager.listen(adaptiveVideoPlayer, 'play', () => {
-						console.log('play');
-					});
-					
-					eventManager.listen(adaptiveVideoPlayer, 'pause', () => {
-						console.log('pause');
-						
-						$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-out');
-						$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-in');
-					});
-					
-					eventManager.listen(adaptiveVideoPlayer, 'playing', () => {
-						console.log('playing');
-						
-						$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-in');
-						$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-out');
-					});
-					
-					SHAKA_PLAYER_WRAPPER = {
-						player: player,
-						sources: adaptiveSources[0].src
-					}
+					$('#video-player-container').append(message);
 				}
 				
-				function initializeVideoJsPlayer(progressiveSources) {
+				function initializeVideoJsPlayer(adaptiveSources, progressiveSources) {
 					window.videojs.log.level("off");
 					
-					$("#progressive-video-player").removeClass("hidden-elem");
-					$("#progressive-video-player").attr("controls", true);
+					$('#mtp-video-link').attr('href', '/watch?v=' + VIDEO_ID);
+					$('#video-poster').attr('src', '/videos/' + VIDEO_ID + '/poster');
+
+					$("#video-player").attr("controls", true);
+
+					const sources = adaptiveSources.concat(progressiveSources);
+
+					var player = videojs('video-player', {
+						html5: {
+							vhs: {
+								overrideNative: !videojs.browser.IS_SAFARI,
+								autoStartLoad: true,
+								maxBufferLength: 30,
+								maxMaxBufferLength: 60,
+								lowLatencyMode: true,
+								liveSyncDurationCount: 5,
+								levelLoadingMaxRetry: 4,
+								capLevelToPlayerSize: true
+							},
+							nativeAudioTracks: false,
+							nativeVideoTracks: false
+						},
+						liveui: true, 
+						errorDisplay: false, 
+						liveTracker: { 
+							trackingThreshold: 0 
+						}, 
+						preload: "auto", 
+						disablePictureInPicture: true, 
+						controlBar: { 
+							pictureInPictureToggle: false 
+						}
+					});
+
+					$('#mtp-channel-link').click(function(event) {
+						event.stopPropagation();
+					});
 					
-					var options = {liveui: true, errorDisplay: false, liveTracker: { trackingThreshold: 0 }, preload: "auto", disablePictureInPicture: true, controlBar: { pictureInPictureToggle: false }};
-					var player = videojs("progressive-video-player", options);
+					$('#mtp-video-link').click(function(event) {
+						event.stopPropagation();
+					});
 					
+					$('#big-play-button-poster-container').click(function(event) {
+						$('#mtp-video-overlay').remove();
+
+						player.src(sources);
+						player.play();
+					});
+					
+					/*
 					const handleTechClickDefaultFunction = player.player_.handleTechClick_;
 					
 					var overflowButton = player.controlBar.addChild("button", {}, 18);
@@ -747,7 +647,7 @@
 					overflowButtonDom.onclick = function (event) {
 						event.stopPropagation();
 						
-						if($('#progressive-video-player .vjs-control-bar .video-js-overflow-menu').length === 0) {
+						if($('#video-player .vjs-control-bar .video-js-overflow-menu').length === 0) {
 							
 							player.player_.handleTechClick_ = function(event) {}
 							
@@ -786,9 +686,9 @@
 								<button type="button" class="video-js-overflow-playback-speed-button"><label class="video-js-overflow-button-label"><span>Playback speed</span><span class="video-js-current-selection-span">' + currentPlaybackRate + 'x</span></label></button>\
 							</div>';
 							
-							$("#progressive-video-player .vjs-control-bar").append(html);
+							$("#video-player .vjs-control-bar").append(html);
 							
-							$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-button').click(function(event) {
+							$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-button').click(function(event) {
 								event.stopPropagation();
 								
 								if (formatIndex !== -1) {
@@ -819,15 +719,15 @@
 									
 									html += '</div>';
 									
-									$("#progressive-video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
+									$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
 									
-									$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click(function(event) {
+									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click(function(event) {
 										event.stopPropagation();
 										
 										const selectedResolution = $(this).data('resolution');
 										
-										$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
-										$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
+										$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
+										$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
 										
 										$(this).addClass('video-js-overflow-explicit-selected-button');
 										$(this).find('.video-js-chosen-item').removeClass('hidden-elem');
@@ -858,7 +758,7 @@
 								}
 							});
 							
-							$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-playback-speed-button').click(function(event) {
+							$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-playback-speed-button').click(function(event) {
 								event.stopPropagation();
 								
 								const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
@@ -877,15 +777,15 @@
 								
 								html += '</div>';
 								
-								$("#progressive-video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
+								$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
 								
-								$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click(function(event) {
+								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click(function(event) {
 									event.stopPropagation();
 									
 									const selectedPlaybackRate = $(this).data('playbackrate');
 									
-									$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
-									$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
+									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
+									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
 									
 									$(this).addClass('video-js-overflow-explicit-selected-button');
 									$(this).find('.video-js-chosen-item').removeClass('hidden-elem');
@@ -902,90 +802,38 @@
 						}
 						
 						function removeOverflowMenuHtml() {
-							$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu').remove();
+							$('#video-player .vjs-control-bar .video-js-overflow-menu').remove();
 						}
 					};
-					
-					var theaterModeButton = player.controlBar.addChild("button", {}, 18);
-					var theaterModeButtonDom = theaterModeButton.el();
-					theaterModeButtonDom.classList.add('video-js-theater-button');
-					theaterModeButtonDom.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-					theaterModeButtonDom.style.cursor = "pointer";
-					var isShowingTheaterMode = false;
-					theaterModeButtonDom.onclick = function () {
-						if(isShowingTheaterMode) {
-							isShowingTheaterMode = false;
-							
-							this.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-							
-							$('#video-player-container').addClass('ratio').removeClass('position-relative');
-							$('#progressive-video-player').removeClass('progressive-video-player-theater-mode').removeClass('vjs-fluid');
-							$("#video-player-container").prependTo("#video-comments-inner");
-						}
-						else {
-							isShowingTheaterMode = true;
-							
-							this.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 26,13 0,10 -16,0 0,-10 z m -14,2 12,0 0,6 -12,0 0,-6 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-							
-							$('#video-player-container').removeClass('ratio').addClass('position-relative');
-							$('#progressive-video-player').addClass('progressive-video-player-theater-mode').addClass('vjs-fluid');
-							$("#video-player-container").appendTo("#theater-container");
-						}
-					};
+					*/
 					
 					player.on(["loadstart", "firstplay", "pause", "ended", "adplay", "adplaying", "adfirstplay", "adpause", "adended", "contentplay", "contentplaying", "contentfirstplay", "contentpause", "contentended", "contentupdate"], function(e) {
 						//console.log(e);
 					});
 					
-					player.on(["fullscreenchange"], function(e) {
-						if(player.isFullscreen()) {
-							theaterModeButtonDom.classList.add('hidden-elem');
-						}
-						else {
-							theaterModeButtonDom.classList.remove('hidden-elem');
-						}
-					});
-					
 					player.on(["pause"], function(e) {
-						//console.log(e);
-						
-						$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-out');
-						$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-in');
+						//console.log(e);						
 					});
 					
 					player.on(["playing"], function(e) {
 						//console.log(e);
+
+						$('#video-player-container').mouseenter(function() {
+							$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-out');
+							$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-in');
+						});
 						
-						$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-in');
-						$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-out');
+						$('#video-player-container').mouseleave(function() {
+							$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-in');
+							$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-out');
+						});
 					});
 					
 					player.on("loadedmetadata", function() { 
 						//console.log("metadata loaded");
+
+						$('#mtp-video-overlay').remove();
 					});
-					
-					const preferredSources = [];
-					progressiveSources.forEach(function(progressiveSource) {
-						const segments = progressiveSource.src.split('/');
-						const resolution = segments[segments.length - 1];
-						
-						if(resolution !== '2160p' && resolution != '1080p') {
-							preferredSources.push(progressiveSource);
-						}
-					});
-					
-					var sources;
-					if(preferredSources.length === 0) {
-						sources = progressiveSources;
-					}
-					else {
-						sources = preferredSources;
-					}
-					
-					VIDEO_JS_PLAYER_WRAPPER = {
-						player: player,
-						sources: sources
-					}
 				}
 			}
 		</script>

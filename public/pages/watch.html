@@ -640,7 +640,7 @@
 									<img id="video-poster" />
 								</div>
 							</div>
-							<video id="video-player" class="video-js hidden-elem" preload="auto" autoplay></video>
+							<video id="video-player" class="video-js video-player" preload="auto" autoplay></video>
 						</div>
 						<div>
 							<div id="video-title-section" class="row gutters mt-2">
@@ -1440,7 +1440,6 @@
 				function initializeVideoJsPlayer(adaptiveSources, progressiveSources) {
 					window.videojs.log.level("off");
 					
-					$("#video-player").removeClass("hidden-elem");
 					$("#video-player").attr("controls", true);
 
 					const sources = adaptiveSources.concat(progressiveSources);
