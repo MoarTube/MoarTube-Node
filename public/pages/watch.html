@@ -37,10 +37,6 @@
 				background: #f9f9f9;
 			}
 
-			#video-player {
-				width: 100%;
-			}
-
 			#recommended-videos {
 				margin-left: 20px;
 			}
@@ -342,13 +338,13 @@
 				max-height: calc(100vh - 10vh) !important;
 			}
 
-			.progressive-video-player-theater-mode {
+			.video-player-theater-mode {
 				width: 100%;
 				max-height: calc(100vh - 10vh) !important;
 				position: unset;
 			}
 
-			.progressive-video-player-dimensions.vjs-fluid:not(.vjs-audio-only-mode) {
+			.video-player-dimensions.vjs-fluid:not(.vjs-audio-only-mode) {
 				padding-top: calc(100vh - 10vh) !important
 			}
 
@@ -644,7 +640,7 @@
 									<img id="video-poster" />
 								</div>
 							</div>
-							<video id="progressive-video-player" class="video-js video-player hidden-elem" preload="auto" autoplay></video>
+							<video id="video-player" class="video-js hidden-elem" preload="auto" autoplay></video>
 						</div>
 						<div>
 							<div id="video-title-section" class="row gutters mt-2">
@@ -1444,12 +1440,12 @@
 				function initializeVideoJsPlayer(adaptiveSources, progressiveSources) {
 					window.videojs.log.level("off");
 					
-					$("#progressive-video-player").removeClass("hidden-elem");
-					$("#progressive-video-player").attr("controls", true);
+					$("#video-player").removeClass("hidden-elem");
+					$("#video-player").attr("controls", true);
 
 					const sources = adaptiveSources.concat(progressiveSources);
 
-					var player = videojs('progressive-video-player', {
+					var player = videojs('video-player', {
 						sources: sources,
 						html5: {
 							vhs: {
@@ -1493,7 +1489,7 @@
 					overflowButtonDom.onclick = function (event) {
 						event.stopPropagation();
 						
-						if($('#progressive-video-player .vjs-control-bar .video-js-overflow-menu').length === 0) {
+						if($('#video-player .vjs-control-bar .video-js-overflow-menu').length === 0) {
 							
 							player.player_.handleTechClick_ = function(event) {}
 							
@@ -1532,9 +1528,9 @@
 								<button type="button" class="video-js-overflow-playback-speed-button"><label class="video-js-overflow-button-label"><span>Playback speed</span><span class="video-js-current-selection-span">' + currentPlaybackRate + 'x</span></label></button>\
 							</div>';
 							
-							$("#progressive-video-player .vjs-control-bar").append(html);
+							$("#video-player .vjs-control-bar").append(html);
 							
-							$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-button').click(function(event) {
+							$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-button').click(function(event) {
 								event.stopPropagation();
 								
 								if (formatIndex !== -1) {
@@ -1565,15 +1561,15 @@
 									
 									html += '</div>';
 									
-									$("#progressive-video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
+									$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
 									
-									$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click(function(event) {
+									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click(function(event) {
 										event.stopPropagation();
 										
 										const selectedResolution = $(this).data('resolution');
 										
-										$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
-										$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
+										$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
+										$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
 										
 										$(this).addClass('video-js-overflow-explicit-selected-button');
 										$(this).find('.video-js-chosen-item').removeClass('hidden-elem');
@@ -1610,7 +1606,7 @@
 								}
 							});
 							
-							$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-playback-speed-button').click(function(event) {
+							$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-playback-speed-button').click(function(event) {
 								event.stopPropagation();
 								
 								const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
@@ -1629,15 +1625,15 @@
 								
 								html += '</div>';
 								
-								$("#progressive-video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
+								$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
 								
-								$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click(function(event) {
+								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click(function(event) {
 									event.stopPropagation();
 									
 									const selectedPlaybackRate = $(this).data('playbackrate');
 									
-									$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
-									$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
+									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
+									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
 									
 									$(this).addClass('video-js-overflow-explicit-selected-button');
 									$(this).find('.video-js-chosen-item').removeClass('hidden-elem');
@@ -1654,7 +1650,7 @@
 						}
 						
 						function removeOverflowMenuHtml() {
-							$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu').remove();
+							$('#video-player .vjs-control-bar .video-js-overflow-menu').remove();
 						}
 					};
 					*/
@@ -1672,7 +1668,7 @@
 							this.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
 							
 							$('#video-player-container').addClass('ratio').removeClass('position-relative');
-							$('#progressive-video-player').removeClass('progressive-video-player-theater-mode').removeClass('vjs-fluid');
+							$('#video-player').removeClass('video-player-theater-mode').removeClass('vjs-fluid');
 							$("#video-player-container").prependTo("#video-comments-inner");
 						}
 						else {
@@ -1681,7 +1677,7 @@
 							this.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 26,13 0,10 -16,0 0,-10 z m -14,2 12,0 0,6 -12,0 0,-6 z" fill="#fff" fill-rule="evenodd"></path></svg>';
 							
 							$('#video-player-container').removeClass('ratio').addClass('position-relative');
-							$('#progressive-video-player').addClass('progressive-video-player-theater-mode').addClass('vjs-fluid');
+							$('#video-player').addClass('video-player-theater-mode').addClass('vjs-fluid');
 							$("#video-player-container").appendTo("#theater-container");
 						}
 					};
