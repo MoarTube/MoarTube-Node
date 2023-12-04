@@ -592,6 +592,7 @@
 					const sources = adaptiveSources.concat(progressiveSources);
 
 					var player = videojs('video-player', {
+						sources: sources,
 						html5: {
 							vhs: {
 								overrideNative: !videojs.browser.IS_SAFARI,
@@ -626,10 +627,13 @@
 						event.stopPropagation();
 					});
 					
+					var bigPlayButtonClicked = false;
+
 					$('#big-play-button-poster-container').click(function(event) {
+						bigPlayButtonClicked = true;
+
 						$('#mtp-video-overlay').remove();
 
-						player.src(sources);
 						player.play();
 					});
 					
@@ -817,6 +821,11 @@
 					
 					player.on(["playing"], function(e) {
 						//console.log(e);
+
+						if(!bigPlayButtonClicked) {
+							$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-in');
+							$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-out');
+						}
 
 						$('#video-player-container').mouseenter(function() {
 							$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-out');
