@@ -224,12 +224,6 @@ body {
     font-family: 'Roboto', sans-serif;
 }
 
-.video-js-overflow-menu span + span:after {
-    content: "navigate_next";
-    font-family: 'Material Icons Sharp';
-    font-size: 20px;
-}
-
 .video-js-overflow-menu * {
     flex-shrink: 0;
 }
@@ -255,11 +249,11 @@ body {
     padding-right: 10px;
 }
 
-.video-js-overflow-explicit-button {
+.video-js-overflow-explicit-button, .video-js-overflow-format-explicit-button, .video-js-overflow-format-resolution-explicit-button {
 	margin-left: 33px;
 }
 
-.video-js-overflow-explicit-button, .video-js-back-to-overflow-button {
+.video-js-overflow-explicit-button, .video-js-overflow-format-explicit-button, .video-js-overflow-format-resolution-explicit-button, .video-js-back-to-overflow-button {
 	padding: 3.5px 6px !important;
 }
 
@@ -272,7 +266,7 @@ body {
 	margin-left: 0px;
 }
 
-.video-js-overflow-explicit-selected-button span, .video-js-back-to-overflow-button span {
+.video-js-overflow-explicit-selected-button span, .video-js-back-to-overflow-button span, .video-js-back-to-overflow-main-button span, .video-js-back-to-overflow-formats-button span {
 	order: 2;
 }
 

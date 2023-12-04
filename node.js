@@ -4778,6 +4778,7 @@ else {
 							
 							const adaptiveSources = [];
 							const progressiveSources = [];
+							const sourcesFormatsAndResolutions = {m3u8: [], mp4: [], webm: [], ogv: []};
 							
 							var isHlsAvailable = false;
 							var isMp4Available = false;
@@ -4787,7 +4788,7 @@ else {
 							adaptiveFormats.forEach(function(adaptiveFormat) {
 								const format = adaptiveFormat.format;
 								const type = adaptiveFormat.type;
-								
+
 								const adaptiveVideoFormatPath = path.join(adaptiveVideosDirectoryPath, format);
 								const adaptiveVideoMasterManifestPath = path.join(adaptiveVideoFormatPath, 'manifest-master.' + format);
 								
@@ -4802,6 +4803,20 @@ else {
 									
 									adaptiveSources.push(source);
 								}
+
+								resolutions.forEach(function(resolution) {
+									const adaptiveVideoFilePath = path.join(adaptiveVideosDirectoryPath, format + '/manifest-' + resolution + '.' + format);
+									
+									if(fs.existsSync(adaptiveVideoFilePath)) {
+										sourcesFormatsAndResolutions[format].push(resolution);
+
+										const src = '/' + videoId + '/adaptive/' + format + '/manifests/manifest-' + resolution + '.' + format;
+										
+										const source = {src: src, type: type};
+										
+										adaptiveSources.push(source);
+									}
+								});
 							});
 							
 							progressiveFormats.forEach(function(progressiveFormat) {
@@ -4821,6 +4836,8 @@ else {
 										else if(format === 'ogv') {
 											isOgvAvailable = true;
 										}
+
+										sourcesFormatsAndResolutions[format].push(resolution);
 										
 										const src = '/' + videoId + '/progressive/' + format + '/' + resolution;
 										
@@ -4850,7 +4867,8 @@ else {
 								isWebmAvailable: isWebmAvailable,
 								isOgvAvailable: isOgvAvailable,
 								adaptiveSources: adaptiveSources,
-								progressiveSources: progressiveSources
+								progressiveSources: progressiveSources,
+								sourcesFormatsAndResolutions: sourcesFormatsAndResolutions
 							};
 							
 							res.send({isError: false, videoData: videoData});
