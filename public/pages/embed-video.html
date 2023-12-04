@@ -501,14 +501,19 @@
 		</div>
 		<script>
 			var VIDEO_ID;
+			var AUTO_START;
 
 			$(document).ready(function() {
 				const embeddedValue = window.location.pathname.split('/');
-				
+
 				if(embeddedValue.length === 4) {
 					VIDEO_ID = embeddedValue[3];
 					
 					if(VIDEO_ID != null) {
+						const params = new URL(window.location.href).searchParams;
+
+						AUTO_START = Number(params.get('autostart')) === 1 ? true : false;
+
 						getVideo();
 					}
 				}
@@ -592,7 +597,6 @@
 					const sources = adaptiveSources.concat(progressiveSources);
 
 					var player = videojs('video-player', {
-						sources: sources,
 						html5: {
 							vhs: {
 								overrideNative: !videojs.browser.IS_SAFARI,
@@ -634,6 +638,7 @@
 
 						$('#mtp-video-overlay').remove();
 
+						player.src(sources);
 						player.play();
 					});
 					
@@ -843,6 +848,11 @@
 
 						$('#mtp-video-overlay').remove();
 					});
+					
+					if(AUTO_START) {
+						player.src(sources);
+						player.play();
+					}
 				}
 			}
 		</script>
