@@ -17,17 +17,11 @@
 		<title>MoarTube</title>
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 		<link href="/css/keen-slider-6.8.5.min.css" rel="stylesheet" type="text/css"/> <!--recommendations slider-->
-		<link href="/css/fonts.google-family.material.icons.sharp.css" rel="stylesheet" type="text/css"/> <!--shaka youtube theme dependency-->
-		<link href="/css/shaka-player-controls-4.5.0.css" rel="stylesheet" type="text/css"/>
-		<link href="/css/youtube-shaka-theme.css" rel="stylesheet" type="text/css"/>
 		<link href="/css/videojs-8.3.0.css" rel="stylesheet" type="text/css"/>
 		<link href="/css/youtube-videojs-theme.css" rel="stylesheet" type="text/css"/>
 		<link href="/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
 		<link href="/css/sweetalert2-11.0.11.min.css" rel="stylesheet" type="text/css" />
 		<script src="/javascript/jquery-3.6.4.min.js"></script>
-		<script src="/javascript/shaka-player.ui-4.5.0.js"></script>
-		<script src="/javascript/mux-6.3.0.min.js"></script>
-		<script src="/javascript/shaka-player-custom-buttons.js"></script>
 		<script src="/javascript/popper-2.11.6.min.js"></script> <!--popup menus, such as report buttons-->
 		<script src="/javascript/bootstrap-5.3.0.min.js"></script>
 		<style>
@@ -379,7 +373,7 @@
 					display: none;
 				}
 				
-				.shaka-theater-button, .video-js-theater-button {
+				.video-js-theater-button {
 					display: none !important;
 				}
 			}
@@ -405,7 +399,7 @@
 					display: block;
 				}
 				
-				.shaka-theater-button, .video-js-theater-button {
+				.video-js-theater-button {
 					display: inline-block !important;
 				}
 			}
@@ -462,10 +456,6 @@
 			}
 			
 			.vjs-big-play-button  {
-				display: none !important;
-			}
-			
-			.shaka-play-button {
 				display: none !important;
 			}
 			
@@ -654,9 +644,6 @@
 									<img id="video-poster" />
 								</div>
 							</div>
-							<!--- Until importing Shaka Player as a tech into VideoJS-8 actually has a working plugin, this will do for now. --->
-							<!--- Unlike Shaka, VideoJS-8 does not use forward buffering for live streams, causing occasional buffer underrun behavior --->
-							<video id="adaptive-video-player" class="video-player hidden-elem" preload="auto" autoplay></video>
 							<video id="progressive-video-player" class="video-js video-player hidden-elem" preload="auto" autoplay></video>
 						</div>
 						<div>
@@ -1379,8 +1366,8 @@
 				const isWebmAvailable = videoData.isWebmAvailable;
 				const isOgvAvailable = videoData.isOgvAvailable;
 				const adaptiveSources = videoData.adaptiveSources;
-				PROGRESSIVE_SOURCES = videoData.progressiveSources;
-				
+				const progressiveSources = videoData.progressiveSources;
+
 				const viewsFormatted = getViewsFormatted(views);
 				const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
 				
@@ -1434,27 +1421,9 @@
 					$('#comment-section-counter-descriptor').text('Comments');
 					$('#expand-comment-section-counter-descriptor').html('Comments');
 				}
-				
-				if(isPublished || (isLive && isStreaming)) {
-					if(isHlsAvailable) {
-						shaka.polyfill.installAll();
-						
-						if(shaka.Player.isBrowserSupported()) {
-							document.addEventListener("shaka-ui-loaded", initializeShakaPlayer(adaptiveSources, isLive, isStreaming));
-						}
-						else if(isMp4Available || isWebmAvailable || isOgvAvailable) {
-							initializeVideoJsPlayer(PROGRESSIVE_SOURCES);
-						}
-						else {
-							$('#video-player-container').css('background', 'black').css('color', 'white').text('this video is unavailable');
-						}
-					}
-					else if(isMp4Available || isWebmAvailable || isOgvAvailable) {
-						initializeVideoJsPlayer(PROGRESSIVE_SOURCES);
-					}
-					else {
-						$('#video-player-container').css('background', 'black').css('color', 'white').text('this video is unavailable');
-					}
+
+				if(adaptiveSources.length > 0 || progressiveSources.length > 0) {
+					initializeVideoJsPlayer(adaptiveSources, progressiveSources);
 				}
 				else {
 					var message = '';
@@ -1472,183 +1441,45 @@
 					$('#video-player-container').append(message);
 				}
 				
-				async function initializeShakaPlayer(adaptiveSources, isLive, isStreaming) {
-					const masterManifestUrl = adaptiveSources[0].src;
-					
-					const adaptiveVideoPlayer = document.getElementById("adaptive-video-player");
-					$(adaptiveVideoPlayer).removeClass("hidden-elem");
-					
-					const ui = new shaka.ui.Overlay(new shaka.Player(adaptiveVideoPlayer), document.getElementById("video-player-container"), adaptiveVideoPlayer);
-					
-					const theaterButton = new TheaterButton.Factory();
-					shaka.ui.Controls.registerElement("theater", theaterButton);
-					
-					const config = {
-						seekBarColors: {
-							base: "rgba(255,255,255,.2)",
-							buffered: "rgba(255,255,255,.4)",
-							played: "rgb(203,12,159)",
-						},
-						controlPanelElements: ["play_pause","time_and_duration","spacer","mute","volume","theater","fullscreen","overflow_menu"],
-						overflowMenuButtons : ["quality", "playback_rate"],
-						playbackRates: [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
-					};
-					
-					ui.configure(config);
-					
-					const controls = ui.getControls();
-					const player = controls.getPlayer();
-					
-					const playerConfig = {
-						streaming: {
-							bufferBehind: 6,
-							bufferingGoal: 12,
-							rebufferingGoal: 2,
-							ignoreTextStreamFailures: true,
-							retryParameters: {
-								maxAttempts: 2,
-								baseDelay: 1000, // 1 second
-								backoffFactor: 2,
-								fuzzFactor: 0.5
-							},
-						}
-					};
-					
-					if(isLive && isStreaming) {
-						playerConfig.streaming.lowLatencyMode = true;
-						playerConfig.streaming.inaccurateManifestTolerance = 0;
-						playerConfig.streaming.rebufferingGoal = 0.01;
-						playerConfig.streaming.segmentPrefetchLimit = 2;
-					}
-					
-					player.configure(playerConfig);
-					
-					window.player = player;
-					window.ui = ui;
-					
-					$('.shaka-fullscreen-button').click(function(event) {
-						theaterButton.exitTheaterMode();
-						
-						if($(adaptiveVideoPlayer).hasClass('shaka-fullscreen')) {
-							$(adaptiveVideoPlayer).removeClass('shaka-fullscreen');
-							$(this).parent().find('.shaka-theater-button').removeClass('hidden-elem');
-						}
-						else {
-							$(adaptiveVideoPlayer).addClass('shaka-fullscreen');
-							$(this).parent().find('.shaka-theater-button').addClass('hidden-elem');
-						}
-					});
-					
-					try {
-						const eventManager = new shaka.util.EventManager();
-						
-						eventManager.listen(adaptiveVideoPlayer, 'timeupdate', () => {
-							
-						});
-						
-						var buffered = false;
-						eventManager.listen(player, 'buffering', (event) => {
-							buffered = true;
-							
-							if (event.buffering == false) {
-								console.log('not buffering');
-								
-								eventManager.unlisten(player, 'buffering');
-								
-								adaptiveVideoPlayer.play().then(() => {
-									console.log('Video started playing');
-								}).catch(error => {
-									console.error('Autoplay failed:', error);
-									
-									$('#mtp-video-overlay').removeClass('hidden-elem');
-								});
-							}
-							else {
-								console.log('buffering');
-							}
-						});
-						
-						eventManager.listen(adaptiveVideoPlayer, 'playing', () => {
-							console.log('playing');
-							
-							eventManager.unlisten(adaptiveVideoPlayer, 'playing');
-							
-							$('#mtp-video-overlay').remove();
-						});
-						
-						eventManager.listen(adaptiveVideoPlayer, 'play', () => {
-							console.log('play');
-						});
-						
-						var reloadingVideo = false;
-						eventManager.listen(adaptiveVideoPlayer, 'error', () => {
-							const error = event.detail;
-							
-							console.error('Error code', error.code, 'object', error);
-							
-							if(!reloadingVideo) {
-								reloadingVideo = true;
-								
-								(function videoReloader() {
-									eventManager.unlisten(adaptiveVideoPlayer, 'playing');
-									
-									eventManager.listen(adaptiveVideoPlayer, 'playing', () => {
-										eventManager.unlisten(adaptiveVideoPlayer, 'playing');
-										
-										reloadingVideo = false;
-									});
-									
-									player.load(masterManifestUrl)
-									.then(function() {
-										console.log('manifest reloaded from error');
-									})
-									.catch(function(error) {
-										console.log(error);
-										
-										setTimeout(videoReloader, 2000);
-									});
-								})();
-							}
-						});
-						
-						$('#big-play-button-poster-container').click(async function(event) {
-							$('#mtp-video-overlay').remove();
-							
-							if(!buffered) {
-								player.load(masterManifestUrl)
-								.then(function() {
-									console.log('manifest reloaded from big play');
-								})
-								.catch(function(error) {
-									console.log(error);
-								});
-							}
-							else {
-								adaptiveVideoPlayer.play();
-							}
-						});
-						
-						player.load(masterManifestUrl)
-						.then(function() {
-							console.log('manifest loaded');
-						})
-						.catch(function(error) {
-							console.log(error);
-						});
-					} catch (error) {
-						console.log(error);
-					}
-				}
-				
-				function initializeVideoJsPlayer() {
+				function initializeVideoJsPlayer(adaptiveSources, progressiveSources) {
 					window.videojs.log.level("off");
 					
 					$("#progressive-video-player").removeClass("hidden-elem");
 					$("#progressive-video-player").attr("controls", true);
-					
-					var options = {liveui: true, errorDisplay: false, liveTracker: { trackingThreshold: 0 }, preload: "auto", disablePictureInPicture: true, controlBar: { pictureInPictureToggle: false }};
-					var player = videojs("progressive-video-player", options);
-					
+
+					const sources = adaptiveSources.concat(progressiveSources);
+
+					var player = videojs('progressive-video-player', {
+						sources: sources,
+						html5: {
+							vhs: {
+								overrideNative: !videojs.browser.IS_SAFARI,
+								autoStartLoad: true,
+								maxBufferLength: 30,
+								maxMaxBufferLength: 60,
+								lowLatencyMode: true,
+								liveSyncDurationCount: 5,
+								levelLoadingMaxRetry: 4,
+								capLevelToPlayerSize: true
+							},
+							nativeAudioTracks: false,
+							nativeVideoTracks: false
+						},
+						liveui: true, 
+						errorDisplay: false, 
+						liveTracker: { 
+							trackingThreshold: 0 
+						}, 
+						preload: "auto", 
+						disablePictureInPicture: true, 
+						controlBar: { 
+							pictureInPictureToggle: false 
+						}
+					});
+
+
+
+					/*
 					const handleTechClickDefaultFunction = player.player_.handleTechClick_;
 					
 					var overflowButton = player.controlBar.addChild("button", {}, 18);
@@ -1826,6 +1657,7 @@
 							$('#progressive-video-player .vjs-control-bar .video-js-overflow-menu').remove();
 						}
 					};
+					*/
 					
 					var theaterModeButton = player.controlBar.addChild("button", {}, 18);
 					var theaterModeButtonDom = theaterModeButton.el();
@@ -1906,7 +1738,7 @@
 					});
 					
 					try {
-						player.src(PROGRESSIVE_SOURCES);
+						player.src(sources);
 					} catch (error) {
 						console.log(error);
 					}

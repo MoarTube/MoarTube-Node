@@ -646,8 +646,11 @@
 					const adaptiveVideoPlayer = document.getElementById("adaptive-video-player");
 					
 					$(adaptiveVideoPlayer).removeClass("hidden-elem");
+
+					const player = new shaka.Player();
+  					await player.attach(adaptiveVideoPlayer);
 					
-					const ui = new shaka.ui.Overlay(new shaka.Player(adaptiveVideoPlayer), document.getElementById("video-player-container"), adaptiveVideoPlayer);
+					const ui = new shaka.ui.Overlay(player, document.getElementById("video-player-container"), adaptiveVideoPlayer);
 					
 					const config = {
 						seekBarColors: {
@@ -662,10 +665,32 @@
 					
 					ui.configure(config);
 					
-					const controls = ui.getControls();
-					const player = controls.getPlayer();
+					//const controls = ui.getControls();
+					//const player = controls.getPlayer();
+
+					const playerConfig = {
+						streaming: {
+							bufferBehind: 6,
+							bufferingGoal: 12,
+							rebufferingGoal: 2,
+							ignoreTextStreamFailures: true,
+							retryParameters: {
+								maxAttempts: 2,
+								baseDelay: 1000, // 1 second
+								backoffFactor: 2,
+								fuzzFactor: 0.5
+							},
+						}
+					};
 					
-					player.configure({streaming: {bufferingGoal: 10, lowLatencyMode: true, inaccurateManifestTolerance: 0, rebufferingGoal: 0.01,}});
+					if(isLive && isStreaming) {
+						playerConfig.streaming.lowLatencyMode = true;
+						playerConfig.streaming.inaccurateManifestTolerance = 0;
+						playerConfig.streaming.rebufferingGoal = 0.01;
+						playerConfig.streaming.segmentPrefetchLimit = 2;
+					}
+					
+					player.configure(playerConfig);
 					
 					window.player = player;
 					window.ui = ui;
