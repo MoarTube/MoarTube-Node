@@ -568,7 +568,7 @@
 				$('#mtp-video-title').html(title);
 
 				if(adaptiveSources.length > 0 || progressiveSources.length > 0) {
-					initializeVideoJsPlayer(adaptiveSources, progressiveSources, sourcesFormatsAndResolutions);
+					initializeVideoJsPlayer();
 				}
 				else {
 					var message = '';
@@ -586,7 +586,7 @@
 					$('#video-player-container').append(message);
 				}
 				
-				function initializeVideoJsPlayer(adaptiveSources, progressiveSources, sourcesFormatsAndResolutions) {
+				function initializeVideoJsPlayer() {
 					window.videojs.log.level("off");
 					
 					$('#mtp-video-link').attr('href', '/watch?v=' + VIDEO_ID);
@@ -637,36 +637,6 @@
 						const MATERIAL_NAVIGATE_NEXT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z" fill="#fff"/></svg>';
 						const MATERIAL_NAVIGATE_BEFORE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z" fill="#fff"/></svg>';
 						const MATERIAL_DONE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z" fill="#fff"/></svg>';
-						
-						// theater button
-						var isShowingTheaterMode = false;
-						const theaterModeButton = player.getChild('ControlBar').addChild('button', {
-							clickHandler: function(event) {
-								event[0].stopPropagation();
-								
-								if(isShowingTheaterMode) {
-									isShowingTheaterMode = false;
-									
-									this.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-									
-									$('#video-player-container').addClass('ratio').removeClass('position-relative');
-									$('#video-player').removeClass('video-player-theater-mode').removeClass('vjs-fluid');
-									$("#video-player-container").prependTo("#video-comments-inner");
-								}
-								else {
-									isShowingTheaterMode = true;
-									
-									this.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 26,13 0,10 -16,0 0,-10 z m -14,2 12,0 0,6 -12,0 0,-6 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-									
-									$('#video-player-container').removeClass('ratio').addClass('position-relative');
-									$('#video-player').addClass('video-player-theater-mode').addClass('vjs-fluid');
-									$("#video-player-container").appendTo("#theater-container");
-								}
-							}
-						});
-						theaterModeButton.el().classList.add('video-js-theater-button');
-						theaterModeButton.el().innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-						theaterModeButton.el().style.cursor = "pointer";
 						
 						// overflow button
 						const overflowButton = player.getChild('ControlBar').addChild('button', {
