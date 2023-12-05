@@ -817,7 +817,7 @@
 			const COMMENT_ELEMENT_CACHE = {};
 			const COMMENT_REPLIES_CACHE = {};
 			
-			var PROGRESSIVE_SOURCES = [];
+			var DOWNLOADABLE_SOURCES = [];
 			
 			var MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP = 0;
 			var OLDEST_VISIBLE_COMMENT_TIMESTAMP = Date.now();
@@ -1368,6 +1368,8 @@
 				const progressiveSources = videoData.progressiveSources;
 				const sourcesFormatsAndResolutions = videoData.sourcesFormatsAndResolutions;
 
+				DOWNLOADABLE_SOURCES = progressiveSources;
+
 				const viewsFormatted = getViewsFormatted(views);
 				const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
 				
@@ -1553,7 +1555,7 @@
 
 									showOverflowMenuFormats();
 								});
-								
+
 								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-playback-speed-button').click(function(event) {
 									event.stopPropagation();
 
@@ -1696,10 +1698,10 @@
 								
 								playbackRates.forEach(function(playbackRate) {
 									if(playbackRate === currentPlaybackRate) {
-										html += '<button type="button" class="video-js-overflow-explicit-button video-js-overflow-explicit-selected-button" data-playbackrate="' + playbackRate + '"><span>' + playbackRate + '</span><i class="material-icons-round video-js-chosen-item">done</i></button>';
+										html += '<button type="button" class="video-js-overflow-explicit-button video-js-overflow-explicit-selected-button" data-playbackrate="' + playbackRate + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + playbackRate + '</span></button>';
 									}
 									else {
-										html += '<button type="button" class="video-js-overflow-explicit-button" data-playbackrate="' + playbackRate + '"><span>' + playbackRate + '</span><i class="material-icons-round video-js-chosen-item hidden-elem">done</i></button>';
+										html += '<button type="button" class="video-js-overflow-explicit-button" data-playbackrate="' + playbackRate + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + playbackRate + '</span></button>';
 									}
 								});
 								
@@ -2275,23 +2277,16 @@
 			}
 			
 			function downloadVideo() {
-				if(PROGRESSIVE_SOURCES.length > 0) {
-					const progressiveSourcesLinks = [];
-					
+				if(DOWNLOADABLE_SOURCES.length > 0) {
 					var html = '';
-					
-					for(var i = 0; i < PROGRESSIVE_SOURCES.length; i++) {
-						const progressiveSource = PROGRESSIVE_SOURCES[i];
+
+					for(const downloadableSource of DOWNLOADABLE_SOURCES) {
+						const segments = downloadableSource.src.split('/');
+						const downloadLink = downloadableSource.src + '/download';
 						
-						const segments = progressiveSource.src.split('/');
-						const downloadLink = progressiveSource.src + '/download';
-						
-						html += '<a href="' + downloadLink + '"><button type="button" class="btn btn-link">' + segments[3] + '-' + segments[4] + '</button></a>';
-						
-						if(i !== (PROGRESSIVE_SOURCES.length - 1)) {
-							html += '<br>';
-						}
+						html += '<a href="' + downloadLink + '"><button type="button" class="btn btn-link">' + segments[3] + '-' + segments[4] + '</button></a><br>';
 					}
+
 					
 					Swal.fire({
 						title: 'download video',
