@@ -18,7 +18,7 @@
 		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 		<link href="/css/keen-slider-6.8.5.min.css" rel="stylesheet" type="text/css"/> <!--recommendations slider-->
 		<link href="/css/videojs-8.3.0.css" rel="stylesheet" type="text/css"/>
-		<link href="/css/youtube-videojs-theme.css" rel="stylesheet" type="text/css"/>
+		<link href="/css/videojs-theme.css" rel="stylesheet" type="text/css"/>
 		<link href="/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
 		<link href="/css/sweetalert2-11.0.11.min.css" rel="stylesheet" type="text/css" />
 		<script src="/javascript/jquery-3.6.4.min.js"></script>
@@ -1360,10 +1360,6 @@
 				const isStreamed = videoData.isStreamed;
 				const creationTimestamp = videoData.creationTimestamp;
 				
-				const isHlsAvailable = videoData.isHlsAvailable;
-				const isMp4Available = videoData.isMp4Available;
-				const isWebmAvailable = videoData.isWebmAvailable;
-				const isOgvAvailable = videoData.isOgvAvailable;
 				const adaptiveSources = videoData.adaptiveSources;
 				const progressiveSources = videoData.progressiveSources;
 				const sourcesFormatsAndResolutions = videoData.sourcesFormatsAndResolutions;
@@ -1478,347 +1474,354 @@
 						}
 					});
 
-					const handleTechClickDefaultFunction = player.player_.handleTechClick_;
+					configurePlayerButtons();
+					configurePlayerEvents();
 
-					const MATERIAL_NAVIGATE_NEXT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z" fill="#fff"/></svg>';
-					const MATERIAL_NAVIGATE_BEFORE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z" fill="#fff"/></svg>';
-					const MATERIAL_DONE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z" fill="#fff"/></svg>';
-				
-					var overflowButton = player.controlBar.addChild("button");
-					var overflowButtonDom = overflowButton.el();
-					//overflowButtonDom.classList.add('video-js-overflow-button');
-					overflowButtonDom.innerHTML = '<svg height="24" viewBox="0 -960 960 960" width="100%"><path d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z" fill="#fff"/></svg>';
-					overflowButtonDom.style.order = "10";
-					overflowButtonDom.style.cursor = "pointer";
-					overflowButtonDom.onclick = function (event) {
-						event.stopPropagation();
-						
-						if($('#video-player .vjs-control-bar .video-js-overflow-menu').length === 0) {
+					function configurePlayerButtons() {
+						const handleTechClickDefaultFunction = player.player_.handleTechClick_;
+
+						const MATERIAL_NAVIGATE_NEXT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z" fill="#fff"/></svg>';
+						const MATERIAL_NAVIGATE_BEFORE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z" fill="#fff"/></svg>';
+						const MATERIAL_DONE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z" fill="#fff"/></svg>';
+					
+						var overflowButton = player.controlBar.addChild("button");
+						var overflowButtonDom = overflowButton.el();
+						//overflowButtonDom.classList.add('video-js-overflow-button');
+						overflowButtonDom.innerHTML = '<svg height="24" viewBox="0 -960 960 960" width="100%"><path d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z" fill="#fff"/></svg>';
+						overflowButtonDom.style.order = "10";
+						overflowButtonDom.style.cursor = "pointer";
+						overflowButtonDom.onclick = function (event) {
+							event.stopPropagation();
 							
-							player.player_.handleTechClick_ = function(event) {}
-							
-							$('body').click(function() {
-								$('body').off('click');
+							if($('#video-player .vjs-control-bar .video-js-overflow-menu').length === 0) {
 								
-								$('.video-player .vjs-control-bar .video-js-overflow-menu').remove();
+								player.player_.handleTechClick_ = function(event) {}
+								
+								$('body').click(function() {
+									$('body').off('click');
+									
+									$('.video-player .vjs-control-bar .video-js-overflow-menu').remove();
+									
+									player.player_.handleTechClick_ = handleTechClickDefaultFunction;
+								});
+								
+								showVideoJsOverflowMenuHtml(player);
+							}
+							else {
+								removeOverflowMenuHtml();
 								
 								player.player_.handleTechClick_ = handleTechClickDefaultFunction;
-							});
+							}
 							
-							showVideoJsOverflowMenuHtml(player);
-						}
-						else {
-							removeOverflowMenuHtml();
-							
-							player.player_.handleTechClick_ = handleTechClickDefaultFunction;
-						}
-						
-						function showVideoJsOverflowMenuHtml(player) {
-							const currentPlaybackRate = player.playbackRate();
+							function showVideoJsOverflowMenuHtml(player) {
+								const currentPlaybackRate = player.playbackRate();
 
-							player.on(["playing"], function(e) {
-								// can only set a playback rate when the player is actually playing; setting before "playing" has no effect
-								player.playbackRate(currentPlaybackRate);
-							});
-
-							if(CURRENT_VIDEO_RESOLUTION == null && CURRENT_VIDEO_FORMAT == null) {
-								const currentSource = player.currentSrc();
-								const segments = currentSource.split('/');
-								
-								CURRENT_VIDEO_RESOLUTION = segments[segments.length - 1];
-								CURRENT_VIDEO_FORMAT = segments[segments.length - 2];
-								
-								if(CURRENT_VIDEO_FORMAT !== 'mp4' && CURRENT_VIDEO_FORMAT !== 'webm' && CURRENT_VIDEO_FORMAT !== 'ogv') {
-									CURRENT_VIDEO_FORMAT = 'm3u8';
-									CURRENT_VIDEO_RESOLUTION = 'auto';
-								}
-							}
-
-							showOverflowMenuMain();
-
-							function showOverflowMenuMain() {
-								const html = '\
-								<div class="video-js-overflow-menu">\
-									<button type="button" class="video-js-overflow-format-button"><label class="video-js-overflow-button-label"><span>Quality</span><span class="video-js-current-selection-span">' + CURRENT_VIDEO_FORMAT + ' ' + CURRENT_VIDEO_RESOLUTION + MATERIAL_NAVIGATE_NEXT_SVG + '</span></label></button>\
-									<button type="button" class="video-js-overflow-playback-speed-button"><label class="video-js-overflow-button-label"><span>Playback speed</span><span class="video-js-current-selection-span">' + currentPlaybackRate + 'x' + MATERIAL_NAVIGATE_NEXT_SVG + '</span></label></button>\
-								</div>';
-								
-								if($("#video-player .vjs-control-bar .video-js-overflow-menu").length) {
-									$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
-								}
-								else {
-									$("#video-player .vjs-control-bar").append(html);
-								}
-								
-								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-button').click(function(event) {
-									event.stopPropagation();
-
-									showOverflowMenuFormats();
+								player.on(["playing"], function(e) {
+									// can only set a playback rate when the player is actually playing; setting before "playing" has no effect
+									player.playbackRate(currentPlaybackRate);
 								});
 
-								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-playback-speed-button').click(function(event) {
-									event.stopPropagation();
+								if(CURRENT_VIDEO_RESOLUTION == null && CURRENT_VIDEO_FORMAT == null) {
+									const currentSource = player.currentSrc();
+									const segments = currentSource.split('/');
+									
+									CURRENT_VIDEO_RESOLUTION = segments[segments.length - 1];
+									CURRENT_VIDEO_FORMAT = segments[segments.length - 2];
+									
+									if(CURRENT_VIDEO_FORMAT !== 'mp4' && CURRENT_VIDEO_FORMAT !== 'webm' && CURRENT_VIDEO_FORMAT !== 'ogv') {
+										CURRENT_VIDEO_FORMAT = 'm3u8';
+										CURRENT_VIDEO_RESOLUTION = 'auto';
+									}
+								}
 
-									showPlayRateMenu();
-								});
-							}
+								showOverflowMenuMain();
 
-							function showOverflowMenuFormats() {
-								const formats = Object.keys(sourcesFormatsAndResolutions);
-
-								var html = '<div class="video-js-overflow-menu">\
-								<button type="button" class="video-js-back-to-overflow-main-button"><span>Format</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
-
-								formats.forEach(function(format) {
-									if(CURRENT_VIDEO_FORMAT === format) {
-										html += '<button type="button" class="video-js-overflow-format-explicit-button video-js-overflow-explicit-selected-button" data-format="' + format + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + format + '</span></button>';
+								function showOverflowMenuMain() {
+									const html = '\
+									<div class="video-js-overflow-menu">\
+										<button type="button" class="video-js-overflow-format-button"><label class="video-js-overflow-button-label"><span>Quality</span><span class="video-js-current-selection-span">' + CURRENT_VIDEO_FORMAT + ' ' + CURRENT_VIDEO_RESOLUTION + MATERIAL_NAVIGATE_NEXT_SVG + '</span></label></button>\
+										<button type="button" class="video-js-overflow-playback-speed-button"><label class="video-js-overflow-button-label"><span>Playback speed</span><span class="video-js-current-selection-span">' + currentPlaybackRate + 'x' + MATERIAL_NAVIGATE_NEXT_SVG + '</span></label></button>\
+									</div>';
+									
+									if($("#video-player .vjs-control-bar .video-js-overflow-menu").length) {
+										$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
 									}
 									else {
-										html += '<button type="button" class="video-js-overflow-format-explicit-button" data-format="' + format + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + format + '</span></button>';
+										$("#video-player .vjs-control-bar").append(html);
 									}
-								});
-
-								html += '</div>';
-
-								$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
-								
-								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-explicit-button').click(function(event) {
-									event.stopPropagation();
-
-									const selectedVideoFormat = $(this).data('format');
-
-									showOverflowMenuResolutions(selectedVideoFormat);
-								});
-
-								// back from formats menu to main menu
-								$('.video-js-back-to-overflow-main-button').click(function(event) {
-									event.stopPropagation();
 									
-									showOverflowMenuMain();
-								});
-							}
+									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-button').click(function(event) {
+										event.stopPropagation();
 
-							function showOverflowMenuResolutions(selectedVideoFormat) {
-								const resolutions = sourcesFormatsAndResolutions[selectedVideoFormat];
+										showOverflowMenuFormats();
+									});
 
-								var html = '<div class="video-js-overflow-menu">\
-								<button type="button" class="video-js-back-to-overflow-formats-button"><span>Resolution</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
-								
-								resolutions.forEach(function(resolution) {
-									if(selectedVideoFormat === CURRENT_VIDEO_FORMAT && CURRENT_VIDEO_RESOLUTION === resolution) {
-										html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button video-js-overflow-explicit-selected-button" data-resolution="' + resolution + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + resolution + '</span></button>';
-									}
-									else {
-										html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button" data-resolution="' + resolution + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + resolution + '</span></button>';
-									}
-								});
+									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-playback-speed-button').click(function(event) {
+										event.stopPropagation();
 
-								if(selectedVideoFormat === 'm3u8') {
-									if(CURRENT_VIDEO_RESOLUTION === 'auto') {
-										html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button video-js-overflow-explicit-selected-button" data-resolution="auto"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>auto</span></button>';
-									}
-									else {
-										html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button" data-resolution="auto"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>auto</span></button>';
-									}
+										showPlayRateMenu();
+									});
 								}
-								
-								html += '</div>';
-								
-								$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
 
-								// back from resolutions menu to formats menu
-								$('.video-js-back-to-overflow-formats-button').click(function(event) {
-									event.stopPropagation();
-									
-									showOverflowMenuFormats();
-								});
+								function showOverflowMenuFormats() {
+									// find the (available) formats that actually have sources; not empty array
+									const availableFormats = Object.keys(sourcesFormatsAndResolutions).filter(key => Array.isArray(sourcesFormatsAndResolutions[key]) && sourcesFormatsAndResolutions[key].length > 0);
 
-								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button').click(function(event) {
-									event.stopPropagation();
-									
-									CURRENT_VIDEO_FORMAT = selectedVideoFormat;
-									CURRENT_VIDEO_RESOLUTION = $(this).data('resolution');
-									
-									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button .video-js-chosen-item').addClass('hidden-elem');
-									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
-									
-									$(this).addClass('video-js-overflow-explicit-selected-button');
-									$(this).find('.video-js-chosen-item').removeClass('hidden-elem');
+									var html = '<div class="video-js-overflow-menu">\
+									<button type="button" class="video-js-back-to-overflow-main-button"><span>Format</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
 
-									var source;
-
-									if(CURRENT_VIDEO_FORMAT === 'm3u8') {
-										if(CURRENT_VIDEO_RESOLUTION === 'auto') {
-											source = { src: adaptiveSources[0].src, type: adaptiveSources[0].type };
+									availableFormats.forEach(function(availableFormat) {
+										if(CURRENT_VIDEO_FORMAT === availableFormat) {
+											html += '<button type="button" class="video-js-overflow-format-explicit-button video-js-overflow-explicit-selected-button" data-format="' + availableFormat + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + availableFormat + '</span></button>';
 										}
 										else {
-											for(const adaptiveSource of adaptiveSources) {
-												const segments = adaptiveSource.src.split('/');
-												const adaptiveSourceResolution = segments[segments.length - 1];
+											html += '<button type="button" class="video-js-overflow-format-explicit-button" data-format="' + availableFormat + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + availableFormat + '</span></button>';
+										}
+									});
 
-												if(adaptiveSourceResolution === ('manifest-' + CURRENT_VIDEO_RESOLUTION + '.' + CURRENT_VIDEO_FORMAT)) {
-													source = { src: adaptiveSource.src, type: adaptiveSource.type };
+									html += '</div>';
+
+									$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
+									
+									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-explicit-button').click(function(event) {
+										event.stopPropagation();
+
+										const selectedVideoFormat = $(this).data('format');
+
+										showOverflowMenuResolutions(selectedVideoFormat);
+									});
+
+									// back from formats menu to main menu
+									$('.video-js-back-to-overflow-main-button').click(function(event) {
+										event.stopPropagation();
+										
+										showOverflowMenuMain();
+									});
+								}
+
+								function showOverflowMenuResolutions(selectedVideoFormat) {
+									const resolutions = sourcesFormatsAndResolutions[selectedVideoFormat];
+
+									var html = '<div class="video-js-overflow-menu">\
+									<button type="button" class="video-js-back-to-overflow-formats-button"><span>Resolution</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
+									
+									resolutions.forEach(function(resolution) {
+										if(selectedVideoFormat === CURRENT_VIDEO_FORMAT && CURRENT_VIDEO_RESOLUTION === resolution) {
+											html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button video-js-overflow-explicit-selected-button" data-resolution="' + resolution + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + resolution + '</span></button>';
+										}
+										else {
+											html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button" data-resolution="' + resolution + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + resolution + '</span></button>';
+										}
+									});
+
+									if(selectedVideoFormat === 'm3u8') {
+										if(CURRENT_VIDEO_RESOLUTION === 'auto') {
+											html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button video-js-overflow-explicit-selected-button" data-resolution="auto"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>auto</span></button>';
+										}
+										else {
+											html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button" data-resolution="auto"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>auto</span></button>';
+										}
+									}
+									
+									html += '</div>';
+									
+									$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
+
+									// back from resolutions menu to formats menu
+									$('.video-js-back-to-overflow-formats-button').click(function(event) {
+										event.stopPropagation();
+										
+										showOverflowMenuFormats();
+									});
+
+									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button').click(function(event) {
+										event.stopPropagation();
+										
+										CURRENT_VIDEO_FORMAT = selectedVideoFormat;
+										CURRENT_VIDEO_RESOLUTION = $(this).data('resolution');
+										
+										$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button .video-js-chosen-item').addClass('hidden-elem');
+										$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
+										
+										$(this).addClass('video-js-overflow-explicit-selected-button');
+										$(this).find('.video-js-chosen-item').removeClass('hidden-elem');
+
+										var source;
+
+										if(CURRENT_VIDEO_FORMAT === 'm3u8') {
+											if(CURRENT_VIDEO_RESOLUTION === 'auto') {
+												source = { src: adaptiveSources[0].src, type: adaptiveSources[0].type };
+											}
+											else {
+												for(const adaptiveSource of adaptiveSources) {
+													const segments = adaptiveSource.src.split('/');
+													const adaptiveSourceResolution = segments[segments.length - 1];
+
+													if(adaptiveSourceResolution === ('manifest-' + CURRENT_VIDEO_RESOLUTION + '.' + CURRENT_VIDEO_FORMAT)) {
+														source = { src: adaptiveSource.src, type: adaptiveSource.type };
+													}
 												}
 											}
 										}
-									}
-									else {
-										for(const progressiveSource of progressiveSources) {
-											const segments = progressiveSource.src.split('/');
+										else {
+											for(const progressiveSource of progressiveSources) {
+												const segments = progressiveSource.src.split('/');
 
-											const progressiveSourceResolution = segments[segments.length - 1];
-											const progressiveSourceFormat = segments[segments.length - 2];
+												const progressiveSourceResolution = segments[segments.length - 1];
+												const progressiveSourceFormat = segments[segments.length - 2];
 
-											if(CURRENT_VIDEO_RESOLUTION === progressiveSourceResolution && CURRENT_VIDEO_FORMAT === progressiveSourceFormat) {
-												source = { src: progressiveSource.src, type: progressiveSource.type };
+												if(CURRENT_VIDEO_RESOLUTION === progressiveSourceResolution && CURRENT_VIDEO_FORMAT === progressiveSourceFormat) {
+													source = { src: progressiveSource.src, type: progressiveSource.type };
+												}
 											}
 										}
-									}
 
-									const currentTime = player.currentTime();
+										const currentTime = player.currentTime();
 
-									player.src(source);
-									player.currentTime(currentTime);
+										player.src(source);
+										player.currentTime(currentTime);
 
-									player.play()
-									.then(function() {
-										// do nothing
-									})
-									.catch(function(error) {
-										console.log(error);
+										player.play()
+										.then(function() {
+											// do nothing
+										})
+										.catch(function(error) {
+											console.log(error);
+										});
 									});
-								});
+								}
+
+								function showPlayRateMenu() {
+									const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+									
+									var html = '<div class="video-js-overflow-menu">\
+									<button type="button" class="video-js-back-to-overflow-main-button"><span>Playback speed</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
+									
+									playbackRates.forEach(function(playbackRate) {
+										if(playbackRate === currentPlaybackRate) {
+											html += '<button type="button" class="video-js-overflow-explicit-button video-js-overflow-explicit-selected-button" data-playbackrate="' + playbackRate + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + playbackRate + '</span></button>';
+										}
+										else {
+											html += '<button type="button" class="video-js-overflow-explicit-button" data-playbackrate="' + playbackRate + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + playbackRate + '</span></button>';
+										}
+									});
+									
+									html += '</div>';
+									
+									$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
+									
+									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click(function(event) {
+										event.stopPropagation();
+										
+										const selectedPlaybackRate = $(this).data('playbackrate');
+										
+										$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
+										$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
+										
+										$(this).addClass('video-js-overflow-explicit-selected-button');
+										$(this).find('.video-js-chosen-item').removeClass('hidden-elem');
+										
+										player.playbackRate(selectedPlaybackRate);
+									});
+									
+									$('.video-js-back-to-overflow-main-button').click(function(event) {
+										event.stopPropagation();
+
+										showOverflowMenuMain();
+									});
+								}
 							}
-
-							function showPlayRateMenu() {
-								const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
-								
-								var html = '<div class="video-js-overflow-menu">\
-								<button type="button" class="video-js-back-to-overflow-main-button"><span>Playback speed</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
-								
-								playbackRates.forEach(function(playbackRate) {
-									if(playbackRate === currentPlaybackRate) {
-										html += '<button type="button" class="video-js-overflow-explicit-button video-js-overflow-explicit-selected-button" data-playbackrate="' + playbackRate + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + playbackRate + '</span></button>';
-									}
-									else {
-										html += '<button type="button" class="video-js-overflow-explicit-button" data-playbackrate="' + playbackRate + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + playbackRate + '</span></button>';
-									}
-								});
-								
-								html += '</div>';
-								
-								$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
-								
-								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click(function(event) {
-									event.stopPropagation();
-									
-									const selectedPlaybackRate = $(this).data('playbackrate');
-									
-									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
-									$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
-									
-									$(this).addClass('video-js-overflow-explicit-selected-button');
-									$(this).find('.video-js-chosen-item').removeClass('hidden-elem');
-									
-									player.playbackRate(selectedPlaybackRate);
-								});
-								
-								$('.video-js-back-to-overflow-main-button').click(function(event) {
-									event.stopPropagation();
-
-									showOverflowMenuMain();
-								});
+							
+							function removeOverflowMenuHtml() {
+								$('#video-player .vjs-control-bar .video-js-overflow-menu').remove();
 							}
-						}
-						
-						function removeOverflowMenuHtml() {
-							$('#video-player .vjs-control-bar .video-js-overflow-menu').remove();
-						}
-					};
-					
-					
-					var theaterModeButton = player.controlBar.addChild("button", {}, 18);
-					var theaterModeButtonDom = theaterModeButton.el();
-					theaterModeButtonDom.classList.add('video-js-theater-button');
-					theaterModeButtonDom.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-					theaterModeButtonDom.style.cursor = "pointer";
-					var isShowingTheaterMode = false;
-					theaterModeButtonDom.onclick = function () {
-						if(isShowingTheaterMode) {
-							isShowingTheaterMode = false;
-							
-							this.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-							
-							$('#video-player-container').addClass('ratio').removeClass('position-relative');
-							$('#video-player').removeClass('video-player-theater-mode').removeClass('vjs-fluid');
-							$("#video-player-container").prependTo("#video-comments-inner");
-						}
-						else {
-							isShowingTheaterMode = true;
-							
-							this.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 26,13 0,10 -16,0 0,-10 z m -14,2 12,0 0,6 -12,0 0,-6 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-							
-							$('#video-player-container').removeClass('ratio').addClass('position-relative');
-							$('#video-player').addClass('video-player-theater-mode').addClass('vjs-fluid');
-							$("#video-player-container").appendTo("#theater-container");
-						}
-					};
-					
-					/*
-					player.on(["loadstart", "firstplay", "pause", "ended", "adplay", "adplaying", "adfirstplay", "adpause", "adended", "contentplay", "contentplaying", "contentfirstplay", "contentpause", "contentended", "contentupdate"], function(e) {
-						//console.log(e);
-					});
-					*/
-					
-					player.on(["fullscreenchange"], function(e) {
-						if(player.isFullscreen()) {
-							theaterModeButtonDom.classList.add('hidden-elem');
-						}
-						else {
-							theaterModeButtonDom.classList.remove('hidden-elem');
-						}
-					});
-					
-					player.on("loadedmetadata", function() { 
-						player.play()
-						.then(function() {
-						
-						})
-						.catch(function(error) {
-							console.log(error);
-							
-							$('#mtp-video-overlay').removeClass('hidden-elem');
-						});
-					});
-					
-					player.on("playing", function() { 
-						$('#mtp-video-overlay').remove();
-					});
-					
-					player.on("loadstart", function() { 
-						
-					});
-					
-					player.on("ready", function() { 
+						};
 
-					});
-					
-					$('#big-play-button-poster-container').click(async function(event) {
-						$('#mtp-video-overlay').remove();
-						
-						player.play()
-						.then(function() {
-						
-						})
-						.catch(function(error) {
-							console.log(error);
+						var theaterModeButton = player.controlBar.addChild("button", {}, 18);
+						var theaterModeButtonDom = theaterModeButton.el();
+						theaterModeButtonDom.classList.add('video-js-theater-button');
+						theaterModeButtonDom.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
+						theaterModeButtonDom.style.cursor = "pointer";
+						var isShowingTheaterMode = false;
+						theaterModeButtonDom.onclick = function () {
+							if(isShowingTheaterMode) {
+								isShowingTheaterMode = false;
+								
+								this.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
+								
+								$('#video-player-container').addClass('ratio').removeClass('position-relative');
+								$('#video-player').removeClass('video-player-theater-mode').removeClass('vjs-fluid');
+								$("#video-player-container").prependTo("#video-comments-inner");
+							}
+							else {
+								isShowingTheaterMode = true;
+								
+								this.innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 26,13 0,10 -16,0 0,-10 z m -14,2 12,0 0,6 -12,0 0,-6 z" fill="#fff" fill-rule="evenodd"></path></svg>';
+								
+								$('#video-player-container').removeClass('ratio').addClass('position-relative');
+								$('#video-player').addClass('video-player-theater-mode').addClass('vjs-fluid');
+								$("#video-player-container").appendTo("#theater-container");
+							}
+						};
+					}
+
+					function configurePlayerEvents() {
+						/*
+						player.on(["loadstart", "firstplay", "pause", "ended", "adplay", "adplaying", "adfirstplay", "adpause", "adended", "contentplay", "contentplaying", "contentfirstplay", "contentpause", "contentended", "contentupdate"], function(e) {
+							//console.log(e);
 						});
-					});
-					
-					try {
-						player.src(sources);
-					} catch (error) {
-						console.log(error);
+						*/
+						
+						player.on(["fullscreenchange"], function(e) {
+							if(player.isFullscreen()) {
+								theaterModeButtonDom.classList.add('hidden-elem');
+							}
+							else {
+								theaterModeButtonDom.classList.remove('hidden-elem');
+							}
+						});
+						
+						player.on("loadedmetadata", function() { 
+							player.play()
+							.then(function() {
+							
+							})
+							.catch(function(error) {
+								console.log(error);
+								
+								$('#mtp-video-overlay').removeClass('hidden-elem');
+							});
+						});
+						
+						player.on("playing", function() { 
+							$('#mtp-video-overlay').remove();
+						});
+						
+						player.on("loadstart", function() { 
+							
+						});
+						
+						player.on("ready", function() { 
+
+						});
+						
+						$('#big-play-button-poster-container').click(async function(event) {
+							$('#mtp-video-overlay').remove();
+							
+							player.play()
+							.then(function() {
+							
+							})
+							.catch(function(error) {
+								console.log(error);
+							});
+						});
+						
+						try {
+							player.src(sources);
+						} catch (error) {
+							console.log(error);
+						}
 					}
 				}
 			}
@@ -2287,7 +2290,6 @@
 						html += '<a href="' + downloadLink + '"><button type="button" class="btn btn-link">' + segments[3] + '-' + segments[4] + '</button></a><br>';
 					}
 
-					
 					Swal.fire({
 						title: 'download video',
 						html: html,
