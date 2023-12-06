@@ -2137,11 +2137,9 @@ body {
 					}
 
 					function configurePlayerEvents() {
-						/*
 						player.on(["loadstart", "firstplay", "pause", "ended", "adplay", "adplaying", "adfirstplay", "adpause", "adended", "contentplay", "contentplaying", "contentfirstplay", "contentpause", "contentended", "contentupdate"], function(e) {
 							//console.log(e);
 						});
-						*/
 						
 						player.on(["fullscreenchange"], function(e) {
 							if(player.isFullscreen()) {
@@ -2153,27 +2151,29 @@ body {
 						});
 						
 						player.on("loadedmetadata", function() { 
+							console.log('loadedmetadata');
+						});
+						
+						player.on("playing", function() { 
+							console.log('playing');
+
+							$('#mtp-video-overlay').remove();
+						});
+						
+						player.on("loadstart", function() { 
+							console.log('loadstart');
+						});
+						
+						player.on("ready", function() { 
+							console.log('ready');
+
 							player.play()
 							.then(function() {
 							
 							})
 							.catch(function(error) {
 								console.log(error);
-								
-								$('#mtp-video-overlay').removeClass('hidden-elem');
 							});
-						});
-						
-						player.on("playing", function() { 
-							$('#mtp-video-overlay').remove();
-						});
-						
-						player.on("loadstart", function() { 
-							
-						});
-						
-						player.on("ready", function() { 
-
 						});
 						
 						$('#big-play-button-poster-container').click(async function(event) {
@@ -2187,12 +2187,6 @@ body {
 								console.log(error);
 							});
 						});
-						
-						try {
-							player.src(sources);
-						} catch (error) {
-							console.log(error);
-						}
 					}
 				}
 			}
