@@ -3,7 +3,7 @@ A repository containing the node software for the [MoarTube platform](http://www
 <br/>
 <br/>
 <br/>
-## Setup Guide (Ubuntu Linux) (automated)
+## Setup Guide (Ubuntu Linux, Digital Ocean) (automated)
 
 Run the command ***bash <(wget -O - https://www.moartube.com/bash/install/node)***
 
@@ -11,7 +11,7 @@ Your MoarTube node is now ready! :tada:
 <br/>
 <br/>
 <br/>
-## Setup Guide (Ubuntu Linux) (manual)
+## Setup Guide (Ubuntu Linux, Digital Ocean) (manual)
 
 Run the command **sudo snap install node --classic --channel=20**
 
