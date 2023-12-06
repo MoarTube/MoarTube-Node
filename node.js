@@ -2858,177 +2858,96 @@ else {
 		});
 		
 		// Retrieve videos from the database
-		app.get('/videos/search', (req, res) => {
+		app.get('/channel/search', (req, res) => {
 			const searchTerm = req.query.searchTerm;
 			const sortTerm = req.query.sortTerm;
 			const tagTerm = req.query.tagTerm;
-			var tagLimit = req.query.tagLimit;
 			
-			if(isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true) && isTagLimitValid(tagLimit)) {
-				tagLimit = Number(tagLimit);
-				
+			if(isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true)) {
+				var query;
+				var params;
+
 				if(searchTerm.length === 0) {
-					database.all('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1)', function(error, rows) {
-						if(error) {
-							logDebugMessageToConsole('', new Error(error).stack, true);
-							
-							res.send({isError: true});
-						}
-						else {
-							const tagLimitCounter = {};
-							
-							if(sortTerm === 'latest') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return b.creation_timestamp - a.creation_timestamp;
-								});
-							}
-							else if(sortTerm === 'popular') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return b.views - a.views;
-								});
-							}
-							else if(sortTerm === 'oldest') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return a.creation_timestamp - b.creation_timestamp;
-								});
-							}
-							
-							var rowsToSend = [];
-							
-							if(tagTerm.length === 0) {
-								if(tagLimit === 0) {
-									rowsToSend = rows;
-								}
-								else {
-									rows.forEach(function(row) {
-										const tagsArray = row.tags.split(',');
-										
-										var addRow = false;
-										
-										for (var tag of tagsArray) {
-											if(!tagLimitCounter.hasOwnProperty(tag)) {
-												tagLimitCounter[tag] = 0;
-											}
-											
-											if(tagLimitCounter[tag] < tagLimit) {
-												tagLimitCounter[tag]++;
-												addRow = true;
-												break;
-											}
-										}
-										
-										if(addRow) {
-											rowsToSend.push(row);
-										}
-									});
-								}
-							}
-							else {
-								rows.forEach(function(row) {
-									const tagsArray = row.tags.split(',');
-									if (tagsArray.includes(tagTerm)) {
-										if(tagLimit === 0) {
-											rowsToSend.push(row);
-										}
-										else {
-											if(!tagLimitCounter.hasOwnProperty(tagTerm)) {
-												tagLimitCounter[tagTerm] = 0;
-											}
-											
-											if(tagLimitCounter[tagTerm] < tagLimit) {
-												tagLimitCounter[tagTerm]++;
-												rowsToSend.push(row);
-											}
-										}
-									}
-								});
-							}
-							
-							res.send({isError: false, searchResults: rowsToSend});
-						}
-					});
-				}
-				else if(searchTerm.length <= 100) {
-					database.all('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) AND title LIKE ?', ['%' + searchTerm + '%'], (error, rows) => {
-						if(error) {
-							logDebugMessageToConsole('', new Error(error).stack, true);
-							
-							res.send({isError: true});
-						}
-						else {
-							const tagLimitCounter = {};
-							
-							if(sortTerm === 'latest') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return b.creation_timestamp - a.creation_timestamp;
-								});
-							}
-							else if(sortTerm === 'popular') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return b.views - a.views;
-								});
-							}
-							else if(sortTerm === 'oldest') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return a.creation_timestamp - b.creation_timestamp;
-								});
-							}
-							
-							var rowsToSend = [];
-							
-							if(tagTerm.length === 0) {
-								if(tagLimit === 0) {
-									rowsToSend = rows;
-								}
-								else {
-									rows.forEach(function(row) {
-										if(!tagLimitCounter.hasOwnProperty(tagTerm)) {
-											tagLimitCounter[tagTerm] = 0;
-										}
-										
-										if(tagLimitCounter[tagTerm] < tagLimit) {
-											tagLimitCounter[tagTerm]++;
-											rowsToSend.push(row);
-										}
-									});
-								}
-							}
-							else {
-								rows.forEach(function(row) {
-									const tagsArray = row.tags.split(',');
-									if (tagsArray.includes(tagTerm)) {
-										if(tagLimit === 0) {
-											rowsToSend.push(row);
-										}
-										else {
-											if(!tagLimitCounter.hasOwnProperty(tagTerm)) {
-												tagLimitCounter[tagTerm] = 0;
-											}
-											
-											if(tagLimitCounter[tagTerm] < tagLimit) {
-												tagLimitCounter[tagTerm]++;
-												rowsToSend.push(row);
-											}
-										}
-									}
-								});
-							}
-							
-							res.send({isError: false, searchResults: rowsToSend});
-						}
-					});
+					query = 'SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1)';
+					params = [];
 				}
 				else {
-					res.send({isError: true});
+					query = 'SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) AND title LIKE ?';
+					params = ['%' + searchTerm + '%'];
 				}
+
+				database.all(query, params, function(error, rows) {
+					if(error) {
+						logDebugMessageToConsole('', new Error(error).stack, true);
+						
+						res.send({isError: true});
+					}
+					else {
+						if(sortTerm === 'latest') {
+							rows.sort(function compareByTimestampDescending(a, b) {
+								return b.creation_timestamp - a.creation_timestamp;
+							});
+						}
+						else if(sortTerm === 'popular') {
+							rows.sort(function compareByTimestampDescending(a, b) {
+								return b.views - a.views;
+							});
+						}
+						else if(sortTerm === 'oldest') {
+							rows.sort(function compareByTimestampDescending(a, b) {
+								return a.creation_timestamp - b.creation_timestamp;
+							});
+						}
+						
+						const tagLimitCounter = {};
+						var rowsToSend = [];
+						
+						if(tagTerm.length === 0) {
+							const tagLimit = 4;
+
+							rows.forEach(function(row) {
+								const tagsArray = row.tags.split(',');
+								
+								var addRow = false;
+								
+								for (var tag of tagsArray) {
+									if(!tagLimitCounter.hasOwnProperty(tag)) {
+										tagLimitCounter[tag] = 0;
+									}
+									
+									if(tagLimitCounter[tag] < tagLimit) {
+										tagLimitCounter[tag]++;
+										addRow = true;
+										break;
+									}
+								}
+								
+								if(addRow) {
+									rowsToSend.push(row);
+								}
+							});
+						}
+						else {
+							rows.forEach(function(row) {
+								const tagsArray = row.tags.split(',');
+
+								if(tagsArray.includes(tagTerm) && !rowsToSend.includes(row)) {
+									rowsToSend.push(row);
+								}
+							});
+						}
+						
+						res.send({isError: false, searchResults: rowsToSend});
+					}
+				});
 			}
 			else {
 				res.send({isError: true});
 			}
 		});
 		
-		// Retrieve videos from the database
-		app.get('/videos/search/all', (req, res) => {
+		// Retrieve videos from the database, uses timestamp for pagination
+		app.get('/videos/search', (req, res) => {
 			const searchTerm = req.query.searchTerm;
 			const sortTerm = req.query.sortTerm;
 			const tagTerm = req.query.tagTerm;
@@ -3037,132 +2956,69 @@ else {
 			
 			if(isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true) && isTagLimitValid(tagLimit) && isTimestampValid(timestamp)) {
 				tagLimit = Number(tagLimit);
-				
+
+				var query;
+				var params;
+
 				if(searchTerm.length === 0) {
-					database.all('SELECT * FROM videos WHERE creation_timestamp < ? ORDER BY creation_timestamp', [timestamp], function(error, rows) {
-						if(error) {
-							logDebugMessageToConsole('', new Error(error).stack, true);
-							
-							res.send({isError: true, message: 'error communicating with the MoarTube node'});
-						}
-						else {
-							const tagLimitCounter = {};
-							
-							if(sortTerm === 'latest') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return b.creation_timestamp - a.creation_timestamp;
-								});
-							}
-							else if(sortTerm === 'popular') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return b.views - a.views;
-								});
-							}
-							else if(sortTerm === 'oldest') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return a.creation_timestamp - b.creation_timestamp;
-								});
-							}
-							
-							var rowsToSend = [];
-							
-							if(tagTerm.length === 0) {
-								if(tagLimit === 0) {
-									rowsToSend = rows;
-								}
-								else {
-									rowsToSend = rows.slice(0, tagLimit);
-								}
-							}
-							else {
-								rows.forEach(function(row) {
-									const tagsArray = row.tags.split(',');
-									if (tagsArray.includes(tagTerm)) {
-										if(tagLimit === 0) {
-											rowsToSend.push(row);
-										}
-										else {
-											if(!tagLimitCounter.hasOwnProperty(tagTerm)) {
-												tagLimitCounter[tagTerm] = 0;
-											}
-											
-											if(tagLimitCounter[tagTerm] < tagLimit) {
-												tagLimitCounter[tagTerm]++;
-												rowsToSend.push(row);
-											}
-										}
-									}
-								});
-							}
-							
-							res.send({isError: false, searchResults: rowsToSend});
-						}
-					});
-				}
-				else if(searchTerm.length <= 100) {
-					database.all('SELECT * FROM videos WHERE creation_timestamp < ? AND title LIKE ?', [timestamp, '%' + searchTerm + '%'], (error, rows) => {
-						if(error) {
-							logDebugMessageToConsole('', new Error(error).stack, true);
-							
-							res.send({isError: true, message: 'error communicating with the MoarTube node'});
-						}
-						else {
-							const tagLimitCounter = {};
-							
-							if(sortTerm === 'latest') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return b.creation_timestamp - a.creation_timestamp;
-								});
-							}
-							else if(sortTerm === 'popular') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return b.views - a.views;
-								});
-							}
-							else if(sortTerm === 'oldest') {
-								rows.sort(function compareByTimestampDescending(a, b) {
-									return a.creation_timestamp - b.creation_timestamp;
-								});
-							}
-							
-							var rowsToSend = [];
-							
-							if(tagTerm.length === 0) {
-								if(tagLimit === 0) {
-									rowsToSend = rows;
-								}
-								else {
-									rowsToSend = rows.slice(0, tagLimit);
-								}
-							}
-							else {
-								rows.forEach(function(row) {
-									const tagsArray = row.tags.split(',');
-									if (tagsArray.includes(tagTerm)) {
-										if(tagLimit === 0) {
-											rowsToSend.push(row);
-										}
-										else {
-											if(!tagLimitCounter.hasOwnProperty(tagTerm)) {
-												tagLimitCounter[tagTerm] = 0;
-											}
-											
-											if(tagLimitCounter[tagTerm] < tagLimit) {
-												tagLimitCounter[tagTerm]++;
-												rowsToSend.push(row);
-											}
-										}
-									}
-								});
-							}
-							
-							res.send({isError: false, searchResults: rowsToSend});
-						}
-					});
+					query = 'SELECT * FROM videos WHERE creation_timestamp < ?';
+					params = [timestamp];
 				}
 				else {
-					res.send({isError: true, message: 'invalid search term length'});
+					query = 'SELECT * FROM videos WHERE creation_timestamp < ? AND title LIKE ?';
+					params = [timestamp, '%' + searchTerm + '%'];
 				}
+				
+				database.all(query, params, function(error, rows) {
+					if(error) {
+						logDebugMessageToConsole('', new Error(error).stack, true);
+						
+						res.send({isError: true, message: 'error communicating with the MoarTube node'});
+					}
+					else {
+						if(sortTerm === 'latest') {
+							rows.sort(function compareByTimestampDescending(a, b) {
+								return b.creation_timestamp - a.creation_timestamp;
+							});
+						}
+						else if(sortTerm === 'popular') {
+							rows.sort(function compareByTimestampDescending(a, b) {
+								return b.views - a.views;
+							});
+						}
+						else if(sortTerm === 'oldest') {
+							rows.sort(function compareByTimestampDescending(a, b) {
+								return a.creation_timestamp - b.creation_timestamp;
+							});
+						}
+
+						var rowsToSend = [];
+						
+						if(tagTerm.length === 0) {
+							if(tagLimit === 0) {
+								rowsToSend = rows;
+							}
+							else {
+								rowsToSend = rows.slice(0, tagLimit);
+							}
+						}
+						else {
+							for(const row of rows) {
+								const tagsArray = row.tags.split(',');
+
+								if (tagsArray.includes(tagTerm) && !rowsToSend.includes(row)) {
+									rowsToSend.push(row);
+								}
+
+								if(tagLimit !== 0 && rowsToSend.length === tagLimit) {
+									break;
+								}
+							}
+						}
+						
+						res.send({isError: false, searchResults: rowsToSend});
+					}
+				});
 			}
 			else {
 				res.send({isError: true, message: 'invalid parameters'});

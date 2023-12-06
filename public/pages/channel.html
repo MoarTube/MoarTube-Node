@@ -213,7 +213,7 @@
 			var CURRENT_SEARCH_TERM;
 			var CURRENT_SORT_TERM;
 			var CURRENT_TAG_TERM;
-			var CURRENT_TAG_LIMIT;
+			var CURRENT_TAG_TERM_ID;
 		
 			$(document).ready(function() {
 				const params = new URL(window.location.href).searchParams;
@@ -221,7 +221,6 @@
 				var searchTerm = params.get('se');
 				var sortTerm = params.get('so');
 				var tagTerm = params.get('ta');
-				var tagLimit = params.get('tl');
 				
 				if(searchTerm == null) {
 					searchTerm = '';
@@ -252,20 +251,16 @@
 					tagTerm = '';
 				}
 				
-				if(tagLimit == null) {
-					tagLimit = 4;
-				}
-				
 				CURRENT_SEARCH_TERM = searchTerm;
 				CURRENT_SORT_TERM = sortTerm;
 				CURRENT_TAG_TERM = tagTerm;
-				CURRENT_TAG_LIMIT = tagLimit;
+				CURRENT_TAG_TERM_ID = tagTerm.replace(/ /g, '-');
 				
 				$('#search-input').val(searchTerm);
 				
 				getNodeInformation();
 				getTags();
-				getVideos(searchTerm, sortTerm, tagTerm, tagLimit);
+				getVideos(searchTerm, sortTerm, tagTerm);
 			});
 			
 			function getNodeInformation() {
@@ -319,14 +314,16 @@
 						$('#tag-buttons').append('<button id="tag-button-all" type="button" class="btn btn-outline-primary tag-button content-button me-1" data-tagterm="" style="white-space: nowrap;" onclick="tagButtonSelected(this);">all</button>');
 						
 						tags.forEach(function(tag) {
-							$('#tag-buttons').append('<button id="tag-button-' + tag + '" type="button" class="btn btn-outline-primary tag-button content-button me-1" data-tagterm="' + tag + '" style="white-space: nowrap;" onclick="tagButtonSelected(this);">' + tag + '</button>');
+							const tagTermId = tag.replace(/ /g, '-');
+
+							$('#tag-buttons').append('<button id="tag-button-' + tagTermId + '" type="button" class="btn btn-outline-primary tag-button content-button me-1" data-tagterm="' + tag + '" style="white-space: nowrap;" onclick="tagButtonSelected(this);">' + tag + '</button>');
 						});
 						
-						if(CURRENT_TAG_TERM === '') {
+						if(CURRENT_TAG_TERM_ID === '') {
 							$('#tag-button-all').addClass('content-button-selected');
 						}
 						else {
-							$('#tag-button-' + CURRENT_TAG_TERM).addClass('content-button-selected');
+							$('#tag-button-' + CURRENT_TAG_TERM_ID).addClass('content-button-selected');
 						}
 					}
 				})
@@ -336,23 +333,21 @@
 				});
 			}
 			
-			function getVideos(searchTerm, sortTerm, tagTerm, tagLimit) {
+			function getVideos(searchTerm, sortTerm, tagTerm) {
 				$('#videos-container').empty();
 				
-				$.ajax({type: 'GET', url: '/videos/search', data: { searchTerm: searchTerm, sortTerm: sortTerm, tagTerm: tagTerm, tagLimit: tagLimit }})
+				$.ajax({type: 'GET', url: '/channel/search', data: { searchTerm: searchTerm, sortTerm: sortTerm, tagTerm: tagTerm }})
 				.done(function (data, textStatus, xhr)
 				{
 					if(data.isError) {
 						alert(data.message);
 					}
 					else {
-						const tags = [];
-						
 						data.searchResults.forEach(function(row) {
 							const videoId = row.video_id;
 							const thumbnail = '/videos/' + videoId + '/thumbnail';
 							const title = row.title;
-							var tags = row.tags;
+							const tags = row.tags;
 							const lengthTimestamp = row.length_timestamp;
 							const views = row.views;
 							const isLive = row.is_live;
@@ -380,19 +375,21 @@
 									liveStreamIndicator = '<i style="position: absolute; left: 5px; bottom: 5px; background-color: #cb0c9f; color: white; border-radius: 4px; padding: 3px; font-size: 10px; font-weight: 500; width: unset;">STREAMED</i>';
 								}
 							}
-							
-							if(tagTerm === '') {
-								if($('#videos-container-all').length === 0) {
+
+							if(tagTerm !== '') {
+								const tagTermId = tagTerm.replace(/ /g, '-');
+
+								if($('#videos-container-' + tagTermId).length === 0) {
 									$('#videos-container').append('\
-										<div id="videos-container-all" class="container videos-container-outer p-0 pb-1 mt-2">\
-											<div class="videos-container-inner-tag-title row justify-content-end pe-1" style=" background-color: #cb0c9f08; border: 1px solid #cb0c9f40; border-radius: 5px 5px 0 0; color: #cb0c9f; font-size: 13px;"><span class="text-end p-0"><a href="?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=&tl=' + CURRENT_TAG_LIMIT + '" >all</a></span></div>\
-											<div id="videos-container-inner-all" class="videos-container-inner row row-cols-sm-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4">\
+										<div id="videos-container-' + tagTermId + '" class="container videos-container-outer p-0 pb-1 mt-2">\
+											<div class="videos-container-inner-tag-title row justify-content-end pe-1" style=" background-color: #cb0c9f08; border: 1px solid #cb0c9f40; border-radius: 5px 5px 0 0; color: #cb0c9f; font-size: 13px;"><span class="text-end p-0"><a href="?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=' + tagTerm + '" >' + tagTerm + '</a></span></div>\
+											<div id="videos-container-inner-' + tagTermId + '" class="videos-container-inner row row-cols-sm-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4">\
 											</div>\
 										</div>'
 									);
 								}
-								
-								$('#videos-container-inner-all').append('\
+
+								$('#videos-container-inner-' + tagTermId).append('\
 									<div class="pt-1 pb-1 ps-1 pe-1">\
 										<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
 											<div class="card">\
@@ -411,35 +408,41 @@
 								);
 							}
 							else {
-								tagTerm = tagTerm.replace(/ /g, '-');
-								
-								if($('#videos-container-' + tagTerm).length === 0) {
-									$('#videos-container').append('\
-										<div id="videos-container-' + tagTerm + '" class="container videos-container-outer p-0 pb-1 mt-2">\
-											<div class="videos-container-inner-tag-title row justify-content-end pe-1" style=" background-color: #cb0c9f08; border: 1px solid #cb0c9f40; border-radius: 5px 5px 0 0; color: #cb0c9f; font-size: 13px;"><span class="text-end p-0"><a href="?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=' + tagTerm + '&tl=' + CURRENT_TAG_LIMIT + '" >' + tagTerm + '</a></span></div>\
-											<div id="videos-container-inner-' + tagTerm + '" class="videos-container-inner row row-cols-sm-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4">\
-											</div>\
-										</div>'
-									);
+								const tagsArray = tags.split(',');
+
+								for(const tag of tagsArray) {
+									const tagTermId = tag.replace(/ /g, '-');
+
+									if($('#videos-container-' + tagTermId).length === 0) {
+										$('#videos-container').append('\
+											<div id="videos-container-' + tagTermId + '" class="container videos-container-outer p-0 pb-1 mt-2">\
+												<div class="videos-container-inner-tag-title row justify-content-end pe-1" style=" background-color: #cb0c9f08; border: 1px solid #cb0c9f40; border-radius: 5px 5px 0 0; color: #cb0c9f; font-size: 13px;"><span class="text-end p-0"><a href="?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=' + tag + '" >' + tag + '</a></span></div>\
+												<div id="videos-container-inner-' + tagTermId + '" class="videos-container-inner row row-cols-sm-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4">\
+												</div>\
+											</div>'
+										);
+									}
+
+									if($('#videos-container-inner-' + tagTermId).children().length < 4) {
+										$('#videos-container-inner-' + tagTermId).append('\
+											<div class="pt-1 pb-1 ps-1 pe-1">\
+												<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
+													<div class="card">\
+														<div class="position-relative ratio-16x9">\
+															<img src="/videos/' + videoId + '/preview" class="card-img-top" alt="...">\
+															' + durationIndicator + '\
+															' + liveStreamIndicator + '\
+														</div>\
+														<div class="card-body">\
+															<h6 class="card-title row">' + title + '</h6>\
+															<small class="card-text row">' + views + ' views &#x2022 ' + creationTimestampFormatted + '</small>\
+														</div>\
+													</div>\
+												</a>\
+											</div>'
+										);
+									}
 								}
-								
-								$('#videos-container-inner-' + tagTerm).append('\
-									<div class="pt-1 pb-1 ps-1 pe-1">\
-										<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
-											<div class="card">\
-												<div class="position-relative ratio-16x9">\
-													<img src="/videos/' + videoId + '/preview" class="card-img-top" alt="...">\
-													' + durationIndicator + '\
-													' + liveStreamIndicator + '\
-												</div>\
-												<div class="card-body">\
-													<h6 class="card-title row">' + title + '</h6>\
-													<small class="card-text row">' + views + ' views &#x2022 ' + creationTimestampFormatted + '</small>\
-												</div>\
-											</div>\
-										</a>\
-									</div>'
-								);
 							}
 						});
 					}
@@ -461,7 +464,7 @@
 				
 				updateAddressBar();
 				
-				getVideos(CURRENT_SEARCH_TERM, CURRENT_SORT_TERM, CURRENT_TAG_TERM, CURRENT_TAG_LIMIT);
+				getVideos(CURRENT_SEARCH_TERM, CURRENT_SORT_TERM, CURRENT_TAG_TERM);
 			}
 			
 			function tagButtonSelected(tagButton) {
@@ -472,10 +475,11 @@
 				const sortTerm = $('.sort-button.content-button-selected').eq(0).data('sortterm');
 				
 				CURRENT_TAG_TERM = tagTerm;
+				CURRENT_TAG_TERM_ID = tagTerm.replace(/ /g, '-');
 				
 				updateAddressBar();
 				
-				getVideos(CURRENT_SEARCH_TERM, CURRENT_SORT_TERM, CURRENT_TAG_TERM, CURRENT_TAG_LIMIT);
+				getVideos(CURRENT_SEARCH_TERM, CURRENT_SORT_TERM, CURRENT_TAG_TERM);
 			}
 			
 			var searchInputTimer;
@@ -489,12 +493,12 @@
 				searchInputTimer = setTimeout(function() {
 					updateAddressBar();
 					
-					getVideos(CURRENT_SEARCH_TERM, CURRENT_SORT_TERM, CURRENT_TAG_TERM, CURRENT_TAG_LIMIT);
+					getVideos(CURRENT_SEARCH_TERM, CURRENT_SORT_TERM, CURRENT_TAG_TERM);
 				}, 500);
 			}
 			
 			function updateAddressBar() {
-				const stateString = '?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=' + CURRENT_TAG_TERM + '&tl=' + CURRENT_TAG_LIMIT;
+				const stateString = '?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=' + CURRENT_TAG_TERM;
 				
 				window.history.replaceState({}, '', stateString);
 			}
