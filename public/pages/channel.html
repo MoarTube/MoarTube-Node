@@ -411,6 +411,8 @@
 								);
 							}
 							else {
+								tagTerm = tagTerm.replace(/ /g, '-');
+								
 								if($('#videos-container-' + tagTerm).length === 0) {
 									$('#videos-container').append('\
 										<div id="videos-container-' + tagTerm + '" class="container videos-container-outer p-0 pb-1 mt-2">\
