@@ -34,7 +34,7 @@
 			}
 			
 			#comments-container, .card {
-				background: #f9f9f9;
+				background: #f5f5f5;
 			}
 
 			#recommended-videos {
@@ -614,96 +614,7 @@
 
 
 
-body.dark-mode {
-	background-color: #1e1e1e;
-}
 
-#recommended-videos-list-container.dark-mode {
-	background-color: #1e1e1e;
-}
-
-#live-stream-chat-container.dark-mode {
-	background-color: #353535;
-}
-
-.live-chat-text-color.dark-mode {
-	color: white;
-}
-
-#send-chat-message-input.dark-mode {
-	background-color: black;
-	color: white;
-}
-
-#send-chat-message-input.dark-mode::placeholder {
-	color: grey;
-	opacity: 1; /* Firefox */
-}
-
-.video-recommendation-card.dark-mode {
-	border: 0px;
-	background-color: #353535;
-	color: #efefef;
-}
-
-.video-recommendation-card-text.dark-mode {
-	color: #efefef;
-}
-
-.comment-input-text-area.dark-mode {
-	background-color: black;
-	color: white;
-}
-
-.comment-input-text-area.dark-mode::placeholder  {
-	color: grey;
-	opacity: 1; /* Firefox */
-}
-
-#comments-container .replyContainer .reply.dark-mode {
-	background-color: #353535;
-	color: #efefef;
-}
-
-#comments-container .replyContainer .reply .quotelink.dark-mode {
-	color: #ff6767;
-}
-
-#comments-container .replyContainer .reply .postNum a.dark-mode {
-	color: grey;
-}
-
-.captcha-container img.dark-mode {
-	background-color: white;
-}
-
-#video-comments-outer.dark-mode {
-	color: #efefef;
-}
-
-.btn-outline-primary.dark-mode {
-	color: grey !important;
-}
-
-.btn-primary.dark-mode {
-	color: white !important;
-}
-
-.recommendation-category-button-selected.dark-mode {
-	color: white !important;
-}
-
-.reply.dark-mode:target, .reply.highlight.dark-mode {
-	background: #2f2f2f !important;
-}
-
-#moartube-logo-light.dark-mode {
-	display: none !important;
-}
-
-#moartube-logo-dark.dark-mode {
-	display: block !important;
-}
 
 @media (prefers-color-scheme: dark) {
     body {
@@ -968,7 +879,7 @@ body {
 						</div>
 						<div>
 							<div id="video-title-section" class="row gutters mt-2">
-								<h3 id="video-title">........</h3>
+								<div class="container"><h3 id="video-title">........</h3></div>
 							</div>
 							<div class="row gutters">
 								<div id="stats-section" class="container">
@@ -1486,9 +1397,9 @@ body {
 									}
 									
 									const html = $('\
-										<li class="list-group-item ps-0 pe-0 mt-2 video-recommendation-card">\
+										<li class="list-group-item ps-0 pe-0 mt-2 video-recommendation-card border-0">\
 											<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
-												<div class="card video-recommendation-card">\
+												<div class="card video-recommendation-card border-0">\
 													<div class="row g-0 position-relative">\
 														<div class="col-6 position-relative">\
 															<div class="position-relative">\
