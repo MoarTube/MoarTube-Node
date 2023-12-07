@@ -722,10 +722,10 @@ else {
 					});
 					
 					websocketServer.on('connection', function connection(ws) {
-						logDebugMessageToConsole('websocket client connected', '', true);
+						logDebugMessageToConsole('MoarTube Client websocket connected', '', true);
 						
 						ws.on('close', () => {
-							logDebugMessageToConsole('websocket client disconnected', '', true);
+							logDebugMessageToConsole('MoarTube Client websocket disconnected', '', true);
 						});
 						
 						ws.on('message', (message) => {
