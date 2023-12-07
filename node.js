@@ -3574,8 +3574,15 @@ else {
 												deletedVideoIds.push(videoId);
 											}
 										});
-										
-										res.send({isError: false, deletedVideoIds: deletedVideoIds, nonDeletedVideoIds: nonDeletedVideoIds});
+
+										submitDatabaseWriteJob('DELETE FROM comments WHERE video_id IN (' + deletedVideoIds.map(() => '?').join(',') + ')', deletedVideoIds, function(isError) {
+											if(isError) {
+												res.send({isError: true, message: 'error communicating with the MoarTube node'});
+											}
+											else {
+												res.send({isError: false, deletedVideoIds: deletedVideoIds, nonDeletedVideoIds: nonDeletedVideoIds});
+											}
+										});
 									}
 								});
 							}
@@ -5527,7 +5534,33 @@ else {
 			}
 		});
 		
-		
+		app.get('/node/videos/comments/all', async (req, res) => {
+			getAuthenticationStatus(req.headers.authorization)
+			.then((isAuthenticated) => {
+				if(isAuthenticated) {
+					database.all('SELECT timestamp,video_id,id,comment_plain_text_sanitized FROM comments ORDER BY timestamp DESC', function(error, comments) {
+						if(error) {
+							logDebugMessageToConsole('', new Error(error).stack, true);
+							
+							res.send({isError: true, message: 'error communicating with the MoarTube node'});
+						}
+						else {
+							res.send({isError: false, comments: comments});
+						}
+					});
+				}
+				else {
+					logDebugMessageToConsole('unauthenticated communication was rejected', new Error().stack, true);
+
+					res.send({isError: true, message: 'you are not logged in'});
+				}
+			})
+			.catch(error => {
+				logDebugMessageToConsole('', new Error(error).stack, true);
+				
+				res.send({isError: true, message: 'error communicating with the MoarTube node'});
+			});
+		});
 		
 		
 		

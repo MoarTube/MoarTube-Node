@@ -1688,7 +1688,7 @@ body {
 						message = 'this video is unavailable';
 					}
 					
-					$('#video-player-container').append(message);
+					$('#video-player-container').append('<div class="d-flex align-items-center justify-content-center">' + message + '</div>');
 				}
 				
 				function initializeVideoJsPlayer() {
