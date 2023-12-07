@@ -739,13 +739,22 @@ else {
 								getAuthenticationStatus(jwtToken)
 								.then((isAuthenticated) => {
 									if(isAuthenticated) {
-										if(parsedMessage.eventName === 'register') {
+										if(parsedMessage.eventName === 'ping') {
+											//logDebugMessageToConsole('received ping from client', '', true);
+
+											if(ws.socketType === 'moartube_client') {
+												//logDebugMessageToConsole('sending pong to client', '', true);
+
+												ws.send(JSON.stringify({eventName: 'pong'}));
+											}
+										}
+										else if(parsedMessage.eventName === 'register') {
 											const socketType = parsedMessage.socketType;
 											
 											if(socketType === 'moartube_client') {
 												ws.socketType = socketType;
 												
-												// ws.send(JSON.stringify({eventName: 'registered'}));
+												ws.send(JSON.stringify({eventName: 'registered'}));
 											}
 										}
 										else if(parsedMessage.eventName === 'echo') {
