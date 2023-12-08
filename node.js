@@ -189,7 +189,7 @@ if(cluster.isMaster) {
 									const isStreaming = (row.is_streaming === 1);
 									const lengthSeconds = row.length_seconds;
 									
-									const nodeIconBase64 = fs.readFileSync(path.join(__dirname, 'public/images/icon.jpg')).toString('base64');
+									const nodeIconBase64 = fs.readFileSync(path.join(__dirname, 'public/images/icon.png')).toString('base64');
 									const videoPreviewImageBase64 = fs.readFileSync(path.join(__dirname, 'public/media/videos/' + videoId + '/images/preview.jpg')).toString('base64');
 									
 									indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
@@ -2610,7 +2610,7 @@ else {
 													const lengthSeconds = video.length_seconds;
 													const creationTimestamp = video.creation_timestamp;
 													
-													const nodeIconBase64 = fs.readFileSync(path.join(__dirname, 'public/images/icon.jpg')).toString('base64');
+													const nodeIconBase64 = fs.readFileSync(path.join(__dirname, 'public/images/icon.png')).toString('base64');
 													const videoPreviewImageBase64 = fs.readFileSync(path.join(__dirname, 'public/media/videos/' + videoId + '/images/preview.jpg')).toString('base64');
 													
 													const data = {
@@ -3262,8 +3262,15 @@ else {
 							}
 							else {
 								logDebugMessageToConsole('uploaded preview for video id <' + videoId + '>', '', true);
-								
-								res.send({isError: false});
+
+								submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END WHERE video_id = ?', [videoId], function(isError) {
+									if(isError) {
+										res.send({isError: true, message: 'error communicating with the MoarTube node'});
+									}
+									else {
+										res.send({isError: false});
+									}
+								});
 							}
 						});
 					}
@@ -4078,12 +4085,12 @@ else {
 		
 		// Retrieve avatar for node
 		app.get('/settings/avatar', (req, res) => {
-			const thumbnailFilePath = path.join(path.join(__dirname, '/public/images'), 'avatar.jpg');
+			const thumbnailFilePath = path.join(path.join(__dirname, '/public/images'), 'avatar.png');
 			
 			if (fs.existsSync(thumbnailFilePath)) {
 				const fileStream = fs.createReadStream(thumbnailFilePath);
 				
-				res.setHeader('Content-Type', 'image/jpeg');
+				res.setHeader('Content-Type', 'image/png');
 				
 				fileStream.pipe(res);
 			}
@@ -4103,7 +4110,7 @@ else {
 						fileFilter: function (req, file, cb) {
 							const mimeType = file.mimetype;
 							
-							if(mimeType === 'image/jpeg') {
+							if(mimeType === 'image/png') {
 								cb(null, true);
 							}
 							else {
@@ -4126,8 +4133,8 @@ else {
 							filename: function (req, file, cb) {
 								var extension;
 								
-								if(file.mimetype === 'image/jpeg') {
-									extension = '.jpg';
+								if(file.mimetype === 'image/png') {
+									extension = '.png';
 								}
 								
 								const fileName = uuidv4() + extension;
@@ -4152,13 +4159,20 @@ else {
 							const iconSourceFilePath = path.join(__dirname, '/public/images/' + iconFile.filename);
 							const avatarSourceFilePath = path.join(__dirname, '/public/images/' + avatarFile.filename);
 							
-							const iconDestinationFilePath = path.join(__dirname, '/public/images/icon.jpg');
-							const avatarDestinationFilePath = path.join(__dirname, '/public/images/avatar.jpg');
+							const iconDestinationFilePath = path.join(__dirname, '/public/images/icon.png');
+							const avatarDestinationFilePath = path.join(__dirname, '/public/images/avatar.png');
 							
 							fs.renameSync(iconSourceFilePath, iconDestinationFilePath);
 							fs.renameSync(avatarSourceFilePath, avatarDestinationFilePath);
-							
-							res.send({isError: false});
+
+							submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END', [], function(isError) {
+								if(isError) {
+									res.send({isError: true, message: 'error communicating with the MoarTube node'});
+								}
+								else {
+									res.send({isError: false});
+								}
+							});
 						}
 					});
 				}
@@ -4177,12 +4191,12 @@ else {
 		
 		// Retrieve banner for node
 		app.get('/settings/banner', (req, res) => {
-			const thumbnailFilePath = path.join(path.join(__dirname, '/public/images'), 'banner.jpg');
+			const thumbnailFilePath = path.join(path.join(__dirname, '/public/images'), 'banner.png');
 			
 			if (fs.existsSync(thumbnailFilePath)) {
 				const fileStream = fs.createReadStream(thumbnailFilePath);
 				
-				res.setHeader('Content-Type', 'image/jpeg');
+				res.setHeader('Content-Type', 'image/png');
 				
 				fileStream.pipe(res);
 			}
@@ -4202,7 +4216,7 @@ else {
 						fileFilter: function (req, file, cb) {
 							const mimeType = file.mimetype;
 							
-							if(mimeType === 'image/jpeg') {
+							if(mimeType === 'image/png') {
 								cb(null, true);
 							}
 							else {
@@ -4225,8 +4239,8 @@ else {
 							filename: function (req, file, cb) {
 								var extension;
 								
-								if(file.mimetype === 'image/jpeg') {
-									extension = '.jpg';
+								if(file.mimetype === 'image/png') {
+									extension = '.png';
 								}
 								
 								const fileName = Date.now() + extension;
@@ -4249,7 +4263,7 @@ else {
 							
 							const bannerSourceFilePath = path.join(__dirname, '/public/images/' + bannerFile.filename);
 							
-							const bannerDestinationFilePath = path.join(__dirname, '/public/images/banner.jpg');
+							const bannerDestinationFilePath = path.join(__dirname, '/public/images/banner.png');
 							
 							fs.renameSync(bannerSourceFilePath, bannerDestinationFilePath);
 							
