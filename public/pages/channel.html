@@ -151,10 +151,43 @@
 			#moartube-logo-dark {
 				display: none;
 			}
+
+			@media (prefers-color-scheme: dark) {
+				body {
+					background-color: #1e1e1e;
+				}
+
+				.btn-outline-primary {
+					color: grey !important;
+				}
+
+				#node-information {
+					color: #efefef;
+				}
+
+				.content-button-selected {
+					color: white !important;
+				}
+
+				#search-input {
+					background-color: black;
+					color: white;
+				}
+
+				#search-input::placeholder  {
+					color: grey;
+					opacity: 1; /* Firefox */
+				}
+
+				#moartube-logo-light {
+					display: none !important;
+				}
+
+				#moartube-logo-dark {
+					display: block !important;
+				}
+			}
 		</style>
-
-
-
 
 <script>
 	function addStyles(css) {
@@ -170,7 +203,7 @@
 	
 	const darkModeStyles = `
 body {
-background-color: #1e1e1e;
+	background-color: #1e1e1e;
 }
 
 .btn-outline-primary {
