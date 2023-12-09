@@ -18,7 +18,7 @@ Your MoarTube node is now ready! :tada:
 <br/>
 ## Setup Guide (Ubuntu Linux, Digital Ocean) (manual)
 
-Run the command **sudo snap install node --classic --channel=20**
+Run the command **sudo snap install node --classic --channel=21**
 
 **git clone** the MoarTube-Node repository
 
