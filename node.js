@@ -286,11 +286,13 @@ if(cluster.isMaster) {
 		
 		errorMessage += '\n';
 		
+		/*
 		if(isLoggingToFile) {
 			const logFilePath = path.join(__dirname, '/_node_log.txt');
 			
 			fs.appendFileSync(logFilePath, errorMessage);
 		}
+		*/
 	}
 	
 	function provisionSqliteDatabase(databasePath) {
