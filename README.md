@@ -4,7 +4,7 @@ A repository containing the node software for hosting videos on and off of the [
 <br/>
 <br/>
 ## DockerHub
-[https://hub.docker.com/u/moartube](https://hub.docker.com/r/moartube/moartube-node)
+https://hub.docker.com/r/moartube/moartube-node
 <br/>
 <br/>
 <br/>
