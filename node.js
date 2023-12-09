@@ -3863,7 +3863,14 @@ else {
 						res.send({isError: true, message: 'error communicating with the MoarTube node'});
 					}
 					else {
-						res.send({isError: false});
+						submitDatabaseWriteJob('UPDATE videos SET comments = comments - 1 WHERE video_id = ?', [videoId], function(isError) {
+							if(isError) {
+								res.send({isError: true, message: 'error communicating with the MoarTube node'});
+							}
+							else {
+								res.send({isError: false});
+							}
+						});
 					}
 				});
 			}
