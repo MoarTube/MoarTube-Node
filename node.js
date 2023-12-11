@@ -429,7 +429,7 @@ if(cluster.isMaster) {
 	
 	function updateManifestFiles(database) {
 		return new Promise(async function(resolve, reject) {
-			database.all('SELECT video_id FROM videos WHERE is_streamed = 1', function(error, rows) {
+			database.all('SELECT video_id, is_stream_recorded_remotely FROM videos WHERE is_streamed = 1', function(error, rows) {
 				if(error) {
 					logDebugMessageToConsole('', new Error(error).stack, true);
 					
@@ -1974,20 +1974,33 @@ else {
 								res.send({isError: true, message: 'error communicating with the MoarTube node'});
 							}
 							else {
-								const m3u8DirectoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/m3u8');
-								
-								deleteDirectoryRecursive(m3u8DirectoryPath);
-								
-								submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE video_id = ?', [videoId], function(isError) {
-									if(isError) {
-										
+								database.get('SELECT is_stream_recorded_remotely FROM videos WHERE video_id = ?', videoId, function(error, video) {
+									if(error) {
+										logDebugMessageToConsole('', new Error(error).stack, true);
+		
+										res.send({isError: true, message: 'error communicating with the MoarTube node'});
 									}
 									else {
+										if(video != null) {
+											if(!video.is_stream_recorded_remotely) {
+												const m3u8DirectoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/m3u8');
+												
+												deleteDirectoryRecursive(m3u8DirectoryPath);
+											}
+										}
+
+										submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE video_id = ?', [videoId], function(isError) {
+											if(isError) {
+												
+											}
+											else {
+												
+											}
+										});
 										
+										res.send({isError: false});
 									}
 								});
-								
-								res.send({isError: false});
 							}
 						});
 					}
