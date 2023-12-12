@@ -6,11 +6,7 @@ A repository containing the node software for hosting videos on and off of the [
 ## DockerHub
 https://hub.docker.com/r/moartube/moartube-node
 
-You can use [Docker Desktop](https://www.docker.com/products/docker-desktop/) to manage your Docker images, or pull the MoarTube Node Docker image via the terminal.
-
-Run the command **docker pull moartube/moartube-node**
-
-Run the command **docker run --name moartube-node -p 8080:8181 -d moartube/moartube-node**
+You can use [Docker Desktop](https://www.docker.com/products/docker-desktop/) to manage your images.
 <br/>
 <br/>
 <br/>
