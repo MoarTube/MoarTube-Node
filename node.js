@@ -6543,7 +6543,7 @@ function loadConfig() {
 	
 	const config = JSON.parse(fs.readFileSync(path.join(__dirname, CONFIG_FILE_NAME), 'utf8'));
 	
-	MOARTUBE_NODE_HTTP_PORT = process.env.PORT || config.nodeConfig.httpPort;
+	MOARTUBE_NODE_HTTP_PORT = config.nodeConfig.httpPort;
 	
 	MOARTUBE_INDEXER_HTTP_PROTOCOL = config.indexerConfig.httpProtocol;
 	MOARTUBE_INDEXER_IP = config.indexerConfig.host;

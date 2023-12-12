@@ -9,9 +9,6 @@ COPY . .
 # Install dependencies
 RUN npm install
 
-# Set the port that the node will listen on
-ENV PORT=80
-
 # Expose node ports
 EXPOSE 80 443
 
