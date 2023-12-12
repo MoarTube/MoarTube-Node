@@ -6126,7 +6126,7 @@ else {
 			if(fs.existsSync(directoryPath)) {
 				fs.readdirSync(directoryPath).forEach((file) => {
 					const curPath = path.join(directoryPath, file);
-					
+			
 					if (fs.statSync(curPath).isDirectory()) {
 						deleteDirectoryRecursive(curPath);
 					}
@@ -6134,8 +6134,10 @@ else {
 						fs.unlinkSync(curPath);
 					}
 				});
-				
-				fs.rmdirSync(directoryPath);
+
+				if (fs.readdirSync(directoryPath).length === 0) {
+					fs.rmdirSync(directoryPath);
+				}
 			}
 		}
 
