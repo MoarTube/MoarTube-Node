@@ -10,10 +10,10 @@ COPY . .
 RUN npm install
 
 # Set the port that the node will listen on
-ENV PORT=8080
+ENV PORT=80
 
 # Expose the node port
-EXPOSE 8080
+EXPOSE 80
 
 # Start the node
 CMD [ "node", "node.js" ]
