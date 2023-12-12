@@ -138,6 +138,21 @@ if(cluster.isMaster) {
 					
 					liveStreamWorkerStats[workerId] = liveStreamStats;
 				}
+				else if (msg.cmd && msg.cmd === 'restart_server') {
+					const httpMode = msg.httpMode;
+
+					const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+
+					var isSecure = httpMode === "HTTPS" ? true : false;
+					
+					nodeSettings.isSecure = isSecure;
+					
+					fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
+
+					Object.values(cluster.workers).forEach((worker) => {
+						worker.send({ cmd: 'restart_server_response', httpMode: httpMode });
+					});
+				}
 			});
 		}
 
@@ -535,8 +550,10 @@ else {
 		
 		var JWT_SECRET;
 		var PENDING_DATABASE_WRITE_JOBS = [];
+
+		var httpServerWrapper;
 		
-		process.on('message', (msg) => {
+		process.on('message', async (msg) => {
 			if (msg.cmd === 'websocket_broadcast_response') {
 				if(httpServerWrapper != null) {
 					const message = msg.message;
@@ -629,6 +646,11 @@ else {
 					});
 				}
 			}
+			else if(msg.cmd === 'restart_server_response') {
+				if(httpServerWrapper != null) {
+					restartHttpServer();
+				}
+			}
 		});
 		
 		process.send({ cmd: 'get_jwt_secret' });
@@ -660,7 +682,7 @@ else {
 		app.use(bodyParser.urlencoded({ extended: false }));
 		app.use(bodyParser.json());
 		
-		var httpServerWrapper = await initializeHttpServer();
+		httpServerWrapper = await initializeHttpServer();
 		
 		function initializeHttpServer() {
 			return new Promise(function(resolve, reject) {
@@ -700,6 +722,8 @@ else {
 								cert: cert,
 								ca: ca
 							};
+
+							logDebugMessageToConsole('MoarTube Node is entering secure HTTPS mode', '', true);
 							
 							httpServer = https.createServer(SSL_CREDENTIALS, app);
 						}
@@ -709,6 +733,8 @@ else {
 					}
 				}
 				else {
+					logDebugMessageToConsole('MoarTube Node is entering non-secure HTTP mode', '', true);
+
 					httpServer = http.createServer(app);
 				}
 				
@@ -1000,6 +1026,36 @@ else {
 					};
 					
 					resolve(serverWrapper);
+				});
+			});
+		}
+
+		async function restartHttpServer() {
+			//httpServerWrapper.httpServer.closeAllConnections();
+			
+			httpServerWrapper.websocketServer.clients.forEach(function each(client) {
+				if (client.readyState === webSocket.OPEN) {
+					client.close();
+				}
+			});
+
+			logDebugMessageToConsole('attempting to terminate node', '', true);
+
+			const terminator = httpTerminator.createHttpTerminator({server: httpServerWrapper.httpServer});
+			
+			logDebugMessageToConsole('termination of node in progress', '', true);
+			
+			await terminator.terminate();
+			
+			logDebugMessageToConsole('terminated node', '', true);
+			
+			httpServerWrapper.websocketServer.close(function() {
+				logDebugMessageToConsole('node websocketServer closed', '', true);
+				
+				httpServerWrapper.httpServer.close(async () => {
+					logDebugMessageToConsole('node web server closed', '', true);
+
+					httpServerWrapper = await initializeHttpServer();
 				});
 			});
 		}
@@ -4392,13 +4448,11 @@ else {
 			.then(async (isAuthenticated) => {
 				if(isAuthenticated) {
 					var isSecure = req.query.isSecure;
-					
+
 					if(isBooleanStringValid(isSecure)) {
 						isSecure = (isSecure === 'true');
-						
+
 						if(isSecure) {
-							logDebugMessageToConsole('switching node to HTTPS mode', '', true);
-							
 							multer({
 								fileFilter: function (req, file, cb) {
 									cb(null, true);
@@ -4450,93 +4504,21 @@ else {
 										res.send({isError: true, message: 'cert file is missing'});
 									}
 									else {
-										if(httpServerWrapper.httpServer instanceof https.Server) {
-											res.send({isError: true, message: 'the node is already running an HTTPS server'});
-										}
-										else {
-											res.send({isError: false});
-											
-											//httpServerWrapper.httpServer.closeAllConnections();
-											
-											httpServerWrapper.websocketServer.clients.forEach(function each(client) {
-												if (client.readyState === webSocket.OPEN) {
-													client.close();
-												}
-											});
+										logDebugMessageToConsole('switching node to HTTPS mode', '', true);
 
-											logDebugMessageToConsole('attempting to terminate HTTP node', '', true);
-											
-											const terminator = httpTerminator.createHttpTerminator({server: httpServerWrapper.httpServer});
-											
-											logDebugMessageToConsole('termination of HTTP node in progress', '', true);
-											
-											await terminator.terminate();
-											
-											logDebugMessageToConsole('terminated HTTP node', '', true);
-											
-											httpServerWrapper.websocketServer.close(function() {
-												logDebugMessageToConsole('HTTP node websocketServer closed, switching to HTTPS', '', true);
-												
-												httpServerWrapper.httpServer.close(async () => {
-													logDebugMessageToConsole('HTTP node web server closed, switching to HTTPS', '', true);
-													
-													const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
-													
-													nodeSettings.isSecure = true;
-													
-													fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
-													
-													httpServerWrapper = await initializeHttpServer();
-												});
-											});
-										}
+										res.send({isError: false});
+
+										process.send({ cmd: 'restart_server', httpMode: 'HTTPS' });
 									}
 								}
 							});
 						}
 						else {
 							logDebugMessageToConsole('switching node to HTTP mode', '', true);
+
+							res.send({isError: false});
 							
-							if(httpServerWrapper.httpServer instanceof https.Server) {
-								res.send({isError: false});
-								
-								//httpServerWrapper.httpServer.closeAllConnections();
-								
-								httpServerWrapper.websocketServer.clients.forEach(function each(client) {
-									if (client.readyState === webSocket.OPEN) {
-										client.close();
-									}
-								});
-								
-								logDebugMessageToConsole('attempting to terminate HTTPS node', '', true);
-								
-								const terminator = httpTerminator.createHttpTerminator({server: httpServerWrapper.httpServer});
-								
-								logDebugMessageToConsole('termination of HTTPS node in progress', '', true);
-								
-								await terminator.terminate();
-								
-								logDebugMessageToConsole('terminated HTTPS node', '', true);
-								
-								httpServerWrapper.websocketServer.close(function() {
-									logDebugMessageToConsole('HTTPS node websocketServer closed, switching to HTTP', '', true);
-									
-									httpServerWrapper.httpServer.close(async () => {
-										logDebugMessageToConsole('HTTPS node web server closed, switching to HTTP', '', true);
-										
-										const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
-										
-										nodeSettings.isSecure = false;
-										
-										fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
-										
-										httpServerWrapper = await initializeHttpServer();
-									});
-								});
-							}
-							else {
-								res.send({isError: true, message: "the node is currently not runing an HTTPS server"});
-							}
+							process.send({ cmd: 'restart_server', httpMode: 'HTTP' });
 						}
 					}
 					else {
