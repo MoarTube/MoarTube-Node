@@ -10,7 +10,7 @@ You can use [Docker Desktop](https://www.docker.com/products/docker-desktop/) to
 
 Run the command **docker pull moartube/moartube-node**
 
-Run the command **docker run --name moartube-node -p 8080:80 -d moartube/moartube-node**
+Run the command **docker run --name moartube-node -p 8080:8181 -d moartube/moartube-node**
 <br/>
 <br/>
 <br/>
