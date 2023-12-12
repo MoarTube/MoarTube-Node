@@ -62,7 +62,7 @@ if(cluster.isMaster) {
 		const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
 		
 		if(nodeSettings.nodeId === '') {
-			nodeSettings.nodeId = generateVideoId();
+			nodeSettings.nodeId = await generateVideoId(database);
 			
 			fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
 		}
@@ -1171,7 +1171,7 @@ else {
 		// Import a video
 		app.post('/video/import', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
+			.then(async (isAuthenticated) => {
 				if(isAuthenticated) {
 					const title = req.body.title;
 					const description = req.body.description;
@@ -1187,7 +1187,7 @@ else {
 						res.send({isError: true, message: 'tags are not valid'});
 					}
 					else {
-						const videoId = generateVideoId();
+						const videoId = await generateVideoId(database);
 						const creationTimestamp = Date.now();
 						
 						const meta = JSON.stringify({});
@@ -1859,7 +1859,7 @@ else {
 		
 		app.post('/stream/start', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
+			.then(async (isAuthenticated) => {
 				if(isAuthenticated) {
 					const title = req.body.title;
 					const description = req.body.description;
@@ -1891,7 +1891,7 @@ else {
 						res.send({isError: true, message: 'isRecordingStreamLocally not valid'});
 					}
 					else {
-						const videoId = generateVideoId();
+						const videoId = await generateVideoId(database);
 						const creationTimestamp = Date.now();
 						
 						isRecordingStreamRemotely = isRecordingStreamRemotely ? 1 : 0;
@@ -6344,41 +6344,60 @@ function logDebugMessageToConsole(message, stackTrace, isLoggingToFile) {
 	process.send({ cmd: 'message_log', message: message, stackTrace: stackTrace, isLoggingToFile: isLoggingToFile });
 }
 
-function generateVideoId() {
-	const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-';
-	const length = 11;
-	
-	let result = '';
-	let hyphenCount = 0;
-	let underscoreCount = 0;
+async function generateVideoId(database) {
+    const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-';
+    const length = 11;
 
-	do {
-		result = '';
-		hyphenCount = 0;
-		underscoreCount = 0;
-		
-		for (let i = 0; i < length; i++) {
-			const randomChar = characters.charAt(Math.floor(Math.random() * characters.length));
-			
-			if (randomChar === '-') {
-				hyphenCount++;
-				if (hyphenCount > 1) {
+    let videoId = '';
+    let hyphenCount = 0;
+    let underscoreCount = 0;
+    let isUnique = false;
+
+    do {
+        videoId = '';
+        hyphenCount = 0;
+        underscoreCount = 0;
+
+        for (let i = 0; i < length; i++) {
+            const randomChar = characters.charAt(Math.floor(Math.random() * characters.length));
+
+            if (randomChar === '-') {
+                hyphenCount++;
+                if (hyphenCount > 1) {
 					continue;
 				}
-			}
-			
-			if (randomChar === '_') {
-				underscoreCount++;
-				if (underscoreCount > 1) {
+            }
+
+            if (randomChar === '_') {
+                underscoreCount++;
+                if (underscoreCount > 1) {
 					continue;
 				}
-			}
-			
-			result += randomChar;
-		}
-	} while (hyphenCount > 1 || underscoreCount > 1);
+            }
 
-	return result;
+            videoId += randomChar;
+        }
+
+        if (hyphenCount <= 1 && underscoreCount <= 1) {
+            await new Promise((resolve, reject) => {
+                database.get('SELECT * FROM videos WHERE video_id = ?', [videoId], function (error, video) {
+                    if (error) {
+                        reject(error);
+                    } else if (video) {
+                        resolve(false);
+                    } else {
+                        resolve(true);
+                    }
+                });
+            }).then(isIdUnique => {
+                isUnique = isIdUnique;
+            }).catch(error => {
+                throw error;
+            });
+        }
+    } while (!isUnique);
+
+    return videoId;
 }
 
 function indexer_performNodeIdentification() {
