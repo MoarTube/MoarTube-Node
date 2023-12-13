@@ -17,6 +17,7 @@ A repository containing the [MoarTube](https://www.moartube.com) node software. 
  - Reports section for comments and video
  - Comment monitoring overview with moderation functionality
  - Captcha functionality to limit abuse
+ - Run in the cloud or on your home WiFi
  - Publicize your node on [MoarTube](http://www.moartube.com), or run your node privately
 
 ## How to Get Started
