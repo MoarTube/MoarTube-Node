@@ -21,7 +21,9 @@ A repository containing the [MoarTube](https://www.moartube.com) node software. 
  - Publicize your node on [MoarTube](http://www.moartube.com), or run your node privately
 
 ## How to Get Started
-MoarTube Node can be found on [DockerHub](https://hub.docker.com/r/moartube/moartube-node) and can be managed with software like [Docker Desktop](https://www.docker.com/products/docker-desktop/), or follow the manual approach to set up your node. The default login credentials for your node are below. Be sure to change these upon logging in.
+MoarTube Node can be found on [DockerHub](https://hub.docker.com/r/moartube/moartube-node) and can be managed with software like [Docker Desktop](https://www.docker.com/products/docker-desktop/), or follow the manual approach to set up your node. After that, head over to [MoarTube Client](https://github.com/cconley717/MoarTube-Client) if you haven't already.
+
+The default login credentials for your node are below. Be sure to change these upon logging in.
 
 username: admin
 
