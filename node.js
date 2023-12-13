@@ -559,7 +559,7 @@ else {
 		});
 
 		process.on('unhandledRejection', (reason, promise) => {
-			logDebugMessageToConsole(null, reason.stack, new Error().stack, true);
+			logDebugMessageToConsole(null, reason, reason.stack, true);
 		});
 		
 		var JWT_SECRET;
