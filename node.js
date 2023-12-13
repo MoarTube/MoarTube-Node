@@ -20,7 +20,6 @@ const httpTerminator = require('http-terminator');
 const cluster = require('cluster');
 const { Mutex } = require('async-mutex');
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 var MOARTUBE_NODE_HTTP_PORT;
 
@@ -36,6 +35,8 @@ var EXPRESS_SESSION_NAME;
 var EXPRESS_SESSION_SECRET;
 
 var CONFIG_FILE_NAME;
+
+var IS_DOCKER_ENVIRONMENT;
 
 loadConfig();
 
@@ -5317,50 +5318,55 @@ else {
 			getAuthenticationStatus(req.headers.authorization)
 			.then(async (isAuthenticated) => {
 				if(isAuthenticated) {
-					const listeningNodePort = req.body.listeningNodePort;
-				
-					if(isPortValid(listeningNodePort)) {
-						
-						res.send({isError: false});
-						
-						//httpServerWrapper.httpServer.closeAllConnections();
-						
-						httpServerWrapper.websocketServer.clients.forEach(function each(client) {
-							if (client.readyState === webSocket.OPEN) {
-								client.close();
-							}
-						});
-						
-						logDebugMessageToConsole('attempting to terminate node', '', true);
-						
-						const terminator = httpTerminator.createHttpTerminator({server: httpServerWrapper.httpServer});
-						
-						logDebugMessageToConsole('termination of node in progress', '', true);
-						
-						await terminator.terminate();
-						
-						logDebugMessageToConsole('terminated node', '', true);
-						
-						httpServerWrapper.websocketServer.close(function() {
-							logDebugMessageToConsole('node websocketServer closed', '', true);
-							
-							httpServerWrapper.httpServer.close(async () => {
-								logDebugMessageToConsole('node web server closed', '', true);
-								
-								const config = JSON.parse(fs.readFileSync(path.join(__dirname, CONFIG_FILE_NAME), 'utf8'));
-								
-								config.nodeConfig.httpPort = listeningNodePort;
-								
-								fs.writeFileSync(path.join(__dirname, CONFIG_FILE_NAME), JSON.stringify(config));
-								
-								MOARTUBE_NODE_HTTP_PORT = listeningNodePort;
-								
-								httpServerWrapper = await initializeHttpServer();
-							});
-						});
+					if(IS_DOCKER_ENVIRONMENT) {
+						res.send({isError: true, message: 'This node cannot change listening ports because it is running inside of a docker container.'});
 					}
 					else {
-						res.send({ isError: true, message: 'invalid parameters' });
+						const listeningNodePort = req.body.listeningNodePort;
+						
+						if(isPortValid(listeningNodePort)) {
+							
+							res.send({isError: false});
+							
+							//httpServerWrapper.httpServer.closeAllConnections();
+							
+							httpServerWrapper.websocketServer.clients.forEach(function each(client) {
+								if (client.readyState === webSocket.OPEN) {
+									client.close();
+								}
+							});
+							
+							logDebugMessageToConsole('attempting to terminate node', '', true);
+							
+							const terminator = httpTerminator.createHttpTerminator({server: httpServerWrapper.httpServer});
+							
+							logDebugMessageToConsole('termination of node in progress', '', true);
+							
+							await terminator.terminate();
+							
+							logDebugMessageToConsole('terminated node', '', true);
+							
+							httpServerWrapper.websocketServer.close(function() {
+								logDebugMessageToConsole('node websocketServer closed', '', true);
+								
+								httpServerWrapper.httpServer.close(async () => {
+									logDebugMessageToConsole('node web server closed', '', true);
+									
+									const config = JSON.parse(fs.readFileSync(path.join(__dirname, CONFIG_FILE_NAME), 'utf8'));
+									
+									config.nodeConfig.httpPort = listeningNodePort;
+									
+									fs.writeFileSync(path.join(__dirname, CONFIG_FILE_NAME), JSON.stringify(config));
+									
+									MOARTUBE_NODE_HTTP_PORT = listeningNodePort;
+									
+									httpServerWrapper = await initializeHttpServer();
+								});
+							});
+						}
+						else {
+							res.send({ isError: true, message: 'invalid parameters' });
+						}
 					}
 				}
 				else {
@@ -6521,6 +6527,10 @@ function getNodeIdentification() {
 }
 
 function loadConfig() {
+	process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+	IS_DOCKER_ENVIRONMENT = process.env.IS_DOCKER_ENVIRONMENT === 'true';
+
 	CONFIG_FILE_NAME = 'config.json';
 	
 	const config = JSON.parse(fs.readFileSync(path.join(__dirname, CONFIG_FILE_NAME), 'utf8'));
