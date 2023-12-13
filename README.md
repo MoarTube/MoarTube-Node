@@ -30,17 +30,13 @@ password: admin
 https://hub.docker.com/r/moartube/moartube-node
 
 You can use [Docker Desktop](https://www.docker.com/products/docker-desktop/) to manage your images.
-<br/>
-<br/>
-<br/>
+
 ## Setup Guide (Ubuntu Linux, Digital Ocean) (automated)
 
 Run the command ***bash <(wget -O - https://www.moartube.com/bash/install/node)***
 
 Your MoarTube node is now ready! :tada:
-<br/>
-<br/>
-<br/>
+
 ## Setup Guide (Ubuntu Linux, Digital Ocean) (manual)
 
 Run the command **sudo snap install node --classic --channel=21**
