@@ -25,9 +25,9 @@ MoarTube Node can be found on [DockerHub](https://hub.docker.com/r/moartube/moar
 
 The default login credentials for your node are below. Be sure to change these upon logging in.
 
-username: admin
+**username**: admin
 
-password: admin
+**password**: admin
 
 # Manual Approach
 
