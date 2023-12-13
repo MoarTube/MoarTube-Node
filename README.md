@@ -1,8 +1,24 @@
 # MoarTube-Node
 A repository containing the node software for hosting videos on and off of the [MoarTube platform](http://www.moartube.com).
-<br/>
-<br/>
-<br/>
+
+# Features
+ - Cross platform support for Windows/macOS/Linux
+ - Video on demand (VoD) and HLS live streaming
+ - **HLS** *(H.264, AAC)*, **MP4** *(H.264, AAC)*, **WEBM** *(VP9, Opus)*, **OGV** *(VP8, Opus)* container formats
+ - Transcode static MP4/WEBM video to HLS/MP4/WEBM/OGV
+ - Transcode RTMP Live stream (such as from OBS) to HLS live stream
+ - Video output resolutions, 30fps: 2160p, 1440p, 1080p, 720p, 480p, 360p, 240p
+ - No server-side encoding; client-side only
+ - HTTPS/WSS
+ - GPU acceleration for Nvidia and AMD (Windows only)
+ - Admin panel for managing videos and live streams
+ - Discussion section and live stream chat for all videos
+ - Dark mode option and browser appearance configuration recognition
+ - Reports section for comments and video
+ - Comment monitoring overview with moderation functionality
+ - Captcha functionality to limit abuse
+ - Publicize your node on [MoarTube](http://www.moartube.com), or run your node privately
+
 ## DockerHub
 https://hub.docker.com/r/moartube/moartube-node
 
