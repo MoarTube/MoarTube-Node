@@ -2743,7 +2743,7 @@ else {
 								});
 							}
 							else {
-								res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network information in the settings<br>"});
+								res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network information in the settings"});
 							}
 						}
 						else {
@@ -2829,7 +2829,7 @@ else {
 							});
 						}
 						else {
-							res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network settings to enable indexing<br><br><a href='/'>what is indexing</a>"});
+							res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network settings to enable indexing"});
 						}
 					}
 					else {
@@ -5630,7 +5630,7 @@ else {
 						});
 					}
 					else {
-						res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network settings to enable indexing<br><br><a href='/'>what is indexing</a>"});
+						res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network settings to enable indexing"});
 					}
 				}
 				else {
@@ -5679,7 +5679,7 @@ else {
 				});
 			}
 			else {
-				res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network settings to enable indexing<br><br><a href='/'>what is indexing</a>"});
+				res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network settings to enable indexing"});
 			}
 		});
 		
