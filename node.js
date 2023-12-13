@@ -37,22 +37,22 @@ var EXPRESS_SESSION_SECRET;
 var CONFIG_FILE_NAME;
 
 var IS_DOCKER_ENVIRONMENT;
+var DATA_DIRECTORY_PATH;
+var NODE_SETTINGS_PATH;
+var IMAGES_DIRECTORY_PATH;
+var PUBLIC_DIRECTORY_PATH;
+var PAGES_DIRECTORY_PATH;
+var VIDEOS_DIRECTORY_PATH;
+var DATABASE_DIRECTORY_PATH;
+var CERTIFICATES_DIRECTORY_PATH;
+
 
 loadConfig();
 
 if(cluster.isMaster) {
-	// create required directories
-	fs.mkdirSync(path.join(__dirname, '/public/javascript'), { recursive: true });
-	fs.mkdirSync(path.join(__dirname, '/public/css'), { recursive: true });
-	fs.mkdirSync(path.join(__dirname, '/public/media/videos'), { recursive: true });
-	fs.mkdirSync(path.join(__dirname, '/public/db'), { recursive: true });
-	fs.mkdirSync(path.join(__dirname, '/public/pages'), { recursive: true });
-	fs.mkdirSync(path.join(__dirname, '/public/fonts'), { recursive: true });
-	fs.mkdirSync(path.join(__dirname, '/public/certificates'), { recursive: true });
-	
 	logDebugMessageToConsole('starting node', '', true);
 
-	provisionSqliteDatabase(path.join(__dirname, '/public/db/node_db.sqlite'))
+	provisionSqliteDatabase(path.join(DATABASE_DIRECTORY_PATH, 'node_db.sqlite'))
 	.then(async (database) => {
 		await performDatabaseMaintenance();
 		
@@ -60,12 +60,12 @@ if(cluster.isMaster) {
 		
 		var liveStreamWorkerStats = {};
 		
-		const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+		const nodeSettings = getNodeSettings();
 		
 		if(nodeSettings.nodeId === '') {
 			nodeSettings.nodeId = await generateVideoId(database);
-			
-			fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
+
+			setNodeSettings(nodeSettings);
 		}
 		
 		const jwtSecret = crypto.randomBytes(32).toString('hex');
@@ -142,13 +142,13 @@ if(cluster.isMaster) {
 				else if (msg.cmd && msg.cmd === 'restart_server') {
 					const httpMode = msg.httpMode;
 
-					const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+					const nodeSettings = getNodeSettings();
 
 					var isSecure = httpMode === "HTTPS" ? true : false;
 					
 					nodeSettings.isSecure = isSecure;
-					
-					fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
+
+					setNodeSettings(nodeSettings);
 
 					Object.values(cluster.workers).forEach((worker) => {
 						worker.send({ cmd: 'restart_server_response', httpMode: httpMode });
@@ -181,7 +181,7 @@ if(cluster.isMaster) {
 		
 		// if any node data related to indexing is updated, then update the indexer with that data
 		setInterval(function() {
-			const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+			const nodeSettings = getNodeSettings();
 			
 			if(nodeSettings.isNodeConfigured) {
 				database.all('SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1', function(error, rows) {
@@ -204,9 +204,10 @@ if(cluster.isMaster) {
 									const views = row.views;
 									const isStreaming = (row.is_streaming === 1);
 									const lengthSeconds = row.length_seconds;
-									
-									const nodeIconBase64 = fs.readFileSync(path.join(__dirname, 'public/images/icon.png')).toString('base64');
-									const videoPreviewImageBase64 = fs.readFileSync(path.join(__dirname, 'public/media/videos/' + videoId + '/images/preview.jpg')).toString('base64');
+
+									const nodeIconBase64 = getNodeIconBase64();
+
+									const videoPreviewImageBase64 = fs.readFileSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images/preview.jpg')).toString('base64');
 									
 									indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
 									.then(async indexerResponseData => {
@@ -458,7 +459,7 @@ if(cluster.isMaster) {
 						if(row.is_stream_recorded_remotely) {
 							const videoId = row.video_id;
 							
-							const m3u8Directory = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/m3u8');
+							const m3u8Directory = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
 							
 							const manifest2160pFilePath = path.join(m3u8Directory, '/manifest-2160p.m3u8');
 							const manifest1440pFilePath = path.join(m3u8Directory, '/manifest-1440p.m3u8');
@@ -513,7 +514,7 @@ if(cluster.isMaster) {
 						
 						const videoId = row.video_id;
 						
-						const m3u8Directory = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/m3u8');
+						const m3u8Directory = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
 						
 						if (fs.existsSync(m3u8Directory)) {
 							fs.readdir(m3u8Directory, (error, files) => {
@@ -664,10 +665,29 @@ else {
 		
 		app.enable('trust proxy');
 		
-		app.use('/javascript',  express.static(path.join(__dirname, '/public/javascript')));
-		app.use('/css',  express.static(path.join(__dirname, '/public/css')));
-		app.use('/images',  express.static(path.join(__dirname, '/public/images')));
-		app.use('/fonts',  express.static(path.join(__dirname, '/public/fonts')));
+		app.use('/javascript',  express.static(path.join(PUBLIC_DIRECTORY_PATH, 'javascript')));
+		app.use('/css',  express.static(path.join(PUBLIC_DIRECTORY_PATH, 'css')));
+		app.use('/images', (req, res, next) => {
+			const imageName = path.basename(req.url).replace('/', '');
+
+			if(imageName === 'icon.png' || imageName === 'avatar.png' || imageName === 'banner.png') {
+				const customImageDirectoryPath = path.join(path.join(DATA_DIRECTORY_PATH, 'images'), imageName);
+
+				if(fs.existsSync(customImageDirectoryPath)) {
+					const fileStream = fs.createReadStream(customImageDirectoryPath);
+					res.setHeader('Content-Type', 'image/png');
+					fileStream.pipe(res);
+				}
+				else {
+					next();
+				}
+			}
+			else {
+				next();
+			}
+		});
+		app.use('/images',  express.static(path.join(PUBLIC_DIRECTORY_PATH, 'images')));
+		app.use('/fonts',  express.static(path.join(PUBLIC_DIRECTORY_PATH, 'fonts')));
 		
 		app.use(expressUseragent.express());
 		
@@ -687,25 +707,23 @@ else {
 		
 		function initializeHttpServer() {
 			return new Promise(function(resolve, reject) {
-				const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+				const nodeSettings = getNodeSettings();
 				
 				if(nodeSettings.isSecure) {
-					const certificatesDirectory = path.join(__dirname, '/public/certificates');
-					
-					if (fs.existsSync(certificatesDirectory)) {
+					if (fs.existsSync(CERTIFICATES_DIRECTORY_PATH)) {
 						var key = '';
 						var cert = '';
 						var ca = [];
 						
-						fs.readdirSync(certificatesDirectory).forEach(fileName => {
+						fs.readdirSync(CERTIFICATES_DIRECTORY_PATH).forEach(fileName => {
 							if(fileName === 'private_key.pem') {
-								key = fs.readFileSync(path.join(certificatesDirectory, 'private_key.pem'), 'utf8');
+								key = fs.readFileSync(path.join(CERTIFICATES_DIRECTORY_PATH, 'private_key.pem'), 'utf8');
 							}
 							else if(fileName === 'certificate.pem') {
-								cert = fs.readFileSync(path.join(certificatesDirectory, 'certificate.pem'), 'utf8');
+								cert = fs.readFileSync(path.join(CERTIFICATES_DIRECTORY_PATH, 'certificate.pem'), 'utf8');
 							}
 							else {
-								const caFile = fs.readFileSync(path.join(certificatesDirectory, fileName), 'utf8');
+								const caFile = fs.readFileSync(path.join(CERTIFICATES_DIRECTORY_PATH, fileName), 'utf8');
 								
 								ca.push(caFile);
 							}
@@ -1066,43 +1084,38 @@ else {
 		});
 		
 		app.get('/', (req, res) => {
-			const pagePath = path.join(__dirname, '/public/pages/channel.html');
+			const pagePath = path.join(PAGES_DIRECTORY_PATH, 'channel.html');
 			const fileStream = fs.createReadStream(pagePath);
 			res.setHeader('Content-Type', 'text/html');
 			fileStream.pipe(res);
 		});
 		
 		app.get('/api/information', (req, res) => {
-			if (fs.existsSync(path.join(__dirname, '/_node_settings.json'))) {
-				database.get('SELECT COUNT(*) AS videoCount FROM videos WHERE (is_published = 1 OR is_live = 1)', function(error, result) {
-					if(error) {
-						logDebugMessageToConsole('', new Error(error).stack, true);
+			database.get('SELECT COUNT(*) AS videoCount FROM videos WHERE (is_published = 1 OR is_live = 1)', function(error, result) {
+				if(error) {
+					logDebugMessageToConsole('', new Error(error).stack, true);
+					
+					res.send({isError: true, message: 'error communicating with the MoarTube node'});
+				}
+				else {
+					if(result != null) {
+						const nodeSettings = getNodeSettings();
 						
-						res.send({isError: true, message: 'error communicating with the MoarTube node'});
+						const nodeId = nodeSettings.nodeId;
+						const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+						const publicNodeAddress = nodeSettings.publicNodeAddress;
+						const publicNodePort = nodeSettings.publicNodePort;
+						const nodeName = nodeSettings.nodeName;
+						const nodeAbout = nodeSettings.nodeAbout;
+						const nodeVideoCount = result.videoCount;
+						
+						res.send({isError: false, nodeId: nodeId, publicNodeProtocol: publicNodeProtocol, publicNodeAddress: publicNodeAddress, publicNodePort: publicNodePort, nodeName: nodeName, nodeVideoCount: nodeVideoCount, nodeAbout: nodeAbout});
 					}
 					else {
-						if(result != null) {
-							const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
-							
-							const nodeId = nodeSettings.nodeId;
-							const publicNodeProtocol = nodeSettings.publicNodeProtocol;
-							const publicNodeAddress = nodeSettings.publicNodeAddress;
-							const publicNodePort = nodeSettings.publicNodePort;
-							const nodeName = nodeSettings.nodeName;
-							const nodeAbout = nodeSettings.nodeAbout;
-							const nodeVideoCount = result.videoCount;
-							
-							res.send({isError: false, nodeId: nodeId, publicNodeProtocol: publicNodeProtocol, publicNodeAddress: publicNodeAddress, publicNodePort: publicNodePort, nodeName: nodeName, nodeVideoCount: nodeVideoCount, nodeAbout: nodeAbout});
-						}
-						else {
-							res.send({isError: true, message: 'error communicating with the MoarTube node'});
-						}
+						res.send({isError: true, message: 'error communicating with the MoarTube node'});
 					}
-				});
-			}
-			else {
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			}
+				}
+			});
 		});
 		
 		app.post('/account/signin', function(req, res, next) {
@@ -1135,28 +1148,23 @@ else {
 					expiresIn = '1d'; // 1 day
 				}
 				
-				if (fs.existsSync(path.join(__dirname, '/_node_settings.json'))) {
-					const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+				const nodeSettings = getNodeSettings();
+				
+				const usernameHash = Buffer.from(decodeURIComponent(nodeSettings.username), 'base64').toString('utf8');
+				const passwordHash = Buffer.from(decodeURIComponent(nodeSettings.password), 'base64').toString('utf8');
+				
+				const isUsernameValid = bcryptjs.compareSync(username, usernameHash);
+				const isPasswordValid = bcryptjs.compareSync(password, passwordHash);
+				
+				if(isUsernameValid && isPasswordValid) {
+					logDebugMessageToConsole('user logged in: ' + username, '', true);
 					
-					const usernameHash = Buffer.from(decodeURIComponent(nodeSettings.username), 'base64').toString('utf8');
-					const passwordHash = Buffer.from(decodeURIComponent(nodeSettings.password), 'base64').toString('utf8');
+					const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: expiresIn });
 					
-					const isUsernameValid = bcryptjs.compareSync(username, usernameHash);
-					const isPasswordValid = bcryptjs.compareSync(password, passwordHash);
-					
-					if(isUsernameValid && isPasswordValid) {
-						logDebugMessageToConsole('user logged in: ' + username, '', true);
-						
-						const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: expiresIn });
-						
-						res.send({isError: false, isAuthenticated: true, token: token});
-					}
-					else {
-						res.send({isError: false, isAuthenticated: false});
-					}
+					res.send({isError: false, isAuthenticated: true, token: token});
 				}
 				else {
-					res.send({isError: true});
+					res.send({isError: false, isAuthenticated: false});
 				}
 			}
 		});
@@ -1206,7 +1214,7 @@ else {
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
 					const config = JSON.parse(fs.readFileSync(path.join(__dirname, CONFIG_FILE_NAME), 'utf8'));
-					const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+					const nodeSettings = getNodeSettings();
 					
 					nodeSettings.nodeListeningPort = config.nodeConfig.httpPort;
 					
@@ -1253,9 +1261,9 @@ else {
 						
 						const tagsSanitized = sanitizeTagsSpaces(tags);
 						
-						fs.mkdirSync(path.join(__dirname, '/public/media/videos/' + videoId + '/images'), { recursive: true });
-						fs.mkdirSync(path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive'), { recursive: true });
-						fs.mkdirSync(path.join(__dirname, '/public/media/videos/' + videoId + '/progressive'), { recursive: true });
+						fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images'), { recursive: true });
+						fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive'), { recursive: true });
+						fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive'), { recursive: true });
 						
 						const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexed, is_index_outdated, is_error, is_finalized, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 						const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, meta, creationTimestamp];
@@ -1544,20 +1552,20 @@ else {
 											const manifestFileName = 'manifest-' + resolution + '.m3u8';
 											
 											if(fileName === manifestFileName) {
-												directoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/m3u8');
+												directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
 											}
 											else if(isSegmentNameValid(fileName)) {
-												directoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/m3u8/' + resolution);
+												directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8/' + resolution);
 											}
 										}
 										else if(format === 'mp4') {
-											directoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/progressive/mp4/' + resolution);
+											directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/mp4/' + resolution);
 										}
 										else if(format === 'webm') {
-											directoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/progressive/webm/' + resolution);
+											directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/webm/' + resolution);
 										}
 										else if(format === 'ogv') {
-											directoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/progressive/ogv/' + resolution);
+											directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/ogv/' + resolution);
 										}
 										
 										if(directoryPath !== '') {
@@ -1679,20 +1687,20 @@ else {
 										const manifestFileName = 'manifest-' + resolution + '.m3u8';
 										
 										if(fileName === manifestFileName) {
-											directoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/m3u8');
+											directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
 										}
 										else if(isSegmentNameValid(fileName)) {
-											directoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/m3u8/' + resolution);
+											directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8/' + resolution);
 										}
 									}
 									else if(format === 'mp4') {
-										directoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/progressive/mp4/' + resolution);
+										directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/mp4/' + resolution);
 									}
 									else if(format === 'webm') {
-										directoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/progressive/webm/' + resolution);
+										directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/webm/' + resolution);
 									}
 									else if(format === 'ogv') {
-										directoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/progressive/ogv/' + resolution);
+										directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/ogv/' + resolution);
 									}
 									
 									if(directoryPath !== '') {
@@ -1958,9 +1966,9 @@ else {
 						
 						const tagsSanitized = sanitizeTagsSpaces(tags);
 						
-						fs.mkdirSync(path.join(__dirname, '/public/media/videos/' + videoId + '/images'), { recursive: true });
-						fs.mkdirSync(path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive'), { recursive: true });
-						fs.mkdirSync(path.join(__dirname, '/public/media/videos/' + videoId + '/progressive'), { recursive: true });
+						fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images'), { recursive: true });
+						fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive'), { recursive: true });
+						fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive'), { recursive: true });
 						
 						const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexed, is_index_outdated, is_error, is_finalized, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
 						const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, isRecordingStreamRemotely, isRecordingStreamLocally, 1, 0, 0, 0, 0, meta, creationTimestamp];
@@ -2040,7 +2048,7 @@ else {
 									else {
 										if(video != null) {
 											if(!video.is_stream_recorded_remotely) {
-												const m3u8DirectoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/m3u8');
+												const m3u8DirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
 												
 												deleteDirectoryRecursive(m3u8DirectoryPath);
 											}
@@ -2088,7 +2096,7 @@ else {
 			const manifestName = req.params.manifestName;
 			
 			if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isManifestNameValid(manifestName)) {
-				const manifestPath = path.join(__dirname, 'public/media/videos/' + videoId + '/adaptive/' + format + '/' + manifestName);
+				const manifestPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/' + manifestName);
 				
 				if(fs.existsSync(manifestPath)) {
 					fs.stat(manifestPath, function(error, stats) {
@@ -2142,7 +2150,7 @@ else {
 			const segmentName = req.params.segmentName;
 			
 			if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
-				const segmentPath = path.join(__dirname, 'public/media/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
+				const segmentPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
 				
 				if(fs.existsSync(segmentPath)) {
 					fs.stat(segmentPath, function(error, stats) {
@@ -2196,7 +2204,7 @@ else {
 					if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isResolutionValid(resolution)) {
 						var nextExpectedSegmentIndex = -1;
 						
-						const segmentsDirectoryPath = path.join(__dirname, 'public/media/videos/' + videoId + '/adaptive/' + format + '/' + resolution);
+						const segmentsDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/' + resolution);
 						
 						if (fs.existsSync(segmentsDirectoryPath) && fs.statSync(segmentsDirectoryPath).isDirectory()) {
 							fs.readdirSync(segmentsDirectoryPath).forEach(segmentFileName => {
@@ -2240,7 +2248,7 @@ else {
 					const segmentName = req.body.segmentName;
 					
 					if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
-						const segmentPath = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
+						const segmentPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
 						
 						fs.unlinkSync(segmentPath);
 						
@@ -2271,8 +2279,7 @@ else {
 			const resolution = req.params.resolution;
 			
 			if(isVideoIdValid(videoId) && isProgressiveFormatValid(format) && isResolutionValid(resolution)) {
-				const relativeFilePath = 'public/media/videos/' + videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format;
-				const filePath = path.join(__dirname, relativeFilePath);
+				const filePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format);
 				
 				if(fs.existsSync(filePath)) {
 					const stat = fs.statSync(filePath);
@@ -2338,8 +2345,7 @@ else {
 			const resolution = req.params.resolution;
 			
 			if(isVideoIdValid(videoId) && isProgressiveFormatValid(format) && isResolutionValid(resolution)) {
-				const relativeFilePath = 'public/media/videos/' + videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format;
-				const filePath = path.join(__dirname, relativeFilePath);
+				const filePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format);
 				const fileName = videoId + '-' + resolution + '.' + format;
 				
 				if(fs.existsSync(filePath)) {
@@ -2408,7 +2414,7 @@ else {
 									];
 									
 									if(row.is_published) {
-										const videosDirectoryPath = path.join(__dirname, 'public/media/videos/' + videoId);
+										const videosDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId);
 										const m3u8DirectoryPath = path.join(videosDirectoryPath, 'adaptive/m3u8');
 										const mp4DirectoryPath = path.join(videosDirectoryPath, 'progressive/mp4');
 										const webmDirectoryPath = path.join(videosDirectoryPath, 'progressive/webm');
@@ -2504,17 +2510,17 @@ else {
 						var manifestFilePath = '';
 						
 						if(format === 'm3u8') {
-							manifestFilePath = path.join(__dirname, 'public/media/videos/' + videoId + '/adaptive/' + format + '/manifest-' + resolution + '.m3u8');
-							videoDirectoryPath = path.join(__dirname, 'public/media/videos/' + videoId + '/adaptive/' + format + '/' + resolution);
+							manifestFilePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/manifest-' + resolution + '.m3u8');
+							videoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/' + resolution);
 						}
 						else if(format === 'mp4') {
-							videoDirectoryPath = path.join(__dirname, 'public/media/videos/' + videoId + '/progressive/' + format + '/' + resolution);
+							videoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/' + format + '/' + resolution);
 						}
 						else if(format === 'webm') {
-							videoDirectoryPath = path.join(__dirname, 'public/media/videos/' + videoId + '/progressive/' + format + '/' + resolution);
+							videoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/' + format + '/' + resolution);
 						}
 						else if(format === 'ogv') {
-							videoDirectoryPath = path.join(__dirname, 'public/media/videos/' + videoId + '/progressive/' + format + '/' + resolution);
+							videoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/' + format + '/' + resolution);
 						}
 						
 						if(fs.existsSync(videoDirectoryPath)) {
@@ -2560,7 +2566,7 @@ else {
 					}
 					else {
 						if(row != null) {
-							const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+							const nodeSettings = getNodeSettings();
 							
 							const information = {
 								videoId: row.video_id,
@@ -2648,7 +2654,7 @@ else {
 
 					if(isVideoIdValid(videoId) && isBooleanValid(containsAdultContent) && isBooleanValid(termsOfServiceAgreed)) {
 						if(termsOfServiceAgreed) {
-							const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+							const nodeSettings = getNodeSettings();
 							
 							if(nodeSettings.isNodeConfigured) {
 								const nodeId = nodeSettings.nodeId;
@@ -2681,9 +2687,10 @@ else {
 													const isStreaming = (video.is_streaming === 1);
 													const lengthSeconds = video.length_seconds;
 													const creationTimestamp = video.creation_timestamp;
-													
-													const nodeIconBase64 = fs.readFileSync(path.join(__dirname, 'public/images/icon.png')).toString('base64');
-													const videoPreviewImageBase64 = fs.readFileSync(path.join(__dirname, 'public/media/videos/' + videoId + '/images/preview.jpg')).toString('base64');
+
+													var nodeIconBase64 = getNodeIconBase64();
+
+													const videoPreviewImageBase64 = fs.readFileSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images/preview.jpg')).toString('base64');
 													
 													const data = {
 														videoId: videoId,
@@ -2774,7 +2781,7 @@ else {
 					const videoId = req.params.videoId;
 
 					if(isVideoIdValid(videoId)) {
-						const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+						const nodeSettings = getNodeSettings();
 						
 						if(nodeSettings.isNodeConfigured) {
 							database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, video) {
@@ -2854,7 +2861,7 @@ else {
 			const captchaResponse = req.body.captchaResponse;
 
 			if(isVideoIdValid(videoId)) {
-				const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+				const nodeSettings = getNodeSettings();
 				
 				if(nodeSettings.isNodeConfigured) {
 					indexer_performNodeIdentification()
@@ -3113,7 +3120,7 @@ else {
 			const videoId = req.params.videoId;
 			
 			if(isVideoIdValid(videoId)) {
-				const thumbnailFilePath = path.join(path.join(__dirname, '/public/media/videos/' + videoId + '/images'), 'thumbnail.jpg');
+				const thumbnailFilePath = path.join(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images'), 'thumbnail.jpg');
 				
 				if (fs.existsSync(thumbnailFilePath)) {
 					const fileStream = fs.createReadStream(thumbnailFilePath);
@@ -3155,7 +3162,7 @@ else {
 							},
 							storage: multer.diskStorage({
 								destination: function (req, file, cb) {
-									const filePath = path.join(__dirname, '/public/media/videos/' + videoId + '/images');
+									const filePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images');
 									
 									fs.access(filePath, fs.F_OK, function(error) {
 										if(error) {
@@ -3225,7 +3232,7 @@ else {
 			const videoId = req.params.videoId;
 			
 			if(isVideoIdValid(videoId)) {
-				const previewFilePath = path.join(path.join(__dirname, '/public/media/videos/' + videoId + '/images'), 'preview.jpg');
+				const previewFilePath = path.join(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images'), 'preview.jpg');
 				
 				if (fs.existsSync(previewFilePath)) {
 					const fileStream = fs.createReadStream(previewFilePath);
@@ -3248,7 +3255,7 @@ else {
 			const videoId = req.params.videoId;
 			
 			if(isVideoIdValid(videoId)) {
-				const previewFilePath = path.join(path.join(__dirname, '/public/media/videos/' + videoId + '/images'), 'poster.jpg');
+				const previewFilePath = path.join(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images'), 'poster.jpg');
 				
 				if (fs.existsSync(previewFilePath)) {
 					const fileStream = fs.createReadStream(previewFilePath);
@@ -3288,7 +3295,7 @@ else {
 							},
 							storage: multer.diskStorage({
 								destination: function (req, file, cb) {
-									const filePath = path.join(__dirname, '/public/media/videos/' + videoId + '/images');
+									const filePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images');
 									
 									fs.access(filePath, fs.F_OK, function(error)
 									{
@@ -3385,7 +3392,7 @@ else {
 							},
 							storage: multer.diskStorage({
 								destination: function (req, file, cb) {
-									const filePath = path.join(__dirname, '/public/media/videos/' + videoId + '/images');
+									const filePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images');
 									
 									fs.access(filePath, fs.F_OK, function(error)
 									{
@@ -3646,9 +3653,9 @@ else {
 										
 										videoIds.forEach(function(videoId) {
 											if(!nonDeletedVideoIds.includes(videoId)) {
-												const directoryPath = path.join(__dirname, '/public/media/videos/' + videoId);
+												const videoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId);
 							
-												deleteDirectoryRecursive(directoryPath);
+												deleteDirectoryRecursive(videoDirectoryPath);
 												
 												deletedVideoIds.push(videoId);
 											}
@@ -4164,10 +4171,20 @@ else {
 		
 		// Retrieve avatar for node
 		app.get('/settings/avatar', (req, res) => {
-			const thumbnailFilePath = path.join(path.join(__dirname, '/public/images'), 'avatar.png');
+			const customAvatarDirectoryPath = path.join(path.join(DATA_DIRECTORY_PATH, 'images'), 'avatar.png');
+			const defaultAvatarDirectoryPath = path.join(path.join(PUBLIC_DIRECTORY_PATH, 'images'), 'avatar.png');
 			
-			if (fs.existsSync(thumbnailFilePath)) {
-				const fileStream = fs.createReadStream(thumbnailFilePath);
+			var avatarFilePath;
+
+			if(fs.existsSync(customAvatarDirectoryPath)) {
+				avatarFilePath = customAvatarDirectoryPath;
+			}
+			else if(fs.existsSync(defaultAvatarDirectoryPath)) {
+				avatarFilePath = defaultAvatarDirectoryPath;
+			}
+			
+			if (avatarFilePath != null) {
+				const fileStream = fs.createReadStream(avatarFilePath);
 				
 				res.setHeader('Content-Type', 'image/png');
 				
@@ -4198,14 +4215,12 @@ else {
 						},
 						storage: multer.diskStorage({
 							destination: function (req, file, cb) {
-								const filePath = path.join(__dirname, '/public/images');
-								
-								fs.access(filePath, fs.F_OK, function(error) {
+								fs.access(IMAGES_DIRECTORY_PATH, fs.F_OK, function(error) {
 									if(error) {
 										cb(new Error('file upload error'));
 									}
 									else {
-										cb(null, filePath);
+										cb(null, IMAGES_DIRECTORY_PATH);
 									}
 								});
 							},
@@ -4235,11 +4250,11 @@ else {
 							const iconFile = req.files['iconFile'][0];
 							const avatarFile = req.files['avatarFile'][0];
 							
-							const iconSourceFilePath = path.join(__dirname, '/public/images/' + iconFile.filename);
-							const avatarSourceFilePath = path.join(__dirname, '/public/images/' + avatarFile.filename);
+							const iconSourceFilePath = path.join(IMAGES_DIRECTORY_PATH, iconFile.filename);
+							const avatarSourceFilePath = path.join(IMAGES_DIRECTORY_PATH, avatarFile.filename);
 							
-							const iconDestinationFilePath = path.join(__dirname, '/public/images/icon.png');
-							const avatarDestinationFilePath = path.join(__dirname, '/public/images/avatar.png');
+							const iconDestinationFilePath = path.join(IMAGES_DIRECTORY_PATH, 'icon.png');
+							const avatarDestinationFilePath = path.join(IMAGES_DIRECTORY_PATH, 'avatar.png');
 							
 							fs.renameSync(iconSourceFilePath, iconDestinationFilePath);
 							fs.renameSync(avatarSourceFilePath, avatarDestinationFilePath);
@@ -4270,10 +4285,20 @@ else {
 		
 		// Retrieve banner for node
 		app.get('/settings/banner', (req, res) => {
-			const thumbnailFilePath = path.join(path.join(__dirname, '/public/images'), 'banner.png');
+			const customBannerDirectoryPath = path.join(path.join(DATA_DIRECTORY_PATH, 'images'), 'banner.png');
+			const defaultBannerDirectoryPath = path.join(path.join(PUBLIC_DIRECTORY_PATH, 'images'), 'banner.png');
 			
-			if (fs.existsSync(thumbnailFilePath)) {
-				const fileStream = fs.createReadStream(thumbnailFilePath);
+			var bannerFilePath;
+
+			if(fs.existsSync(customBannerDirectoryPath)) {
+				bannerFilePath = customBannerDirectoryPath;
+			}
+			else if(fs.existsSync(defaultBannerDirectoryPath)) {
+				bannerFilePath = defaultBannerDirectoryPath;
+			}
+			
+			if (bannerFilePath != null) {
+				const fileStream = fs.createReadStream(bannerFilePath);
 				
 				res.setHeader('Content-Type', 'image/png');
 				
@@ -4304,14 +4329,12 @@ else {
 						},
 						storage: multer.diskStorage({
 							destination: function (req, file, cb) {
-								const filePath = path.join(__dirname, '/public/images');
-								
-								fs.access(filePath, fs.F_OK, function(error) {
+								fs.access(IMAGES_DIRECTORY_PATH, fs.F_OK, function(error) {
 									if(error) {
 										cb(new Error('file upload error'));
 									}
 									else {
-										cb(null, filePath);
+										cb(null, IMAGES_DIRECTORY_PATH);
 									}
 								});
 							},
@@ -4340,9 +4363,9 @@ else {
 							
 							const bannerFile = req.files['bannerFile'][0];
 							
-							const bannerSourceFilePath = path.join(__dirname, '/public/images/' + bannerFile.filename);
+							const bannerSourceFilePath = path.join(IMAGES_DIRECTORY_PATH, bannerFile.filename);
 							
-							const bannerDestinationFilePath = path.join(__dirname, '/public/images/banner.png');
+							const bannerDestinationFilePath = path.join(IMAGES_DIRECTORY_PATH, 'banner.png');
 							
 							fs.renameSync(bannerSourceFilePath, bannerDestinationFilePath);
 							
@@ -4373,7 +4396,7 @@ else {
 					const nodeId = req.body.nodeId;
 					
 					if(isNodeNameValid(nodeName) && isNodeAboutValid(nodeAbout) && isNodeIdValid(nodeId)) {
-						const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+						const nodeSettings = getNodeSettings();
 						
 						if(nodeSettings.isNodeConfigured) {
 							indexer_performNodeIdentification()
@@ -4395,8 +4418,8 @@ else {
 											nodeSettings.nodeName = nodeName;
 											nodeSettings.nodeAbout = nodeAbout;
 											nodeSettings.nodeId = nodeId;
-											
-											fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
+
+											setNodeSettings(nodeSettings);
 											
 											res.send({ isError: false });
 										}
@@ -4421,8 +4444,8 @@ else {
 							nodeSettings.nodeName = nodeName;
 							nodeSettings.nodeAbout = nodeAbout;
 							nodeSettings.nodeId = nodeId;
-							
-							fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
+
+							setNodeSettings(nodeSettings);
 							
 							res.send({ isError: false });
 						}
@@ -4460,14 +4483,12 @@ else {
 								},
 								storage: multer.diskStorage({
 									destination: function (req, file, cb) {
-										const filePath = path.join(__dirname, '/public/certificates');
-										
-										fs.access(filePath, fs.F_OK, function(error) {
+										fs.access(CERTIFICATES_DIRECTORY_PATH, fs.F_OK, function(error) {
 											if(error) {
 												cb(new Error('file upload error'));
 											}
 											else {
-												cb(null, filePath);
+												cb(null, CERTIFICATES_DIRECTORY_PATH);
 											}
 										});
 									},
@@ -4551,12 +4572,12 @@ else {
 						const usernameHash = encodeURIComponent(Buffer.from(bcryptjs.hashSync(username, 10), 'utf8').toString('base64'));
 						const passwordHash = encodeURIComponent(Buffer.from(bcryptjs.hashSync(password, 10), 'utf8').toString('base64'));
 						
-						const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+						const nodeSettings = getNodeSettings();
 						
 						nodeSettings.username = usernameHash;
 						nodeSettings.password = passwordHash;
-						
-						fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
+
+						setNodeSettings(nodeSettings);
 						
 						res.send({ isError: false });
 					}
@@ -4585,12 +4606,12 @@ else {
 					const cloudflareAccountId = req.body.cloudflareAccountId;
 					const cloudflareApiKey = req.body.cloudflareApiKey;
 					
-					const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+					const nodeSettings = getNodeSettings();
 					
 					nodeSettings.cloudflareAccountId = cloudflareAccountId;
 					nodeSettings.cloudflareApiKey = cloudflareApiKey;
-					
-					fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
+
+					setNodeSettings(nodeSettings);
 					
 					res.send({ isError: false, cloudflareAccountId: cloudflareAccountId, cloudflareApiKey: cloudflareApiKey });
 				}
@@ -4612,7 +4633,7 @@ else {
 			const videoId = req.query.v;
 			
 			if(isVideoIdValid(videoId)) {
-				const pagePath = path.join(path.join(__dirname, '/public/pages'), 'watch.html');
+				const pagePath = path.join(PAGES_DIRECTORY_PATH, 'watch.html');
 				
 				const fileStream = fs.createReadStream(pagePath);
 				
@@ -4656,12 +4677,12 @@ else {
 					}
 					else {
 						if(video != null) {
-							const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+							const nodeSettings = getNodeSettings();
 							
 							const nodeName = nodeSettings.nodeName;
 							
-							const adaptiveVideosDirectoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive');
-							const progressiveVideosDirectoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/progressive');
+							const adaptiveVideosDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive');
+							const progressiveVideosDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive');
 							
 							const adaptiveFormats = [{format: 'm3u8', type: 'application/vnd.apple.mpegurl'}];
 							const progressiveFormats = [{format: 'mp4', type: 'video/mp4'}, {format: 'webm', type: 'video/webm'}, {format: 'ogv', type: 'video/ogg'}];
@@ -5404,15 +5425,15 @@ else {
 									res.send({isError: true, message: indexerResponseData.message});
 								}
 								else {
-									const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+									const nodeSettings = getNodeSettings();
 									
 									nodeSettings.publicNodeProtocol = publicNodeProtocol;
 									nodeSettings.publicNodeAddress = publicNodeAddress;
 									nodeSettings.publicNodePort = publicNodePort;
 									
 									nodeSettings.isNodeConfigured = true;
-									
-									fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
+
+									setNodeSettings(nodeSettings);
 									
 									res.send({ isError: false });
 								}
@@ -5454,12 +5475,12 @@ else {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
-					const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+					const nodeSettings = getNodeSettings();
 					
 					nodeSettings.isNodeConfigured = false;
 					nodeSettings.isNodeConfigurationSkipped = true;
 					
-					fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify(nodeSettings));
+					setNodeSettings(nodeSettings);
 					
 					res.send({ isError: false });
 				}
@@ -5599,7 +5620,7 @@ else {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
-					const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+					const nodeSettings = getNodeSettings();
 					
 					if(nodeSettings.isNodeConfigured) {
 						indexer_performNodeIdentification()
@@ -5648,7 +5669,7 @@ else {
 		
 		// Retrieve and serve a captcha
 		app.get('/alias/captcha', async (req, res) => {
-			const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+			const nodeSettings = getNodeSettings();
 			
 			if(nodeSettings.isNodeConfigured) {
 				indexer_performNodeIdentification()
@@ -5696,7 +5717,7 @@ else {
 			const videoId = req.params.videoId;
 			
 			if(isVideoIdValid(videoId)) {
-				const pagePath = path.join(path.join(__dirname, '/public/pages'), 'embed-video.html');
+				const pagePath = path.join(PAGES_DIRECTORY_PATH, 'embed-video.html');
 				
 				const fileStream = fs.createReadStream(pagePath);
 				
@@ -5713,7 +5734,7 @@ else {
 			const videoId = req.params.videoId;
 			
 			if(isVideoIdValid(videoId)) {
-				const pagePath = path.join(path.join(__dirname, '/public/pages'), 'embed-chat.html');
+				const pagePath = path.join(PAGES_DIRECTORY_PATH, 'embed-chat.html');
 				
 				const fileStream = fs.createReadStream(pagePath);
 				
@@ -6068,7 +6089,7 @@ else {
 		}
 		
 		function updateHlsVideoMasterManifestFile(videoId) {
-			const hlsVideoDirectoryPath = path.join(__dirname, '/public/media/videos/' + videoId + '/adaptive/m3u8');
+			const hlsVideoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
 			const masterManifestFilePath = path.join(hlsVideoDirectoryPath, '/manifest-master.m3u8');
 			
 			var manifestFileString = '#EXTM3U\n#EXT-X-VERSION:3\n';
@@ -6307,7 +6328,7 @@ else {
 		
 		function getDatabase() {
 			return new Promise(function(resolve, reject) {
-				const database = new sqlite3.Database(path.join(__dirname, '/public/db/node_db.sqlite'), function(error) {
+				const database = new sqlite3.Database(path.join(DATABASE_DIRECTORY_PATH, 'node_db.sqlite'), function(error) {
 					if (error) {
 						logDebugMessageToConsole('', new Error(error).stack, true);
 						
@@ -6515,6 +6536,22 @@ function indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, tit
 	});
 }
 
+function getNodeIconBase64() {
+	var nodeIconBase64;
+
+	const customIconDirectoryPath = path.join(path.join(DATA_DIRECTORY_PATH, 'images'), 'icon.png');
+	const defaultIconDirectoryPath = path.join(path.join(PUBLIC_DIRECTORY_PATH, 'images'), 'icon.png');
+
+	if(fs.existsSync(customIconDirectoryPath)) {
+		nodeIconBase64 = fs.readFileSync(customIconDirectoryPath).toString('base64');
+	}
+	else {
+		nodeIconBase64 = fs.readFileSync(defaultIconDirectoryPath).toString('base64');
+	}
+
+	return nodeIconBase64;
+}
+
 function getNodeIdentification() {
 	if (fs.existsSync(path.join(__dirname, '/_node_identification.json'))) {
 		const nodeIdentification = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_identification.json'), 'utf8'));
@@ -6526,10 +6563,42 @@ function getNodeIdentification() {
 	}
 }
 
+function getNodeSettings() {
+	const nodeSettings = JSON.parse(fs.readFileSync(NODE_SETTINGS_PATH, 'utf8'));
+
+	return nodeSettings;
+}
+
+function setNodeSettings(nodeSettings) {
+	fs.writeFileSync(NODE_SETTINGS_PATH, JSON.stringify(nodeSettings));
+}
+
 function loadConfig() {
 	process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
+	PUBLIC_DIRECTORY_PATH = path.join(__dirname, 'public');
+	PAGES_DIRECTORY_PATH = path.join(PUBLIC_DIRECTORY_PATH, 'pages');
+
 	IS_DOCKER_ENVIRONMENT = process.env.IS_DOCKER_ENVIRONMENT === 'true';
+
+	if(IS_DOCKER_ENVIRONMENT) {
+		DATA_DIRECTORY_PATH = '/data';
+	}
+	else {
+		DATA_DIRECTORY_PATH = path.join(__dirname, 'data');
+	}
+
+	NODE_SETTINGS_PATH = path.join(DATA_DIRECTORY_PATH, '_node_settings.json');
+
+	IMAGES_DIRECTORY_PATH = path.join(DATA_DIRECTORY_PATH, 'images');
+	VIDEOS_DIRECTORY_PATH = path.join(DATA_DIRECTORY_PATH, 'media/videos');
+	DATABASE_DIRECTORY_PATH = path.join(DATA_DIRECTORY_PATH, 'db');
+	CERTIFICATES_DIRECTORY_PATH = path.join(DATA_DIRECTORY_PATH, 'certificates');
+
+	fs.mkdirSync(IMAGES_DIRECTORY_PATH, { recursive: true });
+	fs.mkdirSync(VIDEOS_DIRECTORY_PATH, { recursive: true });
+	fs.mkdirSync(DATABASE_DIRECTORY_PATH, { recursive: true });
+	fs.mkdirSync(CERTIFICATES_DIRECTORY_PATH, { recursive: true });
 
 	CONFIG_FILE_NAME = 'config.json';
 	
@@ -6545,8 +6614,8 @@ function loadConfig() {
 	MOARTUBE_ALIASER_IP = config.aliaserConfig.host;
 	MOARTUBE_ALIASER_PORT = config.aliaserConfig.port;
 	
-	if(!fs.existsSync(path.join(__dirname, '/_node_settings.json'))) {
-		fs.writeFileSync(path.join(__dirname, '/_node_settings.json'), JSON.stringify({
+	if(!fs.existsSync(NODE_SETTINGS_PATH)) {
+		const nodeSettings = {
 			"isNodeConfigured":false,
 			"isNodeConfigurationSkipped":false,
 			"isSecure":false,
@@ -6560,10 +6629,12 @@ function loadConfig() {
 			"password":"JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX",
 			"expressSessionName": crypto.randomBytes(64).toString('hex'),
 			"expressSessionSecret": crypto.randomBytes(64).toString('hex')
-		}));
+		};
+
+		setNodeSettings(nodeSettings);
 	}
 	
-	const nodeSettings = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_settings.json'), 'utf8'));
+	const nodeSettings = getNodeSettings();
 	
 	EXPRESS_SESSION_NAME = nodeSettings.expressSessionName;
 	EXPRESS_SESSION_SECRET = nodeSettings.expressSessionSecret;
