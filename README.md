@@ -1,5 +1,5 @@
 # MoarTube-Node
-A repository containing the node software for hosting videos on and off of the [MoarTube platform](http://www.moartube.com).
+A repository containing the node software for hosting videos on and off of the [MoarTube platform](http://www.moartube.com). The software makes managing video and live streams so easy you'll be amazed beyond belief.
 
 # Features
  - Cross platform support for Windows/macOS/Linux
