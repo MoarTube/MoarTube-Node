@@ -12,9 +12,9 @@ A repository containing the [MoarTube](https://www.moartube.com) node software. 
  - HTTPS/WSS
  - GPU acceleration for Nvidia and AMD (Windows only)
  - Admin panel for managing videos and live streams
- - Discussion section and live stream chat for all videos
+ - Discussion section and live stream chat
  - Dark mode option and browser appearance configuration recognition
- - Reports section for comments and video
+ - Reports section for comments and videos
  - Comment monitoring overview with moderation functionality
  - Captcha functionality to limit abuse
  - Run in the cloud or on your home WiFi
