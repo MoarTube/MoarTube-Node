@@ -1,5 +1,5 @@
 # MoarTube-Node
-A repository containing the [MoarTube](https://www.moartube.com) node software. Get involved with the MoarTube platform by having your node share its videos or do your own thing and run your node privately. The software makes video and live streaming so easy you'll be amazed beyond belief.
+A repository containing the MoarTube Node software. Get involved with the [MoarTube platform](https://www.moartube.com) by having your node share its videos or do your own thing and run your node privately. The software makes video and live streaming so easy you'll be amazed beyond belief.
 
 # Features
  - Cross platform support for Windows/macOS/Linux
