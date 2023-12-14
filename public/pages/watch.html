@@ -1704,8 +1704,8 @@ body {
 							vhs: {
 								overrideNative: !videojs.browser.IS_SAFARI,
 								autoStartLoad: true,
-								maxBufferLength: 30,
-								maxMaxBufferLength: 60,
+								maxBufferLength: 30, // maxBufferLengthMin
+								maxMaxBufferLength: 60, // maxBufferLengthMax
 								lowLatencyMode: true,
 								liveSyncDurationCount: 5,
 								levelLoadingMaxRetry: 4,
