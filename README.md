@@ -12,6 +12,7 @@ A repository containing the MoarTube Node software. Get involved with the [MoarT
  - HTTPS/WSS
  - GPU acceleration for Nvidia and AMD (Windows only)
  - Admin panel for managing videos and live streams
+ - Different video player modes: streamer, theater, fullscreen
  - Discussion section and live stream chat
  - Dark mode option and browser appearance configuration recognition
  - Reports section for comments and videos
