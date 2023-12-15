@@ -1945,6 +1945,7 @@ else {
 					const uuid = req.body.uuid;
 					var isRecordingStreamRemotely = req.body.isRecordingStreamRemotely;
 					var isRecordingStreamLocally = req.body.isRecordingStreamLocally;
+					const networkAddress = req.body.networkAddress;
 
 					if(!isTitleValid(title)) {
 						res.send({isError: true, message: 'title is not valid'});
@@ -1967,6 +1968,9 @@ else {
 					else if(!isBooleanValid(isRecordingStreamLocally)) {
 						res.send({isError: true, message: 'isRecordingStreamLocally not valid'});
 					}
+					else if(!isNetworkAddressValid(networkAddress)) {
+						res.send({isError: true, message: 'networkAddress not valid'});
+					}
 					else {
 						const videoId = await generateVideoId(database);
 						const creationTimestamp = Date.now();
@@ -1974,7 +1978,7 @@ else {
 						isRecordingStreamRemotely = isRecordingStreamRemotely ? 1 : 0;
 						isRecordingStreamLocally = isRecordingStreamLocally ? 1 : 0;
 						
-						const meta = JSON.stringify({chatSettings: {isChatHistoryEnabled: true, chatHistoryLimit: 0}, rtmpPort: rtmpPort, uuid: uuid});
+						const meta = JSON.stringify({chatSettings: {isChatHistoryEnabled: true, chatHistoryLimit: 0}, rtmpPort: rtmpPort, uuid: uuid, networkAddress: networkAddress});
 						
 						const tagsSanitized = sanitizeTagsSpaces(tags);
 						
@@ -5813,6 +5817,10 @@ else {
 			const regex = /^[\w!@#$%^&*()-_=+]+$/;
 			
 			return password != null && password.length > 0 && password.length <= 100 && regex.test(password)
+		}
+
+		function isNetworkAddressValid(networkAddress) {
+			return networkAddress != null && networkAddress.length > 0 && networkAddress.length <= 100;
 		}
 		
 		function isPublicNodeAddressValid(publicNodeAddress) {
