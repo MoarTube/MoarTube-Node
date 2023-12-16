@@ -31,6 +31,12 @@ The default login credentials for your node are below. Be sure to change these u
  - Publicize your node on [MoarTube](http://www.moartube.com), or run your node privately
  - Dual box compatible; broadcast an RTMP stream with software such as OBS from a primary system over a network (WAN or LAN) to a secondary system running the MoarTube Client, separating streaming from stream processing.
 
+![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/0d8ac95f-f68b-4e36-849e-28139b45ce50)
+
+![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/918aa074-b6e2-49f1-8d14-5c2ed1bcd582)
+
+![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/068ec86b-a3d8-4285-9b64-4b71f64cce41)
+
 # Manual Approach
 
 ## (Ubuntu Linux, Digital Ocean) (automated)
