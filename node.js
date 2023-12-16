@@ -34,8 +34,6 @@ var MOARTUBE_ALIASER_HTTP_PROTOCOL;
 var EXPRESS_SESSION_NAME;
 var EXPRESS_SESSION_SECRET;
 
-var CONFIG_FILE_NAME;
-
 var IS_DOCKER_ENVIRONMENT;
 var DATA_DIRECTORY_PATH;
 var NODE_SETTINGS_PATH;
@@ -1225,10 +1223,7 @@ else {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
-					const config = JSON.parse(fs.readFileSync(path.join(__dirname, CONFIG_FILE_NAME), 'utf8'));
 					const nodeSettings = getNodeSettings();
-					
-					nodeSettings.nodeListeningPort = config.nodeConfig.httpPort;
 					
 					res.send({isError: false, nodeSettings: nodeSettings});
 				}
@@ -5385,11 +5380,11 @@ else {
 								httpServerWrapper.httpServer.close(async () => {
 									logDebugMessageToConsole('node web server closed', null, null, true);
 									
-									const config = JSON.parse(fs.readFileSync(path.join(__dirname, CONFIG_FILE_NAME), 'utf8'));
+									const nodeSettings = getNodeSettings();
 									
-									config.nodeConfig.httpPort = listeningNodePort;
+									nodeSettings.nodeListeningPort = listeningNodePort;
 									
-									fs.writeFileSync(path.join(__dirname, CONFIG_FILE_NAME), JSON.stringify(config));
+									setNodeSettings(nodeSettings);
 									
 									MOARTUBE_NODE_HTTP_PORT = listeningNodePort;
 									
@@ -6615,12 +6610,8 @@ function loadConfig() {
 	fs.mkdirSync(VIDEOS_DIRECTORY_PATH, { recursive: true });
 	fs.mkdirSync(DATABASE_DIRECTORY_PATH, { recursive: true });
 	fs.mkdirSync(CERTIFICATES_DIRECTORY_PATH, { recursive: true });
-
-	CONFIG_FILE_NAME = 'config.json';
 	
-	const config = JSON.parse(fs.readFileSync(path.join(__dirname, CONFIG_FILE_NAME), 'utf8'));
-	
-	MOARTUBE_NODE_HTTP_PORT = config.nodeConfig.httpPort;
+	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
 	
 	MOARTUBE_INDEXER_HTTP_PROTOCOL = config.indexerConfig.httpProtocol;
 	MOARTUBE_INDEXER_IP = config.indexerConfig.host;
@@ -6632,6 +6623,7 @@ function loadConfig() {
 	
 	if(!fs.existsSync(NODE_SETTINGS_PATH)) {
 		const nodeSettings = {
+			"nodeListeningPort": 80,
 			"isNodeConfigured":false,
 			"isNodeConfigurationSkipped":false,
 			"isSecure":false,
@@ -6651,6 +6643,8 @@ function loadConfig() {
 	}
 	
 	const nodeSettings = getNodeSettings();
+
+	MOARTUBE_NODE_HTTP_PORT = nodeSettings.nodeListeningPort;
 	
 	EXPRESS_SESSION_NAME = nodeSettings.expressSessionName;
 	EXPRESS_SESSION_SECRET = nodeSettings.expressSessionSecret;

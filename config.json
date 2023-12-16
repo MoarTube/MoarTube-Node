@@ -1,1 +1,1 @@
-{"nodeConfig":{"httpPort":"80"},"indexerConfig":{"httpProtocol":"https","host":"indexer.moartube.com","port":443},"aliaserConfig":{"httpProtocol":"https","host":"aliaser.moartube.com","port":443}}
+{"indexerConfig":{"httpProtocol":"https","host":"indexer.moartube.com","port":443},"aliaserConfig":{"httpProtocol":"https","host":"aliaser.moartube.com","port":443}}
