@@ -4225,7 +4225,7 @@ else {
 		});
 		
 		// Retrieve avatar for node
-		app.get('/settings/avatar', (req, res) => {
+		app.get('/settings/node/avatar', (req, res) => {
 			const customAvatarDirectoryPath = path.join(path.join(DATA_DIRECTORY_PATH, 'images'), 'avatar.png');
 			const defaultAvatarDirectoryPath = path.join(path.join(PUBLIC_DIRECTORY_PATH, 'images'), 'avatar.png');
 			
@@ -4250,7 +4250,7 @@ else {
 			}
 		});
 		
-		app.post('/settings/avatar', (req, res) => {
+		app.post('/settings/node/avatar', (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
