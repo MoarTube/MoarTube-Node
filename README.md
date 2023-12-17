@@ -27,7 +27,7 @@ The default login credentials for your node are below. Be sure to change these u
  - Reports section for comments and videos
  - Comment monitoring overview with moderation functionality
  - Captcha functionality to limit abuse
- - Run in the cloud or on your home WiFi
+ - Run your node in the cloud or on your home WiFi
  - Publicize your node on [MoarTube](http://www.moartube.com), or run your node privately
  - Dual box compatible; broadcast an RTMP stream with software such as OBS from a primary system over a network (WAN or LAN) to a secondary system running the MoarTube Client, separating streaming from stream processing. This is achieved without any special plugins, such as NDI.
 
