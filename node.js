@@ -190,7 +190,7 @@ if(cluster.isMaster) {
 					}
 					else {
 						if(rows.length > 0) {
-							indexer_performNodeIdentification()
+							indexer_performNodeIdentification(false)
 							.then(() => {
 								const nodeIdentification = getNodeIdentification();
 								
@@ -2688,7 +2688,7 @@ else {
 									else {
 										if(video != null) {
 											if(video.is_published || video.is_live) {
-												indexer_performNodeIdentification()
+												indexer_performNodeIdentification(false)
 												.then(() => {
 													const nodeIdentification = getNodeIdentification();
 													
@@ -2810,7 +2810,7 @@ else {
 								}
 								else {
 									if(video != null) {
-										indexer_performNodeIdentification()
+										indexer_performNodeIdentification(false)
 										.then(() => {
 											const nodeIdentification = getNodeIdentification();
 											
@@ -2885,7 +2885,7 @@ else {
 					res.send({isError: true, message: "aliasing unavailable; this node has not performed initial configuration"});
 				}
 				else {
-					indexer_performNodeIdentification()
+					indexer_performNodeIdentification(false)
 					.then(() => {
 						const nodeIdentification = getNodeIdentification();
 						
@@ -2959,7 +2959,7 @@ else {
 							}
 							else {
 								if(!nodeSettings.isNodePrivate) {
-									indexer_performNodeIdentification()
+									indexer_performNodeIdentification(false)
 									.then(() => {
 										const nodeIdentification = getNodeIdentification();
 										
@@ -4467,7 +4467,7 @@ else {
 								res.send({ isError: false });
 							}
 							else {
-								indexer_performNodeIdentification()
+								indexer_performNodeIdentification(false)
 								.then(() => {
 									const nodeIdentification = getNodeIdentification();
 									
@@ -5513,7 +5513,7 @@ else {
 							res.send({ isError: false });
 						}
 						else {
-							indexer_performNodeIdentification()
+							indexer_performNodeIdentification(true)
 							.then(() => {
 								const nodeIdentification = getNodeIdentification();
 								
@@ -5693,7 +5693,7 @@ else {
 						res.send({isError: true, message: "indexing unavailable; this node has not performed initial configuration"});
 					}
 					else {
-						indexer_performNodeIdentification()
+						indexer_performNodeIdentification(false)
 						.then(() => {
 							const nodeIdentification = getNodeIdentification();
 							
@@ -5745,7 +5745,7 @@ else {
 				res.send({isError: true, message: "aliasing unavailable; this node has not performed initial configuration"});
 			}
 			else {
-				indexer_performNodeIdentification()
+				indexer_performNodeIdentification(false)
 				.then(() => {
 					const nodeIdentification = getNodeIdentification();
 					
@@ -6489,7 +6489,7 @@ async function generateVideoId(database) {
     return videoId;
 }
 
-function indexer_performNodeIdentification() {
+function indexer_performNodeIdentification(isConfiguring) {
 	return new Promise(function(resolve, reject) {
 
 		const nodeSettings = getNodeSettings();
@@ -6497,7 +6497,7 @@ function indexer_performNodeIdentification() {
 		if(nodeSettings.isNodePrivate) {
 			throw new Error('node identification unavailable; this node is currently running privately');
 		}
-		else if(!nodeSettings.isNodeConfigured) {
+		else if(!nodeSettings.isNodeConfigured && !isConfiguring) {
 			throw new Error('node identification unavailable; this node has not performed initial configuration');
 		}
 
