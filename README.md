@@ -1,6 +1,15 @@
 # MoarTube-Node
 A repository containing the MoarTube Node software. Get involved with the [MoarTube platform](https://www.moartube.com) by sharing your node's videos, or do your own thing and run your node privately. The software makes video and live streaming so easy you'll be amazed beyond belief.
 
+# How to Get Started
+MoarTube Node can be found on [DockerHub](https://hub.docker.com/r/moartube/moartube-node) and can be managed with software like [Docker Desktop](https://www.docker.com/products/docker-desktop/), or follow the manual approach to set up your node. When ready, head over to [MoarTube Client](https://github.com/cconley717/MoarTube-Client) if you haven't yet.
+
+*note: the Docker container uses [**/data**](https://github.com/cconley717/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
+
+The default login credentials for your node are below. Be sure to change these upon logging in.
+
+**username**: admin<br/>**password**: admin
+
 # Features
  - Cross platform support for Windows/macOS/Linux
  - Video on demand (VoD) and HLS live streaming
@@ -20,17 +29,13 @@ A repository containing the MoarTube Node software. Get involved with the [MoarT
  - Captcha functionality to limit abuse
  - Run in the cloud or on your home WiFi
  - Publicize your node on [MoarTube](http://www.moartube.com), or run your node privately
+ - Dual box compatible; broadcast an RTMP stream with software such as OBS from a primary system over a network (WAN or LAN) to a secondary system running the MoarTube Client, separating streaming from stream processing. This is achieved without any special plugins, such as NDI.
 
-## How to Get Started
-MoarTube Node can be found on [DockerHub](https://hub.docker.com/r/moartube/moartube-node) and can be managed with software like [Docker Desktop](https://www.docker.com/products/docker-desktop/), or follow the manual approach to set up your node. When ready, head over to [MoarTube Client](https://github.com/cconley717/MoarTube-Client) if you haven't yet.
+![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/0d8ac95f-f68b-4e36-849e-28139b45ce50)
 
-*note: the Docker container uses [**/data**](https://github.com/cconley717/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
+![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/918aa074-b6e2-49f1-8d14-5c2ed1bcd582)
 
-The default login credentials for your node are below. Be sure to change these upon logging in.
-
-**username**: admin
-
-**password**: admin
+![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/068ec86b-a3d8-4285-9b64-4b71f64cce41)
 
 # Manual Approach
 
