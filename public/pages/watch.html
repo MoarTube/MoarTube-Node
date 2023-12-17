@@ -2606,11 +2606,9 @@ body {
 							
 							$.ajax({type: 'GET', url: '/videos/' + videoId + '/alias'})
 							.done(function (data, textStatus, xhr) {
-								var videoAliasUrl;
+								var videoAliasUrl = 'MoarTube Aliaser link unavailable';
 
 								if(data.isError) {
-									videoAliasUrl = 'MoarTube Aliaser link unavailable';
-									
 									showShareLinks(videoId, nodeVideoUrl, videoAliasUrl);
 								}
 								else {
@@ -2643,7 +2641,7 @@ body {
 												})
 												.done(function (data, textStatus, xhr) {
 													if(data.isError) {
-														if(data.message == 'the captcha was not correct') {
+														if(data.message === 'the captcha was not correct') {
 															getCaptcha('/alias/captcha')
 															.then((objectURL) => {
 																$('#alias-captcha-img-container').html('<img src="' + objectURL + '">');
@@ -2661,12 +2659,12 @@ body {
 													}
 												})
 												.fail(function() {
-													console.log('unable to communicate with node');
+													showShareLinks(videoId, nodeVideoUrl, videoAliasUrl);
 												});
 											});
 										})
 										.catch(error => {
-											
+											showShareLinks(videoId, nodeVideoUrl, videoAliasUrl);
 										});
 									}
 									else {

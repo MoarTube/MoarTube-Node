@@ -21,6 +21,8 @@ const cluster = require('cluster');
 const { Mutex } = require('async-mutex');
 
 
+var IS_DEVELOPER_MODE;
+
 var MOARTUBE_NODE_HTTP_PORT;
 
 var MOARTUBE_INDEXER_IP;
@@ -181,7 +183,7 @@ if(cluster.isMaster) {
 		setInterval(function() {
 			const nodeSettings = getNodeSettings();
 			
-			if(nodeSettings.isNodeConfigured) {
+			if(nodeSettings.isNodeConfigured && !nodeSettings.isNodePrivate) {
 				database.all('SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1', function(error, rows) {
 					if(error) {
 						logDebugMessageToConsole(null, error, new Error().stack, true);
@@ -2663,7 +2665,13 @@ else {
 						if(termsOfServiceAgreed) {
 							const nodeSettings = getNodeSettings();
 							
-							if(nodeSettings.isNodeConfigured) {
+							if(nodeSettings.isNodePrivate) {
+								res.send({isError: true, message: "indexing unavailable; this node currently running privately"});
+							}
+							else if(!nodeSettings.isNodeConfigured) {
+								res.send({isError: true, message: "indexing unavailable; this node has not performed initial configuration"});
+							}
+							else {
 								const nodeId = nodeSettings.nodeId;
 								const nodeName = nodeSettings.nodeName;
 								const nodeAbout = nodeSettings.nodeAbout;
@@ -2756,9 +2764,6 @@ else {
 									}
 								});
 							}
-							else {
-								res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network information in the settings"});
-							}
 						}
 						else {
 							res.send({isError: true, message: 'you must agree to the terms of service'});
@@ -2789,8 +2794,14 @@ else {
 
 					if(isVideoIdValid(videoId)) {
 						const nodeSettings = getNodeSettings();
-						
-						if(nodeSettings.isNodeConfigured) {
+
+						if(nodeSettings.isNodePrivate) {
+							res.send({isError: true, message: "indexing unavailable; currently running privately"});
+						}
+						else if(!nodeSettings.isNodeConfigured) {
+							res.send({isError: true, message: "indexing unavailable; this node has not performed initial configuration"});
+						}
+						else {
 							database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, video) {
 								if(error) {
 									logDebugMessageToConsole(null, error, new Error().stack, true);
@@ -2842,9 +2853,6 @@ else {
 								}
 							});
 						}
-						else {
-							res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network settings to enable indexing"});
-						}
 					}
 					else {
 						res.send({isError: true, message: 'invalid parameters'});
@@ -2869,8 +2877,14 @@ else {
 
 			if(isVideoIdValid(videoId)) {
 				const nodeSettings = getNodeSettings();
-				
-				if(nodeSettings.isNodeConfigured) {
+
+				if(nodeSettings.isNodePrivate) {
+					res.send({isError: true, message: "aliasing unavailable; this node currently running privately"});
+				}
+				else if(!nodeSettings.isNodeConfigured) {
+					res.send({isError: true, message: "aliasing unavailable; this node has not performed initial configuration"});
+				}
+				else {
 					indexer_performNodeIdentification()
 					.then(() => {
 						const nodeIdentification = getNodeIdentification();
@@ -2909,9 +2923,6 @@ else {
 						res.send({isError: true, message: 'an error occurred while attempting to index, please try again later'});
 					});
 				}
-				else {
-					res.send({isError: true, message: 'node not configured'});
-				}
 			}
 			else {
 				res.send({isError: true, message: 'invalid parameters'});
@@ -2922,29 +2933,66 @@ else {
 			const videoId = req.params.videoId;
 			
 			if(isVideoIdValid(videoId)) {
-				indexer_performNodeIdentification()
-				.then(() => {
-					const nodeIdentification = getNodeIdentification();
-					
-					aliaser_getVideoAlias(videoId, nodeIdentification.nodeIdentifier, nodeIdentification.nodeIdentifierProof)
-					.then(aliaserResponseData => {
-						if(aliaserResponseData.isError) {
-							logDebugMessageToConsole(aliaserResponseData.message, null, new Error().stack, true);
-							
-							res.send({isError: true, message: aliaserResponseData.message});
-						}
-						else {
-							res.send({isError: false, videoAliasUrl: aliaserResponseData.videoAliasUrl});
-						}
-					})
-					.catch(error => {
+				const nodeSettings = getNodeSettings();
+
+				database.get('SELECT is_indexed FROM videos WHERE video_id = ?', [videoId], function(error, video) {
+					if(error) {
 						logDebugMessageToConsole(null, error, new Error().stack, true);
 						
 						res.send({isError: true, message: 'error communicating with the MoarTube node'});
-					});
-				})
-				.catch(error => {
-					res.send({isError: true, message: 'an error occurred while retrieving the video alias, please try again later'});
+					}
+					else {
+						if(video != null) {
+							const isIndexed = video.is_indexed;
+
+							if(isIndexed) {
+								var videoAliasUrl;
+
+								if(IS_DEVELOPER_MODE) {
+									videoAliasUrl = 'http://localhost:' + MOARTUBE_ALIASER_PORT + '/nodes/' + nodeId + '/videos/' + videoId;
+								}
+								else {
+									videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
+								}
+
+								res.send({isError: false, videoAliasUrl: videoAliasUrl});
+							}
+							else {
+								if(!nodeSettings.isNodePrivate) {
+									indexer_performNodeIdentification()
+									.then(() => {
+										const nodeIdentification = getNodeIdentification();
+										
+										aliaser_getVideoAlias(videoId, nodeIdentification.nodeIdentifier, nodeIdentification.nodeIdentifierProof)
+										.then(aliaserResponseData => {
+											if(aliaserResponseData.isError) {
+												logDebugMessageToConsole(aliaserResponseData.message, null, new Error().stack, true);
+												
+												res.send({isError: true, message: aliaserResponseData.message});
+											}
+											else {
+												res.send({isError: false, videoAliasUrl: aliaserResponseData.videoAliasUrl});
+											}
+										})
+										.catch(error => {
+											logDebugMessageToConsole(null, error, new Error().stack, true);
+											
+											res.send({isError: true, message: 'error communicating with the MoarTube node'});
+										});
+									})
+									.catch(error => {
+										res.send({isError: true, message: 'an error occurred while retrieving the video alias, please try again later'});
+									});
+								}
+								else {
+									res.send({isError: true, message: 'MoarTube Aliaser blocked; node is private'});
+								}
+							}
+						}
+						else {
+							res.send({isError: true, message: 'MoarTube Aliaser link unavailable'});
+						}
+					}
 				});
 			}
 			else {
@@ -4404,58 +4452,93 @@ else {
 					
 					if(isNodeNameValid(nodeName) && isNodeAboutValid(nodeAbout) && isNodeIdValid(nodeId)) {
 						const nodeSettings = getNodeSettings();
-						
-						if(nodeSettings.isNodeConfigured) {
-							indexer_performNodeIdentification()
-							.then(() => {
-								const nodeIdentification = getNodeIdentification();
-								
-								if(nodeIdentification != null) {
-									const nodeIdentifier = nodeIdentification.nodeIdentifier;
-									const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
-									
-									indexer_doNodePersonalizeUpdate(nodeIdentifier, nodeIdentifierProof, nodeName, nodeAbout, nodeId)
-									.then(indexerResponseData => {
-										if(indexerResponseData.isError) {
-											logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
-											
-											res.send({isError: true, message: 'error communicating with the MoarTube indexer'});
-										}
-										else {
-											nodeSettings.nodeName = nodeName;
-											nodeSettings.nodeAbout = nodeAbout;
-											nodeSettings.nodeId = nodeId;
 
-											setNodeSettings(nodeSettings);
-											
-											res.send({ isError: false });
-										}
-									})
-									.catch(error => {
-										logDebugMessageToConsole(null, error, new Error().stack, true);
+						nodeSettings.nodeName = nodeName;
+						nodeSettings.nodeAbout = nodeAbout;
+						nodeSettings.nodeId = nodeId;
 
-										res.send({isError: true, message: 'error communicating with the MoarTube indexer'});
-									});
-								}
-								else {
-									logDebugMessageToConsole('/settings/node/personalize attempted retrieving node identification but was null', null, new Error().stack, true);
-									
-									res.send({isError: true, message: 'error communicating with the MoarTube indexer'});
-								}
-							})
-							.catch(error => {
-								res.send({isError: true, message: 'an unknown error occurred'});
-							});
+						if(!nodeSettings.isNodeConfigured) {
+							res.send({isError: true, message: "personalize unavailable; this node has not performed initial configuration"});
 						}
 						else {
-							nodeSettings.nodeName = nodeName;
-							nodeSettings.nodeAbout = nodeAbout;
-							nodeSettings.nodeId = nodeId;
+							if(nodeSettings.isNodePrivate) {
+								setNodeSettings(nodeSettings);
+								
+								res.send({ isError: false });
+							}
+							else {
+								indexer_performNodeIdentification()
+								.then(() => {
+									const nodeIdentification = getNodeIdentification();
+									
+									if(nodeIdentification != null) {
+										const nodeIdentifier = nodeIdentification.nodeIdentifier;
+										const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+										
+										indexer_doNodePersonalizeUpdate(nodeIdentifier, nodeIdentifierProof, nodeName, nodeAbout, nodeId)
+										.then(indexerResponseData => {
+											if(indexerResponseData.isError) {
+												logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+												
+												res.send({isError: true, message: 'error communicating with the MoarTube indexer'});
+											}
+											else {
+												setNodeSettings(nodeSettings);
+												
+												res.send({ isError: false });
+											}
+										})
+										.catch(error => {
+											logDebugMessageToConsole(null, error, new Error().stack, true);
 
-							setNodeSettings(nodeSettings);
-							
-							res.send({ isError: false });
+											res.send({isError: true, message: 'error communicating with the MoarTube indexer'});
+										});
+									}
+									else {
+										logDebugMessageToConsole('/settings/node/personalize attempted retrieving node identification but was null', null, new Error().stack, true);
+										
+										res.send({isError: true, message: 'error communicating with the MoarTube indexer'});
+									}
+								})
+								.catch(error => {
+									logDebugMessageToConsole(null, error, new Error().stack, true);
+
+									res.send({isError: true, message: 'an unknown error occurred'});
+								});
+							}
 						}
+					}
+					else {
+						res.send({ isError: true, message: 'invalid parameters' });
+					}
+				}
+				else {
+					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+
+					res.send({isError: true, message: 'you are not logged in'});
+				}
+			})
+			.catch(error => {
+				logDebugMessageToConsole(null, error, new Error().stack, true);
+				
+				res.send({isError: true, message: 'error communicating with the MoarTube node'});
+			});
+		});
+		
+		app.post('/settings/node/private', (req, res) => {
+			getAuthenticationStatus(req.headers.authorization)
+			.then((isAuthenticated) => {
+				if(isAuthenticated) {
+					const isNodePrivate = req.body.isNodePrivate;
+					
+					if(isBooleanValid(isNodePrivate)) {
+						const nodeSettings = getNodeSettings();
+						
+						nodeSettings.isNodePrivate = isNodePrivate;
+
+						setNodeSettings(nodeSettings);
+						
+						res.send({ isError: false });
 					}
 					else {
 						res.send({ isError: true, message: 'invalid username and/or password' });
@@ -4473,7 +4556,7 @@ else {
 				res.send({isError: true, message: 'error communicating with the MoarTube node'});
 			});
 		});
-		
+
 		app.post('/settings/node/secure', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then(async (isAuthenticated) => {
@@ -5340,8 +5423,6 @@ else {
 			});
 		});
 		
-		
-		
 		app.post('/settings/node/network/internal', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then(async (isAuthenticated) => {
@@ -5419,77 +5500,53 @@ else {
 					const publicNodePort = req.body.publicNodePort;
 					
 					if(isPublicNodeProtocolValid(publicNodeProtocol) && isPublicNodeAddressValid(publicNodeAddress) && isPortValid(publicNodePort)) {
-						indexer_performNodeIdentification()
-						.then(() => {
-							const nodeIdentification = getNodeIdentification();
-							
-							const nodeIdentifier = nodeIdentification.nodeIdentifier;
-							const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
-							
-							indexer_doNodeExternalNetworkUpdate(nodeIdentifier, nodeIdentifierProof, publicNodeProtocol, publicNodeAddress, publicNodePort)
-							.then(indexerResponseData => {
-								if(indexerResponseData.isError) {
-									res.send({isError: true, message: indexerResponseData.message});
-								}
-								else {
-									const nodeSettings = getNodeSettings();
-									
-									nodeSettings.publicNodeProtocol = publicNodeProtocol;
-									nodeSettings.publicNodeAddress = publicNodeAddress;
-									nodeSettings.publicNodePort = publicNodePort;
-									
-									nodeSettings.isNodeConfigured = true;
+						const nodeSettings = getNodeSettings();
 
-									setNodeSettings(nodeSettings);
+						nodeSettings.publicNodeProtocol = publicNodeProtocol;
+						nodeSettings.publicNodeAddress = publicNodeAddress;
+						nodeSettings.publicNodePort = publicNodePort;
+						nodeSettings.isNodeConfigured = true;
+						
+						if(nodeSettings.isNodePrivate) {
+							setNodeSettings(nodeSettings);
+							
+							res.send({ isError: false });
+						}
+						else {
+							indexer_performNodeIdentification()
+							.then(() => {
+								const nodeIdentification = getNodeIdentification();
+								
+								const nodeIdentifier = nodeIdentification.nodeIdentifier;
+								const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+								
+								indexer_doNodeExternalNetworkUpdate(nodeIdentifier, nodeIdentifierProof, publicNodeProtocol, publicNodeAddress, publicNodePort)
+								.then(indexerResponseData => {
+									if(indexerResponseData.isError) {
+										res.send({isError: true, message: indexerResponseData.message});
+									}
+									else {
+										setNodeSettings(nodeSettings);
+										
+										res.send({ isError: false });
+									}
+								})
+								.catch(error => {
+									logDebugMessageToConsole(null, error, new Error().stack, true);
 									
-									res.send({ isError: false });
-								}
+									res.send({isError: true, message: 'an unknown error occurred'});
+								});
 							})
 							.catch(error => {
-								console.log(error);
-								
 								logDebugMessageToConsole(null, error, new Error().stack, true);
 								
 								res.send({isError: true, message: 'an unknown error occurred'});
 							});
-						})
-						.catch(error => {
-							console.log(error);
-							
-							logDebugMessageToConsole(null, error, new Error().stack, true);
-							
-							res.send({isError: true, message: 'an unknown error occurred'});
-						});
+						}
 					}
 					else {
 						res.send({ isError: true, message: 'invalid parameters' });
 					}
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
-		
-		app.post('/configure/skip', async (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					const nodeSettings = getNodeSettings();
-					
-					nodeSettings.isNodeConfigured = false;
-					nodeSettings.isNodeConfigurationSkipped = true;
-					
-					setNodeSettings(nodeSettings);
-					
-					res.send({ isError: false });
 				}
 				else {
 					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -5628,8 +5685,14 @@ else {
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
 					const nodeSettings = getNodeSettings();
-					
-					if(nodeSettings.isNodeConfigured) {
+
+					if(nodeSettings.isNodePrivate) {
+						res.send({isError: true, message: "indexing unavailable; this node currently running privately"});
+					}
+					else if(!nodeSettings.isNodeConfigured) {
+						res.send({isError: true, message: "indexing unavailable; this node has not performed initial configuration"});
+					}
+					else {
 						indexer_performNodeIdentification()
 						.then(() => {
 							const nodeIdentification = getNodeIdentification();
@@ -5657,9 +5720,6 @@ else {
 							res.send({isError: true, message: 'an error occurred while retrieving the captcha'});
 						});
 					}
-					else {
-						res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network settings to enable indexing"});
-					}
 				}
 				else {
 					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -5677,8 +5737,14 @@ else {
 		// Retrieve and serve a captcha
 		app.get('/alias/captcha', async (req, res) => {
 			const nodeSettings = getNodeSettings();
-			
-			if(nodeSettings.isNodeConfigured) {
+
+			if(nodeSettings.isNodePrivate) {
+				res.send({isError: true, message: "aliasing unavailable; this node currently running privately"});
+			}
+			else if(!nodeSettings.isNodeConfigured) {
+				res.send({isError: true, message: "aliasing unavailable; this node has not performed initial configuration"});
+			}
+			else {
 				indexer_performNodeIdentification()
 				.then(() => {
 					const nodeIdentification = getNodeIdentification();
@@ -5700,14 +5766,15 @@ else {
 					}
 					else {
 						logDebugMessageToConsole('/alias/captcha attempted retrieving node identification but was null', null, new Error().stack, true);
+
+						res.send({isError: true, message: 'an error occurred while attempting to alias, please try again later'});
 					}
 				})
 				.catch(error => {
+					logDebugMessageToConsole(null, error, new Error().stack, true);
+
 					res.send({isError: true, message: 'an error occurred while attempting to alias, please try again later'});
 				});
-			}
-			else {
-				res.send({isError: true, message: "this node isn't configured for MoarTube.com indexing<br>please provide your node's external network settings to enable indexing"});
 			}
 		});
 		
@@ -6424,10 +6491,20 @@ async function generateVideoId(database) {
 
 function indexer_performNodeIdentification() {
 	return new Promise(function(resolve, reject) {
+
+		const nodeSettings = getNodeSettings();
+
+		if(nodeSettings.isNodePrivate) {
+			throw new Error('node identification unavailable; this node is currently running privately');
+		}
+		else if(!nodeSettings.isNodeConfigured) {
+			throw new Error('node identification unavailable; this node has not performed initial configuration');
+		}
+
 		logDebugMessageToConsole('validating node to MoarTube network', null, null, true);
 		
-		if (!fs.existsSync(path.join(__dirname, '/_node_identification.json'))) {
-			fs.writeFileSync(path.join(__dirname, '/_node_identification.json'), JSON.stringify({nodeIdentifier: '', nodeIdentifierProof: ''}));
+		if (getNodeIdentification() == null) {
+			setNodeidentification({nodeIdentifier: '', nodeIdentifierProof: ''});
 		}
 		
 		const nodeIdentification = getNodeIdentification();
@@ -6448,8 +6525,8 @@ function indexer_performNodeIdentification() {
 				else {
 					nodeIdentification.nodeIdentifier = indexerResponseData.nodeIdentifier;
 					nodeIdentification.nodeIdentifierProof = indexerResponseData.nodeIdentifierProof;
-					
-					fs.writeFileSync(path.join(__dirname, '/_node_identification.json'), JSON.stringify(nodeIdentification));
+
+					setNodeidentification(nodeIdentification);
 
 					logDebugMessageToConsole('node identification successful', null, null, true);
 					
@@ -6474,8 +6551,8 @@ function indexer_performNodeIdentification() {
 					logDebugMessageToConsole('node identification valid', null, null, true);
 					
 					nodeIdentification.nodeIdentifierProof = indexerResponseData.nodeIdentifierProof;
-					
-					fs.writeFileSync(path.join(__dirname, '/_node_identification.json'), JSON.stringify(nodeIdentification));
+
+					setNodeidentification(nodeIdentification);
 					
 					resolve();
 				}
@@ -6564,14 +6641,18 @@ function getNodeIconBase64() {
 }
 
 function getNodeIdentification() {
-	if (fs.existsSync(path.join(__dirname, '/_node_identification.json'))) {
-		const nodeIdentification = JSON.parse(fs.readFileSync(path.join(__dirname, '/_node_identification.json'), 'utf8'));
+	if (fs.existsSync(path.join(DATA_DIRECTORY_PATH, '_node_identification.json'))) {
+		const nodeIdentification = JSON.parse(fs.readFileSync(path.join(DATA_DIRECTORY_PATH, '_node_identification.json'), 'utf8'));
 		
 		return nodeIdentification;
 	}
 	else {
 		return null;
 	}
+}
+
+function setNodeidentification(nodeIdentification) {
+	fs.writeFileSync(path.join(DATA_DIRECTORY_PATH, '_node_identification.json'), JSON.stringify(nodeIdentification));
 }
 
 function getNodeSettings() {
@@ -6612,6 +6693,8 @@ function loadConfig() {
 	fs.mkdirSync(CERTIFICATES_DIRECTORY_PATH, { recursive: true });
 	
 	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+
+	IS_DEVELOPER_MODE = config.isDeveloperMode;
 	
 	MOARTUBE_INDEXER_HTTP_PROTOCOL = config.indexerConfig.httpProtocol;
 	MOARTUBE_INDEXER_IP = config.indexerConfig.host;
@@ -6625,7 +6708,7 @@ function loadConfig() {
 		const nodeSettings = {
 			"nodeListeningPort": 80,
 			"isNodeConfigured":false,
-			"isNodeConfigurationSkipped":false,
+			"isNodePrivate":false,
 			"isSecure":false,
 			"publicNodeProtocol":"http",
 			"publicNodeAddress":"",
