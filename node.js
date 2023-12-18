@@ -1225,7 +1225,7 @@ else {
 		
 		
 		
-		app.get('/node/settings', (req, res) => {
+		app.get('/settings/node', (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -2670,10 +2670,10 @@ else {
 							const nodeSettings = getNodeSettings();
 							
 							if(nodeSettings.isNodePrivate) {
-								res.send({isError: true, message: "indexing unavailable; this node currently running privately"});
+								res.send({isError: true, message: "MoarTube Indexer unavailable; node is private"});
 							}
 							else if(!nodeSettings.isNodeConfigured) {
-								res.send({isError: true, message: "indexing unavailable; this node has not performed initial configuration"});
+								res.send({isError: true, message: "MoarTube Indexer unavailable; this node has not performed initial configuration"});
 							}
 							else {
 								const nodeId = nodeSettings.nodeId;
@@ -2800,10 +2800,10 @@ else {
 						const nodeSettings = getNodeSettings();
 
 						if(nodeSettings.isNodePrivate) {
-							res.send({isError: true, message: "indexing unavailable; currently running privately"});
+							res.send({isError: true, message: "MoarTube Indexer unavailable; node is private"});
 						}
 						else if(!nodeSettings.isNodeConfigured) {
-							res.send({isError: true, message: "indexing unavailable; this node has not performed initial configuration"});
+							res.send({isError: true, message: "MoarTube Indexer; this node has not performed initial configuration"});
 						}
 						else {
 							database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, video) {
@@ -2989,7 +2989,7 @@ else {
 									});
 								}
 								else {
-									res.send({isError: true, message: 'MoarTube Aliaser blocked; node is private'});
+									res.send({isError: true, message: 'MoarTube Aliaser unavailable; node is private'});
 								}
 							}
 						}
@@ -4655,7 +4655,7 @@ else {
 		});
 		
 		// Set the account credentials
-		app.post('/node/account/update', (req, res) => {
+		app.post('/settings/node/account', (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -5691,10 +5691,10 @@ else {
 					const nodeSettings = getNodeSettings();
 
 					if(nodeSettings.isNodePrivate) {
-						res.send({isError: true, message: "indexing unavailable; this node currently running privately"});
+						res.send({isError: true, message: "MoarTube Indexer unavailable; node is private"});
 					}
 					else if(!nodeSettings.isNodeConfigured) {
-						res.send({isError: true, message: "indexing unavailable; this node has not performed initial configuration"});
+						res.send({isError: true, message: "MoarTube Indexer unavailable; this node has not performed initial configuration"});
 					}
 					else {
 						indexer_performNodeIdentification(false)
