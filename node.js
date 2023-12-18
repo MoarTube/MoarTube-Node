@@ -300,11 +300,15 @@ if(cluster.isMaster) {
 		var errorMessage = '<message: ' + message + ', date: ' + humanReadableTimestamp + '>';
 
 		if(error != null) {
-			if(typeof error === Error) {
+			if(error.message != null) {
 				errorMessage += '\n' + error.message + '\n';
 			}
-			else {
-				errorMessage += '\n' + error + '\n';
+	
+			if(error.stack != null) {
+				errorMessage += '\n' + error.stack + '\n';
+			}
+			else if(error.stackTrace != null) {
+				errorMessage += '\n' + error.stackTrace + '\n';
 			}
 		}
 
@@ -1931,7 +1935,7 @@ else {
 			});
 		});
 		
-		app.post('/stream/start', async (req, res) => {
+		app.post('/streams/start', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then(async (isAuthenticated) => {
 				if(isAuthenticated) {
@@ -2040,7 +2044,7 @@ else {
 			});
 		});
 		
-		app.post('/videos/:videoId/streaming/stop', (req, res) => {
+		app.post('/streams/:videoId/stop', (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -4651,7 +4655,7 @@ else {
 		});
 		
 		// Set the account credentials
-		app.post('/settings/account/update', (req, res) => {
+		app.post('/node/account/update', (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
