@@ -5978,6 +5978,7 @@ else {
 		function generateCaptcha() {
 			return new Promise(function(resolve, reject) {
 				const svgCaptcha = require('svg-captcha');
+				
 				const { createCanvas, loadImage, Image  } = require('canvas');
 				
 				const captcha = svgCaptcha.create({
