@@ -1225,7 +1225,7 @@ else {
 		
 		
 		
-		app.get('/settings/node', (req, res) => {
+		app.get('/settings', (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -4229,7 +4229,7 @@ else {
 		});
 		
 		// Retrieve avatar for node
-		app.get('/settings/node/avatar', (req, res) => {
+		app.get('/settings/avatar', (req, res) => {
 			const customAvatarDirectoryPath = path.join(path.join(DATA_DIRECTORY_PATH, 'images'), 'avatar.png');
 			const defaultAvatarDirectoryPath = path.join(path.join(PUBLIC_DIRECTORY_PATH, 'images'), 'avatar.png');
 			
@@ -4254,7 +4254,7 @@ else {
 			}
 		});
 		
-		app.post('/settings/node/avatar', (req, res) => {
+		app.post('/settings/avatar', (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -4446,7 +4446,7 @@ else {
 		});
 		
 		// Set the node name
-		app.post('/settings/node/personalize', (req, res) => {
+		app.post('/settings/personalize', (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -4499,7 +4499,7 @@ else {
 										});
 									}
 									else {
-										logDebugMessageToConsole('/settings/node/personalize attempted retrieving node identification but was null', null, new Error().stack, true);
+										logDebugMessageToConsole('/settings/personalize attempted retrieving node identification but was null', null, new Error().stack, true);
 										
 										res.send({isError: true, message: 'error communicating with the MoarTube indexer'});
 									}
@@ -4529,7 +4529,7 @@ else {
 			});
 		});
 		
-		app.post('/settings/node/private', (req, res) => {
+		app.post('/settings/private', (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -4561,7 +4561,7 @@ else {
 			});
 		});
 
-		app.post('/settings/node/secure', async (req, res) => {
+		app.post('/settings/secure', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then(async (isAuthenticated) => {
 				if(isAuthenticated) {
@@ -4597,7 +4597,7 @@ else {
 											cb(null, file.originalname);
 										}
 										else {
-											cb(new Error('invalid field name in POST /settings/node/secure:' + file.fieldname));
+											cb(new Error('invalid field name in POST /settings/secure:' + file.fieldname));
 										}
 									}
 								})
@@ -4655,7 +4655,7 @@ else {
 		});
 		
 		// Set the account credentials
-		app.post('/settings/node/account', (req, res) => {
+		app.post('/settings/account', (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -5016,7 +5016,7 @@ else {
 			}
 		});
 		
-		app.get('/node/reports/videos', async (req, res) => {
+		app.get('/reports/videos', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -5044,7 +5044,7 @@ else {
 			});
 		});
 		
-		app.get('/node/reports/archive/videos', async (req, res) => {
+		app.get('/reports/archive/videos', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -5072,7 +5072,7 @@ else {
 			});
 		});
 		
-		app.get('/node/reports/count', async (req, res) => {
+		app.get('/reports/count', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -5235,7 +5235,7 @@ else {
 			});
 		});
 		
-		app.get('/node/reports/comments', async (req, res) => {
+		app.get('/reports/comments', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -5263,7 +5263,7 @@ else {
 			});
 		});
 		
-		app.get('/node/reports/archive/comments', async (req, res) => {
+		app.get('/reports/archive/comments', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -5427,7 +5427,7 @@ else {
 			});
 		});
 		
-		app.post('/settings/node/network/internal', async (req, res) => {
+		app.post('/settings/network/internal', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then(async (isAuthenticated) => {
 				if(isAuthenticated) {
@@ -5495,7 +5495,7 @@ else {
 			});
 		});
 		
-		app.post('/settings/node/network/external', (req, res) => {
+		app.post('/settings/network/external', (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -5647,7 +5647,7 @@ else {
 			}
 		});
 		
-		app.get('/node/videos/comments/all', async (req, res) => {
+		app.get('/videos/comments/all', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
