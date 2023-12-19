@@ -1106,7 +1106,7 @@ else {
 			fileStream.pipe(res);
 		});
 		
-		app.get('/api/information', (req, res) => {
+		app.get('/information', (req, res) => {
 			database.get('SELECT COUNT(*) AS videoCount FROM videos WHERE (is_published = 1 OR is_live = 1)', function(error, result) {
 				if(error) {
 					logDebugMessageToConsole(null, error, new Error().stack, true);
