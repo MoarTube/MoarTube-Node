@@ -20,31 +20,23 @@ const httpTerminator = require('http-terminator');
 const cluster = require('cluster');
 const { Mutex } = require('async-mutex');
 
+const { 
+	logDebugMessageToConsole, setPublicDirectoryPath, setPagesDirectoryPath, getPublicDirectoryPath, getNodeSettings, setNodeSettings, 
+	getPublicDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath, getDatabaseDirectoryPath, getNodeSettingsPath, getIsDockerEnvironment, 
+	getDataDirectoryPath, getCertificatesDirectoryPath, setIsDockerEnvironment,	setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, 
+	setVideosDirectoryPath, setDatabaseDirectoryPath, setCertificatesDirectoryPath, setIsDeveloperMode, setMoarTubeIndexerHttpProtocol, 
+	setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort, 
+	setMoarTubeNodeHttpPort, setExpressSessionname,	setExpressSessionSecret
+} = require('./utils/helpers');
 
-var IS_DEVELOPER_MODE;
+const homeRoutes = require('./routes/home');
+const accountRoutes = require('./routes/account');
+const reportsRoutes = require('./routes/reports');
+const reportsVideosRoutes = require('./routes/reports-videos');
+const reportsCommentsRoutes = require('./routes/reports-comments');
+const reportsArchiveRoutes = require('./routes/reports-archive');
 
-var MOARTUBE_NODE_HTTP_PORT;
 
-var MOARTUBE_INDEXER_IP;
-var MOARTUBE_INDEXER_PORT;
-var MOARTUBE_INDEXER_HTTP_PROTOCOL;
-
-var MOARTUBE_ALIASER_IP;
-var MOARTUBE_ALIASER_PORT;
-var MOARTUBE_ALIASER_HTTP_PROTOCOL;
-
-var EXPRESS_SESSION_NAME;
-var EXPRESS_SESSION_SECRET;
-
-var IS_DOCKER_ENVIRONMENT;
-var DATA_DIRECTORY_PATH;
-var NODE_SETTINGS_PATH;
-var IMAGES_DIRECTORY_PATH;
-var PUBLIC_DIRECTORY_PATH;
-var PAGES_DIRECTORY_PATH;
-var VIDEOS_DIRECTORY_PATH;
-var DATABASE_DIRECTORY_PATH;
-var CERTIFICATES_DIRECTORY_PATH;
 
 
 loadConfig();
@@ -78,13 +70,6 @@ if(cluster.isMaster) {
 			worker.on('message', async (msg) => {
 				if (msg.cmd && msg.cmd === 'get_jwt_secret') {
 					worker.send({ cmd: 'get_jwt_secret_response', jwtSecret: jwtSecret });
-				}
-				else if (msg.cmd && msg.cmd === 'message_log') {
-					const message = msg.message;
-					const stackTrace = msg.stackTrace;
-					const isLoggingToFile = msg.isLoggingToFile;
-					
-					logDebugMessageToConsole(message, null, stackTrace, isLoggingToFile);
 				}
 				else if (msg.cmd && msg.cmd === 'update_node_name') {
 					const nodeName = msg.nodeName;
@@ -190,7 +175,7 @@ if(cluster.isMaster) {
 					}
 					else {
 						if(rows.length > 0) {
-							indexer_performNodeIdentification(false)
+							performNodeIdentification(false)
 							.then(() => {
 								const nodeIdentification = getNodeIdentification();
 								
@@ -283,50 +268,7 @@ if(cluster.isMaster) {
 		logDebugMessageToConsole(null, error, new Error().stack, true);
 	});
 	
-	function logDebugMessageToConsole(message, error, stackTrace, isLoggingToFile) {
-		const date = new Date(Date.now());
-		const year = date.getFullYear();
-		const month = ('0' + (date.getMonth() + 1)).slice(-2);
-		const day = ('0' + date.getDate()).slice(-2);
-		const hours = ('0' + date.getHours()).slice(-2);
-		const minutes = ('0' + date.getMinutes()).slice(-2);
-		const seconds = ('0' + date.getSeconds()).slice(-2);
-		const humanReadableTimestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-
-		if(message == null) {
-			message = 'none';
-		}
-		
-		var errorMessage = '<message: ' + message + ', date: ' + humanReadableTimestamp + '>';
-
-		if(error != null) {
-			if(error.message != null) {
-				errorMessage += '\n' + error.message + '\n';
-			}
 	
-			if(error.stack != null) {
-				errorMessage += '\n' + error.stack + '\n';
-			}
-			else if(error.stackTrace != null) {
-				errorMessage += '\n' + error.stackTrace + '\n';
-			}
-		}
-
-		if(stackTrace != null) {
-			errorMessage += '\n' + stackTrace + '\n';
-		}
-		
-		console.log(errorMessage);
-		
-		errorMessage += '\n';
-
-		/*
-		if(isLoggingToFile) {
-			const logFilePath = path.join(__dirname, '/_node_log.txt');
-			fs.appendFileSync(logFilePath, errorMessage);
-		}
-		*/
-	}
 	
 	function provisionSqliteDatabase(databasePath) {
 		return new Promise(function(resolve, reject) {
@@ -1098,123 +1040,17 @@ else {
 		app.use(function(req, res, next) {
 			next();
 		});
-		
-		app.get('/', (req, res) => {
-			const pagePath = path.join(PAGES_DIRECTORY_PATH, 'channel.html');
-			const fileStream = fs.createReadStream(pagePath);
-			res.setHeader('Content-Type', 'text/html');
-			fileStream.pipe(res);
-		});
-		
-		app.get('/information', (req, res) => {
-			database.get('SELECT COUNT(*) AS videoCount FROM videos WHERE (is_published = 1 OR is_live = 1)', function(error, result) {
-				if(error) {
-					logDebugMessageToConsole(null, error, new Error().stack, true);
-					
-					res.send({isError: true, message: 'error communicating with the MoarTube node'});
-				}
-				else {
-					if(result != null) {
-						const nodeSettings = getNodeSettings();
-						
-						const nodeId = nodeSettings.nodeId;
-						const publicNodeProtocol = nodeSettings.publicNodeProtocol;
-						const publicNodeAddress = nodeSettings.publicNodeAddress;
-						const publicNodePort = nodeSettings.publicNodePort;
-						const nodeName = nodeSettings.nodeName;
-						const nodeAbout = nodeSettings.nodeAbout;
-						const nodeVideoCount = result.videoCount;
-						
-						res.send({isError: false, nodeId: nodeId, publicNodeProtocol: publicNodeProtocol, publicNodeAddress: publicNodeAddress, publicNodePort: publicNodePort, nodeName: nodeName, nodeVideoCount: nodeVideoCount, nodeAbout: nodeAbout});
-					}
-					else {
-						res.send({isError: true, message: 'error communicating with the MoarTube node'});
-					}
-				}
-			});
-		});
-		
-		app.post('/account/signin', function(req, res, next) {
-			var username = req.body.username;
-			var password = req.body.password;
-			var rememberMe = req.body.rememberMe;
-			
-			if(!isUsernameValid(username)) {
-				logDebugMessageToConsole('attempted to sign in with invalid username: ' + username, null, new Error().stack, true);
 
-				res.send({isError: true, message: 'usernames can contain letters aA-zZ, digits, symbols !@#$%^&*()-_=+[], and can be up to 100 characters long'});
-			}
-			else if(!isPasswordValid(password)) {
-				logDebugMessageToConsole('attempted to sign in with invalid password: ' + password, null, new Error().stack, true);
-
-				res.send({isError: true, message: 'passwords can contain letters aA-zZ, digits, symbols !@#$%^&*()-_=+[], and can be up to 100 characters long'});
-			}
-			else if(!isBooleanValid(rememberMe)) {
-				logDebugMessageToConsole('attempted to sign in with invalid rememberMe: ' + rememberMe, null, new Error().stack, true);
-
-				res.send({isError: true, message: 'invalid parameter: rememberMe value was ' + rememberMe + ', expected "on" or "off"'});
-			}
-			else {
-				var expiresIn;
-				
-				if(rememberMe) {
-					expiresIn = '30d'; // 30 days
-				}
-				else {
-					expiresIn = '1d'; // 1 day
-				}
-				
-				const nodeSettings = getNodeSettings();
-				
-				const usernameHash = Buffer.from(decodeURIComponent(nodeSettings.username), 'base64').toString('utf8');
-				const passwordHash = Buffer.from(decodeURIComponent(nodeSettings.password), 'base64').toString('utf8');
-				
-				const isUsernameValid = bcryptjs.compareSync(username, usernameHash);
-				const isPasswordValid = bcryptjs.compareSync(password, passwordHash);
-				
-				if(isUsernameValid && isPasswordValid) {
-					logDebugMessageToConsole('user logged in: ' + username, null, null, true);
-					
-					const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: expiresIn });
-					
-					res.send({isError: false, isAuthenticated: true, token: token});
-				}
-				else {
-					res.send({isError: false, isAuthenticated: false});
-				}
-			}
-		});
+		app.use('/', homeRoutes);
+		app.use('/account', accountRoutes);
+		app.use('/reports', reportsRoutes);
+		app.use('/reports/videos', reportsVideosRoutes);
+		app.use('/reports/comments', reportsCommentsRoutes);
+		app.use('/reports/archive', reportsArchiveRoutes);
 		
-		app.get('/account/signout', (req, res, next) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					req.logout(function(error) {
-						res.send({isError: false, wasAuthenticated: true});
-					});
-				}
-				else {
-					res.send({isError: false, wasAuthenticated: false});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
 		
-		app.get('/account/authenticated', (req, res, next) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				res.send({isError: false, isAuthenticated: isAuthenticated});
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
+		
+		
 		
 		
 		
@@ -1247,7 +1083,7 @@ else {
 		});
 		
 		// Import a video
-		app.post('/video/import', async (req, res) => {
+		app.post('/videos/import', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then(async (isAuthenticated) => {
 				if(isAuthenticated) {
@@ -1340,7 +1176,7 @@ else {
 			});
 		});
 		
-		app.post('/video/imported', async (req, res) => {
+		app.post('/videos/imported', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -1406,7 +1242,7 @@ else {
 			});
 		});
 		
-		app.post('/video/publishing', async (req, res) => {
+		app.post('/videos/publishing', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -1439,7 +1275,7 @@ else {
 			});
 		});
 		
-		app.post('/video/published', async (req, res) => {
+		app.post('/videos/published', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -1792,7 +1628,7 @@ else {
 		});
 		
 		
-		app.post('/video/error', async (req, res) => {
+		app.post('/videos/error', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -1825,7 +1661,7 @@ else {
 			});
 		});
 		
-		app.post('/video/ready', async (req, res) => {
+		app.post('/videos/ready', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
 			.then((isAuthenticated) => {
 				if(isAuthenticated) {
@@ -2692,7 +2528,7 @@ else {
 									else {
 										if(video != null) {
 											if(video.is_published || video.is_live) {
-												indexer_performNodeIdentification(false)
+												performNodeIdentification(false)
 												.then(() => {
 													const nodeIdentification = getNodeIdentification();
 													
@@ -2814,7 +2650,7 @@ else {
 								}
 								else {
 									if(video != null) {
-										indexer_performNodeIdentification(false)
+										performNodeIdentification(false)
 										.then(() => {
 											const nodeIdentification = getNodeIdentification();
 											
@@ -2889,7 +2725,7 @@ else {
 					res.send({isError: true, message: "aliasing unavailable; this node has not performed initial configuration"});
 				}
 				else {
-					indexer_performNodeIdentification(false)
+					performNodeIdentification(false)
 					.then(() => {
 						const nodeIdentification = getNodeIdentification();
 						
@@ -2963,7 +2799,7 @@ else {
 							}
 							else {
 								if(!nodeSettings.isNodePrivate) {
-									indexer_performNodeIdentification(false)
+									performNodeIdentification(false)
 									.then(() => {
 										const nodeIdentification = getNodeIdentification();
 										
@@ -4471,7 +4307,7 @@ else {
 								res.send({ isError: false });
 							}
 							else {
-								indexer_performNodeIdentification(false)
+								performNodeIdentification(false)
 								.then(() => {
 									const nodeIdentification = getNodeIdentification();
 									
@@ -4895,25 +4731,7 @@ else {
 		
 
 		
-		app.get('/report/video/captcha', async (req, res) => {
-			const captcha = await generateCaptcha();
-			
-			req.session.videoReportCaptcha = captcha.text;
-			
-			res.setHeader('Content-Type', 'image/png');
-			
-			res.send(captcha.data);
-		});
 		
-		app.get('/report/comment/captcha', async (req, res) => {
-			const captcha = await generateCaptcha();
-			
-			req.session.commentReportCaptcha = captcha.text;
-			
-			res.setHeader('Content-Type', 'image/png');
-			
-			res.send(captcha.data);
-		});
 		
 		app.post('/videos/:videoId/report', async (req, res) => {
 			const videoId = req.params.videoId;
@@ -5016,416 +4834,7 @@ else {
 			}
 		});
 		
-		app.get('/reports/videos', async (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					database.all('SELECT * FROM videoReports', function(error, reports) {
-						if(error) {
-							logDebugMessageToConsole(null, error, new Error().stack, true);
-							
-							res.send({isError: true, message: 'error communicating with the MoarTube node'});
-						}
-						else {
-							res.send({isError: false, reports: reports});
-						}
-					});
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
 		
-		app.get('/reports/archive/videos', async (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					database.all('SELECT * FROM videoReportsArchive ORDER BY archive_id DESC', function(error, reports) {
-						if(error) {
-							logDebugMessageToConsole(null, error, new Error().stack, true);
-							
-							res.send({isError: true, message: 'error communicating with the MoarTube node'});
-						}
-						else {
-							res.send({isError: false, reports: reports});
-						}
-					});
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
-		
-		app.get('/reports/count', async (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					database.get('SELECT COUNT(*) AS reportCount FROM videoReports', function(error, videoCountResult) {
-						database.get('SELECT COUNT(*) AS reportCount FROM commentReports', function(error, commentCountResult) {
-							const videoReportCount = videoCountResult.reportCount;
-							const commentReportCount = commentCountResult.reportCount;
-							const totalReportCount = videoReportCount + commentReportCount;
-							
-							res.send({isError: false, videoReportCount: videoReportCount, commentReportCount: commentReportCount, totalReportCount: totalReportCount});
-						});
-					});
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
-		
-		app.post('/reports/videos/archive', (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					const reportId = req.body.reportId;
-					
-					if(isReportIdValid(reportId)) {
-						database.get('SELECT * FROM videoReports WHERE report_id = ?', [reportId], function(error, report) {
-							if(error) {
-								logDebugMessageToConsole(null, error, new Error().stack, true);
-								
-								res.send({isError: true, message: 'error communicating with the MoarTube node'});
-							}
-							else {
-								if(report != null) {
-									const reportId = report.report_id;
-									const timestamp = report.timestamp;
-									const videoTimestamp = report.video_timestamp;
-									const videoId = report.video_id;
-									const email = report.email;
-									const type = report.type;
-									const message = report.message;
-									
-									submitDatabaseWriteJob('INSERT INTO videoReportsArchive(report_id, timestamp, video_timestamp, video_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?)', [reportId, timestamp, videoTimestamp, videoId, email, type, message], function(isError) {
-										if(isError) {
-											res.send({isError: true, message: 'error communicating with the MoarTube node'});
-										}
-										else {
-											submitDatabaseWriteJob('DELETE FROM videoReports WHERE report_id = ?', [reportId], function(isError) {
-												if(isError) {
-													res.send({isError: true, message: 'error communicating with the MoarTube node'});
-												}
-												else {
-													res.send({isError: false});
-												}
-											});
-										}
-									});
-								}
-								else {
-									logDebugMessageToConsole('report with id does not exist: ' + reportId, null, new Error().stack, true);
-									
-									res.send({isError: true, message: 'error communicating with the MoarTube node'});
-								}
-							}
-						});
-					}
-					else {
-						logDebugMessageToConsole('invalid report id: ' + reportId, null, new Error().stack, true);
-						
-						res.send({isError: true, message: 'error communicating with the MoarTube node'});
-					}
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
-		
-		app.delete('/reports/videos/:reportId/delete', async (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					const reportId = req.params.reportId;
-					
-					if(isReportIdValid(reportId)) {
-						submitDatabaseWriteJob('DELETE FROM videoReports WHERE report_id = ?', [reportId], function(isError) {
-							if(isError) {
-								res.send({isError: true, message: 'error communicating with the MoarTube node'});
-							}
-							else {
-								res.send({isError: false});
-							}
-						});
-					}
-					else {
-						logDebugMessageToConsole('invalid report id: ' + reportId, null, new Error().stack, true);
-						
-						res.send({isError: true, message: 'error communicating with the MoarTube node'});
-					}
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
-		
-		app.delete('/reports/archive/videos/:archiveId/delete', async (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					const archiveId = req.params.archiveId;
-					
-					if(isArchiveIdValid(archiveId)) {
-						submitDatabaseWriteJob('DELETE FROM videoReportsArchive WHERE archive_id = ?', [archiveId], function(isError) {
-							if(isError) {
-								res.send({isError: true, message: 'error communicating with the MoarTube node'});
-							}
-							else {
-								res.send({isError: false});
-							}
-						});
-					}
-					else {
-						logDebugMessageToConsole('invalid archive id: ' + archiveId, null, new Error().stack, true);
-						
-						res.send({isError: true, message: 'error communicating with the MoarTube node'});
-					}
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
-		
-		app.get('/reports/comments', async (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					database.all('SELECT * FROM commentReports', function(error, reports) {
-						if(error) {
-							logDebugMessageToConsole(null, error, new Error().stack, true);
-							
-							res.send({isError: true, message: 'error communicating with the MoarTube node'});
-						}
-						else {
-							res.send({isError: false, reports: reports});
-						}
-					});
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
-		
-		app.get('/reports/archive/comments', async (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					database.all('SELECT * FROM commentReportsArchive ORDER BY archive_id DESC', function(error, reports) {
-						if(error) {
-							logDebugMessageToConsole(null, error, new Error().stack, true);
-							
-							res.send({isError: true, message: 'error communicating with the MoarTube node'});
-						}
-						else {
-							res.send({isError: false, reports: reports});
-						}
-					});
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
-		
-		app.post('/reports/comments/archive', (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					const reportId = req.body.reportId;
-					
-					if(isReportIdValid(reportId)) {
-						database.get('SELECT * FROM commentReports WHERE report_id = ?', [reportId], function(error, report) {
-							if(error) {
-								logDebugMessageToConsole(null, error, new Error().stack, true);
-								
-								res.send({isError: true, message: 'error communicating with the MoarTube node'});
-							}
-							else {
-								if(report != null) {
-									
-									const reportId = report.report_id;
-									const timestamp = report.timestamp;
-									const commentTimestamp = report.comment_timestamp;
-									const videoId = report.video_id;
-									const commentId = report.comment_id;
-									const email = report.email;
-									const type = report.type;
-									const message = report.message;
-									
-									submitDatabaseWriteJob('INSERT INTO commentReportsArchive(report_id, timestamp, comment_timestamp, video_id, comment_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [reportId, timestamp, commentTimestamp, videoId, commentId, email, type, message], function(isError) {
-										if(isError) {
-											res.send({isError: true, message: 'error communicating with the MoarTube node'});
-										}
-										else {
-											submitDatabaseWriteJob('DELETE FROM commentReports WHERE report_id = ?', [reportId], function(isError) {
-												if(isError) {
-													res.send({isError: true, message: 'error communicating with the MoarTube node'});
-												}
-												else {
-													res.send({isError: false});
-												}
-											});
-										}
-									});
-								}
-								else {
-									res.send({isError: true, message: 'error communicating with the MoarTube node'});
-								}
-							}
-						});
-					}
-					else {
-						logDebugMessageToConsole('invalid report id: ' + reportId, null, new Error().stack, true);
-						
-						res.send({isError: true, message: 'error communicating with the MoarTube node'});
-					}
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
-		
-		app.delete('/reports/comments/:reportId/delete', async (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					const reportId = req.params.reportId;
-					
-					if(isReportIdValid(reportId)) {
-						submitDatabaseWriteJob('DELETE FROM commentReports WHERE report_id = ?', [reportId], function(isError) {
-							if(isError) {
-								res.send({isError: true, message: 'error communicating with the MoarTube node'});
-							}
-							else {
-								res.send({isError: false});
-							}
-						});
-					}
-					else {
-						logDebugMessageToConsole('invalid report id: ' + reportId, null, new Error().stack, true);
-						
-						res.send({isError: true, message: 'error communicating with the MoarTube node'});
-					}
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
-		
-		app.delete('/reports/archive/comments/:archiveId/delete', async (req, res) => {
-			getAuthenticationStatus(req.headers.authorization)
-			.then((isAuthenticated) => {
-				if(isAuthenticated) {
-					const archiveId = req.params.archiveId;
-					
-					if(isArchiveIdValid(archiveId)) {
-						submitDatabaseWriteJob('DELETE FROM commentReportsArchive WHERE archive_id = ?', [archiveId], function(isError) {
-							if(isError) {
-								res.send({isError: true, message: 'error communicating with the MoarTube node'});
-							}
-							else {
-								res.send({isError: false});
-							}
-						});
-					}
-					else {
-						logDebugMessageToConsole('invalid archive id: ' + archiveId, null, new Error().stack, true);
-						
-						res.send({isError: true, message: 'error communicating with the MoarTube node'});
-					}
-				}
-				else {
-					logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-					res.send({isError: true, message: 'you are not logged in'});
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-				
-				res.send({isError: true, message: 'error communicating with the MoarTube node'});
-			});
-		});
 		
 		app.post('/settings/network/internal', async (req, res) => {
 			getAuthenticationStatus(req.headers.authorization)
@@ -5517,7 +4926,7 @@ else {
 							res.send({ isError: false });
 						}
 						else {
-							indexer_performNodeIdentification(true)
+							performNodeIdentification(true)
 							.then(() => {
 								const nodeIdentification = getNodeIdentification();
 								
@@ -5697,7 +5106,7 @@ else {
 						res.send({isError: true, message: "MoarTube Indexer unavailable; this node has not performed initial configuration"});
 					}
 					else {
-						indexer_performNodeIdentification(false)
+						performNodeIdentification(false)
 						.then(() => {
 							const nodeIdentification = getNodeIdentification();
 							
@@ -5749,7 +5158,7 @@ else {
 				res.send({isError: true, message: "aliasing unavailable; this node has not performed initial configuration"});
 			}
 			else {
-				indexer_performNodeIdentification(false)
+				performNodeIdentification(false)
 				.then(() => {
 					const nodeIdentification = getNodeIdentification();
 					
@@ -5825,10 +5234,7 @@ else {
 			}
 		});
 		
-		// Serve the heartbeat response
-		app.get('/heartbeat', (req, res) => {
-			res.send({isError: false, timestamp: Date.now()});
-		});
+		
 		
 		
 		
@@ -5849,314 +5255,13 @@ else {
 			process.send({ cmd: 'database_write_job', query: query, parameters: parameters, databaseWriteJobId: databaseWriteJobId });
 		}
 		
-		function isVideoIdValid(videoId) {
-			const regex = /^(?=.*[a-zA-Z]|\d)?[a-zA-Z0-9_-]{0,11}$/;
-			
-			return videoId != null && videoId.length > 0 && videoId.length === 11 && regex.test(videoId);
-		}
 		
-		function isVideoIdsValid(videoIds) {
-			var result = true;
-			
-			if(videoIds != null) {
-				videoIds.forEach(function(videoId) {
-					if(!isVideoIdValid(videoId)) {
-						result = false;
-						return;
-					}
-				});
-			}
-			else {
-				result = false
-			}
-			
-			return result;
-		}
 		
-		function isUsernameValid(username) {
-			const regex = /^[\w!@#$%^&*()-_=+]+$/;
-			
-			return username != null && username.length > 0 && username.length <= 100 && regex.test(username)
-		}
 		
-		function isPasswordValid(password) {
-			const regex = /^[\w!@#$%^&*()-_=+]+$/;
-			
-			return password != null && password.length > 0 && password.length <= 100 && regex.test(password)
-		}
-
-		function isNetworkAddressValid(networkAddress) {
-			return networkAddress != null && networkAddress.length > 0 && networkAddress.length <= 100;
-		}
 		
-		function isPublicNodeAddressValid(publicNodeAddress) {
-			return publicNodeAddress != null && publicNodeAddress.length > 0 && publicNodeAddress.length <= 100;
-		}
 		
-		function isPortValid(port) {
-			port = Number(port);
-			
-			return port != null && port != NaN && (port >= 0 && port <= 65535);
-		}
 		
-		function isUuidv4Valid(uuid) {
-			const regex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
-			
-			return regex != null && regex.test(uuid)
-		}
 		
-		function isFormatValid(format) {
-			return format != null && (isAdaptiveFormatValid(format) || isProgressiveFormatValid(format));
-		}
-		
-		function isAdaptiveFormatValid(format) {
-			return format != null && (format === 'm3u8');
-		}
-		
-		function isProgressiveFormatValid(format) {
-			return format != null && (format === 'mp4' || format === 'webm' || format === 'ogv');
-		}
-		
-		function isResolutionValid(resolution) {
-			return resolution != null && (resolution === '2160p' || resolution === '1440p' || resolution === '1080p' || resolution === '720p' || resolution === '480p' || resolution === '360p' || resolution === '240p');
-		}
-		
-		function isTitleValid(title) {
-			return (title != null && title.length > 0 && title.length <= 100);
-		}
-		
-		function isDescriptionValid(description) {
-			return (description != null && description.length > 0 && description.length <= 5000);
-		}
-		
-		function isTagTermValid(tagTerm, canBeEmpty) {
-			/*
-			can be alphanumeric
-			can be mixed case
-			can contain spaces
-			*/
-			
-			var regex = /^[a-zA-Z0-9\s]*$/;
-			
-			if(canBeEmpty) {
-				return (tagTerm != null && tagTerm.length <= 30 && regex.test(tagTerm));
-			}
-			else {
-				return (tagTerm != null && tagTerm.length > 0 && tagTerm.length <= 30 && regex.test(tagTerm));
-			}
-		}
-		
-		function isTagsValid(tags) {
-			var result = true;
-			
-			if(tags != null && tags.length > 0 && tags.length <= 150) {
-				const tagsArray = tags.split(',');
-				
-				if(tagsArray.length > 0 && tagsArray.length <= 5) {
-					for(tag of tagsArray) {
-						if(!(isTagTermValid(tag, false))) {
-							result = false;
-							break;
-						}
-					}
-				}
-				else {
-					result = false;
-				}
-			}
-			else {
-				result = false;
-			}
-			
-			return result;
-		}
-		
-		function isVideoMimeTypeValid(mimeType) {
-			return (mimeType === 'video/mp4' || mimeType === 'video/webm');
-		}
-		
-		function generateCaptcha() {
-			return new Promise(function(resolve, reject) {
-				const svgCaptcha = require('svg-captcha');
-				
-				const { createCanvas, loadImage, Image  } = require('canvas');
-				
-				const captcha = svgCaptcha.create({
-					size: 6,
-					ignoreChars: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-					noise: Math.floor(Math.random() * (6 - 3)) + 3,
-					width: 150,
-					height: 50,
-					fontSize: 40
-				});
-
-				// Create a canvas for the base image
-				const canvas = createCanvas(150, 50);
-				const ctx = canvas.getContext('2d');
-
-				// Draw random noise on the base layer
-				for (let x = 0; x < canvas.width; x++) {
-				  for (let y = 0; y < canvas.height; y++) {
-					const r = Math.floor(Math.random() * 255);
-					const g = Math.floor(Math.random() * 255);
-					const b = Math.floor(Math.random() * 255);
-					const a = (Math.floor(Math.random() * (101 - 0)) + 0) / 100;
-					
-					ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
-					ctx.fillRect(x, y, 1, 1);
-				  }
-				}
-				
-				const img = new Image();
-				
-				img.onload = () => {
-				  const finalCanvas = createCanvas(150, 50);
-				  const finalCtx = finalCanvas.getContext('2d');
-
-				  // Draw the base image
-				  finalCtx.drawImage(canvas, 0, 0);
-
-				  // Draw the captcha image on top
-				  finalCtx.drawImage(img, 0, 0);
-
-				  // Convert the final canvas to PNG
-				  const pngBuffer = finalCanvas.toBuffer('image/png');
-				  
-				  resolve({text: captcha.text, data: pngBuffer});
-				}
-				
-				img.onerror = err => { 
-					reject();
-				}
-				
-				img.src = `data:image/svg+xml;base64,${Buffer.from(captcha.data).toString('base64')}`;
-			});
-		}
-		
-		function isNodeNameValid(nodeName) {
-			return (nodeName != null && nodeName.length >= 0 && nodeName.length <= 100);
-		}
-		
-		function isNodeAboutValid(nodeAbout) {
-			return (nodeAbout != null && nodeAbout.length >= 0 && nodeAbout.length <= 100);
-		}
-		
-		function isNodeIdValid(nodeId) {
-			return (nodeId != null && nodeId.length > 0 && nodeId.length <= 100);
-		}
-		
-		function isPublicNodeProtocolValid(publicNodeProtocol) {
-			return (publicNodeProtocol != null && (publicNodeProtocol === 'http' || publicNodeProtocol === 'https'));
-		}
-		
-		function isManifestNameValid(manifestName) {
-			const regex = /^manifest-(?:2160p|1440p|1080p|720p|480p|360p|240p|master).m3u8$/;
-			
-			return manifestName != null && manifestName.length > 0 && manifestName.length <= 100 && regex.test(manifestName);
-		}
-		
-		function isSegmentNameValid(segmentName) {
-			const regex = /^segment-(?:2160p|1440p|1080p|720p|480p|360p|240p)-\d+\.ts$/;
-			
-			return segmentName != null && segmentName.length > 0 && segmentName.length <= 100 && regex.test(segmentName);
-		}
-		
-		function isStreamMimeTypeValid(mimeType)
-		{
-			return (mimeType === 'application/vnd.apple.mpegurl' || mimeType === 'video/mp2t');
-		}
-		
-		function isSearchTermValid(searchTerm) {
-			return (searchTerm != null && searchTerm.length >= 0 && searchTerm.length <= 100);
-		}
-		
-		function isSourceFileExtensionValid(sourceFileExtension) {
-			return (sourceFileExtension != null && (sourceFileExtension === '.mp4' || sourceFileExtension === '.webm' || sourceFileExtension === '.ts'));
-		}
-		
-		function isJobTypeValid(jobType) {
-			return (jobType != null && (jobType === 'importing' || jobType === 'publishing' || jobType === 'streaming'));
-		}
-		
-		function isBooleanValid(value) {
-			return (value != null && (typeof value === 'boolean'));
-		}
-		
-		function isBooleanStringValid(value) {
-			return (value != null && (value === 'true' || value === 'false'));
-		}
-		
-		function isVideoCommentValid(comment) {
-			return (comment != null && comment.length <= 500);
-		}
-		
-		function isCaptchaTypeValid(captchaType) {
-			return (captchaType != null && (captchaType === 'static' || captchaType === 'dynamic'));
-		}
-		
-		function isCaptchaResponseValid(captchaResponse, captchaAnswer) {
-			return (captchaResponse != null && captchaAnswer != null && captchaResponse !== '' && captchaAnswer !== '' && captchaResponse === captchaAnswer);
-		}
-		
-		function isTimestampValid(timestamp) {
-			const timestampParsed = parseInt(timestamp, 10);
-			
-			return (Number.isInteger(timestampParsed));
-		}
-		
-		function isDiscussionTypeValid(type) {
-			return (type != null && (type === 'before' || type === 'after'));
-		}
-		
-		function isCommentIdValid(commentId) {
-			const regex = /^\d+$/;
-			
-			return (commentId != null && commentId.length <= 100 && regex.test(commentId));
-		}
-		
-		function isReportIdValid(reportId) {
-			const regex = /^\d+$/;
-			
-			return (reportId != null && reportId.length <= 100 && regex.test(reportId));
-		}
-		
-		function isArchiveIdValid(reportId) {
-			const regex = /^\d+$/;
-			
-			return (reportId != null && reportId.length <= 100 && regex.test(reportId));
-		}
-		
-		function isSortTermValid(sortTerm) {
-			return (sortTerm != null && (sortTerm === 'latest' || sortTerm === 'popular' || sortTerm === 'oldest'));
-		}
-		
-		function isTagLimitValid(tagLimit) {
-			return (tagLimit != null && tagLimit >= 0);
-		}
-		
-		function sanitizeTagsSpaces(tags) {
-			return tags.replace(/\s+/g, ' ');
-		}
-		
-		function isReportEmailValid(reportEmail) {
-			return (reportEmail != null && (reportEmail.length <= 100));
-		}
-		
-		function isReportTypeValid(reportType) {
-			return (reportType != null && (reportType === 'complaint' || reportType === 'copyright' || reportType === 'other'));
-		}
-		
-		function isReportMessageValid(reportMessage) {
-			return (reportMessage != null && (reportMessage.length <= 1000));
-		}
-		
-		function isChatMessageContentValid(chatMessageContent) {
-			return (chatMessageContent != null && chatMessageContent.length > 0 && chatMessageContent.length <= 500);
-		}
-		
-		function isChatHistoryLimitValid(chatHistoryLimit) {
-			return (chatHistoryLimit != null && chatHistoryLimit >= 0 && chatHistoryLimit <= 50);
-		}
 		
 		
 		
@@ -6233,171 +5338,30 @@ else {
 			}
 		}
 
-		function getAuthenticationStatus(token) {
-			return new Promise(function(resolve, reject) {
-				if(token == null || token === '') {
-					resolve(false);
-				}
-				else {
-					try {
-						const decoded = jwt.verify(token, JWT_SECRET);
-							
-						resolve(true);
-					}
-					catch(error) {
-						resolve(false);
-					}
-				}
-			});
-		}
 		
-		function indexer_doNodeExternalNetworkUpdate(nodeIdentifier, nodeIdentifierProof, publicNodeProtocol, publicNodeAddress, publicNodePort) {
-			return new Promise(function(resolve, reject) {
-				axios.post(MOARTUBE_INDEXER_HTTP_PROTOCOL + '://' + MOARTUBE_INDEXER_IP + ':' + MOARTUBE_INDEXER_PORT + '/index/node/network/update', {
-					nodeIdentifier: nodeIdentifier,
-					nodeIdentifierProof: nodeIdentifierProof,
-					publicNodeProtocol: publicNodeProtocol,
-					publicNodeAddress: publicNodeAddress,
-					publicNodePort: publicNodePort
-				})
-				.then(response => {
-					const data = response.data;
-					
-					resolve(data);
-				})
-				.catch(error => {
-					resolve({isError: true, message: 'error'});
-				});
-			});
-		}
-		
-		function indexer_addVideoToIndex(data) {
-			return new Promise(function(resolve, reject) {
-				axios.post(MOARTUBE_INDEXER_HTTP_PROTOCOL + '://' + MOARTUBE_INDEXER_IP + ':' + MOARTUBE_INDEXER_PORT + '/index/video/add', data)
-				.then(response => {
-					const data = response.data;
-					
-					resolve(data);
-				})
-				.catch(error => {
-					resolve({isError: true, message: 'error'});
-				});
-			});
-		}
-		
-		function indexer_removeVideoFromIndex(data) {
-			return new Promise(function(resolve, reject) {
-				axios.post(MOARTUBE_INDEXER_HTTP_PROTOCOL + '://' + MOARTUBE_INDEXER_IP + ':' + MOARTUBE_INDEXER_PORT + '/index/video/remove', data)
-				.then(response => {
-					const data = response.data;
-					
-					resolve(data);
-				})
-				.catch(error => {
-					resolve({isError: true, message: 'error'});
-				});
-			});
-		}
-		
-		function aliaser_getVideoAlias(videoId, nodeIdentifier, nodeIdentifierProof) {
-			return new Promise(function(resolve, reject) {
-				axios.get(MOARTUBE_ALIASER_HTTP_PROTOCOL + '://' + MOARTUBE_ALIASER_IP + ':' + MOARTUBE_ALIASER_PORT + '/alias/video', {
-				  params: {
-					  videoId: videoId,
-					  nodeIdentifier: nodeIdentifier,
-					  nodeIdentifierProof: nodeIdentifierProof
-				  }
-				})
-				.then(response => {
-					const data = response.data;
-					
-					resolve(data);
-				})
-				.catch(error => {
-					resolve({isError: true, message: 'error'});
-				});
-			});
-		}
-		
-		function aliaser_doAliasVideo(data) {
-			return new Promise(function(resolve, reject) {
-				axios.post(MOARTUBE_ALIASER_HTTP_PROTOCOL + '://' + MOARTUBE_ALIASER_IP + ':' + MOARTUBE_ALIASER_PORT + '/alias/video', data)
-				.then(response => {
-					const data = response.data;
-					
-					resolve(data);
-				})
-				.catch(error => {
-					resolve({isError: true, message: 'error'});
-				});
-			});
-		}
-		
-		function indexer_doNodePersonalizeUpdate(nodeIdentifier, nodeIdentifierProof, nodeName, nodeAbout, nodeId) {
-			return new Promise(function(resolve, reject) {
-				axios.post(MOARTUBE_INDEXER_HTTP_PROTOCOL + '://' + MOARTUBE_INDEXER_IP + ':' + MOARTUBE_INDEXER_PORT + '/index/node/personalize/update', {
-					nodeIdentifier: nodeIdentifier,
-					nodeIdentifierProof: nodeIdentifierProof,
-					nodeName: nodeName,
-					nodeAbout: nodeAbout,
-					nodeId: nodeId,
-				})
-				.then(response => {
-					const data = response.data;
-					
-					resolve(data);
-				})
-				.catch(error => {
-					logDebugMessageToConsole(null, error, new Error().stack, true);
 
-					resolve({isError: true, message: 'error'});
-				});
-			});
-		}
-		
-		function indexer_getCaptcha(nodeIdentifier, nodeIdentifierProof) {
-			return new Promise(function(resolve, reject) {
-				axios.get(MOARTUBE_INDEXER_HTTP_PROTOCOL + '://' + MOARTUBE_INDEXER_IP + ':' + MOARTUBE_INDEXER_PORT + '/captcha', {
-				  params: {
-					  nodeIdentifier: nodeIdentifier,
-					  nodeIdentifierProof: nodeIdentifierProof
-				  },
-				  responseType: 'stream'
-				})
-				.then(response => {
-					const data = response.data;
-					
-					resolve(data);
-				})
-				.catch(error => {
-					logDebugMessageToConsole(null, error, new Error().stack, true);
 
-					resolve({isError: true, message: 'error'});
-				});
-			});
-		}
-		
-		function aliaser_getCaptcha(nodeIdentifier, nodeIdentifierProof) {
-			return new Promise(function(resolve, reject) {
-				axios.get(MOARTUBE_ALIASER_HTTP_PROTOCOL + '://' + MOARTUBE_ALIASER_IP + ':' + MOARTUBE_ALIASER_PORT + '/captcha', {
-				  params: {
-					  nodeIdentifier: nodeIdentifier,
-					  nodeIdentifierProof: nodeIdentifierProof
-				  },
-				  responseType: 'stream'
-				})
-				.then(response => {
-					const data = response.data;
-					
-					resolve(data);
-				})
-				.catch(error => {
-					logDebugMessageToConsole(null, error, new Error().stack, true);
 
-					resolve({isError: true, message: 'error'});
-				});
-			});
-		}
+
+
+
+
+
+
+
+
+
+
+
+
+		
+		
+		
+		
+		
+		
+		
+		
 		
 		
 		
@@ -6434,200 +5398,13 @@ else {
 	}
 }
 
-function logDebugMessageToConsole(message, stackTrace, isLoggingToFile) {
-	process.send({ cmd: 'message_log', message: message, stackTrace: stackTrace, isLoggingToFile: isLoggingToFile });
-}
 
-async function generateVideoId(database) {
-    const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-';
-    const length = 11;
 
-    let videoId = '';
-    let hyphenCount = 0;
-    let underscoreCount = 0;
-    let isUnique = false;
 
-    do {
-        videoId = '';
-        hyphenCount = 0;
-        underscoreCount = 0;
 
-        for (let i = 0; i < length; i++) {
-            const randomChar = characters.charAt(Math.floor(Math.random() * characters.length));
 
-            if (randomChar === '-') {
-                hyphenCount++;
-                if (hyphenCount > 1) {
-					continue;
-				}
-            }
 
-            if (randomChar === '_') {
-                underscoreCount++;
-                if (underscoreCount > 1) {
-					continue;
-				}
-            }
 
-            videoId += randomChar;
-        }
-
-        if (hyphenCount <= 1 && underscoreCount <= 1) {
-            await new Promise((resolve, reject) => {
-                database.get('SELECT * FROM videos WHERE video_id = ?', [videoId], function (error, video) {
-                    if (error) {
-                        reject(error);
-                    } else if (video) {
-                        resolve(false);
-                    } else {
-                        resolve(true);
-                    }
-                });
-            }).then(isIdUnique => {
-                isUnique = isIdUnique;
-            }).catch(error => {
-                throw error;
-            });
-        }
-    } while (!isUnique);
-
-    return videoId;
-}
-
-function indexer_performNodeIdentification(isConfiguring) {
-	return new Promise(function(resolve, reject) {
-
-		const nodeSettings = getNodeSettings();
-
-		if(nodeSettings.isNodePrivate) {
-			throw new Error('node identification unavailable; this node is currently running privately');
-		}
-		else if(!nodeSettings.isNodeConfigured && !isConfiguring) {
-			throw new Error('node identification unavailable; this node has not performed initial configuration');
-		}
-
-		logDebugMessageToConsole('validating node to MoarTube network', null, null, true);
-		
-		if (getNodeIdentification() == null) {
-			setNodeidentification({nodeIdentifier: '', nodeIdentifierProof: ''});
-		}
-		
-		const nodeIdentification = getNodeIdentification();
-	
-		const nodeIdentifier = nodeIdentification.nodeIdentifier;
-		const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
-		
-		if(nodeIdentifier === '' && nodeIdentifierProof === '') {
-			logDebugMessageToConsole('this node is unidentified, creating node identification', null, null, true);
-			
-			indexer_getNodeIdentification()
-			.then(indexerResponseData => {
-				if(indexerResponseData.isError) {
-					logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
-					
-					reject(indexerResponseData.message);
-				}
-				else {
-					nodeIdentification.nodeIdentifier = indexerResponseData.nodeIdentifier;
-					nodeIdentification.nodeIdentifierProof = indexerResponseData.nodeIdentifierProof;
-
-					setNodeidentification(nodeIdentification);
-
-					logDebugMessageToConsole('node identification successful', null, null, true);
-					
-					resolve();
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-
-				reject(error);
-			});
-		}
-		else {
-			logDebugMessageToConsole('node identification found, validating node identification', null, null, true);
-			
-			indexer_doNodeIdentificationRefresh(nodeIdentifier, nodeIdentifierProof)
-			.then(indexerResponseData => {
-				if(indexerResponseData.isError) {
-					reject(indexerResponseData.message);
-				}
-				else {
-					logDebugMessageToConsole('node identification valid', null, null, true);
-					
-					nodeIdentification.nodeIdentifierProof = indexerResponseData.nodeIdentifierProof;
-
-					setNodeidentification(nodeIdentification);
-					
-					resolve();
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
-
-				reject(error);
-			});
-		}
-	});
-}
-
-function indexer_getNodeIdentification() {
-	return new Promise(function(resolve, reject) {
-		axios.get(MOARTUBE_INDEXER_HTTP_PROTOCOL + '://' + MOARTUBE_INDEXER_IP + ':' + MOARTUBE_INDEXER_PORT + '/node/identification')
-		.then(response => {
-			const data = response.data;
-			
-			resolve(data);
-		})
-		.catch(error => {
-			resolve({isError: true, message: 'error'});
-		});
-	});
-}
-
-function indexer_doNodeIdentificationRefresh(nodeIdentifier, nodeIdentifierProof) {
-	return new Promise(function(resolve, reject) {
-		axios.get(MOARTUBE_INDEXER_HTTP_PROTOCOL + '://' + MOARTUBE_INDEXER_IP + ':' + MOARTUBE_INDEXER_PORT + '/node/identification/refresh', {
-		  params: {
-			  nodeIdentifier: nodeIdentifier,
-			  nodeIdentifierProof: nodeIdentifierProof
-		  }
-		})
-		.then(response => {
-			const data = response.data;
-			
-			resolve(data);
-		})
-		.catch(error => {
-			resolve({isError: true, message: 'error'});
-		});
-	});
-}
-
-function indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64) {
-	return new Promise(function(resolve, reject) {
-		axios.post(MOARTUBE_INDEXER_HTTP_PROTOCOL + '://' + MOARTUBE_INDEXER_IP + ':' + MOARTUBE_INDEXER_PORT + '/index/video/update', {
-			nodeIdentifier: nodeIdentifier,
-			nodeIdentifierProof: nodeIdentifierProof,
-			videoId: videoId,
-			title: title,
-			tags: tags,
-			views: views,
-			isStreaming: isStreaming,
-			lengthSeconds: lengthSeconds,
-			nodeIconBase64: nodeIconBase64,
-			videoPreviewImageBase64: videoPreviewImageBase64
-		})
-		.then(response => {
-			const data = response.data;
-			
-			resolve(data);
-		})
-		.catch(error => {
-			resolve({isError: true, message: 'error'});
-		});
-	});
-}
 
 function getNodeIconBase64() {
 	var nodeIconBase64;
@@ -6660,56 +5437,48 @@ function setNodeidentification(nodeIdentification) {
 	fs.writeFileSync(path.join(DATA_DIRECTORY_PATH, '_node_identification.json'), JSON.stringify(nodeIdentification));
 }
 
-function getNodeSettings() {
-	const nodeSettings = JSON.parse(fs.readFileSync(NODE_SETTINGS_PATH, 'utf8'));
 
-	return nodeSettings;
-}
-
-function setNodeSettings(nodeSettings) {
-	fs.writeFileSync(NODE_SETTINGS_PATH, JSON.stringify(nodeSettings));
-}
 
 function loadConfig() {
 	process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-	PUBLIC_DIRECTORY_PATH = path.join(__dirname, 'public');
-	PAGES_DIRECTORY_PATH = path.join(PUBLIC_DIRECTORY_PATH, 'pages');
+	setPublicDirectoryPath(path.join(__dirname, 'public'));
+	setPagesDirectoryPath(path.join(getPublicDirectoryPath(), 'pages'));
 
-	IS_DOCKER_ENVIRONMENT = process.env.IS_DOCKER_ENVIRONMENT === 'true';
+	setIsDockerEnvironment(process.env.IS_DOCKER_ENVIRONMENT === 'true');
 
-	if(IS_DOCKER_ENVIRONMENT) {
-		DATA_DIRECTORY_PATH = '/data';
+	if(getIsDockerEnvironment()) {
+		setDataDirectoryPath('/data');
 	}
 	else {
-		DATA_DIRECTORY_PATH = path.join(__dirname, 'data');
+		setDataDirectoryPath(path.join(__dirname, 'data'));
 	}
 
-	NODE_SETTINGS_PATH = path.join(DATA_DIRECTORY_PATH, '_node_settings.json');
+	setNodeSettingsPath(path.join(getDataDirectoryPath(), '_node_settings.json'));
 
-	IMAGES_DIRECTORY_PATH = path.join(DATA_DIRECTORY_PATH, 'images');
-	VIDEOS_DIRECTORY_PATH = path.join(DATA_DIRECTORY_PATH, 'media/videos');
-	DATABASE_DIRECTORY_PATH = path.join(DATA_DIRECTORY_PATH, 'db');
-	CERTIFICATES_DIRECTORY_PATH = path.join(DATA_DIRECTORY_PATH, 'certificates');
+	setImagesDirectoryPath(path.join(getDataDirectoryPath(), 'images'));
+	setVideosDirectoryPath(path.join(getDataDirectoryPath(), 'media/videos'));
+	setDatabaseDirectoryPath(path.join(getDataDirectoryPath(), 'db'));
+	setCertificatesDirectoryPath(path.join(getDataDirectoryPath(), 'certificates'));
 
-	fs.mkdirSync(IMAGES_DIRECTORY_PATH, { recursive: true });
-	fs.mkdirSync(VIDEOS_DIRECTORY_PATH, { recursive: true });
-	fs.mkdirSync(DATABASE_DIRECTORY_PATH, { recursive: true });
-	fs.mkdirSync(CERTIFICATES_DIRECTORY_PATH, { recursive: true });
+	fs.mkdirSync(getImagesDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getVideosDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getDatabaseDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getCertificatesDirectoryPath(), { recursive: true });
 	
 	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
 
-	IS_DEVELOPER_MODE = config.isDeveloperMode;
+	setIsDeveloperMode(config.isDeveloperMode);
+
+	setMoarTubeIndexerHttpProtocol(config.indexerConfig.httpProtocol);
+	setMoarTubeIndexerIp(config.indexerConfig.host);
+	setMoarTubeIndexerPort(config.indexerConfig.port);
+
+	setMoarTubeAliaserHttpProtocol(config.aliaserConfig.httpProtocol);
+	setMoarTubeAliaserIp(config.aliaserConfig.host);
+	setMoarTubeAliaserPort(config.aliaserConfig.port);
 	
-	MOARTUBE_INDEXER_HTTP_PROTOCOL = config.indexerConfig.httpProtocol;
-	MOARTUBE_INDEXER_IP = config.indexerConfig.host;
-	MOARTUBE_INDEXER_PORT = config.indexerConfig.port;
-	
-	MOARTUBE_ALIASER_HTTP_PROTOCOL = config.aliaserConfig.httpProtocol;
-	MOARTUBE_ALIASER_IP = config.aliaserConfig.host;
-	MOARTUBE_ALIASER_PORT = config.aliaserConfig.port;
-	
-	if(!fs.existsSync(NODE_SETTINGS_PATH)) {
+	if(!fs.existsSync(getNodeSettingsPath())) {
 		const nodeSettings = {
 			"nodeListeningPort": 80,
 			"isNodeConfigured":false,
@@ -6732,8 +5501,8 @@ function loadConfig() {
 	
 	const nodeSettings = getNodeSettings();
 
-	MOARTUBE_NODE_HTTP_PORT = nodeSettings.nodeListeningPort;
-	
-	EXPRESS_SESSION_NAME = nodeSettings.expressSessionName;
-	EXPRESS_SESSION_SECRET = nodeSettings.expressSessionSecret;
+	setMoarTubeNodeHttpPort(nodeSettings.nodeListeningPort);
+
+	setExpressSessionname(nodeSettings.expressSessionName);
+	setExpressSessionSecret(nodeSettings.expressSessionSecret);
 }
