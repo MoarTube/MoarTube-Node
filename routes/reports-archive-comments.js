@@ -4,11 +4,11 @@ const { reportsArchiveComments_GET, reportsArchiveCommentsArchiveIdDelete_DELETE
 
 const router = express.Router();
 
-router.get('/reports/archive/comments', async (req, res) => {
+router.get('/', async (req, res) => {
     reportsArchiveComments_GET(req, res);
 });
 
-router.delete('/reports/archive/comments/:archiveId/delete', async (req, res) => {
+router.delete('/:archiveId/delete', async (req, res) => {
     reportsArchiveCommentsArchiveIdDelete_DELETE(req, res);
 });
 

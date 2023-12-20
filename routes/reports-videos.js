@@ -1,6 +1,6 @@
 const express = require('express');
 
-const {  } = require('../controllers/reports-videos');
+const { reportsVideos_GET, reportsVideosArchive_POST, reportsVideosReportIdDelete_DELETE, reportsVideosCaptcha_GET } = require('../controllers/reports-videos');
 
 const router = express.Router();
 

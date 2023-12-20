@@ -1,4 +1,10 @@
-const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
+
+
+
+const { logDebugMessageToConsole, getAuthenticationStatus, generateCaptcha, performNodeIdentification, getNodeIdentification, getNodeSettings } = require('../utils/helpers');
+const { isCaptchaTypeValid } = require('../utils/validators');
+const { indexer_getCaptcha } = require('../utils/indexer-communications');
+const { aliaser_getCaptcha } = require('../utils/aliaser-communications');
 
 async function discussion_GET(req, res) {
     const captchaType = req.query.captchaType;
@@ -69,6 +75,8 @@ function index_GET(req, res) {
                     }
                 })
                 .catch(error => {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
+
                     res.send({isError: true, message: 'an error occurred while retrieving the captcha'});
                 });
             }

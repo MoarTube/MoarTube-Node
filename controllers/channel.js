@@ -1,8 +1,5 @@
-
 const { logDebugMessageToConsole } = require('../utils/helpers');
 const { isSearchTermValid, isSortTermValid, isTagTermValid } = require('../utils/validators');
-
-
 
 function search_GET(req, res) {
     const searchTerm = req.query.searchTerm;

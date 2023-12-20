@@ -1,7 +1,8 @@
+const { logDebugMessageToConsole } = require('../utils/helpers');
+const { isCommentIdValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isCaptchaResponseValid } = require('../utils/validators');
 
 
-
-function CommentIdReport_POST(req, res) {
+function commentIdReport_POST(req, res) {
     const commentId = req.params.commentId;
     var email = req.body.email;
     const reportType = req.body.reportType;
@@ -53,5 +54,5 @@ function CommentIdReport_POST(req, res) {
 }
 
 module.exports = {
-    CommentIdReport_POST
+    commentIdReport_POST
 }

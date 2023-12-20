@@ -1,8 +1,6 @@
 const express = require('express');
 
-const { 
-     search_GET
-} = require('../controllers/channel');
+const { search_GET } = require('../controllers/channel');
 
 const router = express.Router();
 

@@ -1,4 +1,5 @@
 const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
+const { isArchiveIdValid } = require('../utils/validators');
 
 function reportsArchiveVideos_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)

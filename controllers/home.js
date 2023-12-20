@@ -1,10 +1,8 @@
-
 const path = require('path');
 const fs = require('fs');
 
-const { 
-	setPublicDirectoryPath, setPagesDirectoryPath, getPublicDirectoryPath, getPagesDirectoryPath
-} = require('../utils/helpers');
+const { logDebugMessageToConsole, getPagesDirectoryPath, getNodeSettings } = require('../utils/helpers');
+const { isVideoIdValid } = require('../utils/validators');
 
 function root_GET(req, res) {
     const pagePath = path.join(getPagesDirectoryPath(), 'channel.html');

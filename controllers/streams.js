@@ -1,4 +1,8 @@
-const { logDebugMessageToConsole } = require('../utils/helpers');
+const { logDebugMessageToConsole, getAuthenticationStatus, generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast } = require('../utils/helpers');
+const { 
+    isTitleValid, isDescriptionValid, isTagsValid, isPortValid, isVideoIdValid, isAdaptiveFormatValid, isResolutionValid, isSegmentNameValid, isBooleanValid, 
+    isNetworkAddressValid, isChatHistoryLimitValid 
+} = require('../utils/validators');
 
 function start_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)

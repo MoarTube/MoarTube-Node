@@ -20,23 +20,24 @@ const httpTerminator = require('http-terminator');
 const cluster = require('cluster');
 const { Mutex } = require('async-mutex');
 
-const { 
-	logDebugMessageToConsole, getNodeSettings, setNodeSettings, loadConfig
-} = require('./utils/helpers');
+const { logDebugMessageToConsole, getNodeSettings, setNodeSettings, loadConfig, generateVideoId } = require('./utils/helpers');
 
-const homeRoutes = require('./routes/home');
+
 const accountRoutes = require('./routes/account');
-const reportsRoutes = require('./routes/reports');
-const reportsVideosRoutes = require('./routes/reports-videos');
-const reportsCommentsRoutes = require('./routes/reports-comments');
-const reportsArchiveRoutes = require('./routes/reports-archive-videos');
-const settingsRoutes = require('./routes/settings');
-const videosRoutes = require('./routes/videos');
-const streamsRoutes = require('./routes/streams');
 const captchaRoutes = require('./routes/captcha');
-const embedRoutes = require('./routes/embed');
 const channelRoutes = require('./routes/channel');
 const commentsRoutes = require('./routes/comments');
+const embedRoutes = require('./routes/embed');
+const homeRoutes = require('./routes/home');
+const reportsArchiveCommentsRoutes = require('./routes/reports-archive-comments');
+const reportsArchiveVideosRoutes = require('./routes/reports-archive-videos');
+const reportsCommentsRoutes = require('./routes/reports-comments');
+const reportsVideosRoutes = require('./routes/reports-videos');
+const reportsRoutes = require('./routes/reports');
+const settingsRoutes = require('./routes/settings');
+const streamsRoutes = require('./routes/streams');
+const videosRoutes = require('./routes/videos');
+
 
 loadConfig();
 
@@ -1040,19 +1041,20 @@ else {
 			next();
 		});
 
-		app.use('/', homeRoutes);
 		app.use('/account', accountRoutes);
-		app.use('/reports', reportsRoutes);
-		app.use('/reports/videos', reportsVideosRoutes);
-		app.use('/reports/comments', reportsCommentsRoutes);
-		app.use('/reports/archive', reportsArchiveRoutes);
-		app.use('/settings', settingsRoutes);
-		app.use('/videos', videosRoutes);
-		app.use('/streams', streamsRoutes);
 		app.use('/captcha', captchaRoutes);
-		app.use('/embed', embedRoutes);
 		app.use('/channel', channelRoutes);
 		app.use('/comments', commentsRoutes);
+		app.use('/embed', embedRoutes);
+		app.use('/', homeRoutes);
+		app.use('/reports/archive/comments', reportsArchiveCommentsRoutes);
+		app.use('/reports/archive/videos', reportsArchiveVideosRoutes);
+		app.use('/reports/comments', reportsCommentsRoutes);
+		app.use('/reports/videos', reportsVideosRoutes);
+		app.use('/reports', reportsRoutes);
+		app.use('/settings', settingsRoutes);
+		app.use('/streams', streamsRoutes);
+		app.use('/videos', videosRoutes);
 		
 		function submitDatabaseWriteJob(query, parameters, callback) {
 			const databaseWriteJobId = uuidv1() + '-' + uuidv4();
@@ -1064,13 +1066,7 @@ else {
 			process.send({ cmd: 'database_write_job', query: query, parameters: parameters, databaseWriteJobId: databaseWriteJobId });
 		}
 		
-		function websocketNodeBroadcast(message) {
-			process.send({ cmd: 'websocket_broadcast', message: message });
-		}
 		
-		function websocketChatBroadcast(message) {
-			process.send({ cmd: 'websocket_broadcast_chat', message: message });
-		}
 		
 		function updateHlsVideoMasterManifestFile(videoId) {
 			const hlsVideoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');

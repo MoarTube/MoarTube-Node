@@ -1,9 +1,4 @@
-
-
 const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
-
-
-
 
 function reportsCount_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)
@@ -35,23 +30,3 @@ function reportsCount_GET(req, res) {
 module.exports = {
     reportsCount_GET
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

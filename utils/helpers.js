@@ -391,6 +391,23 @@ function loadConfig() {
 	setExpressSessionSecret(nodeSettings.expressSessionSecret);
 }
 
+
+
+function websocketNodeBroadcast(message) {
+    process.send({ cmd: 'websocket_broadcast', message: message });
+}
+
+function websocketChatBroadcast(message) {
+    process.send({ cmd: 'websocket_broadcast_chat', message: message });
+}
+
+
+
+
+
+
+
+
 function getPublicDirectoryPath() {
     return publicDirectoryPath;
 }
@@ -573,6 +590,8 @@ function setNodeSettings(nodeSettings) {
 
 module.exports = {
     logDebugMessageToConsole,
+    websocketNodeBroadcast,
+    websocketChatBroadcast,
     sanitizeTagsSpaces,
     performNodeIdentification,
     generateCaptcha,

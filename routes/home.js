@@ -1,6 +1,4 @@
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
 
 const { root_GET, information_GET, heartbeat_GET, watch_GET } = require('../controllers/home');
 

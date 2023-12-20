@@ -1,8 +1,14 @@
-const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+const httpTerminator = require('http-terminator');
+
+const { logDebugMessageToConsole, getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification } = require('../utils/helpers');
 const { 
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isBooleanValid, isBooleanStringValid, isUsernameValid, isPasswordValid, 
-    isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid 
+    isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid
 } = require('../utils/validators');
+const { indexer_doNodePersonalizeUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
 
 function root_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)

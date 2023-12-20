@@ -1,5 +1,5 @@
-
-const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
+const { logDebugMessageToConsole, getAuthenticationStatus, generateCaptcha } = require('../utils/helpers');
+const { isReportIdValid } = require('../utils/validators');
 
 function reportsComments_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)

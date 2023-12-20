@@ -1,8 +1,6 @@
 const express = require('express');
 
-const { 
-    videoVideoId_GET, chatVideoId_GET 
-} = require('../controllers/embed');
+const { videoVideoId_GET, chatVideoId_GET } = require('../controllers/embed');
 
 const router = express.Router();
 

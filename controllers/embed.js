@@ -1,4 +1,7 @@
+const fs = require('fs');
+const path = require('path');
 
+const { isVideoIdValid } = require('../utils/validators');
 
 function videoVideoId_GET(req, res) {
     const videoId = req.params.videoId;

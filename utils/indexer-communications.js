@@ -151,3 +151,14 @@ function indexer_getCaptcha(nodeIdentifier, nodeIdentifierProof) {
         });
     });
 }
+
+module.exports = {
+    indexer_addVideoToIndex,
+    indexer_removeVideoFromIndex,
+    indexer_doNodePersonalizeUpdate,
+    indexer_doNodeExternalNetworkUpdate,
+    indexer_getNodeIdentification,
+    indexer_doNodeIdentificationRefresh,
+    indexer_doIndexUpdate,
+    indexer_getCaptcha
+}
