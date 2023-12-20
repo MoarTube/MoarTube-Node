@@ -1,7 +1,5 @@
 const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
 
-
-
 function reportsVideos_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
@@ -142,5 +140,8 @@ async function reportsVideosCaptcha_GET(req,res) {
 }
 
 module.exports = {
-    
+    reportsVideos_GET,
+    reportsVideosArchive_POST,
+    reportsVideosReportIdDelete_DELETE,
+    reportsVideosCaptcha_GET
 }

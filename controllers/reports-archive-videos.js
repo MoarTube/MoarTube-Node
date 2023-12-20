@@ -64,5 +64,6 @@ function reportsArchiveVideosArchiveIdDelete_DELETE(req, res) {
 }
 
 module.exports = {
-    
+    reportsArchiveVideos_GET,
+    reportsArchiveVideosArchiveIdDelete_DELETE
 }

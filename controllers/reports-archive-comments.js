@@ -1,18 +1,6 @@
-const express = require('express');
+const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
 
-const {  } = require('../controllers/reports-archive');
-
-const router = express.Router();
-
-router.get('/reports/archive/videos', async (req, res) => {
-    
-});
-
-router.delete('/reports/archive/videos/:archiveId/delete', async (req, res) => {
-    
-});
-
-router.get('/reports/archive/comments', async (req, res) => {
+function reportsArchiveComments_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
@@ -38,9 +26,9 @@ router.get('/reports/archive/comments', async (req, res) => {
         
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });
-});
+}
 
-router.delete('/reports/archive/comments/:archiveId/delete', async (req, res) => {
+function reportsArchiveCommentsArchiveIdDelete_DELETE(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
@@ -73,6 +61,9 @@ router.delete('/reports/archive/comments/:archiveId/delete', async (req, res) =>
         
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });
-});
+}
 
-module.exports = router;
+module.exports = {
+    reportsArchiveComments_GET,
+    reportsArchiveCommentsArchiveIdDelete_DELETE
+}
