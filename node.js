@@ -36,7 +36,7 @@ const reportsVideosRoutes = require('./routes/reports-videos');
 const reportsCommentsRoutes = require('./routes/reports-comments');
 const reportsArchiveRoutes = require('./routes/reports-archive-videos');
 const settingsRoutes = require('./routes/settings');
-
+const videosRoutes = require('./routes/videos');
 
 
 
@@ -1049,7 +1049,7 @@ else {
 		app.use('/reports/comments', reportsCommentsRoutes);
 		app.use('/reports/archive', reportsArchiveRoutes);
 		app.use('/settings', settingsRoutes)
-		
+		app.use('/videos', videosRoutes)
 		
 		
 		
