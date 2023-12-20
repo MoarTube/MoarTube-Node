@@ -1,6 +1,8 @@
 const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+
 
 
 var isDeveloperMode;
@@ -290,9 +292,104 @@ function performNodeIdentification(isConfiguring) {
 	});
 }
 
+function getNodeIconBase64() {
+	var nodeIconBase64;
 
+	const customIconDirectoryPath = path.join(path.join(DATA_DIRECTORY_PATH, 'images'), 'icon.png');
+	const defaultIconDirectoryPath = path.join(path.join(PUBLIC_DIRECTORY_PATH, 'images'), 'icon.png');
 
+	if(fs.existsSync(customIconDirectoryPath)) {
+		nodeIconBase64 = fs.readFileSync(customIconDirectoryPath).toString('base64');
+	}
+	else {
+		nodeIconBase64 = fs.readFileSync(defaultIconDirectoryPath).toString('base64');
+	}
 
+	return nodeIconBase64;
+}
+
+function getNodeIdentification() {
+	if (fs.existsSync(path.join(DATA_DIRECTORY_PATH, '_node_identification.json'))) {
+		const nodeIdentification = JSON.parse(fs.readFileSync(path.join(DATA_DIRECTORY_PATH, '_node_identification.json'), 'utf8'));
+		
+		return nodeIdentification;
+	}
+	else {
+		return null;
+	}
+}
+
+function setNodeidentification(nodeIdentification) {
+	fs.writeFileSync(path.join(DATA_DIRECTORY_PATH, '_node_identification.json'), JSON.stringify(nodeIdentification));
+}
+
+function loadConfig() {
+	process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+	setPublicDirectoryPath(path.join(__dirname, 'public'));
+	setPagesDirectoryPath(path.join(getPublicDirectoryPath(), 'pages'));
+
+	setIsDockerEnvironment(process.env.IS_DOCKER_ENVIRONMENT === 'true');
+
+	if(getIsDockerEnvironment()) {
+		setDataDirectoryPath('/data');
+	}
+	else {
+		setDataDirectoryPath(path.join(__dirname, 'data'));
+	}
+
+	setNodeSettingsPath(path.join(getDataDirectoryPath(), '_node_settings.json'));
+
+	setImagesDirectoryPath(path.join(getDataDirectoryPath(), 'images'));
+	setVideosDirectoryPath(path.join(getDataDirectoryPath(), 'media/videos'));
+	setDatabaseDirectoryPath(path.join(getDataDirectoryPath(), 'db'));
+	setCertificatesDirectoryPath(path.join(getDataDirectoryPath(), 'certificates'));
+
+	fs.mkdirSync(getImagesDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getVideosDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getDatabaseDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getCertificatesDirectoryPath(), { recursive: true });
+	
+	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+
+	setIsDeveloperMode(config.isDeveloperMode);
+
+	setMoarTubeIndexerHttpProtocol(config.indexerConfig.httpProtocol);
+	setMoarTubeIndexerIp(config.indexerConfig.host);
+	setMoarTubeIndexerPort(config.indexerConfig.port);
+
+	setMoarTubeAliaserHttpProtocol(config.aliaserConfig.httpProtocol);
+	setMoarTubeAliaserIp(config.aliaserConfig.host);
+	setMoarTubeAliaserPort(config.aliaserConfig.port);
+	
+	if(!fs.existsSync(getNodeSettingsPath())) {
+		const nodeSettings = {
+			"nodeListeningPort": 80,
+			"isNodeConfigured":false,
+			"isNodePrivate":false,
+			"isSecure":false,
+			"publicNodeProtocol":"http",
+			"publicNodeAddress":"",
+			"publicNodePort":"",
+			"nodeName":"moartube node",
+			"nodeAbout":"just a MoarTube node",
+			"nodeId":"",
+			"username":"JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL",
+			"password":"JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX",
+			"expressSessionName": crypto.randomBytes(64).toString('hex'),
+			"expressSessionSecret": crypto.randomBytes(64).toString('hex')
+		};
+
+		setNodeSettings(nodeSettings);
+	}
+	
+	const nodeSettings = getNodeSettings();
+
+	setMoarTubeNodeHttpPort(nodeSettings.nodeListeningPort);
+
+	setExpressSessionname(nodeSettings.expressSessionName);
+	setExpressSessionSecret(nodeSettings.expressSessionSecret);
+}
 
 function getPublicDirectoryPath() {
     return publicDirectoryPath;
@@ -477,6 +574,9 @@ function setNodeSettings(nodeSettings) {
 module.exports = {
     logDebugMessageToConsole,
     sanitizeTagsSpaces,
+    performNodeIdentification,
+    generateCaptcha,
+    loadConfig,
     generateVideoId,
     getAuthenticationStatus,
     getNodeSettings,
@@ -500,6 +600,8 @@ module.exports = {
     getExpressSessionname,
     getExpressSessionSecret,
     getMoarTubeIndexerUrl,
+    getNodeIdentification,
+    getNodeIconBase64,
     setNodeSettings,
     setPublicDirectoryPath,
     setPagesDirectoryPath,
@@ -519,5 +621,6 @@ module.exports = {
     setMoarTubeAliaserPort,
     setMoarTubeNodeHttpPort,
     setExpressSessionname,
-    setExpressSessionSecret
-}
+    setExpressSessionSecret,
+    setNodeidentification
+};

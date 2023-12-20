@@ -1175,7 +1175,7 @@ body {
 									ws.send(JSON.stringify({eventName: 'chat', type: 'message', videoId: VIDEO_ID, chatMessageContent: chatMessageContent}));
 								}
 								
-								$.ajax({type: 'GET', url: '/stream/' + VIDEO_ID + '/chat/history'})
+								$.ajax({type: 'GET', url: '/streams/' + VIDEO_ID + '/chat/history'})
 								.done(function (data) {
 									if(data.isError) {
 										console.log(data.message);
@@ -2139,7 +2139,7 @@ body {
 							}
 							
 							if(data.message == 'the captcha was not correct') {
-								getCaptcha('/discussion/captcha?captchaType=' + captchaType)
+								getCaptcha('/captcha/discussion?captchaType=' + captchaType)
 								.then((objectURL) => {
 									if(captchaType === 'static') {
 										$('#comment-input-form-static-captcha').html('<img src="' + objectURL + '">');
@@ -2615,7 +2615,7 @@ body {
 									videoAliasUrl = data.videoAliasUrl;
 									
 									if(videoAliasUrl === '') {
-										getCaptcha('/alias/captcha')
+										getCaptcha('/captcha/alias')
 										.then((objectURL) => {
 											const html = '<div id="alias-captcha-container"><div id="alias-captcha-img-container"><img src="' + objectURL + '"></div>\
 											<div class="input-group mt-2"><input id="alias-captcha-input" class="form-control" type="text" placeholder="enter the captcha"></div>\
@@ -2642,7 +2642,7 @@ body {
 												.done(function (data, textStatus, xhr) {
 													if(data.isError) {
 														if(data.message === 'the captcha was not correct') {
-															getCaptcha('/alias/captcha')
+															getCaptcha('/captcha/alias')
 															.then((objectURL) => {
 																$('#alias-captcha-img-container').html('<img src="' + objectURL + '">');
 																$('#alias-captcha-input').val('');
@@ -2932,7 +2932,7 @@ body {
 						didOpen: () => {
 							Swal.showLoading();
 							
-							getCaptcha('/likedislike/captcha')
+							getCaptcha('/captcha/likedislike')
 							.then((objectURL) => {
 								Swal.hideLoading();
 								
@@ -2976,7 +2976,7 @@ body {
 											$('#captcha-input').val('');
 											$('#captcha-error').text(data.message);
 											
-											getCaptcha('/likedislike/captcha')
+											getCaptcha('/captcha/likedislike')
 											.then((objectURL) => {
 												Swal.enableButtons();
 												
@@ -3027,7 +3027,7 @@ body {
 						didOpen: () => {
 							Swal.showLoading();
 							
-							getCaptcha('/likedislike/captcha')
+							getCaptcha('/captcha/likedislike')
 							.then((objectURL) => {
 								Swal.hideLoading();
 								
@@ -3071,7 +3071,7 @@ body {
 											$('#captcha-input').val('');
 											$('#captcha-error').text(data.message);
 											
-											getCaptcha('/likedislike/captcha')
+											getCaptcha('/captcha/likedislike')
 											.then((objectURL) => {
 												Swal.enableButtons();
 												
@@ -3430,7 +3430,7 @@ body {
 					$('#comment-input-form-dynamic-submit-container').removeClass('hidden-elem');
 				}
 				
-				getCaptcha('/discussion/captcha?captchaType=' + captchaType)
+				getCaptcha('/captcha/discussion?captchaType=' + captchaType)
 				.then((objectURL) => {
 					if(captchaType === 'static') {
 						$('#comment-input-form-static-captcha').html('<img src="' + objectURL + '">');
