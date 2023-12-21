@@ -1,3 +1,8 @@
+const fs = require('fs');
+const path = require('path');
+
+const { logDebugMessageToConsole, getVideosDirectoryPath } = require('./helpers');
+
 setInterval(function() {
     maintainFileSystem(database);
 }, 5000);
@@ -26,7 +31,7 @@ function updateManifestFiles(database) {
                     if(row.is_stream_recorded_remotely) {
                         const videoId = row.video_id;
                         
-                        const m3u8Directory = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
+                        const m3u8Directory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
                         
                         const manifest2160pFilePath = path.join(m3u8Directory, '/manifest-2160p.m3u8');
                         const manifest1440pFilePath = path.join(m3u8Directory, '/manifest-1440p.m3u8');
@@ -81,7 +86,7 @@ function removeUnusedMasterManifests(database) {
                     
                     const videoId = row.video_id;
                     
-                    const m3u8Directory = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
+                    const m3u8Directory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
                     
                     if (fs.existsSync(m3u8Directory)) {
                         fs.readdir(m3u8Directory, (error, files) => {
@@ -106,7 +111,7 @@ function removeUnusedMasterManifests(database) {
 }
 
 function updateHlsVideoMasterManifestFile(videoId) {
-    const hlsVideoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
+    const hlsVideoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
     const masterManifestFilePath = path.join(hlsVideoDirectoryPath, '/manifest-master.m3u8');
     
     var manifestFileString = '#EXTM3U\n#EXT-X-VERSION:3\n';

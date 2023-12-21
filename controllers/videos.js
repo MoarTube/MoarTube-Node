@@ -1,3 +1,13 @@
+
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+const { submitDatabaseWriteJob } = require('../utils/database');
+const { 
+    logDebugMessageToConsole, getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, getMoarTubeAliaserPort,
+    getVideosDirectoryPath
+} = require('../utils/helpers');
+const { isVideoIdValid, isTitleValid, isDescriptionValid, isTagsValid, isFormatValid, isResolutionValid, isSegmentNameValid, isSourceFileExtensionValid } = require('../utils/validators');
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
 
 function import_POST(req, res) {
@@ -27,9 +37,9 @@ function import_POST(req, res) {
                 
                 const tagsSanitized = sanitizeTagsSpaces(tags);
                 
-                fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images'), { recursive: true });
-                fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive'), { recursive: true });
-                fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive'), { recursive: true });
+                fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/images'), { recursive: true });
+                fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/adaptive'), { recursive: true });
+                fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/progressive'), { recursive: true });
                 
                 const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexed, is_index_outdated, is_error, is_finalized, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
                 const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, meta, creationTimestamp];
@@ -316,20 +326,20 @@ function videoIdUpload_POST(req, res) {
                                     const manifestFileName = 'manifest-' + resolution + '.m3u8';
                                     
                                     if(fileName === manifestFileName) {
-                                        directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
+                                        directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
                                     }
                                     else if(isSegmentNameValid(fileName)) {
-                                        directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8/' + resolution);
+                                        directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
                                     }
                                 }
                                 else if(format === 'mp4') {
-                                    directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/mp4/' + resolution);
+                                    directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/mp4/' + resolution);
                                 }
                                 else if(format === 'webm') {
-                                    directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/webm/' + resolution);
+                                    directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/webm/' + resolution);
                                 }
                                 else if(format === 'ogv') {
-                                    directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/ogv/' + resolution);
+                                    directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/ogv/' + resolution);
                                 }
                                 
                                 if(directoryPath !== '') {
@@ -450,20 +460,20 @@ function videoIdStream_POST(req, res) {
                                 const manifestFileName = 'manifest-' + resolution + '.m3u8';
                                 
                                 if(fileName === manifestFileName) {
-                                    directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
+                                    directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
                                 }
                                 else if(isSegmentNameValid(fileName)) {
-                                    directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8/' + resolution);
+                                    directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
                                 }
                             }
                             else if(format === 'mp4') {
-                                directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/mp4/' + resolution);
+                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/mp4/' + resolution);
                             }
                             else if(format === 'webm') {
-                                directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/webm/' + resolution);
+                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/webm/' + resolution);
                             }
                             else if(format === 'ogv') {
-                                directoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/ogv/' + resolution);
+                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/ogv/' + resolution);
                             }
                             
                             if(directoryPath !== '') {
@@ -700,11 +710,11 @@ function videoIdPublishes_GET(req, res) {
                             ];
                             
                             if(row.is_published) {
-                                const videosDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId);
-                                const m3u8DirectoryPath = path.join(videosDirectoryPath, 'adaptive/m3u8');
-                                const mp4DirectoryPath = path.join(videosDirectoryPath, 'progressive/mp4');
-                                const webmDirectoryPath = path.join(videosDirectoryPath, 'progressive/webm');
-                                const ogvDirectoryPath = path.join(videosDirectoryPath, 'progressive/ogv');
+                                const videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId);
+                                const m3u8DirectoryPath = path.join(videoDirectoryPath, 'adaptive/m3u8');
+                                const mp4DirectoryPath = path.join(videoDirectoryPath, 'progressive/mp4');
+                                const webmDirectoryPath = path.join(videoDirectoryPath, 'progressive/webm');
+                                const ogvDirectoryPath = path.join(videoDirectoryPath, 'progressive/ogv');
                                 
                                 if (fs.existsSync(m3u8DirectoryPath)) {
                                     fs.readdirSync(m3u8DirectoryPath).forEach(fileName => {
@@ -792,17 +802,17 @@ function videoIdUnpublish_POST(req, res) {
                 var manifestFilePath = '';
                 
                 if(format === 'm3u8') {
-                    manifestFilePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/manifest-' + resolution + '.m3u8');
-                    videoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/' + resolution);
+                    manifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/manifest-' + resolution + '.m3u8');
+                    videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution);
                 }
                 else if(format === 'mp4') {
-                    videoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/' + format + '/' + resolution);
+                    videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution);
                 }
                 else if(format === 'webm') {
-                    videoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/' + format + '/' + resolution);
+                    videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution);
                 }
                 else if(format === 'ogv') {
-                    videoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/' + format + '/' + resolution);
+                    videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution);
                 }
                 
                 if(fs.existsSync(videoDirectoryPath)) {
@@ -977,7 +987,7 @@ function videoIdIndexAdd_POST(req, res) {
 
                                             var nodeIconBase64 = getNodeIconBase64();
 
-                                            const videoPreviewImageBase64 = fs.readFileSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images/preview.jpg')).toString('base64');
+                                            const videoPreviewImageBase64 = fs.readFileSync(path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg')).toString('base64');
                                             
                                             const data = {
                                                 videoId: videoId,
@@ -1220,8 +1230,8 @@ function videoIdAlias_GET(req, res) {
                     if(isIndexed) {
                         var videoAliasUrl;
 
-                        if(IS_DEVELOPER_MODE) {
-                            videoAliasUrl = 'http://localhost:' + MOARTUBE_ALIASER_PORT + '/nodes/' + nodeId + '/videos/' + videoId;
+                        if(getIsDeveloperMode()) {
+                            videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeId + '/videos/' + videoId;
                         }
                         else {
                             videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
@@ -1354,7 +1364,7 @@ function videoIdThumbnail_GET(req, res) {
     const videoId = req.params.videoId;
     
     if(isVideoIdValid(videoId)) {
-        const thumbnailFilePath = path.join(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images'), 'thumbnail.jpg');
+        const thumbnailFilePath = path.join(path.join(getVideosDirectoryPath(), videoId + '/images'), 'thumbnail.jpg');
         
         if (fs.existsSync(thumbnailFilePath)) {
             const fileStream = fs.createReadStream(thumbnailFilePath);
@@ -1395,7 +1405,7 @@ function videoIdThumbnail_POST(req, res) {
                     },
                     storage: multer.diskStorage({
                         destination: function (req, file, cb) {
-                            const filePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images');
+                            const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
                             
                             fs.access(filePath, fs.F_OK, function(error) {
                                 if(error) {
@@ -1464,7 +1474,7 @@ function videoIdPreview_GET(req, res) {
     const videoId = req.params.videoId;
     
     if(isVideoIdValid(videoId)) {
-        const previewFilePath = path.join(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images'), 'preview.jpg');
+        const previewFilePath = path.join(path.join(getVideosDirectoryPath(), videoId + '/images'), 'preview.jpg');
         
         if (fs.existsSync(previewFilePath)) {
             const fileStream = fs.createReadStream(previewFilePath);
@@ -1503,7 +1513,7 @@ function videoIdPreview_POST(req, res) {
                     },
                     storage: multer.diskStorage({
                         destination: function (req, file, cb) {
-                            const filePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images');
+                            const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
                             
                             fs.access(filePath, fs.F_OK, function(error)
                             {
@@ -1582,7 +1592,7 @@ function videoIdPoster_GET(req, res) {
     const videoId = req.params.videoId;
     
     if(isVideoIdValid(videoId)) {
-        const previewFilePath = path.join(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images'), 'poster.jpg');
+        const previewFilePath = path.join(path.join(getVideosDirectoryPath(), videoId + '/images'), 'poster.jpg');
         
         if (fs.existsSync(previewFilePath)) {
             const fileStream = fs.createReadStream(previewFilePath);
@@ -1621,7 +1631,7 @@ function videoIdPoster_POST(req, res) {
                     },
                     storage: multer.diskStorage({
                         destination: function (req, file, cb) {
-                            const filePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images');
+                            const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
                             
                             fs.access(filePath, fs.F_OK, function(error)
                             {
@@ -1794,7 +1804,7 @@ function delete_POST(req, res) {
                                 
                                 videoIds.forEach(function(videoId) {
                                     if(!nonDeletedVideoIds.includes(videoId)) {
-                                        const videoDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId);
+                                        const videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId);
                     
                                         deleteDirectoryRecursive(videoDirectoryPath);
                                         
@@ -2389,8 +2399,8 @@ function videoIdWatch_GET(req, res) {
                     
                     const nodeName = nodeSettings.nodeName;
                     
-                    const adaptiveVideosDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive');
-                    const progressiveVideosDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive');
+                    const adaptiveVideosDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive');
+                    const progressiveVideosDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive');
                     
                     const adaptiveFormats = [{format: 'm3u8', type: 'application/vnd.apple.mpegurl'}];
                     const progressiveFormats = [{format: 'mp4', type: 'video/mp4'}, {format: 'webm', type: 'video/webm'}, {format: 'ogv', type: 'video/ogg'}];
@@ -2512,7 +2522,7 @@ function videoIdAdaptiveFormatManifestsManifestName_GET(req, res) {
     const manifestName = req.params.manifestName;
     
     if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isManifestNameValid(manifestName)) {
-        const manifestPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/' + manifestName);
+        const manifestPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + manifestName);
         
         if(fs.existsSync(manifestPath)) {
             fs.stat(manifestPath, function(error, stats) {
@@ -2564,7 +2574,7 @@ function videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET(req, res) {
     const segmentName = req.params.segmentName;
     
     if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
-        const segmentPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
+        const segmentPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
         
         if(fs.existsSync(segmentPath)) {
             fs.stat(segmentPath, function(error, stats) {
@@ -2615,7 +2625,7 @@ function videoIdProgressiveFormatResolution_GET(req, res) {
     const resolution = req.params.resolution;
     
     if(isVideoIdValid(videoId) && isProgressiveFormatValid(format) && isResolutionValid(resolution)) {
-        const filePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format);
+        const filePath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format);
         
         if(fs.existsSync(filePath)) {
             const stat = fs.statSync(filePath);
@@ -2681,7 +2691,7 @@ function videoIdProgressiveFormatResolutionDownload_GET(req, res) {
     const resolution = req.params.resolution;
     
     if(isVideoIdValid(videoId) && isProgressiveFormatValid(format) && isResolutionValid(resolution)) {
-        const filePath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format);
+        const filePath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format);
         const fileName = videoId + '-' + resolution + '.' + format;
         
         if(fs.existsSync(filePath)) {

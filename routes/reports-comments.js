@@ -4,19 +4,19 @@ const { reportsComments_GET, reportsCommentsArchive_POST, reportsCommentsReportI
 
 const router = express.Router();
 
-router.get('/reports/comments', async (req, res) => {
+router.get('/', async (req, res) => {
     reportsComments_GET(req, res);
 });
 
-router.post('/reports/comments/archive', (req, res) => {
+router.post('/archive', (req, res) => {
     reportsCommentsArchive_POST(req, res);
 });
 
-router.delete('/reports/comments/:reportId/delete', async (req, res) => {
+router.delete('/:reportId/delete', async (req, res) => {
     reportsCommentsReportIdDelete_DELETE(req, res);
 });
 
-router.get('/reports/comments/captcha', async (req, res) => {
+router.get('/captcha', async (req, res) => {
     reportsCommentsCaptcha_GET(req, res);
 });
 

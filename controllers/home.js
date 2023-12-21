@@ -47,7 +47,7 @@ function watch_GET(req, res) {
     const videoId = req.query.v;
     
     if(isVideoIdValid(videoId)) {
-        const pagePath = path.join(PAGES_DIRECTORY_PATH, 'watch.html');
+        const pagePath = path.join(getPagesDirectoryPath(), 'watch.html');
         
         const fileStream = fs.createReadStream(pagePath);
         

@@ -3,7 +3,9 @@ const path = require('path');
 const multer = require('multer');
 const httpTerminator = require('http-terminator');
 
-const { logDebugMessageToConsole, getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification } = require('../utils/helpers');
+const { logDebugMessageToConsole, getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, 
+    setMoarTubeNodeHttpPort, getIsDockerEnvironment, getImagesDirectoryPath, getCertificatesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
+} = require('../utils/helpers');
 const { 
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isBooleanValid, isBooleanStringValid, isUsernameValid, isPasswordValid, 
     isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid
@@ -76,12 +78,12 @@ function avatar_POST(req, res) {
                 },
                 storage: multer.diskStorage({
                     destination: function (req, file, cb) {
-                        fs.access(IMAGES_DIRECTORY_PATH, fs.F_OK, function(error) {
+                        fs.access(getImagesDirectoryPath(), fs.F_OK, function(error) {
                             if(error) {
                                 cb(new Error('file upload error'));
                             }
                             else {
-                                cb(null, IMAGES_DIRECTORY_PATH);
+                                cb(null, getImagesDirectoryPath());
                             }
                         });
                     },
@@ -111,11 +113,11 @@ function avatar_POST(req, res) {
                     const iconFile = req.files['iconFile'][0];
                     const avatarFile = req.files['avatarFile'][0];
                     
-                    const iconSourceFilePath = path.join(IMAGES_DIRECTORY_PATH, iconFile.filename);
-                    const avatarSourceFilePath = path.join(IMAGES_DIRECTORY_PATH, avatarFile.filename);
+                    const iconSourceFilePath = path.join(getImagesDirectoryPath(), iconFile.filename);
+                    const avatarSourceFilePath = path.join(getImagesDirectoryPath(), avatarFile.filename);
                     
-                    const iconDestinationFilePath = path.join(IMAGES_DIRECTORY_PATH, 'icon.png');
-                    const avatarDestinationFilePath = path.join(IMAGES_DIRECTORY_PATH, 'avatar.png');
+                    const iconDestinationFilePath = path.join(getImagesDirectoryPath(), 'icon.png');
+                    const avatarDestinationFilePath = path.join(getImagesDirectoryPath(), 'avatar.png');
                     
                     fs.renameSync(iconSourceFilePath, iconDestinationFilePath);
                     fs.renameSync(avatarSourceFilePath, avatarDestinationFilePath);
@@ -189,12 +191,12 @@ function banner_POST(req, res) {
                 },
                 storage: multer.diskStorage({
                     destination: function (req, file, cb) {
-                        fs.access(IMAGES_DIRECTORY_PATH, fs.F_OK, function(error) {
+                        fs.access(getImagesDirectoryPath(), fs.F_OK, function(error) {
                             if(error) {
                                 cb(new Error('file upload error'));
                             }
                             else {
-                                cb(null, IMAGES_DIRECTORY_PATH);
+                                cb(null, getImagesDirectoryPath());
                             }
                         });
                     },
@@ -223,9 +225,9 @@ function banner_POST(req, res) {
                     
                     const bannerFile = req.files['bannerFile'][0];
                     
-                    const bannerSourceFilePath = path.join(IMAGES_DIRECTORY_PATH, bannerFile.filename);
+                    const bannerSourceFilePath = path.join(getImagesDirectoryPath(), bannerFile.filename);
                     
-                    const bannerDestinationFilePath = path.join(IMAGES_DIRECTORY_PATH, 'banner.png');
+                    const bannerDestinationFilePath = path.join(getImagesDirectoryPath(), 'banner.png');
                     
                     fs.renameSync(bannerSourceFilePath, bannerDestinationFilePath);
                     
@@ -377,12 +379,12 @@ function secure_POST(req, res) {
                         },
                         storage: multer.diskStorage({
                             destination: function (req, file, cb) {
-                                fs.access(CERTIFICATES_DIRECTORY_PATH, fs.F_OK, function(error) {
+                                fs.access(getCertificatesDirectoryPath(), fs.F_OK, function(error) {
                                     if(error) {
                                         cb(new Error('file upload error'));
                                     }
                                     else {
-                                        cb(null, CERTIFICATES_DIRECTORY_PATH);
+                                        cb(null, getCertificatesDirectoryPath());
                                     }
                                 });
                             },
@@ -495,7 +497,7 @@ function networkInternal_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            if(IS_DOCKER_ENVIRONMENT) {
+            if(getIsDockerEnvironment()) {
                 res.send({isError: true, message: 'This node cannot change listening ports because it is running inside of a docker container.'});
             }
             else {
@@ -534,8 +536,8 @@ function networkInternal_POST(req, res) {
                             nodeSettings.nodeListeningPort = listeningNodePort;
                             
                             setNodeSettings(nodeSettings);
-                            
-                            MOARTUBE_NODE_HTTP_PORT = listeningNodePort;
+
+                            setMoarTubeNodeHttpPort(listeningNodePort);
                             
                             httpServerWrapper = await initializeHttpServer();
                         });

@@ -1,4 +1,4 @@
-const { logDebugMessageToConsole, getAuthenticationStatus, generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast } = require('../utils/helpers');
+const { logDebugMessageToConsole, getAuthenticationStatus, generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, getVideosDirectoryPath } = require('../utils/helpers');
 const { 
     isTitleValid, isDescriptionValid, isTagsValid, isPortValid, isVideoIdValid, isAdaptiveFormatValid, isResolutionValid, isSegmentNameValid, isBooleanValid, 
     isNetworkAddressValid, isChatHistoryLimitValid 
@@ -52,9 +52,9 @@ function start_POST(req, res) {
                 
                 const tagsSanitized = sanitizeTagsSpaces(tags);
                 
-                fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/images'), { recursive: true });
-                fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive'), { recursive: true });
-                fs.mkdirSync(path.join(VIDEOS_DIRECTORY_PATH, videoId + '/progressive'), { recursive: true });
+                fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/images'), { recursive: true });
+                fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/adaptive'), { recursive: true });
+                fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/progressive'), { recursive: true });
                 
                 const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexed, is_index_outdated, is_error, is_finalized, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
                 const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, isRecordingStreamRemotely, isRecordingStreamLocally, 1, 0, 0, 0, 0, meta, creationTimestamp];
@@ -134,7 +134,7 @@ function videoIdStop_POST(req, res) {
                             else {
                                 if(video != null) {
                                     if(!video.is_stream_recorded_remotely) {
-                                        const m3u8DirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/m3u8');
+                                        const m3u8DirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
                                         
                                         deleteDirectoryRecursive(m3u8DirectoryPath);
                                     }
@@ -183,7 +183,7 @@ function videoIdAdaptiveFormatResolutionSegmentsNextEcpectedSegmentIndex_GET(req
             if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isResolutionValid(resolution)) {
                 var nextExpectedSegmentIndex = -1;
                 
-                const segmentsDirectoryPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/' + resolution);
+                const segmentsDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution);
                 
                 if (fs.existsSync(segmentsDirectoryPath) && fs.statSync(segmentsDirectoryPath).isDirectory()) {
                     fs.readdirSync(segmentsDirectoryPath).forEach(segmentFileName => {
@@ -227,7 +227,7 @@ function videoIdAdaptiveFormatResolutionSegmentsRemove_POST(req, res) {
             const segmentName = req.body.segmentName;
             
             if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
-                const segmentPath = path.join(VIDEOS_DIRECTORY_PATH, videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
+                const segmentPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
                 
                 fs.unlinkSync(segmentPath);
                 

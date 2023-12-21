@@ -1,13 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 
+const { getPagesDirectoryPath } = require('../utils/helpers');
 const { isVideoIdValid } = require('../utils/validators');
 
 function videoVideoId_GET(req, res) {
     const videoId = req.params.videoId;
     
     if(isVideoIdValid(videoId)) {
-        const pagePath = path.join(PAGES_DIRECTORY_PATH, 'embed-video.html');
+        const pagePath = path.join(getPagesDirectoryPath(), 'embed-video.html');
         
         const fileStream = fs.createReadStream(pagePath);
         
@@ -24,7 +25,7 @@ function chatVideoId_GET(req, res) {
     const videoId = req.params.videoId;
     
     if(isVideoIdValid(videoId)) {
-        const pagePath = path.join(PAGES_DIRECTORY_PATH, 'embed-chat.html');
+        const pagePath = path.join(getPagesDirectoryPath(), 'embed-chat.html');
         
         const fileStream = fs.createReadStream(pagePath);
         

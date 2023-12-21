@@ -1,26 +1,18 @@
-const http = require('http');
-const https = require('https');
+
 const express = require('express');
 const expressSession = require('express-session');
 const bodyParser = require('body-parser');
 const expressUseragent = require('express-useragent');
 const path = require('path');
 const fs = require('fs');
-const multer = require('multer');
 const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
 const webSocket = require('ws');
-const bcryptjs = require('bcryptjs');
 const crypto = require('crypto');
-const sanitizeHtml = require('sanitize-html');
-const jwt = require('jsonwebtoken');
-const axios = require('axios');
-const { v1: uuidv1, v4: uuidv4 } = require('uuid');
-const httpTerminator = require('http-terminator');
 const cluster = require('cluster');
 const { Mutex } = require('async-mutex');
 
-const { logDebugMessageToConsole, getNodeSettings, setNodeSettings, generateVideoId, getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setPagesDirectoryPath,
+const {
+	logDebugMessageToConsole, getNodeSettings, setNodeSettings, generateVideoId, getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setPagesDirectoryPath,
 	setIsDockerEnvironment, getIsDockerEnvironment, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, setVideosDirectoryPath, setDatabaseDirectoryPath,
 	setDatabaseFilePath, setCertificatesDirectoryPath, setIsDeveloperMode, setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort,
 	setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort, setJwtSecret, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
@@ -47,7 +39,15 @@ const videosRoutes = require('./routes/videos');
 loadConfig();
 
 if(cluster.isMaster) {
-	logDebugMessageToConsole('starting MoarTube node', null, null, true);
+	process.on('uncaughtException', (error) => {
+		logDebugMessageToConsole(null, error, error.stackTrace, true);
+	});
+
+	process.on('unhandledRejection', (reason, promise) => {
+		logDebugMessageToConsole(null, reason, reason.stack, true);
+	});
+
+	logDebugMessageToConsole('starting MoarTube Node', null, null, true);
 
 	provisionSqliteDatabase()
 	.then(async () => {
@@ -63,7 +63,7 @@ if(cluster.isMaster) {
 			setNodeSettings(nodeSettings);
 		}
 
-		setJwtSecret(crypto.randomBytes(32).toString('hex'));
+		const jwtSecret = crypto.randomBytes(32).toString('hex');
 
 		const numCPUs = require('os').cpus().length;
 
@@ -71,7 +71,10 @@ if(cluster.isMaster) {
 			const worker = cluster.fork();
 			
 			worker.on('message', async (msg) => {
-				if (msg.cmd && msg.cmd === 'update_node_name') {
+				if (msg.cmd && msg.cmd === 'get_jwt_secret') {
+					worker.send({ cmd: 'get_jwt_secret_response', jwtSecret: jwtSecret });
+				}
+				else if (msg.cmd && msg.cmd === 'update_node_name') {
 					const nodeName = msg.nodeName;
 					
 					Object.values(cluster.workers).forEach((worker) => {
@@ -149,6 +152,71 @@ if(cluster.isMaster) {
 		});
 
 		setInterval(function() {
+			const nodeSettings = getNodeSettings();
+			
+			if(nodeSettings.isNodeConfigured && !nodeSettings.isNodePrivate) {
+				database.all('SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1', function(error, rows) {
+					if(error) {
+						logDebugMessageToConsole(null, error, new Error().stack, true);
+					}
+					else {
+						if(rows.length > 0) {
+							performNodeIdentification(false)
+							.then(() => {
+								const nodeIdentification = getNodeIdentification();
+								
+								const nodeIdentifier = nodeIdentification.nodeIdentifier;
+								const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+								
+								rows.forEach(function(row) {
+									const videoId = row.video_id;
+									const title = row.title;
+									const tags = row.tags;
+									const views = row.views;
+									const isStreaming = (row.is_streaming === 1);
+									const lengthSeconds = row.length_seconds;
+		
+									const nodeIconBase64 = getNodeIconBase64();
+		
+									const videoPreviewImageBase64 = fs.readFileSync(path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg')).toString('base64');
+									
+									indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
+									.then(async indexerResponseData => {
+										if(indexerResponseData.isError) {
+											logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+										}
+										else {
+											submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = 0 WHERE video_id = ?', [videoId], function(isError) {
+												if(isError) {
+													logDebugMessageToConsole(null, null, new Error().stack, true);
+												}
+												else {
+													logDebugMessageToConsole('updated video id with index successfully: ' + videoId, null, null, true);
+												}
+											});
+										}
+									})
+									.catch(error => {
+										logDebugMessageToConsole(null, error, new Error().stack, true);
+									});
+								});
+							})
+							.catch(error => {
+								logDebugMessageToConsole(null, error, new Error().stack, true);
+							});
+						}
+					}
+				});
+			}
+		}, 3000);
+
+		setInterval(function() {
+			Object.values(cluster.workers).forEach((worker) => {
+				worker.send({ cmd: 'live_stream_worker_stats_request' });
+			});
+		}, 1000);
+
+		setInterval(function() {
 			Object.values(cluster.workers).forEach((worker) => {
 				worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWorkerStats: liveStreamWorkerStats });
 			});
@@ -224,17 +292,14 @@ else {
 		app.use('/videos', videosRoutes);
 
 		await initializeHttpServer(app);
-
-		process.on('uncaughtException', (error) => {
-			logDebugMessageToConsole(null, error, error.stackTrace, true);
-		});
-
-		process.on('unhandledRejection', (reason, promise) => {
-			logDebugMessageToConsole(null, reason, reason.stack, true);
-		});
 		
 		process.on('message', async (msg) => {
-			if (msg.cmd === 'websocket_broadcast_response') {
+			if (msg.cmd === 'get_jwt_secret_response') {
+				const jwtSecret = msg.jwtSecret;
+
+				setJwtSecret(jwtSecret);
+			}
+			else if (msg.cmd === 'websocket_broadcast_response') {
 				const message = msg.message;
 				
 				gethttpServerWrapper().websocketServer.clients.forEach(function each(client) {

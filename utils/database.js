@@ -1,4 +1,5 @@
 const sqlite3 = require('sqlite3').verbose();
+const { v1: uuidv1, v4: uuidv4 } = require('uuid');
 
 const { logDebugMessageToConsole, getDatabaseFilePath } = require("./helpers");
 
