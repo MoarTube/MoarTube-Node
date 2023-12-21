@@ -1,7 +1,7 @@
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const { logDebugMessageToConsole, getNodeSettings, getAuthenticationStatus } = require('../utils/helpers');
+const { logDebugMessageToConsole, getNodeSettings, getAuthenticationStatus, getJwtSecret } = require('../utils/helpers');
 const { isUsernameValid, isPasswordValid, isBooleanValid } = require('../utils/validators');
 
 function signIn_POST(req, res) {
@@ -45,7 +45,7 @@ function signIn_POST(req, res) {
         if(isUsernameValid && isPasswordValid) {
             logDebugMessageToConsole('user logged in: ' + username, null, null, true);
             
-            const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: expiresIn });
+            const token = jwt.sign({ username }, getJwtSecret(), { expiresIn: expiresIn });
             
             res.send({isError: false, isAuthenticated: true, token: token});
         }

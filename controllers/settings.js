@@ -32,8 +32,8 @@ function root_GET(req, res) {
 }
 
 function avatar_GET(req, res) {
-    const customAvatarDirectoryPath = path.join(path.join(DATA_DIRECTORY_PATH, 'images'), 'avatar.png');
-    const defaultAvatarDirectoryPath = path.join(path.join(PUBLIC_DIRECTORY_PATH, 'images'), 'avatar.png');
+    const customAvatarDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'avatar.png');
+    const defaultAvatarDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'avatar.png');
     
     var avatarFilePath;
 
@@ -145,8 +145,8 @@ function avatar_POST(req, res) {
 }
 
 function banner_GET(req, res) {
-    const customBannerDirectoryPath = path.join(path.join(DATA_DIRECTORY_PATH, 'images'), 'banner.png');
-    const defaultBannerDirectoryPath = path.join(path.join(PUBLIC_DIRECTORY_PATH, 'images'), 'banner.png');
+    const customBannerDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'banner.png');
+    const defaultBannerDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'banner.png');
     
     var bannerFilePath;
 

@@ -20,8 +20,14 @@ const httpTerminator = require('http-terminator');
 const cluster = require('cluster');
 const { Mutex } = require('async-mutex');
 
-const { logDebugMessageToConsole, getNodeSettings, setNodeSettings, generateVideoId, loadConfig } = require('./utils/helpers');
-const { provisionSqliteDatabase, getDatabase } = require('./utils/database');
+const { logDebugMessageToConsole, getNodeSettings, setNodeSettings, generateVideoId, getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setPagesDirectoryPath,
+	setIsDockerEnvironment, getIsDockerEnvironment, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, setVideosDirectoryPath, setDatabaseDirectoryPath,
+	setDatabaseFilePath, setCertificatesDirectoryPath, setIsDeveloperMode, setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort,
+	setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort, setJwtSecret, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
+	getCertificatesDirectoryPath, getNodeSettingsPath, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret, setMoarTubeNodeHttpPort
+} = require('./utils/helpers');
+const { provisionSqliteDatabase, finishPendingDatabaseWriteJob } = require('./utils/database');
+const { initializeHttpServer, restartHttpServer, gethttpServerWrapper } = require('./utils/httpserver');
 
 const accountRoutes = require('./routes/account');
 const captchaRoutes = require('./routes/captcha');
@@ -57,7 +63,7 @@ if(cluster.isMaster) {
 			setNodeSettings(nodeSettings);
 		}
 
-		const jwtSecret = crypto.randomBytes(32).toString('hex');
+		setJwtSecret(crypto.randomBytes(32).toString('hex'));
 
 		const numCPUs = require('os').cpus().length;
 
@@ -65,10 +71,7 @@ if(cluster.isMaster) {
 			const worker = cluster.fork();
 			
 			worker.on('message', async (msg) => {
-				if (msg.cmd && msg.cmd === 'get_jwt_secret') {
-					worker.send({ cmd: 'get_jwt_secret_response', jwtSecret: jwtSecret });
-				}
-				else if (msg.cmd && msg.cmd === 'update_node_name') {
+				if (msg.cmd && msg.cmd === 'update_node_name') {
 					const nodeName = msg.nodeName;
 					
 					Object.values(cluster.workers).forEach((worker) => {
@@ -96,15 +99,17 @@ if(cluster.isMaster) {
 					const parameters = msg.parameters;
 					const databaseWriteJobId = msg.databaseWriteJobId;
 					
-					const databaseWriteJob = {
-						query: query,
-						parameters: parameters
-					};
-					
 					try {
-						await performDatabaseWriteJob(databaseWriteJob);
-						
-						worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, isError: false });
+						database.run(query, parameters, function(error) {
+							if(error) {
+								logDebugMessageToConsole(null, error, new Error().stack, true);
+
+								worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, isError: true });
+							}
+							else {
+								worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, isError: false });
+							}
+						});
 					}
 					catch(error) {
 						logDebugMessageToConsole(null, error, new Error().stack, true);
@@ -142,6 +147,12 @@ if(cluster.isMaster) {
 		cluster.on('exit', (worker, code, signal) => {
 			logDebugMessageToConsole('worker exited with id <' + worker.process.pid + '> code <' + code + '> signal <' + signal + '>', null, null, true);
 		});
+
+		setInterval(function() {
+			Object.values(cluster.workers).forEach((worker) => {
+				worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWorkerStats: liveStreamWorkerStats });
+			});
+		}, 1000);
 	})
 	.catch(error => {
 		logDebugMessageToConsole(null, error, new Error().stack, true);
@@ -151,132 +162,17 @@ else {
 	startNode();
 
 	async function startNode() {
-		process.on('uncaughtException', (error) => {
-			logDebugMessageToConsole(null, error, error.stackTrace, true);
-		});
-
-		process.on('unhandledRejection', (reason, promise) => {
-			logDebugMessageToConsole(null, reason, reason.stack, true);
-		});
-		
-		var JWT_SECRET;
-		var PENDING_DATABASE_WRITE_JOBS = [];
-
-		var httpServerWrapper;
-		
-		process.on('message', async (msg) => {
-			if (msg.cmd === 'websocket_broadcast_response') {
-				if(httpServerWrapper != null) {
-					const message = msg.message;
-					
-					httpServerWrapper.websocketServer.clients.forEach(function each(client) {
-						if (client.readyState === webSocket.OPEN) {
-							client.send(JSON.stringify(message));
-						}
-					});
-				}
-			}
-			else if (msg.cmd === 'websocket_broadcast_chat_response') {
-				if(httpServerWrapper != null) {
-					const message = msg.message;
-					
-					httpServerWrapper.websocketServer.clients.forEach(function each(client) {
-						if (client.readyState === webSocket.OPEN) {
-							if(client.socketType === 'node_peer' && client.videoId === message.videoId) {
-								client.send(JSON.stringify(message));
-							}
-						}
-					});
-				}
-			}
-			else if (msg.cmd === 'get_jwt_secret_response') {
-				JWT_SECRET = msg.jwtSecret;
-			}
-			else if (msg.cmd === 'database_write_job_result') {
-				const databaseWriteJobId = msg.databaseWriteJobId;
-				const isError = msg.isError;
-				
-				if(PENDING_DATABASE_WRITE_JOBS.hasOwnProperty(databaseWriteJobId)) {
-					const pendingDatabaseWriteJob = PENDING_DATABASE_WRITE_JOBS[databaseWriteJobId];
-					
-					const callback = pendingDatabaseWriteJob.callback;
-					
-					delete PENDING_DATABASE_WRITE_JOBS[databaseWriteJobId];
-					
-					callback(isError);
-				}
-			}
-			else if (msg.cmd === 'live_stream_worker_stats_request') {
-				if(httpServerWrapper != null) {
-					const liveStreamStats = {};
-					
-					httpServerWrapper.websocketServer.clients.forEach(function each(client) {
-						if (client.readyState === webSocket.OPEN) {
-							if(client.socketType === 'node_peer') {
-								const videoId = client.videoId;
-								
-								if(!liveStreamStats.hasOwnProperty(videoId)) {
-									liveStreamStats[videoId] = 0;
-								}
-								
-								liveStreamStats[videoId]++;
-							}
-						}
-					});
-					
-					process.send({ cmd: 'live_stream_worker_stats_response', workerId: cluster.worker.id, liveStreamStats: liveStreamStats });
-				}
-			}
-			else if (msg.cmd === 'live_stream_worker_stats_update') {
-				if(httpServerWrapper != null) {
-					const liveStreamWorkerStats = msg.liveStreamWorkerStats;
-					
-					const liveStreamStats = {};
-					
-					for (const worker in liveStreamWorkerStats) {
-						for (const videoId in liveStreamWorkerStats[worker]) {
-							if (liveStreamStats.hasOwnProperty(videoId)) {
-								liveStreamStats[videoId] += liveStreamWorkerStats[worker][videoId];
-							}
-							else {
-								liveStreamStats[videoId] = liveStreamWorkerStats[worker][videoId];
-							}
-						}
-					}
-					
-					httpServerWrapper.websocketServer.clients.forEach(function each(client) {
-						if (client.readyState === webSocket.OPEN) {
-							if(client.socketType === 'node_peer') {
-								const videoId = client.videoId;
-								
-								if(liveStreamStats.hasOwnProperty(videoId)) {
-									client.send(JSON.stringify({eventName: 'stats', watchingCount: liveStreamStats[videoId]}));
-								}
-							}
-						}
-					});
-				}
-			}
-			else if(msg.cmd === 'restart_server_response') {
-				if(httpServerWrapper != null) {
-					restartHttpServer();
-				}
-			}
-		});
-		
-		process.send({ cmd: 'get_jwt_secret' });
-
 		const app = express();
 		
 		app.enable('trust proxy');
 		
-		app.use('/javascript',  express.static(path.join(PUBLIC_DIRECTORY_PATH, 'javascript')));
-		app.use('/css',  express.static(path.join(PUBLIC_DIRECTORY_PATH, 'css')));
+		app.use('/javascript',  express.static(path.join(getPublicDirectoryPath(), 'javascript')));
+		app.use('/css',  express.static(path.join(getPublicDirectoryPath(), 'css')));
 		app.use('/images', (req, res, next) => {
 			const imageName = path.basename(req.url).replace('/', '');
 
 			if(imageName === 'icon.png' || imageName === 'avatar.png' || imageName === 'banner.png') {
-				const customImageDirectoryPath = path.join(path.join(DATA_DIRECTORY_PATH, 'images'), imageName);
+				const customImageDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), imageName);
 
 				if(fs.existsSync(customImageDirectoryPath)) {
 					const fileStream = fs.createReadStream(customImageDirectoryPath);
@@ -291,14 +187,14 @@ else {
 				next();
 			}
 		});
-		app.use('/images',  express.static(path.join(PUBLIC_DIRECTORY_PATH, 'images')));
-		app.use('/fonts',  express.static(path.join(PUBLIC_DIRECTORY_PATH, 'fonts')));
+		app.use('/images',  express.static(path.join(getPublicDirectoryPath(), 'images')));
+		app.use('/fonts',  express.static(path.join(getPublicDirectoryPath(), 'fonts')));
 		
 		app.use(expressUseragent.express());
 		
 		app.use(expressSession({
-			name: EXPRESS_SESSION_NAME,
-			secret: EXPRESS_SESSION_SECRET,
+			name: getExpressSessionName(),
+			secret: getExpressSessionSecret(),
 			resave: false,
 			saveUninitialized: true
 		}));
@@ -307,8 +203,6 @@ else {
 		
 		app.use(bodyParser.urlencoded({ extended: false }));
 		app.use(bodyParser.json());
-		
-		await initializeHttpServer();
 		
 		app.use(function(req, res, next) {
 			next();
@@ -328,5 +222,165 @@ else {
 		app.use('/settings', settingsRoutes);
 		app.use('/streams', streamsRoutes);
 		app.use('/videos', videosRoutes);
+
+		await initializeHttpServer(app);
+
+		process.on('uncaughtException', (error) => {
+			logDebugMessageToConsole(null, error, error.stackTrace, true);
+		});
+
+		process.on('unhandledRejection', (reason, promise) => {
+			logDebugMessageToConsole(null, reason, reason.stack, true);
+		});
+		
+		process.on('message', async (msg) => {
+			if (msg.cmd === 'websocket_broadcast_response') {
+				const message = msg.message;
+				
+				gethttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+					if (client.readyState === webSocket.OPEN) {
+						client.send(JSON.stringify(message));
+					}
+				});
+			}
+			else if (msg.cmd === 'websocket_broadcast_chat_response') {
+				const message = msg.message;
+				
+				gethttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+					if (client.readyState === webSocket.OPEN) {
+						if(client.socketType === 'node_peer' && client.videoId === message.videoId) {
+							client.send(JSON.stringify(message));
+						}
+					}
+				});
+			}
+			else if (msg.cmd === 'database_write_job_result') {
+				const databaseWriteJobId = msg.databaseWriteJobId;
+				const isError = msg.isError;
+
+				finishPendingDatabaseWriteJob(databaseWriteJobId, isError);
+			}
+			else if (msg.cmd === 'live_stream_worker_stats_request') {
+				const liveStreamStats = {};
+				
+				gethttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+					if (client.readyState === webSocket.OPEN) {
+						if(client.socketType === 'node_peer') {
+							const videoId = client.videoId;
+							
+							if(!liveStreamStats.hasOwnProperty(videoId)) {
+								liveStreamStats[videoId] = 0;
+							}
+							
+							liveStreamStats[videoId]++;
+						}
+					}
+				});
+				
+				process.send({ cmd: 'live_stream_worker_stats_response', workerId: cluster.worker.id, liveStreamStats: liveStreamStats });
+			}
+			else if (msg.cmd === 'live_stream_worker_stats_update') {
+				const liveStreamWorkerStats = msg.liveStreamWorkerStats;
+				
+				const liveStreamStats = {};
+				
+				for (const worker in liveStreamWorkerStats) {
+					for (const videoId in liveStreamWorkerStats[worker]) {
+						if (liveStreamStats.hasOwnProperty(videoId)) {
+							liveStreamStats[videoId] += liveStreamWorkerStats[worker][videoId];
+						}
+						else {
+							liveStreamStats[videoId] = liveStreamWorkerStats[worker][videoId];
+						}
+					}
+				}
+				
+				gethttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+					if (client.readyState === webSocket.OPEN) {
+						if(client.socketType === 'node_peer') {
+							const videoId = client.videoId;
+							
+							if(liveStreamStats.hasOwnProperty(videoId)) {
+								client.send(JSON.stringify({eventName: 'stats', watchingCount: liveStreamStats[videoId]}));
+							}
+						}
+					}
+				});
+			}
+			else if(msg.cmd === 'restart_server_response') {
+				restartHttpServer();
+			}
+		});
+		
+		process.send({ cmd: 'get_jwt_secret' });
 	}
+}
+
+function loadConfig() {
+	process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+	setPublicDirectoryPath(path.join(__dirname, 'public'));
+	setPagesDirectoryPath(path.join(getPublicDirectoryPath(), 'pages'));
+
+	setIsDockerEnvironment(process.env.IS_DOCKER_ENVIRONMENT === 'true');
+
+	if(getIsDockerEnvironment()) {
+		setDataDirectoryPath('/data');
+	}
+	else {
+		setDataDirectoryPath(path.join(__dirname, 'data'));
+	}
+
+	setNodeSettingsPath(path.join(getDataDirectoryPath(), '_node_settings.json'));
+
+	setImagesDirectoryPath(path.join(getDataDirectoryPath(), 'images'));
+	setVideosDirectoryPath(path.join(getDataDirectoryPath(), 'media/videos'));
+	setDatabaseDirectoryPath(path.join(getDataDirectoryPath(), 'db'));
+    setDatabaseFilePath(path.join(getDatabaseDirectoryPath(), 'node_db.sqlite'));
+	setCertificatesDirectoryPath(path.join(getDataDirectoryPath(), 'certificates'));
+
+	fs.mkdirSync(getImagesDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getVideosDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getDatabaseDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getCertificatesDirectoryPath(), { recursive: true });
+	
+	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+
+	setIsDeveloperMode(config.isDeveloperMode);
+
+	setMoarTubeIndexerHttpProtocol(config.indexerConfig.httpProtocol);
+	setMoarTubeIndexerIp(config.indexerConfig.host);
+	setMoarTubeIndexerPort(config.indexerConfig.port);
+
+	setMoarTubeAliaserHttpProtocol(config.aliaserConfig.httpProtocol);
+	setMoarTubeAliaserIp(config.aliaserConfig.host);
+	setMoarTubeAliaserPort(config.aliaserConfig.port);
+	
+	if(!fs.existsSync(getNodeSettingsPath())) {
+		const nodeSettings = {
+			"nodeListeningPort": 80,
+			"isNodeConfigured":false,
+			"isNodePrivate":false,
+			"isSecure":false,
+			"publicNodeProtocol":"http",
+			"publicNodeAddress":"",
+			"publicNodePort":"",
+			"nodeName":"moartube node",
+			"nodeAbout":"just a MoarTube node",
+			"nodeId":"",
+			"username":"JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL",
+			"password":"JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX",
+			"expressSessionName": crypto.randomBytes(64).toString('hex'),
+			"expressSessionSecret": crypto.randomBytes(64).toString('hex')
+		};
+
+		setNodeSettings(nodeSettings);
+	}
+	
+	const nodeSettings = getNodeSettings();
+
+	setMoarTubeNodeHttpPort(nodeSettings.nodeListeningPort);
+
+	setExpressSessionName(nodeSettings.expressSessionName);
+	setExpressSessionSecret(nodeSettings.expressSessionSecret);
 }

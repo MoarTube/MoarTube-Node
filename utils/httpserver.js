@@ -1,26 +1,35 @@
+const fs = require('fs');
+const path = require('path');
+const http = require('http');
+const https = require('https');
+const webSocket = require('ws');
+const httpTerminator = require('http-terminator');
+const sanitizeHtml = require('sanitize-html');
+
+const { logDebugMessageToConsole, getNodeSettings, getAuthenticationStatus, getCertificatesDirectoryPath, getMoarTubeNodeHttpPort } = require("./helpers");
 const { stoppedPublishVideoUploading, stoppingPublishVideoUploading } = require("./trackers/publish-video-uploading-tracker");
 
+let httpServerWrapper;
 
-
-function initializeHttpServer() {
+function initializeHttpServer(app) {
     return new Promise(function(resolve, reject) {
         const nodeSettings = getNodeSettings();
         
         if(nodeSettings.isSecure) {
-            if (fs.existsSync(CERTIFICATES_DIRECTORY_PATH)) {
+            if (fs.existsSync(getCertificatesDirectoryPath())) {
                 var key = '';
                 var cert = '';
                 var ca = [];
                 
-                fs.readdirSync(CERTIFICATES_DIRECTORY_PATH).forEach(fileName => {
+                fs.readdirSync(getCertificatesDirectoryPath()).forEach(fileName => {
                     if(fileName === 'private_key.pem') {
-                        key = fs.readFileSync(path.join(CERTIFICATES_DIRECTORY_PATH, 'private_key.pem'), 'utf8');
+                        key = fs.readFileSync(path.join(getCertificatesDirectoryPath(), 'private_key.pem'), 'utf8');
                     }
                     else if(fileName === 'certificate.pem') {
-                        cert = fs.readFileSync(path.join(CERTIFICATES_DIRECTORY_PATH, 'certificate.pem'), 'utf8');
+                        cert = fs.readFileSync(path.join(getCertificatesDirectoryPath(), 'certificate.pem'), 'utf8');
                     }
                     else {
-                        const caFile = fs.readFileSync(path.join(CERTIFICATES_DIRECTORY_PATH, fileName), 'utf8');
+                        const caFile = fs.readFileSync(path.join(getCertificatesDirectoryPath(), fileName), 'utf8');
                         
                         ca.push(caFile);
                     }
@@ -33,7 +42,7 @@ function initializeHttpServer() {
                     reject('certificate not found for HTTPS server');
                 }
                 else {
-                    const SSL_CREDENTIALS =	{
+                    const sslCredentials =	{
                         key: key,
                         cert: cert,
                         ca: ca
@@ -41,7 +50,7 @@ function initializeHttpServer() {
 
                     logDebugMessageToConsole('MoarTube Node is entering secure HTTPS mode', null, null, true);
                     
-                    httpServer = https.createServer(SSL_CREDENTIALS, app);
+                    httpServer = https.createServer(sslCredentials, app);
                 }
             }
             else {
@@ -57,8 +66,8 @@ function initializeHttpServer() {
         httpServer.requestTimeout = 0; // needed for long duration requests (streaming, large uploads)
         httpServer.keepAliveTimeout = 10000;
         
-        httpServer.listen(MOARTUBE_NODE_HTTP_PORT, function() {
-            logDebugMessageToConsole('MoarTube Node is listening on port ' + MOARTUBE_NODE_HTTP_PORT, null, null, true);
+        httpServer.listen(getMoarTubeNodeHttpPort(), function() {
+            logDebugMessageToConsole('MoarTube Node is listening on port ' + getMoarTubeNodeHttpPort(), null, null, true);
             
             const websocketServer = new webSocket.Server({ 
                 noServer: true, 
@@ -321,13 +330,13 @@ function initializeHttpServer() {
                     websocketServer.emit('connection', ws, req);
                 });
             });
-            
-            const serverWrapper = {
+
+            httpServerWrapper = {
                 httpServer: httpServer,
                 websocketServer: websocketServer
             };
-            
-            resolve(serverWrapper);
+
+            resolve();
         });
     });
 }
@@ -361,3 +370,13 @@ async function restartHttpServer() {
         });
     });
 }
+
+function gethttpServerWrapper() {
+    return httpServerWrapper;
+}
+
+module.exports = {
+    initializeHttpServer,
+    restartHttpServer,
+    gethttpServerWrapper
+};

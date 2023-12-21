@@ -1,6 +1,9 @@
-const { getDatabaseFilePath } = require("./helpers");
+const sqlite3 = require('sqlite3').verbose();
+
+const { logDebugMessageToConsole, getDatabaseFilePath } = require("./helpers");
 
 let database;
+let PENDING_DATABASE_WRITE_JOBS = {};
 
 function provisionSqliteDatabase() {
     return new Promise(function(resolve, reject) {
@@ -134,30 +137,27 @@ function submitDatabaseWriteJob(query, parameters, callback) {
     process.send({ cmd: 'database_write_job', query: query, parameters: parameters, databaseWriteJobId: databaseWriteJobId });
 }
 
-function performDatabaseWriteJob(databaseWriteJob) {
-    return new Promise(function(resolve, reject) {
-        const query = databaseWriteJob.query;
-        const parameters = databaseWriteJob.parameters;
-        
-        database.run(query, parameters, function(error) {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
-                
-                reject();
-            }
-            else {
-                resolve();
-            }
-        });
-    });
-}
-
 function getDatabase() {
     return database;
+}
+
+function finishPendingDatabaseWriteJob(databaseWriteJobId, isError) {
+    if(PENDING_DATABASE_WRITE_JOBS.hasOwnProperty(databaseWriteJobId)) {
+        const pendingDatabaseWriteJob = PENDING_DATABASE_WRITE_JOBS[databaseWriteJobId];
+        
+        const callback = pendingDatabaseWriteJob.callback;
+        
+        delete PENDING_DATABASE_WRITE_JOBS[databaseWriteJobId];
+        
+        if(callback != null) {
+            callback(isError);
+        }
+    }
 }
 
 module.exports = {
     provisionSqliteDatabase,
     submitDatabaseWriteJob,
-    getDatabase
+    getDatabase,
+    finishPendingDatabaseWriteJob
 };

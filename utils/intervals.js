@@ -38,29 +38,14 @@ setInterval(function() {
                                     logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
                                 }
                                 else {
-                                    const release = await mutex.acquire();
-                                    
-                                    const type = 'update';
-                                    const query = 'UPDATE videos SET is_index_outdated = 0 WHERE video_id = ?';
-                                    const parameters = [videoId];
-                                    
-                                    const databaseWriteJob = {
-                                        type: type, // insert, update, delete
-                                        query: query, // sql query
-                                        parameters: parameters // sql query parameters (if insert or update, otherwise empty array)
-                                    };
-                                    
-                                    try {
-                                        await performDatabaseWriteJob(databaseWriteJob);
-                                        
-                                        logDebugMessageToConsole('updated video id with index successfully: ' + videoId, null, null, true);
-                                    }
-                                    catch(error) {
-                                        logDebugMessageToConsole(null, error, new Error().stack, true);
-                                    }
-                                    finally {
-                                        release();
-                                    }
+                                    submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = 0 WHERE video_id = ?', [videoId], function(isError) {
+                                        if(isError) {
+                                            logDebugMessageToConsole(null, null, new Error().stack, true);
+                                        }
+                                        else {
+                                            logDebugMessageToConsole('updated video id with index successfully: ' + videoId, null, null, true);
+                                        }
+                                    });
                                 }
                             })
                             .catch(error => {
@@ -82,19 +67,3 @@ setInterval(function() {
         worker.send({ cmd: 'live_stream_worker_stats_request' });
     });
 }, 1000);
-
-setInterval(function() {
-    Object.values(cluster.workers).forEach((worker) => {
-        worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWorkerStats: liveStreamWorkerStats });
-    });
-}, 1000);
-
-setInterval(function() {
-    maintainFileSystem(database)
-    .then(function() {
-        // do nothing
-    })
-    .catch(function(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
-    });
-}, 5000);
