@@ -3,23 +3,16 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
-
-
 var isDeveloperMode;
-
 var moartubeNodeHttpPort;
-
 var moartubeIndexerIp;
 var moartubeIndexerPort;
 var moartubeIndexerHttpProtocol;
-
 var moartubeAliaserIp;
 var moartubeAliaserPort;
 var moartubeAliaserHttpProtocol;
-
 var expressSessionName;
 var expressSessionSecret;
-
 var isDockerEnvironment;
 var dataDirectoryPath;
 var nodeSettingsPath;
@@ -28,11 +21,8 @@ var publicDirectoryPath;
 var pagesDirectoryPath;
 var videosDirectoryPath;
 var databaseDirectoryPath;
+var databaseFilePath;
 var certificatesDirectoryPath;
-
-
-
-
 
 function logDebugMessageToConsole(message, error, stackTrace, isLoggingToFile) {
     const date = new Date(Date.now());
@@ -323,6 +313,25 @@ function setNodeidentification(nodeIdentification) {
 	fs.writeFileSync(path.join(DATA_DIRECTORY_PATH, '_node_identification.json'), JSON.stringify(nodeIdentification));
 }
 
+function deleteDirectoryRecursive(directoryPath) {
+    if(fs.existsSync(directoryPath)) {
+        fs.readdirSync(directoryPath).forEach((file) => {
+            const curPath = path.join(directoryPath, file);
+    
+            if (fs.statSync(curPath).isDirectory()) {
+                deleteDirectoryRecursive(curPath);
+            }
+            else {
+                fs.unlinkSync(curPath);
+            }
+        });
+
+        if (fs.readdirSync(directoryPath).length === 0) {
+            fs.rmdirSync(directoryPath);
+        }
+    }
+}
+
 function loadConfig() {
 	process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
@@ -343,6 +352,7 @@ function loadConfig() {
 	setImagesDirectoryPath(path.join(getDataDirectoryPath(), 'images'));
 	setVideosDirectoryPath(path.join(getDataDirectoryPath(), 'media/videos'));
 	setDatabaseDirectoryPath(path.join(getDataDirectoryPath(), 'db'));
+    setDatabaseFilePath(path.join(getDatabaseDirectoryPath(), 'node_db.sqlite'));
 	setCertificatesDirectoryPath(path.join(getDataDirectoryPath(), 'certificates'));
 
 	fs.mkdirSync(getImagesDirectoryPath(), { recursive: true });
@@ -391,8 +401,6 @@ function loadConfig() {
 	setExpressSessionSecret(nodeSettings.expressSessionSecret);
 }
 
-
-
 function websocketNodeBroadcast(message) {
     process.send({ cmd: 'websocket_broadcast', message: message });
 }
@@ -401,12 +409,7 @@ function websocketChatBroadcast(message) {
     process.send({ cmd: 'websocket_broadcast_chat', message: message });
 }
 
-
-
-
-
-
-
+/* getters */
 
 function getPublicDirectoryPath() {
     return publicDirectoryPath;
@@ -438,6 +441,10 @@ function getVideosDirectoryPath() {
 
 function getDatabaseDirectoryPath() {
     return databaseDirectoryPath;
+}
+
+function getDatabaseFilePath() {
+    return databaseFilePath;
 }
 
 function getCertificatesDirectoryPath() {
@@ -498,14 +505,7 @@ function getNodeSettings() {
 	return nodeSettings;
 }
 
-
-
-
-
-
-
-
-
+/* setters */
 
 function setPublicDirectoryPath(path) {
     publicDirectoryPath = path;
@@ -537,6 +537,10 @@ function setVideosDirectoryPath(path) {
 
 function setDatabaseDirectoryPath(path) {
     databaseDirectoryPath = path;
+}
+
+function setDatabaseFilePath(path) {
+    databaseFilePath = path;
 }
 
 function setCertificatesDirectoryPath(path) {
@@ -587,7 +591,6 @@ function setNodeSettings(nodeSettings) {
 	fs.writeFileSync(NODE_SETTINGS_PATH, JSON.stringify(nodeSettings));
 }
 
-
 module.exports = {
     logDebugMessageToConsole,
     websocketNodeBroadcast,
@@ -607,6 +610,7 @@ module.exports = {
     getImagesDirectoryPath,
     getVideosDirectoryPath,
     getDatabaseDirectoryPath,
+    getDatabaseFilePath,
     getCertificatesDirectoryPath,
     getIsDeveloperMode,
     getMoarTubeIndexerHttpProtocol,
@@ -630,6 +634,7 @@ module.exports = {
     setImagesDirectoryPath,
     setVideosDirectoryPath,
     setDatabaseDirectoryPath,
+    setDatabaseFilePath,
     setCertificatesDirectoryPath,
     setIsDeveloperMode,
     setMoarTubeIndexerHttpProtocol,
