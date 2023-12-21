@@ -16,10 +16,12 @@ const {
 	setIsDockerEnvironment, getIsDockerEnvironment, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, setVideosDirectoryPath, setDatabaseDirectoryPath,
 	setDatabaseFilePath, setCertificatesDirectoryPath, setIsDeveloperMode, setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort,
 	setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort, setJwtSecret, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
-	getCertificatesDirectoryPath, getNodeSettingsPath, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret, setMoarTubeNodeHttpPort
+	getCertificatesDirectoryPath, getNodeSettingsPath, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret, setMoarTubeNodeHttpPort,
+	performNodeIdentification, getNodeIdentification, getNodeIconBase64
 } = require('./utils/helpers');
-const { provisionSqliteDatabase, finishPendingDatabaseWriteJob } = require('./utils/database');
+const { provisionSqliteDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL } = require('./utils/database');
 const { initializeHttpServer, restartHttpServer, gethttpServerWrapper } = require('./utils/httpserver');
+const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
 
 const accountRoutes = require('./routes/account');
 const captchaRoutes = require('./routes/captcha');
@@ -101,27 +103,17 @@ if(cluster.isMaster) {
 					const query = msg.query;
 					const parameters = msg.parameters;
 					const databaseWriteJobId = msg.databaseWriteJobId;
-					
-					try {
-						database.run(query, parameters, function(error) {
-							if(error) {
-								logDebugMessageToConsole(null, error, new Error().stack, true);
 
-								worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, isError: true });
-							}
-							else {
-								worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, isError: false });
-							}
-						});
-					}
-					catch(error) {
-						logDebugMessageToConsole(null, error, new Error().stack, true);
-						
+					performDatabaseWriteJob(query, parameters)
+					.then(() => {
+						worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, isError: false });
+					})
+					.catch(() => {
 						worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, isError: true });
-					}
-					finally {
+					})
+					.finally(() => {
 						release();
-					}
+					});
 				}
 				else if (msg.cmd && msg.cmd === 'live_stream_worker_stats_response') {
 					const workerId = msg.workerId;
@@ -155,57 +147,56 @@ if(cluster.isMaster) {
 			const nodeSettings = getNodeSettings();
 			
 			if(nodeSettings.isNodeConfigured && !nodeSettings.isNodePrivate) {
-				database.all('SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1', function(error, rows) {
-					if(error) {
-						logDebugMessageToConsole(null, error, new Error().stack, true);
-					}
-					else {
-						if(rows.length > 0) {
-							performNodeIdentification(false)
-							.then(() => {
-								const nodeIdentification = getNodeIdentification();
+				performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1', [])
+				.then(rows => {
+					if(rows.length > 0) {
+						performNodeIdentification(false)
+						.then(() => {
+							const nodeIdentification = getNodeIdentification();
+							
+							const nodeIdentifier = nodeIdentification.nodeIdentifier;
+							const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+							
+							rows.forEach(function(row) {
+								const videoId = row.video_id;
+								const title = row.title;
+								const tags = row.tags;
+								const views = row.views;
+								const isStreaming = (row.is_streaming === 1);
+								const lengthSeconds = row.length_seconds;
+	
+								const nodeIconBase64 = getNodeIconBase64();
+	
+								const videoPreviewImageBase64 = fs.readFileSync(path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg')).toString('base64');
 								
-								const nodeIdentifier = nodeIdentification.nodeIdentifier;
-								const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
-								
-								rows.forEach(function(row) {
-									const videoId = row.video_id;
-									const title = row.title;
-									const tags = row.tags;
-									const views = row.views;
-									const isStreaming = (row.is_streaming === 1);
-									const lengthSeconds = row.length_seconds;
-		
-									const nodeIconBase64 = getNodeIconBase64();
-		
-									const videoPreviewImageBase64 = fs.readFileSync(path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg')).toString('base64');
-									
-									indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
-									.then(async indexerResponseData => {
-										if(indexerResponseData.isError) {
-											logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
-										}
-										else {
-											submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = 0 WHERE video_id = ?', [videoId], function(isError) {
-												if(isError) {
-													logDebugMessageToConsole(null, null, new Error().stack, true);
-												}
-												else {
-													logDebugMessageToConsole('updated video id with index successfully: ' + videoId, null, null, true);
-												}
-											});
-										}
-									})
-									.catch(error => {
-										logDebugMessageToConsole(null, error, new Error().stack, true);
-									});
+								indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
+								.then(async indexerResponseData => {
+									if(indexerResponseData.isError) {
+										logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+									}
+									else {
+										submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = 0 WHERE video_id = ?', [videoId], function(isError) {
+											if(isError) {
+												logDebugMessageToConsole(null, null, new Error().stack, true);
+											}
+											else {
+												logDebugMessageToConsole('updated video id with index successfully: ' + videoId, null, null, true);
+											}
+										});
+									}
+								})
+								.catch(error => {
+									logDebugMessageToConsole(null, error, new Error().stack, true);
 								});
-							})
-							.catch(error => {
-								logDebugMessageToConsole(null, error, new Error().stack, true);
 							});
-						}
+						})
+						.catch(error => {
+							logDebugMessageToConsole(null, error, new Error().stack, true);
+						});
 					}
+				})
+				.catch(error => {
+					// do nothing
 				});
 			}
 		}, 3000);
@@ -230,6 +221,8 @@ else {
 	startNode();
 
 	async function startNode() {
+		await openDatabase();
+
 		const app = express();
 		
 		app.enable('trust proxy');

@@ -1,5 +1,6 @@
 const { logDebugMessageToConsole } = require('../utils/helpers');
 const { isCommentIdValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isCaptchaResponseValid } = require('../utils/validators');
+const { performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 
 
 function commentIdReport_POST(req, res) {
@@ -16,30 +17,27 @@ function commentIdReport_POST(req, res) {
         const captchaAnswer = req.session.commentReportCaptcha;
         
         if(isCaptchaResponseValid(captchaResponse, captchaAnswer)) {
-            database.get('SELECT * FROM comments WHERE id = ?', [commentId], function(error, result) {
-                if(error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
+            performDatabaseReadJob_GET('SELECT * FROM comments WHERE id = ?', [commentId])
+            .then(row => {
+                if(row != null) {
+                    const videoId = row.video_id;
+                    const commentTimestamp = row.timestamp;
                     
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    submitDatabaseWriteJob('INSERT INTO commentReports(timestamp, comment_timestamp, video_id, comment_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?)', [Date.now(), commentTimestamp, videoId, commentId, email, reportType, message], function(isError) {
+                        if(isError) {
+                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                        }
+                        else {
+                            res.send({isError: false});
+                        }
+                    });
                 }
                 else {
-                    if(result != null) {
-                        const videoId = result.video_id;
-                        const commentTimestamp = result.timestamp;
-                        
-                        submitDatabaseWriteJob('INSERT INTO commentReports(timestamp, comment_timestamp, video_id, comment_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?)', [Date.now(), commentTimestamp, videoId, commentId, email, reportType, message], function(isError) {
-                            if(isError) {
-                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                            }
-                            else {
-                                res.send({isError: false});
-                            }
-                        });
-                    }
-                    else {
-                        res.send({isError: true, message: 'that comment does not exist'});
-                    }
+                    res.send({isError: true, message: 'that comment does not exist'});
                 }
+            })
+            .catch(error => {
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
             });
         }
         else {

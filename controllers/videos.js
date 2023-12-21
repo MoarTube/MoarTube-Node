@@ -2,12 +2,16 @@
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
-const { submitDatabaseWriteJob } = require('../utils/database');
+const { submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
 const { 
     logDebugMessageToConsole, getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, getMoarTubeAliaserPort,
     getVideosDirectoryPath
 } = require('../utils/helpers');
-const { isVideoIdValid, isTitleValid, isDescriptionValid, isTagsValid, isFormatValid, isResolutionValid, isSegmentNameValid, isSourceFileExtensionValid } = require('../utils/validators');
+const { 
+    isManifestNameValid, isSegmentNameValid, isSearchTermValid, isSourceFileExtensionValid, isBooleanValid, isVideoCommentValid, isCaptchaTypeValid, isCaptchaResponseValid,
+    isTimestampValid, isDiscussionTypeValid, isCommentIdValid, isSortTermValid, isTagLimitValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isVideoIdValid,
+    isVideoIdsValid, isFormatValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid, isTitleValid, isDescriptionValid, isTagTermValid, isTagsValid
+} = require('../utils/validators');
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
 
 function import_POST(req, res) {
@@ -1303,56 +1307,53 @@ function search_GET(req, res) {
             query = 'SELECT * FROM videos WHERE creation_timestamp < ? AND title LIKE ?';
             params = [timestamp, '%' + searchTerm + '%'];
         }
-        
-        database.all(query, params, function(error, rows) {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
-                
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-            else {
-                if(sortTerm === 'latest') {
-                    rows.sort(function compareByTimestampDescending(a, b) {
-                        return b.creation_timestamp - a.creation_timestamp;
-                    });
-                }
-                else if(sortTerm === 'popular') {
-                    rows.sort(function compareByTimestampDescending(a, b) {
-                        return b.views - a.views;
-                    });
-                }
-                else if(sortTerm === 'oldest') {
-                    rows.sort(function compareByTimestampDescending(a, b) {
-                        return a.creation_timestamp - b.creation_timestamp;
-                    });
-                }
 
-                var rowsToSend = [];
-                
-                if(tagTerm.length === 0) {
-                    if(tagLimit === 0) {
-                        rowsToSend = rows;
-                    }
-                    else {
-                        rowsToSend = rows.slice(0, tagLimit);
-                    }
+        performDatabaseReadJob_ALL(query, params)
+        .then(rows => {
+            if(sortTerm === 'latest') {
+                rows.sort(function compareByTimestampDescending(a, b) {
+                    return b.creation_timestamp - a.creation_timestamp;
+                });
+            }
+            else if(sortTerm === 'popular') {
+                rows.sort(function compareByTimestampDescending(a, b) {
+                    return b.views - a.views;
+                });
+            }
+            else if(sortTerm === 'oldest') {
+                rows.sort(function compareByTimestampDescending(a, b) {
+                    return a.creation_timestamp - b.creation_timestamp;
+                });
+            }
+
+            var rowsToSend = [];
+            
+            if(tagTerm.length === 0) {
+                if(tagLimit === 0) {
+                    rowsToSend = rows;
                 }
                 else {
-                    for(const row of rows) {
-                        const tagsArray = row.tags.split(',');
+                    rowsToSend = rows.slice(0, tagLimit);
+                }
+            }
+            else {
+                for(const row of rows) {
+                    const tagsArray = row.tags.split(',');
 
-                        if (tagsArray.includes(tagTerm) && !rowsToSend.includes(row)) {
-                            rowsToSend.push(row);
-                        }
+                    if (tagsArray.includes(tagTerm) && !rowsToSend.includes(row)) {
+                        rowsToSend.push(row);
+                    }
 
-                        if(tagLimit !== 0 && rowsToSend.length === tagLimit) {
-                            break;
-                        }
+                    if(tagLimit !== 0 && rowsToSend.length === tagLimit) {
+                        break;
                     }
                 }
-                
-                res.send({isError: false, searchResults: rowsToSend});
             }
+            
+            res.send({isError: false, searchResults: rowsToSend});
+        })
+        .catch(error => {
+            res.send({isError: true, message: 'error communicating with the MoarTube node'});
         });
     }
     else {
@@ -2237,27 +2238,24 @@ function recommendations_GET(req, res) {
 }
 
 function tags_GET(req, res) {
-    const tags = [];
-    
-    database.all('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) ORDER BY creation_timestamp DESC', function(error, rows) {
-        if(error) {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+    performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) ORDER BY creation_timestamp DESC', [])
+    .then(rows => {
+        const tags = [];
+        
+        rows.forEach(function(row) {
+            const tagsArray = row.tags.split(',');
             
-            res.send({isError: true, message: 'error communicating with the MoarTube node'});
-        }
-        else {
-            rows.forEach(function(row) {
-                const tagsArray = row.tags.split(',');
-                
-                tagsArray.forEach(function(tag) {
-                    if (!tags.includes(tag)) {
-                        tags.push(tag);
-                    }
-                });
+            tagsArray.forEach(function(tag) {
+                if (!tags.includes(tag)) {
+                    tags.push(tag);
+                }
             });
-            
-            res.send({isError: false, tags: tags});
-        }
+        });
+        
+        res.send({isError: false, tags: tags});
+    })
+    .catch(error => {
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });
 }
 

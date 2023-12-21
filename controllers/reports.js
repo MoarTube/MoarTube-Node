@@ -1,17 +1,26 @@
 const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
+const { performDatabaseReadJob_GET } = require('../utils/database');
 
 function reportsCount_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
-            database.get('SELECT COUNT(*) AS reportCount FROM videoReports', function(error, videoCountResult) {
-                database.get('SELECT COUNT(*) AS reportCount FROM commentReports', function(error, commentCountResult) {
+            performDatabaseReadJob_GET('SELECT COUNT(*) AS reportCount FROM videoReports', [])
+            .then(videoCountResult => {
+                performDatabaseReadJob_GET('SELECT COUNT(*) AS reportCount FROM commentReports', [])
+                .then(commentCountResult => {
                     const videoReportCount = videoCountResult.reportCount;
                     const commentReportCount = commentCountResult.reportCount;
                     const totalReportCount = videoReportCount + commentReportCount;
                     
                     res.send({isError: false, videoReportCount: videoReportCount, commentReportCount: commentReportCount, totalReportCount: totalReportCount});
+                })
+                .catch(error => {
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
                 });
+            })
+            .catch(error => {
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
             });
         }
         else {

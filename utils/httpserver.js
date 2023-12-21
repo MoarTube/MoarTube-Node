@@ -281,7 +281,7 @@ function initializeHttpServer(app) {
                                         
                                         websocketChatBroadcast({eventName: 'message', videoId: videoId, chatMessageContent: chatMessageContent, username: username, usernameColorCode: usernameColorCode});
                                         
-                                        getDatabase().get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, videoData) {
+                                        database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, videoData) {
                                             if(error) {
                                                 logDebugMessageToConsole(null, error, new Error().stack, true);
                                                 
