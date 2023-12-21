@@ -1,3 +1,4 @@
+const { stoppedPublishVideoUploading, stoppingPublishVideoUploading } = require("./trackers/publish-video-uploading-tracker");
 
 
 
@@ -144,24 +145,10 @@ function initializeHttpServer() {
                                                 websocketNodeBroadcast(parsedMessage);
                                             }
                                             else if(type === 'publishing_stopping') {
-                                                if(publishVideoUploadingTracker.hasOwnProperty(videoId)) {
-                                                    publishVideoUploadingTracker[videoId].stopping = true;
-                                                }
-                                                
-                                                websocketNodeBroadcast(parsedMessage);
+                                                stoppingPublishVideoUploading(videoId);
                                             }
                                             else if(type === 'publishing_stopped') {
-                                                if(publishVideoUploadingTracker.hasOwnProperty(videoId)) {
-                                                    const uploadRequests = publishVideoUploadingTracker[videoId].uploadRequests;
-                                                    
-                                                    uploadRequests.forEach(function(uploadRequest) {
-                                                        uploadRequest.destroy();
-                                                    });
-                                                    
-                                                    delete publishVideoUploadingTracker[videoId];
-                                                }
-                                                
-                                                websocketNodeBroadcast(parsedMessage);
+                                                stoppedPublishVideoUploading(videoId)
                                             }
                                             else if(type === 'streaming_stopping') {
                                                 websocketNodeBroadcast(parsedMessage);

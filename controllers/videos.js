@@ -1,3 +1,5 @@
+const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
+
 function import_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
@@ -270,16 +272,14 @@ function videoIdUpload_POST(req, res) {
                 const totalFileSize = parseInt(req.headers['content-length']);
                 
                 if(totalFileSize > 0) {
-                    if(!publishVideoUploadingTracker.hasOwnProperty(videoId)) {
-                        publishVideoUploadingTracker[videoId] = {uploadRequests: [], stopping: false};
-                    }
-                    
-                    publishVideoUploadingTracker[videoId].uploadRequests.push(req);
+                    addToPublishVideoUploadingTracker(videoId);
+
+                    addToPublishVideoUploadingTrackerUploadRequests(videoId, req);
                     
                     var lastPublishTimestamp = 0;
                     var receivedFileSize = 0;
                     req.on('data', function(chunk) {
-                        if(!publishVideoUploadingTracker[videoId].stopping) {
+                        if(!isPublishVideoUploading(videoId)) {
                             
                             receivedFileSize += chunk.length;
                             
