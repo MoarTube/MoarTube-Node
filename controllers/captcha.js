@@ -1,7 +1,5 @@
-
-
-
-const { logDebugMessageToConsole, getAuthenticationStatus, generateCaptcha, performNodeIdentification, getNodeIdentification, getNodeSettings } = require('../utils/helpers');
+const { logDebugMessageToConsole } = require('../utils/logger');
+const { getAuthenticationStatus, generateCaptcha, performNodeIdentification, getNodeIdentification, getNodeSettings } = require('../utils/helpers');
 const { isCaptchaTypeValid } = require('../utils/validators');
 const { indexer_getCaptcha } = require('../utils/indexer-communications');
 const { aliaser_getCaptcha } = require('../utils/aliaser-communications');

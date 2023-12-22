@@ -2,11 +2,11 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const { v1: uuidv1, v4: uuidv4 } = require('uuid');
 
-const { logDebugMessageToConsole, getDatabaseFilePath } = require("./helpers");
+const { logDebugMessageToConsole } = require('./logger');
+const { getDatabaseFilePath } = require("./helpers");
 
 let database;
 let PENDING_DATABASE_WRITE_JOBS = {};
-let pendingDatabaseReadJobs = {};
 
 function provisionSqliteDatabase() {
     return new Promise(function(resolve, reject) {
@@ -31,23 +31,10 @@ function provisionSqliteDatabase() {
                 await performDatabaseWriteJob('UPDATE videos SET is_streamed = ? WHERE is_streaming = ?', [1, 1]);
                 await performDatabaseWriteJob('UPDATE videos SET is_importing = ?, is_publishing = ?, is_streaming = ?', [0, 0, 0]);
 
-                await performDatabaseMaintenance();
+                await performDatabaseWriteJob('DELETE FROM liveChatMessages', []);
 
                 logDebugMessageToConsole('provisioned SQLite3 database', null, null, true);
 
-                resolve();
-            }
-        });
-    });
-}
-
-function performDatabaseMaintenance() {
-    return new Promise(function(resolve, reject) {
-        database.run('DELETE FROM liveChatMessages', function(error) {
-            if(error) {
-                reject();
-            }
-            else {
                 resolve();
             }
         });
@@ -122,15 +109,7 @@ function openDatabase() {
                     reject();
                 }
                 else {
-                    database.run('PRAGMA journal_mode=WAL', function (error) {
-                        if (error) {
-                            logDebugMessageToConsole(null, error, new Error().stack, true);
-                            
-                            reject();
-                        } else {
-                            resolve();
-                        }
-                    });
+                    resolve();
                 }
             });
         }

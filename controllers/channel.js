@@ -1,4 +1,4 @@
-const { logDebugMessageToConsole } = require('../utils/helpers');
+const { logDebugMessageToConsole } = require('../utils/logger');
 const { isSearchTermValid, isSortTermValid, isTagTermValid } = require('../utils/validators');
 const { performDatabaseReadJob_ALL } = require('../utils/database');
 

@@ -5,11 +5,11 @@ const { reportsArchiveVideos_GET, reportsArchiveVideosArchiveIdDelete_DELETE } =
 const router = express.Router();
 
 router.get('/', async (req, res) => {
-    reportsArchiveVideos_GET(req, rep);
+    reportsArchiveVideos_GET(req, res);
 });
 
 router.delete('/:archiveId/delete', async (req, res) => {
-    reportsArchiveVideosArchiveIdDelete_DELETE(req, rep);
+    reportsArchiveVideosArchiveIdDelete_DELETE(req, res);
 });
 
 module.exports = router;

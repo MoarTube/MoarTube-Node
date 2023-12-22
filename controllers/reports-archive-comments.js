@@ -1,6 +1,7 @@
-const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
+const { logDebugMessageToConsole } = require('../utils/logger');
+const { getAuthenticationStatus } = require('../utils/helpers');
 const { isArchiveIdValid } = require('../utils/validators');
-const { performDatabaseReadJob_ALL } = require('../utils/database');
+const { performDatabaseReadJob_ALL, submitDatabaseWriteJob } = require('../utils/database');
 
 function reportsArchiveComments_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)

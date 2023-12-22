@@ -1,4 +1,5 @@
-const { logDebugMessageToConsole, getAuthenticationStatus, generateCaptcha } = require('../utils/helpers');
+const { logDebugMessageToConsole } = require('../utils/logger');
+const { getAuthenticationStatus, generateCaptcha } = require('../utils/helpers');
 const { isReportIdValid } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 

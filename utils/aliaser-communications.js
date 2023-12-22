@@ -1,5 +1,6 @@
 const axios = require('axios');
 
+const { logDebugMessageToConsole } = require('./logger');
 const { getMoarTubeAliaserUrl } = require('./helpers');
 
 function aliaser_getVideoAlias(videoId, nodeIdentifier, nodeIdentifierProof) {

@@ -1,5 +1,6 @@
 const axios = require('axios');
 
+const { logDebugMessageToConsole } = require('./logger');
 const { getMoarTubeIndexerUrl } = require('./helpers');
 
 function indexer_addVideoToIndex(data) {

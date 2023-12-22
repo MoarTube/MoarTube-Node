@@ -1,111 +1,111 @@
 const fs = require('fs');
 const path = require('path');
 
-const { logDebugMessageToConsole, getVideosDirectoryPath } = require('./helpers');
+const { logDebugMessageToConsole } = require('./logger');
+const { getVideosDirectoryPath } = require('./helpers');
+const { performDatabaseReadJob_ALL } = require('./database');
 
 setInterval(function() {
-    maintainFileSystem(database);
+    maintainFileSystem();
 }, 5000);
 
-function maintainFileSystem(database) {
+function maintainFileSystem() {
     return new Promise(async function(resolve, reject) {
-        await updateManifestFiles(database);
-        await removeUnusedMasterManifests(database);
+        await updateManifestFiles();
+        await removeUnusedMasterManifests();
         
         resolve();
     });
 }
 
-function updateManifestFiles(database) {
+function updateManifestFiles() {
     return new Promise(async function(resolve, reject) {
-        database.all('SELECT video_id, is_stream_recorded_remotely FROM videos WHERE is_streamed = 1', function(error, rows) {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+        performDatabaseReadJob_ALL('SELECT video_id, is_stream_recorded_remotely FROM videos WHERE is_streamed = 1', [])
+        .then(rows => {
+            for(var i = 0; i < rows.length; i++) {
+                const row = rows[i];
                 
-                reject();
-            }
-            else {
-                for(var i = 0; i < rows.length; i++) {
-                    const row = rows[i];
-                    
-                    if(row.is_stream_recorded_remotely) {
-                        const videoId = row.video_id;
-                        
-                        const m3u8Directory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
-                        
-                        const manifest2160pFilePath = path.join(m3u8Directory, '/manifest-2160p.m3u8');
-                        const manifest1440pFilePath = path.join(m3u8Directory, '/manifest-1440p.m3u8');
-                        const manifest1080pFilePath = path.join(m3u8Directory, '/manifest-1080p.m3u8');
-                        const manifest720pFilePath = path.join(m3u8Directory, '/manifest-720p.m3u8');
-                        const manifest480pFilePath = path.join(m3u8Directory, '/manifest-480p.m3u8');
-                        const manifest360pFilePath = path.join(m3u8Directory, '/manifest-360p.m3u8');
-                        const manifest240pFilePath = path.join(m3u8Directory, '/manifest-240p.m3u8');
-                        
-                        const manifestFilePaths = [
-                            manifest2160pFilePath,
-                            manifest1440pFilePath,
-                            manifest1080pFilePath,
-                            manifest720pFilePath,
-                            manifest480pFilePath,
-                            manifest360pFilePath,
-                            manifest240pFilePath
-                        ];
-                        
-                        const HLS_END_LIST_TAG = '#EXT-X-ENDLIST';
-                        
-                        for(var j = 0; j < manifestFilePaths.length; j++) {
-                            const manifestFilePath = manifestFilePaths[j];
-                            if (fs.existsSync(manifestFilePath)) {
-                                const manifestFileText = fs.readFileSync(manifestFilePath, 'utf8')
-                                if(!manifestFileText.includes(HLS_END_LIST_TAG)) {
-                                    const manifestFileTextModified = manifestFileText.trim() + '\n' + HLS_END_LIST_TAG + '\n';
-                                    fs.writeFileSync(manifestFilePath, manifestFileTextModified);
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                resolve();
-            }
-        });
-    });
-}
-
-function removeUnusedMasterManifests(database) {
-    return new Promise(async function(resolve, reject) {
-        database.all('SELECT video_id FROM videos', function(error, rows) {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
-                
-                reject();
-            }
-            else {
-                for(var i = 0; i < rows.length; i++) {
-                    const row = rows[i];
-                    
+                if(row.is_stream_recorded_remotely) {
                     const videoId = row.video_id;
                     
                     const m3u8Directory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
                     
-                    if (fs.existsSync(m3u8Directory)) {
-                        fs.readdir(m3u8Directory, (error, files) => {
-                            if(error) {
-                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                    const manifest2160pFilePath = path.join(m3u8Directory, '/manifest-2160p.m3u8');
+                    const manifest1440pFilePath = path.join(m3u8Directory, '/manifest-1440p.m3u8');
+                    const manifest1080pFilePath = path.join(m3u8Directory, '/manifest-1080p.m3u8');
+                    const manifest720pFilePath = path.join(m3u8Directory, '/manifest-720p.m3u8');
+                    const manifest480pFilePath = path.join(m3u8Directory, '/manifest-480p.m3u8');
+                    const manifest360pFilePath = path.join(m3u8Directory, '/manifest-360p.m3u8');
+                    const manifest240pFilePath = path.join(m3u8Directory, '/manifest-240p.m3u8');
+                    
+                    const manifestFilePaths = [
+                        manifest2160pFilePath,
+                        manifest1440pFilePath,
+                        manifest1080pFilePath,
+                        manifest720pFilePath,
+                        manifest480pFilePath,
+                        manifest360pFilePath,
+                        manifest240pFilePath
+                    ];
+                    
+                    const HLS_END_LIST_TAG = '#EXT-X-ENDLIST';
+                    
+                    for(var j = 0; j < manifestFilePaths.length; j++) {
+                        const manifestFilePath = manifestFilePaths[j];
+                        if (fs.existsSync(manifestFilePath)) {
+                            const manifestFileText = fs.readFileSync(manifestFilePath, 'utf8')
+                            if(!manifestFileText.includes(HLS_END_LIST_TAG)) {
+                                const manifestFileTextModified = manifestFileText.trim() + '\n' + HLS_END_LIST_TAG + '\n';
+                                fs.writeFileSync(manifestFilePath, manifestFileTextModified);
                             }
-                            else {
-                                if(files.length === 1 && files[0] === 'manifest-master.m3u8') {
-                                    const filePath = path.join(m3u8Directory, files[0]);
-                                    
-                                    fs.unlinkSync(filePath);
-                                }
-                            }
-                        });
+                        }
                     }
                 }
-                
-                resolve();
             }
+            
+            resolve();
+        })
+        .catch(error => {
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+
+            reject();
+        });
+    });
+}
+
+function removeUnusedMasterManifests() {
+    return new Promise(async function(resolve, reject) {
+        performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+        .then(videos => {
+            for(var i = 0; i < videos.length; i++) {
+                const row = videos[i];
+                
+                const videoId = row.video_id;
+                
+                const m3u8Directory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
+                
+                if (fs.existsSync(m3u8Directory)) {
+                    fs.readdir(m3u8Directory, (error, files) => {
+                        if(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        }
+                        else {
+                            if(files.length === 1 && files[0] === 'manifest-master.m3u8') {
+                                const filePath = path.join(m3u8Directory, files[0]);
+                                
+                                fs.unlinkSync(filePath);
+                            }
+                        }
+                    });
+                }
+            }
+            
+            resolve();
+        })
+        .catch(error => {
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+            reject();
         });
     });
 }

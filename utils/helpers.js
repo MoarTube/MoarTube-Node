@@ -2,6 +2,9 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
+const { logDebugMessageToConsole } = require('./logger');
+
+
 var isDeveloperMode;
 var jwtSecret;
 var moartubeNodeHttpPort;
@@ -23,51 +26,6 @@ var videosDirectoryPath;
 var databaseDirectoryPath;
 var databaseFilePath;
 var certificatesDirectoryPath;
-
-function logDebugMessageToConsole(message, error, stackTrace, isLoggingToFile) {
-    const date = new Date(Date.now());
-    const year = date.getFullYear();
-    const month = ('0' + (date.getMonth() + 1)).slice(-2);
-    const day = ('0' + date.getDate()).slice(-2);
-    const hours = ('0' + date.getHours()).slice(-2);
-    const minutes = ('0' + date.getMinutes()).slice(-2);
-    const seconds = ('0' + date.getSeconds()).slice(-2);
-    const humanReadableTimestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-
-    if(message == null) {
-        message = 'none';
-    }
-    
-    var errorMessage = '<message: ' + message + ', date: ' + humanReadableTimestamp + '>';
-
-    if(error != null) {
-        if(error.message != null) {
-            errorMessage += '\n' + error.message + '\n';
-        }
-
-        if(error.stack != null) {
-            errorMessage += '\n' + error.stack + '\n';
-        }
-        else if(error.stackTrace != null) {
-            errorMessage += '\n' + error.stackTrace + '\n';
-        }
-    }
-
-    if(stackTrace != null) {
-        errorMessage += '\n' + stackTrace + '\n';
-    }
-    
-    console.log(errorMessage);
-    
-    errorMessage += '\n';
-
-    /*
-    if(isLoggingToFile) {
-        const logFilePath = path.join(__dirname, '/_node_log.txt');
-        fs.appendFileSync(logFilePath, errorMessage);
-    }
-    */
-}
 
 function generateCaptcha() {
     return new Promise(function(resolve, reject) {
@@ -149,7 +107,7 @@ function sanitizeTagsSpaces(tags) {
     return tags.replace(/\s+/g, ' ');
 }
 
-async function generateVideoId(database) {
+async function generateVideoId() {
     const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-';
     const length = 11;
 
@@ -185,15 +143,21 @@ async function generateVideoId(database) {
 
         if (hyphenCount <= 1 && underscoreCount <= 1) {
             await new Promise((resolve, reject) => {
-                database.get('SELECT * FROM videos WHERE video_id = ?', [videoId], function (error, video) {
-                    if (error) {
-                        reject(error);
-                    } else if (video) {
+                resolve(true);
+                /*
+                performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+                .then(video => {
+                    if (video == null) {
                         resolve(false);
-                    } else {
+                    } 
+                    else {
                         resolve(true);
                     }
+                })
+                .catch(error => {
+                    reject(error);
                 });
+                */
             }).then(isIdUnique => {
                 isUnique = isIdUnique;
             }).catch(error => {
@@ -557,6 +521,7 @@ module.exports = {
     getMoarTubeAliaserHttpProtocol,
     getMoarTubeAliaserIp,
     getMoarTubeAliaserPort,
+    getMoarTubeAliaserUrl,
     getMoarTubeNodeHttpPort,
     getExpressSessionName,
     getExpressSessionSecret,

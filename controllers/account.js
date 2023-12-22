@@ -1,7 +1,8 @@
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const { logDebugMessageToConsole, getNodeSettings, getAuthenticationStatus, getJwtSecret } = require('../utils/helpers');
+const { logDebugMessageToConsole } = require('../utils/logger');
+const { getNodeSettings, getAuthenticationStatus, getJwtSecret } = require('../utils/helpers');
 const { isUsernameValid, isPasswordValid, isBooleanValid } = require('../utils/validators');
 
 function signIn_POST(req, res) {

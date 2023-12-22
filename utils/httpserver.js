@@ -6,13 +6,20 @@ const webSocket = require('ws');
 const httpTerminator = require('http-terminator');
 const sanitizeHtml = require('sanitize-html');
 
-const { logDebugMessageToConsole, getNodeSettings, getAuthenticationStatus, getCertificatesDirectoryPath, getMoarTubeNodeHttpPort } = require("./helpers");
+const { logDebugMessageToConsole } = require('./logger');
+const { getNodeSettings, getAuthenticationStatus, getCertificatesDirectoryPath, getMoarTubeNodeHttpPort } = require("./helpers");
 const { stoppedPublishVideoUploading, stoppingPublishVideoUploading } = require("./trackers/publish-video-uploading-tracker");
+const { isVideoIdValid, isChatMessageContentValid } = require('./validators');
 
 let httpServerWrapper;
+let app;
 
-function initializeHttpServer(app) {
+function initializeHttpServer(value) {
     return new Promise(function(resolve, reject) {
+        if(app == null) {
+            app = value;
+        }
+
         const nodeSettings = getNodeSettings();
         
         if(nodeSettings.isSecure) {
@@ -280,42 +287,39 @@ function initializeHttpServer(app) {
                                         ws.rateLimiter = rateLimiter;
                                         
                                         websocketChatBroadcast({eventName: 'message', videoId: videoId, chatMessageContent: chatMessageContent, username: username, usernameColorCode: usernameColorCode});
-                                        
-                                        database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, videoData) {
-                                            if(error) {
-                                                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                                        performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+                                        .then(video => {
+                                            if(video != null) {
+                                                const meta = JSON.parse(video.meta);
                                                 
-                                                res.send({isError: true, message: 'error retrieving video data'});
-                                            }
-                                            else {
-                                                if(videoData != null) {
-                                                    const meta = JSON.parse(videoData.meta);
+                                                const isChatHistoryEnabled = meta.chatSettings.isChatHistoryEnabled;
+                                                
+                                                if(isChatHistoryEnabled) {
+                                                    const chatHistoryLimit = meta.chatSettings.chatHistoryLimit;
                                                     
-                                                    const isChatHistoryEnabled = meta.chatSettings.isChatHistoryEnabled;
-                                                    
-                                                    if(isChatHistoryEnabled) {
-                                                        const chatHistoryLimit = meta.chatSettings.chatHistoryLimit;
-                                                        
-                                                        submitDatabaseWriteJob('INSERT INTO liveChatMessages(video_id, username, username_color_hex_code, chat_message, timestamp) VALUES (?, ?, ?, ?, ?)', [videoId, username, usernameColorCode, chatMessageContent, timestamp], function(isError) {
-                                                            if(isError) {
-                                                                
+                                                    submitDatabaseWriteJob('INSERT INTO liveChatMessages(video_id, username, username_color_hex_code, chat_message, timestamp) VALUES (?, ?, ?, ?, ?)', [videoId, username, usernameColorCode, chatMessageContent, timestamp], function(isError) {
+                                                        if(isError) {
+                                                            
+                                                        }
+                                                        else {
+                                                            if(chatHistoryLimit !== 0) {
+                                                                submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM liveChatMessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
+                                                                    if(isError) {
+                                                                        
+                                                                    }
+                                                                    else {
+                                                                        
+                                                                    }
+                                                                });
                                                             }
-                                                            else {
-                                                                if(chatHistoryLimit !== 0) {
-                                                                    submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM liveChatMessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
-                                                                        if(isError) {
-                                                                            
-                                                                        }
-                                                                        else {
-                                                                            
-                                                                        }
-                                                                    });
-                                                                }
-                                                            }
-                                                        });
-                                                    }
+                                                        }
+                                                    });
                                                 }
                                             }
+                                        })
+                                        .catch(error => {
+                                            res.send({isError: true, message: 'error retrieving video data'});
                                         });
                                     }
                                 }
@@ -366,17 +370,17 @@ async function restartHttpServer() {
         httpServerWrapper.httpServer.close(async () => {
             logDebugMessageToConsole('node web server closed', null, null, true);
 
-            httpServerWrapper = await initializeHttpServer();
+            await initializeHttpServer();
         });
     });
 }
 
-function gethttpServerWrapper() {
+function getHttpServerWrapper() {
     return httpServerWrapper;
 }
 
 module.exports = {
     initializeHttpServer,
     restartHttpServer,
-    gethttpServerWrapper
+    getHttpServerWrapper
 };

@@ -1,7 +1,8 @@
-const { logDebugMessageToConsole } = require('../utils/helpers');
+const sanitizeHtml = require('sanitize-html');
+
+const { logDebugMessageToConsole } = require('../utils/logger');
 const { isCommentIdValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isCaptchaResponseValid } = require('../utils/validators');
 const { performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
-
 
 function commentIdReport_POST(req, res) {
     const commentId = req.params.commentId;

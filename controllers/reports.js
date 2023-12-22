@@ -1,4 +1,5 @@
-const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
+const { logDebugMessageToConsole } = require('../utils/logger');
+const { getAuthenticationStatus } = require('../utils/helpers');
 const { performDatabaseReadJob_GET } = require('../utils/database');
 
 function reportsCount_GET(req, res) {

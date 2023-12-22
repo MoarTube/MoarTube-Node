@@ -11,8 +11,9 @@ const crypto = require('crypto');
 const cluster = require('cluster');
 const { Mutex } = require('async-mutex');
 
+const {logDebugMessageToConsole} = require('./utils/logger');
 const {
-	logDebugMessageToConsole, getNodeSettings, setNodeSettings, generateVideoId, getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setPagesDirectoryPath,
+	getNodeSettings, setNodeSettings, generateVideoId, getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setPagesDirectoryPath,
 	setIsDockerEnvironment, getIsDockerEnvironment, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, setVideosDirectoryPath, setDatabaseDirectoryPath,
 	setDatabaseFilePath, setCertificatesDirectoryPath, setIsDeveloperMode, setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort,
 	setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort, setJwtSecret, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
@@ -20,7 +21,7 @@ const {
 	performNodeIdentification, getNodeIdentification, getNodeIconBase64
 } = require('./utils/helpers');
 const { provisionSqliteDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL } = require('./utils/database');
-const { initializeHttpServer, restartHttpServer, gethttpServerWrapper } = require('./utils/httpserver');
+const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = require('./utils/httpserver');
 const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
 
 const accountRoutes = require('./routes/account');
@@ -60,7 +61,7 @@ if(cluster.isMaster) {
 		const nodeSettings = getNodeSettings();
 
 		if(nodeSettings.nodeId === '') {
-			nodeSettings.nodeId = await generateVideoId(database);
+			nodeSettings.nodeId = await generateVideoId();
 
 			setNodeSettings(nodeSettings);
 		}
@@ -295,7 +296,7 @@ else {
 			else if (msg.cmd === 'websocket_broadcast_response') {
 				const message = msg.message;
 				
-				gethttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+				getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
 						client.send(JSON.stringify(message));
 					}
@@ -304,7 +305,7 @@ else {
 			else if (msg.cmd === 'websocket_broadcast_chat_response') {
 				const message = msg.message;
 				
-				gethttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+				getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
 						if(client.socketType === 'node_peer' && client.videoId === message.videoId) {
 							client.send(JSON.stringify(message));
@@ -321,7 +322,7 @@ else {
 			else if (msg.cmd === 'live_stream_worker_stats_request') {
 				const liveStreamStats = {};
 				
-				gethttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+				getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
 						if(client.socketType === 'node_peer') {
 							const videoId = client.videoId;
@@ -353,7 +354,7 @@ else {
 					}
 				}
 				
-				gethttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+				getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
 						if(client.socketType === 'node_peer') {
 							const videoId = client.videoId;

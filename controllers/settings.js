@@ -2,8 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 const httpTerminator = require('http-terminator');
+const webSocket = require('ws');
 
-const { logDebugMessageToConsole, getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, 
+const { logDebugMessageToConsole } = require('../utils/logger');
+const { getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, 
     setMoarTubeNodeHttpPort, getIsDockerEnvironment, getImagesDirectoryPath, getCertificatesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
 } = require('../utils/helpers');
 const { 
@@ -11,6 +13,8 @@ const {
     isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
+const { submitDatabaseWriteJob } = require('../utils/database');
+const { initializeHttpServer, getHttpServerWrapper } = require('../utils/httpserver');
 
 function root_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)
@@ -509,7 +513,7 @@ function networkInternal_POST(req, res) {
                     
                     //httpServerWrapper.httpServer.closeAllConnections();
                     
-                    httpServerWrapper.websocketServer.clients.forEach(function each(client) {
+                    getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
                         if (client.readyState === webSocket.OPEN) {
                             client.close();
                         }
@@ -517,7 +521,7 @@ function networkInternal_POST(req, res) {
                     
                     logDebugMessageToConsole('attempting to terminate node', null, null, true);
                     
-                    const terminator = httpTerminator.createHttpTerminator({server: httpServerWrapper.httpServer});
+                    const terminator = httpTerminator.createHttpTerminator({server: getHttpServerWrapper().httpServer});
                     
                     logDebugMessageToConsole('termination of node in progress', null, null, true);
                     
@@ -525,10 +529,10 @@ function networkInternal_POST(req, res) {
                     
                     logDebugMessageToConsole('terminated node', null, null, true);
                     
-                    httpServerWrapper.websocketServer.close(function() {
+                    getHttpServerWrapper().websocketServer.close(function() {
                         logDebugMessageToConsole('node websocketServer closed', null, null, true);
                         
-                        httpServerWrapper.httpServer.close(async () => {
+                        getHttpServerWrapper().httpServer.close(async () => {
                             logDebugMessageToConsole('node web server closed', null, null, true);
                             
                             const nodeSettings = getNodeSettings();
@@ -539,7 +543,7 @@ function networkInternal_POST(req, res) {
 
                             setMoarTubeNodeHttpPort(listeningNodePort);
                             
-                            httpServerWrapper = await initializeHttpServer();
+                            await initializeHttpServer();
                         });
                     });
                 }

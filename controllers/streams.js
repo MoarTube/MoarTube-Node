@@ -1,4 +1,5 @@
-const { logDebugMessageToConsole, getAuthenticationStatus, generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, getVideosDirectoryPath } = require('../utils/helpers');
+const { logDebugMessageToConsole } = require('../utils/logger');
+const { getAuthenticationStatus, generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, getVideosDirectoryPath } = require('../utils/helpers');
 const { 
     isTitleValid, isDescriptionValid, isTagsValid, isPortValid, isVideoIdValid, isAdaptiveFormatValid, isResolutionValid, isSegmentNameValid, isBooleanValid, 
     isNetworkAddressValid, isChatHistoryLimitValid 
@@ -43,7 +44,7 @@ function start_POST(req, res) {
                 res.send({isError: true, message: 'networkAddress not valid'});
             }
             else {
-                const videoId = await generateVideoId(database);
+                const videoId = await generateVideoId();
                 const creationTimestamp = Date.now();
                 
                 isRecordingStreamRemotely = isRecordingStreamRemotely ? 1 : 0;
