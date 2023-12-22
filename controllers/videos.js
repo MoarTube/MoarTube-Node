@@ -1,14 +1,15 @@
-
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const sanitizeHtml = require('sanitize-html');
+
 
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath } = require('../utils/paths');
 const { updateHlsVideoMasterManifestFile } = require('../utils/filesystem');
 const { 
     getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, getMoarTubeAliaserPort,
-    performNodeIdentification, getNodeIdentification, sanitizeTagsSpaces, deleteDirectoryRecursive
+    performNodeIdentification, getNodeIdentification, sanitizeTagsSpaces, deleteDirectoryRecursive, getNodeIconBase64
 } = require('../utils/helpers');
 const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
 const { 
@@ -18,6 +19,7 @@ const {
 } = require('../utils/validators');
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
 const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
+const { aliaser_doAliasVideo, aliaser_getVideoAlias } = require('../utils/aliaser-communications');
 
 function import_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
@@ -356,9 +358,9 @@ function videoIdUpload_POST(req, res) {
                                     
                                     fs.mkdirSync(directoryPath, { recursive: true });
                                     
-                                    fs.access(directoryPath, fs.F_OK, function(error) {
+                                    fs.access(directoryPath, fs.constants.F_OK, function(error) {
                                         if(error) {
-                                            cb(new Error('directory creation error'));
+                                            cb(new Error('directory creation error'), null);
                                         }
                                         else {
                                             cb(null, directoryPath);
@@ -366,7 +368,7 @@ function videoIdUpload_POST(req, res) {
                                     });
                                 }
                                 else {
-                                    cb(new Error('invalid directory path'));
+                                    cb(new Error('invalid directory path'), null);
                                 }
                             },
                             filename: function (req, file, cb) {
@@ -420,16 +422,7 @@ function videoIdUpload_POST(req, res) {
             }
         }
         else {
-            submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [0, 1, videoId], function(isError) {
-                if(isError) {
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                }
-                else {
-                    logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-                    
-                    res.send({isError: true, message: 'you are not logged in'});
-                }
-            });
+            res.send({isError: true, message: 'you are not logged in'});
         }
     })
     .catch(error => {
@@ -457,7 +450,7 @@ function videoIdStream_POST(req, res) {
                             cb(null, true);
                         }
                         else {
-                            cb(new error('only application/vnd.apple.mpegurl and video/mp2t files are supported'));
+                            cb(new Error('only application/vnd.apple.mpegurl and video/mp2t files are supported'));
                         }
                     },
                     storage: multer.diskStorage({
@@ -490,9 +483,9 @@ function videoIdStream_POST(req, res) {
                                 
                                 fs.mkdirSync(directoryPath, { recursive: true });
                                 
-                                fs.access(directoryPath, fs.F_OK, function(error) {
+                                fs.access(directoryPath, fs.constants.F_OK, function(error) {
                                     if(error) {
-                                        cb(new Error('directory creation error'));
+                                        cb(new Error('directory creation error'), null);
                                     }
                                     else {
                                         cb(null, directoryPath);
@@ -500,7 +493,7 @@ function videoIdStream_POST(req, res) {
                                 });
                             }
                             else {
-                                cb(new Error('invalid directory path'));
+                                cb(new Error('invalid directory path'), null);
                             }
                         },
                         filename: function (req, file, cb) {
@@ -541,16 +534,7 @@ function videoIdStream_POST(req, res) {
             }
         }
         else {
-            submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [1, videoId], function(isError) {
-                if(isError) {
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                }
-                else {
-                    logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-                    res.send({isError: true, message: 'you are not logged in'});
-                }
-            });
+            res.send({isError: true, message: 'you are not logged in'});
         }
     })
     .catch(error => {
@@ -754,7 +738,7 @@ function videoIdPublishes_GET(req, res) {
                             }
                             
                             function modifyPublishMatrix(format, resolution) {
-                                for(publish of publishes) {
+                                for(const publish of publishes) {
                                     if(publish.format === format && publish.resolution === resolution) {
                                         publish.isPublished = true;
                                         break;
@@ -868,7 +852,6 @@ function videoIdInformation_GET(req, res) {
                     isStreaming: video.is_streaming,
                     isFinalized: video.is_finalized,
                     timestamp: video.creation_timestamp,
-                    tags: video.tags,
                     nodeName: nodeSettings.nodeName
                 };
                 
@@ -1220,7 +1203,7 @@ function videoIdAlias_GET(req, res) {
                     var videoAliasUrl;
 
                     if(getIsDeveloperMode()) {
-                        videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeId + '/videos/' + videoId;
+                        videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
                     }
                     else {
                         videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
@@ -1395,9 +1378,9 @@ function videoIdThumbnail_POST(req, res) {
                         destination: function (req, file, cb) {
                             const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
                             
-                            fs.access(filePath, fs.F_OK, function(error) {
+                            fs.access(filePath, fs.constants.F_OK, function(error) {
                                 if(error) {
-                                    cb(new Error('file upload error'));
+                                    cb(new Error('file upload error'), null);
                                 }
                                 else {
                                     cb(null, filePath);
@@ -1422,11 +1405,11 @@ function videoIdThumbnail_POST(req, res) {
                             }
                             else
                             {
-                                cb(new Error('Invalid Media Detected'));
+                                cb(new Error('Invalid Media Detected'), null);
                             }
                         }
                     })
-                }).fields([{ name: 'thumbnailFile', minCount: 1, maxCount: 1 }])
+                }).fields([{ name: 'thumbnailFile', maxCount: 1 }])
                 (req, res, async function(error)
                 {
                     if(error) {
@@ -1503,11 +1486,11 @@ function videoIdPreview_POST(req, res) {
                         destination: function (req, file, cb) {
                             const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
                             
-                            fs.access(filePath, fs.F_OK, function(error)
+                            fs.access(filePath, fs.constants.F_OK, function(error)
                             {
                                 if(error)
                                 {
-                                    cb(new Error('file upload error'));
+                                    cb(new Error('file upload error'), null);
                                 }
                                 else
                                 {
@@ -1533,11 +1516,11 @@ function videoIdPreview_POST(req, res) {
                             }
                             else
                             {
-                                cb(new Error('Invalid Media Detected'));
+                                cb(new Error('Invalid Media Detected'), null);
                             }
                         }
                     })
-                }).fields([{ name: 'previewFile', minCount: 1, maxCount: 1 }])
+                }).fields([{ name: 'previewFile', maxCount: 1 }])
                 (req, res, async function(error)
                 {
                     if(error) {
@@ -1621,11 +1604,11 @@ function videoIdPoster_POST(req, res) {
                         destination: function (req, file, cb) {
                             const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
                             
-                            fs.access(filePath, fs.F_OK, function(error)
+                            fs.access(filePath, fs.constants.F_OK, function(error)
                             {
                                 if(error)
                                 {
-                                    cb(new Error('file upload error'));
+                                    cb(new Error('file upload error'), null);
                                 }
                                 else
                                 {
@@ -1651,11 +1634,11 @@ function videoIdPoster_POST(req, res) {
                             }
                             else
                             {
-                                cb(new Error('Invalid Media Detected'));
+                                cb(new Error('Invalid Media Detected'), null);
                             }
                         }
                     })
-                }).fields([{ name: 'posterFile', minCount: 1, maxCount: 1 }])
+                }).fields([{ name: 'posterFile', maxCount: 1 }])
                 (req, res, async function(error)
                 {
                     if(error) {
