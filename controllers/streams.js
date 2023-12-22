@@ -3,6 +3,7 @@ const {
     isTitleValid, isDescriptionValid, isTagsValid, isPortValid, isVideoIdValid, isAdaptiveFormatValid, isResolutionValid, isSegmentNameValid, isBooleanValid, 
     isNetworkAddressValid, isChatHistoryLimitValid 
 } = require('../utils/validators');
+const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 
 function start_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
@@ -125,32 +126,29 @@ function videoIdStop_POST(req, res) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
-                        database.get('SELECT is_stream_recorded_remotely FROM videos WHERE video_id = ?', videoId, function(error, video) {
-                            if(error) {
-                                logDebugMessageToConsole(null, error, new Error().stack, true);
-
-                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                            }
-                            else {
-                                if(video != null) {
-                                    if(!video.is_stream_recorded_remotely) {
-                                        const m3u8DirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
-                                        
-                                        deleteDirectoryRecursive(m3u8DirectoryPath);
-                                    }
+                        performDatabaseReadJob_GET('SELECT is_stream_recorded_remotely FROM videos WHERE video_id = ?', [videoId])
+                        .then(video => {
+                            if(video != null) {
+                                if(!video.is_stream_recorded_remotely) {
+                                    const m3u8DirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
+                                    
+                                    deleteDirectoryRecursive(m3u8DirectoryPath);
                                 }
-
-                                submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE video_id = ?', [videoId], function(isError) {
-                                    if(isError) {
-                                        
-                                    }
-                                    else {
-                                        
-                                    }
-                                });
-                                
-                                res.send({isError: false});
                             }
+
+                            submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE video_id = ?', [videoId], function(isError) {
+                                if(isError) {
+                                    
+                                }
+                                else {
+                                    
+                                }
+                            });
+                            
+                            res.send({isError: false});
+                        })
+                        .catch(error => {
+                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
                         });
                     }
                 });
@@ -257,22 +255,19 @@ function videoIdBandwidth_GET(req, res) {
             const videoId = req.params.videoId;
             
             if(isVideoIdValid(videoId)) {
-                database.get('SELECT bandwidth FROM videos WHERE video_id = ?', [videoId], function(error, row) {
-                    if(error) {
-                        logDebugMessageToConsole(null, error, new Error().stack, true);
+                performDatabaseReadJob_GET('SELECT bandwidth FROM videos WHERE video_id = ?', [videoId])
+                .then(video => {
+                    if(video != null) {
+                        const bandwidth = video.bandwidth;
                         
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                        res.send({isError: false, bandwidth: bandwidth});
                     }
                     else {
-                        if(row != null) {
-                            const bandwidth = row.bandwidth;
-                            
-                            res.send({isError: false, bandwidth: bandwidth});
-                        }
-                        else {
-                            res.send({isError: true, message: 'that video does not exist'});
-                        }
+                        res.send({isError: true, message: 'that video does not exist'});
                     }
+                })
+                .catch(error => {
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
                 });
             }
             else {
@@ -298,53 +293,50 @@ function videoIdChatSettings_POST(req, res) {
     const chatHistoryLimit = req.body.chatHistoryLimit;
     
     if(isVideoIdValid(videoId) && isBooleanValid(isChatHistoryEnabled) && isChatHistoryLimitValid(chatHistoryLimit)) {
-        database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, videoData) {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+        performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+        .then(video => {
+            if(video != null) {
+                const meta = JSON.parse(video.meta);
                 
-                res.send({isError: true, message: 'error retrieving video data'});
+                meta.chatSettings.isChatHistoryEnabled = isChatHistoryEnabled;
+                meta.chatSettings.chatHistoryLimit = chatHistoryLimit;
+                
+                submitDatabaseWriteJob('UPDATE videos SET meta = ? WHERE video_id = ?', [JSON.stringify(meta), videoId], function(isError) {
+                    if(isError) {
+                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    }
+                    else {
+                        if(!isChatHistoryEnabled) {
+                            submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE video_id = ?', [videoId], function(isError) {
+                                if(isError) {
+                                    
+                                }
+                                else {
+                                    
+                                }
+                            });
+                        }
+                        else if(chatHistoryLimit !== 0) {
+                            submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM liveChatMessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
+                                if(isError) {
+                                    
+                                }
+                                else {
+                                    
+                                }
+                            });
+                        }
+                        
+                        res.send({isError: false});
+                    }
+                });
             }
             else {
-                if(videoData != null) {
-                    const meta = JSON.parse(videoData.meta);
-                    
-                    meta.chatSettings.isChatHistoryEnabled = isChatHistoryEnabled;
-                    meta.chatSettings.chatHistoryLimit = chatHistoryLimit;
-                    
-                    submitDatabaseWriteJob('UPDATE videos SET meta = ? WHERE video_id = ?', [JSON.stringify(meta), videoId], function(isError) {
-                        if(isError) {
-                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                        }
-                        else {
-                            if(!isChatHistoryEnabled) {
-                                submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE video_id = ?', [videoId], function(isError) {
-                                    if(isError) {
-                                        
-                                    }
-                                    else {
-                                        
-                                    }
-                                });
-                            }
-                            else if(chatHistoryLimit !== 0) {
-                                submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM liveChatMessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
-                                    if(isError) {
-                                        
-                                    }
-                                    else {
-                                        
-                                    }
-                                });
-                            }
-                            
-                            res.send({isError: false});
-                        }
-                    });
-                }
-                else {
-                    res.send({isError: true, message: 'that video does not exist'});
-                }
+                res.send({isError: true, message: 'that video does not exist'});
             }
+        })
+        .catch(error => {
+            res.send({isError: true, message: 'error retrieving video data'});
         });
     }
     else {
@@ -356,17 +348,12 @@ function videoidChatHistory_GET(req, res) {
     const videoId = req.params.videoId;
     
     if(isVideoIdValid(videoId)) {
-        database.all('SELECT * FROM liveChatMessages WHERE video_id = ?', videoId, function(error, chatHistory) {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
-                
-                res.send({isError: true, message: 'error retrieving chat history'});
-            }
-            else {
-                
-                
-                res.send({isError: false, chatHistory: chatHistory});
-            }
+        performDatabaseReadJob_ALL('SELECT * FROM liveChatMessages WHERE video_id = ?', [videoId])
+        .then(chatHistory => {
+            res.send({isError: false, chatHistory: chatHistory});
+        })
+        .catch(error => {
+            res.send({isError: true, message: 'error retrieving chat history'});
         });
     }
     else {

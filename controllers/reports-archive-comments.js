@@ -1,19 +1,17 @@
 const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
 const { isArchiveIdValid } = require('../utils/validators');
+const { performDatabaseReadJob_ALL } = require('../utils/database');
 
 function reportsArchiveComments_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
-            database.all('SELECT * FROM commentReportsArchive ORDER BY archive_id DESC', function(error, reports) {
-                if(error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                    
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                }
-                else {
-                    res.send({isError: false, reports: reports});
-                }
+            performDatabaseReadJob_ALL('SELECT * FROM commentReportsArchive ORDER BY archive_id DESC', [])
+            .then(reports => {
+                res.send({isError: false, reports: reports});
+            })
+            .catch(error => {
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
             });
         }
         else {

@@ -2,10 +2,10 @@
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
-const { submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
+const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
 const { 
     logDebugMessageToConsole, getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, getMoarTubeAliaserPort,
-    getVideosDirectoryPath
+    getVideosDirectoryPath, performNodeIdentification, getNodeIdentification
 } = require('../utils/helpers');
 const { 
     isManifestNameValid, isSegmentNameValid, isSearchTermValid, isSourceFileExtensionValid, isBooleanValid, isVideoCommentValid, isCaptchaTypeValid, isCaptchaResponseValid,
@@ -13,6 +13,7 @@ const {
     isVideoIdsValid, isFormatValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid, isTitleValid, isDescriptionValid, isTagTermValid, isTagsValid
 } = require('../utils/validators');
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
+const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
 
 function import_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
@@ -629,22 +630,19 @@ function videoIdSourceFileExtension_GET(req, res) {
             const videoId = req.params.videoId;
             
             if(isVideoIdValid(videoId)) {
-                database.get('SELECT source_file_extension FROM videos WHERE video_id = ?', videoId, function(error, row) {
-                    if(error) {
-                        logDebugMessageToConsole(null, error, new Error().stack, true);
-
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                performDatabaseReadJob_GET('SELECT source_file_extension FROM videos WHERE video_id = ?', [videoId])
+                .then(video => {
+                    if(video != null) {
+                        const sourceFileExtension = video.source_file_extension;
+                        
+                        res.send({isError: false, sourceFileExtension: sourceFileExtension});
                     }
                     else {
-                        if(row != null) {
-                            const sourceFileExtension = row.source_file_extension;
-                            
-                            res.send({isError: false, sourceFileExtension: sourceFileExtension});
-                        }
-                        else {
-                            res.send({isError: true, message: 'that video does not exist'});
-                        }
+                        res.send({isError: true, message: 'that video does not exist'});
                     }
+                })
+                .catch(error => {
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
                 });
             }
             else {
@@ -671,107 +669,104 @@ function videoIdPublishes_GET(req, res) {
             const videoId = req.params.videoId;
             
             if(isVideoIdValid(videoId)) {
-                database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, row) {
-                    if(error) {
-                        logDebugMessageToConsole(null, error, new Error().stack, true);
-                        
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                    }
-                    else {
-                        if(row != null) {
-                            const publishes = [
-                                { format: 'm3u8', resolution: '2160p', isPublished: false },
-                                { format: 'm3u8', resolution: '1440p', isPublished: false },
-                                { format: 'm3u8', resolution: '1080p', isPublished: false },
-                                { format: 'm3u8', resolution: '720p', isPublished: false },
-                                { format: 'm3u8', resolution: '480p', isPublished: false },
-                                { format: 'm3u8', resolution: '360p', isPublished: false },
-                                { format: 'm3u8', resolution: '240p', isPublished: false },
-                                
-                                { format: 'mp4', resolution: '2160p', isPublished: false },
-                                { format: 'mp4', resolution: '1440p', isPublished: false },
-                                { format: 'mp4', resolution: '1080p', isPublished: false },
-                                { format: 'mp4', resolution: '720p', isPublished: false },
-                                { format: 'mp4', resolution: '480p', isPublished: false },
-                                { format: 'mp4', resolution: '360p', isPublished: false },
-                                { format: 'mp4', resolution: '240p', isPublished: false },
-                                
-                                { format: 'webm', resolution: '2160p', isPublished: false },
-                                { format: 'webm', resolution: '1440p', isPublished: false },
-                                { format: 'webm', resolution: '1080p', isPublished: false },
-                                { format: 'webm', resolution: '720p', isPublished: false },
-                                { format: 'webm', resolution: '480p', isPublished: false },
-                                { format: 'webm', resolution: '360p', isPublished: false },
-                                { format: 'webm', resolution: '240p', isPublished: false },
-                                
-                                { format: 'ogv', resolution: '2160p', isPublished: false },
-                                { format: 'ogv', resolution: '1440p', isPublished: false },
-                                { format: 'ogv', resolution: '1080p', isPublished: false },
-                                { format: 'ogv', resolution: '720p', isPublished: false },
-                                { format: 'ogv', resolution: '480p', isPublished: false },
-                                { format: 'ogv', resolution: '360p', isPublished: false },
-                                { format: 'ogv', resolution: '240p', isPublished: false },
-                            ];
+                performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+                .then(video => {
+                    if(video != null) {
+                        const publishes = [
+                            { format: 'm3u8', resolution: '2160p', isPublished: false },
+                            { format: 'm3u8', resolution: '1440p', isPublished: false },
+                            { format: 'm3u8', resolution: '1080p', isPublished: false },
+                            { format: 'm3u8', resolution: '720p', isPublished: false },
+                            { format: 'm3u8', resolution: '480p', isPublished: false },
+                            { format: 'm3u8', resolution: '360p', isPublished: false },
+                            { format: 'm3u8', resolution: '240p', isPublished: false },
                             
-                            if(row.is_published) {
-                                const videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId);
-                                const m3u8DirectoryPath = path.join(videoDirectoryPath, 'adaptive/m3u8');
-                                const mp4DirectoryPath = path.join(videoDirectoryPath, 'progressive/mp4');
-                                const webmDirectoryPath = path.join(videoDirectoryPath, 'progressive/webm');
-                                const ogvDirectoryPath = path.join(videoDirectoryPath, 'progressive/ogv');
-                                
-                                if (fs.existsSync(m3u8DirectoryPath)) {
-                                    fs.readdirSync(m3u8DirectoryPath).forEach(fileName => {
-                                        const filePath = path.join(m3u8DirectoryPath, fileName);
-                                        if (fs.lstatSync(filePath).isDirectory()) {
-                                            modifyPublishMatrix('m3u8', fileName);
-                                        }
-                                    });
-                                }
-                                
-                                if (fs.existsSync(mp4DirectoryPath)) {
-                                    fs.readdirSync(mp4DirectoryPath).forEach(fileName => {
-                                        const filePath = path.join(mp4DirectoryPath, fileName);
-                                        if (fs.lstatSync(filePath).isDirectory()) {
-                                            modifyPublishMatrix('mp4', fileName);
-                                        }
-                                    });
-                                }
-                                
-                                if (fs.existsSync(webmDirectoryPath)) {
-                                    fs.readdirSync(webmDirectoryPath).forEach(fileName => {
-                                        const filePath = path.join(webmDirectoryPath, fileName);
-                                        if (fs.lstatSync(filePath).isDirectory()) {
-                                            modifyPublishMatrix('webm', fileName);
-                                        }
-                                    });
-                                }
-                                
-                                if (fs.existsSync(ogvDirectoryPath)) {
-                                    fs.readdirSync(ogvDirectoryPath).forEach(fileName => {
-                                        const filePath = path.join(ogvDirectoryPath, fileName);
-                                        if (fs.lstatSync(filePath).isDirectory()) {
-                                            modifyPublishMatrix('ogv', fileName);
-                                        }
-                                    });
-                                }
-                                
-                                function modifyPublishMatrix(format, resolution) {
-                                    for(publish of publishes) {
-                                        if(publish.format === format && publish.resolution === resolution) {
-                                            publish.isPublished = true;
-                                            break;
-                                        }
+                            { format: 'mp4', resolution: '2160p', isPublished: false },
+                            { format: 'mp4', resolution: '1440p', isPublished: false },
+                            { format: 'mp4', resolution: '1080p', isPublished: false },
+                            { format: 'mp4', resolution: '720p', isPublished: false },
+                            { format: 'mp4', resolution: '480p', isPublished: false },
+                            { format: 'mp4', resolution: '360p', isPublished: false },
+                            { format: 'mp4', resolution: '240p', isPublished: false },
+                            
+                            { format: 'webm', resolution: '2160p', isPublished: false },
+                            { format: 'webm', resolution: '1440p', isPublished: false },
+                            { format: 'webm', resolution: '1080p', isPublished: false },
+                            { format: 'webm', resolution: '720p', isPublished: false },
+                            { format: 'webm', resolution: '480p', isPublished: false },
+                            { format: 'webm', resolution: '360p', isPublished: false },
+                            { format: 'webm', resolution: '240p', isPublished: false },
+                            
+                            { format: 'ogv', resolution: '2160p', isPublished: false },
+                            { format: 'ogv', resolution: '1440p', isPublished: false },
+                            { format: 'ogv', resolution: '1080p', isPublished: false },
+                            { format: 'ogv', resolution: '720p', isPublished: false },
+                            { format: 'ogv', resolution: '480p', isPublished: false },
+                            { format: 'ogv', resolution: '360p', isPublished: false },
+                            { format: 'ogv', resolution: '240p', isPublished: false },
+                        ];
+                        
+                        if(video.is_published) {
+                            const videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId);
+                            const m3u8DirectoryPath = path.join(videoDirectoryPath, 'adaptive/m3u8');
+                            const mp4DirectoryPath = path.join(videoDirectoryPath, 'progressive/mp4');
+                            const webmDirectoryPath = path.join(videoDirectoryPath, 'progressive/webm');
+                            const ogvDirectoryPath = path.join(videoDirectoryPath, 'progressive/ogv');
+                            
+                            if (fs.existsSync(m3u8DirectoryPath)) {
+                                fs.readdirSync(m3u8DirectoryPath).forEach(fileName => {
+                                    const filePath = path.join(m3u8DirectoryPath, fileName);
+                                    if (fs.lstatSync(filePath).isDirectory()) {
+                                        modifyPublishMatrix('m3u8', fileName);
+                                    }
+                                });
+                            }
+                            
+                            if (fs.existsSync(mp4DirectoryPath)) {
+                                fs.readdirSync(mp4DirectoryPath).forEach(fileName => {
+                                    const filePath = path.join(mp4DirectoryPath, fileName);
+                                    if (fs.lstatSync(filePath).isDirectory()) {
+                                        modifyPublishMatrix('mp4', fileName);
+                                    }
+                                });
+                            }
+                            
+                            if (fs.existsSync(webmDirectoryPath)) {
+                                fs.readdirSync(webmDirectoryPath).forEach(fileName => {
+                                    const filePath = path.join(webmDirectoryPath, fileName);
+                                    if (fs.lstatSync(filePath).isDirectory()) {
+                                        modifyPublishMatrix('webm', fileName);
+                                    }
+                                });
+                            }
+                            
+                            if (fs.existsSync(ogvDirectoryPath)) {
+                                fs.readdirSync(ogvDirectoryPath).forEach(fileName => {
+                                    const filePath = path.join(ogvDirectoryPath, fileName);
+                                    if (fs.lstatSync(filePath).isDirectory()) {
+                                        modifyPublishMatrix('ogv', fileName);
+                                    }
+                                });
+                            }
+                            
+                            function modifyPublishMatrix(format, resolution) {
+                                for(publish of publishes) {
+                                    if(publish.format === format && publish.resolution === resolution) {
+                                        publish.isPublished = true;
+                                        break;
                                     }
                                 }
                             }
-                            
-                            res.send({isError: false, publishes: publishes});
                         }
-                        else {
-                            res.send({isError: true, message: 'that video does not exist'});
-                        }
+                        
+                        res.send({isError: false, publishes: publishes});
                     }
+                    else {
+                        res.send({isError: true, message: 'that video does not exist'});
+                    }
+                })
+                .catch(error => {
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
                 });
             }
             else {
@@ -854,36 +849,33 @@ function videoIdInformation_GET(req, res) {
     const videoId = req.params.videoId;
     
     if(isVideoIdValid(videoId)) {
-        database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, row) {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+        performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+        .then(video => {
+            if(video != null) {
+                const nodeSettings = getNodeSettings();
                 
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                const information = {
+                    videoId: video.video_id,
+                    title: video.title,
+                    description: video.description,
+                    tags: video.tags,
+                    views: video.views,
+                    isLive: video.is_live,
+                    isStreaming: video.is_streaming,
+                    isFinalized: video.is_finalized,
+                    timestamp: video.creation_timestamp,
+                    tags: video.tags,
+                    nodeName: nodeSettings.nodeName
+                };
+                
+                res.send({isError: false, information: information});
             }
             else {
-                if(row != null) {
-                    const nodeSettings = getNodeSettings();
-                    
-                    const information = {
-                        videoId: row.video_id,
-                        title: row.title,
-                        description: row.description,
-                        tags: row.tags,
-                        views: row.views,
-                        isLive: row.is_live,
-                        isStreaming: row.is_streaming,
-                        isFinalized: row.is_finalized,
-                        timestamp: row.creation_timestamp,
-                        tags: row.tags,
-                        nodeName: nodeSettings.nodeName
-                    };
-                    
-                    res.send({isError: false, information: information});
-                }
-                else {
-                    res.send({isError: true, message: 'that video does not exist'});
-                }
+                res.send({isError: true, message: 'that video does not exist'});
             }
+        })
+        .catch(error => {
+            res.send({isError: true, message: 'error communicating with the MoarTube node'});
         });
     }
     else {
@@ -964,90 +956,87 @@ function videoIdIndexAdd_POST(req, res) {
                         const publicNodeProtocol = nodeSettings.publicNodeProtocol;
                         const publicNodeAddress = nodeSettings.publicNodeAddress;
                         const publicNodePort = nodeSettings.publicNodePort;
-                        
-                        database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, video) {
-                            if(error) {
-                                logDebugMessageToConsole(null, error, new Error().stack, true);
-                                
-                                res.send({isError: true, message: 'error retrieving video data'});
-                            }
-                            else {
-                                if(video != null) {
-                                    if(video.is_published || video.is_live) {
-                                        performNodeIdentification(false)
-                                        .then(() => {
-                                            const nodeIdentification = getNodeIdentification();
-                                            
-                                            const nodeIdentifier = nodeIdentification.nodeIdentifier;
-                                            const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
-                                            
-                                            const title = video.title;
-                                            const tags = video.tags;
-                                            const views = video.views;
-                                            const isLive = (video.is_live === 1);
-                                            const isStreaming = (video.is_streaming === 1);
-                                            const lengthSeconds = video.length_seconds;
-                                            const creationTimestamp = video.creation_timestamp;
 
-                                            var nodeIconBase64 = getNodeIconBase64();
+                        performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+                        .then(video => {
+                            if(video != null) {
+                                if(video.is_published || video.is_live) {
+                                    performNodeIdentification(false)
+                                    .then(() => {
+                                        const nodeIdentification = getNodeIdentification();
+                                        
+                                        const nodeIdentifier = nodeIdentification.nodeIdentifier;
+                                        const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+                                        
+                                        const title = video.title;
+                                        const tags = video.tags;
+                                        const views = video.views;
+                                        const isLive = (video.is_live === 1);
+                                        const isStreaming = (video.is_streaming === 1);
+                                        const lengthSeconds = video.length_seconds;
+                                        const creationTimestamp = video.creation_timestamp;
 
-                                            const videoPreviewImageBase64 = fs.readFileSync(path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg')).toString('base64');
-                                            
-                                            const data = {
-                                                videoId: videoId,
-                                                nodeId: nodeId,
-                                                nodeIdentifier: nodeIdentifier,
-                                                nodeIdentifierProof: nodeIdentifierProof,
-                                                nodeName: nodeName,
-                                                nodeAbout: nodeAbout,
-                                                publicNodeProtocol: publicNodeProtocol,
-                                                publicNodeAddress: publicNodeAddress,
-                                                publicNodePort: publicNodePort,
-                                                title: title,
-                                                tags: tags,
-                                                views: views,
-                                                isLive: isLive,
-                                                isStreaming: isStreaming,
-                                                lengthSeconds: lengthSeconds,
-                                                creationTimestamp: creationTimestamp,
-                                                captchaResponse: captchaResponse,
-                                                containsAdultContent: containsAdultContent,
-                                                nodeIconBase64: nodeIconBase64,
-                                                videoPreviewImageBase64: videoPreviewImageBase64
-                                            };
-                                            
-                                            indexer_addVideoToIndex(data)
-                                            .then(indexerResponseData => {
-                                                if(indexerResponseData.isError) {
-                                                    res.send({isError: true, message: indexerResponseData.message});
-                                                }
-                                                else {
-                                                    submitDatabaseWriteJob('UPDATE videos SET is_indexed = 1 WHERE video_id = ?', [videoId], function(isError) {
-                                                        if(isError) {
-                                                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                                                        }
-                                                        else {
-                                                            res.send({isError: false});
-                                                        }
-                                                    });
-                                                }
-                                            })
-                                            .catch(error => {
-                                                res.send('error communicating with the MoarTube indexer');
-                                            });
+                                        var nodeIconBase64 = getNodeIconBase64();
+
+                                        const videoPreviewImageBase64 = fs.readFileSync(path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg')).toString('base64');
+                                        
+                                        const data = {
+                                            videoId: videoId,
+                                            nodeId: nodeId,
+                                            nodeIdentifier: nodeIdentifier,
+                                            nodeIdentifierProof: nodeIdentifierProof,
+                                            nodeName: nodeName,
+                                            nodeAbout: nodeAbout,
+                                            publicNodeProtocol: publicNodeProtocol,
+                                            publicNodeAddress: publicNodeAddress,
+                                            publicNodePort: publicNodePort,
+                                            title: title,
+                                            tags: tags,
+                                            views: views,
+                                            isLive: isLive,
+                                            isStreaming: isStreaming,
+                                            lengthSeconds: lengthSeconds,
+                                            creationTimestamp: creationTimestamp,
+                                            captchaResponse: captchaResponse,
+                                            containsAdultContent: containsAdultContent,
+                                            nodeIconBase64: nodeIconBase64,
+                                            videoPreviewImageBase64: videoPreviewImageBase64
+                                        };
+                                        
+                                        indexer_addVideoToIndex(data)
+                                        .then(indexerResponseData => {
+                                            if(indexerResponseData.isError) {
+                                                res.send({isError: true, message: indexerResponseData.message});
+                                            }
+                                            else {
+                                                submitDatabaseWriteJob('UPDATE videos SET is_indexed = 1 WHERE video_id = ?', [videoId], function(isError) {
+                                                    if(isError) {
+                                                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                                                    }
+                                                    else {
+                                                        res.send({isError: false});
+                                                    }
+                                                });
+                                            }
                                         })
                                         .catch(error => {
-                                            res.send({isError: true, message: 'an error occurred while attempting to index, please try again later'});
+                                            res.send('error communicating with the MoarTube indexer');
                                         });
-                                    }
-                                    else {
-                                        res.send({isError: true, message: 'videos have to be published before they can be indexed'});
-                                    }
+                                    })
+                                    .catch(error => {
+                                        res.send({isError: true, message: 'an error occurred while attempting to index, please try again later'});
+                                    });
                                 }
                                 else {
-                                    res.send({isError: true, message: 'that video does not exist'});
+                                    res.send({isError: true, message: 'videos have to be published before they can be indexed'});
                                 }
                             }
+                            else {
+                                res.send({isError: true, message: 'that video does not exist'});
+                            }
+                        })
+                        .catch(error => {
+                            res.send({isError: true, message: 'error retrieving video data'});
                         });
                     }
                 }
@@ -1088,55 +1077,52 @@ function videoIdIndexRemove_POST(req, res) {
                     res.send({isError: true, message: "MoarTube Indexer; this node has not performed initial configuration"});
                 }
                 else {
-                    database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, video) {
-                        if(error) {
-                            logDebugMessageToConsole(null, error, new Error().stack, true);
-                            
-                            res.send({isError: true, message: 'error retrieving video data'});
-                        }
-                        else {
-                            if(video != null) {
-                                performNodeIdentification(false)
-                                .then(() => {
-                                    const nodeIdentification = getNodeIdentification();
-                                    
-                                    const nodeIdentifier = nodeIdentification.nodeIdentifier;
-                                    const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
-                                    
-                                    const data = {
-                                        videoId: videoId,
-                                        nodeIdentifier: nodeIdentifier,
-                                        nodeIdentifierProof: nodeIdentifierProof
-                                    };
-                                    
-                                    indexer_removeVideoFromIndex(data)
-                                    .then(indexerResponseData => {
-                                        if(indexerResponseData.isError) {
-                                            res.send({isError: true, message: indexerResponseData.message});
-                                        }
-                                        else {
-                                            submitDatabaseWriteJob('UPDATE videos SET is_indexed = 0 WHERE video_id = ?', [videoId], function(isError) {
-                                                if(isError) {
-                                                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                                                }
-                                                else {
-                                                    res.send({isError: false});
-                                                }
-                                            });
-                                        }
-                                    })
-                                    .catch(error => {
-                                        res.send('error communicating with the MoarTube indexer');
-                                    });
+                    performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+                    .then(video => {
+                        if(video != null) {
+                            performNodeIdentification(false)
+                            .then(() => {
+                                const nodeIdentification = getNodeIdentification();
+                                
+                                const nodeIdentifier = nodeIdentification.nodeIdentifier;
+                                const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+                                
+                                const data = {
+                                    videoId: videoId,
+                                    nodeIdentifier: nodeIdentifier,
+                                    nodeIdentifierProof: nodeIdentifierProof
+                                };
+                                
+                                indexer_removeVideoFromIndex(data)
+                                .then(indexerResponseData => {
+                                    if(indexerResponseData.isError) {
+                                        res.send({isError: true, message: indexerResponseData.message});
+                                    }
+                                    else {
+                                        submitDatabaseWriteJob('UPDATE videos SET is_indexed = 0 WHERE video_id = ?', [videoId], function(isError) {
+                                            if(isError) {
+                                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                                            }
+                                            else {
+                                                res.send({isError: false});
+                                            }
+                                        });
+                                    }
                                 })
                                 .catch(error => {
-                                    res.send({isError: true, message: 'an error occurred while attempting to index, please try again later'});
+                                    res.send('error communicating with the MoarTube indexer');
                                 });
-                            }
-                            else {
-                                res.send({isError: true, message: 'that video does not exist'});
-                            }
+                            })
+                            .catch(error => {
+                                res.send({isError: true, message: 'an error occurred while attempting to index, please try again later'});
+                            });
                         }
+                        else {
+                            res.send({isError: true, message: 'that video does not exist'});
+                        }
+                    })
+                    .catch(error => {
+                        res.send({isError: true, message: 'error retrieving video data'});
                     });
                 }
             }
@@ -1221,64 +1207,61 @@ function videoIdAlias_GET(req, res) {
     if(isVideoIdValid(videoId)) {
         const nodeSettings = getNodeSettings();
 
-        database.get('SELECT is_indexed FROM videos WHERE video_id = ?', [videoId], function(error, video) {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
-                
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-            else {
-                if(video != null) {
-                    const isIndexed = video.is_indexed;
+        performDatabaseReadJob_GET('SELECT is_indexed FROM videos WHERE video_id = ?', [videoId])
+        .then(video => {
+            if(video != null) {
+                const isIndexed = video.is_indexed;
 
-                    if(isIndexed) {
-                        var videoAliasUrl;
+                if(isIndexed) {
+                    var videoAliasUrl;
 
-                        if(getIsDeveloperMode()) {
-                            videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeId + '/videos/' + videoId;
-                        }
-                        else {
-                            videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
-                        }
-
-                        res.send({isError: false, videoAliasUrl: videoAliasUrl});
+                    if(getIsDeveloperMode()) {
+                        videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeId + '/videos/' + videoId;
                     }
                     else {
-                        if(!nodeSettings.isNodePrivate) {
-                            performNodeIdentification(false)
-                            .then(() => {
-                                const nodeIdentification = getNodeIdentification();
-                                
-                                aliaser_getVideoAlias(videoId, nodeIdentification.nodeIdentifier, nodeIdentification.nodeIdentifierProof)
-                                .then(aliaserResponseData => {
-                                    if(aliaserResponseData.isError) {
-                                        logDebugMessageToConsole(aliaserResponseData.message, null, new Error().stack, true);
-                                        
-                                        res.send({isError: true, message: aliaserResponseData.message});
-                                    }
-                                    else {
-                                        res.send({isError: false, videoAliasUrl: aliaserResponseData.videoAliasUrl});
-                                    }
-                                })
-                                .catch(error => {
-                                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                                    
-                                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                                });
-                            })
-                            .catch(error => {
-                                res.send({isError: true, message: 'an error occurred while retrieving the video alias, please try again later'});
-                            });
-                        }
-                        else {
-                            res.send({isError: true, message: 'MoarTube Aliaser unavailable; node is private'});
-                        }
+                        videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
                     }
+
+                    res.send({isError: false, videoAliasUrl: videoAliasUrl});
                 }
                 else {
-                    res.send({isError: true, message: 'MoarTube Aliaser link unavailable'});
+                    if(!nodeSettings.isNodePrivate) {
+                        performNodeIdentification(false)
+                        .then(() => {
+                            const nodeIdentification = getNodeIdentification();
+                            
+                            aliaser_getVideoAlias(videoId, nodeIdentification.nodeIdentifier, nodeIdentification.nodeIdentifierProof)
+                            .then(aliaserResponseData => {
+                                if(aliaserResponseData.isError) {
+                                    logDebugMessageToConsole(aliaserResponseData.message, null, new Error().stack, true);
+                                    
+                                    res.send({isError: true, message: aliaserResponseData.message});
+                                }
+                                else {
+                                    res.send({isError: false, videoAliasUrl: aliaserResponseData.videoAliasUrl});
+                                }
+                            })
+                            .catch(error => {
+                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                                
+                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                            });
+                        })
+                        .catch(error => {
+                            res.send({isError: true, message: 'an error occurred while retrieving the video alias, please try again later'});
+                        });
+                    }
+                    else {
+                        res.send({isError: true, message: 'MoarTube Aliaser unavailable; node is private'});
+                    }
                 }
             }
+            else {
+                res.send({isError: true, message: 'MoarTube Aliaser link unavailable'});
+            }
+        })
+        .catch(error => {
+            res.send({isError: true, message: 'error communicating with the MoarTube node'});
         });
     }
     else {
@@ -1742,20 +1725,17 @@ function videoIdData_GET(req, res) {
             const videoId = req.params.videoId;
             
             if(isVideoIdValid(videoId)) {
-                database.get('SELECT * FROM videos WHERE video_id = ?', videoId, function(error, videoData) {
-                    if(error) {
-                        logDebugMessageToConsole(null, error, new Error().stack, true);
-                        
-                        res.send({isError: true, message: 'error retrieving video data'});
+                performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+                .then(video => {
+                    if(video != null) {
+                        res.send({isError: false, videoData: video});
                     }
                     else {
-                        if(videoData != null) {
-                            res.send({isError: false, videoData: videoData});
-                        }
-                        else {
-                            res.send({isError: true, message: 'that video does not exist'});
-                        }
+                        res.send({isError: true, message: 'that video does not exist'});
                     }
+                })
+                .catch(error => {
+                    res.send({isError: true, message: 'error retrieving video data'});
                 });
             }
             else {
@@ -1788,40 +1768,38 @@ function delete_POST(req, res) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
-                        database.all('SELECT * FROM videos WHERE (is_importing = 1 OR is_publishing = 1 OR is_streaming = 1 OR is_indexed = 1) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds, (error, videos) => {
-                            if (error) {
-                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = 1 OR is_publishing = 1 OR is_streaming = 1 OR is_indexed = 1) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds)
+                        .then(videos => {
+                            const deletedVideoIds = [];
+                            const nonDeletedVideoIds = [];
+                            
+                            videos.forEach(function(video) {
+                                const videoId = video.video_id;
                                 
-                                res.send({isError: true, message: error.message});
-                            } else {
-                                const deletedVideoIds = [];
-                                const nonDeletedVideoIds = [];
-                                
-                                videos.forEach(function(video) {
-                                    const videoId = video.video_id;
+                                nonDeletedVideoIds.push(videoId);
+                            });
+                            
+                            videoIds.forEach(function(videoId) {
+                                if(!nonDeletedVideoIds.includes(videoId)) {
+                                    const videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId);
+                
+                                    deleteDirectoryRecursive(videoDirectoryPath);
                                     
-                                    nonDeletedVideoIds.push(videoId);
-                                });
-                                
-                                videoIds.forEach(function(videoId) {
-                                    if(!nonDeletedVideoIds.includes(videoId)) {
-                                        const videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId);
-                    
-                                        deleteDirectoryRecursive(videoDirectoryPath);
-                                        
-                                        deletedVideoIds.push(videoId);
-                                    }
-                                });
+                                    deletedVideoIds.push(videoId);
+                                }
+                            });
 
-                                submitDatabaseWriteJob('DELETE FROM comments WHERE video_id IN (' + deletedVideoIds.map(() => '?').join(',') + ')', deletedVideoIds, function(isError) {
-                                    if(isError) {
-                                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                                    }
-                                    else {
-                                        res.send({isError: false, deletedVideoIds: deletedVideoIds, nonDeletedVideoIds: nonDeletedVideoIds});
-                                    }
-                                });
-                            }
+                            submitDatabaseWriteJob('DELETE FROM comments WHERE video_id IN (' + deletedVideoIds.map(() => '?').join(',') + ')', deletedVideoIds, function(isError) {
+                                if(isError) {
+                                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                                }
+                                else {
+                                    res.send({isError: false, deletedVideoIds: deletedVideoIds, nonDeletedVideoIds: nonDeletedVideoIds});
+                                }
+                            });
+                        })
+                        .catch(error => {
+                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
                         });
                     }
                 });
@@ -1856,29 +1834,27 @@ function finalize_POST(req, res) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
-                        database.all('SELECT * FROM videos WHERE (is_importing = 1 OR is_publishing = 1 OR is_streaming = 1) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds, (error, videos) => {
-                            if (error) {
-                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = 1 OR is_publishing = 1 OR is_streaming = 1) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds)
+                        .then(videos => {
+                            const finalizedVideoIds = [];
+                            const nonFinalizedVideoIds = [];
+                            
+                            videos.forEach(function(video) {
+                                const videoId = video.video_id;
                                 
-                                res.send({isError: true, message: error.message});
-                            } else {
-                                const finalizedVideoIds = [];
-                                const nonFinalizedVideoIds = [];
-                                
-                                videos.forEach(function(video) {
-                                    const videoId = video.video_id;
-                                    
-                                    nonFinalizedVideoIds.push(videoId);
-                                });
-                                
-                                videoIds.forEach(function(videoId) {
-                                    if(!nonFinalizedVideoIds.includes(videoId)) {
-                                        finalizedVideoIds.push(videoId);
-                                    }
-                                });
-                                
-                                res.send({isError: false, finalizedVideoIds: finalizedVideoIds, nonFinalizedVideoIds: nonFinalizedVideoIds});
-                            }
+                                nonFinalizedVideoIds.push(videoId);
+                            });
+                            
+                            videoIds.forEach(function(videoId) {
+                                if(!nonFinalizedVideoIds.includes(videoId)) {
+                                    finalizedVideoIds.push(videoId);
+                                }
+                            });
+                            
+                            res.send({isError: false, finalizedVideoIds: finalizedVideoIds, nonFinalizedVideoIds: nonFinalizedVideoIds});
+                        })
+                        .catch(error => {
+                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
                         });
                     }
                 });
@@ -1909,52 +1885,40 @@ function videoIdDiscussion_GET(req, res) {
     
     if(isVideoIdValid(videoId) && isTimestampValid(timestamp) && isDiscussionTypeValid(type) && isCommentIdValid(minimumCommentId) && isCommentIdValid(maximumCommentId)) {
         if(type === 'before') {
-            database.all('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp], function(error, rows) {
-                if (error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                    
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                }
-                else {
-                    res.send({isError: false, comments: rows});
-                }
+            performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp])
+            .then(comments => {
+                res.send({isError: false, comments: comments});
+            })
+            .catch(error => {
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
             });
         }
         else if(type === 'after') {
             if(minimumCommentId == 0 && maximumCommentId == 0) {
-                database.all('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? ORDER BY timestamp DESC LIMIT 20', [videoId, timestamp], function(error, rows) {
-                    if (error) {
-                        logDebugMessageToConsole(null, error, new Error().stack, true);
-                        
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                    }
-                    else {
-                        res.send({isError: false, comments: rows});
-                    }
+                performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? ORDER BY timestamp DESC LIMIT 20', [videoId, timestamp])
+                .then(comments => {
+                    res.send({isError: false, comments: comments});
+                })
+                .catch(error => {
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
                 });
             }
             else if(minimumCommentId >= 0 && maximumCommentId > 0) {
-                database.all('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? AND id >= ? AND id < ? ORDER BY timestamp DESC', [videoId, timestamp, minimumCommentId, maximumCommentId], function(error, rows) {
-                    if (error) {
-                        logDebugMessageToConsole(null, error, new Error().stack, true);
-                        
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                    }
-                    else {
-                        res.send({isError: false, comments: rows});
-                    }
+                performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? AND id >= ? AND id < ? ORDER BY timestamp DESC', [videoId, timestamp, minimumCommentId, maximumCommentId])
+                .then(comments => {
+                    res.send({isError: false, comments: comments});
+                })
+                .catch(error => {
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
                 });
             }
             else if(minimumCommentId > 0 && maximumCommentId == 0) {
-                database.all('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? AND id >= ? ORDER BY timestamp DESC', [videoId, timestamp, minimumCommentId], function(error, rows) {
-                    if (error) {
-                        logDebugMessageToConsole(null, error, new Error().stack, true);
-                        
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                    }
-                    else {
-                        res.send({isError: false, comments: rows});
-                    }
+                performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? AND id >= ? ORDER BY timestamp DESC', [videoId, timestamp, minimumCommentId])
+                .then(comments => {
+                    res.send({isError: false, comments: comments});
+                })
+                .catch(error => {
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
                 });
             }
         }
@@ -1969,20 +1933,17 @@ function videoIdDiscussionCommentId_GET(req, res) {
     const commentId = req.params.commentId;
     
     if(isVideoIdValid(videoId) && isCommentIdValid(commentId)) {
-        database.get('SELECT * FROM comments WHERE video_id = ? AND id = ?', [videoId, commentId], function(error, comment) {
-            if (error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
-                
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        performDatabaseReadJob_GET('SELECT * FROM comments WHERE video_id = ? AND id = ?', [videoId, commentId])
+        .then(comment => {
+            if(comment != null) {
+                res.send({isError: false, comment: comment});
             }
             else {
-                if(comment != null) {
-                    res.send({isError: false, comment: comment});
-                }
-                else {
-                    res.send({isError: true, message: 'that comment does not exist'});
-                }
+                res.send({isError: true, message: 'that comment does not exist'});
             }
+        })
+        .catch(error => {
+            res.send({isError: true, message: 'error communicating with the MoarTube node'});
         });
     }
     else {
@@ -2021,14 +1982,9 @@ function videoIdDiscussionComment_POST(req, res) {
                             res.send({isError: true, message: 'error communicating with the MoarTube node'});
                         }
                         else {
-                            database.all('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp], function(error, comments) {
-                                if (error) {
-                                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                                    
-                                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                                }
-                                else {
-                                    var commentId = 0;
+                            performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp])
+                            .then(comments => {
+                                var commentId = 0;
                                     
                                     for (let i = comments.length - 1; i >= 0; i--) {
                                         if(commentTimestamp === comments[i].timestamp) {
@@ -2038,7 +1994,9 @@ function videoIdDiscussionComment_POST(req, res) {
                                     }
                                     
                                     res.send({isError: false, commentId: commentId, comments: comments});
-                                }
+                            })
+                            .catch(error => {
+                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
                             });
                         }
                     });
@@ -2199,36 +2157,30 @@ function recommendations_GET(req, res) {
     
     if(isTagTermValid(tagTerm, true) && isTimestampValid(timestamp)) {
         if(tagTerm.length === 0) {
-            database.all('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) AND creation_timestamp < ? ORDER BY creation_timestamp DESC LIMIT 20', [timestamp], function(error, recommendations) {
-                if (error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                    
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                }
-                else {
-                    res.send({isError: false, recommendations: recommendations});
-                }
+            performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) AND creation_timestamp < ? ORDER BY creation_timestamp DESC LIMIT 20', [timestamp])
+            .then(recommendations => {
+                res.send({isError: false, recommendations: recommendations});
+            })
+            .catch(error => {
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
             });
         }
         else {
-            database.all('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) AND tags LIKE ? AND creation_timestamp < ? ORDER BY creation_timestamp DESC LIMIT 20', ['%' + tagTerm + '%', timestamp], (error, rows) => {
-                if (error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                    
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                }
-                else {
-                    const recommendations = [];
-                    
-                    rows.forEach(function(row) {
-                        const tagsArray = row.tags.split(',');
-                        if (tagsArray.includes(tagTerm)) {
-                            recommendations.push(row);
-                        }
-                    });
-                    
-                    res.send({isError: false, recommendations: recommendations});
-                }
+            performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) AND tags LIKE ? AND creation_timestamp < ? ORDER BY creation_timestamp DESC LIMIT 20', ['%' + tagTerm + '%', timestamp])
+            .then(videos => {
+                const recommendations = [];
+                
+                videos.forEach(function(video) {
+                    const tagsArray = video.tags.split(',');
+                    if (tagsArray.includes(tagTerm)) {
+                        recommendations.push(video);
+                    }
+                });
+                
+                res.send({isError: false, recommendations: recommendations});
+            })
+            .catch(error => {
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
             });
         }
     }
@@ -2241,7 +2193,7 @@ function tags_GET(req, res) {
     performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) ORDER BY creation_timestamp DESC', [])
     .then(rows => {
         const tags = [];
-        
+
         rows.forEach(function(row) {
             const tagsArray = row.tags.split(',');
             
@@ -2260,27 +2212,24 @@ function tags_GET(req, res) {
 }
 
 function tagsAll_GET(req, res) {
-    const tags = [];
-    
-    database.all('SELECT * FROM videos ORDER BY creation_timestamp DESC', function(error, rows) {
-        if(error) {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
-            
-            res.send({isError: true, message: 'error communicating with the MoarTube node'});
-        }
-        else {
-            rows.forEach(function(row) {
-                const tagsArray = row.tags.split(',');
-                
-                tagsArray.forEach(function(tag) {
-                    if (!tags.includes(tag)) {
-                        tags.push(tag);
-                    }
-                });
+    performDatabaseReadJob_ALL('SELECT * FROM videos ORDER BY creation_timestamp DESC', [])
+    .then(videos => {
+        const tags = [];
+
+        videos.forEach(function(videos) {
+            const tagsArray = videos.tags.split(',');
+
+            tagsArray.forEach(function(tag) {
+                if (!tags.includes(tag)) {
+                    tags.push(tag);
+                }
             });
-            
-            res.send({isError: false, tags: tags});
-        }
+        });
+        
+        res.send({isError: false, tags: tags});
+    })
+    .catch(error => {
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });
 }
 
