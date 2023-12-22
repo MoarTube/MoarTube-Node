@@ -75,7 +75,7 @@ function initializeHttpServer(value) {
         httpServer.keepAliveTimeout = 10000;
         
         httpServer.listen(getMoarTubeNodeHttpPort(), function() {
-            logDebugMessageToConsole('MoarTube Node is listening on port ' + getMoarTubeNodeHttpPort(), null, null, true);
+            logDebugMessageToConsole('MoarTube Node worker ' + process.pid + ' is listening on port ' + getMoarTubeNodeHttpPort(), null, null, true);
             
             const websocketServer = new webSocket.Server({ 
                 noServer: true, 
