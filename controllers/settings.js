@@ -5,8 +5,10 @@ const httpTerminator = require('http-terminator');
 const webSocket = require('ws');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
+const { getImagesDirectoryPath, getCertificatesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
+} = require('../utils/paths');
 const { getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, 
-    setMoarTubeNodeHttpPort, getIsDockerEnvironment, getImagesDirectoryPath, getCertificatesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
+    setMoarTubeNodeHttpPort, getIsDockerEnvironment
 } = require('../utils/helpers');
 const { 
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isBooleanValid, isBooleanStringValid, isUsernameValid, isPasswordValid, 

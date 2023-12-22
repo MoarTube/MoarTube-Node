@@ -4,11 +4,13 @@ const path = require('path');
 const multer = require('multer');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
+const { getVideosDirectoryPath } = require('../utils/paths');
+const { updateHlsVideoMasterManifestFile } = require('../utils/filesystem');
 const { 
     getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, getMoarTubeAliaserPort,
-    getVideosDirectoryPath, performNodeIdentification, getNodeIdentification
+    performNodeIdentification, getNodeIdentification, sanitizeTagsSpaces, deleteDirectoryRecursive
 } = require('../utils/helpers');
+const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
 const { 
     isManifestNameValid, isSegmentNameValid, isSearchTermValid, isSourceFileExtensionValid, isBooleanValid, isVideoCommentValid, isCaptchaTypeValid, isCaptchaResponseValid,
     isTimestampValid, isDiscussionTypeValid, isCommentIdValid, isSortTermValid, isTagLimitValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isVideoIdValid,
@@ -1801,6 +1803,8 @@ function delete_POST(req, res) {
                             });
                         })
                         .catch(error => {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+
                             res.send({isError: true, message: 'error communicating with the MoarTube node'});
                         });
                     }

@@ -1,7 +1,8 @@
 const path = require('path');
 const fs = require('fs');
 
-const { getPagesDirectoryPath, getNodeSettings } = require('../utils/helpers');
+const { getPagesDirectoryPath } = require('../utils/paths');
+const { getNodeSettings } = require('../utils/helpers');
 const { isVideoIdValid } = require('../utils/validators');
 const { performDatabaseReadJob_GET } = require('../utils/database');
 

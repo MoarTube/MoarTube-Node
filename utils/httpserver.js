@@ -7,7 +7,8 @@ const httpTerminator = require('http-terminator');
 const sanitizeHtml = require('sanitize-html');
 
 const { logDebugMessageToConsole } = require('./logger');
-const { getNodeSettings, getAuthenticationStatus, getCertificatesDirectoryPath, getMoarTubeNodeHttpPort } = require("./helpers");
+const { getCertificatesDirectoryPath } = require("./paths");
+const { getNodeSettings, getAuthenticationStatus, getMoarTubeNodeHttpPort, websocketNodeBroadcast } = require("./helpers");
 const { stoppedPublishVideoUploading, stoppingPublishVideoUploading } = require("./trackers/publish-video-uploading-tracker");
 const { isVideoIdValid, isChatMessageContentValid } = require('./validators');
 

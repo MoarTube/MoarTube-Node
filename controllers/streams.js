@@ -1,5 +1,6 @@
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { getAuthenticationStatus, generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, getVideosDirectoryPath } = require('../utils/helpers');
+const { getVideosDirectoryPath } = require('../utils/paths');
+const { getAuthenticationStatus, generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, deleteDirectoryRecursive } = require('../utils/helpers');
 const { 
     isTitleValid, isDescriptionValid, isTagsValid, isPortValid, isVideoIdValid, isAdaptiveFormatValid, isResolutionValid, isSegmentNameValid, isBooleanValid, 
     isNetworkAddressValid, isChatHistoryLimitValid 

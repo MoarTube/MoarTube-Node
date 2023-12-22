@@ -3,7 +3,7 @@ const path = require('path');
 const { v1: uuidv1, v4: uuidv4 } = require('uuid');
 
 const { logDebugMessageToConsole } = require('./logger');
-const { getDatabaseFilePath } = require("./helpers");
+const { getDatabaseFilePath } = require("./paths");
 
 let database;
 let PENDING_DATABASE_WRITE_JOBS = {};

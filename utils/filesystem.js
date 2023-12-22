@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { logDebugMessageToConsole } = require('./logger');
-const { getVideosDirectoryPath } = require('./helpers');
+const { getVideosDirectoryPath } = require('./paths');
 const { performDatabaseReadJob_ALL } = require('./database');
 
 setInterval(function() {
@@ -153,6 +153,6 @@ function updateHlsVideoMasterManifestFile(videoId) {
     fs.writeFileSync(masterManifestFilePath, manifestFileString);
 }
 
-modules.exports = {
+module.exports = {
     updateHlsVideoMasterManifestFile
 };

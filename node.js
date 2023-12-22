@@ -13,13 +13,15 @@ const { Mutex } = require('async-mutex');
 
 const {logDebugMessageToConsole} = require('./utils/logger');
 const {
-	getNodeSettings, setNodeSettings, generateVideoId, getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setPagesDirectoryPath,
-	setIsDockerEnvironment, getIsDockerEnvironment, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, setVideosDirectoryPath, setDatabaseDirectoryPath,
-	setDatabaseFilePath, setCertificatesDirectoryPath, setIsDeveloperMode, setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort,
-	setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort, setJwtSecret, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
-	getCertificatesDirectoryPath, getNodeSettingsPath, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret, setMoarTubeNodeHttpPort,
-	performNodeIdentification, getNodeIdentification, getNodeIconBase64
+	getNodeSettings, setNodeSettings, generateVideoId,
+	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort,
+	setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort, setJwtSecret, getExpressSessionName, getExpressSessionSecret, 
+	setExpressSessionName, setExpressSessionSecret, setMoarTubeNodeHttpPort, performNodeIdentification, getNodeIdentification, getNodeIconBase64
 } = require('./utils/helpers');
+const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setPagesDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, 
+	setVideosDirectoryPath, setDatabaseDirectoryPath, setDatabaseFilePath, setCertificatesDirectoryPath, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
+	getCertificatesDirectoryPath, getNodeSettingsPath
+} = require('./utils/paths');
 const { provisionSqliteDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL } = require('./utils/database');
 const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = require('./utils/httpserver');
 const { indexer_doIndexUpdate } = require('./utils/indexer-communications');

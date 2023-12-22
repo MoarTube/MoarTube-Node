@@ -3,7 +3,8 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
 const { logDebugMessageToConsole } = require('./logger');
-
+const { getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath } = require('./paths');
+const { performDatabaseReadJob_GET } = require('./database');
 
 var isDeveloperMode;
 var jwtSecret;
@@ -17,15 +18,6 @@ var moartubeAliaserHttpProtocol;
 var expressSessionName;
 var expressSessionSecret;
 var isDockerEnvironment;
-var dataDirectoryPath;
-var nodeSettingsPath;
-var imagesDirectoryPath;
-var publicDirectoryPath;
-var pagesDirectoryPath;
-var videosDirectoryPath;
-var databaseDirectoryPath;
-var databaseFilePath;
-var certificatesDirectoryPath;
 
 function generateCaptcha() {
     return new Promise(function(resolve, reject) {
@@ -143,21 +135,18 @@ async function generateVideoId() {
 
         if (hyphenCount <= 1 && underscoreCount <= 1) {
             await new Promise((resolve, reject) => {
-                resolve(true);
-                /*
                 performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
                 .then(video => {
                     if (video == null) {
-                        resolve(false);
+                        resolve(true);
                     } 
                     else {
-                        resolve(true);
+                        resolve(false);
                     }
                 })
                 .catch(error => {
                     reject(error);
                 });
-                */
             }).then(isIdUnique => {
                 isUnique = isIdUnique;
             }).catch(error => {
@@ -309,44 +298,8 @@ function getJwtSecret() {
     return jwtSecret;
 }
 
-function getPublicDirectoryPath() {
-    return publicDirectoryPath;
-}
-
-function getPagesDirectoryPath() {
-    return pagesDirectoryPath;
-}
-
 function getIsDockerEnvironment() {
     return isDockerEnvironment;
-}
-
-function getDataDirectoryPath() {
-    return dataDirectoryPath;
-}
-
-function getNodeSettingsPath() {
-    return nodeSettingsPath;
-}
-
-function getImagesDirectoryPath() {
-    return imagesDirectoryPath;
-}
-
-function getVideosDirectoryPath() {
-    return videosDirectoryPath;
-}
-
-function getDatabaseDirectoryPath() {
-    return databaseDirectoryPath;
-}
-
-function getDatabaseFilePath() {
-    return databaseFilePath;
-}
-
-function getCertificatesDirectoryPath() {
-    return certificatesDirectoryPath;
 }
 
 function getIsDeveloperMode() {
@@ -409,44 +362,8 @@ function setJwtSecret(secret) {
     jwtSecret = secret;
 }
 
-function setPublicDirectoryPath(path) {
-    publicDirectoryPath = path;
-}
-
-function setPagesDirectoryPath(path) {
-    pagesDirectoryPath = path;
-}
-
 function setIsDockerEnvironment(value) {
     isDockerEnvironment = value;
-}
-
-function setDataDirectoryPath(path) {
-    dataDirectoryPath = path;
-}
-
-function setNodeSettingsPath(path) {
-    nodeSettingsPath = path;
-}
-
-function setImagesDirectoryPath(path) {
-    imagesDirectoryPath = path;
-}
-
-function setVideosDirectoryPath(path) {
-    videosDirectoryPath = path;
-}
-
-function setDatabaseDirectoryPath(path) {
-    databaseDirectoryPath = path;
-}
-
-function setDatabaseFilePath(path) {
-    databaseFilePath = path;
-}
-
-function setCertificatesDirectoryPath(path) {
-    certificatesDirectoryPath = path;
 }
 
 function setIsDeveloperMode(value) {
@@ -498,22 +415,14 @@ module.exports = {
     websocketNodeBroadcast,
     websocketChatBroadcast,
     sanitizeTagsSpaces,
+    deleteDirectoryRecursive,
     performNodeIdentification,
     generateCaptcha,
     generateVideoId,
     getJwtSecret,
     getAuthenticationStatus,
     getNodeSettings,
-    getPagesDirectoryPath,
-    getPublicDirectoryPath,
     getIsDockerEnvironment,
-    getDataDirectoryPath,
-    getNodeSettingsPath,
-    getImagesDirectoryPath,
-    getVideosDirectoryPath,
-    getDatabaseDirectoryPath,
-    getDatabaseFilePath,
-    getCertificatesDirectoryPath,
     getIsDeveloperMode,
     getMoarTubeIndexerHttpProtocol,
     getMoarTubeIndexerIp,
@@ -530,16 +439,7 @@ module.exports = {
     getNodeIconBase64,
     setJwtSecret,
     setNodeSettings,
-    setPublicDirectoryPath,
-    setPagesDirectoryPath,
     setIsDockerEnvironment,
-    setDataDirectoryPath,
-    setNodeSettingsPath,
-    setImagesDirectoryPath,
-    setVideosDirectoryPath,
-    setDatabaseDirectoryPath,
-    setDatabaseFilePath,
-    setCertificatesDirectoryPath,
     setIsDeveloperMode,
     setMoarTubeIndexerHttpProtocol,
     setMoarTubeIndexerIp,

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { getPagesDirectoryPath } = require('../utils/helpers');
+const { getPagesDirectoryPath } = require('../utils/paths');
 const { isVideoIdValid } = require('../utils/validators');
 
 function videoVideoId_GET(req, res) {
