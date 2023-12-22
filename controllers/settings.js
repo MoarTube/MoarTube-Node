@@ -3,6 +3,8 @@ const path = require('path');
 const multer = require('multer');
 const httpTerminator = require('http-terminator');
 const webSocket = require('ws');
+const bcryptjs = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getImagesDirectoryPath, getCertificatesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath

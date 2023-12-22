@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const { logDebugMessageToConsole } = require('./logger');
-const { getMoarTubeIndexerUrl } = require('./helpers');
+const { getMoarTubeIndexerUrl } = require('./urls');
 
 function indexer_addVideoToIndex(data) {
     return new Promise(function(resolve, reject) {

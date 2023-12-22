@@ -5,16 +5,11 @@ const jwt = require('jsonwebtoken');
 const { logDebugMessageToConsole } = require('./logger');
 const { getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath } = require('./paths');
 const { performDatabaseReadJob_GET } = require('./database');
+const { indexer_getNodeIdentification, indexer_doNodeIdentificationRefresh } = require('./indexer-communications');
 
 var isDeveloperMode;
 var jwtSecret;
 var moartubeNodeHttpPort;
-var moartubeIndexerIp;
-var moartubeIndexerPort;
-var moartubeIndexerHttpProtocol;
-var moartubeAliaserIp;
-var moartubeAliaserPort;
-var moartubeAliaserHttpProtocol;
 var expressSessionName;
 var expressSessionSecret;
 var isDockerEnvironment;
@@ -342,14 +337,6 @@ function getExpressSessionSecret() {
     return expressSessionSecret;
 }
 
-function getMoarTubeIndexerUrl() {
-    return (getMoarTubeIndexerHttpProtocol() + '://' + getMoarTubeIndexerIp() + ':' + getMoarTubeIndexerPort());
-}
-
-function getMoarTubeAliaserUrl() {
-    return (getMoarTubeAliaserHttpProtocol() + '://' + getMoarTubeAliaserIp() + ':' + getMoarTubeAliaserPort());
-}
-
 function getNodeSettings() {
 	const nodeSettings = JSON.parse(fs.readFileSync(getNodeSettingsPath(), 'utf8'));
 
@@ -368,30 +355,6 @@ function setIsDockerEnvironment(value) {
 
 function setIsDeveloperMode(value) {
     isDeveloperMode = value;
-}
-
-function setMoarTubeIndexerHttpProtocol(value) {
-    moartubeIndexerHttpProtocol = value;
-}
-
-function setMoarTubeIndexerIp(value) {
-    moartubeIndexerIp = value;
-}
-
-function setMoarTubeIndexerPort(value) {
-    moartubeIndexerPort = value;
-}
-
-function setMoarTubeAliaserHttpProtocol(value) {
-    moartubeAliaserHttpProtocol = value;
-}
-
-function setMoarTubeAliaserIp(value) {
-    moartubeAliaserIp = value;
-}
-
-function setMoarTubeAliaserPort(value) {
-    moartubeAliaserPort = value;
 }
 
 function setMoarTubeNodeHttpPort(value) {
@@ -430,23 +393,15 @@ module.exports = {
     getMoarTubeAliaserHttpProtocol,
     getMoarTubeAliaserIp,
     getMoarTubeAliaserPort,
-    getMoarTubeAliaserUrl,
     getMoarTubeNodeHttpPort,
     getExpressSessionName,
     getExpressSessionSecret,
-    getMoarTubeIndexerUrl,
     getNodeIdentification,
     getNodeIconBase64,
     setJwtSecret,
     setNodeSettings,
     setIsDockerEnvironment,
     setIsDeveloperMode,
-    setMoarTubeIndexerHttpProtocol,
-    setMoarTubeIndexerIp,
-    setMoarTubeIndexerPort,
-    setMoarTubeAliaserHttpProtocol,
-    setMoarTubeAliaserIp,
-    setMoarTubeAliaserPort,
     setMoarTubeNodeHttpPort,
     setExpressSessionName,
     setExpressSessionSecret,

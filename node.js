@@ -14,10 +14,10 @@ const { Mutex } = require('async-mutex');
 const {logDebugMessageToConsole} = require('./utils/logger');
 const {
 	getNodeSettings, setNodeSettings, generateVideoId,
-	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort,
-	setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort, setJwtSecret, getExpressSessionName, getExpressSessionSecret, 
+	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, setJwtSecret, getExpressSessionName, getExpressSessionSecret, 
 	setExpressSessionName, setExpressSessionSecret, setMoarTubeNodeHttpPort, performNodeIdentification, getNodeIdentification, getNodeIconBase64
 } = require('./utils/helpers');
+const { setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort } = require('./utils/urls');
 const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setPagesDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, 
 	setVideosDirectoryPath, setDatabaseDirectoryPath, setDatabaseFilePath, setCertificatesDirectoryPath, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
 	getCertificatesDirectoryPath, getNodeSettingsPath
