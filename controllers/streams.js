@@ -134,7 +134,17 @@ function videoIdStop_POST(req, res) {
                         performDatabaseReadJob_GET('SELECT is_stream_recorded_remotely FROM videos WHERE video_id = ?', [videoId])
                         .then(video => {
                             if(video != null) {
-                                if(!video.is_stream_recorded_remotely) {
+                                if(video.is_stream_recorded_remotely) {
+                                    submitDatabaseWriteJob('UPDATE videos SET is_published = 1 WHERE video_id = ?', [videoId], function(isError) {
+                                        if(isError) {
+                                            
+                                        }
+                                        else {
+                                            
+                                        }
+                                    });
+                                }
+                                else {
                                     const m3u8DirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
                                     
                                     deleteDirectoryRecursive(m3u8DirectoryPath);
