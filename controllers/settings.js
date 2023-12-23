@@ -86,9 +86,9 @@ function avatar_POST(req, res) {
                 },
                 storage: multer.diskStorage({
                     destination: function (req, file, cb) {
-                        fs.access(getImagesDirectoryPath(), fs.F_OK, function(error) {
+                        fs.access(getImagesDirectoryPath(), fs.constants.F_OK, function(error) {
                             if(error) {
-                                cb(new Error('file upload error'));
+                                cb(new Error('file upload error'), null);
                             }
                             else {
                                 cb(null, getImagesDirectoryPath());
@@ -107,7 +107,7 @@ function avatar_POST(req, res) {
                         cb(null, fileName);
                     }
                 })
-            }).fields([{ name: 'iconFile', minCount: 1, maxCount: 1 }, { name: 'avatarFile', minCount: 1, maxCount: 1 }])
+            }).fields([{ name: 'iconFile', maxCount: 1 }, { name: 'avatarFile', maxCount: 1 }])
             (req, res, async function(error)
             {
                 if(error) {
@@ -199,9 +199,9 @@ function banner_POST(req, res) {
                 },
                 storage: multer.diskStorage({
                     destination: function (req, file, cb) {
-                        fs.access(getImagesDirectoryPath(), fs.F_OK, function(error) {
+                        fs.access(getImagesDirectoryPath(), fs.constants.F_OK, function(error) {
                             if(error) {
-                                cb(new Error('file upload error'));
+                                cb(new Error('file upload error'), null);
                             }
                             else {
                                 cb(null, getImagesDirectoryPath());
@@ -220,7 +220,7 @@ function banner_POST(req, res) {
                         cb(null, fileName);
                     }
                 })
-            }).fields([{ name: 'bannerFile', minCount: 1, maxCount: 1 }])
+            }).fields([{ name: 'bannerFile', maxCount: 1 }])
             (req, res, async function(error)
             {
                 if(error) {
@@ -387,9 +387,9 @@ function secure_POST(req, res) {
                         },
                         storage: multer.diskStorage({
                             destination: function (req, file, cb) {
-                                fs.access(getCertificatesDirectoryPath(), fs.F_OK, function(error) {
+                                fs.access(getCertificatesDirectoryPath(), fs.constants.F_OK, function(error) {
                                     if(error) {
-                                        cb(new Error('file upload error'));
+                                        cb(new Error('file upload error'), null);
                                     }
                                     else {
                                         cb(null, getCertificatesDirectoryPath());
@@ -407,11 +407,11 @@ function secure_POST(req, res) {
                                     cb(null, file.originalname);
                                 }
                                 else {
-                                    cb(new Error('invalid field name in POST /settings/secure:' + file.fieldname));
+                                    cb(new Error('invalid field name in POST /settings/secure:' + file.fieldname), null);
                                 }
                             }
                         })
-                    }).fields([{ name: 'keyFile', minCount: 1, maxCount: 1 }, { name: 'certFile', minCount: 1, maxCount: 1 }, { name: 'caFiles', minCount: 0 }])
+                    }).fields([{ name: 'keyFile', maxCount: 1 }, { name: 'certFile', maxCount: 1 }, { name: 'caFiles' }])
                     (req, res, async function(error) {
                         if(error) {
                             logDebugMessageToConsole(null, error, new Error().stack, true);

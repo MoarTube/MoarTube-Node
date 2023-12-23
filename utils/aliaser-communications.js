@@ -1,5 +1,4 @@
-const axios = require('axios');
-
+const axios = require('axios').default;
 const { logDebugMessageToConsole } = require('./logger');
 const { getMoarTubeAliaserUrl } = require('./urls');
 

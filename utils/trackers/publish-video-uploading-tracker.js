@@ -1,3 +1,5 @@
+const { websocketNodeBroadcast } = require('../helpers');
+
 const publishVideoUploadingTracker = {};
 
 function addToPublishVideoUploadingTracker(videoId) {
@@ -12,7 +14,7 @@ function addToPublishVideoUploadingTrackerUploadRequests(videoId, req) {
     }
 }
 
-function stoppingPublishVideoUploading(videoId) {
+function stoppingPublishVideoUploading(videoId, parsedMessage) {
     if(publishVideoUploadingTracker.hasOwnProperty(videoId)) {
         publishVideoUploadingTracker[videoId].stopping = true;
     }
@@ -20,7 +22,7 @@ function stoppingPublishVideoUploading(videoId) {
     websocketNodeBroadcast(parsedMessage);
 }
 
-function stoppedPublishVideoUploading(videoId) {
+function stoppedPublishVideoUploading(videoId, parsedMessage) {
     if(publishVideoUploadingTracker.hasOwnProperty(videoId)) {
         const uploadRequests = publishVideoUploadingTracker[videoId].uploadRequests;
         

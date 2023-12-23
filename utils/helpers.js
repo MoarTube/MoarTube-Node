@@ -301,30 +301,6 @@ function getIsDeveloperMode() {
     return isDeveloperMode;
 }
 
-function getMoarTubeIndexerHttpProtocol() {
-    return moartubeIndexerHttpProtocol;
-}
-
-function getMoarTubeIndexerIp() {
-    return moartubeIndexerIp;
-}
-
-function getMoarTubeIndexerPort() {
-    return moartubeIndexerPort;
-}
-
-function getMoarTubeAliaserHttpProtocol() {
-    return moartubeAliaserHttpProtocol;
-}
-
-function getMoarTubeAliaserIp() {
-    return moartubeAliaserIp;
-}
-
-function getMoarTubeAliaserPort() {
-    return moartubeAliaserPort;
-}
-
 function getMoarTubeNodeHttpPort() {
     return moartubeNodeHttpPort;
 }
@@ -387,12 +363,6 @@ module.exports = {
     getNodeSettings,
     getIsDockerEnvironment,
     getIsDeveloperMode,
-    getMoarTubeIndexerHttpProtocol,
-    getMoarTubeIndexerIp,
-    getMoarTubeIndexerPort,
-    getMoarTubeAliaserHttpProtocol,
-    getMoarTubeAliaserIp,
-    getMoarTubeAliaserPort,
     getMoarTubeNodeHttpPort,
     getExpressSessionName,
     getExpressSessionSecret,

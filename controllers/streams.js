@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath } = require('../utils/paths');
 const { getAuthenticationStatus, generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, deleteDirectoryRecursive } = require('../utils/helpers');

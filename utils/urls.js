@@ -5,6 +5,38 @@ var moartubeAliaserIp;
 var moartubeAliaserPort;
 var moartubeAliaserHttpProtocol;
 
+function getMoarTubeIndexerUrl() {
+    return (getMoarTubeIndexerHttpProtocol() + '://' + getMoarTubeIndexerIp() + ':' + getMoarTubeIndexerPort());
+}
+
+function getMoarTubeAliaserUrl() {
+    return (getMoarTubeAliaserHttpProtocol() + '://' + getMoarTubeAliaserIp() + ':' + getMoarTubeAliaserPort());
+}
+
+function getMoarTubeIndexerHttpProtocol() {
+    return moartubeIndexerHttpProtocol;
+}
+
+function getMoarTubeIndexerIp() {
+    return moartubeIndexerIp;
+}
+
+function getMoarTubeIndexerPort() {
+    return moartubeIndexerPort;
+}
+
+function getMoarTubeAliaserHttpProtocol() {
+    return moartubeAliaserHttpProtocol;
+}
+
+function getMoarTubeAliaserIp() {
+    return moartubeAliaserIp;
+}
+
+function getMoarTubeAliaserPort() {
+    return moartubeAliaserPort;
+}
+
 function setMoarTubeIndexerHttpProtocol(value) {
     moartubeIndexerHttpProtocol = value;
 }
@@ -15,10 +47,6 @@ function setMoarTubeIndexerIp(value) {
 
 function setMoarTubeIndexerPort(value) {
     moartubeIndexerPort = value;
-}
-
-function getMoarTubeIndexerUrl() {
-    return (getMoarTubeIndexerHttpProtocol() + '://' + getMoarTubeIndexerIp() + ':' + getMoarTubeIndexerPort());
 }
 
 function setMoarTubeAliaserHttpProtocol(value) {
@@ -33,13 +61,15 @@ function setMoarTubeAliaserPort(value) {
     moartubeAliaserPort = value;
 }
 
-function getMoarTubeAliaserUrl() {
-    return (getMoarTubeAliaserHttpProtocol() + '://' + getMoarTubeAliaserIp() + ':' + getMoarTubeAliaserPort());
-}
-
 module.exports = {
     getMoarTubeAliaserUrl,
     getMoarTubeIndexerUrl,
+    getMoarTubeIndexerHttpProtocol,
+    getMoarTubeIndexerIp,
+    getMoarTubeIndexerPort,
+    getMoarTubeAliaserHttpProtocol,
+    getMoarTubeAliaserIp,
+    getMoarTubeAliaserPort,
     setMoarTubeIndexerHttpProtocol,
     setMoarTubeIndexerIp,
     setMoarTubeIndexerPort,

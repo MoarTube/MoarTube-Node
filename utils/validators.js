@@ -230,7 +230,7 @@ function isTagsValid(tags) {
         const tagsArray = tags.split(',');
         
         if(tagsArray.length > 0 && tagsArray.length <= 5) {
-            for(tag of tagsArray) {
+            for(const tag of tagsArray) {
                 if(!(isTagTermValid(tag, false))) {
                     result = false;
                     break;

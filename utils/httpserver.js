@@ -8,9 +8,10 @@ const sanitizeHtml = require('sanitize-html');
 
 const { logDebugMessageToConsole } = require('./logger');
 const { getCertificatesDirectoryPath } = require("./paths");
-const { getNodeSettings, getAuthenticationStatus, getMoarTubeNodeHttpPort, websocketNodeBroadcast } = require("./helpers");
+const { getNodeSettings, getAuthenticationStatus, getMoarTubeNodeHttpPort, websocketNodeBroadcast, websocketChatBroadcast } = require("./helpers");
 const { stoppedPublishVideoUploading, stoppingPublishVideoUploading } = require("./trackers/publish-video-uploading-tracker");
 const { isVideoIdValid, isChatMessageContentValid } = require('./validators');
+const { performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('./database');
 
 let httpServerWrapper;
 let app;
@@ -22,6 +23,8 @@ function initializeHttpServer(value) {
         }
 
         const nodeSettings = getNodeSettings();
+
+        let httpServer;
         
         if(nodeSettings.isSecure) {
             if (fs.existsSync(getCertificatesDirectoryPath())) {
@@ -162,10 +165,10 @@ function initializeHttpServer(value) {
                                                 websocketNodeBroadcast(parsedMessage);
                                             }
                                             else if(type === 'publishing_stopping') {
-                                                stoppingPublishVideoUploading(videoId);
+                                                stoppingPublishVideoUploading(videoId, parsedMessage);
                                             }
                                             else if(type === 'publishing_stopped') {
-                                                stoppedPublishVideoUploading(videoId)
+                                                stoppedPublishVideoUploading(videoId, parsedMessage)
                                             }
                                             else if(type === 'streaming_stopping') {
                                                 websocketNodeBroadcast(parsedMessage);
@@ -320,7 +323,7 @@ function initializeHttpServer(value) {
                                             }
                                         })
                                         .catch(error => {
-                                            res.send({isError: true, message: 'error retrieving video data'});
+                                            logDebugMessageToConsole(null, error, new Error().stack, true);
                                         });
                                     }
                                 }

@@ -3,7 +3,6 @@ const path = require('path');
 const multer = require('multer');
 const sanitizeHtml = require('sanitize-html');
 
-
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath } = require('../utils/paths');
 const { updateHlsVideoMasterManifestFile } = require('../utils/filesystem');

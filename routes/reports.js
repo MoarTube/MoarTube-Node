@@ -8,37 +8,4 @@ router.get('/count', async (req, res) => {
     reportsCount_GET(req, res);
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 module.exports = router;
