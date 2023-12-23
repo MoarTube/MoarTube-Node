@@ -294,7 +294,7 @@ function personalize_POST(req, res) {
                                     if(indexerResponseData.isError) {
                                         logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
                                         
-                                        res.send({isError: true, message: 'error communicating with the MoarTube indexer'});
+                                        res.send({isError: true, message: indexerResponseData.message});
                                     }
                                     else {
                                         setNodeSettings(nodeSettings);

@@ -65,7 +65,7 @@ function index_GET(req, res) {
                         .catch(error => {
                             logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                            res.send({isError: true, message: 'error retrieving captcha from the MoarTube Indexer'});
                         });
                     }
                     else {
@@ -118,7 +118,7 @@ function alias_GET(req, res) {
                 .catch(error => {
                     logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    res.send({isError: true, message: 'error retrieving captcha from the MoarTube Aliaser'});
                 });
             }
             else {
