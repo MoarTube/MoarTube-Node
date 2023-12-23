@@ -2014,20 +2014,31 @@ function videoIdCommentsCommentIdDelete_DELETE(req, res) {
     const timestamp = req.query.timestamp;
     
     if(isVideoIdValid(videoId) && isCommentIdValid(commentId) && isTimestampValid(timestamp)) {
-        submitDatabaseWriteJob('DELETE FROM comments WHERE id = ? AND video_id = ? AND timestamp = ?', [commentId, videoId, timestamp], function(isError) {
-            if(isError) {
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-            else {
-                submitDatabaseWriteJob('UPDATE videos SET comments = comments - 1 WHERE video_id = ?', [videoId], function(isError) {
+        performDatabaseReadJob_GET('SELECT * FROM comments WHERE id = ? AND video_id = ? AND timestamp = ?', [commentId, videoId, timestamp])
+        .then(comment => {
+            if(comment != null) {
+                submitDatabaseWriteJob('DELETE FROM comments WHERE id = ? AND video_id = ? AND timestamp = ?', [commentId, videoId, timestamp], function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
-                        res.send({isError: false});
+                        submitDatabaseWriteJob('UPDATE videos SET comments = comments - 1 WHERE video_id = ? AND comments > 0', [videoId], function(isError) {
+                            if(isError) {
+                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                            }
+                            else {
+                                res.send({isError: false});
+                            }
+                        });
                     }
                 });
             }
+            else {
+                res.send({isError: true, message: 'that comment does not exist'});
+            }
+        })
+        .catch(error => {
+            res.send({isError: true, message: 'error communicating with the MoarTube node'});
         });
     }
     else {

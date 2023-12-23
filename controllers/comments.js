@@ -1,6 +1,5 @@
 const sanitizeHtml = require('sanitize-html');
 
-const { logDebugMessageToConsole } = require('../utils/logger');
 const { isCommentIdValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isCaptchaResponseValid } = require('../utils/validators');
 const { performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 

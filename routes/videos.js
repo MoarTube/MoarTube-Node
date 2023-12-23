@@ -135,6 +135,10 @@ router.get('/:videoId/discussion', (req, res) => {
     videoIdDiscussion_GET(req, res);
 });
 
+router.get('/comments/all', (req, res) => {
+    commentsAll_GET(req, res);
+});
+
 router.get('/:videoId/discussion/:commentId', (req, res) => {
     videoIdDiscussionCommentId_GET(req, res);
 });
@@ -173,10 +177,6 @@ router.get('/:videoId/watch', (req, res) => {
 
 router.post('/:videoId/report', (req, res) => {
     videoIdReport_POST(req, res);
-});
-
-router.get('/comments/all', (req, res) => {
-    commentsAll_GET(req, res);
 });
 
 router.get('/:videoId/adaptive/:format/manifests/:manifestName', (req, res) => {
