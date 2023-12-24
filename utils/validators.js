@@ -1,6 +1,3 @@
-
-
-
 function isNodeNameValid(nodeName) {
     return (nodeName != null && nodeName.length >= 0 && nodeName.length <= 100);
 }
@@ -176,12 +173,6 @@ function isPortValid(port) {
     return port != null && !Number.isNaN(port) && (port >= 0 && port <= 65535);
 }
 
-function isUuidv4Valid(uuid) {
-    const regex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-4[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
-    
-    return regex != null && regex.test(uuid)
-}
-
 function isFormatValid(format) {
     return format != null && (isAdaptiveFormatValid(format) || isProgressiveFormatValid(format));
 }
@@ -284,7 +275,6 @@ module.exports = {
     isNetworkAddressValid,
     isPublicNodeAddressValid,
     isPortValid,
-    isUuidv4Valid,
     isFormatValid,
     isAdaptiveFormatValid,
     isProgressiveFormatValid,
