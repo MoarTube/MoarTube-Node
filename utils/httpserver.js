@@ -5,10 +5,11 @@ const https = require('https');
 const webSocket = require('ws');
 const httpTerminator = require('http-terminator');
 const sanitizeHtml = require('sanitize-html');
+const cluster = require('cluster');
 
 const { logDebugMessageToConsole } = require('./logger');
 const { getCertificatesDirectoryPath } = require("./paths");
-const { getNodeSettings, getAuthenticationStatus, getMoarTubeNodeHttpPort, websocketNodeBroadcast, websocketChatBroadcast } = require("./helpers");
+const { getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, websocketChatBroadcast } = require("./helpers");
 const { stoppedPublishVideoUploading, stoppingPublishVideoUploading } = require("./trackers/publish-video-uploading-tracker");
 const { isVideoIdValid, isChatMessageContentValid } = require('./validators');
 const { performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('./database');
@@ -59,7 +60,7 @@ function initializeHttpServer(value) {
                         ca: ca
                     };
 
-                    logDebugMessageToConsole('MoarTube Node is entering secure HTTPS mode', null, null, true);
+                    logDebugMessageToConsole('MoarTube Node worker ' + cluster.worker.id + ' is entering secure HTTPS mode', null, null, true);
                     
                     httpServer = https.createServer(sslCredentials, app);
                 }
@@ -69,7 +70,7 @@ function initializeHttpServer(value) {
             }
         }
         else {
-            logDebugMessageToConsole('MoarTube Node is entering non-secure HTTP mode', null, null, true);
+            logDebugMessageToConsole('MoarTube Node worker ' + cluster.worker.id + ' is entering non-secure HTTP mode', null, null, true);
 
             httpServer = http.createServer(app);
         }
@@ -77,8 +78,8 @@ function initializeHttpServer(value) {
         httpServer.requestTimeout = 0; // needed for long duration requests (streaming, large uploads)
         httpServer.keepAliveTimeout = 10000;
         
-        httpServer.listen(getMoarTubeNodeHttpPort(), function() {
-            logDebugMessageToConsole('MoarTube Node worker ' + process.pid + ' is listening on port ' + getMoarTubeNodeHttpPort(), null, null, true);
+        httpServer.listen(nodeSettings.nodeListeningPort, function() {
+            logDebugMessageToConsole('MoarTube Node worker ' + cluster.worker.id + ' is listening on port ' + nodeSettings.nodeListeningPort, null, null, true);
             
             const websocketServer = new webSocket.Server({ 
                 noServer: true, 

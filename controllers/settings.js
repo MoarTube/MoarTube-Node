@@ -1,8 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
-const httpTerminator = require('http-terminator');
-const webSocket = require('ws');
 const bcryptjs = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
@@ -10,7 +8,7 @@ const { logDebugMessageToConsole } = require('../utils/logger');
 const { getImagesDirectoryPath, getCertificatesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
 } = require('../utils/paths');
 const { getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, 
-    setMoarTubeNodeHttpPort, getIsDockerEnvironment
+    getIsDockerEnvironment
 } = require('../utils/helpers');
 const { 
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isBooleanValid, isBooleanStringValid, isUsernameValid, isPasswordValid, 
@@ -18,7 +16,6 @@ const {
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
 const { submitDatabaseWriteJob } = require('../utils/database');
-const { initializeHttpServer, getHttpServerWrapper } = require('../utils/httpserver');
 
 function root_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)
@@ -432,9 +429,15 @@ function secure_POST(req, res) {
                             else {
                                 logDebugMessageToConsole('switching node to HTTPS mode', null, null, true);
 
+                                const nodeSettings = getNodeSettings();
+                                
+                                nodeSettings.isSecure = true;
+
+                                setNodeSettings(nodeSettings);
+
                                 res.send({isError: false});
 
-                                process.send({ cmd: 'restart_server', httpMode: 'HTTPS' });
+                                process.send({ cmd: 'restart_server' });
                             }
                         }
                     });
@@ -442,9 +445,15 @@ function secure_POST(req, res) {
                 else {
                     logDebugMessageToConsole('switching node to HTTP mode', null, null, true);
 
+                    const nodeSettings = getNodeSettings();
+                    
+                    nodeSettings.isSecure = false;
+
+                    setNodeSettings(nodeSettings);
+
                     res.send({isError: false});
                     
-                    process.send({ cmd: 'restart_server', httpMode: 'HTTP' });
+                    process.send({ cmd: 'restart_server' });
                 }
             }
             else {
@@ -512,44 +521,17 @@ function networkInternal_POST(req, res) {
                 const listeningNodePort = req.body.listeningNodePort;
                 
                 if(isPortValid(listeningNodePort)) {
-                    
-                    res.send({isError: false});
-                    
-                    //httpServerWrapper.httpServer.closeAllConnections();
-                    
-                    getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
-                        if (client.readyState === webSocket.OPEN) {
-                            client.close();
-                        }
-                    });
-                    
-                    logDebugMessageToConsole('attempting to terminate node', null, null, true);
-                    
-                    const terminator = httpTerminator.createHttpTerminator({server: getHttpServerWrapper().httpServer});
-                    
-                    logDebugMessageToConsole('termination of node in progress', null, null, true);
-                    
-                    await terminator.terminate();
-                    
-                    logDebugMessageToConsole('terminated node', null, null, true);
-                    
-                    getHttpServerWrapper().websocketServer.close(function() {
-                        logDebugMessageToConsole('node websocketServer closed', null, null, true);
-                        
-                        getHttpServerWrapper().httpServer.close(async () => {
-                            logDebugMessageToConsole('node web server closed', null, null, true);
-                            
-                            const nodeSettings = getNodeSettings();
-                            
-                            nodeSettings.nodeListeningPort = listeningNodePort;
-                            
-                            setNodeSettings(nodeSettings);
+                    logDebugMessageToConsole('switching node to HTTPS mode', null, null, true);
 
-                            setMoarTubeNodeHttpPort(listeningNodePort);
-                            
-                            await initializeHttpServer();
-                        });
-                    });
+                    const nodeSettings = getNodeSettings();
+                    
+                    nodeSettings.nodeListeningPort = listeningNodePort;
+
+                    setNodeSettings(nodeSettings);
+
+                    res.send({isError: false});
+
+                    process.send({ cmd: 'restart_server' });
                 }
                 else {
                     res.send({ isError: true, message: 'invalid parameters' });

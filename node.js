@@ -14,7 +14,7 @@ const {logDebugMessageToConsole} = require('./utils/logger');
 const {
 	getNodeSettings, setNodeSettings, generateVideoId,
 	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, setJwtSecret, getExpressSessionName, getExpressSessionSecret, 
-	setExpressSessionName, setExpressSessionSecret, setMoarTubeNodeHttpPort, performNodeIdentification, getNodeIdentification, getNodeIconBase64
+	setExpressSessionName, setExpressSessionSecret, performNodeIdentification, getNodeIdentification, getNodeIconBase64
 } = require('./utils/helpers');
 const { setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort } = require('./utils/urls');
 const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setPagesDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, 
@@ -123,25 +123,15 @@ if(cluster.isMaster) {
 					updateLiveStreamWatchingCountForWorker(workerId, liveStreamWatchingCounts);
 				}
 				else if (msg.cmd && msg.cmd === 'restart_server') {
-					const httpMode = msg.httpMode;
-
-					const nodeSettings = getNodeSettings();
-
-					var isSecure = httpMode === "HTTPS" ? true : false;
-					
-					nodeSettings.isSecure = isSecure;
-
-					setNodeSettings(nodeSettings);
-
 					Object.values(cluster.workers).forEach((worker) => {
-						worker.send({ cmd: 'restart_server_response', httpMode: httpMode });
+						worker.send({ cmd: 'restart_server_response' });
 					});
 				}
 			});
 		}
 
 		cluster.on('exit', (worker, code, signal) => {
-			logDebugMessageToConsole('worker exited with id <' + worker.process.pid + '> code <' + code + '> signal <' + signal + '>', null, null, true);
+			logDebugMessageToConsole('worker exited with id <' + worker.id + '> code <' + code + '> signal <' + signal + '>', null, null, true);
 		});
 
 		setInterval(function() {
@@ -437,8 +427,6 @@ function loadConfig() {
 	}
 	
 	const nodeSettings = getNodeSettings();
-
-	setMoarTubeNodeHttpPort(nodeSettings.nodeListeningPort);
 
 	setExpressSessionName(nodeSettings.expressSessionName);
 	setExpressSessionSecret(nodeSettings.expressSessionSecret);

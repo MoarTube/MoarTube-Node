@@ -9,7 +9,6 @@ const { indexer_getNodeIdentification, indexer_doNodeIdentificationRefresh } = r
 
 var isDeveloperMode;
 var jwtSecret;
-var moartubeNodeHttpPort;
 var expressSessionName;
 var expressSessionSecret;
 var isDockerEnvironment;
@@ -301,10 +300,6 @@ function getIsDeveloperMode() {
     return isDeveloperMode;
 }
 
-function getMoarTubeNodeHttpPort() {
-    return moartubeNodeHttpPort;
-}
-
 function getExpressSessionName() {
     return expressSessionName;
 }
@@ -333,10 +328,6 @@ function setIsDeveloperMode(value) {
     isDeveloperMode = value;
 }
 
-function setMoarTubeNodeHttpPort(value) {
-    moartubeNodeHttpPort = value;
-}
-
 function setExpressSessionName(value) {
     expressSessionName = value;
 }
@@ -363,7 +354,6 @@ module.exports = {
     getNodeSettings,
     getIsDockerEnvironment,
     getIsDeveloperMode,
-    getMoarTubeNodeHttpPort,
     getExpressSessionName,
     getExpressSessionSecret,
     getNodeIdentification,
@@ -372,7 +362,6 @@ module.exports = {
     setNodeSettings,
     setIsDockerEnvironment,
     setIsDeveloperMode,
-    setMoarTubeNodeHttpPort,
     setExpressSessionName,
     setExpressSessionSecret,
     setNodeidentification
