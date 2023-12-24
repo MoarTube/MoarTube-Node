@@ -1203,7 +1203,7 @@ body {
 								
 								appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode);
 							}
-							else if(data.eventName === 'stats') {
+							else if(data.eventName === 'live_stream_stats') {
 								const watchingCount = data.watchingCount;
 								
 								$('#video-information-views').text(watchingCount + ' watching now');
@@ -1637,7 +1637,7 @@ body {
 				
 				if(isLive) {
 					if(isStreaming) {
-						// websocket event 'stats' will update this
+						// websocket event 'live_stream_stats' will update this
 					}
 					else {
 						$('#video-information-views').text(viewsFormatted);

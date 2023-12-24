@@ -688,7 +688,7 @@
 								
 								appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode);
 							}
-							else if(data.eventName === 'stats') {
+							else if(data.eventName === 'live_stream_stats') {
 								const watchingCount = data.watchingCount;
 								
 								$('#video-information-views').text(watchingCount + ' watching now');

@@ -25,6 +25,7 @@ const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, se
 const { provisionSqliteDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL } = require('./utils/database');
 const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = require('./utils/httpserver');
 const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
+const { getLiveStreamWatchingCountTracker, updateLiveStreamWatchingCountForWorker } = require('./utils/trackers/live-stream-watching-count-tracker');
 
 const accountRoutes = require('./routes/account');
 const captchaRoutes = require('./routes/captcha');
@@ -57,8 +58,6 @@ if(cluster.isMaster) {
 	provisionSqliteDatabase()
 	.then(async () => {
 		const mutex = new Mutex();
-    
-		var liveStreamWorkerStats = {};
 
 		const nodeSettings = getNodeSettings();
 
@@ -120,9 +119,9 @@ if(cluster.isMaster) {
 				}
 				else if (msg.cmd && msg.cmd === 'live_stream_worker_stats_response') {
 					const workerId = msg.workerId;
-					const liveStreamStats = msg.liveStreamStats;
+					const liveStreamWatchingCounts = msg.liveStreamWatchingCounts;
 					
-					liveStreamWorkerStats[workerId] = liveStreamStats;
+					updateLiveStreamWatchingCountForWorker(workerId, liveStreamWatchingCounts);
 				}
 				else if (msg.cmd && msg.cmd === 'restart_server') {
 					const httpMode = msg.httpMode;
@@ -212,7 +211,7 @@ if(cluster.isMaster) {
 
 		setInterval(function() {
 			Object.values(cluster.workers).forEach((worker) => {
-				worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWorkerStats: liveStreamWorkerStats });
+				worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWatchingCount: getLiveStreamWatchingCountTracker() });
 			});
 		}, 1000);
 	})
@@ -322,36 +321,36 @@ else {
 				finishPendingDatabaseWriteJob(databaseWriteJobId, isError);
 			}
 			else if (msg.cmd === 'live_stream_worker_stats_request') {
-				const liveStreamStats = {};
+				const liveStreamWatchingCounts = {};
 				
 				getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
 						if(client.socketType === 'node_peer') {
 							const videoId = client.videoId;
 							
-							if(!liveStreamStats.hasOwnProperty(videoId)) {
-								liveStreamStats[videoId] = 0;
+							if(!liveStreamWatchingCounts.hasOwnProperty(videoId)) {
+								liveStreamWatchingCounts[videoId] = 0;
 							}
 							
-							liveStreamStats[videoId]++;
+							liveStreamWatchingCounts[videoId]++;
 						}
 					}
 				});
 				
-				process.send({ cmd: 'live_stream_worker_stats_response', workerId: cluster.worker.id, liveStreamStats: liveStreamStats });
+				process.send({ cmd: 'live_stream_worker_stats_response', workerId: cluster.worker.id, liveStreamWatchingCounts: liveStreamWatchingCounts });
 			}
 			else if (msg.cmd === 'live_stream_worker_stats_update') {
-				const liveStreamWorkerStats = msg.liveStreamWorkerStats;
+				const liveStreamWatchingCount = msg.liveStreamWatchingCount;
 				
-				const liveStreamStats = {};
+				const liveStreamWatchingCounts = {};
 				
-				for (const worker in liveStreamWorkerStats) {
-					for (const videoId in liveStreamWorkerStats[worker]) {
-						if (liveStreamStats.hasOwnProperty(videoId)) {
-							liveStreamStats[videoId] += liveStreamWorkerStats[worker][videoId];
+				for (const worker in liveStreamWatchingCount) {
+					for (const videoId in liveStreamWatchingCount[worker]) {
+						if (liveStreamWatchingCounts.hasOwnProperty(videoId)) {
+							liveStreamWatchingCounts[videoId] += liveStreamWatchingCount[worker][videoId];
 						}
 						else {
-							liveStreamStats[videoId] = liveStreamWorkerStats[worker][videoId];
+							liveStreamWatchingCounts[videoId] = liveStreamWatchingCount[worker][videoId];
 						}
 					}
 				}
@@ -361,8 +360,8 @@ else {
 						if(client.socketType === 'node_peer') {
 							const videoId = client.videoId;
 							
-							if(liveStreamStats.hasOwnProperty(videoId)) {
-								client.send(JSON.stringify({eventName: 'stats', watchingCount: liveStreamStats[videoId]}));
+							if(liveStreamWatchingCounts.hasOwnProperty(videoId)) {
+								client.send(JSON.stringify({eventName: 'live_stream_stats', watchingCount: liveStreamWatchingCounts[videoId]}));
 							}
 						}
 					}
