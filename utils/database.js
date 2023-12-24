@@ -1,6 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const { v1: uuidv1, v4: uuidv4 } = require('uuid');
+const cluster = require('cluster');
 
 const { logDebugMessageToConsole } = require('./logger');
 const { getDatabaseFilePath } = require("./paths");
@@ -48,7 +49,18 @@ function submitDatabaseWriteJob(query, parameters, callback) {
         callback: callback
     };
     
-    process.send({ cmd: 'database_write_job', query: query, parameters: parameters, databaseWriteJobId: databaseWriteJobId });
+    if(cluster.isWorker) {
+        process.send({ cmd: 'database_write_job', query: query, parameters: parameters, databaseWriteJobId: databaseWriteJobId });
+    }
+    else {
+        performDatabaseWriteJob(query, parameters)
+        .then(() => {
+            finishPendingDatabaseWriteJob(databaseWriteJobId, false);
+        })
+        .catch(() => {
+            finishPendingDatabaseWriteJob(databaseWriteJobId, true);
+        });
+    }
 }
 
 /* 
