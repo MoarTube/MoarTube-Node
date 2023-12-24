@@ -4,17 +4,17 @@ const { isCaptchaTypeValid } = require('../utils/validators');
 const { indexer_getCaptcha } = require('../utils/indexer-communications');
 const { aliaser_getCaptcha } = require('../utils/aliaser-communications');
 
-async function discussion_GET(req, res) {
+async function comments_GET(req, res) {
     const captchaType = req.query.captchaType;
     
     if(isCaptchaTypeValid(captchaType)) {
         const captcha = await generateCaptcha();
         
         if(captchaType === 'static') {
-            req.session.staticDiscussionCaptcha = captcha.text;
+            req.session.staticCommentsCaptcha = captcha.text;
         }
         else if(captchaType === 'dynamic') {
-            req.session.dynamicDiscussionCaptcha = captcha.text;
+            req.session.dynamicCommentsCaptcha = captcha.text;
         }
         
         res.setHeader('Content-Type', 'image/png');
@@ -136,7 +136,7 @@ function alias_GET(req, res) {
 }
 
 module.exports = {
-    discussion_GET,
+    comments_GET,
     likedislike_GET,
     index_GET,
     alias_GET

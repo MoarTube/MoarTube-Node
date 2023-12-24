@@ -1,13 +1,13 @@
 const express = require('express');
 
 const { 
-    discussion_GET, likedislike_GET, index_GET, alias_GET 
+    comments_GET, likedislike_GET, index_GET, alias_GET 
 } = require('../controllers/captcha');
 
 const router = express.Router();
 
-router.get('/discussion', async (req, res) => {
-    discussion_GET(req, res);
+router.get('/comments', async (req, res) => {
+    comments_GET(req, res);
 });
 
 router.get('/likedislike', async (req, res) => {

@@ -72,7 +72,7 @@ function isTimestampValid(timestamp) {
     return (Number.isInteger(timestampParsed));
 }
 
-function isDiscussionTypeValid(type) {
+function isCommentsTypeValid(type) {
     return (type != null && (type === 'before' || type === 'after'));
 }
 
@@ -265,7 +265,7 @@ module.exports = {
     isCaptchaTypeValid,
     isCaptchaResponseValid,
     isTimestampValid,
-    isDiscussionTypeValid,
+    isCommentsTypeValid,
     isCommentIdValid,
     isReportIdValid,
     isArchiveIdValid,

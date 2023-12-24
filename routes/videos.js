@@ -4,7 +4,7 @@ const {
     import_POST, imported_POST, videoIdImportingStop_POST, publishing_POST, published_POST, videoIdPublishingStop_POST, videoIdUpload_POST, videoIdStream_POST, error_POST, videoIdSourceFileExtension_POST,
     videoIdSourceFileExtension_GET, videoIdPublishes_GET, videoIdUnpublish_POST, videoIdInformation_GET, videoIdInformation_POST, videoIdIndexAdd_POST, videoIdIndexRemove_POST, videoIdAlias_POST,
     videoIdAlias_GET, search_GET, videoIdThumbnail_GET, videoIdThumbnail_POST, videoIdPreview_GET, videoIdPreview_POST, videoIdPoster_GET, videoIdPoster_POST, videoIdLengths_POST, videoIdData_GET,
-    delete_POST, finalize_POST, videoIdDiscussion_GET, videoIdDiscussionCommentId_GET, videoIdDiscussionComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST,
+    delete_POST, finalize_POST, videoIdComments_GET, videoIdCommentsCommentId_GET, videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST,
     recommendations_GET, tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, commentsAll_GET, videoIdAdaptiveFormatManifestsManifestName_GET, videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET,
     videoIdProgressiveFormatResolution_GET, videoIdProgressiveFormatResolutionDownload_GET
 } = require('../controllers/videos');
@@ -131,20 +131,20 @@ router.post('/finalize', (req, res) => {
     finalize_POST(req, res);
 });
 
-router.get('/:videoId/discussion', (req, res) => {
-    videoIdDiscussion_GET(req, res);
+router.get('/:videoId/comments', (req, res) => {
+    videoIdComments_GET(req, res);
 });
 
 router.get('/comments/all', (req, res) => {
     commentsAll_GET(req, res);
 });
 
-router.get('/:videoId/discussion/:commentId', (req, res) => {
-    videoIdDiscussionCommentId_GET(req, res);
+router.get('/:videoId/comments/:commentId', (req, res) => {
+    videoIdCommentsCommentId_GET(req, res);
 });
 
-router.post('/:videoId/discussion/comment', (req, res) => {
-    videoIdDiscussionComment_POST(req, res);
+router.post('/:videoId/comments/comment', (req, res) => {
+    videoIdCommentsComment_POST(req, res);
 });
 
 router.delete('/:videoId/comments/:commentId/delete', (req, res) => {

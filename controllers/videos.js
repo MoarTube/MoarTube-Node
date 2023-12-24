@@ -14,7 +14,7 @@ const { getMoarTubeAliaserPort } = require('../utils/urls');
 const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
 const { 
     isManifestNameValid, isSegmentNameValid, isSearchTermValid, isSourceFileExtensionValid, isBooleanValid, isVideoCommentValid, isCaptchaTypeValid, isCaptchaResponseValid,
-    isTimestampValid, isDiscussionTypeValid, isCommentIdValid, isSortTermValid, isTagLimitValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isVideoIdValid,
+    isTimestampValid, isCommentsTypeValid, isCommentIdValid, isSortTermValid, isTagLimitValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isVideoIdValid,
     isVideoIdsValid, isFormatValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid, isTitleValid, isDescriptionValid, isTagTermValid, isTagsValid
 } = require('../utils/validators');
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
@@ -1865,14 +1865,14 @@ function finalize_POST(req, res) {
     });
 }
 
-function videoIdDiscussion_GET(req, res) {
+function videoIdComments_GET(req, res) {
     const videoId = req.params.videoId;
     const timestamp = req.query.timestamp;
     const type = req.query.type;
     const minimumCommentId = req.query.minimumCommentId;
     const maximumCommentId = req.query.maximumCommentId;
     
-    if(isVideoIdValid(videoId) && isTimestampValid(timestamp) && isDiscussionTypeValid(type) && isCommentIdValid(minimumCommentId) && isCommentIdValid(maximumCommentId)) {
+    if(isVideoIdValid(videoId) && isTimestampValid(timestamp) && isCommentsTypeValid(type) && isCommentIdValid(minimumCommentId) && isCommentIdValid(maximumCommentId)) {
         if(type === 'before') {
             performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp])
             .then(comments => {
@@ -1917,7 +1917,7 @@ function videoIdDiscussion_GET(req, res) {
     }
 }
 
-function videoIdDiscussionCommentId_GET(req, res) {
+function videoIdCommentsCommentId_GET(req, res) {
     const videoId = req.params.videoId;
     const commentId = req.params.commentId;
     
@@ -1940,7 +1940,7 @@ function videoIdDiscussionCommentId_GET(req, res) {
     }
 }
 
-function videoIdDiscussionComment_POST(req, res) {
+function videoIdCommentsComment_POST(req, res) {
     const videoId = req.params.videoId;
     const commentPlainText = req.body.commentPlainText;
     const captchaResponse = req.body.captchaResponse;
@@ -1951,10 +1951,10 @@ function videoIdDiscussionComment_POST(req, res) {
         var captchaAnswer = '';
         
         if(captchaType === 'static') {
-            captchaAnswer = req.session.staticDiscussionCaptcha;
+            captchaAnswer = req.session.staticCommentsCaptcha;
         }
         else if(captchaType === 'dynamic') {
-            captchaAnswer = req.session.dynamicDiscussionCaptcha;
+            captchaAnswer = req.session.dynamicCommentsCaptcha;
         }
         
         if(isCaptchaResponseValid(captchaResponse, captchaAnswer)) {
@@ -1994,10 +1994,10 @@ function videoIdDiscussionComment_POST(req, res) {
         }
         else {
             if(captchaType === 'static') {
-                delete req.session.staticDiscussionCaptcha;
+                delete req.session.staticCommentsCaptcha;
             }
             else if(captchaType === 'dynamic') {
-                delete req.session.dynamicDiscussionCaptcha;
+                delete req.session.dynamicCommentsCaptcha;
             }
             
             res.send({isError: true, message: 'the captcha was not correct'});
@@ -2681,9 +2681,9 @@ module.exports = {
     videoIdData_GET,
     delete_POST,
     finalize_POST,
-    videoIdDiscussion_GET,
-    videoIdDiscussionCommentId_GET,
-    videoIdDiscussionComment_POST,
+    videoIdComments_GET,
+    videoIdCommentsCommentId_GET,
+    videoIdCommentsComment_POST,
     videoIdCommentsCommentIdDelete_DELETE,
     videoIdLike_POST,
     videoIdDislike_POST,

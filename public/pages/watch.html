@@ -1443,7 +1443,7 @@ body {
 			
 			function getComments(timestamp, type, ignoreHashValue, minimumCommentId, maximumCommentId) {
 				return new Promise(function(resolve, reject) {
-					$.ajax({type: 'GET', url: '/videos/' + VIDEO_ID + '/discussion', data: { timestamp: timestamp, type: type, minimumCommentId: minimumCommentId, maximumCommentId: maximumCommentId }})
+					$.ajax({type: 'GET', url: '/videos/' + VIDEO_ID + '/comments', data: { timestamp: timestamp, type: type, minimumCommentId: minimumCommentId, maximumCommentId: maximumCommentId }})
 					.done(function (data, textStatus, xhr)
 					{
 						if(data.isError) {
@@ -2121,7 +2121,7 @@ body {
 					form.find('textarea[name="commentPlainText"]').prop('disabled', true);
 					form.find('input[name="captchaResponse"]').prop('disabled', true);
 					
-					$.post('/videos/' + VIDEO_ID + '/discussion/comment', {commentPlainText: commentPlainText, captchaResponse: captchaResponse, captchaType: captchaType, timestamp: MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP})
+					$.post('/videos/' + VIDEO_ID + '/comments/comment', {commentPlainText: commentPlainText, captchaResponse: captchaResponse, captchaType: captchaType, timestamp: MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP})
 					.always(function() {
 						form.find(':submit').prop('disabled', false);
 						form.find('textarea[name="commentPlainText"]').prop('disabled', false);
@@ -2139,7 +2139,7 @@ body {
 							}
 							
 							if(data.message == 'the captcha was not correct') {
-								getCaptcha('/captcha/discussion?captchaType=' + captchaType)
+								getCaptcha('/captcha/comments?captchaType=' + captchaType)
 								.then((objectURL) => {
 									if(captchaType === 'static') {
 										$('#comment-input-form-static-captcha').html('<img src="' + objectURL + '">');
@@ -2266,8 +2266,8 @@ body {
 						}
 						
 						if(type === 'before') {
-							// 'before' means prepending to the discussion
-							// append links to backlinks of comments that reference the comments being prepended to the discussion
+							// 'before' means prepending to the comments
+							// append links to backlinks of comments that reference the comments being prepended to the comments
 							for(const replyToCommentId of replyToCommentIds) {
 								if(COMMENT_ELEMENT_CACHE.hasOwnProperty(replyToCommentId)) {
 									var youString = '';
@@ -2283,8 +2283,8 @@ body {
 							$(commentsContainer).prepend(commentElement);
 						}
 						else if(type === 'after') {
-							// 'after' means  appending to the discussion
-							// append links to backlinks of comments that reference the comments being appended to the discussion
+							// 'after' means  appending to the comments
+							// append links to backlinks of comments that reference the comments being appended to the comments
 							if(COMMENT_REPLIES_CACHE.hasOwnProperty(commentId)) {
 								for(const replyToCommentId of COMMENT_REPLIES_CACHE[commentId]) {
 									var youString = '';
@@ -2408,7 +2408,7 @@ body {
 						const div = document.getElementById('pc' + commentId);
 						
 						if(div == null) {
-							$.ajax({type: 'GET', url: '/videos/' + VIDEO_ID + '/discussion/' + commentId})
+							$.ajax({type: 'GET', url: '/videos/' + VIDEO_ID + '/comments/' + commentId})
 							.done(function (data, textStatus, xhr)
 							{
 								if(data.isError) {
@@ -3430,7 +3430,7 @@ body {
 					$('#comment-input-form-dynamic-submit-container').removeClass('hidden-elem');
 				}
 				
-				getCaptcha('/captcha/discussion?captchaType=' + captchaType)
+				getCaptcha('/captcha/comments?captchaType=' + captchaType)
 				.then((objectURL) => {
 					if(captchaType === 'static') {
 						$('#comment-input-form-static-captcha').html('<img src="' + objectURL + '">');
