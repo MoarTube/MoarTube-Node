@@ -145,8 +145,7 @@ if(cluster.isMaster) {
 						.then(() => {
 							const nodeIdentification = getNodeIdentification();
 							
-							const nodeIdentifier = nodeIdentification.nodeIdentifier;
-							const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+							const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
 							
 							rows.forEach(function(row) {
 								const videoId = row.video_id;
@@ -160,7 +159,7 @@ if(cluster.isMaster) {
 	
 								const videoPreviewImageBase64 = fs.readFileSync(path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg')).toString('base64');
 								
-								indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
+								indexer_doIndexUpdate(moarTubeTokenProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
 								.then(async indexerResponseData => {
 									if(indexerResponseData.isError) {
 										logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
@@ -393,7 +392,7 @@ function loadConfig() {
 	fs.mkdirSync(getDatabaseDirectoryPath(), { recursive: true });
 	fs.mkdirSync(getCertificatesDirectoryPath(), { recursive: true });
 	
-	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config_test.json'), 'utf8'));
 
 	setIsDeveloperMode(config.isDeveloperMode);
 

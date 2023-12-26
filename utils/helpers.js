@@ -166,15 +166,14 @@ function performNodeIdentification(isConfiguring) {
 		logDebugMessageToConsole('validating node to MoarTube network', null, null, true);
 		
 		if (getNodeIdentification() == null) {
-			setNodeidentification({nodeIdentifier: '', nodeIdentifierProof: ''});
+			setNodeidentification({moarTubeTokenProof: ''});
 		}
 		
 		const nodeIdentification = getNodeIdentification();
 	
-		const nodeIdentifier = nodeIdentification.nodeIdentifier;
-		const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+		const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
 		
-		if(nodeIdentifier === '' && nodeIdentifierProof === '') {
+		if(moarTubeTokenProof === '') {
 			logDebugMessageToConsole('this node is unidentified, creating node identification', null, null, true);
 			
 			indexer_getNodeIdentification()
@@ -185,8 +184,7 @@ function performNodeIdentification(isConfiguring) {
 					reject(indexerResponseData.message);
 				}
 				else {
-					nodeIdentification.nodeIdentifier = indexerResponseData.nodeIdentifier;
-					nodeIdentification.nodeIdentifierProof = indexerResponseData.nodeIdentifierProof;
+					nodeIdentification.moarTubeTokenProof = indexerResponseData.moarTubeTokenProof;
 
 					setNodeidentification(nodeIdentification);
 
@@ -204,7 +202,7 @@ function performNodeIdentification(isConfiguring) {
 		else {
 			logDebugMessageToConsole('node identification found, validating node identification', null, null, true);
 			
-			indexer_doNodeIdentificationRefresh(nodeIdentifier, nodeIdentifierProof)
+			indexer_doNodeIdentificationRefresh(moarTubeTokenProof)
 			.then(indexerResponseData => {
 				if(indexerResponseData.isError) {
 					reject(indexerResponseData.message);
@@ -212,7 +210,7 @@ function performNodeIdentification(isConfiguring) {
 				else {
 					logDebugMessageToConsole('node identification valid', null, null, true);
 					
-					nodeIdentification.nodeIdentifierProof = indexerResponseData.nodeIdentifierProof;
+					nodeIdentification.moarTubeTokenProof = indexerResponseData.moarTubeTokenProof;
 
 					setNodeidentification(nodeIdentification);
 					

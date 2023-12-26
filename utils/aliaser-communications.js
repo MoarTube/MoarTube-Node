@@ -2,13 +2,12 @@ const axios = require('axios').default;
 const { logDebugMessageToConsole } = require('./logger');
 const { getMoarTubeAliaserUrl } = require('./urls');
 
-function aliaser_getVideoAlias(videoId, nodeIdentifier, nodeIdentifierProof) {
+function aliaser_getVideoAlias(videoId, moarTubeTokenProof) {
     return new Promise(function(resolve, reject) {
         axios.get(getMoarTubeAliaserUrl() + '/alias/video', {
           params: {
               videoId: videoId,
-              nodeIdentifier: nodeIdentifier,
-              nodeIdentifierProof: nodeIdentifierProof
+              moarTubeTokenProof: moarTubeTokenProof,
           }
         })
         .then(response => {
@@ -36,12 +35,11 @@ function aliaser_doAliasVideo(data) {
     });
 }
 
-function aliaser_getCaptcha(nodeIdentifier, nodeIdentifierProof) {
+function aliaser_getCaptcha(moarTubeTokenProof) {
     return new Promise(function(resolve, reject) {
         axios.get(getMoarTubeAliaserUrl() + '/captcha', {
           params: {
-              nodeIdentifier: nodeIdentifier,
-              nodeIdentifierProof: nodeIdentifierProof
+            moarTubeTokenProof: moarTubeTokenProof
           },
           responseType: 'stream'
         })

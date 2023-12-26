@@ -54,10 +54,9 @@ function index_GET(req, res) {
                     const nodeIdentification = getNodeIdentification();
                     
                     if(nodeIdentification != null) {
-                        const nodeIdentifier = nodeIdentification.nodeIdentifier;
-                        const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+                        const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
                         
-                        indexer_getCaptcha(nodeIdentifier, nodeIdentifierProof)
+                        indexer_getCaptcha(moarTubeTokenProof)
                         .then(async indexerResponseData => {
                             res.setHeader('Content-Type', 'image/png');
                             indexerResponseData.pipe(res);
@@ -107,10 +106,9 @@ function alias_GET(req, res) {
             const nodeIdentification = getNodeIdentification();
             
             if(nodeIdentification != null) {
-                const nodeIdentifier = nodeIdentification.nodeIdentifier;
-                const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+                const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
                 
-                aliaser_getCaptcha(nodeIdentifier, nodeIdentifierProof)
+                aliaser_getCaptcha(moarTubeTokenProof)
                 .then(aliaserResponseData => {
                     res.setHeader('Content-Type', 'image/png');
                     aliaserResponseData.pipe(res);

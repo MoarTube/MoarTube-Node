@@ -31,14 +31,13 @@ function indexer_removeVideoFromIndex(data) {
     });
 }
 
-function indexer_doNodePersonalizeUpdate(nodeIdentifier, nodeIdentifierProof, nodeName, nodeAbout, nodeId) {
+function indexer_doNodePersonalizeUpdate(moarTubeTokenProof, nodeName, nodeAbout, nodeId) {
     return new Promise(function(resolve, reject) {
         axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/update', {
-            nodeIdentifier: nodeIdentifier,
-            nodeIdentifierProof: nodeIdentifierProof,
             nodeName: nodeName,
             nodeAbout: nodeAbout,
             nodeId: nodeId,
+            moarTubeTokenProof: moarTubeTokenProof
         })
         .then(response => {
             const data = response.data;
@@ -53,14 +52,13 @@ function indexer_doNodePersonalizeUpdate(nodeIdentifier, nodeIdentifierProof, no
     });
 }
 
-function indexer_doNodeExternalNetworkUpdate(nodeIdentifier, nodeIdentifierProof, publicNodeProtocol, publicNodeAddress, publicNodePort) {
+function indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProtocol, publicNodeAddress, publicNodePort) {
     return new Promise(function(resolve, reject) {
         axios.post(getMoarTubeIndexerUrl() + '/index/node/network/update', {
-            nodeIdentifier: nodeIdentifier,
-            nodeIdentifierProof: nodeIdentifierProof,
             publicNodeProtocol: publicNodeProtocol,
             publicNodeAddress: publicNodeAddress,
-            publicNodePort: publicNodePort
+            publicNodePort: publicNodePort,
+            moarTubeTokenProof: moarTubeTokenProof
         })
         .then(response => {
             const data = response.data;
@@ -87,12 +85,11 @@ function indexer_getNodeIdentification() {
 	});
 }
 
-function indexer_doNodeIdentificationRefresh(nodeIdentifier, nodeIdentifierProof) {
+function indexer_doNodeIdentificationRefresh(moarTubeTokenProof) {
 	return new Promise(function(resolve, reject) {
 		axios.get(getMoarTubeIndexerUrl() + '/node/identification/refresh', {
 		  params: {
-			  nodeIdentifier: nodeIdentifier,
-			  nodeIdentifierProof: nodeIdentifierProof
+            moarTubeTokenProof: moarTubeTokenProof
 		  }
 		})
 		.then(response => {
@@ -106,11 +103,9 @@ function indexer_doNodeIdentificationRefresh(nodeIdentifier, nodeIdentifierProof
 	});
 }
 
-function indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64) {
+function indexer_doIndexUpdate(moarTubeTokenProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64) {
 	return new Promise(function(resolve, reject) {
 		axios.post(getMoarTubeIndexerUrl() + '/index/video/update', {
-			nodeIdentifier: nodeIdentifier,
-			nodeIdentifierProof: nodeIdentifierProof,
 			videoId: videoId,
 			title: title,
 			tags: tags,
@@ -118,7 +113,8 @@ function indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, tit
 			isStreaming: isStreaming,
 			lengthSeconds: lengthSeconds,
 			nodeIconBase64: nodeIconBase64,
-			videoPreviewImageBase64: videoPreviewImageBase64
+			videoPreviewImageBase64: videoPreviewImageBase64,
+            moarTubeTokenProof: moarTubeTokenProof
 		})
 		.then(response => {
 			const data = response.data;
@@ -131,12 +127,11 @@ function indexer_doIndexUpdate(nodeIdentifier, nodeIdentifierProof, videoId, tit
 	});
 }
 
-function indexer_getCaptcha(nodeIdentifier, nodeIdentifierProof) {
+function indexer_getCaptcha(moarTubeTokenProof) {
     return new Promise(function(resolve, reject) {
         axios.get(getMoarTubeIndexerUrl() + '/captcha', {
           params: {
-              nodeIdentifier: nodeIdentifier,
-              nodeIdentifierProof: nodeIdentifierProof
+            moarTubeTokenProof: moarTubeTokenProof
           },
           responseType: 'stream'
         })

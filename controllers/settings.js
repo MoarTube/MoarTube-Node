@@ -283,10 +283,9 @@ function personalize_POST(req, res) {
                             const nodeIdentification = getNodeIdentification();
                             
                             if(nodeIdentification != null) {
-                                const nodeIdentifier = nodeIdentification.nodeIdentifier;
-                                const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+                                const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
                                 
-                                indexer_doNodePersonalizeUpdate(nodeIdentifier, nodeIdentifierProof, nodeName, nodeAbout, nodeId)
+                                indexer_doNodePersonalizeUpdate(moarTubeTokenProof, nodeName, nodeAbout, nodeId)
                                 .then(indexerResponseData => {
                                     if(indexerResponseData.isError) {
                                         logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
@@ -577,10 +576,9 @@ function networkExternal_POST(req, res) {
                     .then(() => {
                         const nodeIdentification = getNodeIdentification();
                         
-                        const nodeIdentifier = nodeIdentification.nodeIdentifier;
-                        const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+                        const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
                         
-                        indexer_doNodeExternalNetworkUpdate(nodeIdentifier, nodeIdentifierProof, publicNodeProtocol, publicNodeAddress, publicNodePort)
+                        indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProtocol, publicNodeAddress, publicNodePort)
                         .then(indexerResponseData => {
                             if(indexerResponseData.isError) {
                                 res.send({isError: true, message: indexerResponseData.message});

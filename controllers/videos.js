@@ -952,8 +952,7 @@ function videoIdIndexAdd_POST(req, res) {
                                     .then(() => {
                                         const nodeIdentification = getNodeIdentification();
                                         
-                                        const nodeIdentifier = nodeIdentification.nodeIdentifier;
-                                        const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+                                        const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
                                         
                                         const title = video.title;
                                         const tags = video.tags;
@@ -970,8 +969,6 @@ function videoIdIndexAdd_POST(req, res) {
                                         const data = {
                                             videoId: videoId,
                                             nodeId: nodeId,
-                                            nodeIdentifier: nodeIdentifier,
-                                            nodeIdentifierProof: nodeIdentifierProof,
                                             nodeName: nodeName,
                                             nodeAbout: nodeAbout,
                                             publicNodeProtocol: publicNodeProtocol,
@@ -987,7 +984,8 @@ function videoIdIndexAdd_POST(req, res) {
                                             captchaResponse: captchaResponse,
                                             containsAdultContent: containsAdultContent,
                                             nodeIconBase64: nodeIconBase64,
-                                            videoPreviewImageBase64: videoPreviewImageBase64
+                                            videoPreviewImageBase64: videoPreviewImageBase64,
+                                            moarTubeTokenProof: moarTubeTokenProof
                                         };
                                         
                                         indexer_addVideoToIndex(data)
@@ -1071,13 +1069,11 @@ function videoIdIndexRemove_POST(req, res) {
                             .then(() => {
                                 const nodeIdentification = getNodeIdentification();
                                 
-                                const nodeIdentifier = nodeIdentification.nodeIdentifier;
-                                const nodeIdentifierProof = nodeIdentification.nodeIdentifierProof;
+                                const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
                                 
                                 const data = {
                                     videoId: videoId,
-                                    nodeIdentifier: nodeIdentifier,
-                                    nodeIdentifierProof: nodeIdentifierProof
+                                    moarTubeTokenProof: moarTubeTokenProof
                                 };
                                 
                                 indexer_removeVideoFromIndex(data)
@@ -1156,9 +1152,8 @@ function videoIdAlias_POST(req, res) {
                     publicNodeProtocol: nodeSettings.publicNodeProtocol,
                     publicNodeAddress: nodeSettings.publicNodeAddress,
                     publicNodePort: nodeSettings.publicNodePort,
-                    nodeIdentifier: nodeIdentification.nodeIdentifier,
-                    nodeIdentifierProof: nodeIdentification.nodeIdentifierProof,
-                    captchaResponse: captchaResponse
+                    captchaResponse: captchaResponse,
+                    moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
                 };
                 
                 aliaser_doAliasVideo(data)
@@ -1217,7 +1212,7 @@ function videoIdAlias_GET(req, res) {
                         .then(() => {
                             const nodeIdentification = getNodeIdentification();
                             
-                            aliaser_getVideoAlias(videoId, nodeIdentification.nodeIdentifier, nodeIdentification.nodeIdentifierProof)
+                            aliaser_getVideoAlias(videoId, nodeIdentification.moarTubeTokenProof)
                             .then(aliaserResponseData => {
                                 if(aliaserResponseData.isError) {
                                     logDebugMessageToConsole(aliaserResponseData.message, null, new Error().stack, true);
