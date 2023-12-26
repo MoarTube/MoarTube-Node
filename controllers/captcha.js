@@ -40,43 +40,28 @@ function index_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
-            const nodeSettings = getNodeSettings();
-
-            if(nodeSettings.isNodePrivate) {
-                res.send({isError: true, message: "MoarTube Indexer unavailable; node is private"});
-            }
-            else if(!nodeSettings.isNodeConfigured) {
-                res.send({isError: true, message: "MoarTube Indexer unavailable; this node has not performed initial configuration"});
-            }
-            else {
-                performNodeIdentification(false)
-                .then(() => {
-                    const nodeIdentification = getNodeIdentification();
-                    
-                    if(nodeIdentification != null) {
-                        const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-                        
-                        indexer_getCaptcha(moarTubeTokenProof)
-                        .then(async indexerResponseData => {
-                            res.setHeader('Content-Type', 'image/png');
-                            indexerResponseData.pipe(res);
-                        })
-                        .catch(error => {
-                            logDebugMessageToConsole(null, error, new Error().stack, true);
-
-                            res.send({isError: true, message: 'error retrieving captcha from the MoarTube Indexer'});
-                        });
-                    }
-                    else {
-                        logDebugMessageToConsole('/captcha/index attempted retrieving node identification but was null', null, new Error().stack, true);
-                    }
+            performNodeIdentification()
+            .then(() => {
+                const nodeIdentification = getNodeIdentification();
+                
+                const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+                
+                indexer_getCaptcha(moarTubeTokenProof)
+                .then(async indexerResponseData => {
+                    res.setHeader('Content-Type', 'image/png');
+                    indexerResponseData.pipe(res);
                 })
                 .catch(error => {
                     logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                    res.send({isError: true, message: 'an error occurred while retrieving the captcha'});
+                    res.send({isError: true, message: 'unable to communicate with the MoarTube platform'});
                 });
-            }
+            })
+            .catch(error => {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'unable to communicate with the MoarTube platform'});
+            });
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -92,45 +77,28 @@ function index_GET(req, res) {
 }
 
 function alias_GET(req, res) {
-    const nodeSettings = getNodeSettings();
-
-    if(nodeSettings.isNodePrivate) {
-        res.send({isError: true, message: "aliasing unavailable; this node currently running privately"});
-    }
-    else if(!nodeSettings.isNodeConfigured) {
-        res.send({isError: true, message: "aliasing unavailable; this node has not performed initial configuration"});
-    }
-    else {
-        performNodeIdentification(false)
-        .then(() => {
-            const nodeIdentification = getNodeIdentification();
-            
-            if(nodeIdentification != null) {
-                const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-                
-                aliaser_getCaptcha(moarTubeTokenProof)
-                .then(aliaserResponseData => {
-                    res.setHeader('Content-Type', 'image/png');
-                    aliaserResponseData.pipe(res);
-                })
-                .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
-
-                    res.send({isError: true, message: 'error retrieving captcha from the MoarTube Aliaser'});
-                });
-            }
-            else {
-                logDebugMessageToConsole('/captcha/alias attempted retrieving node identification but was null', null, new Error().stack, true);
-
-                res.send({isError: true, message: 'an error occurred while attempting to alias, please try again later'});
-            }
+    performNodeIdentification()
+    .then(() => {
+        const nodeIdentification = getNodeIdentification();
+        
+        const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+        
+        aliaser_getCaptcha(moarTubeTokenProof)
+        .then(aliaserResponseData => {
+            res.setHeader('Content-Type', 'image/png');
+            aliaserResponseData.pipe(res);
         })
         .catch(error => {
             logDebugMessageToConsole(null, error, new Error().stack, true);
 
-            res.send({isError: true, message: 'an error occurred while attempting to alias, please try again later'});
+            res.send({isError: true, message: 'unable to communicate with the MoarTube platform'});
         });
-    }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+
+        res.send({isError: true, message: 'unable to communicate with the MoarTube platform'});
+    });
 }
 
 module.exports = {

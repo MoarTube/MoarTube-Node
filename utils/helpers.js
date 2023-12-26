@@ -152,17 +152,8 @@ async function generateVideoId() {
     return videoId;
 }
 
-function performNodeIdentification(isConfiguring) {
+function performNodeIdentification() {
 	return new Promise(function(resolve, reject) {
-		const nodeSettings = getNodeSettings();
-
-		if(nodeSettings.isNodePrivate) {
-			throw new Error('node identification unavailable; this node is currently running privately');
-		}
-		else if(!nodeSettings.isNodeConfigured && !isConfiguring) {
-			throw new Error('node identification unavailable; this node has not performed initial configuration');
-		}
-
 		logDebugMessageToConsole('validating node to MoarTube network', null, null, true);
 		
 		if (getNodeIdentification() == null) {

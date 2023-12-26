@@ -1,7 +1,7 @@
 const express = require('express');
 
 const { 
-    root_GET, avatar_GET, avatar_POST, banner_GET, banner_POST, personalize_POST, private_POST, secure_POST, account_POST, networkInternal_POST, networkExternal_POST 
+    root_GET, avatar_GET, avatar_POST, banner_GET, banner_POST, personalize_POST, secure_POST, account_POST, networkInternal_POST, networkExternal_POST 
 } = require('../controllers/settings');
 
 const router = express.Router();
@@ -28,10 +28,6 @@ router.post('/banner', (req, res) => {
 
 router.post('/personalize', (req, res) => {
     personalize_POST(req, res);
-});
-
-router.post('/private', (req, res) => {
-    private_POST(req, res);
 });
 
 router.post('/secure', async (req, res) => {

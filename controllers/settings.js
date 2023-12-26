@@ -268,90 +268,39 @@ function personalize_POST(req, res) {
                 nodeSettings.nodeAbout = nodeAbout;
                 nodeSettings.nodeId = nodeId;
 
-                if(!nodeSettings.isNodeConfigured) {
-                    res.send({isError: true, message: "personalize unavailable; this node has not performed initial configuration"});
-                }
-                else {
-                    if(nodeSettings.isNodePrivate) {
-                        setNodeSettings(nodeSettings);
-                        
-                        res.send({ isError: false });
-                    }
-                    else {
-                        performNodeIdentification(false)
-                        .then(() => {
-                            const nodeIdentification = getNodeIdentification();
+                setNodeSettings(nodeSettings);
+
+                performNodeIdentification()
+                .then(() => {
+                    const nodeIdentification = getNodeIdentification();
+                    
+                    const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+                    
+                    indexer_doNodePersonalizeUpdate(moarTubeTokenProof, nodeName, nodeAbout, nodeId)
+                    .then(indexerResponseData => {
+                        if(indexerResponseData.isError) {
+                            logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
                             
-                            if(nodeIdentification != null) {
-                                const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-                                
-                                indexer_doNodePersonalizeUpdate(moarTubeTokenProof, nodeName, nodeAbout, nodeId)
-                                .then(indexerResponseData => {
-                                    if(indexerResponseData.isError) {
-                                        logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
-                                        
-                                        res.send({isError: true, message: indexerResponseData.message});
-                                    }
-                                    else {
-                                        setNodeSettings(nodeSettings);
-                                        
-                                        res.send({ isError: false });
-                                    }
-                                })
-                                .catch(error => {
-                                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                            res.send({isError: true, message: indexerResponseData.message});
+                        }
+                        else {
+                            res.send({ isError: false });
+                        }
+                    })
+                    .catch(error => {
+                        logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                                    res.send({isError: true, message: 'error communicating with the MoarTube indexer'});
-                                });
-                            }
-                            else {
-                                logDebugMessageToConsole('/settings/personalize attempted retrieving node identification but was null', null, new Error().stack, true);
-                                
-                                res.send({isError: true, message: 'error communicating with the MoarTube indexer'});
-                            }
-                        })
-                        .catch(error => {
-                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        res.send({isError: true, message: 'your settings were saved but could not be copied to the MoarTube platform'});
+                    });
+                })
+                .catch(error => {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                            res.send({isError: true, message: 'an unknown error occurred'});
-                        });
-                    }
-                }
+                    res.send({isError: true, message: 'your settings were saved but could not be copied to the MoarTube platform'});
+                });
             }
             else {
                 res.send({ isError: true, message: 'invalid parameters' });
-            }
-        }
-        else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-            res.send({isError: true, message: 'you are not logged in'});
-        }
-    })
-    .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-    });
-}
-
-function private_POST(req, res) {
-    getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
-        if(isAuthenticated) {
-            const isNodePrivate = req.body.isNodePrivate;
-            
-            if(isBooleanValid(isNodePrivate)) {
-                const nodeSettings = getNodeSettings();
-                
-                nodeSettings.isNodePrivate = isNodePrivate;
-
-                setNodeSettings(nodeSettings);
-                
-                res.send({ isError: false });
-            }
-            else {
-                res.send({ isError: true, message: 'invalid username and/or password' });
             }
         }
         else {
@@ -566,41 +515,34 @@ function networkExternal_POST(req, res) {
                 nodeSettings.publicNodePort = publicNodePort;
                 nodeSettings.isNodeConfigured = true;
                 
-                if(nodeSettings.isNodePrivate) {
-                    setNodeSettings(nodeSettings);
+                performNodeIdentification()
+                .then(() => {
+                    const nodeIdentification = getNodeIdentification();
                     
-                    res.send({ isError: false });
-                }
-                else {
-                    performNodeIdentification(true)
-                    .then(() => {
-                        const nodeIdentification = getNodeIdentification();
-                        
-                        const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-                        
-                        indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProtocol, publicNodeAddress, publicNodePort)
-                        .then(indexerResponseData => {
-                            if(indexerResponseData.isError) {
-                                res.send({isError: true, message: indexerResponseData.message});
-                            }
-                            else {
-                                setNodeSettings(nodeSettings);
-                                
-                                res.send({ isError: false });
-                            }
-                        })
-                        .catch(error => {
-                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                    const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+                    
+                    indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProtocol, publicNodeAddress, publicNodePort)
+                    .then(indexerResponseData => {
+                        if(indexerResponseData.isError) {
+                            res.send({isError: true, message: indexerResponseData.message});
+                        }
+                        else {
+                            setNodeSettings(nodeSettings);
                             
-                            res.send({isError: true, message: 'an unknown error occurred'});
-                        });
+                            res.send({ isError: false });
+                        }
                     })
                     .catch(error => {
                         logDebugMessageToConsole(null, error, new Error().stack, true);
                         
-                        res.send({isError: true, message: 'an unknown error occurred'});
+                        res.send({isError: true, message: 'your settings were not saved because they could not be sent to the MoarTube platform'});
                     });
-                }
+                })
+                .catch(error => {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                    
+                    res.send({isError: true, message: 'your settings were not saved because they could not be sent to the MoarTube platform'});
+                });
             }
             else {
                 res.send({ isError: true, message: 'invalid parameters' });
@@ -626,7 +568,6 @@ module.exports = {
     banner_GET,
     banner_POST,
     personalize_POST,
-    private_POST,
     secure_POST,
     account_POST,
     networkInternal_POST,

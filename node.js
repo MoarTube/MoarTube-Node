@@ -40,6 +40,7 @@ const reportsRoutes = require('./routes/reports');
 const settingsRoutes = require('./routes/settings');
 const streamsRoutes = require('./routes/streams');
 const videosRoutes = require('./routes/videos');
+const configureRoutes = require('./routes/configure');
 
 loadConfig();
 
@@ -135,60 +136,56 @@ if(cluster.isMaster) {
 		});
 
 		setInterval(function() {
-			const nodeSettings = getNodeSettings();
-			
-			if(nodeSettings.isNodeConfigured && !nodeSettings.isNodePrivate) {
-				performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1', [])
-				.then(rows => {
-					if(rows.length > 0) {
-						performNodeIdentification(false)
-						.then(() => {
-							const nodeIdentification = getNodeIdentification();
+			performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1', [])
+			.then(rows => {
+				if(rows.length > 0) {
+					performNodeIdentification()
+					.then(() => {
+						const nodeIdentification = getNodeIdentification();
+						
+						const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+						
+						rows.forEach(function(row) {
+							const videoId = row.video_id;
+							const title = row.title;
+							const tags = row.tags;
+							const views = row.views;
+							const isStreaming = (row.is_streaming === 1);
+							const lengthSeconds = row.length_seconds;
+
+							const nodeIconBase64 = getNodeIconBase64();
+
+							const videoPreviewImageBase64 = fs.readFileSync(path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg')).toString('base64');
 							
-							const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-							
-							rows.forEach(function(row) {
-								const videoId = row.video_id;
-								const title = row.title;
-								const tags = row.tags;
-								const views = row.views;
-								const isStreaming = (row.is_streaming === 1);
-								const lengthSeconds = row.length_seconds;
-	
-								const nodeIconBase64 = getNodeIconBase64();
-	
-								const videoPreviewImageBase64 = fs.readFileSync(path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg')).toString('base64');
-								
-								indexer_doIndexUpdate(moarTubeTokenProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
-								.then(async indexerResponseData => {
-									if(indexerResponseData.isError) {
-										logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
-									}
-									else {
-										submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = 0 WHERE video_id = ?', [videoId], function(isError) {
-											if(isError) {
-												logDebugMessageToConsole(null, null, new Error().stack, true);
-											}
-											else {
-												logDebugMessageToConsole('updated video id with index successfully: ' + videoId, null, null, true);
-											}
-										});
-									}
-								})
-								.catch(error => {
-									logDebugMessageToConsole(null, error, new Error().stack, true);
-								});
+							indexer_doIndexUpdate(moarTubeTokenProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
+							.then(async indexerResponseData => {
+								if(indexerResponseData.isError) {
+									logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+								}
+								else {
+									submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = 0 WHERE video_id = ?', [videoId], function(isError) {
+										if(isError) {
+											logDebugMessageToConsole(null, null, new Error().stack, true);
+										}
+										else {
+											logDebugMessageToConsole('updated video id with index successfully: ' + videoId, null, null, true);
+										}
+									});
+								}
+							})
+							.catch(error => {
+								logDebugMessageToConsole(null, error, new Error().stack, true);
 							});
-						})
-						.catch(error => {
-							logDebugMessageToConsole(null, error, new Error().stack, true);
 						});
-					}
-				})
-				.catch(error => {
-					// do nothing
-				});
-			}
+					})
+					.catch(error => {
+						logDebugMessageToConsole('unable to communicate with the MoarTube platform', error, new Error().stack, true);
+					});
+				}
+			})
+			.catch(error => {
+				// do nothing
+			});
 		}, 3000);
 
 		setInterval(function() {
@@ -273,6 +270,7 @@ else {
 		app.use('/settings', settingsRoutes);
 		app.use('/streams', streamsRoutes);
 		app.use('/videos', videosRoutes);
+		app.use('/configure', configureRoutes);
 
 		await initializeHttpServer(app);
 		
@@ -408,7 +406,6 @@ function loadConfig() {
 		const nodeSettings = {
 			"nodeListeningPort": 80,
 			"isNodeConfigured":false,
-			"isNodePrivate":false,
 			"isSecure":false,
 			"publicNodeProtocol":"http",
 			"publicNodeAddress":"",
