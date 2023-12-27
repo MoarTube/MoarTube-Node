@@ -1,5 +1,5 @@
 # MoarTube-Node
-A repository containing the MoarTube Node software, managed by the [MoarTube Client](https://github.com/cconley717/MoarTube-Client). Get involved with the [MoarTube platform](https://www.moartube.com) by sharing your node's videos, or do your own thing and run your node privately. The software makes video and live streaming so easy you'll be amazed beyond belief.
+A repository containing the MoarTube Node software, managed by the [MoarTube Client](https://github.com/cconley717/MoarTube-Client). Get involved with the MoarTube platform by sharing your node's videos with the [main website](https://www.moartube.com), or do your own thing and run your node privately. The software makes video and live streaming so easy you'll be amazed beyond belief.
 
 # How to Get Started
 MoarTube Node can be found on [DockerHub](https://hub.docker.com/r/moartube/moartube-node) and can be managed with software like [Docker Desktop](https://www.docker.com/products/docker-desktop/), or follow the manual approach to set up your node. When ready, head over to [MoarTube Client](https://github.com/cconley717/MoarTube-Client) if you haven't yet.
