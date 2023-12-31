@@ -51,20 +51,8 @@ router.post('/:videoId/sourceFileExtension', (req, res) => {
     videoIdSourceFileExtension_POST(req, res);
 });
 
-router.get('/:videoId/sourceFileExtension', (req, res) => {
-    videoIdSourceFileExtension_GET(req, res);
-});
-
-router.get('/:videoId/publishes', (req, res) => {
-    videoIdPublishes_GET(req, res);
-});
-
 router.post('/:videoId/unpublish', (req, res) => {
     videoIdUnpublish_POST(req, res);
-});
-
-router.get('/:videoId/information', (req, res) => {
-    videoIdInformation_GET(req, res);
 });
 
 router.post('/:videoId/information', (req, res) => {
@@ -83,44 +71,8 @@ router.post('/:videoId/alias', (req, res) => {
     videoIdAlias_POST(req, res);
 });
 
-router.get('/:videoId/alias', (req, res) => {
-    videoIdAlias_GET(req, res);
-});
-
-router.get('/search', (req, res) => {
-    search_GET(req, res);
-});
-
-router.get('/:videoId/thumbnail', (req, res) => {
-    videoIdThumbnail_GET(req, res);
-});
-
-router.post('/:videoId/thumbnail', (req, res) => {
-    videoIdThumbnail_POST(req, res);
-});
-
-router.get('/:videoId/preview', (req, res) => {
-    videoIdPreview_GET(req, res);
-});
-
-router.post('/:videoId/preview', (req, res) => {
-    videoIdPreview_POST(req, res);
-});
-
-router.get('/:videoId/poster', (req, res) => {
-    videoIdPoster_GET(req, res);
-});
-
-router.post('/:videoId/poster', (req, res) => {
-    videoIdPoster_POST(req, res);
-});
-
 router.post('/:videoId/lengths', (req, res) => {
     videoIdLengths_POST(req, res);
-});
-
-router.get('/:videoId/data', (req, res) => {
-    videoIdData_GET(req, res);
 });
 
 router.post('/delete', (req, res) => {
@@ -129,18 +81,6 @@ router.post('/delete', (req, res) => {
 
 router.post('/finalize', (req, res) => {
     finalize_POST(req, res);
-});
-
-router.get('/:videoId/comments', (req, res) => {
-    videoIdComments_GET(req, res);
-});
-
-router.get('/comments/all', (req, res) => {
-    commentsAll_GET(req, res);
-});
-
-router.get('/:videoId/comments/:commentId', (req, res) => {
-    videoIdCommentsCommentId_GET(req, res);
 });
 
 router.post('/:videoId/comments/comment', (req, res) => {
@@ -159,8 +99,61 @@ router.post('/:videoId/dislike', (req, res) => {
     videoIdDislike_POST(req, res);
 });
 
-router.get('/recommendations', (req, res) => {
-    recommendations_GET(req, res);
+router.post('/:videoId/report', (req, res) => {
+    videoIdReport_POST(req, res);
+});
+
+router.post('/:videoId/thumbnail', (req, res) => {
+    videoIdThumbnail_POST(req, res);
+});
+
+router.post('/:videoId/preview', (req, res) => {
+    videoIdPreview_POST(req, res);
+});
+
+router.post('/:videoId/poster', (req, res) => {
+    videoIdPoster_POST(req, res);
+});
+
+router.get('/:videoId/publishes', (req, res) => {
+    videoIdPublishes_GET(req, res);
+});
+
+
+
+
+
+
+router.get('/:videoId/comments', (req, res) => {
+    videoIdComments_GET(req, res);
+});
+
+router.get('/:videoId/comments/:commentId', (req, res) => {
+    videoIdCommentsCommentId_GET(req, res);
+});
+
+router.get('/:videoId/data', (req, res) => {
+    videoIdData_GET(req, res);
+});
+
+router.get('/:videoId/alias', (req, res) => {
+    videoIdAlias_GET(req, res);
+});
+
+router.get('/:videoId/sourceFileExtension', (req, res) => {
+    videoIdSourceFileExtension_GET(req, res);
+});
+
+router.get('/search', (req, res) => {
+    search_GET(req, res);
+});
+
+router.get('/:videoId/information', (req, res) => {
+    videoIdInformation_GET(req, res);
+});
+
+router.get('/comments/all', (req, res) => {
+    commentsAll_GET(req, res);
 });
 
 router.get('/tags', (req, res) => {
@@ -171,12 +164,28 @@ router.get('/tags/all', (req, res) => {
     tagsAll_GET(req, res);
 });
 
+router.get('/recommendations', (req, res) => {
+    recommendations_GET(req, res);
+});
+
 router.get('/:videoId/watch', (req, res) => {
     videoIdWatch_GET(req, res);
 });
 
-router.post('/:videoId/report', (req, res) => {
-    videoIdReport_POST(req, res);
+
+
+
+
+router.get('/:videoId/thumbnail', (req, res) => {
+    videoIdThumbnail_GET(req, res);
+});
+
+router.get('/:videoId/preview', (req, res) => {
+    videoIdPreview_GET(req, res);
+});
+
+router.get('/:videoId/poster', (req, res) => {
+    videoIdPoster_GET(req, res);
 });
 
 router.get('/:videoId/adaptive/:format/manifests/:manifestName', (req, res) => {
