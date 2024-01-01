@@ -26,11 +26,14 @@ const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = requir
 const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
 const { getLiveStreamWatchingCountTracker, updateLiveStreamWatchingCountForWorker } = require('./utils/trackers/live-stream-watching-count-tracker');
 
+loadConfig();
+
 const accountRoutes = require('./routes/account');
 const captchaRoutes = require('./routes/captcha');
 const channelRoutes = require('./routes/channel');
 const commentsRoutes = require('./routes/comments');
-const embedRoutes = require('./routes/embed');
+const watchRoutes = require('./routes/watch');
+const watchEmbedRoutes = require('./routes/watch-embed');
 const homeRoutes = require('./routes/home');
 const reportsArchiveCommentsRoutes = require('./routes/reports-archive-comments');
 const reportsArchiveVideosRoutes = require('./routes/reports-archive-videos');
@@ -41,8 +44,8 @@ const settingsRoutes = require('./routes/settings');
 const streamsRoutes = require('./routes/streams');
 const videosRoutes = require('./routes/videos');
 const configureRoutes = require('./routes/configure');
-
-loadConfig();
+const assetsResourcesRoutes = require('./routes/assets-resources');
+const assetsVideosRoutes = require('./routes/assets-videos');
 
 if(cluster.isMaster) {
 	process.on('uncaughtException', (error) => {
@@ -214,30 +217,6 @@ else {
 		
 		app.enable('trust proxy');
 		
-		app.use('/javascript',  express.static(path.join(getPublicDirectoryPath(), 'javascript')));
-		app.use('/css',  express.static(path.join(getPublicDirectoryPath(), 'css')));
-		app.use('/images', (req, res, next) => {
-			const imageName = path.basename(req.url).replace('/', '');
-
-			if(imageName === 'icon.png' || imageName === 'avatar.png' || imageName === 'banner.png') {
-				const customImageDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), imageName);
-
-				if(fs.existsSync(customImageDirectoryPath)) {
-					const fileStream = fs.createReadStream(customImageDirectoryPath);
-					res.setHeader('Content-Type', 'image/png');
-					fileStream.pipe(res);
-				}
-				else {
-					next();
-				}
-			}
-			else {
-				next();
-			}
-		});
-		app.use('/images',  express.static(path.join(getPublicDirectoryPath(), 'images')));
-		app.use('/fonts',  express.static(path.join(getPublicDirectoryPath(), 'fonts')));
-		
 		app.use(expressUseragent.express());
 		
 		app.use(expressSession({
@@ -251,16 +230,13 @@ else {
 		
 		app.use(bodyParser.urlencoded({ extended: false }));
 		app.use(bodyParser.json());
-		
-		app.use(function(req, res, next) {
-			next();
-		});
 
 		app.use('/account', accountRoutes);
 		app.use('/captcha', captchaRoutes);
 		app.use('/channel', channelRoutes);
 		app.use('/comments', commentsRoutes);
-		app.use('/embed', embedRoutes);
+		app.use('/watch', watchRoutes);
+		app.use('/watch/embed', watchEmbedRoutes);
 		app.use('/', homeRoutes);
 		app.use('/reports/archive/comments', reportsArchiveCommentsRoutes);
 		app.use('/reports/archive/videos', reportsArchiveVideosRoutes);
@@ -271,6 +247,8 @@ else {
 		app.use('/streams', streamsRoutes);
 		app.use('/videos', videosRoutes);
 		app.use('/configure', configureRoutes);
+		app.use('/assets/resources', assetsResourcesRoutes);
+		app.use('/assets/videos', assetsVideosRoutes);
 
 		await initializeHttpServer(app);
 		
@@ -390,7 +368,7 @@ function loadConfig() {
 	fs.mkdirSync(getDatabaseDirectoryPath(), { recursive: true });
 	fs.mkdirSync(getCertificatesDirectoryPath(), { recursive: true });
 	
-	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config_test.json'), 'utf8'));
 
 	setIsDeveloperMode(config.isDeveloperMode);
 
@@ -404,7 +382,7 @@ function loadConfig() {
 	
 	if(!fs.existsSync(getNodeSettingsPath())) {
 		const nodeSettings = {
-			"nodeListeningPort": 80,
+			"nodeListeningPort":80,
 			"isNodeConfigured":false,
 			"isSecure":false,
 			"publicNodeProtocol":"http",
@@ -413,10 +391,13 @@ function loadConfig() {
 			"nodeName":"moartube node",
 			"nodeAbout":"just a MoarTube node",
 			"nodeId":"",
-			"username":"JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL",
-			"password":"JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX",
-			"expressSessionName": crypto.randomBytes(64).toString('hex'),
-			"expressSessionSecret": crypto.randomBytes(64).toString('hex')
+			"username":"JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL",  // admin
+			"password":"JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX",  // admin
+			"expressSessionName":crypto.randomBytes(64).toString('hex'),
+			"expressSessionSecret":crypto.randomBytes(64).toString('hex'),
+			"cloudflareEmailAddress":"",
+			"cloudflareZoneId":"",
+			"cloudflareApiKey":""
 		};
 
 		setNodeSettings(nodeSettings);

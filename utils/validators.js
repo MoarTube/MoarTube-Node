@@ -1,3 +1,7 @@
+const { 
+    cloudflare_validate
+} = require('../utils/cloudflare-communications');
+
 function isNodeNameValid(nodeName) {
     return (nodeName != null && nodeName.length >= 0 && nodeName.length <= 100);
 }
@@ -239,6 +243,28 @@ function isTagsValid(tags) {
     return result;
 }
 
+function isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareApiToken) {
+    return new Promise(function(resolve, reject) {
+        cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareApiToken)
+        .then(function(result) {
+            if(result.isError) {
+                resolve(false);
+            }
+            else {
+                if(result.success) {
+                    resolve(true);
+                }
+                else {
+                    resolve(false);
+                }
+            }
+        })
+        .catch(function(error) {
+            resolve(false);
+        });
+    });
+}
+
 module.exports = {
     isNodeNameValid,
     isNodeAboutValid,
@@ -282,5 +308,6 @@ module.exports = {
     isTitleValid,
     isDescriptionValid,
     isTagTermValid,
-    isTagsValid
+    isTagsValid,
+    isCloudflareCredentialsValid
 }

@@ -43,26 +43,8 @@ function heartbeat_GET(req, res) {
     res.send({isError: false, timestamp: Date.now()});
 }
 
-function watch_GET(req, res) {
-    const videoId = req.query.v;
-    
-    if(isVideoIdValid(videoId)) {
-        const pagePath = path.join(getPagesDirectoryPath(), 'watch.html');
-        
-        const fileStream = fs.createReadStream(pagePath);
-        
-        res.setHeader('Content-Type', 'text/html');
-        
-        fileStream.pipe(res);
-    }
-    else {
-        res.send({isError: true, message: 'invalid parameters'});
-    }
-}
-
 module.exports = {
     root_GET,
     information_GET,
-    heartbeat_GET,
-    watch_GET
+    heartbeat_GET
 };

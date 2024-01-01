@@ -121,31 +121,31 @@ function updateHlsVideoMasterManifestFile(videoId) {
         if (!fs.lstatSync(filePath).isDirectory()) {
             if(fileName === 'manifest-240p.m3u8') {
                 manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=250000,RESOLUTION=426x240\n';
-                manifestFileString += '/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-240p.m3u8\n';
+                manifestFileString += '/assets/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-240p.m3u8\n';
             }
             else if(fileName === 'manifest-360p.m3u8') {
                 manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=500000,RESOLUTION=640x360\n';
-                manifestFileString += '/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-360p.m3u8\n';
+                manifestFileString += '/assets/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-360p.m3u8\n';
             }
             else if(fileName === 'manifest-480p.m3u8') {
                 manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=854x480\n';
-                manifestFileString += '/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-480p.m3u8\n';
+                manifestFileString += '/assets/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-480p.m3u8\n';
             }
             else if(fileName === 'manifest-720p.m3u8') {
                 manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=3000000,RESOLUTION=1280x720\n';
-                manifestFileString += '/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-720p.m3u8\n';
+                manifestFileString += '/assets/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-720p.m3u8\n';
             }
             else if(fileName === 'manifest-1080p.m3u8') {
                 manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=6000000,RESOLUTION=1920x1080\n';
-                manifestFileString += '/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-1080p.m3u8\n';
+                manifestFileString += '/assets/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-1080p.m3u8\n';
             }
             else if(fileName === 'manifest-1440p.m3u8') {
                 manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION=2560x1440\n';
-                manifestFileString += '/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-1440p.m3u8\n';
+                manifestFileString += '/assets/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-1440p.m3u8\n';
             }
             else if(fileName === 'manifest-2160p.m3u8') {
                 manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=16000000,RESOLUTION=3840x2160\n'
-                manifestFileString += '/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-2160p.m3u8\n';
+                manifestFileString += '/assets/videos/' + videoId + '/adaptive/m3u8/manifests/manifest-2160p.m3u8\n';
             }
         }
     });

@@ -11,8 +11,8 @@ const { getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdenti
     getIsDockerEnvironment
 } = require('../utils/helpers');
 const { 
-    isNodeNameValid, isNodeAboutValid, isNodeIdValid, isBooleanValid, isBooleanStringValid, isUsernameValid, isPasswordValid, 
-    isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid
+    isNodeNameValid, isNodeAboutValid, isNodeIdValid, isBooleanStringValid, isUsernameValid, isPasswordValid, 
+    isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
 const { submitDatabaseWriteJob } = require('../utils/database');
@@ -421,6 +421,44 @@ function secure_POST(req, res) {
     });
 }
 
+function cloudflare_POST(req, res) {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            const cloudflareEmailAddress = req.body.cloudflareEmailAddress;
+            const cloudflareZoneId = req.body.cloudflareZoneId;
+            const cloudflareApiToken = req.body.cloudflareApiToken;
+
+            const isValid = await isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareApiToken);
+            
+            if(isValid) {
+                const nodeSettings = getNodeSettings();
+                
+                nodeSettings.cloudflareEmailAddress = cloudflareEmailAddress;
+                nodeSettings.cloudflareZoneId = cloudflareZoneId;
+                nodeSettings.cloudflareApiKey = cloudflareApiToken;
+
+                setNodeSettings(nodeSettings);
+                
+                res.send({ isError: false });
+            }
+            else {
+                res.send({ isError: true, message: 'could not validate the Cloudflare credentials' });
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+}
+
 function account_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
@@ -569,6 +607,7 @@ module.exports = {
     banner_POST,
     personalize_POST,
     secure_POST,
+    cloudflare_POST,
     account_POST,
     networkInternal_POST,
     networkExternal_POST

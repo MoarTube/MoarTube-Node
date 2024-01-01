@@ -16,11 +16,11 @@
 		<meta property="og:image" content="http://www.moartube.com/images/logo.jpg" />
 		
 		<title>MoarTube</title>
-		<link rel="icon" type="image/x-icon" href="/images/favicon.ico">
-		<link href="/css/bootstrap.min-5.3.0.css" rel="stylesheet" />
-		<script src="/javascript/jquery-3.6.4.min.js"></script>
-		<script src="/javascript/bootstrap-5.3.0.min.js"></script>
-		<script src="/javascript/clamp.js"></script>
+		<link rel="icon" type="image/x-icon" href="/assets/resources/images/favicon.ico">
+		<link href="/assets/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" />
+		<script src="/assets/resources/javascript/jquery-3.6.4.min.js"></script>
+		<script src="/assets/resources/javascript/bootstrap-5.3.0.min.js"></script>
+		<script src="/assets/resources/javascript/clamp.js"></script>
 		<style>
 			body {
 				background: #f9f9f9;
@@ -281,13 +281,13 @@ body {
 		<div class="container-fluid p-0 mt-2">
 			<div class="row m-0"> 
 				<div class="col-12 p-0">
-					<img class="img-fluid" src="/images/banner.png"/>
+					<img class="img-fluid" src="/assets/resources/images/banner.png"/>
 				</div>
 			</div>
 			<div class="container">
 			<div class="row m-0 pt-3 align-items-center justify-content-center align-items-sm-start justify-content-sm-start"> 
 				<div class="col-auto p-0 text-end">
-					<img id="node-avatar" class="img-fluid" src="/images/avatar.png"/>
+					<img id="node-avatar" class="img-fluid" src="/assets/resources/images/avatar.png"/>
 				</div>
 				<div id="node-information" class="col-auto p-0">
 					<div class="container-fluid mt-2 p-0">
@@ -473,7 +473,7 @@ body {
 					else {
 						data.searchResults.forEach(function(row) {
 							const videoId = row.video_id;
-							const thumbnail = '/videos/' + videoId + '/thumbnail';
+							const thumbnail = '/assets/videos/' + videoId + '/thumbnail';
 							const title = row.title;
 							const tags = row.tags;
 							const lengthTimestamp = row.length_timestamp;
@@ -522,7 +522,7 @@ body {
 										<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
 											<div class="card">\
 												<div class="position-relative ratio-16x9">\
-													<img src="/videos/' + videoId + '/preview" class="card-img-top" alt="...">\
+													<img src="/assets/videos/' + videoId + '/preview" class="card-img-top" alt="...">\
 													' + durationIndicator + '\
 													' + liveStreamIndicator + '\
 												</div>\
@@ -557,7 +557,7 @@ body {
 												<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
 													<div class="card">\
 														<div class="position-relative ratio-16x9">\
-															<img src="/videos/' + videoId + '/preview" class="card-img-top" alt="...">\
+															<img src="/assets/videos/' + videoId + '/preview" class="card-img-top" alt="...">\
 															' + durationIndicator + '\
 															' + liveStreamIndicator + '\
 														</div>\

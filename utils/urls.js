@@ -61,6 +61,19 @@ function setMoarTubeAliaserPort(value) {
     moartubeAliaserPort = value;
 }
 
+
+
+
+
+
+
+
+function getCloudflareZoneUrl() {
+
+
+    return 'https://api.cloudflare.com/client/v4/zones/';
+}
+
 module.exports = {
     getMoarTubeAliaserUrl,
     getMoarTubeIndexerUrl,
@@ -75,5 +88,6 @@ module.exports = {
     setMoarTubeIndexerPort,
     setMoarTubeAliaserHttpProtocol,
     setMoarTubeAliaserIp,
-    setMoarTubeAliaserPort
+    setMoarTubeAliaserPort,
+    getCloudflareZoneUrl
 };
