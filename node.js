@@ -9,6 +9,7 @@ const webSocket = require('ws');
 const crypto = require('crypto');
 const cluster = require('cluster');
 const { Mutex } = require('async-mutex');
+const engine = require('express-dot-engine');
 
 const {logDebugMessageToConsole} = require('./utils/logger');
 const {
@@ -19,7 +20,7 @@ const {
 const { setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort } = require('./utils/urls');
 const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setPagesDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, 
 	setVideosDirectoryPath, setDatabaseDirectoryPath, setDatabaseFilePath, setCertificatesDirectoryPath, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
-	getCertificatesDirectoryPath, getNodeSettingsPath
+	getCertificatesDirectoryPath, getNodeSettingsPath, setViewsDirectoryPath, getViewsDirectoryPath
 } = require('./utils/paths');
 const { provisionSqliteDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL } = require('./utils/database');
 const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = require('./utils/httpserver');
@@ -231,6 +232,10 @@ else {
 		app.use(bodyParser.urlencoded({ extended: false }));
 		app.use(bodyParser.json());
 
+		app.engine('dot', engine.__express);
+		app.set('views', getViewsDirectoryPath());
+		app.set('view engine', 'dot');
+
 		app.use('/account', accountRoutes);
 		app.use('/captcha', captchaRoutes);
 		app.use('/channel', channelRoutes);
@@ -345,6 +350,7 @@ function loadConfig() {
 
 	setPublicDirectoryPath(path.join(__dirname, 'public'));
 	setPagesDirectoryPath(path.join(getPublicDirectoryPath(), 'pages'));
+	setViewsDirectoryPath(path.join(getPublicDirectoryPath(), 'views'));
 
 	setIsDockerEnvironment(process.env.IS_DOCKER_ENVIRONMENT === 'true');
 

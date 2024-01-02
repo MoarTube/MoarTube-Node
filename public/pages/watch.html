@@ -1261,10 +1261,12 @@ body {
 						console.log(data.message);
 					}
 					else {
-						const nodeId = data.nodeId;
-						const publicNodeProtocol = data.publicNodeProtocol;
-						const publicNodeAddress = data.publicNodeAddress;
-						const publicNodePort = data.publicNodePort;
+						const information = data.information;
+
+						const nodeId = information.nodeId;
+						const publicNodeProtocol = information.publicNodeProtocol;
+						const publicNodeAddress = information.publicNodeAddress;
+						const publicNodePort = information.publicNodePort;
 						
 						NODE_ID = nodeId;
 						

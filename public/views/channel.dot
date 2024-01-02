@@ -338,6 +338,8 @@ body {
 		</div>
 
 		<script>
+			const INCOMING_PARAMETERS = [[= JSON.stringify(model) ]];
+
 			var CURRENT_SEARCH_TERM;
 			var CURRENT_SORT_TERM;
 			var CURRENT_TAG_TERM;
@@ -386,79 +388,51 @@ body {
 				
 				$('#search-input').val(searchTerm);
 				
-				getNodeInformation();
-				getTags();
-				getVideos(searchTerm, sortTerm, tagTerm);
+				loadInformation(INCOMING_PARAMETERS.informationData.information);
+				loadTags(INCOMING_PARAMETERS.tagsData.tags);
+				loadVideos(INCOMING_PARAMETERS.searchResultsData.searchResults);
 			});
-			
-			function getNodeInformation() {
-				$.ajax({type: 'GET', url: '/information'})
-				.done(function (data, textStatus, xhr)
-				{
-					if(data.isError) {
-						alert(data.message);
-					}
-					else {
-						const nodeName = data.nodeName;
-						const nodeVideoCount = data.nodeVideoCount;
-						const nodeAbout = data.nodeAbout;
-						
-						const nodeAboutHtml = nodeAbout.replace(/(?:\r\n|\r|\n)/g, '<br>');
-						
-						var nodeVideoCountDescriptor = '';
-						
-						if(nodeVideoCount != 1) {
-							nodeVideoCountDescriptor = ' videos';
-						}
-						else {
-							nodeVideoCountDescriptor = ' video';
-						}
-						
-						$('#node-name').text(nodeName);
-						$('#node-video-count').text(nodeVideoCount + nodeVideoCountDescriptor);
-						$('#node-about').html(nodeAboutHtml);
-						
-						if(nodeName != '') {
-							document.title = nodeName + ' - MoarTube';
-						}
-					}
-				})
-				.fail(function()
-				{
-					alert('unable to communicate with node');
-				});
-			}
-			
-			function getTags() {
-				$.ajax({type: 'GET', url: '/videos/tags'})
-				.done(function (data, textStatus, xhr)
-				{
-					if(data.isError) {
-						console.log(data.message);
-					}
-					else {
-						const tags = data.tags;
-						
-						$('#tag-buttons').append('<button id="tag-button-all" type="button" class="btn btn-outline-primary tag-button content-button me-1" data-tagterm="" style="white-space: nowrap;" onclick="tagButtonSelected(this);">all</button>');
-						
-						tags.forEach(function(tag) {
-							const tagTermId = tag.replace(/ /g, '-');
 
-							$('#tag-buttons').append('<button id="tag-button-' + tagTermId + '" type="button" class="btn btn-outline-primary tag-button content-button me-1" data-tagterm="' + tag + '" style="white-space: nowrap;" onclick="tagButtonSelected(this);">' + tag + '</button>');
-						});
-						
-						if(CURRENT_TAG_TERM_ID === '') {
-							$('#tag-button-all').addClass('content-button-selected');
-						}
-						else {
-							$('#tag-button-' + CURRENT_TAG_TERM_ID).addClass('content-button-selected');
-						}
-					}
-				})
-				.fail(function()
-				{
-					console.log('unable to communicate with node');
+			function loadInformation(information) {
+				const nodeName = information.nodeName;
+				const nodeVideoCount = information.nodeVideoCount;
+				const nodeAbout = information.nodeAbout;
+				
+				const nodeAboutHtml = nodeAbout.replace(/(?:\r\n|\r|\n)/g, '<br>');
+				
+				var nodeVideoCountDescriptor = '';
+				
+				if(nodeVideoCount != 1) {
+					nodeVideoCountDescriptor = ' videos';
+				}
+				else {
+					nodeVideoCountDescriptor = ' video';
+				}
+				
+				$('#node-name').text(nodeName);
+				$('#node-video-count').text(nodeVideoCount + nodeVideoCountDescriptor);
+				$('#node-about').html(nodeAboutHtml);
+				
+				if(nodeName != '') {
+					document.title = nodeName + ' - MoarTube';
+				}
+			}
+
+			function loadTags(tags) {
+				$('#tag-buttons').append('<button id="tag-button-all" type="button" class="btn btn-outline-primary tag-button content-button me-1" data-tagterm="" style="white-space: nowrap;" onclick="tagButtonSelected(this);">all</button>');
+				
+				tags.forEach(function(tag) {
+					const tagTermId = tag.replace(/ /g, '-');
+
+					$('#tag-buttons').append('<button id="tag-button-' + tagTermId + '" type="button" class="btn btn-outline-primary tag-button content-button me-1" data-tagterm="' + tag + '" style="white-space: nowrap;" onclick="tagButtonSelected(this);">' + tag + '</button>');
 				});
+				
+				if(CURRENT_TAG_TERM_ID === '') {
+					$('#tag-button-all').addClass('content-button-selected');
+				}
+				else {
+					$('#tag-button-' + CURRENT_TAG_TERM_ID).addClass('content-button-selected');
+				}
 			}
 			
 			function getVideos(searchTerm, sortTerm, tagTerm) {

@@ -3,6 +3,7 @@ var nodeSettingsPath;
 var imagesDirectoryPath;
 var publicDirectoryPath;
 var pagesDirectoryPath;
+var viewsDirectoryPath;
 var videosDirectoryPath;
 var databaseDirectoryPath;
 var databaseFilePath;
@@ -17,6 +18,10 @@ function getPublicDirectoryPath() {
 
 function getPagesDirectoryPath() {
     return pagesDirectoryPath;
+}
+
+function getViewsDirectoryPath() {
+    return viewsDirectoryPath;
 }
 
 function getDataDirectoryPath() {
@@ -58,6 +63,10 @@ function setPagesDirectoryPath(path) {
     pagesDirectoryPath = path;
 }
 
+function setViewsDirectoryPath(path) {
+    viewsDirectoryPath = path;
+}
+
 function setDataDirectoryPath(path) {
     dataDirectoryPath = path;
 }
@@ -88,6 +97,7 @@ function setCertificatesDirectoryPath(path) {
 
 module.exports = {
     getPagesDirectoryPath,
+    getViewsDirectoryPath,
     getPublicDirectoryPath,
     getDataDirectoryPath,
     getNodeSettingsPath,
@@ -98,6 +108,7 @@ module.exports = {
     getCertificatesDirectoryPath,
     setPublicDirectoryPath,
     setPagesDirectoryPath,
+    setViewsDirectoryPath,
     setDataDirectoryPath,
     setNodeSettingsPath,
     setImagesDirectoryPath,

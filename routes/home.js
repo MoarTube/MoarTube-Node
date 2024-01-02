@@ -1,11 +1,15 @@
 const express = require('express');
 
-const { root_GET, information_GET, heartbeat_GET } = require('../controllers/home');
+const { root_GET, home_GET, information_GET, heartbeat_GET } = require('../controllers/home');
 
 const router = express.Router();
 
 router.get('/', (req, res) => {
     root_GET(req, res);
+});
+
+router.get('/home', (req, res) => {
+    home_GET(req, res);
 });
 
 router.get('/information', (req, res) => {
