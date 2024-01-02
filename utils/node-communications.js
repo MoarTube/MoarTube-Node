@@ -2,7 +2,7 @@ const axios = require('axios').default;
 
 function node_getInformation() {
     return new Promise(function(resolve, reject) {
-        axios.get('/information')
+        axios.get('/node/information')
         .then(response => {
             const data = response.data;
             
@@ -30,7 +30,7 @@ function node_getVideosTags() {
 
 function node_getChannelSearch(searchTerm, sortTerm, tagTerm) {
     return new Promise(function(resolve, reject) {
-        axios.get('/channel/search', {
+        axios.get('/node/search', {
             params: {
                 searchTerm: searchTerm,
                 sortTerm: sortTerm,

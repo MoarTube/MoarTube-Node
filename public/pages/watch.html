@@ -1255,7 +1255,7 @@ body {
 			}
 			
 			function getNodeInformation() {
-				$.ajax({type: 'GET', url: '/information'})
+				$.ajax({type: 'GET', url: '/node/information'})
 				.done(function (data, textStatus, xhr) {
 					if(data.isError) {
 						console.log(data.message);

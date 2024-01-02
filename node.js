@@ -29,13 +29,13 @@ const { getLiveStreamWatchingCountTracker, updateLiveStreamWatchingCountForWorke
 
 loadConfig();
 
+const baseRoutes = require('./routes/base');
 const accountRoutes = require('./routes/account');
 const captchaRoutes = require('./routes/captcha');
-const channelRoutes = require('./routes/channel');
 const commentsRoutes = require('./routes/comments');
 const watchRoutes = require('./routes/watch');
 const watchEmbedRoutes = require('./routes/watch-embed');
-const homeRoutes = require('./routes/home');
+const nodeRoutes = require('./routes/node');
 const reportsArchiveCommentsRoutes = require('./routes/reports-archive-comments');
 const reportsArchiveVideosRoutes = require('./routes/reports-archive-videos');
 const reportsCommentsRoutes = require('./routes/reports-comments');
@@ -236,13 +236,13 @@ else {
 		app.set('views', getViewsDirectoryPath());
 		app.set('view engine', 'dot');
 
+		app.use('/', baseRoutes);
 		app.use('/account', accountRoutes);
 		app.use('/captcha', captchaRoutes);
-		app.use('/channel', channelRoutes);
 		app.use('/comments', commentsRoutes);
 		app.use('/watch', watchRoutes);
 		app.use('/watch/embed', watchEmbedRoutes);
-		app.use('/', homeRoutes);
+		app.use('/node', nodeRoutes);
 		app.use('/reports/archive/comments', reportsArchiveCommentsRoutes);
 		app.use('/reports/archive/videos', reportsArchiveVideosRoutes);
 		app.use('/reports/comments', reportsCommentsRoutes);

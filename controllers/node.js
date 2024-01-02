@@ -1,5 +1,31 @@
+const { getNodeSettings } = require('../utils/helpers');
 const { isSearchTermValid, isSortTermValid, isTagTermValid } = require('../utils/validators');
-const { performDatabaseReadJob_ALL } = require('../utils/database');
+const { performDatabaseReadJob_GET, performDatabaseReadJob_ALL } = require('../utils/database');
+const { node_getInformation, node_getVideosTags, node_getChannelSearch } = require('../utils/node-communications');
+
+async function root_GET(req, res) {
+    var searchTerm = req.query.se;
+    var sortTerm = req.query.so;
+    var tagTerm = req.query.ta;
+
+    if(!isSearchTermValid(searchTerm)) {
+        searchTerm = '';
+    }
+    
+    if(!isSortTermValid(sortTerm)) {
+        sortTerm = 'latest';
+    }
+    
+    if(!isTagTermValid(tagTerm, true)) {
+        tagTerm = '';
+    }
+
+    const informationData = await node_getInformation();
+    const tagsData = await node_getVideosTags();
+    const searchResultsData = await node_getChannelSearch(searchTerm, sortTerm, tagTerm);
+
+    res.render('node', {informationData: informationData, tagsData: tagsData, searchResultsData: searchResultsData});
+}
 
 function search_GET(req, res) {
     const searchTerm = req.query.searchTerm;
@@ -86,6 +112,49 @@ function search_GET(req, res) {
     }
 }
 
-module.exports = {
-    search_GET
+function information_GET(req, res) {
+    performDatabaseReadJob_GET('SELECT COUNT(*) AS videoCount FROM videos WHERE (is_published = 1 OR is_live = 1)', [])
+    .then(row => {
+        if(row != null) {
+            const nodeVideoCount = row.videoCount;
+
+            const nodeSettings = getNodeSettings();
+            
+            const nodeId = nodeSettings.nodeId;
+            const nodeName = nodeSettings.nodeName;
+            const nodeAbout = nodeSettings.nodeAbout;
+            const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+            const publicNodeAddress = nodeSettings.publicNodeAddress;
+            const publicNodePort = nodeSettings.publicNodePort;
+
+            const information = {
+                nodeVideoCount: nodeVideoCount,
+                nodeId: nodeId, 
+                nodeName: nodeName, 
+                nodeAbout: nodeAbout, 
+                publicNodeProtocol: publicNodeProtocol, 
+                publicNodeAddress: publicNodeAddress, 
+                publicNodePort: publicNodePort
+            };
+            
+            res.send({isError: false, information: information});
+        }
+        else {
+            res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        }
+    })
+    .catch(error => {
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
 }
+
+function heartbeat_GET(req, res) {
+    res.send({isError: false, timestamp: Date.now()});
+}
+
+module.exports = {
+    root_GET,
+    search_GET,
+    information_GET,
+    heartbeat_GET
+};
