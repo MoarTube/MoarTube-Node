@@ -243,9 +243,9 @@ function isTagsValid(tags) {
     return result;
 }
 
-function isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareApiToken) {
+function isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
     return new Promise(function(resolve, reject) {
-        cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareApiToken)
+        cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
         .then(function(result) {
             if(result.isError) {
                 resolve(false);

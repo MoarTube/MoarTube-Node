@@ -1617,9 +1617,9 @@ function videoIdData_GET(req, res) {
             
             if(isVideoIdValid(videoId)) {
                 performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
-                .then(video => {
-                    if(video != null) {
-                        res.send({isError: false, videoData: video});
+                .then(videoData => {
+                    if(videoData != null) {
+                        res.send({isError: false, videoData: videoData});
                     }
                     else {
                         res.send({isError: true, message: 'that video does not exist'});
@@ -1773,10 +1773,8 @@ function videoIdComments_GET(req, res) {
     const videoId = req.params.videoId;
     const timestamp = req.query.timestamp;
     const type = req.query.type;
-    const minimumCommentId = req.query.minimumCommentId;
-    const maximumCommentId = req.query.maximumCommentId;
     
-    if(isVideoIdValid(videoId) && isTimestampValid(timestamp) && isCommentsTypeValid(type) && isCommentIdValid(minimumCommentId) && isCommentIdValid(maximumCommentId)) {
+    if(isVideoIdValid(videoId) && isTimestampValid(timestamp) && isCommentsTypeValid(type)) {
         if(type === 'before') {
             performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp])
             .then(comments => {
@@ -1787,33 +1785,13 @@ function videoIdComments_GET(req, res) {
             });
         }
         else if(type === 'after') {
-            if(minimumCommentId == 0 && maximumCommentId == 0) {
-                performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? ORDER BY timestamp DESC LIMIT 20', [videoId, timestamp])
-                .then(comments => {
-                    res.send({isError: false, comments: comments});
-                })
-                .catch(error => {
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                });
-            }
-            else if(minimumCommentId >= 0 && maximumCommentId > 0) {
-                performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? AND id >= ? AND id < ? ORDER BY timestamp DESC', [videoId, timestamp, minimumCommentId, maximumCommentId])
-                .then(comments => {
-                    res.send({isError: false, comments: comments});
-                })
-                .catch(error => {
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                });
-            }
-            else if(minimumCommentId > 0 && maximumCommentId == 0) {
-                performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? AND id >= ? ORDER BY timestamp DESC', [videoId, timestamp, minimumCommentId])
-                .then(comments => {
-                    res.send({isError: false, comments: comments});
-                })
-                .catch(error => {
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                });
-            }
+            performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? ORDER BY timestamp DESC', [videoId, timestamp])
+            .then(comments => {
+                res.send({isError: false, comments: comments});
+            })
+            .catch(error => {
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            });
         }
     }
     else {
@@ -2055,42 +2033,14 @@ function videoIdDislike_POST(req, res) {
     }
 }
 
-function recommendations_GET(req, res) {
-    const tagTerm = req.query.tagTerm;
-    const timestamp = req.query.timestamp;
-    
-    if(isTagTermValid(tagTerm, true) && isTimestampValid(timestamp)) {
-        if(tagTerm.length === 0) {
-            performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) AND creation_timestamp < ? ORDER BY creation_timestamp DESC LIMIT 20', [timestamp])
-            .then(recommendations => {
-                res.send({isError: false, recommendations: recommendations});
-            })
-            .catch(error => {
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            });
-        }
-        else {
-            performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) AND tags LIKE ? AND creation_timestamp < ? ORDER BY creation_timestamp DESC LIMIT 20', ['%' + tagTerm + '%', timestamp])
-            .then(videos => {
-                const recommendations = [];
-                
-                videos.forEach(function(video) {
-                    const tagsArray = video.tags.split(',');
-                    if (tagsArray.includes(tagTerm)) {
-                        recommendations.push(video);
-                    }
-                });
-                
-                res.send({isError: false, recommendations: recommendations});
-            })
-            .catch(error => {
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            });
-        }
-    }
-    else {
-        res.send({isError: true, message: 'invalid parameters'});
-    }
+function available_GET(req, res) {
+    performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) ORDER BY creation_timestamp DESC', [])
+    .then(availableVideos => {
+        res.send({isError: false, availableVideos: availableVideos});
+    })
+    .catch(error => {
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
 }
 
 function tags_GET(req, res) {
@@ -2188,7 +2138,7 @@ function commentsAll_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
-            performDatabaseReadJob_ALL('SELECT timestamp,video_id,id,comment_plain_text_sanitized FROM comments ORDER BY timestamp DESC', [])
+            performDatabaseReadJob_ALL('SELECT * FROM comments ORDER BY timestamp DESC', [])
             .then(comments => {
                 res.send({isError: false, comments: comments});
             })
@@ -2320,7 +2270,7 @@ function videoIdWatch_GET(req, res) {
                     });
                 });
                 
-                const videoData = {
+                res.send({isError: false, video: {
                     nodeName: nodeName,
                     title: video.title,
                     description: video.description,
@@ -2341,9 +2291,7 @@ function videoIdWatch_GET(req, res) {
                     adaptiveSources: adaptiveSources,
                     progressiveSources: progressiveSources,
                     sourcesFormatsAndResolutions: sourcesFormatsAndResolutions
-                };
-                
-                res.send({isError: false, videoData: videoData});
+                }});
             }
             else {
                 res.send({isError: true, message: 'that video does not exist'});
@@ -2392,7 +2340,7 @@ module.exports = {
     videoIdCommentsCommentIdDelete_DELETE,
     videoIdLike_POST,
     videoIdDislike_POST,
-    recommendations_GET,
+    available_GET,
     tags_GET,
     tagsAll_GET,
     videoIdWatch_GET,

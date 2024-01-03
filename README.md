@@ -12,24 +12,25 @@ The default login credentials for your node are below. Be sure to change these u
 
 # Features
  - Cross platform support for Windows/macOS/Linux
+ - Admin panel for managing videos and live streams
  - Video on demand (VoD) and HLS live streaming
  - **HLS** *(H.264, AAC)*, **MP4** *(H.264, AAC)*, **WEBM** *(VP9, Opus)*, **OGV** *(VP8, Opus)* container formats
  - Transcode static MP4/WEBM video to HLS/MP4/WEBM/OGV
  - Transcode RTMP Live stream (such as from OBS) to HLS live stream
  - Video output resolutions, 30fps: 2160p, 1440p, 1080p, 720p, 480p, 360p, 240p
  - No server-side encoding; client-side only
- - HTTPS/WSS
+ - HTTPS/WSS capabilities
  - GPU acceleration for Nvidia and AMD (Windows only)
- - Admin panel for managing videos and live streams
  - Different video player modes: streamer, theater, fullscreen
- - Comments section and live stream chat
  - Dark mode option and browser appearance configuration recognition
+ - Video comments section and live stream chat
  - Reports section for comments and videos
  - Comment monitoring overview with moderation functionality
- - Captcha functionality to limit abuse
+ - Captcha functionality to limit abuse (i.e. flood attacks)
  - Run your node in the cloud or on your home WiFi
- - Publicize your node on [MoarTube](http://www.moartube.com), or run your node privately
+ - Publicize your node's content on [MoarTube](http://www.moartube.com) or run your node privately
  - Dual box compatible; broadcast an RTMP stream with software such as OBS from a primary system over a network (WAN or LAN) to a secondary system running the MoarTube Client, separating stream broadcasting from stream processing. This is achieved without any special plugins, such as NDI.
+ - Cloudflare integration; easily integrate your node into the [Cloudflare Network](https://www.cloudflare.com/network/) for global media delivery capabilities that rivals major platforms.
 
 ![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/0d8ac95f-f68b-4e36-849e-28139b45ce50)
 

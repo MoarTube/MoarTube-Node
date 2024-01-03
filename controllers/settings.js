@@ -7,14 +7,14 @@ const { v4: uuidv4 } = require('uuid');
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getImagesDirectoryPath, getCertificatesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
 } = require('../utils/paths');
-const { getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, 
-    getIsDockerEnvironment
+const { getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment
 } = require('../utils/helpers');
 const { 
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isBooleanStringValid, isUsernameValid, isPasswordValid, 
     isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
+const { cloudflare_setDefaultPageRules } = require('../utils/cloudflare-communications');
 const { submitDatabaseWriteJob } = require('../utils/database');
 
 function root_GET(req, res) {
@@ -427,16 +427,16 @@ function cloudflare_POST(req, res) {
         if(isAuthenticated) {
             const cloudflareEmailAddress = req.body.cloudflareEmailAddress;
             const cloudflareZoneId = req.body.cloudflareZoneId;
-            const cloudflareApiToken = req.body.cloudflareApiToken;
+            const cloudflareGlobalApiKey = req.body.cloudflareGlobalApiKey;
 
-            const isValid = await isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareApiToken);
+            const isValid = await isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
             
             if(isValid) {
                 const nodeSettings = getNodeSettings();
                 
                 nodeSettings.cloudflareEmailAddress = cloudflareEmailAddress;
                 nodeSettings.cloudflareZoneId = cloudflareZoneId;
-                nodeSettings.cloudflareApiKey = cloudflareApiToken;
+                nodeSettings.cloudflareGlobalApiKey = cloudflareGlobalApiKey;
 
                 setNodeSettings(nodeSettings);
                 
@@ -456,6 +456,23 @@ function cloudflare_POST(req, res) {
         logDebugMessageToConsole(null, error, new Error().stack, true);
         
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+}
+
+function cloudflareDefaults_POST(req, res) {
+    cloudflare_setDefaultPageRules()
+    .then(cloudflareResponseData => {
+        if(cloudflareResponseData.isError) {
+            res.send({isError: true, message: cloudflareResponseData.message});
+        }
+        else {
+            res.send({ isError: false });
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+
+        res.send({isError: true, message: 'an error occurred while applying the settings'});
     });
 }
 
@@ -608,6 +625,7 @@ module.exports = {
     personalize_POST,
     secure_POST,
     cloudflare_POST,
+    cloudflareDefaults_POST,
     account_POST,
     networkInternal_POST,
     networkExternal_POST

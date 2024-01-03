@@ -18,7 +18,7 @@ const {
 	setExpressSessionName, setExpressSessionSecret, performNodeIdentification, getNodeIdentification, getNodeIconBase64
 } = require('./utils/helpers');
 const { setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort } = require('./utils/urls');
-const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setPagesDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, 
+const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, 
 	setVideosDirectoryPath, setDatabaseDirectoryPath, setDatabaseFilePath, setCertificatesDirectoryPath, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
 	getCertificatesDirectoryPath, getNodeSettingsPath, setViewsDirectoryPath, getViewsDirectoryPath
 } = require('./utils/paths');
@@ -349,7 +349,6 @@ function loadConfig() {
 	process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 	setPublicDirectoryPath(path.join(__dirname, 'public'));
-	setPagesDirectoryPath(path.join(getPublicDirectoryPath(), 'pages'));
 	setViewsDirectoryPath(path.join(getPublicDirectoryPath(), 'views'));
 
 	setIsDockerEnvironment(process.env.IS_DOCKER_ENVIRONMENT === 'true');
@@ -403,7 +402,7 @@ function loadConfig() {
 			"expressSessionSecret":crypto.randomBytes(64).toString('hex'),
 			"cloudflareEmailAddress":"",
 			"cloudflareZoneId":"",
-			"cloudflareApiKey":""
+			"cloudflareGlobalApiKey":""
 		};
 
 		setNodeSettings(nodeSettings);

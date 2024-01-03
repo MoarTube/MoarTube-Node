@@ -48,8 +48,58 @@ function node_getChannelSearch(searchTerm, sortTerm, tagTerm) {
     });
 }
 
+function node_getVideo(videoId) {
+    return new Promise(function(resolve, reject) {
+        axios.get('/videos/' + videoId + '/watch')
+        .then(response => {
+            const data = response.data;
+            
+            resolve(data);
+        })
+        .catch(error => {
+            resolve({isError: true, message: 'error'});
+        });
+    });
+}
+
+function node_getComments(videoId, timestamp, type) {
+    return new Promise(function(resolve, reject) {
+        axios.get('/videos/' + videoId + '/comments', {
+            params: {
+                timestamp: timestamp, 
+                type: type
+            }
+        })
+        .then(response => {
+            const data = response.data;
+            
+            resolve(data);
+        })
+        .catch(error => {
+            resolve({isError: true, message: 'error'});
+        });
+    });
+}
+
+function node_getAvailableVideos() {
+    return new Promise(function(resolve, reject) {
+        axios.get('/videos/available')
+        .then(response => {
+            const data = response.data;
+            
+            resolve(data);
+        })
+        .catch(error => {
+            resolve({isError: true, message: 'error'});
+        });
+    });
+}
+
 module.exports = {
     node_getInformation,
     node_getVideosTags,
-    node_getChannelSearch
+    node_getChannelSearch,
+    node_getVideo,
+    node_getComments,
+    node_getAvailableVideos
 };

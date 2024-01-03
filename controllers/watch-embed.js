@@ -1,20 +1,13 @@
-const fs = require('fs');
-const path = require('path');
-
-const { getPagesDirectoryPath } = require('../utils/paths');
 const { isVideoIdValid } = require('../utils/validators');
+const { node_getVideo } = require('../utils/node-communications');
 
-function videoVideoId_GET(req, res) {
+async function videoVideoId_GET(req, res) {
     const videoId = req.params.videoId;
     
     if(isVideoIdValid(videoId)) {
-        const pagePath = path.join(getPagesDirectoryPath(), 'embed-video.html');
-        
-        const fileStream = fs.createReadStream(pagePath);
-        
-        res.setHeader('Content-Type', 'text/html');
-        
-        fileStream.pipe(res);
+        const videoData = await node_getVideo(videoId);
+
+        res.render('embed-video', {videoData: videoData});
     }
     else {
         res.status(404).send('embed video not found');
@@ -25,13 +18,7 @@ function chatVideoId_GET(req, res) {
     const videoId = req.params.videoId;
     
     if(isVideoIdValid(videoId)) {
-        const pagePath = path.join(getPagesDirectoryPath(), 'embed-chat.html');
-        
-        const fileStream = fs.createReadStream(pagePath);
-        
-        res.setHeader('Content-Type', 'text/html');
-        
-        fileStream.pipe(res);
+        res.render('embed-chat', {});
     }
     else {
         res.status(404).send('embed chat not found');
