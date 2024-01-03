@@ -891,7 +891,9 @@
 						});
 						
 						player.on(["playing"], function(e) {
-							//console.log(e);
+							console.log('playing');
+
+							$('#mtp-video-overlay').remove();
 
 							if(!bigPlayButtonClicked) {
 								$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-in');
@@ -910,9 +912,7 @@
 						});
 						
 						player.on("loadedmetadata", function() { 
-							//console.log("metadata loaded");
-
-							$('#mtp-video-overlay').remove();
+							console.log("metadata loaded");
 						});
 						
 						$('#mtp-channel-link').click(function(event) {
