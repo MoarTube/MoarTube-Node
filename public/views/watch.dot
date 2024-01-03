@@ -2043,9 +2043,11 @@ body {
 			});
 			
 			function loadComments(comments, type, highlight) {
+				const commentsContainer = $('#comments-container');
+
+				commentsContainer.find('.post.reply').removeClass('new-comment-highlight');
+				
 				if(comments.length > 0) {
-					const commentsContainer = $('#comments-container');
-					
 					const commentHistory = getCommentHistory();
 					
 					$('.comments-navigation-button').removeClass('hidden-elem');
