@@ -578,8 +578,8 @@ body {
 				const tagTerm = $(tagButton).data('tagterm');
 				const sortTerm = $('.sort-button.content-button-selected').eq(0).data('sortterm');
 				
-				CURRENT_TAG_TERM = tagTerm;
-				CURRENT_TAG_TERM_ID = tagTerm.replace(/ /g, '-');
+				CURRENT_TAG_TERM = tagTerm.toString();
+				CURRENT_TAG_TERM_ID = CURRENT_TAG_TERM.replace(/ /g, '-');
 				
 				updateAddressBar();
 				
