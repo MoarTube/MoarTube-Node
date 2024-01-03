@@ -516,77 +516,71 @@
 				font-weight: 400;
 			}
 			
-			
-			
 			.input-group, .input-group .input-group-text {
-    transition: box-shadow .15s ease,border-color .15s ease;
-}
+				transition: box-shadow .15s ease,border-color .15s ease;
+			}
 
-.input-group {
-    border-radius: 0.5rem;
-}
+			.input-group {
+				border-radius: 0.5rem;
+			}
 
+			.form-control {
+				border-radius: 0.5rem;
+				border-top-right-radius: 0.5rem!important;
+				border-bottom-right-radius: 0.5rem!important;
+				border-left-width: 1px;
+			}
 
+			.me-1 {
+				margin-right: 0.25rem!important;
+			}
 
+			.form-control {
+				display: block;
+				width: 100%;
+				padding: 0.5rem 0.75rem;
+				font-size: .875rem;
+				font-weight: 400;
+				line-height: 1.4rem;
+				color: #495057;
+				background-color: #fff;
+				background-clip: padding-box;
+				border: 1px solid #d2d6da;
+				appearance: none;
+				transition: box-shadow .15s ease,border-color .15s ease;
+			}
 
+			.form-control {
+			font-family: "Open Sans";
+			}
 
-.form-control {
-    border-radius: 0.5rem;
-    border-top-right-radius: 0.5rem!important;
-    border-bottom-right-radius: 0.5rem!important;
-    border-left-width: 1px;
-}
-
-.me-1 {
-    margin-right: 0.25rem!important;
-}
-
-.form-control {
-    display: block;
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    font-size: .875rem;
-    font-weight: 400;
-    line-height: 1.4rem;
-    color: #495057;
-    background-color: #fff;
-    background-clip: padding-box;
-    border: 1px solid #d2d6da;
-    appearance: none;
-    transition: box-shadow .15s ease,border-color .15s ease;
-}
-
-.form-control {
- font-family: "Open Sans";
-}
-
-.share-copy-button.btn {
-    --bs-btn-padding-x: 1.2rem;
-    --bs-btn-padding-y: 0.75rem;
-    --bs-btn-font-size: 0.75rem;
-    --bs-btn-font-weight: 700;
-    --bs-btn-line-height: 1.4;
-    --bs-btn-border-width: 1px;
-    --bs-btn-border-radius: 0.5rem;
-    --bs-btn-box-shadow: 0 4px 7px -1px rgba(0,0,0,.11),0 2px 4px -1px rgba(0,0,0,.07);
-    --bs-btn-disabled-opacity: 0.65;
-    --bs-btn-focus-box-shadow: 0 0 0 0.2rem rgba(var(--bs-btn-focus-shadow-rgb),.5);
-    display: inline-block;
-    padding: var(--bs-btn-padding-y) var(--bs-btn-padding-x);
-    font-family: var(--bs-btn-font-family);
-    font-size: var(--bs-btn-font-size);
-    font-weight: var(--bs-btn-font-weight);
-    line-height: var(--bs-btn-line-height);
-    color: var(--bs-btn-color);
-    text-align: center;
-    vertical-align: middle;
-    cursor: pointer;
-    user-select: none;
-    border: var(--bs-btn-border-width) solid var(--bs-btn-border-color);
-    border-radius: var(--bs-btn-border-radius);
-    background-color: var(--bs-btn-bg);
-    transition: all .15s ease-in;
-}
+			.share-copy-button.btn {
+				--bs-btn-padding-x: 1.2rem;
+				--bs-btn-padding-y: 0.75rem;
+				--bs-btn-font-size: 0.75rem;
+				--bs-btn-font-weight: 700;
+				--bs-btn-line-height: 1.4;
+				--bs-btn-border-width: 1px;
+				--bs-btn-border-radius: 0.5rem;
+				--bs-btn-box-shadow: 0 4px 7px -1px rgba(0,0,0,.11),0 2px 4px -1px rgba(0,0,0,.07);
+				--bs-btn-disabled-opacity: 0.65;
+				--bs-btn-focus-box-shadow: 0 0 0 0.2rem rgba(var(--bs-btn-focus-shadow-rgb),.5);
+				display: inline-block;
+				padding: var(--bs-btn-padding-y) var(--bs-btn-padding-x);
+				font-family: var(--bs-btn-font-family);
+				font-size: var(--bs-btn-font-size);
+				font-weight: var(--bs-btn-font-weight);
+				line-height: var(--bs-btn-line-height);
+				color: var(--bs-btn-color);
+				text-align: center;
+				vertical-align: middle;
+				cursor: pointer;
+				user-select: none;
+				border: var(--bs-btn-border-width) solid var(--bs-btn-border-color);
+				border-radius: var(--bs-btn-border-radius);
+				background-color: var(--bs-btn-bg);
+				transition: all .15s ease-in;
+			}
 
 			#update-comments-spinner {
 				width: 1rem;
@@ -594,121 +588,125 @@
 				border-width: 0.15rem;
 			}
 
-.video-js.vjs-paused:not(.vjs-has-started) .vjs-loading-spinner {
-    display: block;
-    visibility: visible;
-}
+			.video-js.vjs-paused:not(.vjs-has-started) .vjs-loading-spinner {
+				display: block;
+				visibility: visible;
+			}
 
-.video-js.vjs-paused:not(.vjs-has-started) .vjs-loading-spinner,
-.video-js.vjs-paused:not(.vjs-has-started) .vjs-loading-spinner {
-    -webkit-animation: vjs-spinner-spin 1.1s cubic-bezier(0.6, 0.2, 0, 0.8) infinite, vjs-spinner-fade 1.1s linear infinite;
-    animation: vjs-spinner-spin 1.1s cubic-bezier(0.6, 0.2, 0, 0.8) infinite, vjs-spinner-fade 1.1s linear infinite;
-}
+			.video-js.vjs-paused:not(.vjs-has-started) .vjs-loading-spinner,
+			.video-js.vjs-paused:not(.vjs-has-started) .vjs-loading-spinner {
+				-webkit-animation: vjs-spinner-spin 1.1s cubic-bezier(0.6, 0.2, 0, 0.8) infinite, vjs-spinner-fade 1.1s linear infinite;
+				animation: vjs-spinner-spin 1.1s cubic-bezier(0.6, 0.2, 0, 0.8) infinite, vjs-spinner-fade 1.1s linear infinite;
+			}
 
-.navbar-settings-button {
-    color: #cb0c9f;
-}
+			.navbar-settings-button {
+				color: #cb0c9f;
+			}
 
-#moartube-logo-dark {
-	display: none;
-}
+			#moartube-logo-dark {
+				display: none;
+			}
 
+			.new-comment-highlight {
+				background-color: #cb0c9f14 !important;
+			}
 
+			@media (prefers-color-scheme: dark) {
+				body {
+					background-color: #1e1e1e;
+				}
+				
+				#recommended-videos-list-container {
+					background-color: #1e1e1e;
+				}
+				
+				#live-stream-chat-container {
+					background-color: #353535;
+				}
+				
+				.live-chat-text-color {
+					color: white;
+				}
+				
+				#send-chat-message-input {
+					background-color: black;
+					color: white;
+				}
+				
+				#send-chat-message-input::placeholder {
+					color: grey;
+					opacity: 1; /* Firefox */
+				}
+				
+				.video-recommendation-card {
+					border: 0px;
+					background-color: #353535;
+					color: #efefef;
+				}
+				
+				.video-recommendation-card-text {
+					color: #efefef;
+				}
+				
+				.comment-input-text-area {
+					background-color: black;
+					color: white;
+				}
+				
+				.comment-input-text-area::placeholder  {
+					color: grey;
+					opacity: 1; /* Firefox */
+				}
+				
+				#comments-container .replyContainer .reply {
+					background-color: #353535;
+					color: #efefef;
+				}
+				
+				#comments-container .replyContainer .reply .quotelink {
+					color: #ff6767;
+				}
+				
+				#comments-container .replyContainer .reply .postNum a {
+					color: grey;
+				}
+				
+				.captcha-container img {
+					background-color: white;
+				}
+				
+				#video-comments-outer {
+					color: #efefef;
+				}
+				
+				.btn-outline-primary {
+					color: grey !important;
+				}
+				
+				.btn-primary {
+					color: white !important;
+				}
+				
+				.recommendation-category-button-selected {
+					color: white !important;
+				}
+				
+				.reply:target, .reply.highlight {
+					background: #2f2f2f !important;
+				}
+				
+				#moartube-logo-light {
+					display: none !important;
+				}
+				
+				#moartube-logo-dark {
+					display: block !important;
+				}
 
-
-
-@media (prefers-color-scheme: dark) {
-    body {
-        background-color: #1e1e1e;
-    }
-    
-	#recommended-videos-list-container {
-		background-color: #1e1e1e;
-	}
-	
-	#live-stream-chat-container {
-		background-color: #353535;
-	}
-	
-	.live-chat-text-color {
-		color: white;
-	}
-	
-	#send-chat-message-input {
-		background-color: black;
-		color: white;
-	}
-	
-	#send-chat-message-input::placeholder {
-		color: grey;
-		opacity: 1; /* Firefox */
-	}
-	
-	.video-recommendation-card {
-		border: 0px;
-		background-color: #353535;
-		color: #efefef;
-	}
-	
-	.video-recommendation-card-text {
-		color: #efefef;
-	}
-	
-	.comment-input-text-area {
-		background-color: black;
-		color: white;
-	}
-	
-	.comment-input-text-area::placeholder  {
-		color: grey;
-		opacity: 1; /* Firefox */
-	}
-	
-	#comments-container .replyContainer .reply {
-		background-color: #353535;
-		color: #efefef;
-	}
-	
-	#comments-container .replyContainer .reply .quotelink {
-		color: #ff6767;
-	}
-	
-	#comments-container .replyContainer .reply .postNum a {
-		color: grey;
-	}
-	
-	.captcha-container img {
-		background-color: white;
-	}
-	
-	#video-comments-outer {
-		color: #efefef;
-	}
-	
-	.btn-outline-primary {
-		color: grey !important;
-	}
-	
-	.btn-primary {
-		color: white !important;
-	}
-	
-	.recommendation-category-button-selected {
-		color: white !important;
-	}
-	
-	.reply:target, .reply.highlight {
-		background: #2f2f2f !important;
-	}
-	
-	#moartube-logo-light {
-		display: none !important;
-	}
-	
-	#moartube-logo-dark {
-		display: block !important;
-	}
-}
+				.new-comment-highlight {
+					background-color: black !important;
+				}
+			}
 		</style>
 		
 		<script>
@@ -813,6 +811,10 @@ body {
 
 #moartube-logo-dark {
 	display: block !important;
+}
+
+.new-comment-highlight {
+	background-color: black !important;
 }
 `;
 			
@@ -1101,7 +1103,7 @@ body {
 				    loadVideo(INCOMING_PARAMETERS.videoData.video);
                     loadTags(INCOMING_PARAMETERS.availableVideosData.availableVideos);
                     loadAvailableVideos(INCOMING_PARAMETERS.availableVideosData.availableVideos, true);
-                    loadComments(INCOMING_PARAMETERS.commentsData.comments, 'after');
+                    loadComments(INCOMING_PARAMETERS.commentsData.comments, 'after', false);
 
                     if(HASH_VALUE !== '') {
                         if($(HASH_VALUE + ' .postNum a:first-child').length) {
@@ -2031,7 +2033,7 @@ body {
 							
 							addToCommentHistory(commentId);
 							
-							loadComments(comments, 'before');
+							loadComments(comments, 'before', true);
 						}
 					})
 					.fail(function() {
@@ -2040,7 +2042,7 @@ body {
 				}
 			});
 			
-			function loadComments(comments, type) {
+			function loadComments(comments, type, highlight) {
 				if(comments.length > 0) {
 					const commentsContainer = $('#comments-container');
 					
@@ -2085,7 +2087,7 @@ body {
 						const commentTextHtml = convertCommentToHTML(commentPlainTextSanitized);
 						const replyToCommentIds = extractReplyToCommentIds(commentPlainTextSanitized);
 						
-						const commentElement = generateCommentElement(commentId, formattedDate, commentTextHtml);
+						const commentElement = generateCommentElement(commentId, formattedDate, commentTextHtml, highlight);
 						
 						// cache comments in memory for efficient access
 						COMMENT_ELEMENT_CACHE[commentId] = commentElement;
@@ -2148,7 +2150,7 @@ body {
 					});
 				}
 				
-				function generateCommentElement(commentId, formattedDate, commentTextHtml) {
+				function generateCommentElement(commentId, formattedDate, commentTextHtml, highlight) {
 					const commentElement = $('\
 					<div class="postContainer replyContainer" id="pc' + commentId + '">\
 					  <div id="p' + commentId + '" class="post reply">\
@@ -2178,6 +2180,10 @@ body {
 						<blockquote class="postMessage" id="m' + commentId + '">' + commentTextHtml + '</blockquote>\
 					  </div>\
 					</div>');
+
+					if(highlight) {
+						commentElement.find('.post.reply').addClass('new-comment-highlight');
+					}
 					
 					return commentElement;
 				}
@@ -2267,7 +2273,7 @@ body {
 										const formattedDate = getCreationTimestampFormatted(timestamp);
 										const commentTextHtml = convertCommentToHTML(commentPlainTextSanitized);
 										
-										const commentElement = generateCommentElement(commentId, formattedDate, commentTextHtml)[0];
+										const commentElement = generateCommentElement(commentId, formattedDate, commentTextHtml, false)[0];
 										
 										showQuotePreview(commentElement, quotelink);
 									}
@@ -2360,7 +2366,7 @@ body {
                     else {
                         const comments = data.comments;
                         
-                        loadComments(comments, 'before');
+                        loadComments(comments, 'before', true);
 
                         const newCommentCount = parseInt($('#comment-section-counter').text());
                         
