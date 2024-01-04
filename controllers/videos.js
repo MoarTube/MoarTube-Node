@@ -571,7 +571,7 @@ function videoIdStream_POST(req, res) {
 
                                 // 3 second interval, may need to be faster
                                 cloudflare_purge(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey, [manifestFileUrl])
-                                .then(videoSegment => {
+                                .then(() => {
                                     console.log('purged manifest file from Cloudflare cache');
                                 })
                                 .catch(error => {

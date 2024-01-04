@@ -37,7 +37,7 @@ function cloudflare_purge(cloudflareEmailAddress, cloudflareZoneId, cloudflareGl
             const data = response.data;
 
             if(data.success) {
-                resolve(data);
+                resolve();
             }
             else {
                 reject('could not purge the cloudflare cache: ' + JSON.stringify(data.errors));
