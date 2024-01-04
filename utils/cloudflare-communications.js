@@ -23,14 +23,8 @@ function cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflar
     });
 }
 
-function cloudflare_purge(files) {
+function cloudflare_purge(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey, files) {
     return new Promise(function(resolve, reject) {
-        const nodeSettings = getNodeSettings();
-
-        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
         axios.post('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId + '/purge_cache', {
             files: files
         }, {
@@ -41,41 +35,40 @@ function cloudflare_purge(files) {
         })
         .then(response => {
             const data = response.data;
-            
-            resolve(data);
+
+            if(data.success) {
+                resolve(data);
+            }
+            else {
+                reject('could not purge the cloudflare cache: ' + JSON.stringify(data.errors));
+            }
         })
         .catch(error => {
             logDebugMessageToConsole(null, error, new Error().stack, true);
             
-            resolve({isError: true, message: 'error'});
+            reject('an error occurred while purging the cloudflare cache');
         });
     });
 }
 
-function cloudflare_setDefaultPageRules() {
+function cloudflare_setDefaultPageRules(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
     return new Promise(async function(resolve, reject) {
-        const nodeSettings = getNodeSettings();
-
-        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
         try {
             // get all current page rules
-            const response = await axios.get(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/pagerules`, {
+            const response_pageRules = await axios.get(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/pagerules`, {
                 headers: {
                     'X-Auth-Email': cloudflareEmailAddress,
                     'X-Auth-Key': cloudflareGlobalApiKey
                 }
             });
 
-            if(!response.data.success) {
+            if(!response_pageRules.data.success) {
                 throw new Error('Failed to retrieve page rule(s)');
             }
 
-            const pageRules = response.data.result;
+            const pageRules = response_pageRules.data.result;
 
-            logDebugMessageToConsole('discovered pages rules: ' + JSON.stringify(response.data), null, null, true);
+            logDebugMessageToConsole('discovered pages rules: ' + JSON.stringify(response_pageRules.data), null, null, true);
 
             // delete all current page rules
             for(const pageRule of pageRules) {
@@ -182,6 +175,40 @@ function cloudflare_setDefaultPageRules() {
 
                 logDebugMessageToConsole('Created page rule: ' + JSON.stringify(response.data), null, null, true);
             }
+
+            // enable Tiered Caching
+            const response_tieredCache = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/argo/tiered_caching`, {
+                value: 'on'
+            },
+            {
+                headers: {
+                    'X-Auth-Email': cloudflareEmailAddress,
+                    'X-Auth-Key': cloudflareGlobalApiKey
+                }
+            });
+
+            if(!response_tieredCache.data.success) {
+                throw new Error('Failed to enable Tiered Caching');
+            }
+
+            logDebugMessageToConsole('Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null, true);
+            
+            // enable Tiered Cache Smart Topology
+            const response_tieredCacheSmartTopology = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/cache/tiered_cache_smart_topology_enable`, {
+                value: 'on'
+            },
+            {
+                headers: {
+                    'X-Auth-Email': cloudflareEmailAddress,
+                    'X-Auth-Key': cloudflareGlobalApiKey
+                }
+            });
+
+            if(!response_tieredCacheSmartTopology.data.success) {
+                throw new Error('Failed to enable Tiered Cache Smart Topology');
+            }
+
+            logDebugMessageToConsole('Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null, true);
 
             resolve({isError: false});
         }

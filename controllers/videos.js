@@ -20,6 +20,8 @@ const {
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
 const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
 const { aliaser_doAliasVideo, aliaser_getVideoAlias } = require('../utils/aliaser-communications');
+const { node_getVideoSegment } = require('../utils/node-communications');
+const { cloudflare_purge } = require('../utils/cloudflare-communications');
 
 function import_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
@@ -501,8 +503,7 @@ function videoIdStream_POST(req, res) {
                         }
                     })
                 }).fields([{ name: 'video_files' }])
-                (req, res, async function(error)
-                {
+                (req, res, async function(error) {
                     if(error) {
                         submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [1, videoId], function(isError) {
                             if(isError) {
@@ -516,8 +517,69 @@ function videoIdStream_POST(req, res) {
                     else {
                         if(format === 'm3u8') {
                             updateHlsVideoMasterManifestFile(videoId);
-                        }
+
+                            const nodeSettings = getNodeSettings();
+
+                            const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+                            const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+                            const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+
+                            // experimental
+                            if(cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
+                                const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+                                const publicNodeAddress = nodeSettings.publicNodeAddress;
+                                var publicNodePort = nodeSettings.publicNodePort;
+
+                                const manifestFileName = req.files.video_files[0].originalname;
+                                const segmentFileName = req.files.video_files[1].originalname;
+
+                                if(publicNodeProtocol === 'http') {
+                                    publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+                                } 
+                                else if(publicNodeProtocol === 'https') {
+                                    publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+                                }
                         
+                                const segmentFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
+                                const manifestFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/adaptive/' + format + '/manifests/' + manifestFileName;
+
+                                /*
+                                The MoarTube Client is purposefully truncating the manifest file entries by two segments (3 seconds per segment, 6 seconds total).
+                                The node is receiving these segments regardless and upon storage will request them via Cloudflare immediately via the node's publicly 
+                                configured network settings. The purpose is to trigger a cache MISS via the node so as to trigger subsequent cache HIT via the video player
+                                with future manifest files that will contain the truncated entries. Therefore, the video player will trigger a cache HIT on all 
+                                segments in the live stream. Cloudflare's Smart Tiered Caching Topology will ensure that these cached segments are propagated
+                                throughout the Cloudflare network for any lower-tier data center that triggers a cache MISS, which will prompt them to fetch
+                                the segment from an upper-tier data center that has already cached the segment. A single MoarTube Node can leverage the entire 
+                                capacity of the Cloudflare global network exceeding that of all other live streaming platforms combined using just the free tier.
+
+                                This isn't even my final form. I know. I'm awesome. You're welcome.
+
+                                note: "You're welcome" was suggested by Github Copilot. I'm not sure how I feel about that.
+                                note: "I'm not sure how I feel about that" was also suggested by Github Copilot. I'm not sure how I feel about that either.
+                                note: "I'm not sure how I feel about that either" was also suggested by Github Copilot. I'm not sure how I feel about that either either.
+
+                                etc...etc....
+                                */
+                                node_getVideoSegment(segmentFileUrl)
+                                .then(videoSegment => {
+                                    console.log('got segment');
+                                })
+                                .catch(error => {
+                                    console.log(error);
+                                });
+
+                                // 3 second interval, may need to be faster
+                                cloudflare_purge(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey, [manifestFileUrl])
+                                .then(videoSegment => {
+                                    console.log('purged manifest file from Cloudflare cache');
+                                })
+                                .catch(error => {
+                                    console.log(error);
+                                });
+                            }
+                        }
+
                         res.send({isError: false});
                     }
                 });

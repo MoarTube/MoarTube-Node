@@ -95,11 +95,26 @@ function node_getAvailableVideos() {
     });
 }
 
+function node_getVideoSegment(segmentFileUrl) {
+    return new Promise(function(resolve, reject) {
+        axios.get(segmentFileUrl)
+        .then(response => {
+            const data = response.data;
+            
+            resolve(data);
+        })
+        .catch(error => {
+            resolve({isError: true, message: 'error'});
+        });
+    });
+}
+
 module.exports = {
     node_getInformation,
     node_getVideosTags,
     node_getChannelSearch,
     node_getVideo,
     node_getComments,
-    node_getAvailableVideos
+    node_getAvailableVideos,
+    node_getVideoSegment
 };
