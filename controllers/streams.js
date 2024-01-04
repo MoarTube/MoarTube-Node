@@ -10,6 +10,7 @@ const {
 } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 
+const { updateHlsVideoMasterManifestFile } = require('../utils/filesystem');
 function start_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
@@ -131,6 +132,8 @@ function videoIdStop_POST(req, res) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
+                        updateHlsVideoMasterManifestFile(videoId);
+
                         performDatabaseReadJob_GET('SELECT is_stream_recorded_remotely FROM videos WHERE video_id = ?', [videoId])
                         .then(video => {
                             if(video != null) {

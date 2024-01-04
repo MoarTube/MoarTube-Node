@@ -8,7 +8,7 @@ async function root_GET(req, res) {
         const informationData = await node_getInformation();
         const videoData = await node_getVideo(videoId);
         const availableVideosData = await node_getAvailableVideos();
-        const commentsData = await node_getComments(videoId, Date.now(), 'after', 0, 0);
+        const commentsData = await node_getComments(videoId, Date.now(), 'after');
 
         res.render('watch', {informationData: informationData, videoData: videoData, availableVideosData: availableVideosData, commentsData: commentsData});
     }

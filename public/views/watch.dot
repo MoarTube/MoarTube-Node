@@ -1452,6 +1452,17 @@ body {
 						}
 					});
 
+					/*
+					// supposedly iOS does not support headers
+					videojs.Vhs.xhr.beforeRequest = (options) => {
+						options.headers = options.headers || {};
+
+						options.headers['is-live-manifest'] = 'true-or-false';
+						
+						return options;
+					};
+					*/
+
 					configurePlayerButtons();
 					configurePlayerEvents();
 

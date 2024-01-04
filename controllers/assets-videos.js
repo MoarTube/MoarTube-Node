@@ -5,7 +5,7 @@ const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath } = require('../utils/paths');
 const { submitDatabaseWriteJob } = require('../utils/database');
 const { 
-    isManifestNameValid, isSegmentNameValid, isVideoIdValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid
+    isManifestNameValid, isSegmentNameValid, isVideoIdValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid, isManifestTypeValid
 } = require('../utils/validators');
 
 function videoIdThumbnail_GET(req, res) {
@@ -76,12 +76,13 @@ function videoIdPoster_GET(req, res) {
 
 var manifestBandwidthCounter = 0;
 var manifestBandwidthIncrementTimer;
-function videoIdAdaptiveFormatManifestsManifestName_GET(req, res) {
+function videoIdAdaptiveTypeFormatManifestsManifestName_GET(req, res) {
     const videoId = req.params.videoId;
+    const type = req.params.type;
     const format = req.params.format;
     const manifestName = req.params.manifestName;
     
-    if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isManifestNameValid(manifestName)) {
+    if(isVideoIdValid(videoId) && isManifestTypeValid(type) && isAdaptiveFormatValid(format) && isManifestNameValid(manifestName)) {
         const manifestPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + manifestName);
         
         if(fs.existsSync(manifestPath)) {
@@ -274,7 +275,7 @@ module.exports = {
     videoIdThumbnail_GET,
     videoIdPreview_GET,
     videoIdPoster_GET,
-    videoIdAdaptiveFormatManifestsManifestName_GET,
+    videoIdAdaptiveTypeFormatManifestsManifestName_GET,
     videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET,
     videoIdProgressiveFormatResolution_GET,
     videoIdProgressiveFormatResolutionDownload_GET

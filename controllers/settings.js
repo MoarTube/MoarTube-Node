@@ -14,7 +14,7 @@ const {
     isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
-const { cloudflare_setDefaultPageRules } = require('../utils/cloudflare-communications');
+const { cloudflare_setDefaultConfiguration } = require('../utils/cloudflare-communications');
 const { submitDatabaseWriteJob } = require('../utils/database');
 
 function root_GET(req, res) {
@@ -466,7 +466,7 @@ function cloudflareDefaults_POST(req, res) {
     const cloudflareZoneId = nodeSettings.cloudflareZoneId;
     const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
     
-    cloudflare_setDefaultPageRules(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
+    cloudflare_setDefaultConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
     .then(cloudflareResponseData => {
         if(cloudflareResponseData.isError) {
             res.send({isError: true, message: cloudflareResponseData.message});

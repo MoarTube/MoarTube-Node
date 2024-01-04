@@ -18,6 +18,10 @@ function isPublicNodeProtocolValid(publicNodeProtocol) {
     return (publicNodeProtocol != null && (publicNodeProtocol === 'http' || publicNodeProtocol === 'https'));
 }
 
+function isManifestTypeValid(type) {
+    return (type != null && (type === 'static' || type === 'dynamic'));
+}
+
 function isManifestNameValid(manifestName) {
     const regex = /^manifest-(?:2160p|1440p|1080p|720p|480p|360p|240p|master).m3u8$/;
     
@@ -270,6 +274,7 @@ module.exports = {
     isNodeAboutValid,
     isNodeIdValid,
     isPublicNodeProtocolValid,
+    isManifestTypeValid,
     isManifestNameValid,
     isSegmentNameValid,
     isStreamMimeTypeValid,

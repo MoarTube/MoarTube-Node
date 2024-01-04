@@ -530,7 +530,6 @@ function videoIdStream_POST(req, res) {
                                 const publicNodeAddress = nodeSettings.publicNodeAddress;
                                 var publicNodePort = nodeSettings.publicNodePort;
 
-                                const manifestFileName = req.files.video_files[0].originalname;
                                 const segmentFileName = req.files.video_files[1].originalname;
 
                                 if(publicNodeProtocol === 'http') {
@@ -541,17 +540,18 @@ function videoIdStream_POST(req, res) {
                                 }
                         
                                 const segmentFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
-                                const manifestFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/adaptive/' + format + '/manifests/' + manifestFileName;
 
                                 /*
+                                live stream look-ahead implementation:
+
                                 The MoarTube Client is purposefully truncating the manifest file entries by two segments (3 seconds per segment, 6 seconds total).
-                                The node is receiving these segments regardless and upon storage will request them via Cloudflare immediately via the node's publicly 
+                                The node will receive the segments regardless and upon storage will request them via Cloudflare immediately via the node's publicly 
                                 configured network settings. The purpose is to trigger a cache MISS via the node so as to trigger subsequent cache HIT via the video player
-                                with future manifest files that will contain the truncated entries. Therefore, the video player will trigger a cache HIT on all 
+                                as future manifest files that will contain the truncated entries. Therefore, the video player will trigger a cache HIT on all 
                                 segments in the live stream. Cloudflare's Smart Tiered Caching Topology will ensure that these cached segments are propagated
                                 throughout the Cloudflare network for any lower-tier data center that triggers a cache MISS, which will prompt them to fetch
                                 the segment from an upper-tier data center that has already cached the segment. A single MoarTube Node can leverage the entire 
-                                capacity of the Cloudflare global network exceeding that of all other live streaming platforms combined using just the free tier.
+                                capacity of the Cloudflare global network surpassing that of all other live streaming platforms combined using just a free tier account.
 
                                 This isn't even my final form. I know. I'm awesome. You're welcome.
 
@@ -564,15 +564,6 @@ function videoIdStream_POST(req, res) {
                                 node_getVideoSegment(segmentFileUrl)
                                 .then(videoSegment => {
                                     console.log('got segment');
-                                })
-                                .catch(error => {
-                                    console.log(error);
-                                });
-
-                                // 3 second interval, may need to be faster
-                                cloudflare_purge(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey, [manifestFileUrl])
-                                .then(() => {
-                                    console.log('purged manifest file from Cloudflare cache');
                                 })
                                 .catch(error => {
                                     console.log(error);
@@ -2249,6 +2240,15 @@ function videoIdWatch_GET(req, res) {
         performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
         .then(video => {
             if(video != null) {
+                var manifestType;
+
+                if(video.is_streaming) {
+                    manifestType = 'dynamic';
+                }
+                else {
+                    manifestType = 'static';
+                }
+
                 const nodeSettings = getNodeSettings();
                 
                 const nodeName = nodeSettings.nodeName;
@@ -2281,7 +2281,7 @@ function videoIdWatch_GET(req, res) {
                             isHlsAvailable = true;
                         }
                         
-                        const src = '/assets/videos/' + videoId + '/adaptive/' + format + '/manifests/manifest-master.' + format;
+                        const src = '/assets/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-master.' + format;
                         
                         const source = {src: src, type: type};
                         
@@ -2293,8 +2293,8 @@ function videoIdWatch_GET(req, res) {
                         
                         if(fs.existsSync(adaptiveVideoFilePath)) {
                             sourcesFormatsAndResolutions[format].push(resolution);
-
-                            const src = '/assets/videos/' + videoId + '/adaptive/' + format + '/manifests/manifest-' + resolution + '.' + format;
+                            
+                            const src = '/assets/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-' + resolution + '.' + format;
                             
                             const source = {src: src, type: type};
                             
