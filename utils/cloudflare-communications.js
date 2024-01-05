@@ -103,10 +103,10 @@ function cloudflare_setDefaultConfiguration(cloudflareEmailAddress, cloudflareZo
             const newZoneRuleSet = {
                 "rules": [
                     {
-                        "description": "MoarTube Node - Cache Bypass for Live (dynamic) HLS streams",
+                        "description": "MoarTube Node - Cache Bypass for Live (dynamic) HLS stream manifests",
                         "action": "set_cache_settings",
                         "enabled": true,
-                        "expression": "(http.request.uri.path contains \"/javascript\")",
+                        "expression": "(http.request.uri.path contains \"/adaptive/dynamic/\")",
                         "action_parameters": {
                             "cache": false
                         }

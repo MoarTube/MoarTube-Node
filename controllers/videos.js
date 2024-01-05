@@ -526,6 +526,33 @@ function videoIdStream_POST(req, res) {
 
                             // experimental
                             if(cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
+                                /*
+                                <live stream look-ahead implementation>
+
+                                The MoarTube Node purposefully truncates the manifest file entries by two segments (3 seconds per segment, 6 seconds total).
+                                Upon storage of the actual segments, the node will request them through Cloudflare immediately via the node's publicly configured network settings. 
+                                The purpose is to trigger a cache MISS via the node so as to trigger subsequent cache HIT via the video player as future manifest files will 
+                                contain the truncated segment entries. Therefore, the video player will trigger a cache HIT on all segments in the live stream.
+                                
+                                Cloudflare's Smart Tiered Caching Topology will ensure that these cached segments are propagated throughout the Cloudflare network for any 
+                                lower-tier data center that triggers a cache MISS, which will prompt them to fetch the segment from an upper-tier data center that has already 
+                                cached the segment. A single MoarTube Node can leverage the entire capacity of the Cloudflare global network surpassing that of all other 
+                                live streaming platforms combined using just a free-tier account.
+
+                                This isn't even my final form. I know. I'm awesome.
+                                */
+
+                                const manifestFilePath = req.files.video_files[0].path;
+                                
+                                const data = fs.readFileSync(manifestFilePath, 'utf-8');
+                                const lines = data.split(/\r?\n/);
+
+                                if(lines.length >= 10) {
+                                    lines.splice(lines.length - 5, 5);
+                                    const newContent = lines.join('\n');
+                                    fs.writeFileSync(manifestFilePath, newContent, 'utf-8');
+                                }
+                                
                                 const publicNodeProtocol = nodeSettings.publicNodeProtocol;
                                 const publicNodeAddress = nodeSettings.publicNodeAddress;
                                 var publicNodePort = nodeSettings.publicNodePort;
@@ -541,26 +568,6 @@ function videoIdStream_POST(req, res) {
                         
                                 const segmentFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
 
-                                /*
-                                live stream look-ahead implementation:
-
-                                The MoarTube Client is purposefully truncating the manifest file entries by two segments (3 seconds per segment, 6 seconds total).
-                                The node will receive the segments regardless and upon storage will request them via Cloudflare immediately via the node's publicly 
-                                configured network settings. The purpose is to trigger a cache MISS via the node so as to trigger subsequent cache HIT via the video player
-                                as future manifest files that will contain the truncated entries. Therefore, the video player will trigger a cache HIT on all 
-                                segments in the live stream. Cloudflare's Smart Tiered Caching Topology will ensure that these cached segments are propagated
-                                throughout the Cloudflare network for any lower-tier data center that triggers a cache MISS, which will prompt them to fetch
-                                the segment from an upper-tier data center that has already cached the segment. A single MoarTube Node can leverage the entire 
-                                capacity of the Cloudflare global network surpassing that of all other live streaming platforms combined using just a free tier account.
-
-                                This isn't even my final form. I know. I'm awesome. You're welcome.
-
-                                note: "You're welcome" was suggested by Github Copilot. I'm not sure how I feel about that.
-                                note: "I'm not sure how I feel about that" was also suggested by Github Copilot. I'm not sure how I feel about that either.
-                                note: "I'm not sure how I feel about that either" was also suggested by Github Copilot. I'm not sure how I feel about that either either.
-
-                                etc...etc....
-                                */
                                 node_getVideoSegment(segmentFileUrl)
                                 .then(videoSegment => {
                                     console.log('got segment');
