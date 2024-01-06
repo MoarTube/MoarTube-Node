@@ -585,7 +585,6 @@
 					const sources = adaptiveSources.concat(progressiveSources);
 
 					var player = videojs('video-player', {
-						sources: sources,
 						html5: {
 							vhs: {
 								overrideNative: !videojs.browser.IS_SAFARI,
@@ -911,6 +910,22 @@
 							console.log("metadata loaded");
 
 							if(AUTO_START) {
+								player.src(sources);
+								player.play()
+								.then(function() {
+								
+								})
+								.catch(function(error) {
+									console.log(error);
+								});
+							}
+						});
+
+						player.on("ready", function() { 
+							console.log('ready');
+
+							if(AUTO_START) {
+								player.src(sources);
 								player.play()
 								.then(function() {
 								
@@ -935,7 +950,8 @@
 							bigPlayButtonClicked = true;
 
 							$('#mtp-video-overlay').remove();
-
+							
+							player.src(sources);
 							player.play()
 							.then(function() {
 							

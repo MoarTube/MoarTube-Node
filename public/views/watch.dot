@@ -1841,6 +1841,16 @@ body {
 						
 						player.on("ready", function() { 
 							console.log('ready');
+
+							player.play()
+							.then(function() {
+							
+							})
+							.catch(function(error) {
+								console.log(error);
+
+								$('#mtp-video-overlay').removeClass('hidden-elem');
+							});
 						});
 						
 						$('#big-play-button-poster-container').click(async function(event) {
