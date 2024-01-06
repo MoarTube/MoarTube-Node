@@ -585,6 +585,7 @@
 					const sources = adaptiveSources.concat(progressiveSources);
 
 					var player = videojs('video-player', {
+						sources: sources,
 						html5: {
 							vhs: {
 								overrideNative: !videojs.browser.IS_SAFARI,
@@ -615,11 +616,6 @@
 
 					configurePlayerButtons();
 					configurePlayerEvents();
-
-					if(AUTO_START) {
-						player.src(sources);
-						player.play();
-					}
 
 					function configurePlayerButtons() {
 						const handleTechClickDefaultFunction = player.player_.handleTechClick_;
@@ -913,6 +909,16 @@
 						
 						player.on("loadedmetadata", function() { 
 							console.log("metadata loaded");
+
+							if(AUTO_START) {
+								player.play()
+								.then(function() {
+								
+								})
+								.catch(function(error) {
+									console.log(error);
+								});
+							}
 						});
 						
 						$('#mtp-channel-link').click(function(event) {
@@ -930,8 +936,13 @@
 
 							$('#mtp-video-overlay').remove();
 
-							player.src(sources);
-							player.play();
+							player.play()
+							.then(function() {
+							
+							})
+							.catch(function(error) {
+								console.log(error);
+							});
 						});
 					}
 				}

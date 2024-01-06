@@ -4,7 +4,8 @@ const {
     import_POST, imported_POST, videoIdImportingStop_POST, publishing_POST, published_POST, videoIdPublishingStop_POST, videoIdUpload_POST, videoIdStream_POST, error_POST, videoIdSourceFileExtension_POST,
     videoIdSourceFileExtension_GET, videoIdPublishes_GET, videoIdUnpublish_POST, videoIdInformation_GET, videoIdInformation_POST, videoIdIndexAdd_POST, videoIdIndexRemove_POST, videoIdAlias_POST,
     videoIdAlias_GET, search_GET, videoIdThumbnail_POST, videoIdPreview_POST, videoIdPoster_POST, videoIdLengths_POST, videoIdData_GET, delete_POST, finalize_POST, videoIdComments_GET, videoIdCommentsCommentId_GET, 
-    videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST, available_GET, tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, commentsAll_GET
+    videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST, available_GET, tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, commentsAll_GET,
+    videoIdViewsIncrement_GET
 } = require('../controllers/videos');
 
 const router = express.Router();
@@ -165,6 +166,10 @@ router.get('/tags/all', (req, res) => {
 
 router.get('/available', (req, res) => {
     available_GET(req, res);
+});
+
+router.get('/:videoId/views/increment', (req, res) => {
+    videoIdViewsIncrement_GET(req, res);
 });
 
 router.get('/:videoId/watch', (req, res) => {

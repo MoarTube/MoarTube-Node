@@ -443,6 +443,8 @@ function videoIdStream_POST(req, res) {
             const resolution = req.query.resolution;
             
             if(isVideoIdValid(videoId) && isFormatValid(format) && isResolutionValid(resolution)) {
+                const manifestFileName = 'manifest-' + resolution + '.m3u8';
+
                 multer(
                 {
                     fileFilter: function (req, file, cb) {
@@ -461,8 +463,7 @@ function videoIdStream_POST(req, res) {
                             
                             if(format === 'm3u8') {
                                 const fileName = file.originalname;
-                                const manifestFileName = 'manifest-' + resolution + '.m3u8';
-                                
+
                                 if(fileName === manifestFileName) {
                                     directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
                                 }
@@ -499,7 +500,12 @@ function videoIdStream_POST(req, res) {
                             }
                         },
                         filename: function (req, file, cb) {
-                            cb(null, file.originalname);
+                            if(file.originalname === manifestFileName) {
+                                cb(null, file.originalname + '_temp');
+                            }
+                            else {
+                                cb(null, file.originalname);
+                            }
                         }
                     })
                 }).fields([{ name: 'video_files' }])
@@ -542,15 +548,16 @@ function videoIdStream_POST(req, res) {
                                 This isn't even my final form. I know. I'm awesome.
                                 */
 
-                                const manifestFilePath = req.files.video_files[0].path;
+                                const manifestFilePath_temp = req.files.video_files[0].path;
+                                const manifestFilePath_new = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
                                 
-                                const data = fs.readFileSync(manifestFilePath, 'utf-8');
+                                const data = fs.readFileSync(manifestFilePath_temp, 'utf-8');
                                 const lines = data.split(/\r?\n/);
 
                                 if(lines.length >= 10) {
                                     lines.splice(lines.length - 5, 5);
                                     const newContent = lines.join('\n');
-                                    fs.writeFileSync(manifestFilePath, newContent, 'utf-8');
+                                    fs.writeFileSync(manifestFilePath_new, newContent, 'utf-8');
                                 }
                                 
                                 const publicNodeProtocol = nodeSettings.publicNodeProtocol;
@@ -570,7 +577,7 @@ function videoIdStream_POST(req, res) {
 
                                 node_getVideoSegment(segmentFileUrl)
                                 .then(videoSegment => {
-                                    console.log('got segment');
+                                    console.log('Cloudflare cached segment: ' + segmentFileUrl);
                                 })
                                 .catch(error => {
                                     console.log(error);
@@ -2221,7 +2228,7 @@ function commentsAll_GET(req, res) {
 
 var viewCounter = 0;
 var viewCounterIncrementTimer;
-function videoIdWatch_GET(req, res) {
+function videoIdViewsIncrement_GET(req, res) {
     const videoId = req.params.videoId;
     
     if(isVideoIdValid(videoId)) {
@@ -2244,6 +2251,27 @@ function videoIdWatch_GET(req, res) {
             });
         }, 500);
 
+        performDatabaseReadJob_GET('SELECT views FROM videos WHERE video_id = ?', [videoId])
+        .then(video => {
+            if(video != null) {
+                const views = video.views + viewCounter
+
+                res.send({isError: false, views: views});
+            }
+            else{
+                res.send({isError: true, message: 'that video does not exist'});
+            }
+        });
+    }
+    else {
+        res.send({isError: true, message: 'invalid parameters'});
+    }
+}
+
+function videoIdWatch_GET(req, res) {
+    const videoId = req.params.videoId;
+    
+    if(isVideoIdValid(videoId)) {
         performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
         .then(video => {
             if(video != null) {
@@ -2412,6 +2440,7 @@ module.exports = {
     available_GET,
     tags_GET,
     tagsAll_GET,
+    videoIdViewsIncrement_GET,
     videoIdWatch_GET,
     videoIdReport_POST,
     commentsAll_GET

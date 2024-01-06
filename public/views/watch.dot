@@ -1327,7 +1327,6 @@ body {
 				
 				const title = video.title;
 				const description = video.description;
-				const views = video.views;
 				const likes = video.likes;
 				const dislikes = video.dislikes;
 				const comments = video.comments;
@@ -1344,10 +1343,9 @@ body {
 
 				DOWNLOADABLE_SOURCES = progressiveSources;
 
-				const viewsFormatted = getViewsFormatted(views);
 				const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
 				
-				if(isLive && isStreaming) {
+				if(isStreaming) {
 					connectWebsocket();
 				}
 				
@@ -1360,16 +1358,16 @@ body {
 				
 				$('#video-title').text(title);
 				
-				if(isLive) {
-					if(isStreaming) {
-						// websocket event 'live_stream_stats' will update this
-					}
-					else {
+				if(!isStreaming) {
+					incrementViews()
+					.then(function(views) {
+						const viewsFormatted = getViewsFormatted(views);
+
 						$('#video-information-views').text(viewsFormatted);
-					}
-				}
-				else {
-					$('#video-information-views').text(viewsFormatted);
+					})
+					.catch(function(error) {
+						console.log(error);
+					});
 				}
 				
 				if(isLive) {
@@ -1415,6 +1413,25 @@ body {
 					}
 					
 					$('#video-player-container').append('<div class="d-flex align-items-center justify-content-center">' + message + '</div>');
+				}
+
+				function incrementViews() {
+					return new Promise(function(resolve, reject) {
+						$.ajax({type: 'GET', url: '/videos/' + VIDEO_ID + '/views/increment'})
+						.done(function (data) {
+							if(data.isError) {
+								reject(data.message);
+							}
+							else {
+								const views = data.views;
+
+								resolve(views);
+							}
+						})
+						.fail(function() {
+							reject('unable to communicate with node');
+						});
+					});
 				}
 				
 				function initializeVideoJsPlayer() {
@@ -1800,6 +1817,16 @@ body {
 						
 						player.on("loadedmetadata", function() { 
 							console.log('loadedmetadata');
+
+							player.play()
+							.then(function() {
+							
+							})
+							.catch(function(error) {
+								console.log(error);
+
+								$('#mtp-video-overlay').removeClass('hidden-elem');
+							});
 						});
 						
 						player.on("playing", function() { 
@@ -1814,16 +1841,6 @@ body {
 						
 						player.on("ready", function() { 
 							console.log('ready');
-
-							player.play()
-							.then(function() {
-							
-							})
-							.catch(function(error) {
-								console.log(error);
-
-								$('#mtp-video-overlay').removeClass('hidden-elem');
-							});
 						});
 						
 						$('#big-play-button-poster-container').click(async function(event) {
