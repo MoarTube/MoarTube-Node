@@ -460,13 +460,7 @@ function cloudflare_POST(req, res) {
 }
 
 function cloudflareDefaults_POST(req, res) {
-    const nodeSettings = getNodeSettings();
-
-    const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-    const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-    const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-    
-    cloudflare_setDefaultConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
+    cloudflare_setDefaultConfiguration()
     .then(cloudflareResponseData => {
         if(cloudflareResponseData.isError) {
             res.send({isError: true, message: cloudflareResponseData.message});

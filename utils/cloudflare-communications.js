@@ -1,5 +1,6 @@
 const axios = require('axios').default;
 const { logDebugMessageToConsole } = require('./logger');
+const { getNodeSettings } = require('../utils/helpers');
 
 function cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
     return new Promise(function(resolve, reject) {
@@ -22,8 +23,29 @@ function cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflar
     });
 }
 
-function cloudflare_purge(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey, files) {
+function cloudflare_purgeCache(files) {
     return new Promise(function(resolve, reject) {
+        const nodeSettings = getNodeSettings();
+
+        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+
+        const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+        const publicNodeAddress = nodeSettings.publicNodeAddress;
+        var publicNodePort = nodeSettings.publicNodePort;
+
+        if(publicNodeProtocol === 'http') {
+            publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+        } 
+        else if(publicNodeProtocol === 'https') {
+            publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+        }
+
+        for(var i = 0; i < files.length; i++) {
+            files[i] = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + files[i];
+        }
+        
         axios.post('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId + '/purge_cache', {
             files: files
         }, {
@@ -50,10 +72,27 @@ function cloudflare_purge(cloudflareEmailAddress, cloudflareZoneId, cloudflareGl
     });
 }
 
-function cloudflare_setDefaultConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
+function cloudflare_setDefaultConfiguration() {
     return new Promise(async function(resolve, reject) {
         try {
             logDebugMessageToConsole('setting Cloudflare configuration for MoarTube Node', null, null, true);
+
+            const nodeSettings = getNodeSettings();
+
+            const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+            const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+            const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+
+            const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+            const publicNodeAddress = nodeSettings.publicNodeAddress;
+            var publicNodePort = nodeSettings.publicNodePort;
+
+            if(publicNodeProtocol === 'http') {
+                publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+            } 
+            else if(publicNodeProtocol === 'https') {
+                publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+            }
 
             const headers = {
                 'X-Auth-Email': cloudflareEmailAddress,
@@ -160,9 +199,9 @@ function cloudflare_setDefaultConfiguration(cloudflareEmailAddress, cloudflareZo
             logDebugMessageToConsole('creating new page rules', null, null, true);
 
             const newPageRules = [
-                { "status": "active", "priority": 1, "actions": [ { "id": "cache_level", "value": "cache_everything" }, { "id": "edge_cache_ttl", "value": 7200 } ], "targets": [ { "target": "url", "constraint": { "operator": "matches", "value": "https://*moartube-node-chris.com/node" } } ] },
-                { "status": "active", "priority": 2, "actions": [ { "id": "cache_level", "value": "cache_everything" }, { "id": "edge_cache_ttl", "value": 7200 } ], "targets": [ { "target": "url", "constraint": { "operator": "matches", "value": "https://*moartube-node-chris.com/watch*" } } ] },
-                { "status": "active", "priority": 3, "actions": [ { "id": "cache_level", "value": "cache_everything" }, { "id": "edge_cache_ttl", "value": 7200 } ], "targets": [ { "target": "url", "constraint": { "operator": "matches", "value": "https://*moartube-node-chris.com/assets/*" } } ] }
+                { "status": "active", "priority": 1, "actions": [ { "id": "cache_level", "value": "cache_everything" }, { "id": "edge_cache_ttl", "value": 7200 } ], "targets": [ { "target": "url", "constraint": { "operator": "matches", "value": `${publicNodeProtocol}://*${publicNodeAddress}${publicNodePort}/node` } } ] },
+                { "status": "active", "priority": 2, "actions": [ { "id": "cache_level", "value": "cache_everything" }, { "id": "edge_cache_ttl", "value": 7200 } ], "targets": [ { "target": "url", "constraint": { "operator": "matches", "value": `${publicNodeProtocol}://*${publicNodeAddress}${publicNodePort}/watch*` } } ] },
+                { "status": "active", "priority": 3, "actions": [ { "id": "cache_level", "value": "cache_everything" }, { "id": "edge_cache_ttl", "value": 7200 } ], "targets": [ { "target": "url", "constraint": { "operator": "matches", "value": `${publicNodeProtocol}://*${publicNodeAddress}${publicNodePort}/assets/*` } } ] }
             ];
 
             for(const newPageRule of newPageRules) {
@@ -230,6 +269,6 @@ function cloudflare_setDefaultConfiguration(cloudflareEmailAddress, cloudflareZo
 
 module.exports = {
     cloudflare_validate,
-    cloudflare_purge,
+    cloudflare_purgeCache,
     cloudflare_setDefaultConfiguration
 };

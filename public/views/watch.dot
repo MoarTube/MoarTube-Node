@@ -1358,17 +1358,17 @@ body {
 				
 				$('#video-title').text(title);
 				
-				if(!isStreaming) {
-					incrementViews()
-					.then(function(views) {
+				incrementViews()
+				.then(function(views) {
+					if(!isStreaming) {
 						const viewsFormatted = getViewsFormatted(views);
 
 						$('#video-information-views').text(viewsFormatted);
-					})
-					.catch(function(error) {
-						console.log(error);
-					});
-				}
+					}
+				})
+				.catch(function(error) {
+					console.log(error);
+				});
 				
 				if(isLive) {
 					if(isStreaming) {

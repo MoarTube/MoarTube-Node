@@ -21,7 +21,7 @@ const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUplo
 const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
 const { aliaser_doAliasVideo, aliaser_getVideoAlias } = require('../utils/aliaser-communications');
 const { node_getVideoSegment } = require('../utils/node-communications');
-const { cloudflare_purge } = require('../utils/cloudflare-communications');
+const { cloudflare_purgeCache } = require('../utils/cloudflare-communications');
 
 function import_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
@@ -1920,6 +1920,9 @@ function videoIdCommentsComment_POST(req, res) {
                             res.send({isError: true, message: 'error communicating with the MoarTube node'});
                         }
                         else {
+                            const filesToPurge = ['/watch?v=' + videoId];
+                            cloudflare_purgeCache(filesToPurge);
+
                             performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp])
                             .then(comments => {
                                 var commentId = 0;
