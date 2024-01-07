@@ -86,7 +86,7 @@ function performDatabaseReadJob_ALL(query, parameters) {
             if(error) {
                 logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                reject();
+                reject(error);
             }
             else {
                 resolve(rows);

@@ -1,6 +1,10 @@
 const axios = require('axios').default;
+const path = require('path');
+const fs = require('fs');
+
 const { logDebugMessageToConsole } = require('./logger');
 const { getNodeSettings } = require('../utils/helpers');
+const { getVideosDirectoryPath } = require('../utils/paths');
 
 function cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
     return new Promise(function(resolve, reject) {
@@ -23,31 +27,16 @@ function cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflar
     });
 }
 
-function cloudflare_purgeCache(files) {
+function cloudflare_purgeEntireCache() {
     return new Promise(function(resolve, reject) {
         const nodeSettings = getNodeSettings();
 
         const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
         const cloudflareZoneId = nodeSettings.cloudflareZoneId;
         const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
-        const publicNodeProtocol = nodeSettings.publicNodeProtocol;
-        const publicNodeAddress = nodeSettings.publicNodeAddress;
-        var publicNodePort = nodeSettings.publicNodePort;
-
-        if(publicNodeProtocol === 'http') {
-            publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
-        } 
-        else if(publicNodeProtocol === 'https') {
-            publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
-        }
-
-        for(var i = 0; i < files.length; i++) {
-            files[i] = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + files[i];
-        }
         
         axios.post('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId + '/purge_cache', {
-            files: files
+            purge_everything: true
         }, {
             headers: {
                 'X-Auth-Email': cloudflareEmailAddress,
@@ -68,6 +57,290 @@ function cloudflare_purgeCache(files) {
             logDebugMessageToConsole(null, error, new Error().stack, true);
             
             reject('an error occurred while purging the cloudflare cache');
+        });
+    });
+}
+
+function cloudflare_purgeCache(files) {
+    const filesofFiles = formatFilesParameter(files);
+    const nodeSettings = getNodeSettings();
+
+    const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+    const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+    const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+
+    if (cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
+        const axiosPromises = filesofFiles.map(files => {
+            return axios.post(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/purge_cache`, {
+                files: files
+            }, {
+                headers: {
+                    'X-Auth-Email': cloudflareEmailAddress,
+                    'X-Auth-Key': cloudflareGlobalApiKey
+                }
+            })
+            .then(response => {
+                const data = response.data;
+
+                if(data.success) {
+                    logDebugMessageToConsole('cloudflare_purgeCache success', null, null, true);
+                }
+                else {
+                    logDebugMessageToConsole('cloudflare_purgeCache failed', null, null, true);
+                }
+
+                return { status: 'fulfilled' };
+            })
+            .catch(error => {
+                logDebugMessageToConsole('cloudflare_purgeCache error', error, new Error().stack, true);
+
+                return { status: 'rejected' };
+            });
+        });
+
+        return Promise.allSettled(axiosPromises);
+    } 
+    else {
+        return Promise.resolve([]);
+    }
+}
+
+function cloudflare_purgeWatchPages(videoIds) {
+    return new Promise(function(resolve, reject) {
+        const nodeSettings = getNodeSettings();
+
+        const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+        const publicNodeAddress = nodeSettings.publicNodeAddress;
+        var publicNodePort = nodeSettings.publicNodePort;
+
+        if(publicNodeProtocol === 'http') {
+            publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+        } 
+        else if(publicNodeProtocol === 'https') {
+            publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+        }
+
+        const files = [];
+
+        for(const videoId of videoIds) {
+            files.push(publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/watch?v=' + videoId);
+        }
+
+        cloudflare_purgeCache(files)
+        .then(() => {
+            resolve();
+        })
+        .catch(error => {
+            reject(error);
+        });
+    });
+}
+
+function cloudflare_purgeVideo(videoId, format, resolution) {
+    return new Promise(function(resolve, reject) {
+        const nodeSettings = getNodeSettings();
+
+        const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+        const publicNodeAddress = nodeSettings.publicNodeAddress;
+        var publicNodePort = nodeSettings.publicNodePort;
+
+        if(publicNodeProtocol === 'http') {
+            publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+        } 
+        else if(publicNodeProtocol === 'https') {
+            publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+        }
+
+        const nodeBaseUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort;
+
+        var files = [];
+
+        if(format === 'm3u8') {
+            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-master.m3u8`);
+            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-${resolution}.m3u8`);
+
+            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-master.m3u8`);
+            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-${resolution}.m3u8`);
+
+            const adaptiveVideoDirectory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
+
+            const items = fs.readdirSync(adaptiveVideoDirectory);
+
+            files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/assets/videos/${videoId}/adaptive/m3u8/${resolution}/segments/segment-${resolution}-${i}.ts`));
+        }
+        else if(format === 'mp4' || format === 'webm' || format === 'ogv') {
+            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/progressive/${format}/${resolution}`);
+        }
+
+        cloudflare_purgeCache(files)
+        .then(() => {
+            resolve();
+        })
+        .catch(error => {
+            reject(error);
+        });
+    });
+}
+
+function cloudflare_purgeAdaptiveVideos(videoIds) {
+    return new Promise(function(resolve, reject) {
+        const nodeSettings = getNodeSettings();
+
+        const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+        const publicNodeAddress = nodeSettings.publicNodeAddress;
+        var publicNodePort = nodeSettings.publicNodePort;
+
+        if(publicNodeProtocol === 'http') {
+            publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+        } 
+        else if(publicNodeProtocol === 'https') {
+            publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+        }
+
+        const nodeBaseUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort;
+
+        var files = [];
+
+        for(const videoId of videoIds) {
+            const adaptiveVideosDirectory = path.join(getVideosDirectoryPath(), videoId + '/adaptive');
+            const adaptiveM3u8Directory = path.join(adaptiveVideosDirectory, 'm3u8');
+
+            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-master.m3u8`);
+            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-master.m3u8`);
+
+            const entries = fs.readdirSync(adaptiveM3u8Directory);
+
+            for (const entry of entries) {
+                const entryPath = path.join(adaptiveM3u8Directory, entry);
+
+                if (fs.statSync(entryPath).isDirectory()) {
+                    files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-${entry}.m3u8`);
+                    files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-${entry}.m3u8`);
+
+                    const items = fs.readdirSync(entryPath);
+
+                    files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/assets/videos/${videoId}/adaptive/m3u8/${entry}/segments/segment-${entry}-${i}.ts`));
+                }
+            }
+        }
+
+        cloudflare_purgeCache(files)
+        .then(() => {
+            resolve();
+        })
+        .catch(error => {
+            reject(error);
+        });
+    });
+}
+
+function cloudflare_purgeProgressiveVideos(videoIds) {
+    return new Promise(function(resolve, reject) {
+        const nodeSettings = getNodeSettings();
+
+        const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+        const publicNodeAddress = nodeSettings.publicNodeAddress;
+        var publicNodePort = nodeSettings.publicNodePort;
+
+        if(publicNodeProtocol === 'http') {
+            publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+        } 
+        else if(publicNodeProtocol === 'https') {
+            publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+        }
+
+        const nodeBaseUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort;
+
+        var files = [];
+
+        for(const videoId of videoIds) {
+            const progressiveVideosDirectory = path.join(getVideosDirectoryPath(), videoId + '/progressive');
+
+            const entries = fs.readdirSync(progressiveVideosDirectory);
+
+            for (const entry of entries) {
+                const entryPath = path.join(progressiveVideosDirectory, entry);
+
+                const items = fs.readdirSync(entryPath);
+
+                for (const item of items) {
+                    if (fs.statSync(entryPath).isDirectory()) {
+                        files.push(`${nodeBaseUrl}/assets/videos/${videoId}/progressive/${entry}/${item}`);
+                    }
+                }
+            }
+        }
+
+        cloudflare_purgeCache(files)
+        .then(() => {
+            resolve();
+        })
+        .catch(error => {
+            reject(error);
+        });
+    });
+}
+
+
+
+function cloudflare_purgePreviewImages(videoIds) {
+    return new Promise(function(resolve, reject) {
+        const nodeSettings = getNodeSettings();
+
+        const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+        const publicNodeAddress = nodeSettings.publicNodeAddress;
+        var publicNodePort = nodeSettings.publicNodePort;
+
+        if(publicNodeProtocol === 'http') {
+            publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+        } 
+        else if(publicNodeProtocol === 'https') {
+            publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+        }
+
+        const files = [];
+
+        for(const videoId of videoIds) {
+            files.push(publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/preview');
+        }
+
+        cloudflare_purgeCache(files)
+        .then(() => {
+            resolve();
+        })
+        .catch(error => {
+            reject(error);
+        });
+    });
+}
+
+function cloudflare_purgePosterImages(videoIds) {
+    return new Promise(function(resolve, reject) {
+        const nodeSettings = getNodeSettings();
+
+        const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+        const publicNodeAddress = nodeSettings.publicNodeAddress;
+        var publicNodePort = nodeSettings.publicNodePort;
+
+        if(publicNodeProtocol === 'http') {
+            publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+        } 
+        else if(publicNodeProtocol === 'https') {
+            publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+        }
+
+        const files = [];
+
+        for(const videoId of videoIds) {
+            files.push(publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/poster');
+        }
+
+        cloudflare_purgeCache(files)
+        .then(() => {
+            resolve();
+        })
+        .catch(error => {
+            reject(error);
         });
     });
 }
@@ -267,8 +540,21 @@ function cloudflare_setDefaultConfiguration() {
     });
 }
 
+function formatFilesParameter(files) {
+    const maxSize = 30; // cloudflare purges are a maximum of 30 files at a time
+
+    // divide the array of files into an array of arrays of files, each array with a maximum length of maxSize
+    return Array.from({ length: Math.ceil(files.length / maxSize) }, (v, i) => files.slice(i * maxSize, i * maxSize + maxSize));
+}
+
 module.exports = {
     cloudflare_validate,
-    cloudflare_purgeCache,
+    cloudflare_purgeEntireCache,
+    cloudflare_purgeWatchPages,
+    cloudflare_purgeVideo,
+    cloudflare_purgeAdaptiveVideos,
+    cloudflare_purgeProgressiveVideos,
+    cloudflare_purgePreviewImages,
+    cloudflare_purgePosterImages,
     cloudflare_setDefaultConfiguration
 };

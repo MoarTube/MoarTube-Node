@@ -21,7 +21,7 @@ const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUplo
 const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
 const { aliaser_doAliasVideo, aliaser_getVideoAlias } = require('../utils/aliaser-communications');
 const { node_getVideoSegment } = require('../utils/node-communications');
-const { cloudflare_purgeCache } = require('../utils/cloudflare-communications');
+const { cloudflare_purgeWatchPages, cloudflare_purgePreviewImages, cloudflare_purgePosterImages, cloudflare_purgeVideo } = require('../utils/cloudflare-communications');
 
 function import_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
@@ -394,7 +394,29 @@ function videoIdUpload_POST(req, res) {
                         }
                         else {
                             if(format === 'm3u8') {
-                                updateHlsVideoMasterManifestFile(videoId);
+                                try {
+                                    await updateHlsVideoMasterManifestFile(videoId);
+                                }
+                                catch(error) {
+                                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                                }
+                            }
+
+                            try {
+                                performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+                                .then(async videos => {
+                                    const videoIds = videos.map(video => video.video_id);
+
+                                    await cloudflare_purgeVideo(videoId, format, resolution);
+                                    await cloudflare_purgeWatchPages(videoIds);
+
+                                })
+                                .catch(error => {
+
+                                });
+                            }
+                            catch(error) {
+                                logDebugMessageToConsole(null, error, new Error().stack, true);
                             }
                             
                             res.send({isError: false});
@@ -522,7 +544,12 @@ function videoIdStream_POST(req, res) {
                     }
                     else {
                         if(format === 'm3u8') {
-                            updateHlsVideoMasterManifestFile(videoId);
+                            try {
+                                await updateHlsVideoMasterManifestFile(videoId);
+                            }
+                            catch(error) {
+                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                            }
 
                             const nodeSettings = getNodeSettings();
 
@@ -843,7 +870,7 @@ function videoIdPublishes_GET(req, res) {
 
 function videoIdUnpublish_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
+    .then(async (isAuthenticated) => {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             const format = req.body.format;
@@ -878,7 +905,29 @@ function videoIdUnpublish_POST(req, res) {
                 }
                 
                 if(format === 'm3u8') {
-                    updateHlsVideoMasterManifestFile(videoId);
+                    try {
+                        await updateHlsVideoMasterManifestFile(videoId);
+                    }
+                    catch(error) {
+                        logDebugMessageToConsole(null, error, new Error().stack, true);
+                    }
+                }
+
+                try {
+                    performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+                    .then(async videos => {
+                        const videoIds = videos.map(video => video.video_id);
+
+                        await cloudflare_purgeVideo(videoId, format, resolution);
+                        await cloudflare_purgeWatchPages(videoIds);
+
+                    })
+                    .catch(error => {
+
+                    });
+                }
+                catch(error) {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
                 }
                 
                 res.send({isError: false});
@@ -1434,6 +1483,8 @@ function videoIdThumbnail_POST(req, res) {
                     }
                     else {
                         logDebugMessageToConsole('uploaded thumbnail for video id <' + videoId + '>', null, null, true);
+
+                        // no cloudflare purge needed here because the thumbnail is not ever in the CDN
                         
                         res.send({isError: false});
                     }
@@ -1529,6 +1580,13 @@ function videoIdPreview_POST(req, res) {
                                 res.send({isError: true, message: 'error communicating with the MoarTube node'});
                             }
                             else {
+                                try {
+                                    cloudflare_purgePreviewImages([videoId]);
+                                }
+                                catch(error) {
+                                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                                }
+
                                 res.send({isError: false});
                             }
                         });
@@ -1619,6 +1677,13 @@ function videoIdPoster_POST(req, res) {
                     }
                     else {
                         logDebugMessageToConsole('uploaded poster for video id <' + videoId + '>', null, null, true);
+
+                        try {
+                            cloudflare_purgePosterImages([videoId]);
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        }
                         
                         res.send({isError: false});
                     }
@@ -1920,8 +1985,12 @@ function videoIdCommentsComment_POST(req, res) {
                             res.send({isError: true, message: 'error communicating with the MoarTube node'});
                         }
                         else {
-                            const filesToPurge = ['/watch?v=' + videoId];
-                            cloudflare_purgeCache(filesToPurge);
+                            try {
+                                cloudflare_purgeWatchPages([videoId]);
+                            }
+                            catch(error) {
+                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                            }
 
                             performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp])
                             .then(comments => {
@@ -2020,11 +2089,25 @@ function videoIdLike_POST(req, res) {
                                     res.send({isError: true, message: 'error communicating with the MoarTube node'});
                                 }
                                 else {
+                                    try {
+                                        cloudflare_purgeWatchPages([videoId]);
+                                    }
+                                    catch(error) {
+                                        logDebugMessageToConsole(null, error, new Error().stack, true);
+                                    }
+
                                     res.send({isError: false});
                                 }
                             });
                         }
                         else {
+                            try {
+                                cloudflare_purgeWatchPages([videoId]);
+                            }
+                            catch(error) {
+                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                            }
+
                             res.send({isError: false});
                         }
                     }
@@ -2036,6 +2119,13 @@ function videoIdLike_POST(req, res) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
+                        try {
+                            cloudflare_purgeWatchPages([videoId]);
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        }
+
                         res.send({isError: false});
                     }
                 });
@@ -2074,9 +2164,26 @@ function videoIdDislike_POST(req, res) {
                                     res.send({isError: true, message: 'error communicating with the MoarTube node'});
                                 }
                                 else {
+                                    try {
+                                        cloudflare_purgeWatchPages([videoId]);
+                                    }
+                                    catch(error) {
+                                        logDebugMessageToConsole(null, error, new Error().stack, true);
+                                    }
+
                                     res.send({isError: false});
                                 }
                             });
+                        }
+                        else {
+                            try {
+                                cloudflare_purgeWatchPages([videoId]);
+                            }
+                            catch(error) {
+                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                            }
+
+                            res.send({isError: false});
                         }
                     }
                 });
@@ -2087,6 +2194,13 @@ function videoIdDislike_POST(req, res) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
+                        try {
+                            cloudflare_purgeWatchPages([videoId]);
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        }
+                        
                         res.send({isError: false});
                     }
                 });

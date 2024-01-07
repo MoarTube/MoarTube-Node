@@ -114,15 +114,12 @@ router.post('/:videoId/poster', (req, res) => {
     videoIdPoster_POST(req, res);
 });
 
+
+
+
 router.get('/:videoId/publishes', (req, res) => {
     videoIdPublishes_GET(req, res);
 });
-
-
-
-
-
-
 
 router.get('/:videoId/comments', (req, res) => {
     videoIdComments_GET(req, res);

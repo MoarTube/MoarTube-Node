@@ -127,12 +127,17 @@ function videoIdStop_POST(req, res) {
             const videoId = req.params.videoId;
             
             if(isVideoIdValid(videoId)) {
-                submitDatabaseWriteJob('UPDATE videos SET is_streaming = 0, is_streamed = 1, is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END WHERE video_id = ?', [videoId], function(isError) {
+                submitDatabaseWriteJob('UPDATE videos SET is_streaming = 0, is_streamed = 1, is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END WHERE video_id = ?', [videoId], async function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
-                        updateHlsVideoMasterManifestFile(videoId);
+                        try {
+                            await updateHlsVideoMasterManifestFile(videoId);
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        }
 
                         performDatabaseReadJob_GET('SELECT is_stream_recorded_remotely FROM videos WHERE video_id = ?', [videoId])
                         .then(video => {

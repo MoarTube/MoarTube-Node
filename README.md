@@ -30,7 +30,7 @@ The default login credentials for your node are below. Be sure to change these u
  - Run your node in the cloud or on your home WiFi
  - Publicize your node's content on [MoarTube](http://www.moartube.com) or run your node privately
  - Dual box compatible; broadcast an RTMP stream with software such as OBS from a primary system over a network (WAN or LAN) to a secondary system running the MoarTube Client, separating stream broadcasting from stream processing. This is achieved without any special plugins, such as NDI.
- - Cloudflare one-click integration; easily integrate your node into the [Cloudflare Network](https://www.cloudflare.com/network/), allowing for global media delivery capabilities that rivals major platforms, all from a single node.
+ - Cloudflare one-click integration; easily integrate your node into the [Cloudflare Network](https://www.cloudflare.com/network/), allowing for global media delivery capabilities that rivals major platforms, all from a single node. Features automated caching strategy configuration and automated cache management, and of course the best security from the world's leading CDN.
 
 ![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/0d8ac95f-f68b-4e36-849e-28139b45ce50)
 
