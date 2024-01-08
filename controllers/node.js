@@ -4,9 +4,9 @@ const { performDatabaseReadJob_GET, performDatabaseReadJob_ALL } = require('../u
 const { node_getInformation, node_getVideosTags, node_getChannelSearch } = require('../utils/node-communications');
 
 async function root_GET(req, res) {
-    var searchTerm = req.query.se;
-    var sortTerm = req.query.so;
-    var tagTerm = req.query.ta;
+    var searchTerm = req.query.searchTerm;
+    var sortTerm = req.query.sortTerm;
+    var tagTerm = req.query.tagTerm;
 
     if(!isSearchTermValid(searchTerm)) {
         searchTerm = '';

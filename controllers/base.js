@@ -1,5 +1,5 @@
 function root_GET(req, res) {
-    const url = '/node/' + req.originalUrl.substring(req.path.length);
+    const url = '/node' + req.originalUrl.substring(req.path.length);
     
     res.redirect(url);
 }

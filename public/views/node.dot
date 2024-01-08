@@ -348,9 +348,9 @@ body {
 			$(document).ready(function() {
 				const params = new URL(window.location.href).searchParams;
 				
-				var searchTerm = params.get('se');
-				var sortTerm = params.get('so');
-				var tagTerm = params.get('ta');
+				var searchTerm = params.get('searchTerm');
+				var sortTerm = params.get('sortTerm');
+				var tagTerm = params.get('tagTerm');
 				
 				if(searchTerm == null) {
 					searchTerm = '';
@@ -644,7 +644,7 @@ body {
 			}
 			
 			function updateAddressBar() {
-				const stateString = '?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=' + CURRENT_TAG_TERM;
+				const stateString = '?searchTerm=' + CURRENT_SEARCH_TERM + '&sortTerm=' + CURRENT_SORT_TERM + '&tagTerm=' + CURRENT_TAG_TERM;
 				
 				window.history.replaceState({}, '', stateString);
 			}
