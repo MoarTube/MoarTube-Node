@@ -14,7 +14,7 @@ const {
     isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
-const { cloudflare_setDefaultConfiguration } = require('../utils/cloudflare-communications');
+const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration } = require('../utils/cloudflare-communications');
 const { submitDatabaseWriteJob } = require('../utils/database');
 
 function root_GET(req, res) {
@@ -22,6 +22,13 @@ function root_GET(req, res) {
     .then((isAuthenticated) => {
         if(isAuthenticated) {
             const nodeSettings = getNodeSettings();
+
+            if(nodeSettings.cloudflareEmailAddress !== '' && nodeSettings.cloudflareZoneId !== '' && nodeSettings.cloudflareGlobalApiKey !== '') {
+                nodeSettings.isCloudflareIntegrated = true;
+            }
+            else {
+                nodeSettings.isCloudflareIntegrated = false;
+            }
             
             res.send({isError: false, nodeSettings: nodeSettings});
         }
@@ -421,7 +428,7 @@ function secure_POST(req, res) {
     });
 }
 
-function cloudflare_POST(req, res) {
+function cloudflareConfigure_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
@@ -429,21 +436,22 @@ function cloudflare_POST(req, res) {
             const cloudflareZoneId = req.body.cloudflareZoneId;
             const cloudflareGlobalApiKey = req.body.cloudflareGlobalApiKey;
 
-            const isValid = await isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
-            
-            if(isValid) {
-                const nodeSettings = getNodeSettings();
-                
-                nodeSettings.cloudflareEmailAddress = cloudflareEmailAddress;
-                nodeSettings.cloudflareZoneId = cloudflareZoneId;
-                nodeSettings.cloudflareGlobalApiKey = cloudflareGlobalApiKey;
+            try {
+                const isValid = await isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
 
-                setNodeSettings(nodeSettings);
-                
-                res.send({ isError: false });
+                if(isValid) {
+                    await cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
+
+                    res.send({ isError: false });
+                }
+                else {
+                    res.send({isError: true, message: 'could not validate the Cloudflare credentials'});
+                }
             }
-            else {
-                res.send({ isError: true, message: 'could not validate the Cloudflare credentials' });
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'an error occurred while applying the settings'});
             }
         }
         else {
@@ -459,20 +467,32 @@ function cloudflare_POST(req, res) {
     });
 }
 
-function cloudflareDefaults_POST(req, res) {
-    cloudflare_setDefaultConfiguration()
-    .then(cloudflareResponseData => {
-        if(cloudflareResponseData.isError) {
-            res.send({isError: true, message: cloudflareResponseData.message});
+function cloudflareClear_POST(req, res) {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            try {
+                await cloudflare_purgeEntireCache();
+                await cloudflare_resetIntegration();
+
+                res.send({ isError: false });
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'an error occurred while applying the settings'});
+            }
         }
         else {
-            res.send({ isError: false });
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+
+            res.send({isError: true, message: 'you are not logged in'});
         }
     })
     .catch(error => {
         logDebugMessageToConsole(null, error, new Error().stack, true);
-
-        res.send({isError: true, message: 'an error occurred while applying the settings'});
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });
 }
 
@@ -624,8 +644,8 @@ module.exports = {
     banner_POST,
     personalize_POST,
     secure_POST,
-    cloudflare_POST,
-    cloudflareDefaults_POST,
+    cloudflareConfigure_POST,
+    cloudflareClear_POST,
     account_POST,
     networkInternal_POST,
     networkExternal_POST

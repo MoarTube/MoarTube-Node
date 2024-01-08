@@ -2,7 +2,7 @@ const express = require('express');
 
 const { 
     root_GET, avatar_GET, avatar_POST, banner_GET, banner_POST, personalize_POST, secure_POST, account_POST, networkInternal_POST, networkExternal_POST,
-    cloudflare_POST, cloudflareDefaults_POST
+    cloudflareConfigure_POST, cloudflareClear_POST
 } = require('../controllers/settings');
 
 const router = express.Router();
@@ -35,12 +35,12 @@ router.post('/secure', async (req, res) => {
     secure_POST(req, res);
 });
 
-router.post('/cloudflare', (req, res) => {
-    cloudflare_POST(req, res);
+router.post('/cloudflare/configure', (req, res) => {
+    cloudflareConfigure_POST(req, res);
 });
 
-router.post('/cloudflare/defaults', (req, res) => {
-    cloudflareDefaults_POST(req, res);
+router.post('/cloudflare/clear', (req, res) => {
+    cloudflareClear_POST(req, res);
 });
 
 router.post('/account', (req, res) => {

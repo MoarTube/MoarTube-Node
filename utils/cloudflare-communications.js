@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { logDebugMessageToConsole } = require('./logger');
-const { getNodeSettings } = require('../utils/helpers');
+const { getNodeSettings, setNodeSettings } = require('../utils/helpers');
 const { getVideosDirectoryPath } = require('../utils/paths');
 
 function cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
@@ -34,34 +34,41 @@ function cloudflare_purgeEntireCache() {
         const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
         const cloudflareZoneId = nodeSettings.cloudflareZoneId;
         const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-        
-        axios.post('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId + '/purge_cache', {
-            purge_everything: true
-        }, {
-            headers: {
-                'X-Auth-Email': cloudflareEmailAddress,
-                'X-Auth-Key': cloudflareGlobalApiKey
-            }
-        })
-        .then(response => {
-            const data = response.data;
 
-            if(data.success) {
-                resolve();
-            }
-            else {
-                reject('could not purge the cloudflare cache: ' + JSON.stringify(data.errors));
-            }
-        })
-        .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
-            
-            reject('an error occurred while purging the cloudflare cache');
-        });
+        if (cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
+            axios.post('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId + '/purge_cache', {
+                purge_everything: true
+            }, {
+                headers: {
+                    'X-Auth-Email': cloudflareEmailAddress,
+                    'X-Auth-Key': cloudflareGlobalApiKey
+                }
+            })
+            .then(response => {
+                const data = response.data;
+
+                if(data.success) {
+                    logDebugMessageToConsole('cloudflare_purgeEntireCache success', null, null, true);
+
+                    resolve();
+                }
+                else {
+                    reject('could not purge the cloudflare cache: ' + JSON.stringify(data.errors));
+                }
+            })
+            .catch(error => {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+                
+                reject('an error occurred while purging the cloudflare cache');
+            });
+        }
+        else {
+            reject('could not purge the Cloudflare cache; the node is currently not configured to use Cloudflare');
+        }
     });
 }
 
-function cloudflare_purgeCache(files) {
+function cloudflare_purgeCache(files, source) {
     const filesofFiles = formatFilesParameter(files);
 
     const nodeSettings = getNodeSettings();
@@ -86,16 +93,16 @@ function cloudflare_purgeCache(files) {
                 const data = response.data;
 
                 if(data.success) {
-                    logDebugMessageToConsole('cloudflare_purgeCache success: ' + filesJson, null, null, true);
+                    logDebugMessageToConsole(source + ' success: ' + filesJson, null, null, true);
                 }
                 else {
-                    logDebugMessageToConsole('cloudflare_purgeCache failed: ' + filesJson, null, null, true);
+                    logDebugMessageToConsole(source + ' failed: ' + filesJson, null, null, true);
                 }
 
                 return { status: 'fulfilled' };
             })
             .catch(error => {
-                logDebugMessageToConsole('cloudflare_purgeCache error: ' + filesJson, error, new Error().stack, true);
+                logDebugMessageToConsole(source + ' error: ' + filesJson, error, new Error().stack, true);
 
                 return { status: 'rejected' };
             });
@@ -131,7 +138,7 @@ function cloudflare_purgeVideo(videoId, format, resolution) {
             files.push(`${nodeBaseUrl}/assets/videos/${videoId}/progressive/${format}/${resolution}`);
         }
 
-        cloudflare_purgeCache(files)
+        cloudflare_purgeCache(files, 'cloudflare_purgeVideo')
         .then(() => {
             resolve();
         })
@@ -170,7 +177,7 @@ function cloudflare_purgeAdaptiveVideos(videoIds) {
             }
         }
 
-        cloudflare_purgeCache(files)
+        cloudflare_purgeCache(files, 'cloudflare_purgeAdaptiveVideos')
         .then(() => {
             resolve();
         })
@@ -204,7 +211,7 @@ function cloudflare_purgeProgressiveVideos(videoIds) {
             }
         }
 
-        cloudflare_purgeCache(files)
+        cloudflare_purgeCache(files, 'cloudflare_purgeProgressiveVideos')
         .then(() => {
             resolve();
         })
@@ -224,7 +231,7 @@ function cloudflare_purgeWatchPages(videoIds) {
             files.push(`${nodeBaseUrl}/watch?v=${videoId}`);
         }
 
-        cloudflare_purgeCache(files)
+        cloudflare_purgeCache(files, 'cloudflare_purgeWatchPages')
         .then(() => {
             resolve();
         })
@@ -246,7 +253,7 @@ function cloudflare_purgeEmbedVideoPages(videoIds) {
             files.push(`${nodeBaseUrl}/watch/embed/video/${videoId}?autostart=1`);
         }
 
-        cloudflare_purgeCache(files)
+        cloudflare_purgeCache(files, 'cloudflare_purgeEmbedVideoPages')
         .then(() => {
             resolve();
         })
@@ -286,7 +293,7 @@ function cloudflare_purgeNodePage(tags) {
             */
         }
         
-        cloudflare_purgeCache(files)
+        cloudflare_purgeCache(files, 'cloudflare_purgeNodePage')
         .then(() => {
             resolve();
         })
@@ -302,15 +309,11 @@ function cloudflare_purgeNodeImages() {
 
         const files = [];
 
-        files.push(`${nodeBaseUrl}/assets/images/node/logo.png`);
-        files.push(`${nodeBaseUrl}/assets/images/node/logo.svg`);
-        files.push(`${nodeBaseUrl}/assets/images/node/logo-192x192.png`);
-        files.push(`${nodeBaseUrl}/assets/images/node/logo-512x512.png`);
-        files.push(`${nodeBaseUrl}/assets/images/node/logo-512x512.svg`);
-        files.push(`${nodeBaseUrl}/assets/images/node/logo-1024x1024.png`);
-        files.push(`${nodeBaseUrl}/assets/images/node/logo-1024x1024.svg`);
+        files.push(`${nodeBaseUrl}/assets/resources/images/icon.png`);
+        files.push(`${nodeBaseUrl}/assets/resources/images/avatar.png`);
+        files.push(`${nodeBaseUrl}/assets/resources/images/banner.png`);
 
-        cloudflare_purgeCache(files)
+        cloudflare_purgeCache(files, 'cloudflare_purgeNodeImages')
         .then(() => {
             resolve();
         })
@@ -331,7 +334,7 @@ function cloudflare_purgePreviewImages(videoIds) {
             files.push(`${nodeBaseUrl}/assets/videos/${videoId}/preview`);
         }
 
-        cloudflare_purgeCache(files)
+        cloudflare_purgeCache(files, 'cloudflare_purgePreviewImages')
         .then(() => {
             resolve();
         })
@@ -351,7 +354,7 @@ function cloudflare_purgePosterImages(videoIds) {
             files.push(`${nodeBaseUrl}/assets/videos/${videoId}/poster`);
         }
 
-        cloudflare_purgeCache(files)
+        cloudflare_purgeCache(files, 'cloudflare_purgePosterImages')
         .then(() => {
             resolve();
         })
@@ -361,59 +364,25 @@ function cloudflare_purgePosterImages(videoIds) {
     });
 }
 
-function cloudflare_setDefaultConfiguration() {
+function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
     return new Promise(async function(resolve, reject) {
         try {
             logDebugMessageToConsole('setting Cloudflare configuration for MoarTube Node', null, null, true);
-
-            const nodeSettings = getNodeSettings();
-
-            const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-            const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-            const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
+            
             const headers = {
                 'X-Auth-Email': cloudflareEmailAddress,
                 'X-Auth-Key': cloudflareGlobalApiKey
             };
 
-            
-            // step 1: get all rule sets in the zone
-
-            logDebugMessageToConsole('retrieving zone rule sets', null, null, true);
-
-            const response_ruleSets = await axios.get(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets`, { headers });
-
-            if(!response_ruleSets.data.success) {
-                throw new Error('failed to retrieve zone rule sets');
+            try {
+                await cloudflare_resetIntegration();
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
             }
 
-            const response_ruleSets_result = response_ruleSets.data.result;
 
-            logDebugMessageToConsole('discovered zone rule sets: ' + JSON.stringify(response_ruleSets.data), null, null, true);
-
-            
-            // step 2: delete all http_request_cache_settings phase rule sets in the zone
-
-            logDebugMessageToConsole('deleting zone http_request_cache_settings phase rule set if discovered', null, null, true);
-
-            for(const ruleSet of response_ruleSets_result) {
-                if(ruleSet.phase === 'http_request_cache_settings') {
-                    logDebugMessageToConsole('deleting discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null, true);
-
-                    const response_deleteRuleSet = await axios.delete(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets/${ruleSet.id}`, { headers });
-
-                    if(response_deleteRuleSet.status === 204) {
-                        logDebugMessageToConsole('deleted discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null, true);
-                    }
-                    else {
-                        throw new Error('failed to delete zone http_request_cache_settings phase rule set');
-                    }
-                }
-            }
-
-            
-            // step 3: create new http_request_cache_settings phase rule set in the zone and initialize it with rules
+            // step 1: create new http_request_cache_settings phase rule set in the zone and initialize it with rules
 
             logDebugMessageToConsole('creating zone http_request_cache_settings phase rule set', null, null, true);
 
@@ -515,7 +484,7 @@ function cloudflare_setDefaultConfiguration() {
             logDebugMessageToConsole('created zone http_request_cache_settings phase rule set: ' + JSON.stringify(response_newZoneRuleSet_result), null, null, true);
 
 
-            // step 4: enable Argo Tiered Caching
+            // step 2: enable Argo Tiered Caching
 
             logDebugMessageToConsole('enabling Argo Tiered Caching', null, null, true);
 
@@ -532,7 +501,7 @@ function cloudflare_setDefaultConfiguration() {
             logDebugMessageToConsole('enabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null, true);
             
             
-            // step 5: enable Tiered Cache Smart Topology
+            // step 3: enable Tiered Cache Smart Topology
 
             logDebugMessageToConsole('enabling Tiered Cache Smart Topology', null, null, true);
 
@@ -549,20 +518,130 @@ function cloudflare_setDefaultConfiguration() {
             logDebugMessageToConsole('enabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null, true);
 
             
-            // step 6: ...
+            // step 4: save the configuration
 
+            const nodeSettings = getNodeSettings();
             
-            // step 7: profit
+            nodeSettings.cloudflareEmailAddress = cloudflareEmailAddress;
+            nodeSettings.cloudflareZoneId = cloudflareZoneId;
+            nodeSettings.cloudflareGlobalApiKey = cloudflareGlobalApiKey;
 
+            setNodeSettings(nodeSettings);
 
             logDebugMessageToConsole('successfully set Cloudflare configuration for MoarTube Node', null, null, true);
 
-            resolve({isError: false});
+            resolve();
         }
         catch (error) {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            resolve(error);
+        }
+    });
+}
+
+async function cloudflare_resetIntegration() {
+    return new Promise(async function(resolve, reject) {
+        try {
+            logDebugMessageToConsole('resetting Cloudflare configuration for MoarTube Node', null, null, true);
+
+            const nodeSettings = getNodeSettings();
             
-            resolve({isError: true, message: error.message});
+            const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+            const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+            const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+
+            if (cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
+                const headers = {
+                    'X-Auth-Email': cloudflareEmailAddress,
+                    'X-Auth-Key': cloudflareGlobalApiKey
+                };
+
+                // step 1: get all rule sets in the zone
+
+                logDebugMessageToConsole('retrieving zone rule sets', null, null, true);
+
+                const response_ruleSets = await axios.get(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets`, { headers });
+
+                if(!response_ruleSets.data.success) {
+                    throw new Error('failed to retrieve zone rule sets');
+                }
+
+                const response_ruleSets_result = response_ruleSets.data.result;
+
+                logDebugMessageToConsole('discovered zone rule sets: ' + JSON.stringify(response_ruleSets.data), null, null, true);
+
+                
+                // step 2: delete all http_request_cache_settings phase rule sets in the zone
+
+                logDebugMessageToConsole('deleting zone http_request_cache_settings phase rule set if discovered', null, null, true);
+
+                for(const ruleSet of response_ruleSets_result) {
+                    if(ruleSet.phase === 'http_request_cache_settings') {
+                        logDebugMessageToConsole('deleting discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null, true);
+
+                        const response_deleteRuleSet = await axios.delete(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets/${ruleSet.id}`, { headers });
+
+                        if(response_deleteRuleSet.status === 204) {
+                            logDebugMessageToConsole('deleted discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null, true);
+                        }
+                        else {
+                            throw new Error('failed to delete zone http_request_cache_settings phase rule set');
+                        }
+                    }
+                }
+
+
+                // step 3: disable Argo Tiered Caching
+
+                logDebugMessageToConsole('disabling Argo Tiered Caching', null, null, true);
+
+                const tieredCachingData = {
+                    value: 'off'
+                };
+
+                const response_tieredCache = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/argo/tiered_caching`, tieredCachingData, { headers });
+
+                if(!response_tieredCache.data.success) {
+                    throw new Error('failed to disable Argo Tiered Caching');
+                }
+
+                logDebugMessageToConsole('disabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null, true);
+                
+                
+                // step 4: disable Tiered Cache Smart Topology
+
+                logDebugMessageToConsole('disabling Tiered Cache Smart Topology', null, null, true);
+
+                const tieredCacheSmartTopologyData = {
+                    value: 'off'
+                };
+
+                const response_tieredCacheSmartTopology = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/cache/tiered_cache_smart_topology_enable`, tieredCacheSmartTopologyData, { headers });
+
+                if(!response_tieredCacheSmartTopology.data.success) {
+                    throw new Error('failed to disable Tiered Cache Smart Topology');
+                }
+
+                logDebugMessageToConsole('disabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null, true);
+
+
+                // step 5: save the configuration
+                
+                nodeSettings.cloudflareEmailAddress = '';
+                nodeSettings.cloudflareZoneId = '';
+                nodeSettings.cloudflareGlobalApiKey = '';
+
+                setNodeSettings(nodeSettings);
+
+                logDebugMessageToConsole('successfully reset Cloudflare configuration for MoarTube Node', null, null, true);
+
+                resolve();
+            }
+            else {
+                reject('could not reset the Cloudflare integration; the node is currently not configured to use Cloudflare');
+            }
+        }
+        catch (error) {
+            reject(error);
         }
     });
 }
@@ -605,5 +684,6 @@ module.exports = {
     cloudflare_purgeNodeImages,
     cloudflare_purgePreviewImages,
     cloudflare_purgePosterImages,
-    cloudflare_setDefaultConfiguration
+    cloudflare_setConfiguration,
+    cloudflare_resetIntegration
 };

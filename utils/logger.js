@@ -25,6 +25,9 @@ function logDebugMessageToConsole(message, error, stackTrace, isLoggingToFile) {
         else if(error.stackTrace != null) {
             errorMessage += '\n' + error.stackTrace + '\n';
         }
+        else {
+            errorMessage += '\n' + error + '\n';
+        }
     }
 
     if(stackTrace != null) {
