@@ -324,17 +324,17 @@ function cloudflare_purgeNodeImages() {
 
 }
 
-function cloudflare_purgePreviewImages(videoIds) {
+function cloudflare_purgeVideoThumbnailImages(videoIds) {
     return new Promise(function(resolve, reject) {
         const nodeBaseUrl = getNodebaseUrl();
 
         const files = [];
 
         for(const videoId of videoIds) {
-            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/preview`);
+            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/thumbnail`);
         }
 
-        cloudflare_purgeCache(files, 'cloudflare_purgePreviewImages')
+        cloudflare_purgeCache(files, 'cloudflare_purgeVideoThumbnailImages')
         .then(() => {
             resolve();
         })
@@ -344,7 +344,27 @@ function cloudflare_purgePreviewImages(videoIds) {
     });
 }
 
-function cloudflare_purgePosterImages(videoIds) {
+function cloudflare_purgeVideoPreviewImages(videoIds) {
+    return new Promise(function(resolve, reject) {
+        const nodeBaseUrl = getNodebaseUrl();
+
+        const files = [];
+
+        for(const videoId of videoIds) {
+            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/preview`);
+        }
+
+        cloudflare_purgeCache(files, 'cloudflare_purgeVideoPreviewImages')
+        .then(() => {
+            resolve();
+        })
+        .catch(error => {
+            reject(error);
+        });
+    });
+}
+
+function cloudflare_purgeVideoPosterImages(videoIds) {
     return new Promise(function(resolve, reject) {
         const nodeBaseUrl = getNodebaseUrl();
 
@@ -354,7 +374,7 @@ function cloudflare_purgePosterImages(videoIds) {
             files.push(`${nodeBaseUrl}/assets/videos/${videoId}/poster`);
         }
 
-        cloudflare_purgeCache(files, 'cloudflare_purgePosterImages')
+        cloudflare_purgeCache(files, 'cloudflare_purgeVideoPosterImages')
         .then(() => {
             resolve();
         })
@@ -397,33 +417,33 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                             "cache": true,
                             "edge_ttl": {
                                 "mode": "override_origin",
-                                "default": 7200
+                                "default": 31536000
                             },
                             "browser_ttl": {
                                 "mode": "override_origin",
-                                "default": 10800
+                                "default": 28800
                             }
                         }
                     },
                     {
-                        "description": "Node Assets - JavaScript, CSS",
+                        "description": "Node Assets - JavaScript, CSS, Images",
                         "action": "set_cache_settings",
                         "enabled": true,
-                        "expression": "(starts_with(http.request.uri, \"/assets/resources/javascript\")) or (starts_with(http.request.uri, \"/assets/resources/css\"))",
+                        "expression": "(starts_with(http.request.uri, \"/assets/resources/javascript\")) or (starts_with(http.request.uri, \"/assets/resources/css\")) or (starts_with(http.request.uri, \"/assets/resources/images\"))",
                         "action_parameters": {
                             "cache": true,
                             "edge_ttl": {
                                 "mode": "override_origin",
-                                "default": 7200
+                                "default": 86400
                             },
                             "browser_ttl": {
                                 "mode": "override_origin",
-                                "default": 10800
+                                "default": 86400
                             }
                         }
                     },
                     {
-                        "description": "Node Watch - Page for Displaying a Video",
+                        "description": "Node Watch - Watch Page for Displaying a Video",
                         "action": "set_cache_settings",
                         "enabled": true,
                         "expression": "(starts_with(http.request.uri, \"/watch\"))",
@@ -431,12 +451,12 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                             "cache": true,
                             "edge_ttl": {
                                 "mode": "override_origin",
-                                "default": 7200
+                                "default": 86400
                             }
                         }
                     },
                     {
-                        "description": "Node Search - Cache Bypass for Custom Search Entries on the Node Page",
+                        "description": "Node Search - Cache Searches on the Node Page, but bypass if searchTerm is specified",
                         "action": "set_cache_settings",
                         "enabled": true,
                         "expression": "(starts_with(http.request.uri, \"/node/search?searchTerm=&sortTerm\"))",
@@ -444,12 +464,12 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                             "cache": true,
                             "edge_ttl": {
                                 "mode": "override_origin",
-                                "default": 7200
+                                "default": 86400
                             }
                         }
                     },
                     {
-                        "description": "Node Page - Cache for Different Variations of the Node Page",
+                        "description": "Node Page - Cache for Different Variations of the Node Page, but bypass if searchTerm is specified",
                         "action": "set_cache_settings",
                         "enabled": true,
                         "expression": "(starts_with(http.request.uri, \"/node\")) or (starts_with(http.request.uri, \"/node?searchTerm=&sortTerm\"))",
@@ -457,12 +477,12 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                             "cache": true,
                             "edge_ttl": {
                                 "mode": "override_origin",
-                                "default": 7200
+                                "default": 86400
                             }
                         }
                     },
                     {
-                        "description": "MoarTube Node - Cache Bypass for Live (dynamic) HLS stream manifests",
+                        "description": "node Assets - Cache Bypass for Live (dynamic) HLS stream manifests",
                         "action": "set_cache_settings",
                         "enabled": true,
                         "expression": "(http.request.uri.path contains \"/adaptive/dynamic/\")",
@@ -682,8 +702,9 @@ module.exports = {
     cloudflare_purgeEmbedVideoPages,
     cloudflare_purgeNodePage,
     cloudflare_purgeNodeImages,
-    cloudflare_purgePreviewImages,
-    cloudflare_purgePosterImages,
+    cloudflare_purgeVideoThumbnailImages,
+    cloudflare_purgeVideoPreviewImages,
+    cloudflare_purgeVideoPosterImages,
     cloudflare_setConfiguration,
     cloudflare_resetIntegration
 };

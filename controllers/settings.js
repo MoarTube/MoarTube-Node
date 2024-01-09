@@ -14,7 +14,7 @@ const {
     isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
-const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration } = require('../utils/cloudflare-communications');
+const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration, cloudflare_purgeNodeImages, cloudflare_purgeNodePage } = require('../utils/cloudflare-communications');
 const { submitDatabaseWriteJob } = require('../utils/database');
 
 function root_GET(req, res) {
@@ -134,6 +134,13 @@ function avatar_POST(req, res) {
                     fs.renameSync(iconSourceFilePath, iconDestinationFilePath);
                     fs.renameSync(avatarSourceFilePath, avatarDestinationFilePath);
 
+                    try {
+                        cloudflare_purgeNodeImages();
+                    }
+                    catch(error) {
+                        // do nothing
+                    }
+
                     submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END', [], function(isError) {
                         if(isError) {
                             res.send({isError: true, message: 'error communicating with the MoarTube node'});
@@ -242,6 +249,13 @@ function banner_POST(req, res) {
                     const bannerDestinationFilePath = path.join(getImagesDirectoryPath(), 'banner.png');
                     
                     fs.renameSync(bannerSourceFilePath, bannerDestinationFilePath);
+
+                    try {
+                        cloudflare_purgeNodeImages();
+                    }
+                    catch(error) {
+                        // do nothing
+                    }
                     
                     res.send({isError: false});
                 }
@@ -287,6 +301,13 @@ function personalize_POST(req, res) {
                     .then(indexerResponseData => {
                         if(indexerResponseData.isError) {
                             logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+
+                            try {
+                                cloudflare_purgeNodePage([]);
+                            }
+                            catch(error) {
+                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                            }
                             
                             res.send({isError: true, message: indexerResponseData.message});
                         }
@@ -472,8 +493,8 @@ function cloudflareClear_POST(req, res) {
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
             try {
-                await cloudflare_purgeEntireCache();
-                await cloudflare_resetIntegration();
+                cloudflare_purgeEntireCache();
+                cloudflare_resetIntegration();
 
                 res.send({ isError: false });
             }

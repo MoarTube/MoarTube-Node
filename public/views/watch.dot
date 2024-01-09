@@ -349,6 +349,23 @@
 				padding-top: calc(100vh - 10vh) !important
 			}
 
+			#video-information-description {
+				white-space: pre-line;
+			}
+
+			.available-video-duration-indicator {
+				position: absolute;
+				right: 5px;
+				bottom: 5px;
+				background-color: rgba(0, 0, 0, 0.8);
+				color: white;
+				border-radius: 4px;
+				padding: 3px;
+				font-size: 11px;
+				font-weight: 500;
+				width: unset;
+			}
+
 			@media (min-width: 0px) {
 				.container-fluid {
 					width: 100%;
@@ -1071,6 +1088,8 @@ body {
 			var CURRENT_VIDEO_RESOLUTION;
 			var CURRENT_VIDEO_FORMAT;
 
+			var RECOMMENDED_VIDEOS_TIMESTAMPS = {};
+
             const COMMENT_INPUT_FORM_DYNAMIC = $('\
 			<form id="comment-input-form-dynamic" class="comment-input-form" role="form" method="POST" data-captchatype="dynamic" style="background: #cb0c9f12;padding: 5px 5px 5px 5px;">\
 				<textarea class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area" rows="1" placeholder="Add a comment..." maxlength="500" name="commentPlainText" style="height:28px;overflow-y:hidden;resize:none;"></textarea>\
@@ -1196,7 +1215,9 @@ body {
                                 AVAILABLE_VIDEOS_TAGS_CACHE[tag].push(availableVideo);
                             }
 
-                            AVAILABLE_VIDEOS_TAGS_CACHE[''].push(availableVideo);
+							if (!AVAILABLE_VIDEOS_TAGS_CACHE[''].includes(availableVideo)) {
+								AVAILABLE_VIDEOS_TAGS_CACHE[''].push(availableVideo);
+							}
                         });
                     }
 
@@ -1210,14 +1231,11 @@ body {
                 const views = availableVideo.views;
                 const isLive = availableVideo.is_live;
                 const isStreaming = availableVideo.is_streaming;
-                const lengthSeconds = availableVideo.length_seconds;
+                var lengthSeconds = availableVideo.length_seconds;
                 const creationTimestamp = availableVideo.creation_timestamp;
                 
+				const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
                 const viewsFormatted = getViewsFormatted(views);
-                const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
-                const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
-                
-                const durationIndicator = '<i style="position: absolute; right: 5px; bottom: 5px; background-color: rgba(0, 0, 0, 0.8); color: white; border-radius: 4px; padding: 3px; font-size: 11px; font-weight: 500;width: unset;">' + durationFormatted + '</i>';
                 
                 var liveStreamInidcator = '';
                 
@@ -1229,7 +1247,7 @@ body {
                         liveStreamInidcator = '<i style="position: absolute; left: 5px; bottom: 5px; background-color: #cb0c9f; color: white; border-radius: 4px; padding: 3px; font-size: 10px; font-weight: 500;">STREAMED</i>';
                     }
                 }
-                
+
                 const html = $('\
                     <li class="list-group-item ps-0 pe-0 mt-2 video-recommendation-card border-0">\
                         <a href="/watch?v=' + videoId + '" class="text-decoration-none">\
@@ -1238,14 +1256,14 @@ body {
                                     <div class="col-6 position-relative">\
                                         <div class="position-relative">\
                                             <img src="/assets/videos/' + videoId + '/preview" class="rounded ratio ratio-16x9" alt="..."/>\
-                                            ' + durationIndicator + '\
+                                            <i id="available-video-duration-indicator-' + videoId + '" class="available-video-duration-indicator">' + durationFormatted + '</i>\
                                             ' + liveStreamInidcator + '\
                                         </div>\
                                     </div>\
                                     <div class="col-6">\
                                         <div class="h-100 ms-1">\
                                             <span class="video-recommendation-card-text" style="overflow: hidden;text-overflow: ellipsis;white-space: normal;-webkit-line-clamp: 2;display: -webkit-box;-webkit-box-orient: vertical;font-weight: 500;font-family: &quot;Roboto&quot;,&quot;Arial&quot;,sans-serif;">' + title + '</span>\
-                                            <small class="video-recommendation-card-text">' + viewsFormatted + ' &#x2022 ' + creationTimestampFormatted + '</small>\
+                                            <small class="video-recommendation-card-text">' + viewsFormatted + ' &#x2022 <span id="video-recommendation-creation-timestamp-' + videoId + '"></span></small>\
                                         </div>\
                                     </div>\
                                 </div>\
@@ -1255,6 +1273,35 @@ body {
                 ');
                 
                 $('#recommended-videos-list').append(html);
+
+				if(!RECOMMENDED_VIDEOS_TIMESTAMPS.hasOwnProperty(videoId)) {
+					const interval = setInterval(function() {
+						if(RECOMMENDED_VIDEOS_TIMESTAMPS.hasOwnProperty(videoId)) {
+							RECOMMENDED_VIDEOS_TIMESTAMPS[videoId].lengthSecondsUpdated++;
+						}
+
+						updateCreationTimestamp();
+					}, 1000);
+
+					RECOMMENDED_VIDEOS_TIMESTAMPS[videoId] = {
+						interval: interval,
+						lengthSecondsUpdated: lengthSeconds
+					};
+				}
+
+				updateCreationTimestamp();
+
+				function updateCreationTimestamp() {
+					const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
+					
+					$('#video-recommendation-creation-timestamp-' + videoId).text(creationTimestampFormatted);
+
+					if(isStreaming) {
+						const durationFormatted = convertSecondsToDurationFormatted(RECOMMENDED_VIDEOS_TIMESTAMPS[videoId].lengthSecondsUpdated);
+
+						$('#available-video-duration-indicator-' + videoId).text(durationFormatted);
+					}
+				}
             }
 			
 			function setLikedOrDisliked() {
@@ -1342,8 +1389,6 @@ body {
 				const sourcesFormatsAndResolutions = video.sourcesFormatsAndResolutions;
 
 				DOWNLOADABLE_SOURCES = progressiveSources;
-
-				const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
 				
 				if(isStreaming) {
 					connectWebsocket();
@@ -1369,18 +1414,24 @@ body {
 				.catch(function(error) {
 					console.log(error);
 				});
-				
-				if(isLive) {
-					if(isStreaming) {
-						$('#video-information-date').text('Started streaming ' + creationTimestampFormatted);
+
+				(function updateCreationTimestamp() {
+					const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
+
+					if(isLive) {
+						if(isStreaming) {
+							$('#video-information-date').text('Started streaming ' + creationTimestampFormatted);
+						}
+						else {
+							$('#video-information-date').text('Streamed live ' + creationTimestampFormatted);
+						}
 					}
 					else {
-						$('#video-information-date').text('Streamed live ' + creationTimestampFormatted);
+						$('#video-information-date').text(creationTimestampFormatted);
 					}
-				}
-				else {
-					$('#video-information-date').text(creationTimestampFormatted);
-				}
+
+					setTimeout(updateCreationTimestamp, 1000);
+				})();
 				
 				$('#video-information-description').text(description);
 				

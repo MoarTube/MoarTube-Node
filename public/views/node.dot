@@ -492,7 +492,7 @@ body {
 						if($('#videos-container-' + CURRENT_TAG_TERM_ID).length === 0) {
 							$('#videos-container').append('\
 								<div id="videos-container-' + CURRENT_TAG_TERM_ID + '" class="container videos-container-outer p-0 pb-1 mt-2">\
-									<div class="videos-container-inner-tag-title row justify-content-end pe-1" style=" background-color: #cb0c9f08; border: 1px solid #cb0c9f40; border-radius: 5px 5px 0 0; color: #cb0c9f; font-size: 13px;"><span class="text-end p-0"><a href="?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=' + CURRENT_TAG_TERM + '" >' + CURRENT_TAG_TERM + '</a></span></div>\
+									<div class="videos-container-inner-tag-title row justify-content-end pe-1" style=" background-color: #cb0c9f08; border: 1px solid #cb0c9f40; border-radius: 5px 5px 0 0; color: #cb0c9f; font-size: 13px;"><span class="text-end p-0"><a href="?searchTerm=' + CURRENT_SEARCH_TERM + '&sortTerm=' + CURRENT_SORT_TERM + '&tagTerm=' + CURRENT_TAG_TERM + '" >' + CURRENT_TAG_TERM + '</a></span></div>\
 									<div id="videos-container-inner-' + CURRENT_TAG_TERM_ID + '" class="videos-container-inner row row-cols-sm-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4">\
 									</div>\
 								</div>'
@@ -526,7 +526,7 @@ body {
 							if($('#videos-container-' + tagTermId).length === 0) {
 								$('#videos-container').append('\
 									<div id="videos-container-' + tagTermId + '" class="container videos-container-outer p-0 pb-1 mt-2">\
-										<div class="videos-container-inner-tag-title row justify-content-end pe-1" style=" background-color: #cb0c9f08; border: 1px solid #cb0c9f40; border-radius: 5px 5px 0 0; color: #cb0c9f; font-size: 13px;"><span class="text-end p-0"><a href="?se=' + CURRENT_SEARCH_TERM + '&so=' + CURRENT_SORT_TERM + '&ta=' + tag + '" >' + tag + ' ></a></span></div>\
+										<div class="videos-container-inner-tag-title row justify-content-end pe-1" style=" background-color: #cb0c9f08; border: 1px solid #cb0c9f40; border-radius: 5px 5px 0 0; color: #cb0c9f; font-size: 13px;"><span class="text-end p-0"><a href="?searchTerm=' + CURRENT_SEARCH_TERM + '&sortTerm=' + CURRENT_SORT_TERM + '&tagTerm=' + tag + '" >' + tag + ' ></a></span></div>\
 										<div id="videos-container-inner-' + tagTermId + '" class="videos-container-inner row row-cols-sm-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4">\
 										</div>\
 									</div>'

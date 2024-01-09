@@ -22,8 +22,8 @@ const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../ut
 const { aliaser_doAliasVideo, aliaser_getVideoAlias } = require('../utils/aliaser-communications');
 const { node_getVideoSegment } = require('../utils/node-communications');
 const { 
-    cloudflare_purgeWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos, cloudflare_purgePreviewImages, cloudflare_purgePosterImages, 
-    cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, cloudflare_purgeNodePage
+    cloudflare_purgeWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos, cloudflare_purgeVideoPreviewImages, cloudflare_purgeVideoPosterImages, 
+    cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, cloudflare_purgeNodePage, cloudflare_purgeVideoThumbnailImages
 } = require('../utils/cloudflare-communications');
 
 function import_POST(req, res) {
@@ -411,9 +411,9 @@ function videoIdUpload_POST(req, res) {
                                     const videoIds = videos.map(video => video.video_id);
                                     const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
 
-                                    await cloudflare_purgeVideo(videoId, format, resolution);
-                                    await cloudflare_purgeNodePage(tags);
-                                    await cloudflare_purgeWatchPages(videoIds);
+                                    cloudflare_purgeNodePage(tags);
+                                    cloudflare_purgeWatchPages(videoIds);
+                                    cloudflare_purgeVideo(videoId, format, resolution);
                                 })
                                 .catch(error => {
                                     // do nothing
@@ -555,6 +555,9 @@ function videoIdStream_POST(req, res) {
                                 logDebugMessageToConsole(null, error, new Error().stack, true);
                             }
 
+                            const manifestFilePath_temp = req.files.video_files[0].path;
+                            const manifestFilePath_new = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
+
                             const nodeSettings = getNodeSettings();
 
                             const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
@@ -579,9 +582,6 @@ function videoIdStream_POST(req, res) {
                                 This isn't even my final form. I know. I'm awesome.
                                 */
 
-                                const manifestFilePath_temp = req.files.video_files[0].path;
-                                const manifestFilePath_new = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
-                                
                                 const data = fs.readFileSync(manifestFilePath_temp, 'utf-8');
                                 const lines = data.split(/\r?\n/);
 
@@ -613,6 +613,9 @@ function videoIdStream_POST(req, res) {
                                 .catch(error => {
                                     console.log(error);
                                 });
+                            }
+                            else {
+                                fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
                             }
                         }
 
@@ -922,9 +925,9 @@ function videoIdUnpublish_POST(req, res) {
                     .then(async videos => {
                         const videoIds = videos.map(video => video.video_id);
 
-                        await cloudflare_purgeEmbedVideoPages(videoIds);
-                        await cloudflare_purgeVideo(videoId, format, resolution);
-                        await cloudflare_purgeWatchPages(videoIds);
+                        cloudflare_purgeEmbedVideoPages(videoIds);
+                        cloudflare_purgeWatchPages(videoIds);
+                        cloudflare_purgeVideo(videoId, format, resolution);
                     })
                     .catch(error => {
                         // do nothing
@@ -1020,8 +1023,17 @@ function videoIdInformation_POST(req, res) {
                     }
                     else {
                         try {
-                            cloudflare_purgeEmbedVideoPages([videoId]);
-                            cloudflare_purgeWatchPages([videoId]);
+                            performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
+                            .then(async videos => {
+                                const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
+
+                                cloudflare_purgeEmbedVideoPages([videoId]);
+                                cloudflare_purgeWatchPages([videoId]);
+                                cloudflare_purgeNodePage(tags);
+                            })
+                            .catch(error => {
+                                // do nothing
+                            });
                         }
                         catch(error) {
                             logDebugMessageToConsole(null, error, new Error().stack, true);
@@ -1496,7 +1508,12 @@ function videoIdThumbnail_POST(req, res) {
                     else {
                         logDebugMessageToConsole('uploaded thumbnail for video id <' + videoId + '>', null, null, true);
 
-                        // no cloudflare purge needed here because the thumbnail is not ever in the CDN
+                        try {
+                            cloudflare_purgeVideoThumbnailImages([videoId]);
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        }
                         
                         res.send({isError: false});
                     }
@@ -1593,7 +1610,7 @@ function videoIdPreview_POST(req, res) {
                             }
                             else {
                                 try {
-                                    cloudflare_purgePreviewImages([videoId]);
+                                    cloudflare_purgeVideoPreviewImages([videoId]);
                                 }
                                 catch(error) {
                                     logDebugMessageToConsole(null, error, new Error().stack, true);
@@ -1691,7 +1708,7 @@ function videoIdPoster_POST(req, res) {
                         logDebugMessageToConsole('uploaded poster for video id <' + videoId + '>', null, null, true);
 
                         try {
-                            cloudflare_purgePosterImages([videoId]);
+                            cloudflare_purgeVideoPosterImages([videoId]);
                         }
                         catch(error) {
                             logDebugMessageToConsole(null, error, new Error().stack, true);
@@ -1795,65 +1812,60 @@ function delete_POST(req, res) {
     .then((isAuthenticated) => {
         if(isAuthenticated) {
             const videoIdsJson = req.body.videoIdsJson;
-            const videoIds = JSON.parse(videoIdsJson);
+            const submittedVideoids = JSON.parse(videoIdsJson);
             
-            if(isVideoIdsValid(videoIds)) {
-                submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = 0 AND is_publishing = 0 AND is_streaming = 0 AND is_indexed = 0) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds, function(isError) {
-                    if(isError) {
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                    }
-                    else {
-                        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = 1 OR is_publishing = 1 OR is_streaming = 1 OR is_indexed = 1) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds)
-                        .then(async videos => {
-                            const deletedVideoIds = [];
-                            const nonDeletedVideoIds = [];
-                            
-                            videos.forEach(function(video) {
-                                const videoId = video.video_id;
-                                
-                                nonDeletedVideoIds.push(videoId);
-                            });
-                            
-                            videoIds.forEach(function(videoId) {
-                                if(!nonDeletedVideoIds.includes(videoId)) {
-                                    deletedVideoIds.push(videoId);
-                                }
-                            });
+            if(isVideoIdsValid(submittedVideoids)) {
+                performDatabaseReadJob_ALL('SELECT * FROM videos', [])
+                .then(async allVideos => {
+                    const allVideoIds = allVideos.map(video => video.video_id);
+                    const allTags = Array.from(new Set(allVideos.map(video => video.tags.split(',')).flat()));
 
-                            try {
-                                await cloudflare_purgeEmbedVideoPages(deletedVideoIds);
-                                await cloudflare_purgeAdaptiveVideos(deletedVideoIds);
-                                await cloudflare_purgeProgressiveVideos(deletedVideoIds);
-
-                                const allVideos = await performDatabaseReadJob_ALL('SELECT video_id FROM videos', []);
-                                const allVideoIds = allVideos.map(video => video.video_id).concat(deletedVideoIds);
-                                await cloudflare_purgeWatchPages(allVideoIds);
-                            }
-                            catch(error) {
-                                // do nothing
-                            }
-
-                            deletedVideoIds.forEach(function(deletedVideoId) {
-                                const videoDirectoryPath = path.join(getVideosDirectoryPath(), deletedVideoId);
-            
-                                deleteDirectoryRecursive(videoDirectoryPath);
-                            });
-
-                            submitDatabaseWriteJob('DELETE FROM comments WHERE video_id IN (' + deletedVideoIds.map(() => '?').join(',') + ')', deletedVideoIds, function(isError) {
-                                if(isError) {
-                                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                                }
-                                else {
-                                    res.send({isError: false, deletedVideoIds: deletedVideoIds, nonDeletedVideoIds: nonDeletedVideoIds});
-                                }
-                            });
-                        })
-                        .catch(error => {
-                            logDebugMessageToConsole(null, error, new Error().stack, true);
-
+                    submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = 0 AND is_publishing = 0 AND is_streaming = 0 AND is_indexed = 0) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids, function(isError) {
+                        if(isError) {
                             res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                        });
-                    }
+                        }
+                        else {
+                            performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = 1 OR is_publishing = 1 OR is_streaming = 1 OR is_indexed = 1) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids)
+                            .then(async nonDeletedVideos => {
+                                const nonDeletedVideoIds = nonDeletedVideos.map(video => video.video_id);
+                                const deletedVideoIds = submittedVideoids.filter(videoId => !nonDeletedVideoIds.includes(videoId));
+    
+                                try {
+                                    cloudflare_purgeNodePage(allTags);
+                                    cloudflare_purgeEmbedVideoPages(deletedVideoIds);
+                                    cloudflare_purgeAdaptiveVideos(deletedVideoIds);
+                                    cloudflare_purgeProgressiveVideos(deletedVideoIds);
+                                    cloudflare_purgeWatchPages(allVideoIds);
+                                }
+                                catch(error) {
+                                    // do nothing
+                                }
+    
+                                deletedVideoIds.forEach(function(deletedVideoId) {
+                                    const videoDirectoryPath = path.join(getVideosDirectoryPath(), deletedVideoId);
+                
+                                    deleteDirectoryRecursive(videoDirectoryPath);
+                                });
+    
+                                submitDatabaseWriteJob('DELETE FROM comments WHERE video_id IN (' + deletedVideoIds.map(() => '?').join(',') + ')', deletedVideoIds, function(isError) {
+                                    if(isError) {
+                                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                                    }
+                                    else {
+                                        res.send({isError: false, deletedVideoIds: deletedVideoIds, nonDeletedVideoIds: nonDeletedVideoIds});
+                                    }
+                                });
+                            })
+                            .catch(error => {
+                                logDebugMessageToConsole(null, error, new Error().stack, true);
+    
+                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                            });
+                        }
+                    });
+                })
+                .catch(error => {
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
                 });
             }
             else {
@@ -2075,6 +2087,13 @@ function videoIdCommentsCommentIdDelete_DELETE(req, res) {
                                 res.send({isError: true, message: 'error communicating with the MoarTube node'});
                             }
                             else {
+                                try {
+                                    cloudflare_purgeWatchPages([videoId]);
+                                }
+                                catch(error) {
+                                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                                }
+
                                 res.send({isError: false});
                             }
                         });
