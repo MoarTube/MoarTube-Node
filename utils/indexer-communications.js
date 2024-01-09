@@ -31,6 +31,20 @@ function indexer_removeVideoFromIndex(data) {
     });
 }
 
+function indexer_doIndexUpdate(data) {
+	return new Promise(function(resolve, reject) {
+		axios.post(getMoarTubeIndexerUrl() + '/index/video/update', data)
+		.then(response => {
+			const data = response.data;
+			
+			resolve(data);
+		})
+		.catch(error => {
+			resolve({isError: true, message: 'error'});
+		});
+	});
+}
+
 function indexer_doNodePersonalizeUpdate(moarTubeTokenProof, nodeName, nodeAbout, nodeId) {
     return new Promise(function(resolve, reject) {
         axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/update', {
@@ -91,30 +105,6 @@ function indexer_doNodeIdentificationRefresh(moarTubeTokenProof) {
 		  params: {
             moarTubeTokenProof: moarTubeTokenProof
 		  }
-		})
-		.then(response => {
-			const data = response.data;
-			
-			resolve(data);
-		})
-		.catch(error => {
-			resolve({isError: true, message: 'error'});
-		});
-	});
-}
-
-function indexer_doIndexUpdate(moarTubeTokenProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64) {
-	return new Promise(function(resolve, reject) {
-		axios.post(getMoarTubeIndexerUrl() + '/index/video/update', {
-			videoId: videoId,
-			title: title,
-			tags: tags,
-			views: views,
-			isStreaming: isStreaming,
-			lengthSeconds: lengthSeconds,
-			nodeIconBase64: nodeIconBase64,
-			videoPreviewImageBase64: videoPreviewImageBase64,
-            moarTubeTokenProof: moarTubeTokenProof
 		})
 		.then(response => {
 			const data = response.data;

@@ -899,14 +899,14 @@ body {
 						</div>
 						<div>
 							<div id="video-title-section" class="row gutters mt-2">
-								<div class="container"><h3 id="video-title">........</h3></div>
+								<div class="container"><h3 id="video-title" class="text-break">........</h3></div>
 							</div>
 							<div class="row gutters">
 								<div id="stats-section" class="container">
 									<div class="row align-items-center">
 										<div class="col-xl-6 col-md-12">
 											<a href="/"><img src="/assets/resources/images/icon.png" style="border-radius: 50%;width: 40px;height: 40px;"></a>
-											<span id="node-name">........</span>
+											<span id="node-name" class="text-break">........</span>
 										</div>
 										<div class="col-xl-6 col-md-12">
 											<div class="float-end">
@@ -953,7 +953,7 @@ body {
 									<div id="video-information-views-date">
 										<span id="video-information-views" class="fw-bold">........</span>&nbsp;&nbsp;<span id="video-information-date" class="fw-bold">........</span>
 									</div>
-									<div id="video-information-description">........</div>
+									<div id="video-information-description" class="text-break">........</div>
 								</div>
 							</div>
 							
@@ -2268,7 +2268,7 @@ body {
 						  <ul class="dropdown-menu" aria-labelledby="comment-' + commentId + '-dropdown-button"><li><a class="dropdown-item" role="button" onclick="reportComment(\'' + commentId + '\');">Report</a></li></ul>\
 						  <div id="bl_' + commentId + '" class="backlink"></div>\
 						</div>\
-						<blockquote class="postMessage" id="m' + commentId + '">' + commentTextHtml + '</blockquote>\
+						<blockquote class="postMessage text-break" id="m' + commentId + '">' + commentTextHtml + '</blockquote>\
 					  </div>\
 					</div>');
 

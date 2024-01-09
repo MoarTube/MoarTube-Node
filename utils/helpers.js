@@ -3,7 +3,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
 const { logDebugMessageToConsole } = require('./logger');
-const { getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath } = require('./paths');
+const { getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath, getVideosDirectoryPath } = require('./paths');
 const { performDatabaseReadJob_GET } = require('./database');
 const { indexer_getNodeIdentification, indexer_doNodeIdentificationRefresh } = require('./indexer-communications');
 
@@ -217,20 +217,97 @@ function performNodeIdentification() {
 	});
 }
 
-function getNodeIconBase64() {
-	var nodeIconBase64;
+function getNodeIconPngBase64() {
+	var pngImageBase64;
 
-	const customIconDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'icon.png');
-	const defaultIconDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'icon.png');
+	const customDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'icon.png');
+	const defaultDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'icon.png');
 
-	if(fs.existsSync(customIconDirectoryPath)) {
-		nodeIconBase64 = fs.readFileSync(customIconDirectoryPath).toString('base64');
+	if(fs.existsSync(customDirectoryPath)) {
+		pngImageBase64 = fs.readFileSync(customDirectoryPath).toString('base64');
 	}
 	else {
-		nodeIconBase64 = fs.readFileSync(defaultIconDirectoryPath).toString('base64');
+		pngImageBase64 = fs.readFileSync(defaultDirectoryPath).toString('base64');
 	}
 
-	return nodeIconBase64;
+	return pngImageBase64;
+}
+
+function getNodeAvatarPngBase64() {
+	var pngImageBase64;
+
+	const customDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'avatar.png');
+	const defaultDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'avatar.png');
+
+	if(fs.existsSync(customDirectoryPath)) {
+		pngImageBase64 = fs.readFileSync(customDirectoryPath).toString('base64');
+	}
+	else {
+		pngImageBase64 = fs.readFileSync(defaultDirectoryPath).toString('base64');
+	}
+
+	return pngImageBase64;
+}
+
+function getNodeBannerPngBase64() {
+	var pngImageBase64;
+
+	const customDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'banner.png');
+	const defaultDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'banner.png');
+
+	if(fs.existsSync(customDirectoryPath)) {
+		pngImageBase64 = fs.readFileSync(customDirectoryPath).toString('base64');
+	}
+	else {
+		pngImageBase64 = fs.readFileSync(defaultDirectoryPath).toString('base64');
+	}
+
+	return pngImageBase64;
+}
+
+function getVideoThumbnailJpgBase64(videoId) {
+	var jpgImageBase64;
+
+	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/thumbnail.jpg');
+
+	if(fs.existsSync(directoryPath)) {
+		jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
+	}
+	else {
+		
+	}
+
+	return jpgImageBase64;
+}
+
+function getVideoPreviewJpgBase64(videoId) {
+	var jpgImageBase64;
+
+	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg');
+
+	if(fs.existsSync(directoryPath)) {
+		jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
+	}
+	else {
+		
+	}
+
+	return jpgImageBase64;
+}
+
+function getVideoPosterJpgBase64(videoId) {
+	var jpgImageBase64;
+
+	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/poster.jpg');
+
+	if(fs.existsSync(directoryPath)) {
+		jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
+	}
+	else {
+		
+	}
+
+	return jpgImageBase64;
 }
 
 function getNodeIdentification() {
@@ -346,7 +423,12 @@ module.exports = {
     getExpressSessionName,
     getExpressSessionSecret,
     getNodeIdentification,
-    getNodeIconBase64,
+    getNodeIconPngBase64,
+    getNodeAvatarPngBase64,
+    getNodeBannerPngBase64,
+    getVideoThumbnailJpgBase64,
+    getVideoPreviewJpgBase64,
+    getVideoPosterJpgBase64,
     setJwtSecret,
     setNodeSettings,
     setIsDockerEnvironment,

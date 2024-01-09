@@ -14,8 +14,9 @@ const engine = require('express-dot-engine');
 const {logDebugMessageToConsole} = require('./utils/logger');
 const {
 	getNodeSettings, setNodeSettings, generateVideoId,
-	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, setJwtSecret, getExpressSessionName, getExpressSessionSecret, 
-	setExpressSessionName, setExpressSessionSecret, performNodeIdentification, getNodeIdentification, getNodeIconBase64
+	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, setJwtSecret, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret, 
+	performNodeIdentification, getNodeIdentification, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64, getVideoThumbnailJpgBase64, getVideoPreviewJpgBase64, 
+	getVideoPosterJpgBase64
 } = require('./utils/helpers');
 const { setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort } = require('./utils/urls');
 const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, 
@@ -157,11 +158,31 @@ if(cluster.isMaster) {
 							const isStreaming = (row.is_streaming === 1);
 							const lengthSeconds = row.length_seconds;
 
-							const nodeIconBase64 = getNodeIconBase64();
+							const nodeIconPngBase64 = getNodeIconPngBase64();
+							const nodeAvatarPngBase64 = getNodeAvatarPngBase64();
+							const nodeBannerPngBase64 = getNodeBannerPngBase64();
 
-							const videoPreviewImageBase64 = fs.readFileSync(path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg')).toString('base64');
+							const videoThumbnailJpgBase64 = getVideoThumbnailJpgBase64(videoId);
+							const videoPreviewJpgBase64 = getVideoPreviewJpgBase64(videoId);
+							const videoPosterJpgBase64 = getVideoPosterJpgBase64(videoId);
+
+							const data = {
+								videoId: videoId,
+								title: title,
+								tags: tags,
+								views: views,
+								isStreaming: isStreaming,
+								lengthSeconds: lengthSeconds,
+								nodeIconPngBase64: nodeIconPngBase64,
+								nodeAvatarPngBase64: nodeAvatarPngBase64,
+								nodeBannerPngBase64: nodeBannerPngBase64,
+								videoThumbnailJpgBase64: videoThumbnailJpgBase64,
+								videoPreviewJpgBase64: videoPreviewJpgBase64,
+								videoPosterJpgBase64: videoPosterJpgBase64,
+								moarTubeTokenProof: moarTubeTokenProof
+							};
 							
-							indexer_doIndexUpdate(moarTubeTokenProof, videoId, title, tags, views, isStreaming, lengthSeconds, nodeIconBase64, videoPreviewImageBase64)
+							indexer_doIndexUpdate(data)
 							.then(async indexerResponseData => {
 								if(indexerResponseData.isError) {
 									logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);

@@ -7,8 +7,9 @@ const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath } = require('../utils/paths');
 const { updateHlsVideoMasterManifestFile } = require('../utils/filesystem');
 const { 
-    getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId,
-    performNodeIdentification, getNodeIdentification, sanitizeTagsSpaces, deleteDirectoryRecursive, getNodeIconBase64
+    getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, performNodeIdentification, getNodeIdentification, 
+    sanitizeTagsSpaces, deleteDirectoryRecursive, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64, getVideoThumbnailJpgBase64,
+    getVideoPosterJpgBase64, getVideoPreviewJpgBase64
 } = require('../utils/helpers');
 const { getMoarTubeAliaserPort } = require('../utils/urls');
 const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
@@ -1095,9 +1096,13 @@ function videoIdIndexAdd_POST(req, res) {
                                     const lengthSeconds = video.length_seconds;
                                     const creationTimestamp = video.creation_timestamp;
 
-                                    var nodeIconBase64 = getNodeIconBase64();
+                                    const nodeIconPngBase64 = getNodeIconPngBase64();
+                                    const nodeAvatarPngBase64 = getNodeAvatarPngBase64();
+                                    const nodeBannerPngBase64 = getNodeBannerPngBase64();
 
-                                    const videoPreviewImageBase64 = fs.readFileSync(path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg')).toString('base64');
+                                    const videoThumbnailJpgBase64 = getVideoThumbnailJpgBase64(videoId);
+                                    const videoPreviewJpgBase64 = getVideoPreviewJpgBase64(videoId);
+                                    const videoPosterJpgBase64 = getVideoPosterJpgBase64(videoId);
                                     
                                     const data = {
                                         videoId: videoId,
@@ -1116,8 +1121,12 @@ function videoIdIndexAdd_POST(req, res) {
                                         creationTimestamp: creationTimestamp,
                                         captchaResponse: captchaResponse,
                                         containsAdultContent: containsAdultContent,
-                                        nodeIconBase64: nodeIconBase64,
-                                        videoPreviewImageBase64: videoPreviewImageBase64,
+                                        nodeIconPngBase64: nodeIconPngBase64,
+                                        nodeAvatarPngBase64: nodeAvatarPngBase64,
+                                        nodeBannerPngBase64: nodeBannerPngBase64,
+                                        videoThumbnailJpgBase64: videoThumbnailJpgBase64,
+                                        videoPreviewJpgBase64: videoPreviewJpgBase64,
+                                        videoPosterJpgBase64: videoPosterJpgBase64,
                                         moarTubeTokenProof: moarTubeTokenProof
                                     };
                                     

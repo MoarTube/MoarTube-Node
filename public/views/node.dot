@@ -292,13 +292,13 @@ body {
 				<div id="node-information" class="col-auto p-0">
 					<div class="container-fluid mt-2 p-0">
 						<div class="row m-0"> 
-							<h2><span id="node-name">........</span></h2>
+							<h2><span id="node-name" class="text-break">........</span></h2>
 						</div>
 						<div class="row m-0"> 
-							<h5><span id="node-video-count">........</span></h5>
+							<h5><span id="node-video-count" class="text-break">........</span></h5>
 						</div>
 						<div class="row m-0"> 
-							<span id="node-about">........</span>
+							<span id="node-about" class="text-break">........</span>
 						</div>
 					</div>
 				</div>
@@ -509,8 +509,8 @@ body {
 											' + liveStreamIndicator + '\
 										</div>\
 										<div class="card-body">\
-											<h6 class="card-title row">' + title + '</h6>\
-											<small class="card-text row">' + views + ' views &#x2022 ' + creationTimestampFormatted + '</small>\
+											<h6 class="card-title text-break row">' + title + '</h6>\
+											<small class="card-text text-break row">' + views + ' views &#x2022 ' + creationTimestampFormatted + '</small>\
 										</div>\
 									</div>\
 								</a>\
@@ -544,8 +544,8 @@ body {
 													' + liveStreamIndicator + '\
 												</div>\
 												<div class="card-body">\
-													<h6 class="card-title row">' + title + '</h6>\
-													<small class="card-text row">' + views + ' views &#x2022 ' + creationTimestampFormatted + '</small>\
+													<h6 class="card-title text-break row">' + title + '</h6>\
+													<small class="card-text text-break row">' + views + ' views &#x2022 ' + creationTimestampFormatted + '</small>\
 												</div>\
 											</div>\
 										</a>\

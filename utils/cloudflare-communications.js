@@ -155,24 +155,25 @@ function cloudflare_purgeAdaptiveVideos(videoIds) {
         var files = [];
 
         for(const videoId of videoIds) {
-            const adaptiveVideosDirectory = path.join(getVideosDirectoryPath(), videoId + '/adaptive');
-            const adaptiveM3u8Directory = path.join(adaptiveVideosDirectory, 'm3u8');
-
             files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-master.m3u8`);
             files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-master.m3u8`);
 
-            const entries = fs.readdirSync(adaptiveM3u8Directory);
+            const adaptiveM3u8Directory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
 
-            for (const entry of entries) {
-                const entryPath = path.join(adaptiveM3u8Directory, entry);
+            if(fs.existsSync(adaptiveM3u8Directory)) {
+                const entries = fs.readdirSync(adaptiveM3u8Directory);
 
-                if (fs.statSync(entryPath).isDirectory()) {
-                    files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-${entry}.m3u8`);
-                    files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-${entry}.m3u8`);
+                for (const entry of entries) {
+                    const entryPath = path.join(adaptiveM3u8Directory, entry);
 
-                    const items = fs.readdirSync(entryPath);
+                    if (fs.statSync(entryPath).isDirectory()) {
+                        files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-${entry}.m3u8`);
+                        files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-${entry}.m3u8`);
 
-                    files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/assets/videos/${videoId}/adaptive/m3u8/${entry}/segments/segment-${entry}-${i}.ts`));
+                        const items = fs.readdirSync(entryPath);
+
+                        files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/assets/videos/${videoId}/adaptive/m3u8/${entry}/segments/segment-${entry}-${i}.ts`));
+                    }
                 }
             }
         }
@@ -196,16 +197,18 @@ function cloudflare_purgeProgressiveVideos(videoIds) {
         for(const videoId of videoIds) {
             const progressiveVideosDirectory = path.join(getVideosDirectoryPath(), videoId + '/progressive');
 
-            const entries = fs.readdirSync(progressiveVideosDirectory);
+            if(fs.existsSync(progressiveVideosDirectory)) {
+                const entries = fs.readdirSync(progressiveVideosDirectory);
 
-            for (const entry of entries) {
-                const entryPath = path.join(progressiveVideosDirectory, entry);
+                for (const entry of entries) {
+                    const entryPath = path.join(progressiveVideosDirectory, entry);
 
-                const items = fs.readdirSync(entryPath);
+                    const items = fs.readdirSync(entryPath);
 
-                for (const item of items) {
-                    if (fs.statSync(entryPath).isDirectory()) {
-                        files.push(`${nodeBaseUrl}/assets/videos/${videoId}/progressive/${entry}/${item}`);
+                    for (const item of items) {
+                        if (fs.statSync(entryPath).isDirectory()) {
+                            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/progressive/${entry}/${item}`);
+                        }
                     }
                 }
             }
