@@ -81,9 +81,9 @@ function node_getComments(videoId, timestamp, type) {
     });
 }
 
-function node_getAvailableVideos() {
+function node_getRecommendedVideos() {
     return new Promise(function(resolve, reject) {
-        axios.get('/videos/available')
+        axios.get('/videos/recommended')
         .then(response => {
             const data = response.data;
             
@@ -115,6 +115,6 @@ module.exports = {
     node_getChannelSearch,
     node_getVideo,
     node_getComments,
-    node_getAvailableVideos,
+    node_getRecommendedVideos,
     node_getVideoSegment
 };

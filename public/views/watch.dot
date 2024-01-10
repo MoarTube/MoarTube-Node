@@ -1079,7 +1079,7 @@ body {
 			const COMMENT_ELEMENT_CACHE = {};
 			const COMMENT_REPLIES_CACHE = {};
 
-            const AVAILABLE_VIDEOS_TAGS_CACHE = {'':[]};
+            const RECOMMENDED_VIDEOS_TAGS_CACHE = {'':[]};
 			
 			var DOWNLOADABLE_SOURCES = [];
 			
@@ -1120,8 +1120,8 @@ body {
 
                     loadInformation(INCOMING_PARAMETERS.informationData.information);
 				    loadVideo(INCOMING_PARAMETERS.videoData.video);
-                    loadTags(INCOMING_PARAMETERS.availableVideosData.availableVideos);
-                    loadAvailableVideos(INCOMING_PARAMETERS.availableVideosData.availableVideos, true);
+                    loadTags(INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos);
+                    loadRecommendedVideos(INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos, true);
                     loadComments(INCOMING_PARAMETERS.commentsData.comments, 'after', false);
 
                     if(HASH_VALUE !== '') {
@@ -1150,11 +1150,11 @@ body {
                 NODE_BASE_URL = NODE_PROTOCOL + '://' + NODE_ADDRESS + ':' + NODE_PORT;
             }
 
-            function loadTags(availableVideos) {
+            function loadTags(recommendedVideos) {
                 const tags = [];
 
-                availableVideos.forEach(function(availableVideo) {
-                    const tagsArray = availableVideo.tags.split(',');
+                recommendedVideos.forEach(function(recommendedVideo) {
+                    const tagsArray = recommendedVideo.tags.split(',');
                     
                     tagsArray.forEach(function(tag) {
                         if (!tags.includes(tag)) {
@@ -1198,43 +1198,43 @@ body {
                     
                     $('#recommended-videos-list').empty();
 
-                    loadAvailableVideos(AVAILABLE_VIDEOS_TAGS_CACHE[tagTerm], false);
+                    loadRecommendedVideos(RECOMMENDED_VIDEOS_TAGS_CACHE[tagTerm], false);
                 });
             }
 
-            function loadAvailableVideos(availableVideos, updateCache) {
+            function loadRecommendedVideos(recommendedVideos, updateCache) {
 				clearTimestampUpdateTracker();
-				
-                availableVideos.forEach(function(availableVideo) {
+
+                recommendedVideos.forEach(function(recommendedVideo) {
                     if(updateCache) {
-                        const tagsArray = availableVideo.tags.split(',');
+                        const tagsArray = recommendedVideo.tags.split(',');
                         
                         tagsArray.forEach(function(tag) {
-                            if(!AVAILABLE_VIDEOS_TAGS_CACHE.hasOwnProperty(tag)) {
-                                AVAILABLE_VIDEOS_TAGS_CACHE[tag] = [availableVideo];
+                            if(!RECOMMENDED_VIDEOS_TAGS_CACHE.hasOwnProperty(tag)) {
+                                RECOMMENDED_VIDEOS_TAGS_CACHE[tag] = [recommendedVideo];
                             }
                             else {
-                                AVAILABLE_VIDEOS_TAGS_CACHE[tag].push(availableVideo);
+                                RECOMMENDED_VIDEOS_TAGS_CACHE[tag].push(recommendedVideo);
                             }
 
-							if (!AVAILABLE_VIDEOS_TAGS_CACHE[''].includes(availableVideo)) {
-								AVAILABLE_VIDEOS_TAGS_CACHE[''].push(availableVideo);
+							if (!RECOMMENDED_VIDEOS_TAGS_CACHE[''].includes(recommendedVideo)) {
+								RECOMMENDED_VIDEOS_TAGS_CACHE[''].push(recommendedVideo);
 							}
                         });
                     }
 
-                    loadAvailableVideo(availableVideo);
+                    loadRecommendedVideo(recommendedVideo);
                 });
             }
 
-            function loadAvailableVideo(availableVideo) {
-                const videoId = availableVideo.video_id;
-                const title = availableVideo.title;
-                const views = availableVideo.views;
-                const isLive = availableVideo.is_live;
-                const isStreaming = availableVideo.is_streaming;
-                const lengthSeconds = availableVideo.length_seconds;
-                const creationTimestamp = availableVideo.creation_timestamp;
+            function loadRecommendedVideo(recommendedVideo) {
+                const videoId = recommendedVideo.video_id;
+                const title = recommendedVideo.title;
+                const views = recommendedVideo.views;
+                const isLive = recommendedVideo.is_live;
+                const isStreaming = recommendedVideo.is_streaming;
+                const lengthSeconds = recommendedVideo.length_seconds;
+                const creationTimestamp = recommendedVideo.creation_timestamp;
                 
 				const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
                 const viewsFormatted = getViewsFormatted(views);

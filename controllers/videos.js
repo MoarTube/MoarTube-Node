@@ -2271,10 +2271,10 @@ function videoIdDislike_POST(req, res) {
     }
 }
 
-function available_GET(req, res) {
+function recommended_GET(req, res) {
     performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) ORDER BY creation_timestamp DESC', [])
-    .then(availableVideos => {
-        res.send({isError: false, availableVideos: availableVideos});
+    .then(recommendedVideos => {
+        res.send({isError: false, recommendedVideos: recommendedVideos});
     })
     .catch(error => {
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
@@ -2608,7 +2608,7 @@ module.exports = {
     videoIdCommentsCommentIdDelete_DELETE,
     videoIdLike_POST,
     videoIdDislike_POST,
-    available_GET,
+    recommended_GET,
     tags_GET,
     tagsAll_GET,
     videoIdViewsIncrement_GET,
