@@ -37,6 +37,7 @@ const commentsRoutes = require('./routes/comments');
 const watchRoutes = require('./routes/watch');
 const watchEmbedRoutes = require('./routes/watch-embed');
 const nodeRoutes = require('./routes/node');
+const statusRoutes = require('./routes/status');
 const reportsArchiveCommentsRoutes = require('./routes/reports-archive-comments');
 const reportsArchiveVideosRoutes = require('./routes/reports-archive-videos');
 const reportsCommentsRoutes = require('./routes/reports-comments');
@@ -264,6 +265,7 @@ else {
 		app.use('/watch', watchRoutes);
 		app.use('/watch/embed', watchEmbedRoutes);
 		app.use('/node', nodeRoutes);
+		app.use('/status', statusRoutes);
 		app.use('/reports/archive/comments', reportsArchiveCommentsRoutes);
 		app.use('/reports/archive/videos', reportsArchiveVideosRoutes);
 		app.use('/reports/comments', reportsCommentsRoutes);

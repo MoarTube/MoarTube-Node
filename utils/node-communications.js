@@ -2,7 +2,7 @@ const axios = require('axios').default;
 
 function node_getInformation() {
     return new Promise(function(resolve, reject) {
-        axios.get('/node/information')
+        axios.get('/status/information')
         .then(response => {
             const data = response.data;
             

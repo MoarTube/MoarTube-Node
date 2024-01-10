@@ -616,6 +616,17 @@
 					configurePlayerButtons();
 					configurePlayerEvents();
 
+					if(AUTO_START) {
+						player.src(sources);
+						player.play()
+						.then(function() {
+						
+						})
+						.catch(function(error) {
+							console.log(error);
+						});
+					}
+
 					function configurePlayerButtons() {
 						const handleTechClickDefaultFunction = player.player_.handleTechClick_;
 
@@ -908,17 +919,6 @@
 						
 						player.on("loadedmetadata", function() { 
 							console.log("metadata loaded");
-
-							if(AUTO_START) {
-								player.src(sources);
-								player.play()
-								.then(function() {
-								
-								})
-								.catch(function(error) {
-									console.log(error);
-								});
-							}
 						});
 
 						player.on("ready", function() { 
