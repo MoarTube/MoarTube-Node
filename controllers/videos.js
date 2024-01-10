@@ -565,7 +565,6 @@ function videoIdStream_POST(req, res) {
                             const cloudflareZoneId = nodeSettings.cloudflareZoneId;
                             const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
 
-                            // experimental
                             if(cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
                                 /*
                                 <live stream look-ahead implementation>
@@ -577,8 +576,8 @@ function videoIdStream_POST(req, res) {
                                 
                                 Cloudflare's Smart Tiered Caching Topology will ensure that these cached segments are propagated throughout the Cloudflare network for any 
                                 lower-tier data center that triggers a cache MISS, which will prompt them to fetch the segment from an upper-tier data center that has already 
-                                cached the segment. A single MoarTube Node can leverage the entire capacity of the Cloudflare global network surpassing that of all other 
-                                live streaming platforms combined using just a free-tier account.
+                                cached the segment. A single MoarTube Node with low-end hardware can leverage the entire capacity of the Cloudflare global network surpassing 
+                                that of all other live streaming platforms combined using just a free-tier account.
 
                                 This isn't even my final form. I know. I'm awesome.
                                 */
@@ -608,7 +607,7 @@ function videoIdStream_POST(req, res) {
                                 const segmentFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
 
                                 node_getVideoSegment(segmentFileUrl)
-                                .then(videoSegment => {
+                                .then(() => {
                                     console.log('Cloudflare cached segment: ' + segmentFileUrl);
                                 })
                                 .catch(error => {

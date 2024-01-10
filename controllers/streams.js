@@ -11,6 +11,10 @@ const {
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 
 const { updateHlsVideoMasterManifestFile } = require('../utils/filesystem');
+const { 
+    cloudflare_purgeWatchPages, cloudflare_purgeNodePage
+} = require('../utils/cloudflare-communications');
+
 function start_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
@@ -71,6 +75,23 @@ function start_POST(req, res) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
+                        try {
+                            performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
+                            .then(async videos => {
+                                const videoIds = videos.map(video => video.video_id);
+                                const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
+
+                                cloudflare_purgeWatchPages(videoIds);
+                                cloudflare_purgeNodePage(tags);
+                            })
+                            .catch(error => {
+                                // do nothing
+                            });
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        }
+
                         websocketNodeBroadcast({eventName: 'echo', data: {eventName: 'video_data', payload: { 
                                 videoId: videoId, 
                                 thumbnail: '', 
@@ -134,6 +155,23 @@ function videoIdStop_POST(req, res) {
                     else {
                         try {
                             await updateHlsVideoMasterManifestFile(videoId);
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        }
+
+                        try {
+                            performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
+                            .then(async videos => {
+                                const videoIds = videos.map(video => video.video_id);
+                                const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
+                                
+                                cloudflare_purgeWatchPages(videoIds);
+                                cloudflare_purgeNodePage(tags);
+                            })
+                            .catch(error => {
+                                // do nothing
+                            });
                         }
                         catch(error) {
                             logDebugMessageToConsole(null, error, new Error().stack, true);

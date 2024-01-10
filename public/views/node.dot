@@ -344,6 +344,8 @@ body {
 			var CURRENT_SORT_TERM;
 			var CURRENT_TAG_TERM;
 			var CURRENT_TAG_TERM_ID;
+
+			var TIMESTAMP_UPDATE_TRACKER = [];
 		
 			$(document).ready(function() {
 				const params = new URL(window.location.href).searchParams;
@@ -455,6 +457,8 @@ body {
 			}
 
 			function loadVideos(videos) {
+				clearTimestampUpdateTracker();
+
 				videos.forEach(function(row) {
 					const videoId = row.video_id;
 					const thumbnail = '/assets/videos/' + videoId + '/thumbnail';
@@ -475,7 +479,7 @@ body {
 					const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
 					const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
 					
-					const durationIndicator = '<i style="position: absolute; right: 5px; bottom: 5px; background-color: rgba(0, 0, 0, 0.8); color: white; border-radius: 4px; padding: 3px; font-size: 11px; font-weight: 500;width: unset;">' + durationFormatted + '</i>';
+					const durationIndicator = '<i style="position: absolute; right: 5px; bottom: 5px; background-color: rgba(0, 0, 0, 0.8); color: white; border-radius: 4px; padding: 3px; font-size: 11px; font-weight: 500;width: unset;"><span class="video-streaming-timestamp">' + durationFormatted + '</span></i>';
 					
 					var liveStreamIndicator = '';
 					
@@ -499,7 +503,7 @@ body {
 							);
 						}
 
-						$('#videos-container-inner-' + CURRENT_TAG_TERM_ID).append('\
+						const element = $('\
 							<div class="pt-1 pb-1 ps-1 pe-1">\
 								<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
 									<div class="card">\
@@ -510,12 +514,15 @@ body {
 										</div>\
 										<div class="card-body">\
 											<h6 class="card-title text-break row">' + title + '</h6>\
-											<small class="card-text text-break row">' + views + ' views &#x2022 ' + creationTimestampFormatted + '</small>\
+											<small class="card-text text-break row">' + views + ' views &#x2022 <span class="video-info-timestamp">' + creationTimestampFormatted + '</span></small>\
 										</div>\
 									</div>\
 								</a>\
-							</div>'
-						);
+							</div>');
+
+						$('#videos-container-inner-' + CURRENT_TAG_TERM_ID).append(element);
+
+						applyTimestampUpdateTrackerToVideo(element);
 					}
 					else {
 						const tagsArray = tags.split(',');
@@ -534,7 +541,8 @@ body {
 							}
 
 							if($('#videos-container-inner-' + tagTermId).children().length < 4) {
-								$('#videos-container-inner-' + tagTermId).append('\
+
+								const element = $('\
 									<div class="pt-1 pb-1 ps-1 pe-1">\
 										<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
 											<div class="card">\
@@ -545,15 +553,47 @@ body {
 												</div>\
 												<div class="card-body">\
 													<h6 class="card-title text-break row">' + title + '</h6>\
-													<small class="card-text text-break row">' + views + ' views &#x2022 ' + creationTimestampFormatted + '</small>\
+													<small class="card-text text-break row">' + views + ' views &#x2022 <span class="video-info-timestamp">' + creationTimestampFormatted + '</span></small>\
 												</div>\
 											</div>\
 										</a>\
 									</div>'
 								);
+
+								$('#videos-container-inner-' + tagTermId).append(element);
+
+								applyTimestampUpdateTrackerToVideo(element, lengthSeconds, creationTimestamp, isStreaming);
 							}
 						}
 					}
+				});
+			}
+
+			function applyTimestampUpdateTrackerToVideo(element, lengthSeconds, creationTimestamp, isStreaming) {
+				function updateCreationTimestamp() {
+					const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
+
+					$(element).find('.video-info-timestamp').text(creationTimestampFormatted);
+
+					if(isStreaming) {
+						const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
+
+						$(element).find('.video-streaming-timestamp').text(durationFormatted);
+					}
+				}
+
+				updateCreationTimestamp();
+
+				const interval = setInterval(function() {
+					lengthSeconds++;
+
+					updateCreationTimestamp();
+				}, 1000);
+			}
+
+			function clearTimestampUpdateTracker() {
+				TIMESTAMP_UPDATE_TRACKER.forEach(function(interval) {
+					clearInterval(interval);
 				});
 			}
 			

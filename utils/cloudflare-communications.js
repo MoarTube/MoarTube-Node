@@ -273,27 +273,23 @@ function cloudflare_purgeNodePage(tags) {
         const files = [];
 
         files.push(`${nodeBaseUrl}/node`);
+
         files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=latest&tagTerm=`);
         files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=popular&tagTerm=`);
         files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=oldest&tagTerm=`);
 
-        /*
-        files.push(`${nodeBaseUrl}/node/`);
-        files.push(`${nodeBaseUrl}/node/?searchTerm=&sortTerm=latest&tagTerm=`);
-        files.push(`${nodeBaseUrl}/node/?searchTerm=&sortTerm=popular&tagTerm=`);
-        files.push(`${nodeBaseUrl}/node/?searchTerm=&sortTerm=oldest&tagTerm=`);
-        */
+        files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=latest&tagTerm=`);
+        files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=popular&tagTerm=`);
+        files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=oldest&tagTerm=`);
 
         for(const tag of tags) {
             files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=latest&tagTerm=${tag}`);
             files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=popular&tagTerm=${tag}`);
             files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=oldest&tagTerm=${tag}`);
 
-            /*
-            files.push(`${nodeBaseUrl}/node/?searchTerm=&sortTerm=latest&tagTerm=${tag}`);
-            files.push(`${nodeBaseUrl}/node/?searchTerm=&sortTerm=popular&tagTerm=${tag}`);
-            files.push(`${nodeBaseUrl}/node/?searchTerm=&sortTerm=oldest&tagTerm=${tag}`);
-            */
+            files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=latest&tagTerm=${tag}`);
+            files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=popular&tagTerm=${tag}`);
+            files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=oldest&tagTerm=${tag}`);
         }
         
         cloudflare_purgeCache(files, 'cloudflare_purgeNodePage')
