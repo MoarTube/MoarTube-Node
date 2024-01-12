@@ -444,7 +444,7 @@ body {
 				.done(function (data, textStatus, xhr)
 				{
 					if(data.isError) {
-						alert(data.message);
+						console.log(data.message);
 					}
 					else {
 						loadVideos(data.searchResults);
@@ -452,7 +452,7 @@ body {
 				})
 				.fail(function()
 				{
-					alert('unable to communicate with node');
+					console.log('unable to communicate with node');
 				});
 			}
 
