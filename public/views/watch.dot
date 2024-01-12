@@ -1230,7 +1230,7 @@ body {
             function loadRecommendedVideo(recommendedVideo) {
                 const videoId = recommendedVideo.video_id;
                 const title = recommendedVideo.title;
-                const views = (videoId == VIDEO_ID ? recommendedVideo.views + 1 : recommendedVideo.views);
+                const views = (videoId === VIDEO_ID ? recommendedVideo.views + 1 : recommendedVideo.views);
                 const isLive = recommendedVideo.is_live;
                 const isStreaming = recommendedVideo.is_streaming;
                 const lengthSeconds = recommendedVideo.length_seconds;
