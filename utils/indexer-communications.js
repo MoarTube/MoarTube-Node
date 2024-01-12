@@ -12,7 +12,16 @@ function indexer_addVideoToIndex(data) {
             resolve(data);
         })
         .catch(error => {
-            resolve({isError: true, message: 'error'});
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+
+            if(error.response.status === 413) {
+                const kilobytes = Math.ceil(error.request._contentLength / 1024);
+
+                resolve({isError: true, message: `your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>500kb</b>)<br>try using smaller node and video images`});
+            }
+            else {
+                resolve({isError: true, message: 'an error occurred while adding to the MoarTube Indexer'});
+            }
         });
     });
 }
@@ -26,7 +35,9 @@ function indexer_removeVideoFromIndex(data) {
             resolve(data);
         })
         .catch(error => {
-            resolve({isError: true, message: 'error'});
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+
+            resolve({isError: true, message: 'an error occurred while removing from the MoarTube Indexer'});
         });
     });
 }
@@ -40,7 +51,16 @@ function indexer_doIndexUpdate(data) {
 			resolve(data);
 		})
 		.catch(error => {
-			resolve({isError: true, message: 'error'});
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+
+            if(error.response.status === 413) {
+                const kilobytes = Math.ceil(error.request._contentLength / 1024);
+
+                resolve({isError: true, message: `your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>500kb</b>)<br>try using smaller node and video images`});
+            }
+            else {
+                resolve({isError: true, message: 'an error occurred while updating the MoarTube Indexer'});
+            }
 		});
 	});
 }
@@ -61,7 +81,7 @@ function indexer_doNodePersonalizeUpdate(moarTubeTokenProof, nodeName, nodeAbout
         .catch(error => {
             logDebugMessageToConsole(null, error, new Error().stack, true);
 
-            resolve({isError: true, message: 'error'});
+            resolve({isError: true, message: 'an error occurred while updating the personalize settings'});
         });
     });
 }
@@ -80,7 +100,9 @@ function indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProto
             resolve(data);
         })
         .catch(error => {
-            resolve({isError: true, message: 'error'});
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+
+            resolve({isError: true, message: 'an error occurred while updating the network settings'});
         });
     });
 }
@@ -94,7 +116,9 @@ function indexer_getNodeIdentification() {
 			resolve(data);
 		})
 		.catch(error => {
-			resolve({isError: true, message: 'error'});
+			logDebugMessageToConsole(null, error, new Error().stack, true);
+
+            resolve({isError: true, message: 'an error occurred while identifying the node with the MoarTube Indexer'});
 		});
 	});
 }
@@ -112,7 +136,9 @@ function indexer_doNodeIdentificationRefresh(moarTubeTokenProof) {
 			resolve(data);
 		})
 		.catch(error => {
-			resolve({isError: true, message: 'error'});
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+
+			resolve({isError: true, message: 'an error occurred while refreshing the node with the MoarTube Indexer'});
 		});
 	});
 }
@@ -133,7 +159,7 @@ function indexer_getCaptcha(moarTubeTokenProof) {
         .catch(error => {
             logDebugMessageToConsole(null, error, new Error().stack, true);
 
-            resolve({isError: true, message: 'error'});
+			resolve({isError: true, message: 'an error occurred while retrieving a captcha from the MoarTube Indexer'});
         });
     });
 }

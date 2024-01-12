@@ -1965,7 +1965,7 @@ body {
 								});
 								
 								function broadcastChatMessageContent() {
-									if (ws.readyState === webSocket.OPEN) {
+									if (ws.readyState === WebSocket.OPEN) {
 										const chatMessageContent = $('#send-chat-message-input').val();
 										
 										$('#send-chat-message-input').val('');

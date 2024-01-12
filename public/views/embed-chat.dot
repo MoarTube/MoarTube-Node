@@ -674,12 +674,37 @@
 								});
 								
 								function broadcastChatMessageContent() {
-									const chatMessageContent = $('#send-chat-message-input').val();
-									
-									$('#send-chat-message-input').val('');
-									
-									ws.send(JSON.stringify({eventName: 'chat', type: 'message', videoId: VIDEO_ID, chatMessageContent: chatMessageContent}));
+									if (ws.readyState === WebSocket.OPEN) {
+										const chatMessageContent = $('#send-chat-message-input').val();
+										
+										$('#send-chat-message-input').val('');
+										
+										ws.send(JSON.stringify({eventName: 'chat', type: 'message', videoId: VIDEO_ID, chatMessageContent: chatMessageContent}));
+									}
 								}
+
+								$.ajax({type: 'GET', url: '/streams/' + VIDEO_ID + '/chat/history'})
+								.done(function (data) {
+									if(data.isError) {
+										console.log(data.message);
+									}
+									else {
+										const chatHistory = data.chatHistory;
+
+										$("#chat-messages").empty();
+										
+										for(const chatMessage of chatHistory) {
+											const chatMessageContent = chatMessage.chat_message;
+											const username = chatMessage.username;
+											const usernameColorCode = chatMessage.username_color_hex_code;
+											
+											appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode);
+										}
+									}
+								})
+								.fail(function() {
+									console.log('unable to communicate with node');
+								});
 							}
 							else if(data.eventName === 'message') {
 								const chatMessageContent = data.chatMessageContent;

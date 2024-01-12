@@ -289,8 +289,6 @@ function personalize_POST(req, res) {
                 nodeSettings.nodeAbout = nodeAbout;
                 nodeSettings.nodeId = nodeId;
 
-                setNodeSettings(nodeSettings);
-
                 performNodeIdentification()
                 .then(() => {
                     const nodeIdentification = getNodeIdentification();
@@ -301,7 +299,10 @@ function personalize_POST(req, res) {
                     .then(indexerResponseData => {
                         if(indexerResponseData.isError) {
                             logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
-
+                            
+                            res.send({isError: true, message: indexerResponseData.message});
+                        }
+                        else {
                             try {
                                 cloudflare_purgeNodePage([]);
                             }
@@ -309,14 +310,15 @@ function personalize_POST(req, res) {
                                 logDebugMessageToConsole(null, error, new Error().stack, true);
                             }
                             
-                            res.send({isError: true, message: indexerResponseData.message});
-                        }
-                        else {
+                            setNodeSettings(nodeSettings);
+
                             res.send({ isError: false });
                         }
                     })
                     .catch(error => {
                         logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                        setNodeSettings(nodeSettings);
 
                         res.send({isError: true, message: 'your settings were saved but could not be copied to the MoarTube platform'});
                     });
