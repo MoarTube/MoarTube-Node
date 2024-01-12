@@ -2785,7 +2785,7 @@ body {
 						Swal.fire({
 							icon: 'error',
 							title: 'hmmm',
-							text: error
+							html: error
 						});
 					}
 				}
@@ -2860,7 +2860,7 @@ body {
 						Swal.fire({
 							icon: 'error',
 							title: 'hmmm',
-							text: error
+							html: error
 						});
 					}
 				}
@@ -2953,7 +2953,7 @@ body {
 									Swal.fire({
 										icon: 'error',
 										title: 'hmmm',
-										text: '...something went wrong...'
+										html: '...something went wrong...'
 									});
 								});
 							}
@@ -3048,7 +3048,7 @@ body {
 									Swal.fire({
 										icon: 'error',
 										title: 'hmmm',
-										text: '...something went wrong...'
+										html: '...something went wrong...'
 									});
 								});
 							}
