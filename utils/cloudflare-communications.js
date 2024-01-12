@@ -665,6 +665,20 @@ async function cloudflare_resetIntegration() {
     });
 }
 
+function cloudflare_cacheVideoSegment(segmentFileUrl) {
+    return new Promise(function(resolve, reject) {
+        axios.get(segmentFileUrl)
+        .then(response => {
+            const data = response.data;
+            
+            resolve(data);
+        })
+        .catch(error => {
+            resolve({isError: true, message: 'error'});
+        });
+    });
+}
+
 function getNodebaseUrl() {
     const nodeSettings = getNodeSettings();
 
@@ -705,5 +719,6 @@ module.exports = {
     cloudflare_purgeVideoPreviewImages,
     cloudflare_purgeVideoPosterImages,
     cloudflare_setConfiguration,
-    cloudflare_resetIntegration
+    cloudflare_resetIntegration,
+    cloudflare_cacheVideoSegment
 };

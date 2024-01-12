@@ -21,10 +21,9 @@ const {
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
 const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
 const { aliaser_doAliasVideo, aliaser_getVideoAlias } = require('../utils/aliaser-communications');
-const { node_getVideoSegment } = require('../utils/node-communications');
 const { 
     cloudflare_purgeWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos, cloudflare_purgeVideoPreviewImages, cloudflare_purgeVideoPosterImages, 
-    cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, cloudflare_purgeNodePage, cloudflare_purgeVideoThumbnailImages
+    cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, cloudflare_purgeNodePage, cloudflare_purgeVideoThumbnailImages, cloudflare_cacheVideoSegment
 } = require('../utils/cloudflare-communications');
 
 function import_POST(req, res) {
@@ -607,7 +606,7 @@ function videoIdStream_POST(req, res) {
                         
                                 const segmentFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
 
-                                node_getVideoSegment(segmentFileUrl)
+                                cloudflare_cacheVideoSegment(segmentFileUrl)
                                 .then(() => {
                                     console.log('Cloudflare cached segment: ' + segmentFileUrl);
                                 })

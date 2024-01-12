@@ -1,8 +1,12 @@
 const axios = require('axios').default;
 
+const { getNodeSettings } = require('./helpers');
+
 function node_getInformation() {
     return new Promise(function(resolve, reject) {
-        axios.get('/status/information')
+        const localhostBaseUrl = getLocalhostBaseUrl();
+
+        axios.get(localhostBaseUrl + '/status/information')
         .then(response => {
             const data = response.data;
             
@@ -16,7 +20,9 @@ function node_getInformation() {
 
 function node_getVideosTags() {
     return new Promise(function(resolve, reject) {
-        axios.get('/videos/tags')
+        const localhostBaseUrl = getLocalhostBaseUrl();
+
+        axios.get(localhostBaseUrl + '/videos/tags')
         .then(response => {
             const data = response.data;
             
@@ -30,7 +36,9 @@ function node_getVideosTags() {
 
 function node_getChannelSearch(searchTerm, sortTerm, tagTerm) {
     return new Promise(function(resolve, reject) {
-        axios.get('/node/search', {
+        const localhostBaseUrl = getLocalhostBaseUrl();
+
+        axios.get(localhostBaseUrl + '/node/search', {
             params: {
                 searchTerm: searchTerm,
                 sortTerm: sortTerm,
@@ -50,7 +58,9 @@ function node_getChannelSearch(searchTerm, sortTerm, tagTerm) {
 
 function node_getVideo(videoId) {
     return new Promise(function(resolve, reject) {
-        axios.get('/videos/' + videoId + '/watch')
+        const localhostBaseUrl = getLocalhostBaseUrl();
+
+        axios.get(localhostBaseUrl + '/videos/' + videoId + '/watch')
         .then(response => {
             const data = response.data;
             
@@ -64,7 +74,9 @@ function node_getVideo(videoId) {
 
 function node_getComments(videoId, timestamp, type) {
     return new Promise(function(resolve, reject) {
-        axios.get('/videos/' + videoId + '/comments', {
+        const localhostBaseUrl = getLocalhostBaseUrl();
+
+        axios.get(localhostBaseUrl + '/videos/' + videoId + '/comments', {
             params: {
                 timestamp: timestamp, 
                 type: type
@@ -83,7 +95,9 @@ function node_getComments(videoId, timestamp, type) {
 
 function node_getRecommendedVideos() {
     return new Promise(function(resolve, reject) {
-        axios.get('/videos/recommended')
+        const localhostBaseUrl = getLocalhostBaseUrl();
+
+        axios.get(localhostBaseUrl + '/videos/recommended')
         .then(response => {
             const data = response.data;
             
@@ -95,18 +109,17 @@ function node_getRecommendedVideos() {
     });
 }
 
-function node_getVideoSegment(segmentFileUrl) {
-    return new Promise(function(resolve, reject) {
-        axios.get(segmentFileUrl)
-        .then(response => {
-            const data = response.data;
-            
-            resolve(data);
-        })
-        .catch(error => {
-            resolve({isError: true, message: 'error'});
-        });
-    });
+function getLocalhostBaseUrl() {
+    const nodeSettings = getNodeSettings();
+
+    const nodeListeningPort = nodeSettings.nodeListeningPort;
+    const isSecure = nodeSettings.isSecure;
+
+    const protocol = isSecure ? 'https' : 'http';
+
+    const localhostBaseUrl = protocol + '://localhost:' + nodeListeningPort;
+
+    return localhostBaseUrl;
 }
 
 module.exports = {
@@ -115,6 +128,5 @@ module.exports = {
     node_getChannelSearch,
     node_getVideo,
     node_getComments,
-    node_getRecommendedVideos,
-    node_getVideoSegment
+    node_getRecommendedVideos
 };

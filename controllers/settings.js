@@ -226,7 +226,7 @@ function banner_POST(req, res) {
                             extension = '.png';
                         }
                         
-                        const fileName = Date.now() + extension;
+                        const fileName = uuidv4() + extension;
                         
                         cb(null, fileName);
                     }
