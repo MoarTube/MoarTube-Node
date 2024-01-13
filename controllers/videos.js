@@ -885,6 +885,29 @@ function videoIdUnpublish_POST(req, res) {
             
             if(isVideoIdValid(videoId) && isFormatValid(format) && isResolutionValid(resolution)) {
                 logDebugMessageToConsole('unpublishing video with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '>', null, null, true);
+
+                try {
+                    performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+                    .then(async videos => {
+                        const videoIds = videos.map(video => video.video_id);
+
+                        /*
+                        awaits are needed because Cloudflare purge logic needs directory names,
+                        yet they are subsequently deleted; the purge will intermitently
+                        fail due to race condition.
+                        */
+
+                        await cloudflare_purgeEmbedVideoPages(videoIds);
+                        await cloudflare_purgeWatchPages(videoIds);
+                        await cloudflare_purgeVideo(videoId, format, resolution);
+                    })
+                    .catch(error => {
+                        // do nothing
+                    });
+                }
+                catch(error) {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                }
                 
                 var videoDirectoryPath = '';
                 var manifestFilePath = '';
@@ -918,23 +941,6 @@ function videoIdUnpublish_POST(req, res) {
                     catch(error) {
                         logDebugMessageToConsole(null, error, new Error().stack, true);
                     }
-                }
-
-                try {
-                    performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
-                    .then(async videos => {
-                        const videoIds = videos.map(video => video.video_id);
-
-                        cloudflare_purgeEmbedVideoPages(videoIds);
-                        cloudflare_purgeWatchPages(videoIds);
-                        cloudflare_purgeVideo(videoId, format, resolution);
-                    })
-                    .catch(error => {
-                        // do nothing
-                    });
-                }
-                catch(error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
                 }
                 
                 res.send({isError: false});
