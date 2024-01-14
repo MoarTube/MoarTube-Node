@@ -27,6 +27,7 @@ const { provisionSqliteDatabase, openDatabase, finishPendingDatabaseWriteJob, su
 const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = require('./utils/httpserver');
 const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
 const { getLiveStreamWatchingCountTracker, updateLiveStreamWatchingCountForWorker } = require('./utils/trackers/live-stream-watching-count-tracker');
+const { updateLiveStreamManifestTracker } = require('./utils/trackers/live-stream-manifest-tracker');
 
 loadConfig();
 
@@ -132,6 +133,22 @@ if(cluster.isMaster) {
 				else if (msg.cmd && msg.cmd === 'restart_server') {
 					Object.values(cluster.workers).forEach((worker) => {
 						worker.send({ cmd: 'restart_server_response' });
+					});
+				}
+				else if (msg.cmd && msg.cmd === 'live_stream_manifest_update') {
+					const dynamicManifestFilePath = msg.dynamicManifestFilePath;
+					const dynamicManifest = msg.dynamicManifest;
+					const dynamicMasterManifestFilePath = msg.dynamicMasterManifestFilePath;
+					const dynamicMasterManifest = msg.dynamicMasterManifest;
+
+					Object.values(cluster.workers).forEach((worker) => {
+						worker.send({ 
+							cmd: 'live_stream_manifest_update_response', 
+							dynamicManifestFilePath: dynamicManifestFilePath, 
+							dynamicManifest: dynamicManifest,
+							dynamicMasterManifestFilePath: dynamicMasterManifestFilePath,
+							dynamicMasterManifest: dynamicMasterManifest 
+						});
 					});
 				}
 			});
@@ -361,6 +378,14 @@ else {
 			}
 			else if(msg.cmd === 'restart_server_response') {
 				restartHttpServer();
+			}
+			else if(msg.cmd === 'live_stream_manifest_update_response') {
+				const dynamicManifestFilePath = msg.dynamicManifestFilePath;
+				const dynamicManifest = msg.dynamicManifest;
+				const dynamicMasterManifestFilePath = msg.dynamicMasterManifestFilePath;
+				const dynamicMasterManifest = msg.dynamicMasterManifest;
+
+				updateLiveStreamManifestTracker(dynamicManifestFilePath, dynamicManifest, dynamicMasterManifestFilePath, dynamicMasterManifest);
 			}
 		});
 		

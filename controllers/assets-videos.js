@@ -7,6 +7,7 @@ const { submitDatabaseWriteJob } = require('../utils/database');
 const { 
     isManifestNameValid, isSegmentNameValid, isVideoIdValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid, isManifestTypeValid
 } = require('../utils/validators');
+const { getLiveStreamManifest } = require('../utils/trackers/live-stream-manifest-tracker');
 
 function videoIdThumbnail_GET(req, res) {
     const videoId = req.params.videoId;
@@ -74,8 +75,6 @@ function videoIdPoster_GET(req, res) {
     }
 }
 
-var manifestBandwidthCounter = 0;
-var manifestBandwidthIncrementTimer;
 function videoIdAdaptiveTypeFormatManifestsManifestName_GET(req, res) {
     const videoId = req.params.videoId;
     const type = req.params.type;
@@ -84,41 +83,37 @@ function videoIdAdaptiveTypeFormatManifestsManifestName_GET(req, res) {
     
     if(isVideoIdValid(videoId) && isManifestTypeValid(type) && isAdaptiveFormatValid(format) && isManifestNameValid(manifestName)) {
         const manifestPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + manifestName);
-        
-        if(fs.existsSync(manifestPath)) {
-            fs.stat(manifestPath, function(error, stats) {
-                if (error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                } else {
-                    manifestBandwidthCounter += stats.size;
-        
-                    clearTimeout(manifestBandwidthIncrementTimer);
 
-                    manifestBandwidthIncrementTimer = setTimeout(function() {
-                        const manifestBandwidthCounterTemp = manifestBandwidthCounter;
-                        
-                        manifestBandwidthCounter = 0;
-                        
-                        submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [manifestBandwidthCounterTemp, videoId], function(isError) {
-                            if(isError) {
-                                // do nothing
-                            }
-                            else {
-                                // do nothing
-                            }
-                        });
-                    }, 100);
-                }
-            });
-            
-            res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-            
-            const fileStream = fs.createReadStream(manifestPath);
-            
-            fileStream.pipe(res);
+        if(type === 'dynamic') {
+            const manifest = getLiveStreamManifest(manifestPath);
+
+            if(manifest != null) {
+                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+                
+                res.send(manifest);
+            }
+            else if(fs.existsSync(manifestPath)) {
+                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+                
+                const fileStream = fs.createReadStream(manifestPath);
+                
+                fileStream.pipe(res);
+            }
+            else {
+                res.status(404).send('video not found');
+            }
         }
         else {
-            res.status(404).send('video not found');
+            if(fs.existsSync(manifestPath)) {
+                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+                
+                const fileStream = fs.createReadStream(manifestPath);
+                
+                fileStream.pipe(res);
+            }
+            else {
+                res.status(404).send('video not found');
+            }
         }
     }
     else {
