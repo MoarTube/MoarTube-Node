@@ -143,27 +143,6 @@ function indexer_doNodeIdentificationRefresh(moarTubeTokenProof) {
 	});
 }
 
-function indexer_getCaptcha(moarTubeTokenProof) {
-    return new Promise(function(resolve, reject) {
-        axios.get(getMoarTubeIndexerUrl() + '/captcha', {
-          params: {
-            moarTubeTokenProof: moarTubeTokenProof
-          },
-          responseType: 'stream'
-        })
-        .then(response => {
-            const data = response.data;
-            
-            resolve(data);
-        })
-        .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
-
-			resolve({isError: true, message: 'an error occurred while retrieving a captcha from the MoarTube Indexer'});
-        });
-    });
-}
-
 module.exports = {
     indexer_addVideoToIndex,
     indexer_removeVideoFromIndex,
@@ -171,6 +150,5 @@ module.exports = {
     indexer_doNodeExternalNetworkUpdate,
     indexer_getNodeIdentification,
     indexer_doNodeIdentificationRefresh,
-    indexer_doIndexUpdate,
-    indexer_getCaptcha
+    indexer_doIndexUpdate
 }

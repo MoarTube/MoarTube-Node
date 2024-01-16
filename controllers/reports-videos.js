@@ -1,5 +1,5 @@
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { getAuthenticationStatus, generateCaptcha } = require('../utils/helpers');
+const { getAuthenticationStatus } = require('../utils/helpers');
 const { isReportIdValid } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 
@@ -126,19 +126,8 @@ function reportsVideosReportIdDelete_DELETE(req, res) {
     });
 }
 
-async function reportsVideosCaptcha_GET(req,res) {
-    const captcha = await generateCaptcha();
-    
-    req.session.videoReportCaptcha = captcha.text;
-    
-    res.setHeader('Content-Type', 'image/png');
-    
-    res.send(captcha.data);
-}
-
 module.exports = {
     reportsVideos_GET,
     reportsVideosArchive_POST,
-    reportsVideosReportIdDelete_DELETE,
-    reportsVideosCaptcha_GET
+    reportsVideosReportIdDelete_DELETE
 }

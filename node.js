@@ -33,7 +33,6 @@ loadConfig();
 
 const baseRoutes = require('./routes/base');
 const accountRoutes = require('./routes/account');
-const captchaRoutes = require('./routes/captcha');
 const commentsRoutes = require('./routes/comments');
 const watchRoutes = require('./routes/watch');
 const watchEmbedRoutes = require('./routes/watch-embed');
@@ -277,7 +276,6 @@ else {
 
 		app.use('/', baseRoutes);
 		app.use('/account', accountRoutes);
-		app.use('/captcha', captchaRoutes);
 		app.use('/comments', commentsRoutes);
 		app.use('/watch', watchRoutes);
 		app.use('/watch/embed', watchEmbedRoutes);
@@ -421,7 +419,7 @@ function loadConfig() {
 	fs.mkdirSync(getDatabaseDirectoryPath(), { recursive: true });
 	fs.mkdirSync(getCertificatesDirectoryPath(), { recursive: true });
 	
-	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config_test.json'), 'utf8'));
 
 	setIsDeveloperMode(config.isDeveloperMode);
 

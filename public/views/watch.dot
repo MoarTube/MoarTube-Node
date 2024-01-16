@@ -136,10 +136,6 @@
 				background-color: #cb0c9f;
 			}
 			
-			.captcha-container {
-				height: 50px;
-			}
-			
 			div.reply {
 				background-color: #f9f9f9;
 				border: 1px solid #b7c5d9;
@@ -688,10 +684,6 @@
 					color: grey;
 				}
 				
-				.captcha-container img {
-					background-color: white;
-				}
-				
 				#video-comments-outer {
 					color: #efefef;
 				}
@@ -796,10 +788,6 @@ body {
 
 #comments-container .replyContainer .reply .postNum a {
 	color: grey;
-}
-
-.captcha-container img {
-	background-color: white;
 }
 
 #video-comments-outer {
@@ -989,16 +977,10 @@ body {
 									</span>
 									<span id="comment-section-update-descriptor"></span>
 								</div>
-								<form id="comment-input-form-static" class="comment-input-form" role="form" method="POST" data-captchatype="static">
+								<form id="comment-input-form-static" class="comment-input-form" role="form" method="POST" data-commentformtype="static">
 									<textarea class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area" rows=1 placeholder="Add a comment..." maxlength=500 name="commentPlainText"></textarea>
 									<div class="text-end mt-1">
-										<div id="comment-input-form-static-captcha-container">
-											<button class="btn btn-outline-primary comment-input-form-get-captcha-button" type="button" onclick="showCommentInputFormCaptcha(this)" data-captchatype="static">get captcha</button>
-										</div>
-										<div id="comment-input-form-static-submit-container" class="hidden-elem">
-											<div id="comment-input-form-static-captcha" class="captcha-container mb-1"></div>
-											<button class="btn btn-outline-primary" type="button" data-captchatype="static" onclick="$('#comment-input-form-static-submit-container').addClass('hidden-elem');$('#comment-input-form-static-captcha-container').removeClass('hidden-elem');$('#comment-input-form-static-error-message').empty()">cancel</button>
-											<input type="text" maxlength="6" size="4" placeholder="captcha" name="captchaResponse" />
+										<div id="comment-input-form-static-submit-container">
 											<button class="btn btn-outline-primary" type="submit">submit</button>
 											<div id="comment-input-form-static-error-message"></div>
 										</div>
@@ -1071,6 +1053,7 @@ body {
 			var HASH_VALUE = '';
 			
 			var NODE_ID;
+			var NODE_NAME;
 			var NODE_PROTOCOL;
 			var NODE_ADDRESS;
 			var NODE_PORT;
@@ -1091,17 +1074,11 @@ body {
 			var TIMESTAMP_UPDATE_TRACKER = [];
 
             const COMMENT_INPUT_FORM_DYNAMIC = $('\
-			<form id="comment-input-form-dynamic" class="comment-input-form" role="form" method="POST" data-captchatype="dynamic" style="background: #cb0c9f12;padding: 5px 5px 5px 5px;">\
+			<form id="comment-input-form-dynamic" class="comment-input-form" role="form" method="POST" data-commentformtype="dynamic" style="background: #cb0c9f12;padding: 5px 5px 5px 5px;">\
 				<textarea class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area" rows="1" placeholder="Add a comment..." maxlength="500" name="commentPlainText" style="height:28px;overflow-y:hidden;resize:none;"></textarea>\
 				<div class="text-end mt-1">\
-					<div id="comment-input-form-dynamic-captcha-container">\
-						<button class="btn btn-outline-primary" type="button" data-captchatype="dynamic" onclick="$(\'#comment-input-form-dynamic\').remove();">cancel</button>\
-						<button class="btn btn-outline-primary comment-input-form-get-captcha-button" type="button" onclick="showCommentInputFormCaptcha(this)" data-captchatype="dynamic">get captcha</button>\
-					</div>\
-					<div id="comment-input-form-dynamic-submit-container" class="hidden-elem">\
-						<div id="comment-input-form-dynamic-captcha" class="captcha-container mb-1"></div>\
-						<button id="comment-input-form-dynamic-cancel-button-inner" class="btn btn-outline-primary" type="button" data-captchatype="dynamic" onclick="$(\'#comment-input-form-dynamic\').remove();$(this).parent().parent().find(\'#comment-input-form-dynamic-submit-container\').addClass(\'hidden-elem\');$(this).parent().parent().find(\'#comment-input-form-dynamic-captcha-container\').removeClass(\'hidden-elem\');$(this).parent().parent().find(\'#comment-input-form-dynamic-error-message\').empty();">cancel</button>\
-						<input type="text" maxlength="6" size="4" placeholder="captcha" name="captchaResponse">\
+					<div id="comment-input-form-dynamic-submit-container">\
+						<button id="comment-input-form-dynamic-cancel-button-inner" class="btn btn-outline-primary" type="button" data-commentformtype="dynamic" onclick="$(\'#comment-input-form-dynamic\').remove();$(this).parent().parent().parent().find(\'textarea\').val(\'\');">cancel</button>\
 						<button class="btn btn-outline-primary" type="submit">submit</button>\
 						<div id="comment-input-form-dynamic-error-message"></div>\
 					</div>\
@@ -1137,11 +1114,14 @@ body {
 
             function loadInformation(information) {
                 const nodeId = information.nodeId;
+				const nodeName = information.nodeName;
                 const publicNodeProtocol = information.publicNodeProtocol;
                 const publicNodeAddress = information.publicNodeAddress;
                 const publicNodePort = information.publicNodePort;
                 
                 NODE_ID = nodeId;
+
+				NODE_NAME = nodeName;
                 
                 NODE_PROTOCOL = publicNodeProtocol;
                 NODE_ADDRESS = publicNodeAddress;
@@ -1373,8 +1353,6 @@ body {
 			}
 			
 			function loadVideo(video) {
-				const nodeName = video.nodeName;
-				
 				const title = video.title;
 				const description = video.description;
 				const likes = video.likes;
@@ -1399,7 +1377,7 @@ body {
 				
 				document.title = title + ' - MoarTube';
 				
-				$('#node-name').text(nodeName);
+				$('#node-name').text(NODE_NAME);
 				
 				$('#video-like-count').text(likes);
 				$('#video-dislike-count').text(dislikes);
@@ -1466,6 +1444,7 @@ body {
 						message = 'this video is unavailable';
 					}
 					
+					$('#mtp-video-overlay').remove();
 					$('#video-player-container').append('<div class="d-flex align-items-center justify-content-center">' + message + '</div>');
 				}
 
@@ -2059,82 +2038,71 @@ body {
 				event.preventDefault();
 				
 				const form = $(this);
-				const captchaType = form.data('captchatype');
+
+				const commentFormType = form.data('commentformtype');
 				
 				const commentPlainText = form.find('textarea[name="commentPlainText"]').val();
-				const captchaResponse = form.find('input[name="captchaResponse"]').val();
 				
-				if(commentPlainText !== '' && captchaResponse !== '') {
-					form.find(':submit').prop('disabled', true);
-					form.find('textarea[name="commentPlainText"]').prop('disabled', true);
-					form.find('input[name="captchaResponse"]').prop('disabled', true);
-					
-					$.post('/videos/' + VIDEO_ID + '/comments/comment', {commentPlainText: commentPlainText, captchaResponse: captchaResponse, captchaType: captchaType, timestamp: MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP})
-					.always(function() {
-						form.find(':submit').prop('disabled', false);
-						form.find('textarea[name="commentPlainText"]').prop('disabled', false);
-						form.find('input[name="captchaResponse"]').prop('disabled', false);
-					})
-					.done(function(data) {
-						if(data.isError) {
-							form.find('input[name="captchaResponse"]').val('');
-							
-							if(captchaType === 'static') {
-								$('#comment-input-form-static-error-message').text(data.message);
-							}
-							else if(captchaType === 'dynamic') {
-								$('#comment-input-form-dynamic-error-message').text(data.message);
-							}
-							
-							if(data.message == 'the captcha was not correct') {
-								getCaptcha('/captcha/comments?captchaType=' + captchaType)
-								.then((objectURL) => {
-									if(captchaType === 'static') {
-										$('#comment-input-form-static-captcha').html('<img src="' + objectURL + '">');
-									}
-									else if(captchaType === 'dynamic') {
-										$('#comment-input-form-dynamic-captcha').html('<img src="' + objectURL + '">');
-									}
-								})
-								.catch(error => {
-									if(captchaType === 'static') {
-										$('#comment-input-form-static-error-message').html(error);
-									}
-									else if(captchaType === 'dynamic') {
-										$('#comment-input-form-dynamic-error-message').html(error);
-									}
-								});
+				if(commentPlainText !== '') {
+					disableFormInputs(form, '...please wait...');
+
+					getCloudflareTurnstileToken()
+					.then(function(cloudflareTurnstileToken) {
+						$.post('/videos/' + VIDEO_ID + '/comments/comment', {commentPlainText: commentPlainText, timestamp: MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP, cloudflareTurnstileToken: cloudflareTurnstileToken})
+						.done(function(data) {
+							if(data.isError) {
+								showAlert(true, data.message);
+
+								enableFormInputs(form, 'submit');
 							}
 							else {
-								console.log(data.message);
-							}
-						}
-						else {
-							if(captchaType === 'static') {
-								form.find('#comment-input-form-static-submit-container').addClass('hidden-elem');
-								form.find('#comment-input-form-static-captcha-container').removeClass('hidden-elem');
-							}
-							else if(captchaType === 'dynamic') {
-								form.remove();
+								if(commentFormType === 'dynamic') {
+									form.remove();
+								}
+								else if(commentFormType === 'static') {
+									form.find('textarea[name="commentPlainText"]').val('');
+								}
 								
-								form.find('#comment-input-form-dynamic-submit-container').addClass('hidden-elem');
-								form.find('#comment-input-form-dynamic-captcha-container').removeClass('hidden-elem');
+								const commentId = data.commentId;
+								const comments = data.comments;
+								
+								addToCommentHistory(commentId);
+								
+								loadComments(comments, 'before', true);
+
+								enableFormInputs(form, 'submit');
 							}
-							
-							form.find('textarea[name="commentPlainText"]').val('');
-							form.find('input[name="captchaResponse"]').val('');
-							
-							const commentId = data.commentId;
-							const comments = data.comments;
-							
-							addToCommentHistory(commentId);
-							
-							loadComments(comments, 'before', true);
-						}
+						})
+						.fail(function() {
+							showAlert(true, 'unable to submit comment, please try again later');
+
+							enableFormInputs(form, 'submit');
+						});
 					})
-					.fail(function() {
-						
+					.catch(function(error) {
+						console.log(error);
+
+						showAlert(true, error);
+
+						enableFormInputs(form, 'submit');
+					})
+					.finally(function() {
+						enableFormInputs(form, 'submit');
 					});
+				}
+
+				function disableFormInputs(form, buttonText) {
+					form.find(':submit').prop('disabled', true);
+					form.find('textarea[name="commentPlainText"]').prop('disabled', true);
+
+					form.find(':submit').html(buttonText);
+				}
+
+				function enableFormInputs(form, buttonText) {
+					form.find(':submit').prop('disabled', false);
+					form.find('textarea[name="commentPlainText"]').prop('disabled', false);
+
+					form.find(':submit').html(buttonText);
 				}
 			});
 			
@@ -2548,165 +2516,89 @@ body {
 						const nodeVideoUrl = NODE_BASE_URL + '/watch?v=' + videoId
 						
 						$.ajax({type: 'GET', url: '/videos/' + videoId + '/information'})
-						.done(function (data, textStatus, xhr) {
-							const information = data.information;
-							
-							const title = information.title;
-							
-							$.ajax({type: 'GET', url: '/videos/' + videoId + '/alias'})
-							.done(function (data, textStatus, xhr) {
-								var videoAliasUrl = 'MoarTube Aliaser link unavailable';
+						.done(async function(data, textStatus, xhr) {
+							if(data.isError) {
+								showAlert(true, data.message);
+							}
+							else {
+								const information = data.information;
+								
+								const title = information.title;
+								const videoAliasUrl = information.videoAliasUrl;
 
-								if(data.isError) {
-									showShareLinks(videoId, nodeVideoUrl, videoAliasUrl);
+								const embedUrl = NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0';
+								
+								const embedHtml_1 = '<iframe class="w-100" src="' + NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0" style="aspect-ratio: 16/9;"></iframe>';
+								const embedHtml_2 = '<iframe src="' + NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0"></iframe>';
+								
+								const embedSVG = '<svg viewBox="0 0 36 36" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><circle cx="18" cy="18" r="17.5" stroke="#E7E7E7" fill="#F4F4F4" stroke-width=".5"></circle><path d="m21.41,23.29l-0.71,-0.71l4.59,-4.58l-4.59,-4.59l0.71,-0.71l5.3,5.3l-5.3,5.29zm-6.12,-0.7l-4.58,-4.59l4.59,-4.59l-0.71,-0.7l-5.3,5.29l5.29,5.29l0.71,-0.7z" fill="#606060"></path></svg>';
+								const twitterSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.486325 59.969298c-6.636404-.569063-11.56302-2.326956-16.321973-5.823932C4.443764 48.472116 0 39.646792 0 29.986934 0 15.11156 10.506778 2.798388 25.274412.36718c6.028107-.992411 12.703853.049265 18.28794 2.85363 13.576275 6.818095 19.7813 22.541053 14.64267 37.103159-3.527955 9.997705-12.789708 17.617785-23.391072 19.244938-2.085625.320112-5.065149.508645-6.327625.400391z" fill="#1DA1F2" fill-rule="nonzero"></path><path d="M45.089067 17.577067c-.929778.595555-3.064534 1.460977-4.117334 1.460977v.001778C39.7696 17.784 38.077156 17 36.200178 17c-3.645511 0-6.6016 2.956089-6.6016 6.600178 0 .50631.058666 1.000178.16711 1.473778h-.001066c-4.945066-.129778-10.353422-2.608356-13.609244-6.85049-2.001778 3.46489-.269511 7.3184 2.002133 8.72249-.7776.058666-2.209067-.0896-2.882844-.747023-.045156 2.299734 1.060622 5.346845 5.092622 6.452267-.776533.417778-2.151111.297956-2.7488.209067.209778 1.941333 2.928355 4.479289 5.901155 4.479289C22.46009 38.565156 18.4736 40.788089 14 40.080889 17.038222 41.929422 20.5792 43 24.327111 43c10.650667 0 18.921956-8.631822 18.4768-19.280356-.001778-.011733-.001778-.023466-.002844-.036266.001066-.027378.002844-.054756.002844-.0832 0-.033067-.002844-.064356-.003911-.096356.9696-.66311 2.270578-1.836089 3.2-3.37991-.539022.296888-2.156089.891377-3.6608 1.038932.965689-.521244 2.396444-2.228266 2.749867-3.585777" fill="#FFF"></path></g></svg>';
+								const redditSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill-rule="nonzero" fill="none"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#FF4500"></path><path d="M34.1335847 43.9991814c1.6336774-.3831682 2.81654-.7939438 3.9781753-1.3815065 3.6153903-1.8286959 5.8788354-4.8645264 5.8788354-7.8849481 0-.9131088.0196207-.9556355.780668-1.6923265.6040409-.5847092.8404012-.962515 1.044679-1.6698428.2433185-.8425206.2441028-.9826228.0100139-1.7878614-.6566532-2.2588075-3.0054252-3.2764371-5.1075029-2.212882l-.8124519.4110627-.837264-.5151716c-1.6101652-.9907471-4.473974-1.96108051-6.3205111-2.14155924-.5059537-.04945042-1.143803-.1235464-1.4174535-.16465815l-.4975382-.07474783.2136595-1.06953332c.1175125-.5882423.3623778-1.7491883.5441475-2.57987956.181767-.83069153.4095191-1.95749071.5061138-2.50399817.1396137-.78991765.2348596-.99365031.4645331-.99365031.1589005 0 1.2955101.21462853 2.5257988.4769522 1.2302915.26232367 2.2622022.47695193 2.293134.47695193.0309345 0 .1003234.23497925.154203.52217616.1363137.72661143.4902897 1.17780487 1.2134714 1.54674469 1.7356128.8854428 3.6891485-.29431302 3.6891485-2.22790474 0-2.3956262-2.9538443-3.44186625-4.4550019-1.57794377-.2901205.36022881-.4356746.42625561-.7154284.32453216-.1931649-.07023833-1.5202546-.3669593-2.9490951-.65938053-1.8923676-.38728585-2.6686067-.48706487-2.8582979-.36740978-.2896185.1826864-.2522224.047706-1.0501419 3.79055007-.9490696 4.45187338-1.0064011 4.70400786-1.0882029 4.78580828-.0432388.04324046-.729551.14596475-1.5251367.22827402-2.413687.24971784-5.06621906 1.10194849-6.8544721 2.20227189l-.8268564.5087695-.81204644-.4046587c-2.11972653-1.0563058-4.47243958-.0382468-5.1287215 2.2192841-.23408885.8052386-.23330375.9453408.0100166 1.7878614.20427624.7073278.44063816 1.0851336 1.04467744 1.6698428.76105187.736691.78066878.7792177.78066878 1.6923265 0 4.172347 4.28816886 8.1540991 10.01599352 9.3002929 1.8975637.3797217 2.0263168.3894072 4.4515526.3349143 1.5849893-.0356103 2.7274992-.1508298 3.6566327-.3687526zm-6.6864685-3.0300366c-1.3154638-.2961613-2.8032079-.9569232-3.2391341-1.4386156-.34760429-.384099-.198986-.9659493.246724-.9659493.1736296 0 .5801788.1805458.9034441.4012095 2.1828306 1.4900284 7.1085991 1.484628 9.2987021-.0101767.7054363-.4814861 1.2827246-.468194 1.3538857.0311679.0334854.234998-.1164569.4687666-.4771278.7438635-1.7511846 1.3356924-5.2646974 1.8738181-8.086494 1.2385197v-.000019zm-4.01196195-5.9075609c-.81902983-.4443886-1.22403999-1.1532958-1.22477787-2.143771-.000787-1.135302.52653614-1.8699603 1.59778946-2.2257735.76240766-.253232.85344696-.2532238 1.51689516.0001492 1.785415.6818561 2.1507834 2.909296.6724678 4.0996229-.7705198.6204159-1.7299516.7214286-2.56237455.2697724zm11.09588945.0732995c-.7590038-.3947507-1.1832989-.8746601-1.3628596-1.5414995-.3321829-1.2336253.2931784-2.4377233 1.5067529-2.9011953.6634485-.253373.754488-.2533812 1.5168976-.0001492 1.0712525.3558132 1.5986343 1.0904715 1.5977903 2.2257735-.0008141 1.0085002-.4138259 1.7116813-1.2587076 2.1427072-.7599699.3877084-1.3548626.4098285-1.9998736.0743633z" fill="#FDFDFD"></path></g></svg>';
+								const facebookSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#3B5998" fill-rule="nonzero"></path><path d="M25.7305108 45h5.4583577V30.0073333h4.0947673l.8098295-4.6846666h-4.9045968V21.928c0-1.0943333.7076019-2.2433333 1.7188899-2.2433333h2.7874519V15h-3.4161354v.021c-5.3451414.194-6.4433395 3.2896667-6.5385744 6.5413333h-.0099897v3.7603334H23v4.6846666h2.7305108V45z" fill="#FFF"></path></g></svg>';
+
+								var twitterLink;
+								var redditLink;
+								var facebookLink;
+
+								if(videoAliasUrl === 'MoarTube Aliaser link unavailable') {
+									twitterLink = 'https://twitter.com/intent/tweet?url=' + nodeVideoUrl + '&text=' + title + '&via=MoarTubes&related=MoarTubes';
+									redditLink = 'https://www.reddit.com/submit?url=' + nodeVideoUrl + '&title=' + title;
+									facebookLink = 'https://www.facebook.com/dialog/share?app_id=246871938290679&href=' + nodeVideoUrl + '&display=popup';
 								}
 								else {
-									videoAliasUrl = data.videoAliasUrl;
-									
-									if(videoAliasUrl === '') {
-										getCaptcha('/captcha/alias')
-										.then((objectURL) => {
-											const html = '<div id="alias-captcha-container"><div id="alias-captcha-img-container"><img src="' + objectURL + '"></div>\
-											<div class="input-group mt-2"><input id="alias-captcha-input" class="form-control" type="text" placeholder="enter the captcha"></div>\
-											<div><button id="alias-captcha-submit" class="btn btn-primary mt-2">create share links</button></div></div>';
-											
-											Swal.update({
-												title: 'Share',
-												html: html
-											});
-											
-											$('#alias-captcha-input').focus();
-											
-											$('#alias-captcha-submit').click(function(event) {
-												const captchaResponse = $('#alias-captcha-input').val();
-												
-												$('#alias-captcha-input').attr('disabled', true);
-												$('#alias-captcha-submit').attr('disabled', true);
-												
-												$.ajax({type: 'POST', url: '/videos/' + videoId + '/alias', data: { captchaResponse: captchaResponse }})
-												.always(function() {
-													$('#alias-captcha-input').attr('disabled', false);
-													$('#alias-captcha-submit').attr('disabled', false);
-												})
-												.done(function (data, textStatus, xhr) {
-													if(data.isError) {
-														if(data.message === 'the captcha was not correct') {
-															getCaptcha('/captcha/alias')
-															.then((objectURL) => {
-																$('#alias-captcha-img-container').html('<img src="' + objectURL + '">');
-																$('#alias-captcha-input').val('');
-															})
-															.catch(error => {
-																$('#report-error-message').text(error);
-															});
-														}
-													}
-													else {
-														const videoAliasUrl = data.videoAliasUrl;
-														
-														showShareLinks(videoId, nodeVideoUrl, videoAliasUrl);
-													}
-												})
-												.fail(function() {
-													showShareLinks(videoId, nodeVideoUrl, videoAliasUrl);
-												});
-											});
-										})
-										.catch(error => {
-											showShareLinks(videoId, nodeVideoUrl, videoAliasUrl);
-										});
-									}
-									else {
-										showShareLinks(videoId, nodeVideoUrl, videoAliasUrl);
-									}
+									twitterLink = 'https://twitter.com/intent/tweet?url=' + videoAliasUrl + '&text=' + title + '&via=MoarTubes&related=MoarTubes';
+									redditLink = 'https://www.reddit.com/submit?url=' + videoAliasUrl + '&title=' + title;
+									facebookLink = 'https://www.facebook.com/dialog/share?app_id=246871938290679&href=' + videoAliasUrl + '&display=popup';
 								}
-
-								function showShareLinks(videoId, nodeVideoUrl, videoAliasUrl) {
-									const embedUrl = NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0';
+								
+								const html = $('<div class="share-icon-container"><a href="' + twitterLink + '" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + twitterSVG + '</div><div class="share-icon-title">Twitter</div></button></a></div>\
+										<div class="share-icon-container"><a href="' + redditLink + '" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + redditSVG + '</div><div class="share-icon-title">Reddit</div></button></a></div>\
+										<div class="share-icon-container"><a href="' + facebookLink + '" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + facebookSVG + '</div><div class="share-icon-title">Facebook</div></button></a></div>\
+										<div>' + embedHtml_1 + '</div>\
+										<div class="input-group mt-1"><input id="node-video-url-input" class="form-control me-1" type="text" value="' + nodeVideoUrl + '" disabled><span class="input-group-btn"><button id="node-video-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>\
+										<div class="input-group mt-1"><input id="moartube-video-alias-url-input" class="form-control me-1" type="text" value="' + videoAliasUrl + '" disabled><span class="input-group-btn"><button id="moartube-video-alias-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>\
+										<div class="input-group mt-1"><input id="video-alias-embed-url-input" class="form-control me-1" type="text" value="" disabled><span class="input-group-btn"><button id="video-alias-embed-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>\
+										<div class="input-group mt-1"><input id="video-alias-embed-code-input" class="form-control me-1" type="text" value="" disabled><span class="input-group-btn"><button id="video-alias-embed-code-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>');
+								
+								$(html).find('#video-alias-embed-url-input').val(embedUrl);
+								$(html).find('#video-alias-embed-code-input').val(embedHtml_2);
+								
+								Swal.update({
+									title: 'Share',
+									html: html
+								});
+								
+								$('#video-alias-embed-url-copy-button').click(function(event) {
+									const value = $('#video-alias-embed-url-input').val();
 									
-									const embedHtml_1 = '<iframe class="w-100" src="' + NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0" style="aspect-ratio: 16/9;" allow="accelerometer; autoplay; clipboard-write; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
-									const embedHtml_2 = '<iframe src="' + NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
+									setClipboard(value);
+								});
+								
+								$('#video-alias-embed-code-copy-button').click(function(event) {
+									const value = $('#video-alias-embed-code-input').val();
 									
-									const embedSVG = '<svg viewBox="0 0 36 36" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><circle cx="18" cy="18" r="17.5" stroke="#E7E7E7" fill="#F4F4F4" stroke-width=".5"></circle><path d="m21.41,23.29l-0.71,-0.71l4.59,-4.58l-4.59,-4.59l0.71,-0.71l5.3,5.3l-5.3,5.29zm-6.12,-0.7l-4.58,-4.59l4.59,-4.59l-0.71,-0.7l-5.3,5.29l5.29,5.29l0.71,-0.7z" fill="#606060"></path></svg>';
-									const twitterSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.486325 59.969298c-6.636404-.569063-11.56302-2.326956-16.321973-5.823932C4.443764 48.472116 0 39.646792 0 29.986934 0 15.11156 10.506778 2.798388 25.274412.36718c6.028107-.992411 12.703853.049265 18.28794 2.85363 13.576275 6.818095 19.7813 22.541053 14.64267 37.103159-3.527955 9.997705-12.789708 17.617785-23.391072 19.244938-2.085625.320112-5.065149.508645-6.327625.400391z" fill="#1DA1F2" fill-rule="nonzero"></path><path d="M45.089067 17.577067c-.929778.595555-3.064534 1.460977-4.117334 1.460977v.001778C39.7696 17.784 38.077156 17 36.200178 17c-3.645511 0-6.6016 2.956089-6.6016 6.600178 0 .50631.058666 1.000178.16711 1.473778h-.001066c-4.945066-.129778-10.353422-2.608356-13.609244-6.85049-2.001778 3.46489-.269511 7.3184 2.002133 8.72249-.7776.058666-2.209067-.0896-2.882844-.747023-.045156 2.299734 1.060622 5.346845 5.092622 6.452267-.776533.417778-2.151111.297956-2.7488.209067.209778 1.941333 2.928355 4.479289 5.901155 4.479289C22.46009 38.565156 18.4736 40.788089 14 40.080889 17.038222 41.929422 20.5792 43 24.327111 43c10.650667 0 18.921956-8.631822 18.4768-19.280356-.001778-.011733-.001778-.023466-.002844-.036266.001066-.027378.002844-.054756.002844-.0832 0-.033067-.002844-.064356-.003911-.096356.9696-.66311 2.270578-1.836089 3.2-3.37991-.539022.296888-2.156089.891377-3.6608 1.038932.965689-.521244 2.396444-2.228266 2.749867-3.585777" fill="#FFF"></path></g></svg>';
-									const redditSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill-rule="nonzero" fill="none"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#FF4500"></path><path d="M34.1335847 43.9991814c1.6336774-.3831682 2.81654-.7939438 3.9781753-1.3815065 3.6153903-1.8286959 5.8788354-4.8645264 5.8788354-7.8849481 0-.9131088.0196207-.9556355.780668-1.6923265.6040409-.5847092.8404012-.962515 1.044679-1.6698428.2433185-.8425206.2441028-.9826228.0100139-1.7878614-.6566532-2.2588075-3.0054252-3.2764371-5.1075029-2.212882l-.8124519.4110627-.837264-.5151716c-1.6101652-.9907471-4.473974-1.96108051-6.3205111-2.14155924-.5059537-.04945042-1.143803-.1235464-1.4174535-.16465815l-.4975382-.07474783.2136595-1.06953332c.1175125-.5882423.3623778-1.7491883.5441475-2.57987956.181767-.83069153.4095191-1.95749071.5061138-2.50399817.1396137-.78991765.2348596-.99365031.4645331-.99365031.1589005 0 1.2955101.21462853 2.5257988.4769522 1.2302915.26232367 2.2622022.47695193 2.293134.47695193.0309345 0 .1003234.23497925.154203.52217616.1363137.72661143.4902897 1.17780487 1.2134714 1.54674469 1.7356128.8854428 3.6891485-.29431302 3.6891485-2.22790474 0-2.3956262-2.9538443-3.44186625-4.4550019-1.57794377-.2901205.36022881-.4356746.42625561-.7154284.32453216-.1931649-.07023833-1.5202546-.3669593-2.9490951-.65938053-1.8923676-.38728585-2.6686067-.48706487-2.8582979-.36740978-.2896185.1826864-.2522224.047706-1.0501419 3.79055007-.9490696 4.45187338-1.0064011 4.70400786-1.0882029 4.78580828-.0432388.04324046-.729551.14596475-1.5251367.22827402-2.413687.24971784-5.06621906 1.10194849-6.8544721 2.20227189l-.8268564.5087695-.81204644-.4046587c-2.11972653-1.0563058-4.47243958-.0382468-5.1287215 2.2192841-.23408885.8052386-.23330375.9453408.0100166 1.7878614.20427624.7073278.44063816 1.0851336 1.04467744 1.6698428.76105187.736691.78066878.7792177.78066878 1.6923265 0 4.172347 4.28816886 8.1540991 10.01599352 9.3002929 1.8975637.3797217 2.0263168.3894072 4.4515526.3349143 1.5849893-.0356103 2.7274992-.1508298 3.6566327-.3687526zm-6.6864685-3.0300366c-1.3154638-.2961613-2.8032079-.9569232-3.2391341-1.4386156-.34760429-.384099-.198986-.9659493.246724-.9659493.1736296 0 .5801788.1805458.9034441.4012095 2.1828306 1.4900284 7.1085991 1.484628 9.2987021-.0101767.7054363-.4814861 1.2827246-.468194 1.3538857.0311679.0334854.234998-.1164569.4687666-.4771278.7438635-1.7511846 1.3356924-5.2646974 1.8738181-8.086494 1.2385197v-.000019zm-4.01196195-5.9075609c-.81902983-.4443886-1.22403999-1.1532958-1.22477787-2.143771-.000787-1.135302.52653614-1.8699603 1.59778946-2.2257735.76240766-.253232.85344696-.2532238 1.51689516.0001492 1.785415.6818561 2.1507834 2.909296.6724678 4.0996229-.7705198.6204159-1.7299516.7214286-2.56237455.2697724zm11.09588945.0732995c-.7590038-.3947507-1.1832989-.8746601-1.3628596-1.5414995-.3321829-1.2336253.2931784-2.4377233 1.5067529-2.9011953.6634485-.253373.754488-.2533812 1.5168976-.0001492 1.0712525.3558132 1.5986343 1.0904715 1.5977903 2.2257735-.0008141 1.0085002-.4138259 1.7116813-1.2587076 2.1427072-.7599699.3877084-1.3548626.4098285-1.9998736.0743633z" fill="#FDFDFD"></path></g></svg>';
-									const facebookSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#3B5998" fill-rule="nonzero"></path><path d="M25.7305108 45h5.4583577V30.0073333h4.0947673l.8098295-4.6846666h-4.9045968V21.928c0-1.0943333.7076019-2.2433333 1.7188899-2.2433333h2.7874519V15h-3.4161354v.021c-5.3451414.194-6.4433395 3.2896667-6.5385744 6.5413333h-.0099897v3.7603334H23v4.6846666h2.7305108V45z" fill="#FFF"></path></g></svg>';
-
-									var twitterLink;
-									var redditLink;
-									var facebookLink;
+									setClipboard(value);
+								});
+								
+								$('#moartube-video-alias-url-copy-button').click(function(event) {
+									const value = $('#moartube-video-alias-url-input').val();
 									
-									if(videoAliasUrl === 'MoarTube Aliaser link unavailable') {
-										twitterLink = 'https://twitter.com/intent/tweet?url=' + nodeVideoUrl + '&text=' + title + '&via=MoarTubes&related=MoarTubes';
-										redditLink = 'https://www.reddit.com/submit?url=' + nodeVideoUrl + '&title=' + title;
-										facebookLink = 'https://www.facebook.com/dialog/share?app_id=246871938290679&href=' + nodeVideoUrl + '&display=popup';
-									}
-									else {
-										twitterLink = 'https://twitter.com/intent/tweet?url=' + videoAliasUrl + '&text=' + title + '&via=MoarTubes&related=MoarTubes';
-										redditLink = 'https://www.reddit.com/submit?url=' + videoAliasUrl + '&title=' + title;
-										facebookLink = 'https://www.facebook.com/dialog/share?app_id=246871938290679&href=' + videoAliasUrl + '&display=popup';
-									}
+									setClipboard(value);
+								});
+								
+								$('#node-video-url-copy-button').click(function(event) {
+									const value = $('#node-video-url-input').val();
 									
-									const html = $('<div class="share-icon-container"><a href="' + twitterLink + '" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + twitterSVG + '</div><div class="share-icon-title">Twitter</div></button></a></div>\
-											<div class="share-icon-container"><a href="' + redditLink + '" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + redditSVG + '</div><div class="share-icon-title">Reddit</div></button></a></div>\
-											<div class="share-icon-container"><a href="' + facebookLink + '" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + facebookSVG + '</div><div class="share-icon-title">Facebook</div></button></a></div>\
-											<div>' + embedHtml_1 + '</div>\
-											<div class="input-group mt-1"><input id="node-video-url-input" class="form-control me-1" type="text" value="' + nodeVideoUrl + '" disabled><span class="input-group-btn"><button id="node-video-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>\
-											<div class="input-group mt-1"><input id="moartube-video-alias-url-input" class="form-control me-1" type="text" value="' + videoAliasUrl + '" disabled><span class="input-group-btn"><button id="moartube-video-alias-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>\
-											<div class="input-group mt-1"><input id="video-alias-embed-url-input" class="form-control me-1" type="text" value="" disabled><span class="input-group-btn"><button id="video-alias-embed-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>\
-											<div class="input-group mt-1"><input id="video-alias-embed-code-input" class="form-control me-1" type="text" value="" disabled><span class="input-group-btn"><button id="video-alias-embed-code-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>');
-									
-									$(html).find('#video-alias-embed-url-input').val(embedUrl);
-									$(html).find('#video-alias-embed-code-input').val(embedHtml_2);
-									
-									Swal.update({
-										title: 'Share',
-										html: html
-									});
-									
-									$('#video-alias-embed-url-copy-button').click(function(event) {
-										const value = $('#video-alias-embed-url-input').val();
-										
-										setClipboard(value);
-									});
-									
-									$('#video-alias-embed-code-copy-button').click(function(event) {
-										const value = $('#video-alias-embed-code-input').val();
-										
-										setClipboard(value);
-									});
-									
-									$('#moartube-video-alias-url-copy-button').click(function(event) {
-										const value = $('#moartube-video-alias-url-input').val();
-										
-										setClipboard(value);
-									});
-									
-									$('#node-video-url-copy-button').click(function(event) {
-										const value = $('#node-video-url-input').val();
-										
-										setClipboard(value);
-									});
-									
-									if(videoAliasUrl === 'MoarTube Aliaser link unavailable') {
-										$(html).find('#moartube-video-alias-url-copy-button').addClass('hidden-elem');
-									}
-									
-									refreshClickTooltips();
-								}
-							})
-							.fail(function()
-							{
-								console.log('unable to communicate with node');
-							});
+									setClipboard(value);
+								});
+								
+								refreshClickTooltips();
+							}
 						})
 						.fail(function()
 						{
 							console.log('unable to communicate with node');
 						});
-					},
-					didOpen: () => {
-						Swal.showLoading();
 					}
 				});
 			}
@@ -2722,10 +2614,12 @@ body {
 			async function likeVideo() {
 				if(typeof(Storage) != null) {
 					const localStorageKey = VIDEO_ID + '-like-dislike';
+
+					disableLikeDislikeButtons();
 					
 					const videoLikeButton = $('#video-like-button');
 					const videoDislikeButton = $('#video-dislike-button');
-					
+
 					const value = localStorage.getItem(localStorageKey);
 					
 					$(videoLikeButton).blur();
@@ -2744,6 +2638,9 @@ body {
 							})
 							.catch(error => {
 								
+							})
+							.finally(() => {
+								enableLikeDislikeButtons();
 							});
 						}
 						else {
@@ -2760,6 +2657,9 @@ body {
 								})
 								.catch(error => {
 									
+								})
+								.finally(() => {
+									enableLikeDislikeButtons();
 								});
 							}
 							else if(value === 'dislike') {
@@ -2777,16 +2677,17 @@ body {
 								})
 								.catch(error => {
 									
+								})
+								.finally(() => {
+									enableLikeDislikeButtons();
 								});
 							}
 						}
 					}
 					catch(error) {
-						Swal.fire({
-							icon: 'error',
-							title: 'hmmm',
-							html: error
-						});
+						showAlert(true, error);
+
+						enableLikeDislikeButtons();
 					}
 				}
 				else {
@@ -2797,6 +2698,8 @@ body {
 			async function dislikeVideo() {
 				if(typeof(Storage) != null) {
 					const localStorageKey = VIDEO_ID + '-like-dislike';
+
+					disableLikeDislikeButtons();
 					
 					const videoLikeButton = $('#video-like-button');
 					const videoDislikeButton = $('#video-dislike-button');
@@ -2819,6 +2722,9 @@ body {
 							})
 							.catch(error => {
 								
+							})
+							.finally(() => {
+								enableLikeDislikeButtons();
 							});
 						}
 						else {
@@ -2835,6 +2741,9 @@ body {
 								})
 								.catch(error => {
 									
+								})
+								.finally(() => {
+									enableLikeDislikeButtons();
 								});
 							}
 							else if(value === 'like') {
@@ -2852,209 +2761,98 @@ body {
 								})
 								.catch(error => {
 									
+								})
+								.finally(() => {
+									enableLikeDislikeButtons();
 								});
 							}
 						}
 					}
 					catch(error) {
-						Swal.fire({
-							icon: 'error',
-							title: 'hmmm',
-							html: error
-						});
+						showAlert(true, error);
+
+						enableLikeDislikeButtons();
 					}
 				}
 				else {
 					console.log('localStorage is not supported in this browser.');
 				}
 			}
+
+			function disableLikeDislikeButtons() {
+				const videoLikeButton = $('#video-like-button');
+				const videoDislikeButton = $('#video-dislike-button');
+
+				$(videoLikeButton).prop('disabled', true);
+				$(videoDislikeButton).prop('disabled', true);
+			}
+
+			function enableLikeDislikeButtons() {
+				const videoLikeButton = $('#video-like-button');
+				const videoDislikeButton = $('#video-dislike-button');
+
+				$(videoLikeButton).prop('disabled', false);
+				$(videoDislikeButton).prop('disabled', false);
+			}
 			
 			async function performLike(isLiking, isUnDisliking) {
 				return new Promise(function(resolve, reject) {
-					Swal.fire({
-						title: '...preparing to like...',
-						showCloseButton: true,
-						confirmButtonText: 'submit',
-						customClass: {
-							actions: 'm-0',
-						},
-						didOpen: () => {
-							Swal.showLoading();
-							
-							getCaptcha('/captcha/likedislike')
-							.then((objectURL) => {
-								Swal.hideLoading();
-								
-								Swal.update({ 
-									title: 'enter the captcha', 
-									html: '<div class="captcha-container">......</div><div id="captcha-error"></div><div class="input-group"><input id="captcha-input" class="form-control mt-2" disabled placeholder="enter the captcha" type="text"></div>' 
-								});
-								
-								$('#captcha-input').on('keypress', function(event) {
-									if (event.keyCode === 13) {
-										Swal.clickConfirm();
-									}
-								});
-								
-								$('.captcha-container').html('<img src="' + objectURL + '">');
-								
-								$('#captcha-input').prop('disabled', false);
-								$('#captcha-input').focus();
-							})
-							.catch(error => {
-								Swal.hideLoading();
-								
-								$('#captcha-input').remove();
-								
-								Swal.update({ 
-									title: 'hmmm',
-									html: error
-								});
-							});
-						},
-						preConfirm: () => {
-							const captchaResponse = $('#captcha-input').val();
-							
-							if(captchaResponse != null && captchaResponse !== '') {
-								Swal.disableButtons();
-								
-								$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/like', data: JSON.stringify({ isLiking: isLiking, isUnDisliking: isUnDisliking, captchaResponse: captchaResponse }), contentType: 'application/json; charset=utf-8'})
-								.done(function (data, textStatus, xhr) {
-									if(data.isError) {
-										if(data.message == 'the captcha was not correct') {
-											$('#captcha-input').val('');
-											$('#captcha-error').text(data.message);
-											
-											getCaptcha('/captcha/likedislike')
-											.then((objectURL) => {
-												Swal.enableButtons();
-												
-												$('.captcha-container').html('<img src="' + objectURL + '">');
-											})
-											.catch(error => {
-												$('#captcha-error').text(error);
-											});
-										}
-										else {
-											Swal.fire({
-												icon: 'error',
-												title: 'hmmm',
-												html: data.message
-											});
-										}
-									}
-									else {
-										Swal.close();
-										
-										resolve();
-									}
-								})
-								.fail(function() {
-									Swal.fire({
-										icon: 'error',
-										title: 'hmmm',
-										html: '...something went wrong...'
-									});
-								});
+					getCloudflareTurnstileToken()
+					.then(function(cloudflareTurnstileToken) {
+						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/like', data: JSON.stringify({ isLiking: isLiking, isUnDisliking: isUnDisliking, cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
+						.done(function (data, textStatus, xhr) {
+							if(data.isError) {
+								showAlert(true, error);
+
+								reject(data.message);
 							}
-							
-							return false;
-						}
+							else {
+								Swal.close();
+								
+								resolve();
+							}
+						})
+						.fail(function() {
+							showAlert(true, '...something went wrong...');
+
+							reject('...something went wrong...');
+						});
+					})
+					.catch(function(error) {
+						showAlert(true, error);
+
+						reject(error);
 					});
 				});
 			}
 			
 			function performDislike(isDisliking, isUnliking) {
 				return new Promise(function(resolve, reject) {
-					Swal.fire({
-						title: '...preparing to dislike...',
-						showCloseButton: true,
-						confirmButtonText: 'submit',
-						customClass: {
-							actions: 'm-0',
-						},
-						didOpen: () => {
-							Swal.showLoading();
-							
-							getCaptcha('/captcha/likedislike')
-							.then((objectURL) => {
-								Swal.hideLoading();
-								
-								Swal.update({ 
-									title: 'enter the captcha', 
-									html: '<div class="captcha-container">......</div><div id="captcha-error"></div><div class="input-group"><input id="captcha-input" class="form-control mt-2" disabled placeholder="enter the captcha" type="text"></div>' 
-								});
-								
-								$('#captcha-input').on('keypress', function(event) {
-									if (event.keyCode === 13) {
-										Swal.clickConfirm();
-									}
-								});
-								
-								$('.captcha-container').html('<img src="' + objectURL + '">');
-								
-								$('#captcha-input').prop('disabled', false);
-								$('#captcha-input').focus();
-							})
-							.catch(error => {
-								Swal.hideLoading();
-								
-								$('#captcha-input').remove();
-								
-								Swal.update({ 
-									title: 'hmmm',
-									html: error
-								});
-							});
-						},
-						preConfirm: () => {
-							const captchaResponse = $('#captcha-input').val();
-							
-							if(captchaResponse != null && captchaResponse !== '') {
-								Swal.disableButtons();
-								
-								$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/dislike', data: JSON.stringify({ isDisliking: isDisliking, isUnliking: isUnliking, captchaResponse: captchaResponse }), contentType: 'application/json; charset=utf-8'})
-								.done(function (data, textStatus, xhr) {
-									if(data.isError) {
-										if(data.message == 'the captcha was not correct') {
-											$('#captcha-input').val('');
-											$('#captcha-error').text(data.message);
-											
-											getCaptcha('/captcha/likedislike')
-											.then((objectURL) => {
-												Swal.enableButtons();
-												
-												$('.captcha-container').html('<img src="' + objectURL + '">');
-											})
-											.catch(error => {
-												$('#captcha-error').text(error);
-											});
-										}
-										else {
-											Swal.fire({
-												icon: 'error',
-												title: 'hmmm',
-												html: data.message
-											});
-										}
-									}
-									else {
-										Swal.close();
-										
-										resolve();
-									}
-								})
-								.fail(function() {
-									Swal.fire({
-										icon: 'error',
-										title: 'hmmm',
-										html: '...something went wrong...'
-									});
-								});
+					getCloudflareTurnstileToken()
+					.then(function(cloudflareTurnstileToken) {
+						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/dislike', data: JSON.stringify({ isDisliking: isDisliking, isUnliking: isUnliking, cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
+						.done(function (data, textStatus, xhr) {
+							if(data.isError) {
+								showAlert(true, data.message);
+
+								reject(data.message);
 							}
-							
-							return false;
-						}
+							else {
+								Swal.close();
+								
+								resolve();
+							}
+						})
+						.fail(function() {
+							showAlert(true, '...something went wrong...');
+
+							reject('...something went wrong...');
+						});
+					})
+					.catch(function(error) {
+						showAlert(true, error);
+
+						reject(error);
 					});
 				});
 			}
@@ -3138,17 +2936,14 @@ body {
 			
 			function showReportModal(targetId, type) {
 				var modalTitle = '';
-				var captchaUrl = '';
 				var submitUrl = '';
 				
 				if(type === 'video') {
 					modalTitle = 'report video';
-					captchaUrl = '/reports/videos/captcha';
 					submitUrl = '/videos/' + targetId + '/report';
 				}
 				else if(type === 'comment') {
 					modalTitle = 'report comment';
-					captchaUrl = '/reports/comments/captcha';
 					submitUrl = '/comments/' + targetId + '/report';
 				}
 			
@@ -3171,8 +2966,6 @@ body {
 							</div>\
 						</div>\
 					</div>\
-					<div id="report-captcha-container" class="captcha-container mb-3"><p>...retrieving captcha...</p></div>\
-					<input id="report-captcha-input" class="swal2-input" placeholder="captcha">\
 					<span id="report-error-message"></span>';
 				
 				Swal.fire({
@@ -3181,23 +2974,8 @@ body {
 					showCloseButton: true,
 					confirmButtonText: 'submit',
 					focusConfirm: false,
-					willOpen: () => {
-						getCaptcha(captchaUrl)
-						.then((objectURL) => {
-							$('#report-captcha-input').on('keypress', function(event) {
-								if (event.keyCode === 13) {
-									Swal.clickConfirm();
-								}
-							});
-							
-							$('#report-captcha-container').html('<img src="' + objectURL + '">');
-						})
-						.catch(error => {
-							$('#report-error-message').text(error);
-						});
-					},
-					preConfirm: () => {
-						Swal.disableButtons();
+					preConfirm: async () => {
+						Swal.showLoading();
 						
 						const message = Swal.getHtmlContainer().querySelector('#report-message-textarea').value;
 						const email = Swal.getHtmlContainer().querySelector('#report-email-input').value;
@@ -3209,36 +2987,35 @@ body {
 								reportType = reportTypeButton.value;
 							}
 						});
-						
-						const captchaResponse = Swal.getHtmlContainer().querySelector('#report-captcha-input').value;
-						
-						$.ajax({type: 'POST', url: submitUrl, data: { message: message, email: email, reportType: reportType, captchaResponse: captchaResponse }})
-						.always(function() {
-							Swal.enableButtons();
-						})
-						.done(function (data, textStatus, xhr) {
+
+						try {
+							const cloudflareTurnstileToken = await getCloudflareTurnstileToken();
+
+							const response = await fetch(submitUrl, {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+								},
+								body: JSON.stringify({ message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken }),
+							});
+
+							const data = await response.json();
+
 							if(data.isError) {
-								$('#report-captcha-input').val('');
 								$('#report-error-message').text(data.message);
-								
-								if(data.message == 'the captcha was not correct') {
-									getCaptcha(captchaUrl)
-									.then((objectURL) => {
-										$('#report-captcha-container').html('<img src="' + objectURL + '">');
-									})
-									.catch(error => {
-										$('#report-error-message').text(error);
-									});
-								}
+
+								Swal.hideLoading();
 							}
 							else {
 								Swal.close();
 							}
-						})
-						.fail(function() {
-							$('#report-error-message').text('...something went wrong...');
-						});
-						
+						}
+						catch(error) {
+							$('#report-error-message').text(error);
+
+							Swal.hideLoading();
+						}
+
 						return false;
 					}
 				});
@@ -3277,26 +3054,6 @@ body {
 				else {
 					console.log('localStorage is not supported in this browser.');
 				}
-			}
-			
-			function getCaptcha(captchaUrl) {
-				return new Promise(function(resolve, reject) {
-					fetch(captchaUrl)
-					.then(response => {
-						if (response.ok) {
-							return response.blob();
-						}
-						throw new Error('...something went wrong...');
-					})
-					.then(blob => {
-						const objectURL = URL.createObjectURL(blob);
-						
-						resolve(objectURL);
-					})
-					.catch(error => {
-						reject(error.message);
-					});
-				});
 			}
 			
 			function getViewsFormatted(views) {
@@ -3357,37 +3114,6 @@ body {
 				}
 				
 				return timeElapsed;
-			}
-			
-			function showCommentInputFormCaptcha(button) {
-				const captchaType = $(button).data('captchatype');
-				
-				if(captchaType === 'static') {
-					$('#comment-input-form-static-captcha-container').addClass('hidden-elem');
-					$('#comment-input-form-static-submit-container').removeClass('hidden-elem');
-				}
-				else if(captchaType === 'dynamic') {
-					$('#comment-input-form-dynamic-captcha-container').addClass('hidden-elem');
-					$('#comment-input-form-dynamic-submit-container').removeClass('hidden-elem');
-				}
-				
-				getCaptcha('/captcha/comments?captchaType=' + captchaType)
-				.then((objectURL) => {
-					if(captchaType === 'static') {
-						$('#comment-input-form-static-captcha').html('<img src="' + objectURL + '">');
-					}
-					else if(captchaType === 'dynamic') {
-						$('#comment-input-form-dynamic-captcha').html('<img src="' + objectURL + '">');
-					}
-				})
-				.catch(error => {
-					if(captchaType === 'static') {
-						$('#comment-input-form-static-error-message').text('...something went wrong...');
-					}
-					else if(captchaType === 'dynamic') {
-						$('#comment-input-form-dynamic-error-message').text('...something went wrong...');
-					}
-				});
 			}
 			
 			function quote(commentId) {
@@ -3460,6 +3186,88 @@ body {
 				durationFormatted += seconds;
 
 				return durationFormatted;
+			}
+
+			function showAlert(isError, message) {
+				if(isError) {
+					Swal.fire({
+						html: message,
+						icon: 'warning',
+						confirmButtonColor: '#3085d6',
+						confirmButtonText: 'Ok'
+					});
+				}
+				else {
+					if(message === '') {
+						Swal.fire({
+							icon: 'success',
+							showConfirmButton: false,
+							timer: 1500
+						});
+					}
+					else {
+						Swal.fire({
+							icon: 'success',
+							html: message
+						});
+					}
+				}
+			}
+
+			function getCloudflareTurnstileToken() {
+				return new Promise(function(resolve, reject) {
+					const captchaIframeId = Date.now();
+
+					function processMessage (evt) {
+						if (evt.origin === "https://captcha.moartube.com") {
+							if (window.removeEventListener) {
+								window.removeEventListener("message", processMessage, false);
+							} 
+							else {
+								window.detachEvent("onmessage", processMessage);
+							}
+
+							const currentIframe = document.getElementById(captchaIframeId);
+
+							document.body.removeChild(currentIframe);
+
+							const token = evt.data;
+
+							if(token === 'unsupported') {
+								reject('unable to activate that feature');
+							}
+							else if(token === 'timeout') {
+								reject('activating that feature took too long');
+							}
+							else if(token === 'error') {
+								reject('you\'re doing that too much, please try agin later');
+							}
+							else {
+								resolve(token);
+							}
+						}
+					}
+
+					if (window.addEventListener) {
+						window.addEventListener("message", processMessage, false);
+					}
+					else {
+						window.attachEvent("onmessage", processMessage);
+					}
+
+					const newIframe = document.createElement('iframe');
+
+					newIframe.id = captchaIframeId;
+					newIframe.src = 'https://captcha.moartube.com/token/generate';
+
+					newIframe.onload = function() {
+						const iframe = document.getElementById(captchaIframeId).contentWindow;
+						
+						iframe.postMessage('get-captcha', '*');
+					};
+
+					document.body.appendChild(newIframe);
+				});
 			}
 		</script>
 	</body>

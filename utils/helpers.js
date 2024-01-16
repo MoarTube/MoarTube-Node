@@ -13,64 +13,6 @@ var expressSessionName;
 var expressSessionSecret;
 var isDockerEnvironment;
 
-function generateCaptcha() {
-    return new Promise(function(resolve, reject) {
-        const svgCaptcha = require('svg-captcha');
-        
-        const { createCanvas, loadImage, Image  } = require('canvas');
-        
-        const captcha = svgCaptcha.create({
-            size: 6,
-            ignoreChars: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ',
-            noise: Math.floor(Math.random() * (6 - 3)) + 3,
-            width: 150,
-            height: 50,
-            fontSize: 40
-        });
-
-        // Create a canvas for the base image
-        const canvas = createCanvas(150, 50);
-        const ctx = canvas.getContext('2d');
-
-        // Draw random noise on the base layer
-        for (let x = 0; x < canvas.width; x++) {
-          for (let y = 0; y < canvas.height; y++) {
-            const r = Math.floor(Math.random() * 255);
-            const g = Math.floor(Math.random() * 255);
-            const b = Math.floor(Math.random() * 255);
-            const a = (Math.floor(Math.random() * (101 - 0)) + 0) / 100;
-            
-            ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
-            ctx.fillRect(x, y, 1, 1);
-          }
-        }
-        
-        const img = new Image();
-        
-        img.onload = () => {
-          const finalCanvas = createCanvas(150, 50);
-          const finalCtx = finalCanvas.getContext('2d');
-
-          // Draw the base image
-          finalCtx.drawImage(canvas, 0, 0);
-
-          // Draw the captcha image on top
-          finalCtx.drawImage(img, 0, 0);
-
-          // Convert the final canvas to PNG
-          const pngBuffer = finalCanvas.toBuffer('image/png');
-          
-          resolve({text: captcha.text, data: pngBuffer});
-        }
-        
-        img.onerror = err => { 
-            reject();
-        }
-        
-        img.src = `data:image/svg+xml;base64,${Buffer.from(captcha.data).toString('base64')}`;
-    });
-}
-
 function getAuthenticationStatus(token) {
     return new Promise(function(resolve, reject) {
         if(token == null || token === '') {
@@ -413,7 +355,6 @@ module.exports = {
     sanitizeTagsSpaces,
     deleteDirectoryRecursive,
     performNodeIdentification,
-    generateCaptcha,
     generateVideoId,
     getJwtSecret,
     getAuthenticationStatus,

@@ -136,10 +136,6 @@
 				background-color: #cb0c9f;
 			}
 			
-			.captcha-container {
-				height: 50px;
-			}
-			
 			div.reply {
 				background-color: #f9f9f9;
 				border: 1px solid #b7c5d9;

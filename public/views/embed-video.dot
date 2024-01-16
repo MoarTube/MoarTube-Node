@@ -114,10 +114,6 @@
 				background-color: #cb0c9f;
 			}
 			
-			.captcha-container {
-				height: 50px;
-			}
-			
 			div.reply {
 				background-color: white;
 				border: 1px solid #b7c5d9;
@@ -571,7 +567,8 @@
 						message = 'this video is unavailable';
 					}
 					
-					$('#video-player-container').append(message);
+					$('#mtp-video-overlay').remove();
+					$('#video-player-container').append('<div class="d-flex align-items-center justify-content-center">' + message + '</div>');
 				}
 				
 				function initializeVideoJsPlayer() {

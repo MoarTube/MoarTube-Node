@@ -63,14 +63,6 @@ function isVideoCommentValid(comment) {
     return (comment != null && comment.length <= 500);
 }
 
-function isCaptchaTypeValid(captchaType) {
-    return (captchaType != null && (captchaType === 'static' || captchaType === 'dynamic'));
-}
-
-function isCaptchaResponseValid(captchaResponse, captchaAnswer) {
-    return (captchaResponse != null && captchaAnswer != null && captchaResponse !== '' && captchaAnswer !== '' && captchaResponse === captchaAnswer);
-}
-
 function isTimestampValid(timestamp) {
     const timestampParsed = parseInt(timestamp, 10);
     
@@ -284,8 +276,6 @@ module.exports = {
     isBooleanValid,
     isBooleanStringValid,
     isVideoCommentValid,
-    isCaptchaTypeValid,
-    isCaptchaResponseValid,
     isTimestampValid,
     isCommentsTypeValid,
     isCommentIdValid,

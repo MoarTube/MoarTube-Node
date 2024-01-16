@@ -665,6 +665,23 @@ async function cloudflare_resetIntegration() {
     });
 }
 
+function cloudflare_validateTurnstileToken(token, ip) {
+    return new Promise(function(resolve, reject) {
+        axios.post(`https://captcha.moartube.com/token/validate`, {
+            token: token,
+            ip: ip
+        })
+        .then(response => {
+            const data = response.data;
+
+            resolve(data);
+        })
+        .catch(error => {
+            resolve({isError: true, message: 'local error'});
+        });
+    });
+}
+
 function cloudflare_cacheVideoSegment(segmentFileUrl) {
     return new Promise(function(resolve, reject) {
         axios.get(segmentFileUrl)
@@ -720,5 +737,6 @@ module.exports = {
     cloudflare_purgeVideoPosterImages,
     cloudflare_setConfiguration,
     cloudflare_resetIntegration,
-    cloudflare_cacheVideoSegment
+    cloudflare_cacheVideoSegment,
+    cloudflare_validateTurnstileToken
 };
