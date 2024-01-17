@@ -1043,6 +1043,7 @@ body {
 		</div>
 
 		<script src="/assets/resources/javascript/videojs-8.3.0.min.js"></script>
+		<script src="/assets/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
 		<script src="/assets/resources/javascript/sweetalert-11.0.11.min.js"></script>
 		<script src="/assets/resources/javascript/keen-slider-6.8.5.min.js"></script>
 		
@@ -1585,6 +1586,17 @@ body {
 						theaterModeButton.el().classList.add('video-js-theater-button');
 						theaterModeButton.el().innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
 						theaterModeButton.el().style.cursor = "pointer";
+
+						player.on(["fullscreenchange"], function(e) {
+							if(player.isFullscreen()) {
+								theaterModeButton.el().classList.add('hidden-elem');
+
+								player.landscapeFullscreen();
+							}
+							else {
+								theaterModeButton.el().classList.remove('hidden-elem');
+							}
+						});
 						
 						// overflow button
 						const overflowButton = player.getChild('ControlBar').addChild('button', {
@@ -1842,15 +1854,6 @@ body {
 					function configurePlayerEvents() {
 						player.on(["loadstart", "firstplay", "pause", "ended", "adplay", "adplaying", "adfirstplay", "adpause", "adended", "contentplay", "contentplaying", "contentfirstplay", "contentpause", "contentended", "contentupdate"], function(e) {
 							//console.log(e);
-						});
-						
-						player.on(["fullscreenchange"], function(e) {
-							if(player.isFullscreen()) {
-								theaterModeButtonDom.classList.add('hidden-elem');
-							}
-							else {
-								theaterModeButtonDom.classList.remove('hidden-elem');
-							}
 						});
 						
 						player.on("loadedmetadata", function() { 
