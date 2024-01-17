@@ -55,6 +55,21 @@ function isBooleanValid(value) {
     return (value != null && (typeof value === 'boolean'));
 }
 
+function isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, canBeEmpty) {
+    /*
+    https://developers.cloudflare.com/turnstile/frequently-asked-questions/#what-is-the-length-of-a-turnstile-token
+
+    Cloudflare Turnstyle token length is subject to change and thus cannot be anticipated reliably.
+    */
+
+    if(canBeEmpty) {
+        return (cloudflareTurnstileToken != null && cloudflareTurnstileToken.length >= 0);
+    }
+    else {
+        return (cloudflareTurnstileToken != null && cloudflareTurnstileToken.length > 0);
+    }
+}
+
 function isBooleanStringValid(value) {
     return (value != null && (value === 'true' || value === 'false'));
 }
@@ -304,5 +319,6 @@ module.exports = {
     isDescriptionValid,
     isTagTermValid,
     isTagsValid,
-    isCloudflareCredentialsValid
+    isCloudflareCredentialsValid,
+    isCloudflareTurnstileTokenValid
 }

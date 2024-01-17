@@ -446,6 +446,7 @@ function loadConfig() {
 			"password":"JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX",  // admin
 			"expressSessionName":crypto.randomBytes(64).toString('hex'),
 			"expressSessionSecret":crypto.randomBytes(64).toString('hex'),
+			"isCloudflareTurnstileEnabled":true,
 			"cloudflareEmailAddress":"",
 			"cloudflareZoneId":"",
 			"cloudflareGlobalApiKey":""

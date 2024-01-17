@@ -1058,6 +1058,8 @@ body {
 			var NODE_ADDRESS;
 			var NODE_PORT;
 			var NODE_BASE_URL;
+
+			var IS_CLOUDFLARE_TURNSTILE_ENABLED;
 			
 			const COMMENT_ELEMENT_CACHE = {};
 			const COMMENT_REPLIES_CACHE = {};
@@ -1118,6 +1120,7 @@ body {
                 const publicNodeProtocol = information.publicNodeProtocol;
                 const publicNodeAddress = information.publicNodeAddress;
                 const publicNodePort = information.publicNodePort;
+				const isCloudflareTurnstileEnabled = information.isCloudflareTurnstileEnabled;
                 
                 NODE_ID = nodeId;
 
@@ -1128,6 +1131,8 @@ body {
                 NODE_PORT = publicNodePort;
                 
                 NODE_BASE_URL = NODE_PROTOCOL + '://' + NODE_ADDRESS + ':' + NODE_PORT;
+
+				IS_CLOUDFLARE_TURNSTILE_ENABLED = isCloudflareTurnstileEnabled;
             }
 
             function loadTags(recommendedVideos) {
@@ -2034,7 +2039,7 @@ body {
 				connectWebsocketClient();
 			}
 			
-			$(document).on('submit', '.comment-input-form', function(event) {
+			$(document).on('submit', '.comment-input-form', async function(event) {
 				event.preventDefault();
 				
 				const form = $(this);
@@ -2046,8 +2051,26 @@ body {
 				if(commentPlainText !== '') {
 					disableFormInputs(form, '...please wait...');
 
-					getCloudflareTurnstileToken()
-					.then(function(cloudflareTurnstileToken) {
+					var canProceed = true;
+
+					var cloudflareTurnstileToken = '';
+
+					if(IS_CLOUDFLARE_TURNSTILE_ENABLED) {
+						try {
+							cloudflareTurnstileToken = await getCloudflareTurnstileToken();
+						}
+						catch(error) {
+							console.log(error);
+
+							showAlert(true, error);
+
+							enableFormInputs(form, 'submit');
+
+							canProceed = false;
+						}
+					}
+
+					if(canProceed) {
 						$.post('/videos/' + VIDEO_ID + '/comments/comment', {commentPlainText: commentPlainText, timestamp: MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP, cloudflareTurnstileToken: cloudflareTurnstileToken})
 						.done(function(data) {
 							if(data.isError) {
@@ -2078,17 +2101,7 @@ body {
 
 							enableFormInputs(form, 'submit');
 						});
-					})
-					.catch(function(error) {
-						console.log(error);
-
-						showAlert(true, error);
-
-						enableFormInputs(form, 'submit');
-					})
-					.finally(function() {
-						enableFormInputs(form, 'submit');
-					});
+					}
 				}
 
 				function disableFormInputs(form, buttonText) {

@@ -16,7 +16,7 @@ const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJ
 const { 
     isSegmentNameValid, isSearchTermValid, isSourceFileExtensionValid, isBooleanValid, isVideoCommentValid, isTimestampValid, isCommentsTypeValid, isCommentIdValid, 
     isSortTermValid, isTagLimitValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isVideoIdValid, isVideoIdsValid, isFormatValid, isResolutionValid, 
-    isTitleValid, isDescriptionValid, isTagTermValid, isTagsValid
+    isTitleValid, isDescriptionValid, isTagTermValid, isTagsValid, isCloudflareTurnstileTokenValid
 } = require('../utils/validators');
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
 const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
@@ -1109,7 +1109,7 @@ function videoIdIndexAdd_POST(req, res) {
             const termsOfServiceAgreed = req.body.termsOfServiceAgreed;
             const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
 
-            if(isVideoIdValid(videoId) && isBooleanValid(containsAdultContent) && isBooleanValid(termsOfServiceAgreed)) {
+            if(isVideoIdValid(videoId) && isBooleanValid(containsAdultContent) && isBooleanValid(termsOfServiceAgreed) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, false)) {
                 if(termsOfServiceAgreed) {
                     const nodeSettings = getNodeSettings();
 
@@ -1995,70 +1995,93 @@ function videoIdCommentsCommentId_GET(req, res) {
     }
 }
 
-function videoIdCommentsComment_POST(req, res) {
+async function videoIdCommentsComment_POST(req, res) {
     const videoId = req.params.videoId;
     const commentPlainText = req.body.commentPlainText;
     const timestamp = req.body.timestamp;
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
-    if(isVideoIdValid(videoId) && isVideoCommentValid(commentPlainText) && isTimestampValid(timestamp)) {
-        const ip = req.header('CF-Connecting-IP');
+    if(isVideoIdValid(videoId) && isVideoCommentValid(commentPlainText) && isTimestampValid(timestamp) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+        var canProceed = true;
+        var message;
 
-        cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip)
-        .then(response => {
-            if(response.isError) {
-                logDebugMessageToConsole(null, response.message, new Error().stack, true);
+        try {
+            const nodeSettings = getNodeSettings();
+            
+            if(nodeSettings.isCloudflareTurnstileEnabled) {
+                if(cloudflareTurnstileToken.length === 0) {
+                    message = 'human verification was enabled on this MoarTube Node, please refresh your browser';
 
-                res.send({isError: true, message: 'you\'re doing that too much, please try again later'});
-            }
-            else {
-                const commentPlainTextSanitized = sanitizeHtml(commentPlainText, {allowedTags: [], allowedAttributes: {}});
-                const commentTimestamp = Date.now();
-                
-                submitDatabaseWriteJob('INSERT INTO comments(video_id, comment_plain_text_sanitized, timestamp) VALUES (?, ?, ?)', [videoId, commentPlainTextSanitized, commentTimestamp], function(isError) {
-                    if(isError) {
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    canProceed = false;
+                }
+                else {
+                    const ip = req.header('CF-Connecting-IP');
+
+                    const response = await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip);
+
+                    if(response.isError) {
+                        logDebugMessageToConsole(null, response.message, new Error().stack, true);
+
+                        message = response.message;
+
+                        canProceed = false;
                     }
-                    else {
-                        submitDatabaseWriteJob('UPDATE videos SET comments = comments + 1 WHERE video_id = ?', [videoId], function(isError) {
-                            if(isError) {
-                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                            }
-                            else {
-                                try {
-                                    cloudflare_purgeWatchPages([videoId]);
-                                }
-                                catch(error) {
-                                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                                }
-
-                                performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp])
-                                .then(comments => {
-                                    var commentId = 0;
-                                        
-                                        for (let i = comments.length - 1; i >= 0; i--) {
-                                            if(commentTimestamp === comments[i].timestamp) {
-                                                commentId = comments[i].id;
-                                                break;
-                                            }
-                                        }
-                                        
-                                        res.send({isError: false, commentId: commentId, comments: comments});
-                                })
-                                .catch(error => {
-                                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                                });
-                            }
-                        });
-                    }
-                });
+                }
             }
-        })
-        .catch(error => {
+        }
+        catch(error) {
             logDebugMessageToConsole(null, error, new Error().stack, true);
 
-            res.send({isError: true, message: 'you\'re doing that too much, please try again later'});
-        });
+            message = 'error communicating with the MoarTube node';
+
+            canProceed = false;
+        }
+
+        if(canProceed) {
+            const commentPlainTextSanitized = sanitizeHtml(commentPlainText, {allowedTags: [], allowedAttributes: {}});
+            const commentTimestamp = Date.now();
+            
+            submitDatabaseWriteJob('INSERT INTO comments(video_id, comment_plain_text_sanitized, timestamp) VALUES (?, ?, ?)', [videoId, commentPlainTextSanitized, commentTimestamp], function(isError) {
+                if(isError) {
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                }
+                else {
+                    submitDatabaseWriteJob('UPDATE videos SET comments = comments + 1 WHERE video_id = ?', [videoId], function(isError) {
+                        if(isError) {
+                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                        }
+                        else {
+                            try {
+                                cloudflare_purgeWatchPages([videoId]);
+                            }
+                            catch(error) {
+                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                            }
+
+                            performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp])
+                            .then(comments => {
+                                var commentId = 0;
+                                    
+                                    for (let i = comments.length - 1; i >= 0; i--) {
+                                        if(commentTimestamp === comments[i].timestamp) {
+                                            commentId = comments[i].id;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    res.send({isError: false, commentId: commentId, comments: comments});
+                            })
+                            .catch(error => {
+                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                            });
+                        }
+                    });
+                }
+            });
+        }
+        else {
+            res.send({isError: true, message: message});
+        }
     }
     else {
         res.send({isError: true, message: 'invalid parameters'});
@@ -2110,63 +2133,71 @@ function videoIdCommentsCommentIdDelete_DELETE(req, res) {
     }
 }
 
-function videoIdLike_POST(req, res) {
+async function videoIdLike_POST(req, res) {
     const videoId = req.params.videoId;
     const isLiking = req.body.isLiking;
     const isUnDisliking = req.body.isUnDisliking;
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
-    if(isVideoIdValid(videoId) && isBooleanValid(isLiking) && isBooleanValid(isUnDisliking)) {
-        const ip = req.header('CF-Connecting-IP');
+    if(isVideoIdValid(videoId) && isBooleanValid(isLiking) && isBooleanValid(isUnDisliking) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+        var canProceed = true;
+        var message;
 
-        cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip)
-        .then(response => {
-            if(response.isError) {
-                logDebugMessageToConsole(null, response.message, new Error().stack, true);
+        try {
+            const nodeSettings = getNodeSettings();
+            
+            if(nodeSettings.isCloudflareTurnstileEnabled) {
+                if(cloudflareTurnstileToken.length === 0) {
+                    message = 'human verification was enabled on this MoarTube Node, please refresh your browser';
 
-                res.send({isError: true, message: 'you\'re doing that too much, please try again later'});
-            }
-            else {
-                if(isLiking) {
-                    submitDatabaseWriteJob('UPDATE videos SET likes = likes + 1 WHERE video_id = ?', [videoId], function(isError) {
-                        if(isError) {
-                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                        }
-                        else {
-                            if(isUnDisliking) {
-                                submitDatabaseWriteJob('UPDATE videos SET dislikes = dislikes - 1 WHERE video_id = ?', [videoId], function(isError) {
-                                    if(isError) {
-                                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                                    }
-                                    else {
-                                        try {
-                                            cloudflare_purgeWatchPages([videoId]);
-                                        }
-                                        catch(error) {
-                                            logDebugMessageToConsole(null, error, new Error().stack, true);
-                                        }
-    
-                                        res.send({isError: false});
-                                    }
-                                });
-                            }
-                            else {
-                                try {
-                                    cloudflare_purgeWatchPages([videoId]);
-                                }
-                                catch(error) {
-                                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                                }
-    
-                                res.send({isError: false});
-                            }
-                        }
-                    });
+                    canProceed = false;
                 }
                 else {
-                    submitDatabaseWriteJob('UPDATE videos SET likes = likes - 1 WHERE video_id = ?', [videoId], function(isError) {
-                        if(isError) {
-                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    const ip = req.header('CF-Connecting-IP');
+
+                    const response = await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip);
+
+                    if(response.isError) {
+                        logDebugMessageToConsole(null, response.message, new Error().stack, true);
+
+                        message = response.message;
+
+                        canProceed = false;
+                    }
+                }
+            }
+        }
+        catch(error) {
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+
+            message = 'error communicating with the MoarTube node';
+
+            canProceed = false;
+        }
+
+        if(canProceed) {
+            if(isLiking) {
+                submitDatabaseWriteJob('UPDATE videos SET likes = likes + 1 WHERE video_id = ?', [videoId], function(isError) {
+                    if(isError) {
+                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    }
+                    else {
+                        if(isUnDisliking) {
+                            submitDatabaseWriteJob('UPDATE videos SET dislikes = dislikes - 1 WHERE video_id = ?', [videoId], function(isError) {
+                                if(isError) {
+                                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                                }
+                                else {
+                                    try {
+                                        cloudflare_purgeWatchPages([videoId]);
+                                    }
+                                    catch(error) {
+                                        logDebugMessageToConsole(null, error, new Error().stack, true);
+                                    }
+
+                                    res.send({isError: false});
+                                }
+                            });
                         }
                         else {
                             try {
@@ -2175,81 +2206,104 @@ function videoIdLike_POST(req, res) {
                             catch(error) {
                                 logDebugMessageToConsole(null, error, new Error().stack, true);
                             }
-    
+
                             res.send({isError: false});
                         }
-                    });
-                }
+                    }
+                });
             }
-        })
-        .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            else {
+                submitDatabaseWriteJob('UPDATE videos SET likes = likes - 1 WHERE video_id = ?', [videoId], function(isError) {
+                    if(isError) {
+                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    }
+                    else {
+                        try {
+                            cloudflare_purgeWatchPages([videoId]);
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        }
 
-            res.send({isError: true, message: 'you\'re doing that too much, please try again later'});
-        });
+                        res.send({isError: false});
+                    }
+                });
+            }
+        }
+        else {
+            res.send({isError: true, message: message});
+        }
     }
     else {
         res.send({isError: true, message: 'invalid parameters'});
     }
 }
 
-function videoIdDislike_POST(req, res) {
+async function videoIdDislike_POST(req, res) {
     const videoId = req.params.videoId;
     const isDisliking = req.body.isDisliking;
     const isUnliking = req.body.isUnliking;
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
-    if(isVideoIdValid(videoId) && isBooleanValid(isDisliking) && isBooleanValid(isUnliking)) {
-        const ip = req.header('CF-Connecting-IP');
+    if(isVideoIdValid(videoId) && isBooleanValid(isDisliking) && isBooleanValid(isUnliking) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+        var canProceed = true;
+        var message;
 
-        cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip)
-        .then(response => {
-            if(response.isError) {
-                logDebugMessageToConsole(null, response.message, new Error().stack, true);
+        try {
+            const nodeSettings = getNodeSettings();
+            
+            if(nodeSettings.isCloudflareTurnstileEnabled) {
+                if(cloudflareTurnstileToken.length === 0) {
+                    message = 'human verification was enabled on this MoarTube Node, please refresh your browser';
 
-                res.send({isError: true, message: 'you\'re doing that too much, please try again later'});
-            }
-            else {
-                if(isDisliking) {
-                    submitDatabaseWriteJob('UPDATE videos SET dislikes = dislikes + 1 WHERE video_id = ?', [videoId], function(isError) {
-                        if(isError) {
-                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                        }
-                        else {
-                            if(isUnliking) {
-                                submitDatabaseWriteJob('UPDATE videos SET likes = likes - 1 WHERE video_id = ?', [videoId], function(isError) {
-                                    if(isError) {
-                                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                                    }
-                                    else {
-                                        try {
-                                            cloudflare_purgeWatchPages([videoId]);
-                                        }
-                                        catch(error) {
-                                            logDebugMessageToConsole(null, error, new Error().stack, true);
-                                        }
-    
-                                        res.send({isError: false});
-                                    }
-                                });
-                            }
-                            else {
-                                try {
-                                    cloudflare_purgeWatchPages([videoId]);
-                                }
-                                catch(error) {
-                                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                                }
-    
-                                res.send({isError: false});
-                            }
-                        }
-                    });
+                    canProceed = false;
                 }
                 else {
-                    submitDatabaseWriteJob('UPDATE videos SET dislikes = dislikes - 1 WHERE video_id = ?', [videoId], function(isError) {
-                        if(isError) {
-                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    const ip = req.header('CF-Connecting-IP');
+
+                    const response = await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip);
+
+                    if(response.isError) {
+                        logDebugMessageToConsole(null, response.message, new Error().stack, true);
+
+                        message = response.message;
+
+                        canProceed = false;
+                    }
+                }
+            }
+        }
+        catch(error) {
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+
+            message = 'error communicating with the MoarTube node';
+
+            canProceed = false;
+        }
+
+        if(canProceed) {
+            if(isDisliking) {
+                submitDatabaseWriteJob('UPDATE videos SET dislikes = dislikes + 1 WHERE video_id = ?', [videoId], function(isError) {
+                    if(isError) {
+                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    }
+                    else {
+                        if(isUnliking) {
+                            submitDatabaseWriteJob('UPDATE videos SET likes = likes - 1 WHERE video_id = ?', [videoId], function(isError) {
+                                if(isError) {
+                                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                                }
+                                else {
+                                    try {
+                                        cloudflare_purgeWatchPages([videoId]);
+                                    }
+                                    catch(error) {
+                                        logDebugMessageToConsole(null, error, new Error().stack, true);
+                                    }
+
+                                    res.send({isError: false});
+                                }
+                            });
                         }
                         else {
                             try {
@@ -2258,18 +2312,33 @@ function videoIdDislike_POST(req, res) {
                             catch(error) {
                                 logDebugMessageToConsole(null, error, new Error().stack, true);
                             }
-                            
+
                             res.send({isError: false});
                         }
-                    });
-                }
+                    }
+                });
             }
-        })
-        .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
-
-            res.send({isError: true, message: 'you\'re doing that too much, please try again later'});
-        });
+            else {
+                submitDatabaseWriteJob('UPDATE videos SET dislikes = dislikes - 1 WHERE video_id = ?', [videoId], function(isError) {
+                    if(isError) {
+                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    }
+                    else {
+                        try {
+                            cloudflare_purgeWatchPages([videoId]);
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        }
+                        
+                        res.send({isError: false});
+                    }
+                });
+            }
+        }
+        else {
+            res.send({isError: true, message: message});
+        }
     }
     else {
         res.send({isError: true, message: 'invalid parameters'});
@@ -2330,57 +2399,80 @@ function tagsAll_GET(req, res) {
     });
 }
 
-function videoIdReport_POST(req, res) {
+async function videoIdReport_POST(req, res) {
     const videoId = req.params.videoId;
     var email = req.body.email;
     const reportType = req.body.reportType;
     var message = req.body.message;
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
-    if(isVideoIdValid(videoId) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message)) {
-        email = sanitizeHtml(email, {allowedTags: [], allowedAttributes: {}});
-        message = sanitizeHtml(message, {allowedTags: [], allowedAttributes: {}});
-        
-        const ip = req.header('CF-Connecting-IP');
+    if(isVideoIdValid(videoId) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+        var canProceed = true;
+        var message;
 
-        cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip)
-        .then(response => {
-            if(response.isError) {
-                logDebugMessageToConsole(null, response.message, new Error().stack, true);
+        try {
+            const nodeSettings = getNodeSettings();
+            
+            if(nodeSettings.isCloudflareTurnstileEnabled) {
+                if(cloudflareTurnstileToken.length === 0) {
+                    message = 'human verification was enabled on this MoarTube Node, please refresh your browser';
 
-                res.send({isError: true, message: 'you\'re doing that too much, please try again later'});
-            }
-            else {
-                performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
-                .then(video => {
-                    if(video != null) {
-                        const creationTimestamp = video.creation_timestamp;
-                        
-                        submitDatabaseWriteJob('INSERT INTO videoReports(timestamp, video_timestamp, video_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?)', [Date.now(), creationTimestamp, videoId, email, reportType, message], function(isError) {
-                            if(isError) {
-                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                            }
-                            else {
-                                res.send({isError: false});
-                            }
-                        });
+                    canProceed = false;
+                }
+                else {
+                    const ip = req.header('CF-Connecting-IP');
+
+                    const response = await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip);
+
+                    if(response.isError) {
+                        logDebugMessageToConsole(null, response.message, new Error().stack, true);
+
+                        message = response.message;
+
+                        canProceed = false;
                     }
-                    else {
-                        res.send({isError: true, message: 'that video does not exist'});
-                    }
-                })
-                .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
-
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                });
+                }
             }
-        })
-        .catch(error => {
+        }
+        catch(error) {
             logDebugMessageToConsole(null, error, new Error().stack, true);
 
-            res.send({isError: true, message: 'you\'re doing that too much, please try again later'});
-        });
+            message = 'error communicating with the MoarTube node';
+
+            canProceed = false;
+        }
+
+        if(canProceed) {
+            email = sanitizeHtml(email, {allowedTags: [], allowedAttributes: {}});
+            message = sanitizeHtml(message, {allowedTags: [], allowedAttributes: {}});
+
+            performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+            .then(video => {
+                if(video != null) {
+                    const creationTimestamp = video.creation_timestamp;
+                    
+                    submitDatabaseWriteJob('INSERT INTO videoReports(timestamp, video_timestamp, video_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?)', [Date.now(), creationTimestamp, videoId, email, reportType, message], function(isError) {
+                        if(isError) {
+                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                        }
+                        else {
+                            res.send({isError: false});
+                        }
+                    });
+                }
+                else {
+                    res.send({isError: true, message: 'that video does not exist'});
+                }
+            })
+            .catch(error => {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            });
+        }
+        else {
+            res.send({isError: true, message: message});
+        }
     }
     else {
         res.send({isError: true, message: 'invalid parameters'});

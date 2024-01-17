@@ -16,6 +16,7 @@ function information_GET(req, res) {
             const publicNodeProtocol = nodeSettings.publicNodeProtocol;
             const publicNodeAddress = nodeSettings.publicNodeAddress;
             const publicNodePort = nodeSettings.publicNodePort;
+            const isCloudflareTurnstileEnabled = nodeSettings.isCloudflareTurnstileEnabled;
 
             const information = {
                 nodeVideoCount: nodeVideoCount,
@@ -24,7 +25,8 @@ function information_GET(req, res) {
                 nodeAbout: nodeAbout, 
                 publicNodeProtocol: publicNodeProtocol, 
                 publicNodeAddress: publicNodeAddress, 
-                publicNodePort: publicNodePort
+                publicNodePort: publicNodePort,
+                isCloudflareTurnstileEnabled: isCloudflareTurnstileEnabled
             };
             
             res.send({isError: false, information: information});

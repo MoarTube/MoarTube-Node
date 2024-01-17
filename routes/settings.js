@@ -2,7 +2,7 @@ const express = require('express');
 
 const { 
     root_GET, avatar_GET, avatar_POST, banner_GET, banner_POST, personalize_POST, secure_POST, account_POST, networkInternal_POST, networkExternal_POST,
-    cloudflareConfigure_POST, cloudflareClear_POST
+    cloudflareConfigure_POST, cloudflareClear_POST, cloudflareTurnstile_POST
 } = require('../controllers/settings');
 
 const router = express.Router();
@@ -37,6 +37,10 @@ router.post('/secure', async (req, res) => {
 
 router.post('/cloudflare/configure', (req, res) => {
     cloudflareConfigure_POST(req, res);
+});
+
+router.post('/cloudflare/turnstile', (req, res) => {
+    cloudflareTurnstile_POST(req, res);
 });
 
 router.post('/cloudflare/clear', (req, res) => {

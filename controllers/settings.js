@@ -14,8 +14,9 @@ const {
     isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
-const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration, cloudflare_purgeNodeImages, cloudflare_purgeNodePage } = require('../utils/cloudflare-communications');
-const { submitDatabaseWriteJob } = require('../utils/database');
+const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
+    cloudflare_purgeWatchPages } = require('../utils/cloudflare-communications');
+const { submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
 
 function root_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)
@@ -490,6 +491,55 @@ function cloudflareConfigure_POST(req, res) {
     });
 }
 
+function cloudflareTurnstile_POST(req, res) {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            var isCloudflareTurnstileEnabled = req.body.isCloudflareTurnstileEnabled;
+
+            if(isBooleanStringValid(isCloudflareTurnstileEnabled)) {
+                isCloudflareTurnstileEnabled = (isCloudflareTurnstileEnabled === 'true');
+
+                const nodeSettings = getNodeSettings();
+                
+                nodeSettings.isCloudflareTurnstileEnabled = isCloudflareTurnstileEnabled;
+
+                setNodeSettings(nodeSettings);
+
+                try {
+                    performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+                    .then(async videos => {
+                        const videoIds = videos.map(video => video.video_id);
+
+                        cloudflare_purgeWatchPages(videoIds);
+                    })
+                    .catch(error => {
+                        // do nothing
+                    });
+                }
+                catch(error) {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                }
+
+                res.send({isError: false});
+            }
+            else {
+                res.send({ isError: true, message: 'invalid parameters' });
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+}
+
 function cloudflareClear_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
@@ -668,6 +718,7 @@ module.exports = {
     personalize_POST,
     secure_POST,
     cloudflareConfigure_POST,
+    cloudflareTurnstile_POST,
     cloudflareClear_POST,
     account_POST,
     networkInternal_POST,
