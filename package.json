@@ -1,6 +1,6 @@
 {
   "name": "moartube-node",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "The node software for hosting videos and streams.",
   "author": "Christopher Conley",
   "license": "Custom License - See LICENSE.md file",
