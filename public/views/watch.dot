@@ -1216,7 +1216,7 @@ body {
             function loadRecommendedVideo(recommendedVideo) {
                 const videoId = recommendedVideo.video_id;
                 const title = recommendedVideo.title;
-                const views = (videoId === VIDEO_ID ? recommendedVideo.views + 1 : recommendedVideo.views);
+                const views = (videoId === VIDEO_ID ? '...' : recommendedVideo.views);
                 const isLive = recommendedVideo.is_live;
                 const isStreaming = recommendedVideo.is_streaming;
                 const lengthSeconds = recommendedVideo.length_seconds;
@@ -1251,7 +1251,7 @@ body {
                                     <div class="col-6">\
                                         <div class="h-100 ms-1">\
                                             <span class="video-recommendation-card-text" style="overflow: hidden;text-overflow: ellipsis;white-space: normal;-webkit-line-clamp: 2;display: -webkit-box;-webkit-box-orient: vertical;font-weight: 500;font-family: &quot;Roboto&quot;,&quot;Arial&quot;,sans-serif;">' + title + '</span>\
-                                            <small class="video-recommendation-card-text">' + viewsFormatted + ' &#x2022 <span class="video-info-timestamp"></span></small>\
+                                            <small class="video-recommendation-card-text"><span id="recommended-video-info-views-' + videoId + '">' + viewsFormatted + '</span> &#x2022 <span class="video-info-timestamp"></span></small>\
                                         </div>\
                                     </div>\
                                 </div>\
@@ -1396,6 +1396,7 @@ body {
 						const viewsFormatted = getViewsFormatted(views);
 
 						$('#video-information-views').text(viewsFormatted);
+						$('#recommended-video-info-views-' + VIDEO_ID).text(viewsFormatted)
 					}
 				})
 				.catch(function(error) {
