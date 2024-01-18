@@ -675,17 +675,17 @@
 					opacity: 1; /* Firefox */
 				}
 				
-				#comments-container .replyContainer .reply {
-					background-color: #353535;
-					color: #efefef;
+				.replyContainer .reply {
+					background-color: #353535 !important;
+					color: #efefef !important;
 				}
-				
-				#comments-container .replyContainer .reply .quotelink {
-					color: #ff6767;
+
+				.replyContainer .reply .quotelink {
+					color: #ff6767 !important;
 				}
-				
-				#comments-container .replyContainer .reply .postNum a {
-					color: grey;
+
+				.replyContainer .reply .postNum a {
+					color: grey !important;
 				}
 				
 				#video-comments-outer {
@@ -718,6 +718,11 @@
 
 				.new-comment-highlight {
 					background-color: black !important;
+				}
+
+				.reply.highlight-anti {
+					border-width: 1px !important;
+					background-color: #272727 !important;
 				}
 			}
 		</style>
@@ -781,17 +786,17 @@ body {
 	opacity: 1; /* Firefox */
 }
 
-#comments-container .replyContainer .reply {
-	background-color: #353535;
-	color: #efefef;
+.replyContainer .reply {
+	background-color: #353535 !important;
+	color: #efefef !important;
 }
 
-#comments-container .replyContainer .reply .quotelink {
-	color: #ff6767;
+.replyContainer .reply .quotelink {
+	color: #ff6767 !important;
 }
 
-#comments-container .replyContainer .reply .postNum a {
-	color: grey;
+.replyContainer .reply .postNum a {
+	color: grey !important;
 }
 
 #video-comments-outer {
@@ -824,6 +829,11 @@ body {
 
 .new-comment-highlight {
 	background-color: black !important;
+}
+
+.reply.highlight-anti {
+	border-width: 1px !important;
+	background-color: #272727 !important;
 }
 `;
 			
