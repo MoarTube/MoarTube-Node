@@ -1065,6 +1065,8 @@ body {
             const INCOMING_PARAMETERS = [[= JSON.stringify(model) ]];
 
 			var VIDEO_ID;
+			var VIEW_COUNT;
+
 			var HASH_VALUE = '';
 			
 			var NODE_ID;
@@ -1229,12 +1231,11 @@ body {
             function loadRecommendedVideo(recommendedVideo) {
                 const videoId = recommendedVideo.video_id;
                 const title = recommendedVideo.title;
-                const views = (videoId === VIDEO_ID ? '...' : recommendedVideo.views);
+                const views = (videoId === VIDEO_ID ? VIEW_COUNT != null ? VIEW_COUNT : '...' : recommendedVideo.views);
                 const isLive = recommendedVideo.is_live;
                 const isStreaming = recommendedVideo.is_streaming;
                 const lengthSeconds = recommendedVideo.length_seconds;
                 const creationTimestamp = recommendedVideo.creation_timestamp;
-                
 				const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
                 const viewsFormatted = getViewsFormatted(views);
                 
@@ -1406,6 +1407,8 @@ body {
 				incrementViews()
 				.then(function(views) {
 					if(!isStreaming) {
+						VIEW_COUNT = views;
+
 						const viewsFormatted = getViewsFormatted(views);
 
 						$('#video-information-views').text(viewsFormatted);
