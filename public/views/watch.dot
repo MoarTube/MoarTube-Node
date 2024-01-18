@@ -624,6 +624,10 @@
 				background-color: #cb0c9f14 !important;
 			}
 
+			.dead-link {
+				text-decoration: line-through;
+			}
+
 			@media (prefers-color-scheme: dark) {
 				body {
 					background-color: #1e1e1e;
@@ -1063,7 +1067,6 @@ body {
 			var IS_CLOUDFLARE_TURNSTILE_ENABLED;
 			
 			const COMMENT_ELEMENT_CACHE = {};
-			const COMMENT_REPLIES_CACHE = {};
 
             const RECOMMENDED_VIDEOS_TAGS_CACHE = {'':[]};
 			
@@ -1102,7 +1105,7 @@ body {
 				    loadVideo(INCOMING_PARAMETERS.videoData.video);
                     loadTags(INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos);
                     loadRecommendedVideos(INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos, true);
-                    loadComments(INCOMING_PARAMETERS.commentsData.comments, 'after', false);
+                    loadComments(INCOMING_PARAMETERS.commentsData.comments, false);
 
                     if(HASH_VALUE !== '') {
                         if($(HASH_VALUE + ' .postNum a:first-child').length) {
@@ -2095,7 +2098,7 @@ body {
 								
 								addToCommentHistory(commentId);
 								
-								loadComments(comments, 'before', true);
+								loadComments(comments, true);
 
 								enableFormInputs(form, 'submit');
 							}
@@ -2123,7 +2126,7 @@ body {
 				}
 			});
 			
-			function loadComments(comments, type, highlight) {
+			function loadComments(comments, highlight) {
 				const commentsContainer = $('#comments-container');
 
 				commentsContainer.find('.post.reply').removeClass('new-comment-highlight');
@@ -2133,28 +2136,26 @@ body {
 					
 					$('.comments-navigation-button').removeClass('hidden-elem');
 					
-					if(type === 'before') {
-						const commentSectionCounter = $('#comment-section-counter');
-						const commentSectionCounterDescriptor = $('#comment-section-counter-descriptor');
-						const expandCommentSectionCounter = $('#expand-comment-section-counter');
-						const expandCommentSectionCounterDescriptor = $('#expand-comment-section-counter-descriptor');
-						
-						commentSectionCounter.text(parseInt($(commentSectionCounter).text()) + comments.length);
-						expandCommentSectionCounter.text(parseInt($(expandCommentSectionCounter).text()) + comments.length);
-						
-						if(parseInt($(commentSectionCounter).text()) === 1) {
-							commentSectionCounterDescriptor.text('Comment');
-						}
-						else {
-							commentSectionCounterDescriptor.text('Comments');
-						}
-						
-						if(parseInt($(expandCommentSectionCounter).text()) === 1) {
-							expandCommentSectionCounterDescriptor.html('Comment');
-						}
-						else {
-							expandCommentSectionCounterDescriptor.html('Comments');
-						}
+					const commentSectionCounter = $('#comment-section-counter');
+					const commentSectionCounterDescriptor = $('#comment-section-counter-descriptor');
+					const expandCommentSectionCounter = $('#expand-comment-section-counter');
+					const expandCommentSectionCounterDescriptor = $('#expand-comment-section-counter-descriptor');
+					
+					commentSectionCounter.text(parseInt($(commentSectionCounter).text()) + comments.length);
+					expandCommentSectionCounter.text(parseInt($(expandCommentSectionCounter).text()) + comments.length);
+					
+					if(parseInt($(commentSectionCounter).text()) === 1) {
+						commentSectionCounterDescriptor.text('Comment');
+					}
+					else {
+						commentSectionCounterDescriptor.text('Comments');
+					}
+					
+					if(parseInt($(expandCommentSectionCounter).text()) === 1) {
+						expandCommentSectionCounterDescriptor.html('Comment');
+					}
+					else {
+						expandCommentSectionCounterDescriptor.html('Comments');
 					}
 					
 					comments.forEach(function(comment) {
@@ -2175,15 +2176,6 @@ body {
 						// cache comments in memory for efficient access
 						COMMENT_ELEMENT_CACHE[commentId] = commentElement;
 						
-						// keep track of the IDs of comments that have replied to this comment
-						for(const replyToCommentId of replyToCommentIds) {
-							if(!COMMENT_REPLIES_CACHE.hasOwnProperty(replyToCommentId)) {
-								COMMENT_REPLIES_CACHE[replyToCommentId] = [];
-							}
-						
-							COMMENT_REPLIES_CACHE[replyToCommentId].push(commentId);
-						}
-						
 						// append (you) to quotelinks within the body of the comment that references comments this user has made
 						for(const commentHistoryId of commentHistory) {
 							if(replyToCommentIds.includes(commentHistoryId)) {
@@ -2191,43 +2183,31 @@ body {
 									var elementHref = $(element).attr('href');
 									if(elementHref === ('#p' + commentHistoryId)) {
 										$(element).append(' (you)');
+										
+										if($('#p' + commentHistoryId).length === 0) {
+											$(element).addClass('dead-link');
+										}
 									}
 								});
 							}
 						}
 						
-						if(type === 'before') {
-							// 'before' means prepending to the comments
-							// append links to backlinks of comments that reference the comments being prepended to the comments
-							for(const replyToCommentId of replyToCommentIds) {
-								if(COMMENT_ELEMENT_CACHE.hasOwnProperty(replyToCommentId)) {
-									var youString = '';
-									if(commentHistory.includes(commentId)) {
-										youString = ' (you)';
-									}
-									$(COMMENT_ELEMENT_CACHE[replyToCommentId]).find('#bl_' + replyToCommentId).append('<a href="#p' + commentId + '" class="quotelink">&gt;&gt;' + commentId + youString + '</a> ');
-									
-									attachQuotelinkListeners(COMMENT_ELEMENT_CACHE[replyToCommentId]);
+						// append links to backlinks of comments that reference the comments being prepended to the comments
+						for(const replyToCommentId of replyToCommentIds) {
+							if(COMMENT_ELEMENT_CACHE.hasOwnProperty(replyToCommentId)) {
+								var youString = '';
+
+								if(commentHistory.includes(commentId)) {
+									youString = ' (you)';
 								}
+
+								$(COMMENT_ELEMENT_CACHE[replyToCommentId]).find('#bl_' + replyToCommentId).append('<a href="#p' + commentId + '" class="quotelink">&gt;&gt;' + commentId + youString + '</a> ');
+								
+								attachQuotelinkListeners(COMMENT_ELEMENT_CACHE[replyToCommentId]);
 							}
-							
-							$(commentsContainer).prepend(commentElement);
 						}
-						else if(type === 'after') {
-							// 'after' means  appending to the comments
-							// append links to backlinks of comments that reference the comments being appended to the comments
-							if(COMMENT_REPLIES_CACHE.hasOwnProperty(commentId)) {
-								for(const replyToCommentId of COMMENT_REPLIES_CACHE[commentId]) {
-									var youString = '';
-									if(commentHistory.includes(replyToCommentId)) {
-										youString = ' (you)';
-									}
-									$(commentElement).find('#bl_' + commentId).prepend('<a href="#p' + replyToCommentId + '" class="quotelink">&gt;&gt;' + replyToCommentId + youString + '</a> ');
-								}
-							}
-							
-							$(commentsContainer).append(commentElement);
-						}
+						
+						$(commentsContainer).prepend(commentElement);
 						
 						attachQuotelinkListeners(commentElement);
 					});
@@ -2440,7 +2420,7 @@ body {
 				
 				const previousCommentCount = parseInt($('#comment-section-counter').text());
 				
-                $.ajax({type: 'GET', url: '/videos/' + VIDEO_ID + '/comments', data: { timestamp: MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP, type: 'before'}})
+                $.ajax({type: 'GET', url: '/videos/' + VIDEO_ID + '/comments', data: { timestamp: MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP, type: 'after', sort: 'ascending'}})
                 .done(function (data, textStatus, xhr)
                 {
                     if(data.isError) {
@@ -2449,7 +2429,7 @@ body {
                     else {
                         const comments = data.comments;
                         
-                        loadComments(comments, 'before', true);
+                        loadComments(comments, true);
 
                         const newCommentCount = parseInt($('#comment-section-counter').text());
                         

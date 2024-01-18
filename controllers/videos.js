@@ -16,7 +16,7 @@ const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJ
 const { 
     isSegmentNameValid, isSearchTermValid, isSourceFileExtensionValid, isBooleanValid, isVideoCommentValid, isTimestampValid, isCommentsTypeValid, isCommentIdValid, 
     isSortTermValid, isTagLimitValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isVideoIdValid, isVideoIdsValid, isFormatValid, isResolutionValid, 
-    isTitleValid, isDescriptionValid, isTagTermValid, isTagsValid, isCloudflareTurnstileTokenValid
+    isTitleValid, isDescriptionValid, isTagTermValid, isTagsValid, isCloudflareTurnstileTokenValid, isSortValid
 } = require('../utils/validators');
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
 const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
@@ -1946,10 +1946,20 @@ function videoIdComments_GET(req, res) {
     const videoId = req.params.videoId;
     const timestamp = req.query.timestamp;
     const type = req.query.type;
+    const sort = req.query.sort;
     
-    if(isVideoIdValid(videoId) && isTimestampValid(timestamp) && isCommentsTypeValid(type)) {
-        if(type === 'before') {
-            performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp])
+    if(isVideoIdValid(videoId) && isTimestampValid(timestamp) && isCommentsTypeValid(type) && isSortValid(sort)) {
+        var sortTerm;
+
+        if(sort === 'ascending') {
+            sortTerm = 'ASC';
+        }
+        else if(sort === 'descending') {
+            sortTerm = 'DESC';
+        }
+
+        if(type === 'after') {
+            performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ' + sortTerm, [videoId, timestamp])
             .then(comments => {
                 res.send({isError: false, comments: comments});
             })
@@ -1957,8 +1967,8 @@ function videoIdComments_GET(req, res) {
                 res.send({isError: true, message: 'error communicating with the MoarTube node'});
             });
         }
-        else if(type === 'after') {
-            performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? ORDER BY timestamp DESC', [videoId, timestamp])
+        else if(type === 'before') {
+            performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? ORDER BY timestamp ' + sortTerm, [videoId, timestamp])
             .then(comments => {
                 res.send({isError: false, comments: comments});
             })

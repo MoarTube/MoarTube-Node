@@ -72,14 +72,15 @@ function node_getVideo(videoId) {
     });
 }
 
-function node_getComments(videoId, timestamp, type) {
+function node_getComments(videoId, timestamp, type, sort) {
     return new Promise(function(resolve, reject) {
         const localhostBaseUrl = getLocalhostBaseUrl();
 
         axios.get(localhostBaseUrl + '/videos/' + videoId + '/comments', {
             params: {
                 timestamp: timestamp, 
-                type: type
+                type: type,
+                sort: sort
             }
         })
         .then(response => {

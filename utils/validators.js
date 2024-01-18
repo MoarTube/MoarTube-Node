@@ -88,6 +88,10 @@ function isCommentsTypeValid(type) {
     return (type != null && (type === 'before' || type === 'after'));
 }
 
+function isSortValid(sort) {
+    return (sort != null && (sort === 'ascending' || sort === 'descending'));
+}
+
 function isCommentIdValid(commentId) {
     const regex = /^\d+$/;
     
@@ -320,5 +324,6 @@ module.exports = {
     isTagTermValid,
     isTagsValid,
     isCloudflareCredentialsValid,
-    isCloudflareTurnstileTokenValid
+    isCloudflareTurnstileTokenValid,
+    isSortValid
 }
