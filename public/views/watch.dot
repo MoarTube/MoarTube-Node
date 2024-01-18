@@ -1352,9 +1352,10 @@ body {
 			function refreshClickTooltips() {
 				$(function () {
 					$('.click-tooltip[data-bs-toggle="tooltip"]').tooltip({
-						trigger: 'click'
+						trigger: 'click',
+						container: '.swal2-html-container'
 					});
-					
+
 					$('.click-tooltip[data-bs-toggle="tooltip"]').on('click', function () {
 						setTimeout(() => {
 							$(this).tooltip('hide');
@@ -2515,15 +2516,36 @@ body {
 			
 			function shareVideo() {
 				const videoId = VIDEO_ID;
+
+				const nodeVideoUrl = NODE_BASE_URL + '/watch?v=' + videoId;
+
+				const embedUrl = NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0';
 				
+				const embedHtml_1 = '<iframe class="w-100" src="' + NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0" style="aspect-ratio: 16/9;"></iframe>';
+				const embedHtml_2 = '<iframe src="' + NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0"></iframe>';
+
+				const embedSVG = '<svg viewBox="0 0 36 36" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><circle cx="18" cy="18" r="17.5" stroke="#E7E7E7" fill="#F4F4F4" stroke-width=".5"></circle><path d="m21.41,23.29l-0.71,-0.71l4.59,-4.58l-4.59,-4.59l0.71,-0.71l5.3,5.3l-5.3,5.29zm-6.12,-0.7l-4.58,-4.59l4.59,-4.59l-0.71,-0.7l-5.3,5.29l5.29,5.29l0.71,-0.7z" fill="#606060"></path></svg>';
+				const twitterSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.486325 59.969298c-6.636404-.569063-11.56302-2.326956-16.321973-5.823932C4.443764 48.472116 0 39.646792 0 29.986934 0 15.11156 10.506778 2.798388 25.274412.36718c6.028107-.992411 12.703853.049265 18.28794 2.85363 13.576275 6.818095 19.7813 22.541053 14.64267 37.103159-3.527955 9.997705-12.789708 17.617785-23.391072 19.244938-2.085625.320112-5.065149.508645-6.327625.400391z" fill="#1DA1F2" fill-rule="nonzero"></path><path d="M45.089067 17.577067c-.929778.595555-3.064534 1.460977-4.117334 1.460977v.001778C39.7696 17.784 38.077156 17 36.200178 17c-3.645511 0-6.6016 2.956089-6.6016 6.600178 0 .50631.058666 1.000178.16711 1.473778h-.001066c-4.945066-.129778-10.353422-2.608356-13.609244-6.85049-2.001778 3.46489-.269511 7.3184 2.002133 8.72249-.7776.058666-2.209067-.0896-2.882844-.747023-.045156 2.299734 1.060622 5.346845 5.092622 6.452267-.776533.417778-2.151111.297956-2.7488.209067.209778 1.941333 2.928355 4.479289 5.901155 4.479289C22.46009 38.565156 18.4736 40.788089 14 40.080889 17.038222 41.929422 20.5792 43 24.327111 43c10.650667 0 18.921956-8.631822 18.4768-19.280356-.001778-.011733-.001778-.023466-.002844-.036266.001066-.027378.002844-.054756.002844-.0832 0-.033067-.002844-.064356-.003911-.096356.9696-.66311 2.270578-1.836089 3.2-3.37991-.539022.296888-2.156089.891377-3.6608 1.038932.965689-.521244 2.396444-2.228266 2.749867-3.585777" fill="#FFF"></path></g></svg>';
+				const redditSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill-rule="nonzero" fill="none"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#FF4500"></path><path d="M34.1335847 43.9991814c1.6336774-.3831682 2.81654-.7939438 3.9781753-1.3815065 3.6153903-1.8286959 5.8788354-4.8645264 5.8788354-7.8849481 0-.9131088.0196207-.9556355.780668-1.6923265.6040409-.5847092.8404012-.962515 1.044679-1.6698428.2433185-.8425206.2441028-.9826228.0100139-1.7878614-.6566532-2.2588075-3.0054252-3.2764371-5.1075029-2.212882l-.8124519.4110627-.837264-.5151716c-1.6101652-.9907471-4.473974-1.96108051-6.3205111-2.14155924-.5059537-.04945042-1.143803-.1235464-1.4174535-.16465815l-.4975382-.07474783.2136595-1.06953332c.1175125-.5882423.3623778-1.7491883.5441475-2.57987956.181767-.83069153.4095191-1.95749071.5061138-2.50399817.1396137-.78991765.2348596-.99365031.4645331-.99365031.1589005 0 1.2955101.21462853 2.5257988.4769522 1.2302915.26232367 2.2622022.47695193 2.293134.47695193.0309345 0 .1003234.23497925.154203.52217616.1363137.72661143.4902897 1.17780487 1.2134714 1.54674469 1.7356128.8854428 3.6891485-.29431302 3.6891485-2.22790474 0-2.3956262-2.9538443-3.44186625-4.4550019-1.57794377-.2901205.36022881-.4356746.42625561-.7154284.32453216-.1931649-.07023833-1.5202546-.3669593-2.9490951-.65938053-1.8923676-.38728585-2.6686067-.48706487-2.8582979-.36740978-.2896185.1826864-.2522224.047706-1.0501419 3.79055007-.9490696 4.45187338-1.0064011 4.70400786-1.0882029 4.78580828-.0432388.04324046-.729551.14596475-1.5251367.22827402-2.413687.24971784-5.06621906 1.10194849-6.8544721 2.20227189l-.8268564.5087695-.81204644-.4046587c-2.11972653-1.0563058-4.47243958-.0382468-5.1287215 2.2192841-.23408885.8052386-.23330375.9453408.0100166 1.7878614.20427624.7073278.44063816 1.0851336 1.04467744 1.6698428.76105187.736691.78066878.7792177.78066878 1.6923265 0 4.172347 4.28816886 8.1540991 10.01599352 9.3002929 1.8975637.3797217 2.0263168.3894072 4.4515526.3349143 1.5849893-.0356103 2.7274992-.1508298 3.6566327-.3687526zm-6.6864685-3.0300366c-1.3154638-.2961613-2.8032079-.9569232-3.2391341-1.4386156-.34760429-.384099-.198986-.9659493.246724-.9659493.1736296 0 .5801788.1805458.9034441.4012095 2.1828306 1.4900284 7.1085991 1.484628 9.2987021-.0101767.7054363-.4814861 1.2827246-.468194 1.3538857.0311679.0334854.234998-.1164569.4687666-.4771278.7438635-1.7511846 1.3356924-5.2646974 1.8738181-8.086494 1.2385197v-.000019zm-4.01196195-5.9075609c-.81902983-.4443886-1.22403999-1.1532958-1.22477787-2.143771-.000787-1.135302.52653614-1.8699603 1.59778946-2.2257735.76240766-.253232.85344696-.2532238 1.51689516.0001492 1.785415.6818561 2.1507834 2.909296.6724678 4.0996229-.7705198.6204159-1.7299516.7214286-2.56237455.2697724zm11.09588945.0732995c-.7590038-.3947507-1.1832989-.8746601-1.3628596-1.5414995-.3321829-1.2336253.2931784-2.4377233 1.5067529-2.9011953.6634485-.253373.754488-.2533812 1.5168976-.0001492 1.0712525.3558132 1.5986343 1.0904715 1.5977903 2.2257735-.0008141 1.0085002-.4138259 1.7116813-1.2587076 2.1427072-.7599699.3877084-1.3548626.4098285-1.9998736.0743633z" fill="#FDFDFD"></path></g></svg>';
+				const facebookSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#3B5998" fill-rule="nonzero"></path><path d="M25.7305108 45h5.4583577V30.0073333h4.0947673l.8098295-4.6846666h-4.9045968V21.928c0-1.0943333.7076019-2.2433333 1.7188899-2.2433333h2.7874519V15h-3.4161354v.021c-5.3451414.194-6.4433395 3.2896667-6.5385744 6.5413333h-.0099897v3.7603334H23v4.6846666h2.7305108V45z" fill="#FFF"></path></g></svg>';
+
+				const html = $('<div class="share-icon-container"><a id="share-twitter-link" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + twitterSVG + '</div><div class="share-icon-title">Twitter</div></button></a></div>\
+				<div class="share-icon-container"><a id="share-reddit-link" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + redditSVG + '</div><div class="share-icon-title">Reddit</div></button></a></div>\
+				<div class="share-icon-container"><a id="share-facebook-link" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + facebookSVG + '</div><div class="share-icon-title">Facebook</div></button></a></div>\
+				<div>' + embedHtml_1 + '</div>\
+				<div class="input-group mt-1"><input id="node-video-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="node-video-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
+				<div class="input-group mt-1"><input id="moartube-video-alias-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="moartube-video-alias-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
+				<div class="input-group mt-1"><input id="video-alias-embed-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="video-alias-embed-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
+				<div class="input-group mt-1"><input id="video-alias-embed-code-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="video-alias-embed-code-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>');
+
 				Swal.fire({
-					title: '...preparing to share video...',
-					html: '',
+					title: 'share',
+					html: html,
 					showConfirmButton: false,
 					showCloseButton: true,
 					showCancelButton: false,
-					willOpen: () => {
-						const nodeVideoUrl = NODE_BASE_URL + '/watch?v=' + videoId
+					didOpen: () => {
+						Swal.showLoading();
 						
 						$.ajax({type: 'GET', url: '/videos/' + videoId + '/information'})
 						.done(async function(data, textStatus, xhr) {
@@ -2531,21 +2553,13 @@ body {
 								showAlert(true, data.message);
 							}
 							else {
+								Swal.hideLoading();
+
 								const information = data.information;
 								
 								const title = information.title;
 								const videoAliasUrl = information.videoAliasUrl;
-
-								const embedUrl = NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0';
 								
-								const embedHtml_1 = '<iframe class="w-100" src="' + NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0" style="aspect-ratio: 16/9;"></iframe>';
-								const embedHtml_2 = '<iframe src="' + NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0"></iframe>';
-								
-								const embedSVG = '<svg viewBox="0 0 36 36" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><circle cx="18" cy="18" r="17.5" stroke="#E7E7E7" fill="#F4F4F4" stroke-width=".5"></circle><path d="m21.41,23.29l-0.71,-0.71l4.59,-4.58l-4.59,-4.59l0.71,-0.71l5.3,5.3l-5.3,5.29zm-6.12,-0.7l-4.58,-4.59l4.59,-4.59l-0.71,-0.7l-5.3,5.29l5.29,5.29l0.71,-0.7z" fill="#606060"></path></svg>';
-								const twitterSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.486325 59.969298c-6.636404-.569063-11.56302-2.326956-16.321973-5.823932C4.443764 48.472116 0 39.646792 0 29.986934 0 15.11156 10.506778 2.798388 25.274412.36718c6.028107-.992411 12.703853.049265 18.28794 2.85363 13.576275 6.818095 19.7813 22.541053 14.64267 37.103159-3.527955 9.997705-12.789708 17.617785-23.391072 19.244938-2.085625.320112-5.065149.508645-6.327625.400391z" fill="#1DA1F2" fill-rule="nonzero"></path><path d="M45.089067 17.577067c-.929778.595555-3.064534 1.460977-4.117334 1.460977v.001778C39.7696 17.784 38.077156 17 36.200178 17c-3.645511 0-6.6016 2.956089-6.6016 6.600178 0 .50631.058666 1.000178.16711 1.473778h-.001066c-4.945066-.129778-10.353422-2.608356-13.609244-6.85049-2.001778 3.46489-.269511 7.3184 2.002133 8.72249-.7776.058666-2.209067-.0896-2.882844-.747023-.045156 2.299734 1.060622 5.346845 5.092622 6.452267-.776533.417778-2.151111.297956-2.7488.209067.209778 1.941333 2.928355 4.479289 5.901155 4.479289C22.46009 38.565156 18.4736 40.788089 14 40.080889 17.038222 41.929422 20.5792 43 24.327111 43c10.650667 0 18.921956-8.631822 18.4768-19.280356-.001778-.011733-.001778-.023466-.002844-.036266.001066-.027378.002844-.054756.002844-.0832 0-.033067-.002844-.064356-.003911-.096356.9696-.66311 2.270578-1.836089 3.2-3.37991-.539022.296888-2.156089.891377-3.6608 1.038932.965689-.521244 2.396444-2.228266 2.749867-3.585777" fill="#FFF"></path></g></svg>';
-								const redditSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill-rule="nonzero" fill="none"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#FF4500"></path><path d="M34.1335847 43.9991814c1.6336774-.3831682 2.81654-.7939438 3.9781753-1.3815065 3.6153903-1.8286959 5.8788354-4.8645264 5.8788354-7.8849481 0-.9131088.0196207-.9556355.780668-1.6923265.6040409-.5847092.8404012-.962515 1.044679-1.6698428.2433185-.8425206.2441028-.9826228.0100139-1.7878614-.6566532-2.2588075-3.0054252-3.2764371-5.1075029-2.212882l-.8124519.4110627-.837264-.5151716c-1.6101652-.9907471-4.473974-1.96108051-6.3205111-2.14155924-.5059537-.04945042-1.143803-.1235464-1.4174535-.16465815l-.4975382-.07474783.2136595-1.06953332c.1175125-.5882423.3623778-1.7491883.5441475-2.57987956.181767-.83069153.4095191-1.95749071.5061138-2.50399817.1396137-.78991765.2348596-.99365031.4645331-.99365031.1589005 0 1.2955101.21462853 2.5257988.4769522 1.2302915.26232367 2.2622022.47695193 2.293134.47695193.0309345 0 .1003234.23497925.154203.52217616.1363137.72661143.4902897 1.17780487 1.2134714 1.54674469 1.7356128.8854428 3.6891485-.29431302 3.6891485-2.22790474 0-2.3956262-2.9538443-3.44186625-4.4550019-1.57794377-.2901205.36022881-.4356746.42625561-.7154284.32453216-.1931649-.07023833-1.5202546-.3669593-2.9490951-.65938053-1.8923676-.38728585-2.6686067-.48706487-2.8582979-.36740978-.2896185.1826864-.2522224.047706-1.0501419 3.79055007-.9490696 4.45187338-1.0064011 4.70400786-1.0882029 4.78580828-.0432388.04324046-.729551.14596475-1.5251367.22827402-2.413687.24971784-5.06621906 1.10194849-6.8544721 2.20227189l-.8268564.5087695-.81204644-.4046587c-2.11972653-1.0563058-4.47243958-.0382468-5.1287215 2.2192841-.23408885.8052386-.23330375.9453408.0100166 1.7878614.20427624.7073278.44063816 1.0851336 1.04467744 1.6698428.76105187.736691.78066878.7792177.78066878 1.6923265 0 4.172347 4.28816886 8.1540991 10.01599352 9.3002929 1.8975637.3797217 2.0263168.3894072 4.4515526.3349143 1.5849893-.0356103 2.7274992-.1508298 3.6566327-.3687526zm-6.6864685-3.0300366c-1.3154638-.2961613-2.8032079-.9569232-3.2391341-1.4386156-.34760429-.384099-.198986-.9659493.246724-.9659493.1736296 0 .5801788.1805458.9034441.4012095 2.1828306 1.4900284 7.1085991 1.484628 9.2987021-.0101767.7054363-.4814861 1.2827246-.468194 1.3538857.0311679.0334854.234998-.1164569.4687666-.4771278.7438635-1.7511846 1.3356924-5.2646974 1.8738181-8.086494 1.2385197v-.000019zm-4.01196195-5.9075609c-.81902983-.4443886-1.22403999-1.1532958-1.22477787-2.143771-.000787-1.135302.52653614-1.8699603 1.59778946-2.2257735.76240766-.253232.85344696-.2532238 1.51689516.0001492 1.785415.6818561 2.1507834 2.909296.6724678 4.0996229-.7705198.6204159-1.7299516.7214286-2.56237455.2697724zm11.09588945.0732995c-.7590038-.3947507-1.1832989-.8746601-1.3628596-1.5414995-.3321829-1.2336253.2931784-2.4377233 1.5067529-2.9011953.6634485-.253373.754488-.2533812 1.5168976-.0001492 1.0712525.3558132 1.5986343 1.0904715 1.5977903 2.2257735-.0008141 1.0085002-.4138259 1.7116813-1.2587076 2.1427072-.7599699.3877084-1.3548626.4098285-1.9998736.0743633z" fill="#FDFDFD"></path></g></svg>';
-								const facebookSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#3B5998" fill-rule="nonzero"></path><path d="M25.7305108 45h5.4583577V30.0073333h4.0947673l.8098295-4.6846666h-4.9045968V21.928c0-1.0943333.7076019-2.2433333 1.7188899-2.2433333h2.7874519V15h-3.4161354v.021c-5.3451414.194-6.4433395 3.2896667-6.5385744 6.5413333h-.0099897v3.7603334H23v4.6846666h2.7305108V45z" fill="#FFF"></path></g></svg>';
-
 								var twitterLink;
 								var redditLink;
 								var facebookLink;
@@ -2560,23 +2574,15 @@ body {
 									redditLink = 'https://www.reddit.com/submit?url=' + videoAliasUrl + '&title=' + title;
 									facebookLink = 'https://www.facebook.com/dialog/share?app_id=246871938290679&href=' + videoAliasUrl + '&display=popup';
 								}
+
+								$('#share-twitter-link').attr('href', twitterLink);
+								$('#share-reddit-link').attr('href', redditLink);
+								$('#share-facebook-link').attr('href', facebookLink);
 								
-								const html = $('<div class="share-icon-container"><a href="' + twitterLink + '" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + twitterSVG + '</div><div class="share-icon-title">Twitter</div></button></a></div>\
-										<div class="share-icon-container"><a href="' + redditLink + '" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + redditSVG + '</div><div class="share-icon-title">Reddit</div></button></a></div>\
-										<div class="share-icon-container"><a href="' + facebookLink + '" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + facebookSVG + '</div><div class="share-icon-title">Facebook</div></button></a></div>\
-										<div>' + embedHtml_1 + '</div>\
-										<div class="input-group mt-1"><input id="node-video-url-input" class="form-control me-1" type="text" value="' + nodeVideoUrl + '" disabled><span class="input-group-btn"><button id="node-video-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>\
-										<div class="input-group mt-1"><input id="moartube-video-alias-url-input" class="form-control me-1" type="text" value="' + videoAliasUrl + '" disabled><span class="input-group-btn"><button id="moartube-video-alias-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>\
-										<div class="input-group mt-1"><input id="video-alias-embed-url-input" class="form-control me-1" type="text" value="" disabled><span class="input-group-btn"><button id="video-alias-embed-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>\
-										<div class="input-group mt-1"><input id="video-alias-embed-code-input" class="form-control me-1" type="text" value="" disabled><span class="input-group-btn"><button id="video-alias-embed-code-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" title="copied!" data-bs-container="body" data-bs-animation="false">copy</button></span></div>');
-								
-								$(html).find('#video-alias-embed-url-input').val(embedUrl);
-								$(html).find('#video-alias-embed-code-input').val(embedHtml_2);
-								
-								Swal.update({
-									title: 'Share',
-									html: html
-								});
+								$('#node-video-url-input').val(nodeVideoUrl);
+								$('#moartube-video-alias-url-input').val(videoAliasUrl);
+								$('#video-alias-embed-url-input').val(embedUrl);
+								$('#video-alias-embed-code-input').val(embedHtml_2);
 								
 								$('#video-alias-embed-url-copy-button').click(function(event) {
 									const value = $('#video-alias-embed-url-input').val();
