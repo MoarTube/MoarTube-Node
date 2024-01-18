@@ -3244,10 +3244,10 @@ body {
 								reject('unable to activate that feature');
 							}
 							else if(token === 'timeout') {
-								reject('activating that feature took too long');
+								reject('human verification unsuccessful, please try again');
 							}
 							else if(token === 'error') {
-								reject('you\'re doing that too much, please try agin later');
+								reject('human verification unsuccessful, please try again');
 							}
 							else {
 								resolve(token);
