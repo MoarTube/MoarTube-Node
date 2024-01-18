@@ -677,7 +677,7 @@ function cloudflare_validateTurnstileToken(token, ip) {
             resolve(data);
         })
         .catch(error => {
-            resolve({isError: true, message: 'local error'});
+            resolve({isError: true, message: 'human verification unavailable, please try again later'});
         });
     });
 }

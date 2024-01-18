@@ -3232,57 +3232,63 @@ body {
 
 			function getCloudflareTurnstileToken() {
 				return new Promise(function(resolve, reject) {
-					const captchaIframeId = Date.now();
+					fetch('https://captcha.moartube.com/heartbeat')
+					.then(data => {
+						const captchaIframeId = Date.now();
 
-					function processMessage (evt) {
-						if (evt.origin === "https://captcha.moartube.com") {
-							if (window.removeEventListener) {
-								window.removeEventListener("message", processMessage, false);
-							} 
-							else {
-								window.detachEvent("onmessage", processMessage);
-							}
+						function processMessage (evt) {
+							if (evt.origin === "https://captcha.moartube.com") {
+								if (window.removeEventListener) {
+									window.removeEventListener("message", processMessage, false);
+								} 
+								else {
+									window.detachEvent("onmessage", processMessage);
+								}
 
-							const currentIframe = document.getElementById(captchaIframeId);
+								const currentIframe = document.getElementById(captchaIframeId);
 
-							document.body.removeChild(currentIframe);
+								document.body.removeChild(currentIframe);
 
-							const token = evt.data;
+								const token = evt.data;
 
-							if(token === 'unsupported') {
-								reject('unable to activate that feature');
-							}
-							else if(token === 'timeout') {
-								reject('human verification unsuccessful, please try again');
-							}
-							else if(token === 'error') {
-								reject('human verification unsuccessful, please try again');
-							}
-							else {
-								resolve(token);
+								if(token === 'unsupported') {
+									reject('unable to activate that feature');
+								}
+								else if(token === 'timeout') {
+									reject('human verification unsuccessful, please try again');
+								}
+								else if(token === 'error') {
+									reject('human verification unsuccessful, please try again');
+								}
+								else {
+									resolve(token);
+								}
 							}
 						}
-					}
 
-					if (window.addEventListener) {
-						window.addEventListener("message", processMessage, false);
-					}
-					else {
-						window.attachEvent("onmessage", processMessage);
-					}
+						if (window.addEventListener) {
+							window.addEventListener("message", processMessage, false);
+						}
+						else {
+							window.attachEvent("onmessage", processMessage);
+						}
 
-					const newIframe = document.createElement('iframe');
+						const newIframe = document.createElement('iframe');
 
-					newIframe.id = captchaIframeId;
-					newIframe.src = 'https://captcha.moartube.com/token/generate';
+						newIframe.id = captchaIframeId;
+						newIframe.src = 'https://captcha.moartube.com/token/generate';
 
-					newIframe.onload = function() {
-						const iframe = document.getElementById(captchaIframeId).contentWindow;
-						
-						iframe.postMessage('get-captcha', '*');
-					};
+						newIframe.onload = function() {
+							const iframe = document.getElementById(captchaIframeId).contentWindow;
+							
+							iframe.postMessage('get-captcha', '*');
+						};
 
-					document.body.appendChild(newIframe);
+						document.body.appendChild(newIframe);
+					})
+					.catch(error => {
+						reject('human verification unavailable, please try again later');
+					});
 				});
 			}
 		</script>
