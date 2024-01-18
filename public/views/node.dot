@@ -514,7 +514,7 @@ body {
 										</div>\
 										<div class="card-body">\
 											<h6 class="card-title text-break row">' + title + '</h6>\
-											<small class="card-text text-break row">' + views + ' views &#x2022 <span class="video-info-timestamp">' + creationTimestampFormatted + '</span></small>\
+											<small class="card-text text-break">' + views + ' views &#x2022 <span class="video-info-timestamp">' + creationTimestampFormatted + '</span></small>\
 										</div>\
 									</div>\
 								</a>\
@@ -553,7 +553,7 @@ body {
 												</div>\
 												<div class="card-body">\
 													<h6 class="card-title text-break row">' + title + '</h6>\
-													<small class="card-text text-break row">' + views + ' views &#x2022 <span class="video-info-timestamp">' + creationTimestampFormatted + '</span></small>\
+													<small class="card-text text-break">' + views + ' views &#x2022 <span class="video-info-timestamp">' + creationTimestampFormatted + '</span></small>\
 												</div>\
 											</div>\
 										</a>\
