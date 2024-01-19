@@ -1,5 +1,6 @@
 var dataDirectoryPath;
 var nodeSettingsPath;
+var lastCheckedContentTrackerPath;
 var imagesDirectoryPath;
 var publicDirectoryPath;
 var viewsDirectoryPath;
@@ -25,6 +26,10 @@ function getDataDirectoryPath() {
 
 function getNodeSettingsPath() {
     return nodeSettingsPath;
+}
+
+function getLastCheckedContentTrackerPath() {
+    return lastCheckedContentTrackerPath;
 }
 
 function getImagesDirectoryPath() {
@@ -66,6 +71,10 @@ function setNodeSettingsPath(path) {
     nodeSettingsPath = path;
 }
 
+function setLastCheckedContentTrackerPath(path) {
+    lastCheckedContentTrackerPath = path;
+}
+
 function setImagesDirectoryPath(path) {
     imagesDirectoryPath = path;
 }
@@ -91,6 +100,7 @@ module.exports = {
     getPublicDirectoryPath,
     getDataDirectoryPath,
     getNodeSettingsPath,
+    getLastCheckedContentTrackerPath,
     getImagesDirectoryPath,
     getVideosDirectoryPath,
     getDatabaseDirectoryPath,
@@ -100,6 +110,7 @@ module.exports = {
     setViewsDirectoryPath,
     setDataDirectoryPath,
     setNodeSettingsPath,
+    setLastCheckedContentTrackerPath,
     setImagesDirectoryPath,
     setVideosDirectoryPath,
     setDatabaseDirectoryPath,

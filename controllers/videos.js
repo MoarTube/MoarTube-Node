@@ -126,7 +126,7 @@ function imported_POST(req, res) {
         if(isAuthenticated) {
             const videoId = req.body.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 submitDatabaseWriteJob('UPDATE videos SET is_importing = ?, is_imported = ? WHERE video_id = ?', [0, 1, videoId], function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
@@ -159,7 +159,7 @@ function videoIdImportingStop_POST(req, res) {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 submitDatabaseWriteJob('UPDATE videos SET is_importing = 0 WHERE video_id = ?', [videoId], function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
@@ -192,7 +192,7 @@ function publishing_POST(req, res) {
         if(isAuthenticated) {
             const videoId = req.body.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 submitDatabaseWriteJob('UPDATE videos SET is_publishing = ? WHERE video_id = ?', [1, videoId], function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
@@ -225,7 +225,7 @@ function published_POST(req, res) {
         if(isAuthenticated) {
             const videoId = req.body.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_published = ? WHERE video_id = ?', [0, 1, videoId], function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
@@ -258,7 +258,7 @@ function videoIdPublishingStop_POST(req, res) {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 submitDatabaseWriteJob('UPDATE videos SET is_publishing = 0 WHERE video_id = ?', [videoId], function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
@@ -293,7 +293,7 @@ function videoIdUpload_POST(req, res) {
             const format = req.query.format;
             const resolution = req.query.resolution;
             
-            if(isVideoIdValid(videoId) && isFormatValid(format) && isResolutionValid(resolution)) {
+            if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
                 logDebugMessageToConsole('uploading video with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '>', null, null, true);
 
                 const totalFileSize = parseInt(req.headers['content-length']);
@@ -469,7 +469,7 @@ function videoIdStream_POST(req, res) {
             const format = req.query.format;
             const resolution = req.query.resolution;
             
-            if(isVideoIdValid(videoId) && isFormatValid(format) && isResolutionValid(resolution)) {
+            if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
                 const manifestFileName = 'manifest-' + resolution + '.m3u8';
 
                 multer(
@@ -665,7 +665,7 @@ function error_POST(req, res) {
         if(isAuthenticated) {
             const videoId = req.body.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [1, videoId], function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
@@ -699,7 +699,7 @@ function videoIdSourceFileExtension_POST(req, res) {
             const videoId = req.params.videoId;
             const sourceFileExtension = req.body.sourceFileExtension;
             
-            if(isVideoIdValid(videoId) && isSourceFileExtensionValid(sourceFileExtension)) {
+            if(isVideoIdValid(videoId, false) && isSourceFileExtensionValid(sourceFileExtension)) {
                 submitDatabaseWriteJob('UPDATE videos SET source_file_extension = ? WHERE video_id = ?', [sourceFileExtension, videoId], function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
@@ -732,7 +732,7 @@ function videoIdSourceFileExtension_GET(req, res) {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 performDatabaseReadJob_GET('SELECT source_file_extension FROM videos WHERE video_id = ?', [videoId])
                 .then(video => {
                     if(video != null) {
@@ -771,7 +771,7 @@ function videoIdPublishes_GET(req, res) {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
                 .then(video => {
                     if(video != null) {
@@ -897,7 +897,7 @@ function videoIdUnpublish_POST(req, res) {
             const format = req.body.format;
             const resolution = req.body.resolution;
             
-            if(isVideoIdValid(videoId) && isFormatValid(format) && isResolutionValid(resolution)) {
+            if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
                 logDebugMessageToConsole('unpublishing video with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '>', null, null, true);
 
                 try {
@@ -979,7 +979,7 @@ function videoIdUnpublish_POST(req, res) {
 function videoIdInformation_GET(req, res) {
     const videoId = req.params.videoId;
     
-    if(isVideoIdValid(videoId)) {
+    if(isVideoIdValid(videoId, false)) {
         performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
         .then(video => {
             if(video != null) {
@@ -1045,7 +1045,7 @@ function videoIdInformation_POST(req, res) {
             var description = req.body.description;
             var tags = req.body.tags;
             
-            if(!isVideoIdValid(videoId)) {
+            if(!isVideoIdValid(videoId, false)) {
                 res.send({isError: true, message: 'video id is not valid'});
             }
             else if(!isTitleValid(title)) {
@@ -1109,7 +1109,7 @@ function videoIdIndexAdd_POST(req, res) {
             const termsOfServiceAgreed = req.body.termsOfServiceAgreed;
             const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
 
-            if(isVideoIdValid(videoId) && isBooleanValid(containsAdultContent) && isBooleanValid(termsOfServiceAgreed) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, false)) {
+            if(isVideoIdValid(videoId, false) && isBooleanValid(containsAdultContent) && isBooleanValid(termsOfServiceAgreed) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, false)) {
                 if(termsOfServiceAgreed) {
                     const nodeSettings = getNodeSettings();
 
@@ -1264,7 +1264,7 @@ function videoIdIndexRemove_POST(req, res) {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
 
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
                 .then(video => {
                     if(video != null) {
@@ -1331,7 +1331,7 @@ function videoIdIndexRemove_POST(req, res) {
 function videoIdAlias_GET(req, res) {
     const videoId = req.params.videoId;
     
-    if(isVideoIdValid(videoId)) {
+    if(isVideoIdValid(videoId, false)) {
         const nodeSettings = getNodeSettings();
 
         performDatabaseReadJob_GET('SELECT is_indexed FROM videos WHERE video_id = ?', [videoId])
@@ -1449,7 +1449,7 @@ function videoIdThumbnail_POST(req, res) {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 logDebugMessageToConsole('uploading thumbnail for video id: ' + videoId, null, null, true);
 
                 multer(
@@ -1544,7 +1544,7 @@ function videoIdPreview_POST(req, res) {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 multer(
                 {
                     fileFilter: function (req, file, cb) {
@@ -1647,7 +1647,7 @@ function videoIdPoster_POST(req, res) {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 multer(
                 {
                     fileFilter: function (req, file, cb) {
@@ -1745,7 +1745,7 @@ function videoIdLengths_POST(req, res) {
             const lengthSeconds = req.body.lengthSeconds;
             const lengthTimestamp = req.body.lengthTimestamp;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 submitDatabaseWriteJob('UPDATE videos SET length_seconds = ?, length_timestamp = ?, is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END WHERE video_id = ?', [lengthSeconds, lengthTimestamp, videoId], function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
@@ -1778,7 +1778,7 @@ function videoIdData_GET(req, res) {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
                 .then(videoData => {
                     if(videoData != null) {
@@ -1948,7 +1948,7 @@ function videoIdComments_GET(req, res) {
     const type = req.query.type;
     const sort = req.query.sort;
     
-    if(isVideoIdValid(videoId) && isTimestampValid(timestamp) && isCommentsTypeValid(type) && isSortValid(sort)) {
+    if(isVideoIdValid(videoId, false) && isTimestampValid(timestamp) && isCommentsTypeValid(type) && isSortValid(sort)) {
         var sortTerm;
 
         if(sort === 'ascending') {
@@ -1986,7 +1986,7 @@ function videoIdCommentsCommentId_GET(req, res) {
     const videoId = req.params.videoId;
     const commentId = req.params.commentId;
     
-    if(isVideoIdValid(videoId) && isCommentIdValid(commentId)) {
+    if(isVideoIdValid(videoId, false) && isCommentIdValid(commentId)) {
         performDatabaseReadJob_GET('SELECT * FROM comments WHERE video_id = ? AND id = ?', [videoId, commentId])
         .then(comment => {
             if(comment != null) {
@@ -2011,7 +2011,7 @@ async function videoIdCommentsComment_POST(req, res) {
     const timestamp = req.body.timestamp;
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
-    if(isVideoIdValid(videoId) && isVideoCommentValid(commentPlainText) && isTimestampValid(timestamp) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+    if(isVideoIdValid(videoId, false) && isVideoCommentValid(commentPlainText) && isTimestampValid(timestamp) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
         var canProceed = true;
         var message;
 
@@ -2103,7 +2103,7 @@ function videoIdCommentsCommentIdDelete_DELETE(req, res) {
     const commentId = req.params.commentId;
     const timestamp = req.query.timestamp;
     
-    if(isVideoIdValid(videoId) && isCommentIdValid(commentId) && isTimestampValid(timestamp)) {
+    if(isVideoIdValid(videoId, false) && isCommentIdValid(commentId) && isTimestampValid(timestamp)) {
         performDatabaseReadJob_GET('SELECT * FROM comments WHERE id = ? AND video_id = ? AND timestamp = ?', [commentId, videoId, timestamp])
         .then(comment => {
             if(comment != null) {
@@ -2149,7 +2149,7 @@ async function videoIdLike_POST(req, res) {
     const isUnDisliking = req.body.isUnDisliking;
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
-    if(isVideoIdValid(videoId) && isBooleanValid(isLiking) && isBooleanValid(isUnDisliking) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+    if(isVideoIdValid(videoId, false) && isBooleanValid(isLiking) && isBooleanValid(isUnDisliking) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
         var canProceed = true;
         var message;
 
@@ -2255,7 +2255,7 @@ async function videoIdDislike_POST(req, res) {
     const isUnliking = req.body.isUnliking;
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
-    if(isVideoIdValid(videoId) && isBooleanValid(isDisliking) && isBooleanValid(isUnliking) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+    if(isVideoIdValid(videoId, false) && isBooleanValid(isDisliking) && isBooleanValid(isUnliking) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
         var canProceed = true;
         var message;
 
@@ -2416,7 +2416,7 @@ async function videoIdReport_POST(req, res) {
     var message = req.body.message;
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
-    if(isVideoIdValid(videoId) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+    if(isVideoIdValid(videoId, false) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
         var canProceed = true;
         var message;
 
@@ -2519,7 +2519,7 @@ var viewCounterIncrementTimer;
 function videoIdViewsIncrement_GET(req, res) {
     const videoId = req.params.videoId;
     
-    if(isVideoIdValid(videoId)) {
+    if(isVideoIdValid(videoId, false)) {
         viewCounter++;
         
         clearTimeout(viewCounterIncrementTimer);
@@ -2559,7 +2559,7 @@ function videoIdViewsIncrement_GET(req, res) {
 function videoIdWatch_GET(req, res) {
     const videoId = req.params.videoId;
     
-    if(isVideoIdValid(videoId)) {
+    if(isVideoIdValid(videoId, false)) {
         performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
         .then(video => {
             if(video != null) {

@@ -1,5 +1,6 @@
+const { logDebugMessageToConsole, getLastCheckedContentTracker, setLastCheckedContentTracker, getAuthenticationStatus } = require('../utils/helpers');
 const { isSearchTermValid, isSortTermValid, isTagTermValid } = require('../utils/validators');
-const { performDatabaseReadJob_ALL } = require('../utils/database');
+const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET } = require('../utils/database');
 const { node_getInformation, node_getVideosTags, node_getChannelSearch } = require('../utils/node-communications');
 
 async function root_GET(req, res) {
@@ -111,7 +112,69 @@ function search_GET(req, res) {
     }
 }
 
+async function newContentCounts_GET(req, res) {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            const lastCheckedContentTracker = getLastCheckedContentTracker();
+
+            const lastCheckedCommentsTimestamp = lastCheckedContentTracker.lastCheckedCommentsTimestamp;
+            const lastCheckedVideoReportsTimestamp = lastCheckedContentTracker.lastCheckedVideoReportsTimestamp;
+            const lastCheckedCommentReportsTimestamp = lastCheckedContentTracker.lastCheckedCommentReportsTimestamp;
+
+            try {
+                const newCommentsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newCommentsCount FROM comments WHERE timestamp > ?', [lastCheckedCommentsTimestamp])).newCommentsCount;
+                const newVideoReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newVideoReportsCount FROM videoReports WHERE timestamp > ?', [lastCheckedVideoReportsTimestamp])).newVideoReportsCount;
+                const newCommentReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newCommentReportsCount FROM commentReports WHERE timestamp > ?', [lastCheckedCommentReportsTimestamp])).newCommentReportsCount;
+
+                res.send({isError: false, newContentCounts: {newCommentsCount: newCommentsCount, newVideoReportsCount: newVideoReportsCount, newCommentReportsCount: newCommentReportsCount}});
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+}
+
+function contentChecked_POST(req, res) {
+    const contentType = req.body.contentType;
+
+    //validate here
+
+    const lastCheckedContentTracker = getLastCheckedContentTracker();
+
+    const timestamp = Date.now();
+
+    if(contentType === 'comments') {
+        lastCheckedContentTracker.lastCheckedCommentsTimestamp = timestamp;
+    }
+    else if(contentType === 'videoReports') {
+        lastCheckedContentTracker.lastCheckedVideoReportsTimestamp = timestamp;
+    }
+    else if(contentType === 'commentReports') {
+        lastCheckedContentTracker.lastCheckedCommentReportsTimestamp = timestamp;
+    }
+
+    setLastCheckedContentTracker(lastCheckedContentTracker);
+
+    res.send({isError: false});
+}
+
 module.exports = {
     root_GET,
-    search_GET
+    search_GET,
+    newContentCounts_GET,
+    contentChecked_POST
 };

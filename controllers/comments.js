@@ -1,8 +1,9 @@
 const sanitizeHtml = require('sanitize-html');
 
-const { logDebugMessageToConsole, getNodeSettings } = require('../utils/helpers');
-const { isCommentIdValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isCloudflareTurnstileTokenValid } = require('../utils/validators');
-const { performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
+const { logDebugMessageToConsole, getNodeSettings, getAuthenticationStatus } = require('../utils/helpers');
+const { isCommentIdValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isCloudflareTurnstileTokenValid, isTimestampValid,
+    isLimitValid, isSearchTermValid, isVideoIdValid } = require('../utils/validators');
+const { performDatabaseReadJob_GET, performDatabaseReadJob_ALL, submitDatabaseWriteJob } = require('../utils/database');
 const { cloudflare_validateTurnstileToken } = require('../utils/cloudflare-communications');
 
 async function commentIdReport_POST(req, res) {
@@ -86,6 +87,81 @@ async function commentIdReport_POST(req, res) {
     }
 }
 
+function search_GET(req, res) {
+    getAuthenticationStatus(req.headers.authorization)
+    .then((isAuthenticated) => {
+        if(isAuthenticated) {
+            const videoId = req.query.videoId;
+            const searchTerm = req.query.searchTerm;
+            const timestamp = req.query.timestamp;
+            const limit = req.query.limit;
+
+            if(isVideoIdValid(videoId, true) && isSearchTermValid(searchTerm) && isTimestampValid(timestamp) && isLimitValid(limit)) {
+                var query = 'SELECT * FROM comments';
+                var params = [];
+
+                if(videoId.length > 0 || searchTerm.length > 0 || timestamp.length > 0) {
+                    query += ' WHERE';
+                }
+
+                if(videoId.length > 0) {
+                    query += ' video_id = ?';
+                    params.push(videoId);
+
+                    if(searchTerm.length > 0 || timestamp.length > 0) {
+                        query += ' AND';
+                    }
+                }
+
+                if(searchTerm.length > 0) {
+                    query += ' comment_plain_text_sanitized LIKE ?';
+                    params.push('%' + searchTerm + '%');
+
+                    if(timestamp.length > 0) {
+                        query += ' AND';
+                    }
+                }
+
+                if(timestamp.length > 0) {
+                    query += ' timestamp < ?';
+                    params.push(timestamp);
+                }
+
+                query += ' ORDER BY timestamp DESC';
+
+                if(limit.length > 0) {
+                    query += ' LIMIT ?';
+                    params.push(limit);
+                }
+                
+                performDatabaseReadJob_ALL(query, params)
+                .then(comments => {
+                    res.send({isError: false, comments: comments});
+                })
+                .catch(error => {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                });
+            }
+            else {
+                res.send({isError: true, message: 'invalid parameters'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+}
+
 module.exports = {
-    commentIdReport_POST
+    commentIdReport_POST,
+    search_GET
 }

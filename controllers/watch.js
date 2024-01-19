@@ -4,7 +4,7 @@ const { node_getInformation, node_getVideo, node_getComments, node_getRecommende
 async function root_GET(req, res) {
     const videoId = req.query.v;
     
-    if(isVideoIdValid(videoId)) {
+    if(isVideoIdValid(videoId, false)) {
         const informationData = await node_getInformation();
         const videoData = await node_getVideo(videoId);
         const recommendedVideosData = await node_getRecommendedVideos();

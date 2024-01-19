@@ -148,7 +148,7 @@ function videoIdStop_POST(req, res) {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 submitDatabaseWriteJob('UPDATE videos SET is_streaming = 0, is_streamed = 1, is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END WHERE video_id = ?', [videoId], async function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
@@ -240,7 +240,7 @@ function videoIdAdaptiveFormatResolutionSegmentsNextEcpectedSegmentIndex_GET(req
             const format = req.params.format;
             const resolution = req.params.resolution;
             
-            if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isResolutionValid(resolution)) {
+            if(isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isResolutionValid(resolution)) {
                 var nextExpectedSegmentIndex = -1;
                 
                 const segmentsDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution);
@@ -286,7 +286,7 @@ function videoIdAdaptiveFormatResolutionSegmentsRemove_POST(req, res) {
             const resolution = req.params.resolution;
             const segmentName = req.body.segmentName;
             
-            if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
+            if(isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
                 const segmentPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
                 
                 fs.unlinkSync(segmentPath);
@@ -316,7 +316,7 @@ function videoIdBandwidth_GET(req, res) {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             
-            if(isVideoIdValid(videoId)) {
+            if(isVideoIdValid(videoId, false)) {
                 performDatabaseReadJob_GET('SELECT bandwidth FROM videos WHERE video_id = ?', [videoId])
                 .then(video => {
                     if(video != null) {
@@ -354,7 +354,7 @@ function videoIdChatSettings_POST(req, res) {
     const isChatHistoryEnabled = req.body.isChatHistoryEnabled;
     const chatHistoryLimit = req.body.chatHistoryLimit;
     
-    if(isVideoIdValid(videoId) && isBooleanValid(isChatHistoryEnabled) && isChatHistoryLimitValid(chatHistoryLimit)) {
+    if(isVideoIdValid(videoId, false) && isBooleanValid(isChatHistoryEnabled) && isChatHistoryLimitValid(chatHistoryLimit)) {
         performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
         .then(video => {
             if(video != null) {
@@ -409,7 +409,7 @@ function videoIdChatSettings_POST(req, res) {
 function videoidChatHistory_GET(req, res) {
     const videoId = req.params.videoId;
     
-    if(isVideoIdValid(videoId)) {
+    if(isVideoIdValid(videoId, false)) {
         performDatabaseReadJob_ALL('SELECT * FROM liveChatMessages WHERE video_id = ?', [videoId])
         .then(chatHistory => {
             res.send({isError: false, chatHistory: chatHistory});

@@ -16,18 +16,19 @@ const {
 	getNodeSettings, setNodeSettings, generateVideoId,
 	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, setJwtSecret, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret, 
 	performNodeIdentification, getNodeIdentification, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64, getVideoThumbnailJpgBase64, getVideoPreviewJpgBase64, 
-	getVideoPosterJpgBase64
+	getVideoPosterJpgBase64, setLastCheckedContentTracker
 } = require('./utils/helpers');
 const { setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort } = require('./utils/urls');
 const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, 
 	setVideosDirectoryPath, setDatabaseDirectoryPath, setDatabaseFilePath, setCertificatesDirectoryPath, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
-	getCertificatesDirectoryPath, getNodeSettingsPath, setViewsDirectoryPath, getViewsDirectoryPath
+	getCertificatesDirectoryPath, getNodeSettingsPath, setViewsDirectoryPath, getViewsDirectoryPath, setLastCheckedContentTrackerPath, getLastCheckedContentTrackerPath
 } = require('./utils/paths');
 const { provisionSqliteDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL } = require('./utils/database');
 const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = require('./utils/httpserver');
 const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
 const { getLiveStreamWatchingCountTracker, updateLiveStreamWatchingCountForWorker } = require('./utils/trackers/live-stream-watching-count-tracker');
 const { updateLiveStreamManifestTracker } = require('./utils/trackers/live-stream-manifest-tracker');
+const { cloudflare_purgeWatchPages, cloudflare_purgeNodePage } = require('./utils/cloudflare-communications');
 
 loadConfig();
 
@@ -231,6 +232,22 @@ if(cluster.isMaster) {
 		}, 3000);
 
 		setInterval(function() {
+			performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
+			.then(async videos => {
+				logDebugMessageToConsole('clearing Cloudflare cache for all node page configurations and watch pages', true);
+
+				const videoIds = videos.map(video => video.video_id);
+				const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
+				
+				cloudflare_purgeWatchPages(videoIds);
+				cloudflare_purgeNodePage(tags);
+			})
+			.catch(error => {
+				// do nothing
+			});
+		}, 60000 * 5);
+
+		setInterval(function() {
 			Object.values(cluster.workers).forEach((worker) => {
 				worker.send({ cmd: 'live_stream_worker_stats_request' });
 			});
@@ -407,6 +424,7 @@ function loadConfig() {
 	}
 
 	setNodeSettingsPath(path.join(getDataDirectoryPath(), '_node_settings.json'));
+	setLastCheckedContentTrackerPath(path.join(getDataDirectoryPath(), '_last_checked_content_tracker.json'));
 
 	setImagesDirectoryPath(path.join(getDataDirectoryPath(), 'images'));
 	setVideosDirectoryPath(path.join(getDataDirectoryPath(), 'media/videos'));
@@ -453,6 +471,16 @@ function loadConfig() {
 		};
 
 		setNodeSettings(nodeSettings);
+	}
+
+	if(!fs.existsSync(getLastCheckedContentTrackerPath())) {
+		const lastCheckedContentTracker = {
+			"lastCheckedCommentsTimestamp":0,
+			"lastCheckedVideoReportsTimestamp":0,
+			"lastCheckedCommentReportsTimestamp":0,
+		};
+
+		setLastCheckedContentTracker(lastCheckedContentTracker);
 	}
 	
 	const nodeSettings = getNodeSettings();

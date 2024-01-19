@@ -3,7 +3,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
 const { logDebugMessageToConsole } = require('./logger');
-const { getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath, getVideosDirectoryPath } = require('./paths');
+const { getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath, getVideosDirectoryPath, getLastCheckedContentTrackerPath } = require('./paths');
 const { performDatabaseReadJob_GET } = require('./database');
 const { indexer_getNodeIdentification, indexer_doNodeIdentificationRefresh } = require('./indexer-communications');
 
@@ -322,6 +322,12 @@ function getNodeSettings() {
 	return nodeSettings;
 }
 
+function getLastCheckedContentTracker() {
+	const lastCheckedContentTracker = JSON.parse(fs.readFileSync(getLastCheckedContentTrackerPath(), 'utf8'));
+
+	return lastCheckedContentTracker;
+}
+
 /* setters */
 
 function setJwtSecret(secret) {
@@ -348,6 +354,10 @@ function setNodeSettings(nodeSettings) {
 	fs.writeFileSync(getNodeSettingsPath(), JSON.stringify(nodeSettings));
 }
 
+function setLastCheckedContentTracker(lastCheckedContentTracker) {
+	fs.writeFileSync(getLastCheckedContentTrackerPath(), JSON.stringify(lastCheckedContentTracker));
+}
+
 module.exports = {
     logDebugMessageToConsole,
     websocketNodeBroadcast,
@@ -359,6 +369,7 @@ module.exports = {
     getJwtSecret,
     getAuthenticationStatus,
     getNodeSettings,
+	getLastCheckedContentTracker,
     getIsDockerEnvironment,
     getIsDeveloperMode,
     getExpressSessionName,
@@ -372,6 +383,7 @@ module.exports = {
     getVideoPosterJpgBase64,
     setJwtSecret,
     setNodeSettings,
+	setLastCheckedContentTracker,
     setIsDockerEnvironment,
     setIsDeveloperMode,
     setExpressSessionName,

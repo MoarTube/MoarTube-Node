@@ -129,7 +129,7 @@ function initializeHttpServer(value) {
                                         const type = payload.type;
                                         const videoId = payload.videoId;
                                         
-                                        if(isVideoIdValid(videoId)) {
+                                        if(isVideoIdValid(videoId, false)) {
                                             if(type === 'importing') {
                                                 const progress = payload.progress;
                                                 
@@ -207,7 +207,7 @@ function initializeHttpServer(value) {
                                 if(parsedMessage.type === 'join') {
                                     const videoId = parsedMessage.videoId;
                                     
-                                    if(isVideoIdValid(videoId)) {
+                                    if(isVideoIdValid(videoId, false)) {
                                         ws.videoId = videoId;
                                         
                                         var username = '';
@@ -234,7 +234,7 @@ function initializeHttpServer(value) {
                                     const videoId = parsedMessage.videoId;
                                     const chatMessageContent = sanitizeHtml(parsedMessage.chatMessageContent, {allowedTags: [], allowedAttributes: {}});
                                     
-                                    if(isVideoIdValid(videoId) && isChatMessageContentValid(chatMessageContent)) {
+                                    if(isVideoIdValid(videoId, false) && isChatMessageContentValid(chatMessageContent)) {
                                         const rateLimiter = ws.rateLimiter;
                                         
                                         const timestamp = Date.now();

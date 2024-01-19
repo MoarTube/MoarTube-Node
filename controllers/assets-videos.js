@@ -12,7 +12,7 @@ const { getLiveStreamManifest } = require('../utils/trackers/live-stream-manifes
 function videoIdThumbnail_GET(req, res) {
     const videoId = req.params.videoId;
     
-    if(isVideoIdValid(videoId)) {
+    if(isVideoIdValid(videoId, false)) {
         const thumbnailFilePath = path.join(path.join(getVideosDirectoryPath(), videoId + '/images'), 'thumbnail.jpg');
         
         if (fs.existsSync(thumbnailFilePath)) {
@@ -34,7 +34,7 @@ function videoIdThumbnail_GET(req, res) {
 function videoIdPreview_GET(req, res) {
     const videoId = req.params.videoId;
     
-    if(isVideoIdValid(videoId)) {
+    if(isVideoIdValid(videoId, false)) {
         const previewFilePath = path.join(path.join(getVideosDirectoryPath(), videoId + '/images'), 'preview.jpg');
         
         if (fs.existsSync(previewFilePath)) {
@@ -56,7 +56,7 @@ function videoIdPreview_GET(req, res) {
 function videoIdPoster_GET(req, res) {
     const videoId = req.params.videoId;
     
-    if(isVideoIdValid(videoId)) {
+    if(isVideoIdValid(videoId, false)) {
         const previewFilePath = path.join(path.join(getVideosDirectoryPath(), videoId + '/images'), 'poster.jpg');
         
         if (fs.existsSync(previewFilePath)) {
@@ -81,7 +81,7 @@ function videoIdAdaptiveTypeFormatManifestsManifestName_GET(req, res) {
     const format = req.params.format;
     const manifestName = req.params.manifestName;
     
-    if(isVideoIdValid(videoId) && isManifestTypeValid(type) && isAdaptiveFormatValid(format) && isManifestNameValid(manifestName)) {
+    if(isVideoIdValid(videoId, false) && isManifestTypeValid(type) && isAdaptiveFormatValid(format) && isManifestNameValid(manifestName)) {
         const manifestPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + manifestName);
 
         if(type === 'dynamic') {
@@ -129,7 +129,7 @@ function videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET(req, res) {
     const resolution = req.params.resolution;
     const segmentName = req.params.segmentName;
     
-    if(isVideoIdValid(videoId) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
+    if(isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
         const segmentPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
         
         if(fs.existsSync(segmentPath)) {
@@ -180,7 +180,7 @@ function videoIdProgressiveFormatResolution_GET(req, res) {
     const format = req.params.format;
     const resolution = req.params.resolution;
     
-    if(isVideoIdValid(videoId) && isProgressiveFormatValid(format) && isResolutionValid(resolution)) {
+    if(isVideoIdValid(videoId, false) && isProgressiveFormatValid(format) && isResolutionValid(resolution)) {
         const filePath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format);
         
         if(fs.existsSync(filePath)) {
@@ -246,7 +246,7 @@ function videoIdProgressiveFormatResolutionDownload_GET(req, res) {
     const format = req.params.format;
     const resolution = req.params.resolution;
     
-    if(isVideoIdValid(videoId) && isProgressiveFormatValid(format) && isResolutionValid(resolution)) {
+    if(isVideoIdValid(videoId, false) && isProgressiveFormatValid(format) && isResolutionValid(resolution)) {
         const filePath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format);
         const fileName = videoId + '-' + resolution + '.' + format;
         

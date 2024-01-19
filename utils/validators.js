@@ -78,6 +78,12 @@ function isVideoCommentValid(comment) {
     return (comment != null && comment.length <= 500);
 }
 
+function isLimitValid(limit) {
+    const limitParsed = parseInt(limit, 10);
+    
+    return (Number.isInteger(limitParsed));
+}
+
 function isTimestampValid(timestamp) {
     const timestampParsed = parseInt(timestamp, 10);
     
@@ -142,10 +148,15 @@ function isVideoMimeTypeValid(mimeType) {
     return (mimeType === 'video/mp4' || mimeType === 'video/webm');
 }
 
-function isVideoIdValid(videoId) {
+function isVideoIdValid(videoId, canBeEmpty) {
     const regex = /^(?=.*[a-zA-Z]|\d)?[a-zA-Z0-9_-]{0,11}$/;
-    
-    return videoId != null && videoId.length > 0 && videoId.length === 11 && regex.test(videoId);
+
+    if(canBeEmpty) {
+        return videoId != null && (videoId.length === 0 || (videoId.length === 11 && regex.test(videoId)));
+    }
+    else {
+        return videoId != null && videoId.length > 0 && videoId.length === 11 && regex.test(videoId);
+    }
 }
 
 function isVideoIdsValid(videoIds) {
@@ -153,7 +164,7 @@ function isVideoIdsValid(videoIds) {
     
     if(videoIds != null) {
         videoIds.forEach(function(videoId) {
-            if(!isVideoIdValid(videoId)) {
+            if(!isVideoIdValid(videoId, false)) {
                 result = false;
                 return;
             }
@@ -325,5 +336,6 @@ module.exports = {
     isTagsValid,
     isCloudflareCredentialsValid,
     isCloudflareTurnstileTokenValid,
-    isSortValid
+    isSortValid,
+    isLimitValid
 }

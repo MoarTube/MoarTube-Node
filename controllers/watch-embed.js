@@ -4,7 +4,7 @@ const { node_getVideo } = require('../utils/node-communications');
 async function videoVideoId_GET(req, res) {
     const videoId = req.params.videoId;
     
-    if(isVideoIdValid(videoId)) {
+    if(isVideoIdValid(videoId, false)) {
         const videoData = await node_getVideo(videoId);
 
         res.render('embed-video', {videoData: videoData});
@@ -17,7 +17,7 @@ async function videoVideoId_GET(req, res) {
 function chatVideoId_GET(req, res) {
     const videoId = req.params.videoId;
     
-    if(isVideoIdValid(videoId)) {
+    if(isVideoIdValid(videoId, false)) {
         res.render('embed-chat', {});
     }
     else {
