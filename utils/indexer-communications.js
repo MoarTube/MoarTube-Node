@@ -17,7 +17,7 @@ function indexer_addVideoToIndex(data) {
             if(error.response.status === 413) {
                 const kilobytes = Math.ceil(error.request._contentLength / 1024);
 
-                resolve({isError: true, message: `your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>500kb</b>)<br>try using smaller node and video images`});
+                resolve({isError: true, message: `your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>1mb</b>)<br>try using smaller node and video images`});
             }
             else {
                 resolve({isError: true, message: 'an error occurred while adding to the MoarTube Indexer'});
@@ -56,7 +56,7 @@ function indexer_doIndexUpdate(data) {
             if(error.response.status === 413) {
                 const kilobytes = Math.ceil(error.request._contentLength / 1024);
 
-                resolve({isError: true, message: `your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>500kb</b>)<br>try using smaller node and video images`});
+                resolve({isError: true, message: `your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>1mb</b>)<br>try using smaller node and video images`});
             }
             else {
                 resolve({isError: true, message: 'an error occurred while updating the MoarTube Indexer'});
