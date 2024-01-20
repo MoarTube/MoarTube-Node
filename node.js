@@ -245,7 +245,7 @@ if(cluster.isMaster) {
 			.catch(error => {
 				// do nothing
 			});
-		}, 60000 * 5);
+		}, 60000 * 60);
 
 		setInterval(function() {
 			Object.values(cluster.workers).forEach((worker) => {

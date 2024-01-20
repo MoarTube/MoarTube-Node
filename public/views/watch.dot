@@ -3276,6 +3276,8 @@ body {
 						const newIframe = document.createElement('iframe');
 
 						newIframe.id = captchaIframeId;
+						newIframe.className = 'hidden-elem';
+
 						newIframe.src = 'https://captcha.moartube.com/token/generate';
 
 						newIframe.onload = function() {
