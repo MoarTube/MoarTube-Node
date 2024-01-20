@@ -8,8 +8,7 @@ const { getVideosDirectoryPath } = require('../utils/paths');
 const { updateHlsVideoMasterManifestFile } = require('../utils/filesystem');
 const { 
     getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, performNodeIdentification, getNodeIdentification, 
-    sanitizeTagsSpaces, deleteDirectoryRecursive, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64, getVideoThumbnailJpgBase64,
-    getVideoPosterJpgBase64, getVideoPreviewJpgBase64
+    sanitizeTagsSpaces, deleteDirectoryRecursive, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64, getVideoPreviewJpgBase64
 } = require('../utils/helpers');
 const { getMoarTubeAliaserPort } = require('../utils/urls');
 const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
@@ -1142,9 +1141,7 @@ function videoIdIndexAdd_POST(req, res) {
                                     const nodeAvatarPngBase64 = getNodeAvatarPngBase64();
                                     const nodeBannerPngBase64 = getNodeBannerPngBase64();
 
-                                    const videoThumbnailJpgBase64 = getVideoThumbnailJpgBase64(videoId);
                                     const videoPreviewJpgBase64 = getVideoPreviewJpgBase64(videoId);
-                                    const videoPosterJpgBase64 = getVideoPosterJpgBase64(videoId);
                                     
                                     const data = {
                                         videoId: videoId,
@@ -1164,10 +1161,7 @@ function videoIdIndexAdd_POST(req, res) {
                                         containsAdultContent: containsAdultContent,
                                         nodeIconPngBase64: nodeIconPngBase64,
                                         nodeAvatarPngBase64: nodeAvatarPngBase64,
-                                        nodeBannerPngBase64: nodeBannerPngBase64,
-                                        videoThumbnailJpgBase64: videoThumbnailJpgBase64,
                                         videoPreviewJpgBase64: videoPreviewJpgBase64,
-                                        videoPosterJpgBase64: videoPosterJpgBase64,
                                         moarTubeTokenProof: moarTubeTokenProof,
                                         cloudflareTurnstileToken: cloudflareTurnstileToken
                                     };

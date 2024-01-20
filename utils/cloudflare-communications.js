@@ -425,10 +425,10 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                         }
                     },
                     {
-                        "description": "Node Assets - JavaScript, CSS, Images",
+                        "description": "Node Assets - JavaScript, CSS",
                         "action": "set_cache_settings",
                         "enabled": true,
-                        "expression": "(starts_with(http.request.uri, \"/assets/resources/javascript\")) or (starts_with(http.request.uri, \"/assets/resources/css\")) or (starts_with(http.request.uri, \"/assets/resources/images\"))",
+                        "expression": "(starts_with(http.request.uri, \"/assets/resources/javascript\")) or (starts_with(http.request.uri, \"/assets/resources/css\"))",
                         "action_parameters": {
                             "cache": true,
                             "edge_ttl": {
@@ -436,6 +436,19 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                                 "default": 86400
                             },
                             "browser_ttl": {
+                                "mode": "override_origin",
+                                "default": 28800
+                            }
+                        }
+                    },
+                    {
+                        "description": "Node Assets - Images",
+                        "action": "set_cache_settings",
+                        "enabled": true,
+                        "expression": "(starts_with(http.request.uri, \"/assets/resources/images\"))",
+                        "action_parameters": {
+                            "cache": true,
+                            "edge_ttl": {
                                 "mode": "override_origin",
                                 "default": 86400
                             }
