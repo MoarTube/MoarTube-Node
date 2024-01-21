@@ -411,7 +411,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                         "description": "Node Assets - Video",
                         "action": "set_cache_settings",
                         "enabled": true,
-                        "expression": "(starts_with(http.request.uri, \"/assets/video\"))",
+                        "expression": "(starts_with(http.request.uri, \"/assets/videos\"))",
                         "action_parameters": {
                             "cache": true,
                             "edge_ttl": {
@@ -419,8 +419,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                                 "default": 31536000
                             },
                             "browser_ttl": {
-                                "mode": "override_origin",
-                                "default": 28800
+                                "mode": "bypass"
                             }
                         }
                     },
