@@ -451,6 +451,9 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                             "edge_ttl": {
                                 "mode": "override_origin",
                                 "default": 86400
+                            },
+                            "browser_ttl": {
+                                "mode": "bypass"
                             }
                         }
                     },
@@ -464,6 +467,9 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                             "edge_ttl": {
                                 "mode": "override_origin",
                                 "default": 86400
+                            },
+                            "browser_ttl": {
+                                "mode": "bypass"
                             }
                         }
                     },
@@ -477,6 +483,9 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                             "edge_ttl": {
                                 "mode": "override_origin",
                                 "default": 86400
+                            },
+                            "browser_ttl": {
+                                "mode": "bypass"
                             }
                         }
                     },
@@ -490,6 +499,9 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                             "edge_ttl": {
                                 "mode": "override_origin",
                                 "default": 86400
+                            },
+                            "browser_ttl": {
+                                "mode": "bypass"
                             }
                         }
                     },
