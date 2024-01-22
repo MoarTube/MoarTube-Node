@@ -527,7 +527,24 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
             logDebugMessageToConsole('created zone http_request_cache_settings phase rule set: ' + JSON.stringify(response_newZoneRuleSet_result), null, null, true);
 
 
-            // step 2: enable Argo Tiered Caching
+            // step 2: set Browser Cache TTL to "Respect Existing Headers"
+
+            logDebugMessageToConsole('setting Browser Cache TTL to Respect Existing Headers', null, null, true);
+
+            const browserCacheTtlData = {
+                value: 0
+            };
+
+            const response_BrowserCacheTtl = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/settings/browser_cache_ttl`, browserCacheTtlData, { headers });
+            
+            if(!response_BrowserCacheTtl.data.success) {
+                throw new Error('failed to set Browser Cache TTL');
+            }
+
+            logDebugMessageToConsole('set Browser Cache TTL to Respect Existing Headers: ' + JSON.stringify(response_BrowserCacheTtl.data), null, null, true);
+
+
+            // step 3: enable Argo Tiered Caching
 
             logDebugMessageToConsole('enabling Argo Tiered Caching', null, null, true);
 
@@ -544,7 +561,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
             logDebugMessageToConsole('enabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null, true);
             
             
-            // step 3: enable Tiered Cache Smart Topology
+            // step 4: enable Tiered Cache Smart Topology
 
             logDebugMessageToConsole('enabling Tiered Cache Smart Topology', null, null, true);
 
@@ -561,7 +578,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
             logDebugMessageToConsole('enabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null, true);
 
             
-            // step 4: save the configuration
+            // step 5: save the configuration
 
             const nodeSettings = getNodeSettings();
             
