@@ -544,7 +544,24 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
             logDebugMessageToConsole('set Browser Cache TTL to Respect Existing Headers: ' + JSON.stringify(response_BrowserCacheTtl.data), null, null, true);
 
 
-            // step 3: enable Argo Tiered Caching
+            // step 3: enable Always Use HTTPS
+
+            logDebugMessageToConsole('enabling Always Use HTTPS', null, null, true);
+
+            const alwaysUseHttpsData = {
+                value: 'on'
+            };
+
+            const response_AlwaysUseHttps = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/settings/always_use_https`, alwaysUseHttpsData, { headers });
+            
+            if(!response_AlwaysUseHttps.data.success) {
+                throw new Error('failed to enable Always Use HTTPS');
+            }
+
+            logDebugMessageToConsole('enabled Always Use HTTPS: ' + JSON.stringify(alwaysUseHttpsData.data), null, null, true);
+
+
+            // step 4: enable Argo Tiered Caching
 
             logDebugMessageToConsole('enabling Argo Tiered Caching', null, null, true);
 
@@ -561,7 +578,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
             logDebugMessageToConsole('enabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null, true);
             
             
-            // step 4: enable Tiered Cache Smart Topology
+            // step 5: enable Tiered Cache Smart Topology
 
             logDebugMessageToConsole('enabling Tiered Cache Smart Topology', null, null, true);
 
@@ -578,7 +595,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
             logDebugMessageToConsole('enabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null, true);
 
             
-            // step 5: save the configuration
+            // step 6: save the configuration
 
             const nodeSettings = getNodeSettings();
             
