@@ -550,86 +550,75 @@ function videoIdStream_POST(req, res) {
                         if(format === 'm3u8') {
                             try {
                                 await updateHlsVideoMasterManifestFile(videoId);
+
+                                const manifestFilePath_temp = req.files.video_files[0].path;
+                                const manifestFilePath_new = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
+
+                                const nodeSettings = getNodeSettings();
+
+                                const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+                                const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+                                const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+
+                                if(cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
+                                    const data = fs.readFileSync(manifestFilePath_temp, 'utf-8');
+                                    const lines = data.split(/\r?\n/);
+
+                                    if(lines.length >= 10) {
+                                        lines.splice(lines.length - 3, 3);
+                                        const newContent = lines.join('\n');
+                                        fs.writeFileSync(manifestFilePath_new, newContent, 'utf-8');
+                                    }
+                                    else {
+                                        fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
+                                    }
+
+                                    fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
+                                    
+                                    const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+                                    const publicNodeAddress = nodeSettings.publicNodeAddress;
+                                    var publicNodePort = nodeSettings.publicNodePort;
+
+                                    const segmentFileName = req.files.video_files[1].originalname;
+
+                                    if(publicNodeProtocol === 'http') {
+                                        publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+                                    } 
+                                    else if(publicNodeProtocol === 'https') {
+                                        publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+                                    }
+                            
+                                    const segmentFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
+
+                                    cloudflare_cacheVideoSegment(segmentFileUrl)
+                                    .then(() => {
+                                        console.log('Cloudflare cached segment: ' + segmentFileUrl);
+                                    })
+                                    .catch(error => {
+                                        console.log(error);
+                                    });
+                                }
+                                else {
+                                    fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
+                                }
+
+                                const dynamicManifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
+                                const dynamicMasterManifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/manifest-master.m3u8');
+
+                                const dynamicManifest = fs.readFileSync(dynamicManifestFilePath, 'utf-8');
+                                const dynamicMasterManifest = fs.readFileSync(dynamicMasterManifestFilePath, 'utf-8');
+
+                                process.send({
+                                    cmd: 'live_stream_manifest_update', 
+                                    dynamicManifestFilePath: dynamicManifestFilePath, 
+                                    dynamicManifest: dynamicManifest,
+                                    dynamicMasterManifestFilePath: dynamicMasterManifestFilePath, 
+                                    dynamicMasterManifest: dynamicMasterManifest,
+                                });
                             }
                             catch(error) {
                                 logDebugMessageToConsole(null, error, new Error().stack, true);
                             }
-
-                            const manifestFilePath_temp = req.files.video_files[0].path;
-                            const manifestFilePath_new = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
-
-                            const nodeSettings = getNodeSettings();
-
-                            const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-                            const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-                            const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
-                            if(cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
-                                /*
-                                <live stream look-ahead implementation>
-
-                                The MoarTube Node purposefully truncates the manifest file entries by two segments (3 seconds per segment, 6 seconds total).
-                                Upon storage of the actual segments, the node will request them through Cloudflare immediately via the node's publicly configured network settings. 
-                                The purpose is to trigger a cache MISS via the node so as to trigger subsequent cache HIT via the video player as future manifest files will 
-                                contain the truncated segment entries. Therefore, the video player will trigger a cache HIT on all segments in the live stream.
-                                
-                                Cloudflare's Smart Tiered Caching Topology will ensure that these cached segments are propagated throughout the Cloudflare network for any 
-                                lower-tier data center that triggers a cache MISS, which will prompt them to fetch the segment from an upper-tier data center that has already 
-                                cached the segment. A single MoarTube Node with low-end hardware can leverage the entire capacity of the Cloudflare global network surpassing 
-                                that of all other live streaming platforms combined using just a free-tier account.
-
-                                This isn't even my final form. I know. I'm awesome.
-                                */
-
-                                const data = fs.readFileSync(manifestFilePath_temp, 'utf-8');
-                                const lines = data.split(/\r?\n/);
-
-                                if(lines.length >= 10) {
-                                    lines.splice(lines.length - 5, 5);
-                                    const newContent = lines.join('\n');
-                                    fs.writeFileSync(manifestFilePath_new, newContent, 'utf-8');
-                                }
-                                
-                                const publicNodeProtocol = nodeSettings.publicNodeProtocol;
-                                const publicNodeAddress = nodeSettings.publicNodeAddress;
-                                var publicNodePort = nodeSettings.publicNodePort;
-
-                                const segmentFileName = req.files.video_files[1].originalname;
-
-                                if(publicNodeProtocol === 'http') {
-                                    publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
-                                } 
-                                else if(publicNodeProtocol === 'https') {
-                                    publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
-                                }
-                        
-                                const segmentFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
-
-                                cloudflare_cacheVideoSegment(segmentFileUrl)
-                                .then(() => {
-                                    console.log('Cloudflare cached segment: ' + segmentFileUrl);
-                                })
-                                .catch(error => {
-                                    console.log(error);
-                                });
-                            }
-                            else {
-                                fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
-                            }
-
-                            const dynamicManifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
-                            const dynamicMasterManifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/manifest-master.m3u8');
-
-                            const dynamicManifest = fs.readFileSync(dynamicManifestFilePath, 'utf-8');
-                            const dynamicMasterManifest = fs.readFileSync(dynamicMasterManifestFilePath, 'utf-8');
-
-                            process.send({
-                                cmd: 'live_stream_manifest_update', 
-                                dynamicManifestFilePath: dynamicManifestFilePath, 
-                                dynamicManifest: dynamicManifest,
-                                dynamicMasterManifestFilePath: dynamicMasterManifestFilePath, 
-                                dynamicMasterManifest: dynamicMasterManifest,
-                            });
                         }
 
                         res.send({isError: false});

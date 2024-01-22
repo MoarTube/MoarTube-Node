@@ -288,8 +288,15 @@ function videoIdAdaptiveFormatResolutionSegmentsRemove_POST(req, res) {
             
             if(isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
                 const segmentPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
-                
-                fs.unlinkSync(segmentPath);
+
+                try {
+                    if(fs.existsSync(segmentPath)) {
+                        fs.unlinkSync(segmentPath);
+                    }
+                }
+                catch(error) {
+                    // do nothing
+                }
                 
                 res.send({isError: false});
             }
