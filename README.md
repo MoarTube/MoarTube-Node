@@ -1,3 +1,5 @@
+<img src="https://github.com/cconley717/MoarTube-Node/assets/26640616/2dacfc1c-dbd0-4c71-b9a5-b11ac67d290f" alt="logo" width="200"/>
+
 # MoarTube-Node
 A repository containing the MoarTube Node software, managed by the [MoarTube Client](https://github.com/cconley717/MoarTube-Client). Share your node's videos with [MoarTube](https://www.moartube.com) or do your own thing and run your node privately. The software makes video and live streaming so easy you'll be amazed beyond belief.
 
