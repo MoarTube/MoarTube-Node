@@ -21,7 +21,7 @@ The default login credentials for your node are below. Be sure to change these u
  - Auto framerate; the framerate that goes in is the framerate that goes out to your viewers.
  - No server-side encoding; client-side only
  - [HTTPS/WSS](https://moartu.be/nodes/chris_moartube_node/videos/L9qCCrsMtJl) capabilities
- - GPU acceleration for Nvidia and AMD (Windows only)
+ - [GPU acceleration](https://moartu.be/nodes/chris_moartube_node/videos/X3xL5oPTJaz) for Nvidia and AMD (Windows only)
  - Different video player modes: streamer, theater, fullscreen
  - Dark mode option and browser appearance configuration recognition
  - Video comments section and live stream chat
