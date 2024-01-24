@@ -16,11 +16,11 @@ The default login credentials for your node are below. Be sure to change these u
  - Video on demand (VoD) and HLS live streaming
  - **HLS** *(H.264, AAC)*, **MP4** *(H.264, AAC)*, **WEBM** *(VP9, Opus)*, **OGV** *(VP8, Opus)* container formats
  - Transcode static MP4/WEBM video to HLS/MP4/WEBM/OGV
- - Transcode RTMP Live stream (such as from OBS) to HLS live stream
+ - Transcode RTMP stream (such as from OBS) to HLS live stream
  - Video output resolutions: 2160p, 1440p, 1080p, 720p, 480p, 360p, 240p
  - Adaptive framerate; the framerate that goes in is the framerate that goes out to your viewers.
  - No server-side encoding; client-side only
- - HTTPS/WSS capabilities
+ - [HTTPS/WSS](https://moartu.be/nodes/chris_moartube_node/videos/L9qCCrsMtJl) capabilities
  - GPU acceleration for Nvidia and AMD (Windows only)
  - Different video player modes: streamer, theater, fullscreen
  - Dark mode option and browser appearance configuration recognition
