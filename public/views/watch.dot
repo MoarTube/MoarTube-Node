@@ -963,7 +963,7 @@ body {
 							<div id="expand-comment-section" class="hand pt-2" onclick="openCommentSection();">
 								<hr>
 								<div>
-									<span id="expand-comment-section-descriptor">Comments</span> &#x2022; <span id="expand-comment-section-counter">...</span>
+									<span id="expand-comment-section-descriptor">Comments</span> &#x2022; <span id="expand-comment-section-counter">0</span>
 									<div style="float: right;">
 										<svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" height="24" viewBox="0 0 24 24" width="24">
 											<path d="M12,21.7l-6.4-6.4l0.7-0.7l5.6,5.6l5.6-5.6l0.7,0.7L12,21.7z M18.4,8.6L12,2.3L5.6,8.6l0.7,0.7L12,3.7l5.6,5.6L18.4,8.6z"></path>
@@ -980,7 +980,7 @@ body {
 								</button>
 								
 								</div>
-								<div id="comment-section-counter-container" class="mb-3"><span id="comment-section-counter">...</span> <span id="comment-section-counter-descriptor">Comments</span>  
+								<div id="comment-section-counter-container" class="mb-3"><span id="comment-section-counter">0</span> <span id="comment-section-counter-descriptor">Comments</span>  
 									<span>
 										<button id="update-comments-button" type="button" class="btn btn-outline-primary me-1" onclick="updateComments()">
 											<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
@@ -1439,18 +1439,6 @@ body {
 				})();
 				
 				$('#video-information-description').text(description);
-				
-				$('#comment-section-counter').text(comments);
-				$('#expand-comment-section-counter').text(comments);
-				
-				if(comments === 1) {
-					$('#comment-section-counter-descriptor').text('Comment');
-					$('#expand-comment-section-counter-descriptor').html('Comment');
-				}
-				else {
-					$('#comment-section-counter-descriptor').text('Comments');
-					$('#expand-comment-section-counter-descriptor').html('Comments');
-				}
 
 				if(adaptiveSources.length > 0 || progressiveSources.length > 0) {
 					initializeVideoJsPlayer();
