@@ -268,22 +268,37 @@ function setNodeidentification(nodeIdentification) {
 }
 
 function deleteDirectoryRecursive(directoryPath) {
-    if(fs.existsSync(directoryPath)) {
-        fs.readdirSync(directoryPath).forEach((file) => {
-            const curPath = path.join(directoryPath, file);
-    
-            if (fs.statSync(curPath).isDirectory()) {
-                deleteDirectoryRecursive(curPath);
-            }
-            else {
-                fs.unlinkSync(curPath);
-            }
-        });
+	try {
+		if(fs.existsSync(directoryPath)) {
+			fs.readdirSync(directoryPath).forEach((file) => {
+				try {
+					const currentPath = path.join(directoryPath, file);
 
-        if (fs.readdirSync(directoryPath).length === 0) {
-            fs.rmdirSync(directoryPath);
-        }
-    }
+					if (fs.statSync(currentPath).isDirectory()) {
+						deleteDirectoryRecursive(currentPath);
+					}
+					else {
+						fs.unlinkSync(currentPath);
+					}
+				}
+				catch(e) {
+					// do nothing
+				}
+			});
+
+			try {
+				if (fs.readdirSync(directoryPath).length === 0) {
+					fs.rmdirSync(directoryPath);
+				}
+			}
+			catch(e) {
+				// do nothing
+			}
+		}
+	}
+	catch(e) {
+		// do nothing
+	}
 }
 
 function websocketNodeBroadcast(message) {
