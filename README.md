@@ -18,7 +18,7 @@ The default login credentials for your node are below. Be sure to change these u
  - Transcode static MP4/WEBM video to HLS/MP4/WEBM/OGV
  - Transcode RTMP stream (such as from OBS) to HLS live stream
  - Video output resolutions: 2160p, 1440p, 1080p, 720p, 480p, 360p, 240p
- - Adaptive framerate; the framerate that goes in is the framerate that goes out to your viewers.
+ - Auto framerate; the framerate that goes in is the framerate that goes out to your viewers.
  - No server-side encoding; client-side only
  - [HTTPS/WSS](https://moartu.be/nodes/chris_moartube_node/videos/L9qCCrsMtJl) capabilities
  - GPU acceleration for Nvidia and AMD (Windows only)
