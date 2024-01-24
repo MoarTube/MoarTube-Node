@@ -17,7 +17,8 @@ The default login credentials for your node are below. Be sure to change these u
  - **HLS** *(H.264, AAC)*, **MP4** *(H.264, AAC)*, **WEBM** *(VP9, Opus)*, **OGV** *(VP8, Opus)* container formats
  - Transcode static MP4/WEBM video to HLS/MP4/WEBM/OGV
  - Transcode RTMP Live stream (such as from OBS) to HLS live stream
- - Video output resolutions, 30fps: 2160p, 1440p, 1080p, 720p, 480p, 360p, 240p
+ - Video output resolutions: 2160p, 1440p, 1080p, 720p, 480p, 360p, 240p
+ - Adaptive framerate; the framerate that goes in is the framerate that goes out to your viewers.
  - No server-side encoding; client-side only
  - HTTPS/WSS capabilities
  - GPU acceleration for Nvidia and AMD (Windows only)
@@ -28,9 +29,9 @@ The default login credentials for your node are below. Be sure to change these u
  - Comment monitoring overview with moderation functionality
  - Run your node in the cloud or on your home WiFi
  - Publicize your node's content on [MoarTube](http://www.moartube.com) or run your node privately
- - Dual box compatible; broadcast an RTMP stream with software such as OBS from a primary system over a network (WAN or LAN) to a secondary system running the MoarTube Client, separating stream broadcasting from stream processing. This is achieved without any special plugins, such as NDI.
- - [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/); transparent bot detection and human verification without the annoyance of captcha.
- - Cloudflare one-click integration; easily integrate your node into the [Cloudflare Network](https://www.cloudflare.com/network/), allowing for global media delivery capabilities that rivals major platforms, all from a single node. Features automated caching strategy configuration and automated cache management, and of course the best security from the world's leading CDN.
+ - [Dual box compatible](https://moartu.be/nodes/chris_moartube_node/videos/f7w9spnInuN); broadcast an RTMP stream with software such as OBS from a primary system over a network (WAN or LAN) to a secondary system running the MoarTube Client, separating stream broadcasting from stream processing. This is achieved without any special plugins, such as NDI.
+ - [Cloudflare Turnstile](https://moartu.be/nodes/chris_moartube_node/videos/gQcsrSmsmrY); transparent bot detection and human verification without the annoyance of captcha, [Cloudflare Turnstile](https://www.cloudflare.com/products/turnstile/) is next-generation protection for your MoarTube Node.
+ - [Cloudflare one-click integration](https://moartu.be/nodes/chris_moartube_node/videos/9aP6aY4DYeH); easily integrate your node into the [Cloudflare Network](https://www.cloudflare.com/network/), allowing for global media delivery capabilities that rivals major platforms, all from a single node. Features automated caching strategy configuration and automated cache management, and of course the best security from the world's leading CDN.
 
 ![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/0d8ac95f-f68b-4e36-849e-28139b45ce50)
 
