@@ -268,37 +268,9 @@ function setNodeidentification(nodeIdentification) {
 }
 
 function deleteDirectoryRecursive(directoryPath) {
-	try {
-		if(fs.existsSync(directoryPath)) {
-			fs.readdirSync(directoryPath).forEach((file) => {
-				try {
-					const currentPath = path.join(directoryPath, file);
-
-					if (fs.statSync(currentPath).isDirectory()) {
-						deleteDirectoryRecursive(currentPath);
-					}
-					else {
-						fs.unlinkSync(currentPath);
-					}
-				}
-				catch(e) {
-					// do nothing
-				}
-			});
-
-			try {
-				if (fs.readdirSync(directoryPath).length === 0) {
-					fs.rmdirSync(directoryPath);
-				}
-			}
-			catch(e) {
-				// do nothing
-			}
-		}
-	}
-	catch(e) {
-		// do nothing
-	}
+	fs.rm(directoryPath, { recursive: true, force: true }, function(error) {
+		// do nothing, best effort
+	});
 }
 
 function websocketNodeBroadcast(message) {

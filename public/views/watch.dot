@@ -1276,16 +1276,17 @@ body {
                 
                 $('#recommended-videos-list').append(element);
 
-				applyTimestampUpdateTrackerToVideo(element, lengthSeconds, creationTimestamp, isStreaming);
+				applyTimestampUpdateTrackerToVideo(element, creationTimestamp, isStreaming);
             }
 
-			function applyTimestampUpdateTrackerToVideo(element, lengthSeconds, creationTimestamp, isStreaming) {
+			function applyTimestampUpdateTrackerToVideo(element, creationTimestamp, isStreaming) {
 				function updateCreationTimestamp() {
 					const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
 
 					$(element).find('.video-info-timestamp').text(creationTimestampFormatted);
 
 					if(isStreaming) {
+						const lengthSeconds = Math.floor((Date.now() - creationTimestamp) / 1000);
 						const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
 
 						$(element).find('.video-streaming-timestamp').text(durationFormatted);
@@ -1295,8 +1296,6 @@ body {
 				updateCreationTimestamp();
 
 				const interval = setInterval(function() {
-					lengthSeconds++;
-
 					updateCreationTimestamp();
 				}, 1000);
 			}
@@ -1407,14 +1406,15 @@ body {
 				
 				incrementViews()
 				.then(function(views) {
+					VIEW_COUNT = views;
+
+					const viewsFormatted = getViewsFormatted(views);
+					
 					if(!isStreaming) {
-						VIEW_COUNT = views;
-
-						const viewsFormatted = getViewsFormatted(views);
-
 						$('#video-information-views').text(viewsFormatted);
-						$('#recommended-video-info-views-' + VIDEO_ID).text(viewsFormatted)
 					}
+
+					$('#recommended-video-info-views-' + VIDEO_ID).text(viewsFormatted)
 				})
 				.catch(function(error) {
 					console.log(error);

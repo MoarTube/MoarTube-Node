@@ -928,9 +928,7 @@ function videoIdUnpublish_POST(req, res) {
                     videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution);
                 }
                 
-                if(fs.existsSync(videoDirectoryPath)) {
-                    deleteDirectoryRecursive(videoDirectoryPath);
-                }
+                deleteDirectoryRecursive(videoDirectoryPath);
                 
                 if(fs.existsSync(manifestFilePath)) {
                     fs.unlinkSync(manifestFilePath);

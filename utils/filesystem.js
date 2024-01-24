@@ -1,24 +1,22 @@
 const fs = require('fs');
 const path = require('path');
 
+const { deleteDirectoryRecursive } = require('./helpers');
 const { logDebugMessageToConsole } = require('./logger');
 const { getVideosDirectoryPath } = require('./paths');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET } = require('./database');
 
-setInterval(function() {
-    maintainFileSystem();
-}, 5000);
-
 function maintainFileSystem() {
     return new Promise(async function(resolve, reject) {
-        await updateManifestFiles();
+        await endStreamedHlsManifestFiles();
         await removeUnusedMasterManifests();
+        await removeOrphanedVideoDirectories();
         
         resolve();
     });
 }
 
-function updateManifestFiles() {
+function endStreamedHlsManifestFiles() {
     return new Promise(async function(resolve, reject) {
         performDatabaseReadJob_ALL('SELECT video_id, is_stream_recorded_remotely FROM videos WHERE is_streamed = 1', [])
         .then(rows => {
@@ -68,7 +66,7 @@ function updateManifestFiles() {
         .catch(error => {
             logDebugMessageToConsole(null, error, new Error().stack, true);
 
-            reject();
+            resolve();
         });
     });
 }
@@ -105,7 +103,46 @@ function removeUnusedMasterManifests() {
         .catch(error => {
             logDebugMessageToConsole(null, error, new Error().stack, true);
             
-            reject();
+            resolve();
+        });
+    });
+}
+
+function removeOrphanedVideoDirectories() {
+    return new Promise(async function(resolve, reject) {
+        performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+        .then(videos => {
+            const videoIds = [];
+            
+            for(const video of videos) {
+                const videoId = video.video_id;
+                
+                videoIds.push(videoId);
+            }
+            
+            const videosDirectoryPath = getVideosDirectoryPath();
+
+            fs.readdir(videosDirectoryPath, (error, videoDirectories) => {
+                if(error) {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                }
+                else {
+                    for(const videoDirectory of videoDirectories) {
+                        if(!videoIds.includes(videoDirectory)) {
+                            const videoDirectoryPath = path.join(videosDirectoryPath, videoDirectory);
+
+                            deleteDirectoryRecursive(videoDirectoryPath);
+                        }
+                    }
+                }
+
+                resolve();
+            });
+        })
+        .catch(error => {
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+            resolve();
         });
     });
 }
@@ -182,5 +219,6 @@ function updateHlsVideoMasterManifestFile(videoId) {
 }
 
 module.exports = {
+    maintainFileSystem,
     updateHlsVideoMasterManifestFile
 };

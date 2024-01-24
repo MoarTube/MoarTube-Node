@@ -28,6 +28,7 @@ const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
 const { getLiveStreamWatchingCountTracker, updateLiveStreamWatchingCountForWorker } = require('./utils/trackers/live-stream-watching-count-tracker');
 const { updateLiveStreamManifestTracker } = require('./utils/trackers/live-stream-manifest-tracker');
 const { cloudflare_purgeWatchPages, cloudflare_purgeNodePage } = require('./utils/cloudflare-communications');
+const { maintainFileSystem } = require('./utils/filesystem');
 
 loadConfig();
 
@@ -252,6 +253,10 @@ if(cluster.isMaster) {
 				worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWatchingCount: getLiveStreamWatchingCountTracker() });
 			});
 		}, 1000);
+
+		setInterval(function() {
+			maintainFileSystem();
+		}, 10000);
 	})
 	.catch(error => {
 		logDebugMessageToConsole(null, error, new Error().stack, true);
