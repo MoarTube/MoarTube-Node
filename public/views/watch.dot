@@ -628,6 +628,11 @@
 				text-decoration: line-through;
 			}
 
+			.pending-chat-message {
+				font-style: italic;
+				opacity: 0.5;
+			}
+
 			@media (prefers-color-scheme: dark) {
 				body {
 					background-color: #1e1e1e;
@@ -1093,7 +1098,7 @@ body {
 
             const COMMENT_INPUT_FORM_DYNAMIC = $('\
 			<form id="comment-input-form-dynamic" class="comment-input-form" role="form" method="POST" data-commentformtype="dynamic" style="background: #cb0c9f12;padding: 5px 5px 5px 5px;">\
-				<textarea class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area" rows="1" placeholder="Add a comment..." maxlength="500" name="commentPlainText" style="height:28px;overflow-y:hidden;resize:none;"></textarea>\
+				<textarea class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area" rows="1" placeholder="Add a comment..." maxlength="500" name="commentPlainText"></textarea>\
 				<div class="text-end mt-1">\
 					<div id="comment-input-form-dynamic-submit-container">\
 						<button id="comment-input-form-dynamic-cancel-button-inner" class="btn btn-outline-primary" type="button" data-commentformtype="dynamic" onclick="$(\'#comment-input-form-dynamic\').remove();$(this).parent().parent().parent().find(\'textarea\').val(\'\');">cancel</button>\
@@ -1365,7 +1370,12 @@ body {
 			
 			function refreshTextAreas() {
 				$("textarea").each(function () {
-					this.setAttribute("style", "height:" + (this.scrollHeight) + "px;overflow-y:hidden;resize:none;");
+					if(this.scrollHeight > 0) {
+						this.setAttribute("style", "height:" + (this.scrollHeight) + "px;overflow-y:hidden;resize:none;");
+					}
+					else {
+						this.setAttribute("style", "height:30px;overflow-y:hidden;resize:none;");
+					}
 				}).on("input", function () {
 					this.style.height = 0;
 					this.style.height = (this.scrollHeight) + "px";
@@ -1440,22 +1450,35 @@ body {
 				
 				$('#video-information-description').text(description);
 
+				var message = '';
+
 				if(adaptiveSources.length > 0 || progressiveSources.length > 0) {
-					initializeVideoJsPlayer();
-				}
-				else {
-					var message = '';
-					
-					if(isPublishing) {
-						message = 'this video is currently publishing, please check back later';
+					if(isPublished || isStreaming) {
+						initializeVideoJsPlayer();
 					}
 					else if(isStreamed) {
-						message = 'this live stream has ended and has not been published yet';
+						message = 'this live stream has ended and has not been published';
 					}
 					else {
 						message = 'this video is unavailable';
 					}
-					
+				}
+				else {
+					if(isPublishing) {
+						message = 'this video is currently publishing, please check back later';
+					}
+					else if(isStreaming) {
+						message = 'this live stream has not started yet';
+					}
+					else if(isStreamed) {
+						message = 'this live stream has ended and has not been published';
+					}
+					else {
+						message = 'this video is unavailable';
+					}
+				}
+
+				if(message != '') {
 					$('#mtp-video-overlay').remove();
 					$('#video-player-container').append('<div class="d-flex align-items-center justify-content-center">' + message + '</div>');
 				}
@@ -1918,6 +1941,9 @@ body {
             function connectWebsocket() {
 				var connectWebsocketClient = function() {
 					try {
+						let LIVE_CHAT_USERNAME;
+						let LIVE_CHAT_USERNAME_COLOR_CODE;
+
 						$('#live-stream-chat-container').removeClass('hidden-elem');
 						
 						const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -1943,6 +1969,9 @@ body {
 								ws.send(JSON.stringify({eventName: 'chat', type: 'join', videoId: VIDEO_ID}));
 							}
 							else if(data.eventName === 'joined') {
+								LIVE_CHAT_USERNAME = data.liveChatUsername;
+								LIVE_CHAT_USERNAME_COLOR_CODE = data.liveChatUsernameColorCode;
+
 								$('#send-chat-message-input').prop('placeholder', 'Type your message');
 								$('#send-chat-message-input').prop('disabled', false);
 								$('#send-chat-message-button').prop('disabled', false);
@@ -1960,10 +1989,27 @@ body {
 								function broadcastChatMessageContent() {
 									if (ws.readyState === WebSocket.OPEN) {
 										const chatMessageContent = $('#send-chat-message-input').val();
-										
-										$('#send-chat-message-input').val('');
-										
-										ws.send(JSON.stringify({eventName: 'chat', type: 'message', videoId: VIDEO_ID, chatMessageContent: chatMessageContent}));
+
+										if(chatMessageContent.length > 0) {
+											$('#send-chat-message-input').prop('disabled', true);
+											$('#send-chat-message-button').prop('disabled', true);
+
+											$('#send-chat-message-button').text('...please wait...');
+											
+											const sentTimestamp = Date.now();
+
+											const chatMessageElement = appendMessageAndConditionallyScroll(chatMessageContent, LIVE_CHAT_USERNAME, LIVE_CHAT_USERNAME_COLOR_CODE, sentTimestamp);
+
+											getCloudflareTurnstileToken()
+											.then(function(cloudflareTurnstileToken) {
+												ws.send(JSON.stringify({eventName: 'chat', type: 'message', videoId: VIDEO_ID, chatMessageContent: chatMessageContent, sentTimestamp: sentTimestamp, cloudflareTurnstileToken: cloudflareTurnstileToken}));
+											})
+											.catch(function(error) {
+												showAlert(true, error);
+
+												$(chatMessageElement).remove();
+											});
+										}
 									}
 								}
 								
@@ -1979,10 +2025,10 @@ body {
 										
 										for(const chatMessage of chatHistory) {
 											const chatMessageContent = chatMessage.chat_message;
-											const username = chatMessage.username;
-											const usernameColorCode = chatMessage.username_color_hex_code;
+											const liveChatUsername = chatMessage.liveChatUsername;
+											const liveChatUsernameColorCode = chatMessage.username_color_hex_code;
 											
-											appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode);
+											appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null);
 										}
 									}
 								})
@@ -1992,10 +2038,24 @@ body {
 							}
 							else if(data.eventName === 'message') {
 								const chatMessageContent = data.chatMessageContent;
-								const username = data.username;
-								const usernameColorCode = data.usernameColorCode;
-								
-								appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode);
+								const liveChatUsername = data.liveChatUsername;
+								const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
+								const sentTimestamp = data.sentTimestamp;
+
+								if(liveChatUsername !== LIVE_CHAT_USERNAME && liveChatUsernameColorCode !== LIVE_CHAT_USERNAME_COLOR_CODE) {
+									appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null);
+								}
+								else {
+									$('#send-chat-message-input').val('');
+
+									$('#send-chat-message-input').prop('disabled', false);
+									$('#send-chat-message-button').prop('disabled', false);
+
+									$('#send-chat-message-button').text('Send');
+
+									const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+									$('#' + chatMessageElementId).removeClass('pending-chat-message');
+								}
 							}
 							else if(data.eventName === 'live_stream_stats') {
 								const watchingCount = data.watchingCount;
@@ -2025,19 +2085,62 @@ body {
 									}
 								}, 1000);
 							}
+							else if(data.eventName === 'error') {
+								const errorType = data.errorType;
+
+								if(errorType === 'register') {
+									$('#send-chat-message-input').prop('disabled', true);
+									$('#send-chat-message-button').prop('disabled', true);
+								}
+								else if(errorType === 'join') {
+									$('#send-chat-message-input').prop('disabled', true);
+									$('#send-chat-message-button').prop('disabled', true);
+								}
+								else if(errorType === 'message') {
+									const liveChatUsername = data.liveChatUsername;
+									const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
+									const sentTimestamp = data.sentTimestamp;
+
+									const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+									$('#' + chatMessageElementId).remove();
+									
+									$('#send-chat-message-input').prop('disabled', false);
+									$('#send-chat-message-button').prop('disabled', false);
+
+									$('#send-chat-message-button').text('Send');
+								}
+
+								showAlert(true, data.message);
+							}
+							else if(data.eventName === 'information') {
+								const isCloudflareTurnstileEnabled = data.isCloudflareTurnstileEnabled;
+
+								IS_CLOUDFLARE_TURNSTILE_ENABLED = isCloudflareTurnstileEnabled;
+							}
 						};
 						
-						function appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode) {
+						function appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, sentTimestamp) {
 							const chatMessagesContainer = $("#chat-messages-container");
 							const chatMessages = $("#chat-messages");
+
+							const chatMessageElement = $('<div class="chat-message pb-2"><div class="flex-shrink-1 rounded px-2"><b style="color:#' + liveChatUsernameColorCode + ';font-size:0.8em;">' + liveChatUsername + '</b>: <span class="live-chat-text-color">' + chatMessageContent + '</span></div></div>');
 							
-							$(chatMessages).append('<div class="chat-message pb-2"><div class="flex-shrink-1 rounded px-2"><b style="color:#' + usernameColorCode + ';font-size:0.8em;">' + username + '</b>: <span class="live-chat-text-color">' + chatMessageContent + '</span></div></div>');
+							if(sentTimestamp != null) {
+								const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+
+								$(chatMessageElement).attr('id', chatMessageElementId); 
+								$(chatMessageElement).addClass('pending-chat-message');
+							}
+
+							$(chatMessages).append(chatMessageElement);
 							
 							const isNearBottom = $(chatMessagesContainer)[0].scrollHeight - $(chatMessagesContainer).scrollTop() - $(chatMessagesContainer).outerHeight() < 100;
 							
 							if (isNearBottom) {
 								$(chatMessagesContainer).scrollTop($(chatMessagesContainer)[0].scrollHeight);
 							}
+
+							return chatMessageElement;
 						}
 					}
 					catch(error) {
@@ -2060,32 +2163,12 @@ body {
 				if(commentPlainText !== '') {
 					disableFormInputs(form, '...please wait...');
 
-					var canProceed = true;
-
-					var cloudflareTurnstileToken = '';
-
-					if(IS_CLOUDFLARE_TURNSTILE_ENABLED) {
-						try {
-							cloudflareTurnstileToken = await getCloudflareTurnstileToken();
-						}
-						catch(error) {
-							console.log(error);
-
-							showAlert(true, error);
-
-							enableFormInputs(form, 'submit');
-
-							canProceed = false;
-						}
-					}
-
-					if(canProceed) {
+					getCloudflareTurnstileToken()
+					.then(function(cloudflareTurnstileToken) {
 						$.post('/videos/' + VIDEO_ID + '/comments/comment', {commentPlainText: commentPlainText, timestamp: MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP, cloudflareTurnstileToken: cloudflareTurnstileToken})
 						.done(function(data) {
 							if(data.isError) {
 								showAlert(true, data.message);
-
-								enableFormInputs(form, 'submit');
 							}
 							else {
 								if(commentFormType === 'dynamic') {
@@ -2101,16 +2184,23 @@ body {
 								addToCommentHistory(commentId);
 								
 								loadComments(comments, true);
-
-								enableFormInputs(form, 'submit');
 							}
+
+							enableFormInputs(form, 'submit');
 						})
 						.fail(function() {
 							showAlert(true, 'unable to submit comment, please try again later');
 
 							enableFormInputs(form, 'submit');
 						});
-					}
+					})
+					.catch(function(error) {
+						console.log(error);
+
+						showAlert(true, error);
+
+						enableFormInputs(form, 'submit');
+					});
 				}
 
 				function disableFormInputs(form, buttonText) {
@@ -2799,10 +2889,10 @@ body {
 				$(videoDislikeButton).prop('disabled', false);
 			}
 			
-			async function performLike(isLiking, isUnDisliking) {
+			function performLike(isLiking, isUnDisliking) {
 				return new Promise(function(resolve, reject) {
 					getCloudflareTurnstileToken()
-					.then(function(cloudflareTurnstileToken) {
+					.then(cloudflareTurnstileToken => {
 						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/like', data: JSON.stringify({ isLiking: isLiking, isUnDisliking: isUnDisliking, cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
 						.done(function (data, textStatus, xhr) {
 							if(data.isError) {
@@ -2822,7 +2912,7 @@ body {
 							reject('...something went wrong...');
 						});
 					})
-					.catch(function(error) {
+					.catch(error => {
 						showAlert(true, error);
 
 						reject(error);
@@ -2833,11 +2923,11 @@ body {
 			function performDislike(isDisliking, isUnliking) {
 				return new Promise(function(resolve, reject) {
 					getCloudflareTurnstileToken()
-					.then(function(cloudflareTurnstileToken) {
+					.then(cloudflareTurnstileToken => {
 						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/dislike', data: JSON.stringify({ isDisliking: isDisliking, isUnliking: isUnliking, cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
 						.done(function (data, textStatus, xhr) {
 							if(data.isError) {
-								showAlert(true, data.message);
+								showAlert(true, error);
 
 								reject(data.message);
 							}
@@ -2853,7 +2943,7 @@ body {
 							reject('...something went wrong...');
 						});
 					})
-					.catch(function(error) {
+					.catch(error => {
 						showAlert(true, error);
 
 						reject(error);
@@ -2992,33 +3082,30 @@ body {
 							}
 						});
 
-						try {
-							const cloudflareTurnstileToken = await getCloudflareTurnstileToken();
+						getCloudflareTurnstileToken()
+						.then(cloudflareTurnstileToken => {
+							$.ajax({type: 'POST', url: submitUrl, data: JSON.stringify({ message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
+							.done(function (data, textStatus, xhr) {
+								if(data.isError) {
+									$('#report-error-message').text(data.message);
 
-							const response = await fetch(submitUrl, {
-								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json',
-								},
-								body: JSON.stringify({ message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken }),
-							});
-
-							const data = await response.json();
-
-							if(data.isError) {
-								$('#report-error-message').text(data.message);
+									Swal.hideLoading();
+								}
+								else {
+									Swal.close();
+								}
+							})
+							.fail(function() {
+								$('#report-error-message').text('...something went wrong...');
 
 								Swal.hideLoading();
-							}
-							else {
-								Swal.close();
-							}
-						}
-						catch(error) {
+							});
+						})
+						.catch(error => {
 							$('#report-error-message').text(error);
 
 							Swal.hideLoading();
-						}
+						});
 
 						return false;
 					}
@@ -3220,65 +3307,70 @@ body {
 
 			function getCloudflareTurnstileToken() {
 				return new Promise(function(resolve, reject) {
-					fetch('https://captcha.moartube.com/heartbeat')
-					.then(data => {
-						const captchaIframeId = Date.now();
+					if(IS_CLOUDFLARE_TURNSTILE_ENABLED) {
+						fetch('https://captcha.moartube.com/heartbeat')
+						.then(data => {
+							const captchaIframeId = Date.now();
 
-						function processMessage (evt) {
-							if (evt.origin === "https://captcha.moartube.com") {
-								if (window.removeEventListener) {
-									window.removeEventListener("message", processMessage, false);
-								} 
-								else {
-									window.detachEvent("onmessage", processMessage);
-								}
+							function processMessage (evt) {
+								if (evt.origin === "https://captcha.moartube.com") {
+									if (window.removeEventListener) {
+										window.removeEventListener("message", processMessage, false);
+									} 
+									else {
+										window.detachEvent("onmessage", processMessage);
+									}
 
-								const currentIframe = document.getElementById(captchaIframeId);
+									const currentIframe = document.getElementById(captchaIframeId);
 
-								document.body.removeChild(currentIframe);
+									document.body.removeChild(currentIframe);
 
-								const token = evt.data;
+									const token = evt.data;
 
-								if(token === 'unsupported') {
-									reject('unable to activate that feature');
-								}
-								else if(token === 'timeout') {
-									reject('human verification unsuccessful, please try again');
-								}
-								else if(token === 'error') {
-									reject('human verification unsuccessful, please try again');
-								}
-								else {
-									resolve(token);
+									if(token === 'unsupported') {
+										reject('unable to activate that feature');
+									}
+									else if(token === 'timeout') {
+										reject('human verification unsuccessful, please try again');
+									}
+									else if(token === 'error') {
+										reject('human verification unsuccessful, please try again');
+									}
+									else {
+										resolve(token);
+									}
 								}
 							}
-						}
 
-						if (window.addEventListener) {
-							window.addEventListener("message", processMessage, false);
-						}
-						else {
-							window.attachEvent("onmessage", processMessage);
-						}
+							if (window.addEventListener) {
+								window.addEventListener("message", processMessage, false);
+							}
+							else {
+								window.attachEvent("onmessage", processMessage);
+							}
 
-						const newIframe = document.createElement('iframe');
+							const newIframe = document.createElement('iframe');
 
-						newIframe.id = captchaIframeId;
-						newIframe.className = 'hidden-elem';
+							newIframe.id = captchaIframeId;
+							newIframe.className = 'hidden-elem';
 
-						newIframe.src = 'https://captcha.moartube.com/token/generate';
+							newIframe.src = 'https://captcha.moartube.com/token/generate';
 
-						newIframe.onload = function() {
-							const iframe = document.getElementById(captchaIframeId).contentWindow;
-							
-							iframe.postMessage('get-captcha', '*');
-						};
+							newIframe.onload = function() {
+								const iframe = document.getElementById(captchaIframeId).contentWindow;
+								
+								iframe.postMessage('get-captcha', '*');
+							};
 
-						document.body.appendChild(newIframe);
-					})
-					.catch(error => {
-						reject('human verification unavailable, please try again later');
-					});
+							document.body.appendChild(newIframe);
+						})
+						.catch(error => {
+							reject('human verification unavailable, please try again later');
+						});
+					}
+					else {
+						resolve('');
+					}
 				});
 			}
 		</script>

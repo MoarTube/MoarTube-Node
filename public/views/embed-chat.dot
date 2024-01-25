@@ -563,6 +563,11 @@
     background-color: var(--bs-btn-bg);
     transition: all .15s ease-in;
 }
+
+.pending-chat-message {
+				font-style: italic;
+				opacity: 0.5;
+			}
 		</style>
 		<script>
 			const params = new URL(window.location.href).searchParams;
@@ -615,6 +620,8 @@
 		
 		<script>
 			var VIDEO_ID;
+
+			var IS_CLOUDFLARE_TURNSTILE_ENABLED;
 			
 			$(document).ready(function() {
 				const pathname = window.location.pathname;
@@ -630,6 +637,9 @@
 			function connectWebsocket() {
 				var connectWebsocketClient = function() {
 					try {
+						let LIVE_CHAT_USERNAME;
+						let LIVE_CHAT_USERNAME_COLOR_CODE;
+
 						$('#live-stream-chat-container').removeClass('hidden-elem');
 						
 						const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -655,6 +665,9 @@
 								ws.send(JSON.stringify({eventName: 'chat', type: 'join', videoId: VIDEO_ID}));
 							}
 							else if(data.eventName === 'joined') {
+								LIVE_CHAT_USERNAME = data.liveChatUsername;
+								LIVE_CHAT_USERNAME_COLOR_CODE = data.liveChatUsernameColorCode;
+
 								$('#send-chat-message-input').prop('placeholder', 'Type your message');
 								$('#send-chat-message-input').prop('disabled', false);
 								$('#send-chat-message-button').prop('disabled', false);
@@ -672,10 +685,27 @@
 								function broadcastChatMessageContent() {
 									if (ws.readyState === WebSocket.OPEN) {
 										const chatMessageContent = $('#send-chat-message-input').val();
-										
-										$('#send-chat-message-input').val('');
-										
-										ws.send(JSON.stringify({eventName: 'chat', type: 'message', videoId: VIDEO_ID, chatMessageContent: chatMessageContent}));
+
+										if(chatMessageContent.length > 0) {
+											$('#send-chat-message-input').prop('disabled', true);
+											$('#send-chat-message-button').prop('disabled', true);
+
+											$('#send-chat-message-button').text('...please wait...');
+											
+											const sentTimestamp = Date.now();
+
+											const chatMessageElement = appendMessageAndConditionallyScroll(chatMessageContent, LIVE_CHAT_USERNAME, LIVE_CHAT_USERNAME_COLOR_CODE, sentTimestamp);
+
+											getCloudflareTurnstileToken()
+											.then(function(cloudflareTurnstileToken) {
+												ws.send(JSON.stringify({eventName: 'chat', type: 'message', videoId: VIDEO_ID, chatMessageContent: chatMessageContent, sentTimestamp: sentTimestamp, cloudflareTurnstileToken: cloudflareTurnstileToken}));
+											})
+											.catch(function(error) {
+												showAlert(true, error);
+
+												$(chatMessageElement).remove();
+											});
+										}
 									}
 								}
 
@@ -691,10 +721,10 @@
 										
 										for(const chatMessage of chatHistory) {
 											const chatMessageContent = chatMessage.chat_message;
-											const username = chatMessage.username;
-											const usernameColorCode = chatMessage.username_color_hex_code;
+											const liveChatUsername = chatMessage.liveChatUsername;
+											const liveChatUsernameColorCode = chatMessage.username_color_hex_code;
 											
-											appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode);
+											appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null);
 										}
 									}
 								})
@@ -704,10 +734,24 @@
 							}
 							else if(data.eventName === 'message') {
 								const chatMessageContent = data.chatMessageContent;
-								const username = data.username;
-								const usernameColorCode = data.usernameColorCode;
+								const liveChatUsername = data.liveChatUsername;
+								const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
+								const sentTimestamp = data.sentTimestamp;
 								
-								appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode);
+								if(liveChatUsername !== LIVE_CHAT_USERNAME && liveChatUsernameColorCode !== LIVE_CHAT_USERNAME_COLOR_CODE) {
+									appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null);
+								}
+								else {
+									$('#send-chat-message-input').val('');
+
+									$('#send-chat-message-input').prop('disabled', false);
+									$('#send-chat-message-button').prop('disabled', false);
+
+									$('#send-chat-message-button').text('Send');
+
+									const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+									$('#' + chatMessageElementId).removeClass('pending-chat-message');
+								}
 							}
 							else if(data.eventName === 'live_stream_stats') {
 								const watchingCount = data.watchingCount;
@@ -737,15 +781,62 @@
 									}
 								}, 1000);
 							}
+							else if(data.eventName === 'error') {
+								const errorType = data.errorType;
+
+								if(errorType === 'register') {
+									$('#send-chat-message-input').prop('disabled', true);
+									$('#send-chat-message-button').prop('disabled', true);
+								}
+								else if(errorType === 'join') {
+									$('#send-chat-message-input').prop('disabled', true);
+									$('#send-chat-message-button').prop('disabled', true);
+								}
+								else if(errorType === 'message') {
+									const liveChatUsername = data.liveChatUsername;
+									const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
+									const sentTimestamp = data.sentTimestamp;
+
+									const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+									$('#' + chatMessageElementId).remove();
+									
+									$('#send-chat-message-input').prop('disabled', false);
+									$('#send-chat-message-button').prop('disabled', false);
+
+									$('#send-chat-message-button').text('Send');
+								}
+
+								showAlert(true, data.message);
+							}
+							else if(data.eventName === 'information') {
+								const isCloudflareTurnstileEnabled = data.isCloudflareTurnstileEnabled;
+
+								IS_CLOUDFLARE_TURNSTILE_ENABLED = isCloudflareTurnstileEnabled;
+							}
 						};
 						
-						function appendMessageAndConditionallyScroll(chatMessageContent, username, usernameColorCode) {
+						function appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, sentTimestamp) {
 							const chatMessagesContainer = $("#chat-messages-container");
 							const chatMessages = $("#chat-messages");
+
+							const chatMessageElement = $('<div class="chat-message pb-2"><div class="flex-shrink-1 rounded px-2" style=" font-family: sans-serif; font-weight: 600; font-size: 4vw; "><b style="color:#' + liveChatUsernameColorCode + ';font-size:0.8em;">' + liveChatUsername + '</b>: <span class="live-chat-text-color">' + chatMessageContent + '</span></div></div>');
 							
-							$(chatMessages).append('<div class="chat-message pb-2"><div class="flex-shrink-1 rounded px-2" style=" font-family: sans-serif; font-weight: 600; font-size: 4vw; "><b style="color:#' + usernameColorCode + ';">' + username + '</b>: <span>' + chatMessageContent + '</span></div></div>');
+							if(sentTimestamp != null) {
+								const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+
+								$(chatMessageElement).attr('id', chatMessageElementId); 
+								$(chatMessageElement).addClass('pending-chat-message');
+							}
+
+							$(chatMessages).append(chatMessageElement);
 							
-							$(chatMessagesContainer).scrollTop($(chatMessagesContainer)[0].scrollHeight);
+							const isNearBottom = $(chatMessagesContainer)[0].scrollHeight - $(chatMessagesContainer).scrollTop() - $(chatMessagesContainer).outerHeight() < 100;
+							
+							if (isNearBottom) {
+								$(chatMessagesContainer).scrollTop($(chatMessagesContainer)[0].scrollHeight);
+							}
+
+							return chatMessageElement;
 						}
 					}
 					catch(error) {
@@ -754,6 +845,75 @@
 				};
 				
 				connectWebsocketClient();
+			}
+
+			function getCloudflareTurnstileToken() {
+				return new Promise(function(resolve, reject) {
+					if(IS_CLOUDFLARE_TURNSTILE_ENABLED) {
+						fetch('https://captcha.moartube.com/heartbeat')
+						.then(data => {
+							const captchaIframeId = Date.now();
+
+							function processMessage (evt) {
+								if (evt.origin === "https://captcha.moartube.com") {
+									if (window.removeEventListener) {
+										window.removeEventListener("message", processMessage, false);
+									} 
+									else {
+										window.detachEvent("onmessage", processMessage);
+									}
+
+									const currentIframe = document.getElementById(captchaIframeId);
+
+									document.body.removeChild(currentIframe);
+
+									const token = evt.data;
+
+									if(token === 'unsupported') {
+										reject('unable to activate that feature');
+									}
+									else if(token === 'timeout') {
+										reject('human verification unsuccessful, please try again');
+									}
+									else if(token === 'error') {
+										reject('human verification unsuccessful, please try again');
+									}
+									else {
+										resolve(token);
+									}
+								}
+							}
+
+							if (window.addEventListener) {
+								window.addEventListener("message", processMessage, false);
+							}
+							else {
+								window.attachEvent("onmessage", processMessage);
+							}
+
+							const newIframe = document.createElement('iframe');
+
+							newIframe.id = captchaIframeId;
+							newIframe.className = 'hidden-elem';
+
+							newIframe.src = 'https://captcha.moartube.com/token/generate';
+
+							newIframe.onload = function() {
+								const iframe = document.getElementById(captchaIframeId).contentWindow;
+								
+								iframe.postMessage('get-captcha', '*');
+							};
+
+							document.body.appendChild(newIframe);
+						})
+						.catch(error => {
+							reject('human verification unavailable, please try again later');
+						});
+					}
+					else {
+						resolve('');
+					}
+				});
 			}
 		</script>
 	</body>

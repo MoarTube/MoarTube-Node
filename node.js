@@ -331,7 +331,7 @@ else {
 				
 				getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
-						if(client.socketType === 'node_peer' && client.videoId === message.videoId) {
+						if(client.socketType === 'node_peer' && (client.videoId === message.videoId || message.videoId === 'all')) {
 							client.send(JSON.stringify(message));
 						}
 					}

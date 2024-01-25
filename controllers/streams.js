@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { getVideosDirectoryPath } = require('../utils/paths');
+const { getVideosDirectoryPath, getPublicDirectoryPath } = require('../utils/paths');
 const { getAuthenticationStatus, generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, deleteDirectoryRecursive } = require('../utils/helpers');
 const { 
     isTitleValid, isDescriptionValid, isTagsValid, isPortValid, isVideoIdValid, isAdaptiveFormatValid, isResolutionValid, isSegmentNameValid, isBooleanValid, 
@@ -62,11 +62,25 @@ function start_POST(req, res) {
                 const meta = JSON.stringify({chatSettings: {isChatHistoryEnabled: true, chatHistoryLimit: 0}, rtmpPort: rtmpPort, uuid: uuid, networkAddress: networkAddress});
                 
                 const tagsSanitized = sanitizeTagsSpaces(tags);
-                
-                fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/images'), { recursive: true });
+
+                const publicImagesDirectory = path.join(getPublicDirectoryPath(), '/images');
+                const publicThumbnailImageFilePath = path.join(publicImagesDirectory, 'thumbnail.jpg');
+                const publicPreviewImageFilePath = path.join(publicImagesDirectory, 'preview.jpg');
+                const publicPosterImageFilePath = path.join(publicImagesDirectory, 'poster.jpg');
+
+                const videoImagesDirectory = path.join(getVideosDirectoryPath(), videoId + '/images');
+                const videoThumbnailImageFilePath = path.join(videoImagesDirectory, 'thumbnail.jpg');
+                const videoPreviewImageFilePath = path.join(videoImagesDirectory, 'preview.jpg');
+                const videoPosterImageFilePath = path.join(videoImagesDirectory, 'poster.jpg');
+
+                fs.mkdirSync(videoImagesDirectory, { recursive: true });
                 fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/adaptive'), { recursive: true });
                 fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/progressive'), { recursive: true });
-                
+
+                fs.copyFileSync(publicThumbnailImageFilePath, videoThumbnailImageFilePath);
+                fs.copyFileSync(publicPreviewImageFilePath, videoPreviewImageFilePath);
+                fs.copyFileSync(publicPosterImageFilePath, videoPosterImageFilePath);
+
                 const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
                 const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, isRecordingStreamRemotely, isRecordingStreamLocally, 1, 0, 0, 0, 0, 0, meta, creationTimestamp];
                 
@@ -232,7 +246,7 @@ function videoIdStop_POST(req, res) {
     });
 }
 
-function videoIdAdaptiveFormatResolutionSegmentsNextEcpectedSegmentIndex_GET(req, res) {
+function videoIdAdaptiveFormatResolutionSegmentsNextExpectedSegmentIndex_GET(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
@@ -433,7 +447,7 @@ function videoidChatHistory_GET(req, res) {
 module.exports = {
     start_POST,
     videoIdStop_POST,
-    videoIdAdaptiveFormatResolutionSegmentsNextEcpectedSegmentIndex_GET,
+    videoIdAdaptiveFormatResolutionSegmentsNextExpectedSegmentIndex_GET,
     videoIdAdaptiveFormatResolutionSegmentsRemove_POST,
     videoIdBandwidth_GET,
     videoIdChatSettings_POST,

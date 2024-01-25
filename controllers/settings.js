@@ -7,7 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getImagesDirectoryPath, getCertificatesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
 } = require('../utils/paths');
-const { getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment
+const { getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast
 } = require('../utils/helpers');
 const { 
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isBooleanStringValid, isUsernameValid, isPasswordValid, 
@@ -506,20 +506,17 @@ function cloudflareTurnstile_POST(req, res) {
 
                 setNodeSettings(nodeSettings);
 
-                try {
-                    performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
-                    .then(async videos => {
-                        const videoIds = videos.map(video => video.video_id);
+                websocketChatBroadcast({eventName: 'information', videoId: 'all', isCloudflareTurnstileEnabled: isCloudflareTurnstileEnabled});
 
-                        cloudflare_purgeWatchPages(videoIds);
-                    })
-                    .catch(error => {
-                        // do nothing
-                    });
-                }
-                catch(error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                }
+                performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+                .then(async videos => {
+                    const videoIds = videos.map(video => video.video_id);
+
+                    cloudflare_purgeWatchPages(videoIds);
+                })
+                .catch(error => {
+                    // do nothing
+                });
 
                 res.send({isError: false});
             }

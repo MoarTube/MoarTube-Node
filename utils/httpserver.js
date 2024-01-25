@@ -11,8 +11,9 @@ const { logDebugMessageToConsole } = require('./logger');
 const { getCertificatesDirectoryPath } = require("./paths");
 const { getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, websocketChatBroadcast } = require("./helpers");
 const { stoppedPublishVideoUploading, stoppingPublishVideoUploading } = require("./trackers/publish-video-uploading-tracker");
-const { isVideoIdValid, isChatMessageContentValid } = require('./validators');
+const { isVideoIdValid, isChatMessageContentValid, isCloudflareTurnstileTokenValid, isTimestampValid } = require('./validators');
 const { performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('./database');
+const { cloudflare_validateTurnstileToken } = require('../utils/cloudflare-communications');
 
 let httpServerWrapper;
 let app;
@@ -86,14 +87,20 @@ function initializeHttpServer(value) {
                 perMessageDeflate: false 
             });
             
-            websocketServer.on('connection', function connection(ws) {
+            websocketServer.on('connection', function connection(ws, req) {
                 logDebugMessageToConsole('MoarTube Client websocket connected', null, null, true);
                 
+                let ip = req.headers['CF-Connecting-IP'];
+
+                if(ip == null) {
+                    ip = req.socket.remoteAddress;
+                }
+
                 ws.on('close', () => {
                     logDebugMessageToConsole('MoarTube Client websocket disconnected', null, null, true);
                 });
                 
-                ws.on('message', (message) => {
+                ws.on('message', async (message) => {
                     const parsedMessage = JSON.parse(message);
                     
                     const jwtToken = parsedMessage.jwtToken;
@@ -198,8 +205,15 @@ function initializeHttpServer(value) {
                             
                             if(socketType === 'node_peer') {
                                 ws.socketType = socketType;
+
+                                const nodeSettings = getNodeSettings();
                                 
                                 ws.send(JSON.stringify({eventName: 'registered'}));
+                                ws.send(JSON.stringify({eventName: 'information', isCloudflareTurnstileEnabled: nodeSettings.isCloudflareTurnstileEnabled}));
+                            }
+                            else {
+                                ws.send(JSON.stringify({eventName: 'error', errorType: 'register', message: 'invalid socket type'}));
+                                ws.close();
                             }
                         }
                         else if(parsedMessage.eventName === 'chat') {
@@ -210,15 +224,15 @@ function initializeHttpServer(value) {
                                     if(isVideoIdValid(videoId, false)) {
                                         ws.videoId = videoId;
                                         
-                                        var username = '';
+                                        var liveChatUsername = '';
                                         
                                         const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
                                         for (var i = 0; i < 8; i++) {
-                                            username += chars[Math.floor(Math.random() * chars.length)];
+                                            liveChatUsername += chars[Math.floor(Math.random() * chars.length)];
                                         }
                                         
-                                        ws.username = username;
-                                        ws.usernameColorCode = ('000000' + Math.floor(Math.random()*16777215).toString(16)).slice(-6);
+                                        ws.liveChatUsername = liveChatUsername;
+                                        ws.liveChatUsernameColorCode = ('000000' + Math.floor(Math.random()*16777215).toString(16)).slice(-6);
                                         
                                         ws.rateLimiter = {
                                             timestamps: [],
@@ -227,105 +241,156 @@ function initializeHttpServer(value) {
                                             isRateLimited: false
                                         };
                                         
-                                        ws.send(JSON.stringify({eventName: 'joined'}));
+                                        ws.send(JSON.stringify({eventName: 'joined', liveChatUsername: ws.liveChatUsername, liveChatUsernameColorCode: ws.liveChatUsernameColorCode}));
+                                    }
+                                    else {
+                                        ws.send(JSON.stringify({eventName: 'error', errorType: 'join', message: 'invalid join parameters'}));
+                                        ws.close();
                                     }
                                 }
                                 else if(parsedMessage.type === 'message') {
                                     const videoId = parsedMessage.videoId;
                                     const chatMessageContent = sanitizeHtml(parsedMessage.chatMessageContent, {allowedTags: [], allowedAttributes: {}});
+                                    const cloudflareTurnstileToken = parsedMessage.cloudflareTurnstileToken;
+                                    const sentTimestamp = parsedMessage.sentTimestamp;
                                     
-                                    if(isVideoIdValid(videoId, false) && isChatMessageContentValid(chatMessageContent)) {
-                                        const rateLimiter = ws.rateLimiter;
-                                        
-                                        const timestamp = Date.now();
-                                        
-                                        const BASE_RATE_LIMIT_PENALTY_MILLISECONDS = 5000;
-                                        const BASE_RATE_LIMIT_PENALTY_SECONDS = BASE_RATE_LIMIT_PENALTY_MILLISECONDS / 1000;
-                                        const RATE_LIMIT_EAGERNESS_PENALTY_MILLISECONDS = 3000;
-                                        
-                                        if(rateLimiter.isRateLimited) {
-                                            const rateLimitThreshold = BASE_RATE_LIMIT_PENALTY_MILLISECONDS + (rateLimiter.rateLimitLevel * BASE_RATE_LIMIT_PENALTY_MILLISECONDS);
+                                    if(isVideoIdValid(videoId, false) && isChatMessageContentValid(chatMessageContent) && isTimestampValid(sentTimestamp) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+                                        var canProceed = true;
+                                        var errorMessage;
+
+                                        try {
+                                            const nodeSettings = getNodeSettings();
                                             
-                                            if((timestamp - rateLimiter.rateLimitTimestamp) > rateLimitThreshold) {
-                                                if((timestamp - rateLimiter.rateLimitTimestamp) < (rateLimitThreshold + RATE_LIMIT_EAGERNESS_PENALTY_MILLISECONDS)) {
-                                                    rateLimiter.rateLimitTimestamp = timestamp;
-                                                    rateLimiter.rateLimitLevel++;
-                                                    
-                                                    ws.send(JSON.stringify({eventName: 'limited', rateLimitSeconds: BASE_RATE_LIMIT_PENALTY_SECONDS + (rateLimiter.rateLimitLevel * BASE_RATE_LIMIT_PENALTY_SECONDS)}));
+                                            if(nodeSettings.isCloudflareTurnstileEnabled) {
+                                                if(cloudflareTurnstileToken.length === 0) {
+                                                    errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
+
+                                                    canProceed = false;
                                                 }
                                                 else {
-                                                    rateLimiter.isRateLimited = false;
-                                                    rateLimiter.rateLimitLevel = -1;
-                                                }
-                                            }
-                                            else {
-                                                return;
-                                            }
-                                        }
-                                        
-                                        if(rateLimiter.timestamps.length < 3) {
-                                            rateLimiter.timestamps.push(timestamp);
-                                        }
-                                        else if(rateLimiter.timestamps.length === 3) {
-                                            rateLimiter.timestamps.shift();
-                                            rateLimiter.timestamps.push(timestamp);
-                                        }
-                                        
-                                        if(rateLimiter.timestamps.length === 3) {
-                                            const firstTimestamp = rateLimiter.timestamps[0];
-                                            const lastTimestamp = rateLimiter.timestamps[rateLimiter.timestamps.length - 1];
-                                            
-                                            const timeEllapsed = lastTimestamp - firstTimestamp;
-                                            
-                                            if(timeEllapsed < BASE_RATE_LIMIT_PENALTY_MILLISECONDS) {
-                                                rateLimiter.rateLimitTimestamp = timestamp;
-                                                rateLimiter.isRateLimited = true;
-                                                rateLimiter.rateLimitLevel++;
-                                                
-                                                ws.send(JSON.stringify({eventName: 'limited', rateLimitSeconds: BASE_RATE_LIMIT_PENALTY_SECONDS}));
-                                            }
-                                        }
-                                        
-                                        const username = ws.username;
-                                        const usernameColorCode = ws.usernameColorCode;
-                                        
-                                        ws.rateLimiter = rateLimiter;
-                                        
-                                        websocketChatBroadcast({eventName: 'message', videoId: videoId, chatMessageContent: chatMessageContent, username: username, usernameColorCode: usernameColorCode});
+                                                    const response = await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip);
 
-                                        performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
-                                        .then(video => {
-                                            if(video != null) {
-                                                const meta = JSON.parse(video.meta);
-                                                
-                                                const isChatHistoryEnabled = meta.chatSettings.isChatHistoryEnabled;
-                                                
-                                                if(isChatHistoryEnabled) {
-                                                    const chatHistoryLimit = meta.chatSettings.chatHistoryLimit;
-                                                    
-                                                    submitDatabaseWriteJob('INSERT INTO liveChatMessages(video_id, username, username_color_hex_code, chat_message, timestamp) VALUES (?, ?, ?, ?, ?)', [videoId, username, usernameColorCode, chatMessageContent, timestamp], function(isError) {
-                                                        if(isError) {
-                                                            
-                                                        }
-                                                        else {
-                                                            if(chatHistoryLimit !== 0) {
-                                                                submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM liveChatMessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
-                                                                    if(isError) {
-                                                                        
-                                                                    }
-                                                                    else {
-                                                                        
-                                                                    }
-                                                                });
-                                                            }
-                                                        }
-                                                    });
+                                                    if(response.isError) {
+                                                        logDebugMessageToConsole(null, response.message, new Error().stack, true);
+
+                                                        errorMessage = response.message;
+
+                                                        canProceed = false;
+                                                    }
                                                 }
                                             }
-                                        })
-                                        .catch(error => {
+                                        }
+                                        catch(error) {
                                             logDebugMessageToConsole(null, error, new Error().stack, true);
-                                        });
+
+                                            errorMessage = 'error communicating with the MoarTube node';
+
+                                            canProceed = false;
+                                        }
+
+                                        if(canProceed) {
+                                            const rateLimiter = ws.rateLimiter;
+                                            
+                                            const timestamp = Date.now();
+                                            
+                                            const BASE_RATE_LIMIT_PENALTY_MILLISECONDS = 5000;
+                                            const BASE_RATE_LIMIT_PENALTY_SECONDS = BASE_RATE_LIMIT_PENALTY_MILLISECONDS / 1000;
+                                            const RATE_LIMIT_EAGERNESS_PENALTY_MILLISECONDS = 3000;
+                                            
+                                            if(rateLimiter.isRateLimited) {
+                                                const rateLimitThreshold = BASE_RATE_LIMIT_PENALTY_MILLISECONDS + (rateLimiter.rateLimitLevel * BASE_RATE_LIMIT_PENALTY_MILLISECONDS);
+                                                
+                                                if((timestamp - rateLimiter.rateLimitTimestamp) > rateLimitThreshold) {
+                                                    if((timestamp - rateLimiter.rateLimitTimestamp) < (rateLimitThreshold + RATE_LIMIT_EAGERNESS_PENALTY_MILLISECONDS)) {
+                                                        rateLimiter.rateLimitTimestamp = timestamp;
+                                                        rateLimiter.rateLimitLevel++;
+                                                        
+                                                        ws.send(JSON.stringify({eventName: 'limited', rateLimitSeconds: BASE_RATE_LIMIT_PENALTY_SECONDS + (rateLimiter.rateLimitLevel * BASE_RATE_LIMIT_PENALTY_SECONDS)}));
+                                                    }
+                                                    else {
+                                                        rateLimiter.isRateLimited = false;
+                                                        rateLimiter.rateLimitLevel = -1;
+                                                    }
+                                                }
+                                                else {
+                                                    return;
+                                                }
+                                            }
+                                            
+                                            if(rateLimiter.timestamps.length < 3) {
+                                                rateLimiter.timestamps.push(timestamp);
+                                            }
+                                            else if(rateLimiter.timestamps.length === 3) {
+                                                rateLimiter.timestamps.shift();
+                                                rateLimiter.timestamps.push(timestamp);
+                                            }
+                                            
+                                            if(rateLimiter.timestamps.length === 3) {
+                                                const firstTimestamp = rateLimiter.timestamps[0];
+                                                const lastTimestamp = rateLimiter.timestamps[rateLimiter.timestamps.length - 1];
+                                                
+                                                const timeEllapsed = lastTimestamp - firstTimestamp;
+                                                
+                                                if(timeEllapsed < BASE_RATE_LIMIT_PENALTY_MILLISECONDS) {
+                                                    rateLimiter.rateLimitTimestamp = timestamp;
+                                                    rateLimiter.isRateLimited = true;
+                                                    rateLimiter.rateLimitLevel++;
+                                                    
+                                                    ws.send(JSON.stringify({eventName: 'limited', rateLimitSeconds: BASE_RATE_LIMIT_PENALTY_SECONDS}));
+                                                }
+                                            }
+                                            
+                                            const liveChatUsername = ws.liveChatUsername;
+                                            const liveChatUsernameColorCode = ws.liveChatUsernameColorCode;
+                                            
+                                            ws.rateLimiter = rateLimiter;
+                                            
+                                            websocketChatBroadcast({eventName: 'message', videoId: videoId, chatMessageContent: chatMessageContent, sentTimestamp: sentTimestamp, liveChatUsername: liveChatUsername, liveChatUsernameColorCode: liveChatUsernameColorCode});
+
+                                            performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+                                            .then(video => {
+                                                if(video != null) {
+                                                    const meta = JSON.parse(video.meta);
+                                                    
+                                                    const isChatHistoryEnabled = meta.chatSettings.isChatHistoryEnabled;
+                                                    
+                                                    if(isChatHistoryEnabled) {
+                                                        const chatHistoryLimit = meta.chatSettings.chatHistoryLimit;
+                                                        
+                                                        submitDatabaseWriteJob('INSERT INTO liveChatMessages(video_id, username, username_color_hex_code, chat_message, timestamp) VALUES (?, ?, ?, ?, ?)', [videoId, liveChatUsername, liveChatUsernameColorCode, chatMessageContent, timestamp], function(isError) {
+                                                            if(isError) {
+                                                                
+                                                            }
+                                                            else {
+                                                                if(chatHistoryLimit !== 0) {
+                                                                    submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM liveChatMessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
+                                                                        if(isError) {
+                                                                            
+                                                                        }
+                                                                        else {
+                                                                            
+                                                                        }
+                                                                    });
+                                                                }
+                                                            }
+                                                        });
+                                                    }
+                                                }
+                                            })
+                                            .catch(error => {
+                                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                                            });
+                                        }
+                                        else {
+                                            const liveChatUsername = ws.liveChatUsername;
+                                            const liveChatUsernameColorCode = ws.liveChatUsernameColorCode;
+
+                                            ws.send(JSON.stringify({eventName: 'error', errorType: 'message', message: errorMessage, sentTimestamp: sentTimestamp, liveChatUsername: liveChatUsername, liveChatUsernameColorCode: liveChatUsernameColorCode}));
+                                        }
+                                    }
+                                    else {
+                                        ws.send(JSON.stringify({eventName: 'error', errorType: 'message', message: 'invalid message parameters'}));
+                                        ws.close();
                                     }
                                 }
                             }

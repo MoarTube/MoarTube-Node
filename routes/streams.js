@@ -1,7 +1,7 @@
 const express = require('express');
 
 const { 
-    start_POST, videoIdStop_POST, videoIdAdaptiveFormatResolutionSegmentsNextEcpectedSegmentIndex_GET, videoIdAdaptiveFormatResolutionSegmentsRemove_POST, videoIdBandwidth_GET,
+    start_POST, videoIdStop_POST, videoIdAdaptiveFormatResolutionSegmentsNextExpectedSegmentIndex_GET, videoIdAdaptiveFormatResolutionSegmentsRemove_POST, videoIdBandwidth_GET,
     videoIdChatSettings_POST, videoidChatHistory_GET
 } = require('../controllers/streams');
 
@@ -16,7 +16,7 @@ router.post('/:videoId/stop', (req, res) => {
 });
 
 router.get('/:videoId/adaptive/:format/:resolution/segments/nextExpectedSegmentIndex', (req, res) => {
-    videoIdAdaptiveFormatResolutionSegmentsNextEcpectedSegmentIndex_GET(req, res);
+    videoIdAdaptiveFormatResolutionSegmentsNextExpectedSegmentIndex_GET(req, res);
 });
 
 router.post('/:videoId/adaptive/:format/:resolution/segments/remove', (req, res) => {

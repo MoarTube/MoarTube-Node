@@ -86,8 +86,8 @@ function isLimitValid(limit) {
 
 function isTimestampValid(timestamp) {
     const timestampParsed = parseInt(timestamp, 10);
-    
-    return (Number.isInteger(timestampParsed));
+
+    return (Number.isInteger(timestampParsed) && timestampParsed >= 0 && timestampParsed <= 100000000000000);
 }
 
 function isCommentsTypeValid(type) {
@@ -200,7 +200,7 @@ function isPublicNodeAddressValid(publicNodeAddress) {
 function isPortValid(port) {
     port = Number(port);
     
-    return port != null && !Number.isNaN(port) && (port >= 0 && port <= 65535);
+    return port != null && !Number.isNaN(port) && (port > 0 && port <= 65535);
 }
 
 function isFormatValid(format) {

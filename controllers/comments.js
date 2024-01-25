@@ -15,14 +15,14 @@ async function commentIdReport_POST(req, res) {
     
     if(isCommentIdValid(commentId) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
         var canProceed = true;
-        var message;
+        var errorMessage;
 
         try {
             const nodeSettings = getNodeSettings();
             
             if(nodeSettings.isCloudflareTurnstileEnabled) {
                 if(cloudflareTurnstileToken.length === 0) {
-                    message = 'human verification was enabled on this MoarTube Node, please refresh your browser';
+                    errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
 
                     canProceed = false;
                 }
@@ -34,7 +34,7 @@ async function commentIdReport_POST(req, res) {
                     if(response.isError) {
                         logDebugMessageToConsole(null, response.message, new Error().stack, true);
 
-                        message = response.message;
+                        errorMessage = response.message;
 
                         canProceed = false;
                     }
@@ -44,7 +44,7 @@ async function commentIdReport_POST(req, res) {
         catch(error) {
             logDebugMessageToConsole(null, error, new Error().stack, true);
 
-            message = 'error communicating with the MoarTube node';
+            errorMessage = 'error communicating with the MoarTube node';
 
             canProceed = false;
         }
@@ -79,7 +79,7 @@ async function commentIdReport_POST(req, res) {
             });
         }
         else {
-            res.send({isError: true, message: message});
+            res.send({isError: true, message: errorMessage});
         }
     }
     else {
