@@ -100,7 +100,7 @@ After=network.target
 Type=simple
 User=root
 ExecStart=/snap/bin/node /home/Moartube-Node/node.js
-Restart=on-failure
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
