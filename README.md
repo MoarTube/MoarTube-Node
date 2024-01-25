@@ -113,3 +113,9 @@ Run the command **sudo systemctl enable moartube-node** to make the moartube-nod
 Run the command **sudo systemctl start moartube-node** to start the moartube-node service
 
 Run the command **sudo systemctl status moartube-node** to view the status of the moartube-node service
+
+#### some commands of interest
+
+Run the command **sudo systemctl stop moartube-node** to stop the moartube-node service
+
+Run the command **sudo systemctl restart moartube-node** to restart the moartube-node service
