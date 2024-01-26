@@ -3082,31 +3082,34 @@ body {
 							}
 						});
 
-						getCloudflareTurnstileToken()
-						.then(cloudflareTurnstileToken => {
-							$.ajax({type: 'POST', url: submitUrl, data: JSON.stringify({ message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
-							.done(function (data, textStatus, xhr) {
-								if(data.isError) {
-									$('#report-error-message').text(data.message);
+						try {
+							const cloudflareTurnstileToken = await getCloudflareTurnstileToken();
 
-									Swal.hideLoading();
-								}
-								else {
-									Swal.close();
-								}
-							})
-							.fail(function() {
-								$('#report-error-message').text('...something went wrong...');
+							const response = await fetch(submitUrl, {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json',
+								},
+								body: JSON.stringify({ message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken }),
+							});
+
+							const data = await response.json();
+
+							if(data.isError) {
+								$('#report-error-message').text(data.message);
 
 								Swal.hideLoading();
-							});
-						})
-						.catch(error => {
+							}
+							else {
+								Swal.close();
+							}
+						}
+						catch(error) {
 							$('#report-error-message').text(error);
 
 							Swal.hideLoading();
-						});
-
+						}
+						
 						return false;
 					}
 				});
