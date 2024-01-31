@@ -508,7 +508,7 @@ function videoIdStream_POST(req, res) {
                             }
                             
                             if(directoryPath !== '') {
-                                logDebugMessageToConsole('storing stream with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '> to directory <' + directoryPath + '>', null, null, true);
+                                //logDebugMessageToConsole('storing stream with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '> to directory <' + directoryPath + '>', null, null, true);
                                 
                                 fs.mkdirSync(directoryPath, { recursive: true });
                                 
@@ -549,7 +549,7 @@ function videoIdStream_POST(req, res) {
                     else {
                         if(format === 'm3u8') {
                             try {
-                                await updateHlsVideoMasterManifestFile(videoId);
+                                updateHlsVideoMasterManifestFile(videoId);
 
                                 const manifestFilePath_temp = req.files.video_files[0].path;
                                 const manifestFilePath_new = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
@@ -561,20 +561,6 @@ function videoIdStream_POST(req, res) {
                                 const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
 
                                 if(cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
-                                    const data = fs.readFileSync(manifestFilePath_temp, 'utf-8');
-                                    const lines = data.split(/\r?\n/);
-
-                                    if(lines.length >= 10) {
-                                        lines.splice(lines.length - 3, 3);
-                                        const newContent = lines.join('\n');
-                                        fs.writeFileSync(manifestFilePath_new, newContent, 'utf-8');
-                                    }
-                                    else {
-                                        fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
-                                    }
-
-                                    fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
-                                    
                                     const publicNodeProtocol = nodeSettings.publicNodeProtocol;
                                     const publicNodeAddress = nodeSettings.publicNodeAddress;
                                     var publicNodePort = nodeSettings.publicNodePort;
@@ -587,12 +573,24 @@ function videoIdStream_POST(req, res) {
                                     else if(publicNodeProtocol === 'https') {
                                         publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
                                     }
-                            
+
                                     const segmentFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
 
                                     cloudflare_cacheVideoSegment(segmentFileUrl)
                                     .then(() => {
-                                        console.log('Cloudflare cached segment: ' + segmentFileUrl);
+                                        const data = fs.readFileSync(manifestFilePath_temp, 'utf-8');
+                                        const lines = data.split(/\r?\n/);
+
+                                        if(lines.length >= 10) {
+                                            lines.splice(lines.length - 3, 3);
+                                            const newContent = lines.join('\n');
+                                            fs.writeFileSync(manifestFilePath_new, newContent, 'utf-8');
+                                        }
+                                        else {
+                                            fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
+                                        }
+
+                                        liveStreamManifestUpdate();
                                     })
                                     .catch(error => {
                                         console.log(error);
@@ -600,21 +598,25 @@ function videoIdStream_POST(req, res) {
                                 }
                                 else {
                                     fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
+
+                                    liveStreamManifestUpdate();
                                 }
 
-                                const dynamicManifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
-                                const dynamicMasterManifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/manifest-master.m3u8');
+                                function liveStreamManifestUpdate() {
+                                    const dynamicManifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
+                                    const dynamicMasterManifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/manifest-master.m3u8');
 
-                                const dynamicManifest = fs.readFileSync(dynamicManifestFilePath, 'utf-8');
-                                const dynamicMasterManifest = fs.readFileSync(dynamicMasterManifestFilePath, 'utf-8');
+                                    const dynamicManifest = fs.readFileSync(dynamicManifestFilePath, 'utf-8');
+                                    const dynamicMasterManifest = fs.readFileSync(dynamicMasterManifestFilePath, 'utf-8');
 
-                                process.send({
-                                    cmd: 'live_stream_manifest_update', 
-                                    dynamicManifestFilePath: dynamicManifestFilePath, 
-                                    dynamicManifest: dynamicManifest,
-                                    dynamicMasterManifestFilePath: dynamicMasterManifestFilePath, 
-                                    dynamicMasterManifest: dynamicMasterManifest,
-                                });
+                                    process.send({
+                                        cmd: 'live_stream_manifest_update', 
+                                        dynamicManifestFilePath: dynamicManifestFilePath, 
+                                        dynamicManifest: dynamicManifest,
+                                        dynamicMasterManifestFilePath: dynamicMasterManifestFilePath, 
+                                        dynamicMasterManifest: dynamicMasterManifest,
+                                    });
+                                }
                             }
                             catch(error) {
                                 logDebugMessageToConsole(null, error, new Error().stack, true);
@@ -1431,7 +1433,7 @@ function videoIdThumbnail_POST(req, res) {
             const videoId = req.params.videoId;
             
             if(isVideoIdValid(videoId, false)) {
-                logDebugMessageToConsole('uploading thumbnail for video id: ' + videoId, null, null, true);
+                //logDebugMessageToConsole('uploading thumbnail for video id: ' + videoId, null, null, true);
 
                 multer(
                 {
@@ -1489,7 +1491,7 @@ function videoIdThumbnail_POST(req, res) {
                         res.send({isError: true, message: error.message});
                     }
                     else {
-                        logDebugMessageToConsole('uploaded thumbnail for video id <' + videoId + '>', null, null, true);
+                        //logDebugMessageToConsole('uploaded thumbnail for video id <' + videoId + '>', null, null, true);
 
                         try {
                             cloudflare_purgeVideoThumbnailImages([videoId]);
@@ -1585,23 +1587,25 @@ function videoIdPreview_POST(req, res) {
                         res.send({isError: true, message: error.message});
                     }
                     else {
-                        logDebugMessageToConsole('uploaded preview for video id <' + videoId + '>', null, null, true);
+                        //logDebugMessageToConsole('uploaded preview for video id <' + videoId + '>', null, null, true);
 
                         submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END WHERE video_id = ?', [videoId], function(isError) {
                             if(isError) {
                                 res.send({isError: true, message: 'error communicating with the MoarTube node'});
                             }
                             else {
-                                try {
-                                    cloudflare_purgeVideoPreviewImages([videoId]);
-                                }
-                                catch(error) {
-                                    logDebugMessageToConsole(null, error, new Error().stack, true);
-                                }
-
-                                res.send({isError: false});
+                                // do nothing
                             }
                         });
+
+                        try {
+                            cloudflare_purgeVideoPreviewImages([videoId]);
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        }
+
+                        res.send({isError: false});
                     }
                 });
             }
@@ -1688,7 +1692,7 @@ function videoIdPoster_POST(req, res) {
                         res.send({isError: true, message: error.message});
                     }
                     else {
-                        logDebugMessageToConsole('uploaded poster for video id <' + videoId + '>', null, null, true);
+                        //logDebugMessageToConsole('uploaded poster for video id <' + videoId + '>', null, null, true);
 
                         try {
                             cloudflare_purgeVideoPosterImages([videoId]);

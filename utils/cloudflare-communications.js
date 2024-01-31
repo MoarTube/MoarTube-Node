@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { logDebugMessageToConsole } = require('./logger');
-const { getNodeSettings, setNodeSettings } = require('../utils/helpers');
+const { getNodeSettings, setNodeSettings, getIsDeveloperMode } = require('../utils/helpers');
 const { getVideosDirectoryPath } = require('../utils/paths');
 
 function cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
@@ -71,47 +71,52 @@ function cloudflare_purgeEntireCache() {
 function cloudflare_purgeCache(files, source) {
     const filesofFiles = formatFilesParameter(files);
 
-    const nodeSettings = getNodeSettings();
-
-    const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-    const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-    const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
-    if (cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
-        const axiosPromises = filesofFiles.map(files => {
-            const filesJson = JSON.stringify(files);
-
-            return axios.post(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/purge_cache`, {
-                files: files
-            }, {
-                headers: {
-                    'X-Auth-Email': cloudflareEmailAddress,
-                    'X-Auth-Key': cloudflareGlobalApiKey
-                }
-            })
-            .then(response => {
-                const data = response.data;
-
-                if(data.success) {
-                    logDebugMessageToConsole(source + ' success: ' + filesJson, null, null, true);
-                }
-                else {
-                    logDebugMessageToConsole(source + ' failed: ' + filesJson, null, null, true);
-                }
-
-                return { status: 'fulfilled' };
-            })
-            .catch(error => {
-                logDebugMessageToConsole(source + ' error: ' + filesJson, error, new Error().stack, true);
-
-                return { status: 'rejected' };
-            });
-        });
-
-        return Promise.allSettled(axiosPromises);
-    } 
-    else {
+    if(getIsDeveloperMode()) {
         return Promise.resolve([]);
+    }
+    else {
+        const nodeSettings = getNodeSettings();
+
+        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+
+        if (cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
+            const axiosPromises = filesofFiles.map(files => {
+                const filesJson = JSON.stringify(files);
+
+                return axios.post(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/purge_cache`, {
+                    files: files
+                }, {
+                    headers: {
+                        'X-Auth-Email': cloudflareEmailAddress,
+                        'X-Auth-Key': cloudflareGlobalApiKey
+                    }
+                })
+                .then(response => {
+                    const data = response.data;
+
+                    if(data.success) {
+                        logDebugMessageToConsole(source + ' success: ' + filesJson, null, null, true);
+                    }
+                    else {
+                        logDebugMessageToConsole(source + ' failed: ' + filesJson, null, null, true);
+                    }
+
+                    return { status: 'fulfilled' };
+                })
+                .catch(error => {
+                    logDebugMessageToConsole(source + ' error: ' + filesJson, error, new Error().stack, true);
+
+                    return { status: 'rejected' };
+                });
+            });
+
+            return Promise.allSettled(axiosPromises);
+        }
+        else {
+            return Promise.resolve([]);
+        }
     }
 }
 

@@ -1514,7 +1514,7 @@ body {
 						html5: {
 							vhs: {
 								overrideNative: !videojs.browser.IS_SAFARI,
-								isUsingEventDrivenLiveHlsManifest: true
+								llhls:true
 							},
 							nativeAudioTracks: false,
 							nativeVideoTracks: false
@@ -1898,9 +1898,9 @@ body {
 
 							$('#mtp-video-overlay').remove();
 						});
-						
-						player.on("loadstart", function() { 
-							console.log('loadstart');
+
+						player.on("waiting", function() { 
+							console.log('waiting');
 						});
 						
 						player.on("ready", function() { 
@@ -2019,7 +2019,7 @@ body {
 										
 										for(const chatMessage of chatHistory) {
 											const chatMessageContent = chatMessage.chat_message;
-											const liveChatUsername = chatMessage.liveChatUsername;
+											const liveChatUsername = chatMessage.username;
 											const liveChatUsernameColorCode = chatMessage.username_color_hex_code;
 											
 											appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null);

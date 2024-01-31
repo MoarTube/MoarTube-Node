@@ -1,7 +1,6 @@
 const express = require('express');
 const expressSession = require('express-session');
 const bodyParser = require('body-parser');
-const expressUseragent = require('express-useragent');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
@@ -25,7 +24,6 @@ const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, se
 const { provisionSqliteDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL } = require('./utils/database');
 const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = require('./utils/httpserver');
 const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
-const { getLiveStreamWatchingCountTracker, updateLiveStreamWatchingCountForWorker } = require('./utils/trackers/live-stream-watching-count-tracker');
 const { updateLiveStreamManifestTracker } = require('./utils/trackers/live-stream-manifest-tracker');
 const { cloudflare_purgeWatchPages, cloudflare_purgeNodePage } = require('./utils/cloudflare-communications');
 const { maintainFileSystem } = require('./utils/filesystem');
@@ -66,6 +64,8 @@ if(cluster.isMaster) {
 	.then(async () => {
 		const mutex = new Mutex();
 
+		let liveStreamWatchingCountsTracker = {};
+
 		const nodeSettings = getNodeSettings();
 
 		if(nodeSettings.nodeId === '') {
@@ -80,7 +80,11 @@ if(cluster.isMaster) {
 
 		for (var i = 0; i < numCPUs; i++) {
 			const worker = cluster.fork();
-			
+
+			attachWorkerListeners(worker);
+		}
+
+		function attachWorkerListeners(worker) {
 			worker.on('message', async (msg) => {
 				if (msg.cmd && msg.cmd === 'get_jwt_secret') {
 					worker.send({ cmd: 'get_jwt_secret_response', jwtSecret: jwtSecret });
@@ -127,8 +131,8 @@ if(cluster.isMaster) {
 				else if (msg.cmd && msg.cmd === 'live_stream_worker_stats_response') {
 					const workerId = msg.workerId;
 					const liveStreamWatchingCounts = msg.liveStreamWatchingCounts;
-					
-					updateLiveStreamWatchingCountForWorker(workerId, liveStreamWatchingCounts);
+
+					liveStreamWatchingCountsTracker[workerId] = liveStreamWatchingCounts;
 				}
 				else if (msg.cmd && msg.cmd === 'restart_server') {
 					Object.values(cluster.workers).forEach((worker) => {
@@ -156,6 +160,12 @@ if(cluster.isMaster) {
 
 		cluster.on('exit', (worker, code, signal) => {
 			logDebugMessageToConsole('worker exited with id <' + worker.id + '> code <' + code + '> signal <' + signal + '>', null, null, true);
+
+			delete liveStreamWatchingCountsTracker[worker.id];
+
+			const newWorker = cluster.fork();
+
+			attachWorkerListeners(newWorker);
 		});
 
 		setInterval(function() {
@@ -178,7 +188,6 @@ if(cluster.isMaster) {
 
 							const nodeIconPngBase64 = getNodeIconPngBase64();
 							const nodeAvatarPngBase64 = getNodeAvatarPngBase64();
-							const nodeBannerPngBase64 = getNodeBannerPngBase64();
 
 							const videoPreviewJpgBase64 = getVideoPreviewJpgBase64(videoId);
 
@@ -242,15 +251,17 @@ if(cluster.isMaster) {
 			});
 		}, 60000 * 60);
 
+		// gets the live stream watching count for all workers
 		setInterval(function() {
 			Object.values(cluster.workers).forEach((worker) => {
 				worker.send({ cmd: 'live_stream_worker_stats_request' });
 			});
 		}, 1000);
-
+		
+		// broadcasts the live stream watching count to all viewers
 		setInterval(function() {
 			Object.values(cluster.workers).forEach((worker) => {
-				worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWatchingCount: getLiveStreamWatchingCountTracker() });
+				worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWatchingCountsTracker: liveStreamWatchingCountsTracker });
 			});
 		}, 1000);
 
@@ -271,8 +282,6 @@ else {
 		const app = express();
 		
 		app.enable('trust proxy');
-		
-		app.use(expressUseragent.express());
 		
 		app.use(expressSession({
 			name: getExpressSessionName(),
@@ -363,17 +372,17 @@ else {
 				process.send({ cmd: 'live_stream_worker_stats_response', workerId: cluster.worker.id, liveStreamWatchingCounts: liveStreamWatchingCounts });
 			}
 			else if (msg.cmd === 'live_stream_worker_stats_update') {
-				const liveStreamWatchingCount = msg.liveStreamWatchingCount;
+				const liveStreamWatchingCountsTracker = msg.liveStreamWatchingCountsTracker;
 				
 				const liveStreamWatchingCounts = {};
 				
-				for (const worker in liveStreamWatchingCount) {
-					for (const videoId in liveStreamWatchingCount[worker]) {
+				for (const worker in liveStreamWatchingCountsTracker) {
+					for (const videoId in liveStreamWatchingCountsTracker[worker]) {
 						if (liveStreamWatchingCounts.hasOwnProperty(videoId)) {
-							liveStreamWatchingCounts[videoId] += liveStreamWatchingCount[worker][videoId];
+							liveStreamWatchingCounts[videoId] += liveStreamWatchingCountsTracker[worker][videoId];
 						}
 						else {
-							liveStreamWatchingCounts[videoId] = liveStreamWatchingCount[worker][videoId];
+							liveStreamWatchingCounts[videoId] = liveStreamWatchingCountsTracker[worker][videoId];
 						}
 					}
 				}

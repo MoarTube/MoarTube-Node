@@ -3,11 +3,12 @@
 		<meta name="robots" content="noindex,nofollow">
 		<title>MoarTube</title>
 		<link rel="icon" type="image/x-icon" href="/assets/resources/images/favicon.ico">
-		<link href="/assets/resources/css/videojs-8.3.0.css" rel="stylesheet" type="text/css"/>
+		<link href="/assets/resources/css/videojs-8.9.0.css" rel="stylesheet" type="text/css"/>
 		<link href="/assets/resources/css/videojs-theme.css" rel="stylesheet" type="text/css"/>
 		<link href="/assets/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
 		<script src="/assets/resources/javascript/jquery-3.6.4.min.js"></script>
-		<script src="/assets/resources/javascript/videojs-8.3.0.min.js"></script>
+		<script src="/assets/resources/javascript/videojs-8.9.0.js"></script>
+		<script src="/assets/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
 		<script src="/assets/resources/javascript/bootstrap-5.3.0.min.js"></script>
 		<style>
 			body {
@@ -599,15 +600,7 @@
 						html5: {
 							vhs: {
 								overrideNative: !videojs.browser.IS_SAFARI,
-								autoStartLoad: true,
-								maxBufferLength: 30,
-								maxMaxBufferLength: 60,
-								backBufferLength: Infinity,
-  								frontBufferFlushThreshold: Infinity,
-								lowLatencyMode: true,
-								liveSyncDurationCount: 5,
-								levelLoadingMaxRetry: 4,
-								capLevelToPlayerSize: true
+								llhls:true
 							},
 							nativeAudioTracks: false,
 							nativeVideoTracks: false
@@ -623,6 +616,8 @@
 							pictureInPictureToggle: false 
 						}
 					});
+
+					player.landscapeFullscreen();
 
 					configurePlayerButtons();
 					configurePlayerEvents();
@@ -906,15 +901,19 @@
 						player.on(["pause"], function(e) {
 							//console.log(e);						
 						});
+
+						player.on("loadedmetadata", function() { 
+							console.log("metadata loaded");
+						});
 						
 						player.on(["playing"], function(e) {
 							console.log('playing');
 
 							$('#mtp-video-overlay').remove();
 						});
-						
-						player.on("loadedmetadata", function() { 
-							console.log("metadata loaded");
+
+						player.on("waiting", function() { 
+							console.log('waiting');
 						});
 
 						player.on("ready", function() { 

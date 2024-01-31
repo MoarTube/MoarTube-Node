@@ -721,7 +721,7 @@
 										
 										for(const chatMessage of chatHistory) {
 											const chatMessageContent = chatMessage.chat_message;
-											const liveChatUsername = chatMessage.liveChatUsername;
+											const liveChatUsername = chatMessage.username;
 											const liveChatUsernameColorCode = chatMessage.username_color_hex_code;
 											
 											appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null);
