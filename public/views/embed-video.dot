@@ -3,11 +3,11 @@
 		<meta name="robots" content="noindex,nofollow">
 		<title>MoarTube</title>
 		<link rel="icon" type="image/x-icon" href="/assets/resources/images/favicon.ico">
-		<link href="/assets/resources/css/videojs-8.9.0.css" rel="stylesheet" type="text/css"/>
+		<link href="/assets/resources/css/videojs-8.6.1.css" rel="stylesheet" type="text/css"/>
 		<link href="/assets/resources/css/videojs-theme.css" rel="stylesheet" type="text/css"/>
 		<link href="/assets/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
 		<script src="/assets/resources/javascript/jquery-3.6.4.min.js"></script>
-		<script src="/assets/resources/javascript/videojs-8.9.0.js"></script>
+		<script src="/assets/resources/javascript/videojs-8.6.1.js"></script>
 		<script src="/assets/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
 		<script src="/assets/resources/javascript/bootstrap-5.3.0.min.js"></script>
 		<style>
