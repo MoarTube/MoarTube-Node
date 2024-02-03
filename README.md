@@ -6,6 +6,10 @@ A repository containing the MoarTube Node software, managed by the [MoarTube Cli
 # How to Get Started
 MoarTube Node can be found on [DockerHub](https://hub.docker.com/r/moartube/moartube-node) and can be managed with software like [Docker Desktop](https://www.docker.com/products/docker-desktop/), or follow the manual approach to start your node. When ready, head over to [MoarTube Client](https://github.com/cconley717/MoarTube-Client) if you haven't yet.
 
+If you're using Docker from the command line, the following command pulls the latest MoarTube Node image, creates a container from it called moartube-node-1, assigns it port 8181, and sets it to run in the background. It'll auto-restart if its stopped status was not initiated by the user; it will auto-start when the Docker daemon starts, such as on system boot if the Docker daemon is configured to start on system boot.
+
+**docker run -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartube/moartube-node:latest**
+
 *note: the Docker container uses [**/data**](https://github.com/cconley717/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
 
 The default login credentials for your node are below. Be sure to change these upon logging in.
