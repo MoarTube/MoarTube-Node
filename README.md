@@ -29,7 +29,7 @@ The default login credentials for your node are below. Be sure to change these u
  - [GPU acceleration](https://moartu.be/nodes/chris_moartube_node/videos/X3xL5oPTJaz) for Nvidia and AMD (Windows only)
  - Different video player modes: streamer, theater, fullscreen
  - Dark mode option and browser appearance configuration recognition
- - Video comments section and live stream chat
+ - Anonymous video comments section and live stream chat
  - Reports section for comments and videos
  - Comment monitoring overview with moderation functionality
  - Run your node in the cloud or on your home WiFi
