@@ -1150,8 +1150,17 @@ body {
                 NODE_PROTOCOL = publicNodeProtocol;
                 NODE_ADDRESS = publicNodeAddress;
                 NODE_PORT = publicNodePort;
-                
-                NODE_BASE_URL = NODE_PROTOCOL + '://' + NODE_ADDRESS + ':' + NODE_PORT;
+
+				let port;
+				
+				if(NODE_PROTOCOL === 'http') {
+					port = NODE_PORT == 80 ? '' : ':' + NODE_PORT;
+				} 
+				else if(NODE_PROTOCOL === 'https') {
+					port = NODE_PORT == 443 ? '' : ':' + NODE_PORT;
+				}
+				
+				NODE_BASE_URL = NODE_PROTOCOL + '://' + NODE_ADDRESS  + port;
 
 				IS_CLOUDFLARE_TURNSTILE_ENABLED = isCloudflareTurnstileEnabled;
             }
