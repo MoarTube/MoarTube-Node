@@ -885,9 +885,9 @@ body {
 		<div id="theater-container" class="container-fluid p-0 mt-2 gutters" style="width: 100%; background: black;">
 		
 		</div>
-		<div id="main-container" class="container-fluid p-0 mt-2 gutters">
+		<div id="main-container" class="container-fluid mt-2 gutters">
 			<div class="row gutters"> 
-				<div id="video-comments-outer" class="col-12 col-lg-9">
+				<div id="video-comments-outer" class="col-12 col-lg-9 ps-0 pe-0">
 					<div id="video-comments-inner">
 						<div id="video-player-container" class="ratio ratio-16x9 d-flex align-items-center justify-content-center" style="background: black; color: white;">
 							<div id="mtp-video-overlay" class="ratio ratio-16x9 hidden-elem" style="position: absolute; z-index: 9;width: 100%;" role="button">
@@ -904,7 +904,7 @@ body {
 							</div>
 							<video id="video-player" class="video-js video-player" preload="auto" autoplay></video>
 						</div>
-						<div>
+						<div class="p-2">
 							<div id="video-title-section" class="row gutters mt-2">
 								<div class="container"><h3 id="video-title" class="text-break">........</h3></div>
 							</div>
