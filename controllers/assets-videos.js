@@ -7,7 +7,6 @@ const { submitDatabaseWriteJob } = require('../utils/database');
 const { 
     isManifestNameValid, isSegmentNameValid, isVideoIdValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid, isManifestTypeValid
 } = require('../utils/validators');
-const { getLiveStreamManifest } = require('../utils/trackers/live-stream-manifest-tracker');
 
 function videoIdThumbnail_GET(req, res) {
     const videoId = req.params.videoId;
@@ -84,36 +83,15 @@ function videoIdAdaptiveTypeFormatManifestsManifestName_GET(req, res) {
     if(isVideoIdValid(videoId, false) && isManifestTypeValid(type) && isAdaptiveFormatValid(format) && isManifestNameValid(manifestName)) {
         const manifestPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + manifestName);
 
-        if(type === 'dynamic') {
-            const manifest = getLiveStreamManifest(manifestPath);
-
-            if(manifest != null) {
-                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-                
-                res.send(manifest);
-            }
-            else if(fs.existsSync(manifestPath)) {
-                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-                
-                const fileStream = fs.createReadStream(manifestPath);
-                
-                fileStream.pipe(res);
-            }
-            else {
-                res.status(404).send('video not found');
-            }
+        if(fs.existsSync(manifestPath)) {
+            res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+            
+            const fileStream = fs.createReadStream(manifestPath);
+            
+            fileStream.pipe(res);
         }
         else {
-            if(fs.existsSync(manifestPath)) {
-                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-                
-                const fileStream = fs.createReadStream(manifestPath);
-                
-                fileStream.pipe(res);
-            }
-            else {
-                res.status(404).send('video not found');
-            }
+            res.status(404).send('video not found');
         }
     }
     else {

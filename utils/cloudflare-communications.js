@@ -510,7 +510,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                         }
                     },
                     {
-                        "description": "node Assets - Cache Bypass for Live (dynamic) HLS stream manifests",
+                        "description": "Node Assets - Cache Bypass for Live (dynamic) HLS stream manifests",
                         "action": "set_cache_settings",
                         "enabled": true,
                         "expression": "(http.request.uri.path contains \"/adaptive/dynamic/\")",

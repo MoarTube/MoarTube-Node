@@ -589,8 +589,6 @@ function videoIdStream_POST(req, res) {
                                         else {
                                             fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
                                         }
-
-                                        liveStreamManifestUpdate();
                                     })
                                     .catch(error => {
                                         console.log(error);
@@ -598,24 +596,6 @@ function videoIdStream_POST(req, res) {
                                 }
                                 else {
                                     fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
-
-                                    liveStreamManifestUpdate();
-                                }
-
-                                function liveStreamManifestUpdate() {
-                                    const dynamicManifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
-                                    const dynamicMasterManifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/manifest-master.m3u8');
-
-                                    const dynamicManifest = fs.readFileSync(dynamicManifestFilePath, 'utf-8');
-                                    const dynamicMasterManifest = fs.readFileSync(dynamicMasterManifestFilePath, 'utf-8');
-
-                                    process.send({
-                                        cmd: 'live_stream_manifest_update', 
-                                        dynamicManifestFilePath: dynamicManifestFilePath, 
-                                        dynamicManifest: dynamicManifest,
-                                        dynamicMasterManifestFilePath: dynamicMasterManifestFilePath, 
-                                        dynamicMasterManifest: dynamicMasterManifest,
-                                    });
                                 }
                             }
                             catch(error) {
