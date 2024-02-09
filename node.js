@@ -232,7 +232,7 @@ if(cluster.isMaster) {
 			.catch(error => {
 				// do nothing
 			});
-		}, 60000 * 60);
+		}, 60000 * 10);
 
 		// gets the live stream watching count for all workers
 		setInterval(function() {
