@@ -2617,6 +2617,7 @@ function videoIdWatch_GET(req, res) {
                 });
                 
                 res.send({isError: false, video: {
+                    videoId: videoId,
                     title: video.title,
                     description: video.description,
                     views: video.views,
