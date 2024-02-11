@@ -483,7 +483,7 @@
 				display: none !important;
 			}
 			
-			@media (max-width: 992px) {
+			@media (max-width: 1366px) {
 				.row.gutters {
 					--bs-gutter-x: 0 !important;
 					--bs-gutter-y: 0 !important;
