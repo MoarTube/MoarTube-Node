@@ -909,7 +909,7 @@ body {
 							</div>
 							<video id="video-player" class="video-js video-player" preload="auto" autoplay></video>
 						</div>
-						<div id="video-player-information" class="container-fluid w-100">
+						<div id="video-player-information" class="container-fluid p-0 w-100">
 							<div id="video-title-section" class="row gutters mt-2">
 								<div class="container-fluid w-100"><h3 id="video-title" class="text-break">........</h3></div>
 							</div>

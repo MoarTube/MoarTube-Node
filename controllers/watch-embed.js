@@ -18,7 +18,7 @@ function chatVideoId_GET(req, res) {
     const videoId = req.params.videoId;
     
     if(isVideoIdValid(videoId, false)) {
-        res.render('embed-chat', {});
+        res.render('embed-chat', {videoId: videoId});
     }
     else {
         res.status(404).send('embed chat not found');
