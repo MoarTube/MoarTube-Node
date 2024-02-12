@@ -1074,32 +1074,32 @@ body {
 		<script>
             const INCOMING_PARAMETERS = [[= JSON.stringify(model) ]];
 
-			var VIDEO_ID;
-			var VIEW_COUNT;
+			let VIDEO_ID;
+			let VIEW_COUNT;
 
-			var HASH_VALUE = '';
+			let HASH_VALUE = '';
 			
-			var NODE_ID;
-			var NODE_NAME;
-			var NODE_PROTOCOL;
-			var NODE_ADDRESS;
-			var NODE_PORT;
-			var NODE_BASE_URL;
+			let NODE_ID;
+			let NODE_NAME;
+			let NODE_PROTOCOL;
+			let NODE_ADDRESS;
+			let NODE_PORT;
+			let NODE_BASE_URL;
 
-			var IS_CLOUDFLARE_TURNSTILE_ENABLED;
+			let IS_CLOUDFLARE_TURNSTILE_ENABLED;
 			
 			const COMMENT_ELEMENT_CACHE = {};
 
             const RECOMMENDED_VIDEOS_TAGS_CACHE = {'':[]};
 			
-			var DOWNLOADABLE_SOURCES = [];
+			let DOWNLOADABLE_SOURCES = [];
 			
-			var MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP = 0;
+			let MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP = 0;
 
-			var CURRENT_VIDEO_RESOLUTION;
-			var CURRENT_VIDEO_FORMAT;
+			let CURRENT_VIDEO_RESOLUTION;
+			let CURRENT_VIDEO_FORMAT;
 
-			var TIMESTAMP_UPDATE_TRACKER = [];
+			let TIMESTAMP_UPDATE_TRACKER = [];
 
             const COMMENT_INPUT_FORM_DYNAMIC = $('\
 			<form id="comment-input-form-dynamic" class="comment-input-form" role="form" method="POST" data-commentformtype="dynamic" style="background: #cb0c9f12;padding: 5px 5px 5px 5px;">\
@@ -1197,7 +1197,7 @@ body {
                     },
                 });
                 
-                var recommendationCategoryButtonOffsetLeft;
+                let recommendationCategoryButtonOffsetLeft;
                 $(".recommendation-category-button").on("mouseup", function(e) {
                     const movementDifference = Math.abs(recommendationCategoryButtonOffsetLeft - $(this).offset().left);
                     
@@ -1258,7 +1258,7 @@ body {
 				const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
                 const viewsFormatted = getViewsFormatted(views);
                 
-                var liveStreamInidcator = '';
+                let liveStreamInidcator = '';
                 
                 if(isLive) {
                     if(isStreaming) {
@@ -1357,7 +1357,7 @@ body {
 				}
 				
 				function fallback() {
-					var tempInput = document.createElement("input");
+					let tempInput = document.createElement("input");
 					tempInput.style = "position: absolute; left: -1000px; top: -1000px";
 					tempInput.value = value;
 					document.body.appendChild(tempInput);
@@ -1464,7 +1464,7 @@ body {
 				
 				$('#video-information-description').text(description);
 
-				var message = '';
+				let message = '';
 
 				if(adaptiveSources.length > 0 || progressiveSources.length > 0) {
 					if(isPublished || isStreaming) {
@@ -1523,7 +1523,7 @@ body {
 
 					const sources = adaptiveSources.concat(progressiveSources);
 
-					var player = videojs('video-player', {
+					let player = videojs('video-player', {
 						sources: sources,
 						html5: {
 							vhs: {
@@ -1570,7 +1570,7 @@ body {
 						
 						if(isLive && isStreaming) {
 							// streamer mode
-							var isShowingStreamerMode = false;
+							let isShowingStreamerMode = false;
 							const streamerModeButton = player.getChild('ControlBar').addChild('button', {
 								clickHandler: function(event) {
 									event[0].stopPropagation();
@@ -1597,7 +1597,7 @@ body {
 						}
 						
 						// theater button
-						var isShowingTheaterMode = false;
+						let isShowingTheaterMode = false;
 						const theaterModeButton = player.getChild('ControlBar').addChild('button', {
 							clickHandler: function(event) {
 								event[0].stopPropagation();
@@ -1709,7 +1709,7 @@ body {
 								// find the (available) formats that actually have sources; not empty array
 								const availableFormats = Object.keys(sourcesFormatsAndResolutions).filter(key => Array.isArray(sourcesFormatsAndResolutions[key]) && sourcesFormatsAndResolutions[key].length > 0);
 
-								var html = '<div class="video-js-overflow-menu">\
+								let html = '<div class="video-js-overflow-menu">\
 								<button type="button" class="video-js-back-to-overflow-main-button"><span>Format</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
 
 								availableFormats.forEach(function(availableFormat) {
@@ -1744,7 +1744,7 @@ body {
 							function showOverflowMenuResolutions(selectedVideoFormat) {
 								const resolutions = sourcesFormatsAndResolutions[selectedVideoFormat];
 
-								var html = '<div class="video-js-overflow-menu">\
+								let html = '<div class="video-js-overflow-menu">\
 								<button type="button" class="video-js-back-to-overflow-formats-button"><span>Resolution</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
 								
 								resolutions.forEach(function(resolution) {
@@ -1788,7 +1788,7 @@ body {
 									$(this).addClass('video-js-overflow-explicit-selected-button');
 									$(this).find('.video-js-chosen-item').removeClass('hidden-elem');
 
-									var source;
+									let source;
 
 									if(CURRENT_VIDEO_FORMAT === 'm3u8') {
 										if(CURRENT_VIDEO_RESOLUTION === 'auto') {
@@ -1836,7 +1836,7 @@ body {
 							function showPlayRateMenu() {
 								const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 								
-								var html = '<div class="video-js-overflow-menu">\
+								let html = '<div class="video-js-overflow-menu">\
 								<button type="button" class="video-js-back-to-overflow-main-button"><span>Playback speed</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
 								
 								playbackRates.forEach(function(playbackRate) {
@@ -1947,7 +1947,7 @@ body {
 			}
 
             function connectWebsocket() {
-				var connectWebsocketClient = function() {
+				let connectWebsocketClient = function() {
 					try {
 						let LIVE_CHAT_USERNAME;
 						let LIVE_CHAT_USERNAME_COLOR_CODE;
@@ -1958,7 +1958,7 @@ body {
 						const hostname = window.location.hostname;
 						const port = window.location.port;
 						
-						var ws = new WebSocket(protocol + '//' + hostname + ':' + port);
+						let ws = new WebSocket(protocol + '//' + hostname + ':' + port);
 						
 						ws.onopen = () => {
 							ws.send(JSON.stringify({eventName: 'register', socketType: 'node_peer'}));
@@ -2071,7 +2071,7 @@ body {
 								$('#video-information-views').text(watchingCount + ' watching now');
 							}
 							else if(data.eventName === 'limited') {
-								var rateLimitSeconds = data.rateLimitSeconds;
+								let rateLimitSeconds = data.rateLimitSeconds;
 								
 								$('#send-chat-message-input').prop('disabled', true);
 								$('#send-chat-message-button').prop('disabled', true);
@@ -2280,7 +2280,7 @@ body {
 						for(const commentHistoryId of commentHistory) {
 							if(replyToCommentIds.includes(commentHistoryId)) {
 								$(commentElement).find('#m' + commentId).find('.quotelink').each(function(index, element) {
-									var elementHref = $(element).attr('href');
+									let elementHref = $(element).attr('href');
 									if(elementHref === ('#p' + commentHistoryId)) {
 										$(element).append(' (you)');
 										
@@ -2295,7 +2295,7 @@ body {
 						// append links to backlinks of comments that reference the comments being prepended to the comments
 						for(const replyToCommentId of replyToCommentIds) {
 							if(COMMENT_ELEMENT_CACHE.hasOwnProperty(replyToCommentId)) {
-								var youString = '';
+								let youString = '';
 
 								if(commentHistory.includes(commentId)) {
 									youString = ' (you)';
@@ -2536,7 +2536,7 @@ body {
                         $('#update-comments-button').removeClass('hidden-elem');
                         $('#update-comments-button-spinner').addClass('hidden-elem');
                         
-                        var commentCountDifference = newCommentCount - previousCommentCount;
+                        let commentCountDifference = newCommentCount - previousCommentCount;
                         
                         if(commentCountDifference === 1) {
                             $('#comment-section-update-descriptor').text('1 new comment');
@@ -2574,7 +2574,7 @@ body {
 			
 			function downloadVideo() {
 				if(DOWNLOADABLE_SOURCES.length > 0) {
-					var html = '';
+					let html = '';
 
 					for(const downloadableSource of DOWNLOADABLE_SOURCES) {
 						const segments = downloadableSource.src.split('/');
@@ -2646,9 +2646,9 @@ body {
 								const title = information.title;
 								const videoAliasUrl = information.videoAliasUrl;
 								
-								var twitterLink;
-								var redditLink;
-								var facebookLink;
+								let twitterLink;
+								let redditLink;
+								let facebookLink;
 
 								if(videoAliasUrl === 'MoarTube Aliaser link unavailable') {
 									twitterLink = 'https://twitter.com/intent/tweet?url=' + nodeVideoUrl + '&text=' + title + '&via=MoarTubes&related=MoarTubes';
@@ -2961,28 +2961,28 @@ body {
 			
 			function incrementLikeCount() {
 				const likeCount = $('#video-like-count').text();
-				var likeCountParsed = parseInt(likeCount);
+				let likeCountParsed = parseInt(likeCount);
 				likeCountParsed++;
 				$('#video-like-count').text(likeCountParsed);
 			}
 			
 			function decrementLikeCount() {
 				const likeCount = $('#video-like-count').text();
-				var likeCountParsed = parseInt(likeCount);
+				let likeCountParsed = parseInt(likeCount);
 				likeCountParsed--;
 				$('#video-like-count').text(likeCountParsed);
 			}
 			
 			function incrementDislikeCount() {
 				const dislikeCount = $('#video-dislike-count').text();
-				var dislikeCountParsed = parseInt(dislikeCount);
+				let dislikeCountParsed = parseInt(dislikeCount);
 				dislikeCountParsed++;
 				$('#video-dislike-count').text(dislikeCountParsed);
 			}
 			
 			function decrementDislikeCount() {
 				const dislikeCount = $('#video-dislike-count').text();
-				var dislikeCountParsed = parseInt(dislikeCount);
+				let dislikeCountParsed = parseInt(dislikeCount);
 				dislikeCountParsed--;
 				$('#video-dislike-count').text(dislikeCountParsed);
 			}
@@ -2992,7 +2992,7 @@ body {
 				if(typeof(Storage) != null) {
 					const localStorageKey = VIDEO_ID + '-yous';
 					
-					var yous = localStorage.getItem(localStorageKey);
+					let yous = localStorage.getItem(localStorageKey);
 					
 					if(yous == null) {
 						yous = [];
@@ -3011,7 +3011,7 @@ body {
 				if(typeof(Storage) != null) {
 					const localStorageKey = VIDEO_ID + '-yous';
 					
-					var yous = localStorage.getItem(localStorageKey);
+					let yous = localStorage.getItem(localStorageKey);
 					
 					if(yous == null) {
 						yous = [];
@@ -3037,8 +3037,8 @@ body {
 			}
 			
 			function showReportModal(targetId, type) {
-				var modalTitle = '';
-				var submitUrl = '';
+				let modalTitle = '';
+				let submitUrl = '';
 				
 				if(type === 'video') {
 					modalTitle = 'report video';
@@ -3082,7 +3082,7 @@ body {
 						const message = Swal.getHtmlContainer().querySelector('#report-message-textarea').value;
 						const email = Swal.getHtmlContainer().querySelector('#report-email-input').value;
 						
-						var reportType = '';
+						let reportType = '';
 						const reportTypeRadioButtons = Swal.getHtmlContainer().querySelectorAll('input[name="reportTypeRadioButton"]');
 						reportTypeRadioButtons.forEach(reportTypeButton => {
 							if (reportTypeButton.checked) {
@@ -3123,7 +3123,7 @@ body {
 
 			function showSettings() {
 				if(typeof(Storage) != null) {
-					var value = localStorage.getItem('dark-mode-enabled') === 'true';
+					let value = localStorage.getItem('dark-mode-enabled') === 'true';
 					
 					if(value) {
 						$('#darkModeSwitch').prop('checked', true);
@@ -3157,7 +3157,7 @@ body {
 			}
 			
 			function getViewsFormatted(views) {
-				var totalViews = '';
+				let totalViews = '';
 				
 				if(views === 1) {
 					totalViews = 1 + ' view';
@@ -3170,7 +3170,7 @@ body {
 			}
 			
 			function getCreationTimestampFormatted(creationTimestamp) {
-				var timeElapsed = '';
+				let timeElapsed = '';
 				
 				const timeDifference = Date.now() - creationTimestamp;
 				

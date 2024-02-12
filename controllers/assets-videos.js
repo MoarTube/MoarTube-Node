@@ -99,8 +99,8 @@ function videoIdAdaptiveTypeFormatManifestsManifestName_GET(req, res) {
     }
 }
 
-var segmentBandwidthCounter = 0;
-var segmentBandwidthIncrementTimer;
+let segmentBandwidthCounter = 0;
+let segmentBandwidthIncrementTimer;
 function videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET(req, res) {
     const videoId = req.params.videoId;
     const format = req.params.format;
@@ -151,8 +151,8 @@ function videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET(req, res) {
     }
 }
 
-var progressiveBandwidthCounter = 0;
-var progressiveBandwidthIncrementTimer;
+let progressiveBandwidthCounter = 0;
+let progressiveBandwidthIncrementTimer;
 function videoIdProgressiveFormatResolution_GET(req, res) {
     const videoId = req.params.videoId;
     const format = req.params.format;

@@ -77,7 +77,7 @@ if(cluster.isMaster) {
 
 		const numCPUs = require('os').cpus().length;
 
-		for (var i = 0; i < numCPUs; i++) {
+		for (let i = 0; i < numCPUs; i++) {
 			const worker = cluster.fork();
 
 			attachWorkerListeners(worker);

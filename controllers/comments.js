@@ -8,14 +8,14 @@ const { cloudflare_validateTurnstileToken } = require('../utils/cloudflare-commu
 
 async function commentIdReport_POST(req, res) {
     const commentId = req.params.commentId;
-    var email = req.body.email;
+    let email = req.body.email;
     const reportType = req.body.reportType;
-    var message = req.body.message;
+    let message = req.body.message;
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
     if(isCommentIdValid(commentId) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-        var canProceed = true;
-        var errorMessage;
+        let canProceed = true;
+        let errorMessage;
 
         try {
             const nodeSettings = getNodeSettings();
@@ -97,8 +97,8 @@ function search_GET(req, res) {
             const limit = req.query.limit;
 
             if(isVideoIdValid(videoId, true) && isSearchTermValid(searchTerm) && isTimestampValid(timestamp) && isLimitValid(limit)) {
-                var query = 'SELECT * FROM comments';
-                var params = [];
+                let query = 'SELECT * FROM comments';
+                let params = [];
 
                 if(videoId.length > 0 || searchTerm.length > 0 || timestamp.length > 0) {
                     query += ' WHERE';

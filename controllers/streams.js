@@ -24,8 +24,8 @@ function start_POST(req, res) {
             const tags = req.body.tags;
             const rtmpPort = req.body.rtmpPort;
             const uuid = req.body.uuid;
-            var isRecordingStreamRemotely = req.body.isRecordingStreamRemotely;
-            var isRecordingStreamLocally = req.body.isRecordingStreamLocally;
+            let isRecordingStreamRemotely = req.body.isRecordingStreamRemotely;
+            let isRecordingStreamLocally = req.body.isRecordingStreamLocally;
             const networkAddress = req.body.networkAddress;
 
             if(!isTitleValid(title)) {
@@ -255,7 +255,7 @@ function videoIdAdaptiveFormatResolutionSegmentsNextExpectedSegmentIndex_GET(req
             const resolution = req.params.resolution;
             
             if(isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isResolutionValid(resolution)) {
-                var nextExpectedSegmentIndex = -1;
+                let nextExpectedSegmentIndex = -1;
                 
                 const segmentsDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution);
                 

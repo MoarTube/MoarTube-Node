@@ -619,9 +619,9 @@
 		</div>
 		
 		<script>
-			var VIDEO_ID;
+			let VIDEO_ID;
 
-			var IS_CLOUDFLARE_TURNSTILE_ENABLED;
+			let IS_CLOUDFLARE_TURNSTILE_ENABLED;
 			
 			$(document).ready(function() {
 				const pathname = window.location.pathname;
@@ -635,7 +635,7 @@
 			});
 			
 			function connectWebsocket() {
-				var connectWebsocketClient = function() {
+				let connectWebsocketClient = function() {
 					try {
 						let LIVE_CHAT_USERNAME;
 						let LIVE_CHAT_USERNAME_COLOR_CODE;
@@ -759,7 +759,7 @@
 								$('#video-information-views').text(watchingCount + ' watching now');
 							}
 							else if(data.eventName === 'limited') {
-								var rateLimitSeconds = data.rateLimitSeconds;
+								let rateLimitSeconds = data.rateLimitSeconds;
 								
 								$('#send-chat-message-input').prop('disabled', true);
 								$('#send-chat-message-button').prop('disabled', true);

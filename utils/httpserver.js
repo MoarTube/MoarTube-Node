@@ -30,9 +30,9 @@ function initializeHttpServer(value) {
         
         if(nodeSettings.isSecure) {
             if (fs.existsSync(getCertificatesDirectoryPath())) {
-                var key = '';
-                var cert = '';
-                var ca = [];
+                let key = '';
+                let cert = '';
+                let ca = [];
                 
                 fs.readdirSync(getCertificatesDirectoryPath()).forEach(fileName => {
                     if(fileName === 'private_key.pem') {
@@ -224,10 +224,10 @@ function initializeHttpServer(value) {
                                     if(isVideoIdValid(videoId, false)) {
                                         ws.videoId = videoId;
                                         
-                                        var liveChatUsername = '';
+                                        let liveChatUsername = '';
                                         
                                         const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-                                        for (var i = 0; i < 8; i++) {
+                                        for (let i = 0; i < 8; i++) {
                                             liveChatUsername += chars[Math.floor(Math.random() * chars.length)];
                                         }
                                         
@@ -255,8 +255,8 @@ function initializeHttpServer(value) {
                                     const sentTimestamp = parsedMessage.sentTimestamp;
                                     
                                     if(isVideoIdValid(videoId, false) && isChatMessageContentValid(chatMessageContent) && isTimestampValid(sentTimestamp) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-                                        var canProceed = true;
-                                        var errorMessage;
+                                        let canProceed = true;
+                                        let errorMessage;
 
                                         try {
                                             const nodeSettings = getNodeSettings();

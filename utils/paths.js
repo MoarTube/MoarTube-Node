@@ -1,13 +1,13 @@
-var dataDirectoryPath;
-var nodeSettingsPath;
-var lastCheckedContentTrackerPath;
-var imagesDirectoryPath;
-var publicDirectoryPath;
-var viewsDirectoryPath;
-var videosDirectoryPath;
-var databaseDirectoryPath;
-var databaseFilePath;
-var certificatesDirectoryPath;
+let dataDirectoryPath;
+let nodeSettingsPath;
+let lastCheckedContentTrackerPath;
+let imagesDirectoryPath;
+let publicDirectoryPath;
+let viewsDirectoryPath;
+let videosDirectoryPath;
+let databaseDirectoryPath;
+let databaseFilePath;
+let certificatesDirectoryPath;
 
 
 /* getters */

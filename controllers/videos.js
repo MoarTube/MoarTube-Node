@@ -302,8 +302,8 @@ function videoIdUpload_POST(req, res) {
 
                     addToPublishVideoUploadingTrackerUploadRequests(videoId, req);
                     
-                    var lastPublishTimestamp = 0;
-                    var receivedFileSize = 0;
+                    let lastPublishTimestamp = 0;
+                    let receivedFileSize = 0;
                     req.on('data', function(chunk) {
                         if(!isPublishVideoUploading(videoId)) {
                             
@@ -335,7 +335,7 @@ function videoIdUpload_POST(req, res) {
                         },
                         storage: multer.diskStorage({
                             destination: function (req, file, cb) {
-                                var directoryPath = '';
+                                let directoryPath = '';
                                 
                                 if(format === 'm3u8') {
                                     const fileName = file.originalname;
@@ -485,7 +485,7 @@ function videoIdStream_POST(req, res) {
                     },
                     storage: multer.diskStorage({
                         destination: function (req, file, cb) {
-                            var directoryPath = '';
+                            let directoryPath = '';
                             
                             if(format === 'm3u8') {
                                 const fileName = file.originalname;
@@ -563,7 +563,7 @@ function videoIdStream_POST(req, res) {
                                 if(cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
                                     const publicNodeProtocol = nodeSettings.publicNodeProtocol;
                                     const publicNodeAddress = nodeSettings.publicNodeAddress;
-                                    var publicNodePort = nodeSettings.publicNodePort;
+                                    let publicNodePort = nodeSettings.publicNodePort;
 
                                     const segmentFileName = req.files.video_files[1].originalname;
 
@@ -893,8 +893,8 @@ function videoIdUnpublish_POST(req, res) {
                     logDebugMessageToConsole(null, error, new Error().stack, true);
                 }
                 
-                var videoDirectoryPath = '';
-                var manifestFilePath = '';
+                let videoDirectoryPath = '';
+                let manifestFilePath = '';
                 
                 if(format === 'm3u8') {
                     manifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/manifest-' + resolution + '.m3u8');
@@ -962,7 +962,7 @@ function videoIdInformation_GET(req, res) {
                 const isFinalized = video.is_finalized;
                 const timestamp = video.creation_timestamp;
 
-                var videoAliasUrl = 'MoarTube Aliaser link unavailable';
+                let videoAliasUrl = 'MoarTube Aliaser link unavailable';
 
                 if(video.is_indexed) {
                     const nodeSettings = getNodeSettings();
@@ -1008,10 +1008,10 @@ function videoIdInformation_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
-            var videoId = req.params.videoId;
-            var title = req.body.title;
-            var description = req.body.description;
-            var tags = req.body.tags;
+            let videoId = req.params.videoId;
+            let title = req.body.title;
+            let description = req.body.description;
+            let tags = req.body.tags;
             
             if(!isVideoIdValid(videoId, false)) {
                 res.send({isError: true, message: 'video id is not valid'});
@@ -1303,7 +1303,7 @@ function videoIdAlias_GET(req, res) {
                 const isIndexed = video.is_indexed;
 
                 if(isIndexed) {
-                    var videoAliasUrl;
+                    let videoAliasUrl;
 
                     if(getIsDeveloperMode()) {
                         videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
@@ -1335,14 +1335,14 @@ function search_GET(req, res) {
     const searchTerm = req.query.searchTerm;
     const sortTerm = req.query.sortTerm;
     const tagTerm = req.query.tagTerm;
-    var tagLimit = req.query.tagLimit;
+    let tagLimit = req.query.tagLimit;
     const timestamp = req.query.timestamp;
     
     if(isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true) && isTagLimitValid(tagLimit) && isTimestampValid(timestamp)) {
         tagLimit = Number(tagLimit);
 
-        var query;
-        var params;
+        let query;
+        let params;
 
         if(searchTerm.length === 0) {
             query = 'SELECT * FROM videos WHERE creation_timestamp < ?';
@@ -1371,7 +1371,7 @@ function search_GET(req, res) {
                 });
             }
 
-            var rowsToSend = [];
+            let rowsToSend = [];
             
             if(tagTerm.length === 0) {
                 if(tagLimit === 0) {
@@ -1445,7 +1445,7 @@ function videoIdThumbnail_POST(req, res) {
                             
                             if(mimeType === 'image/jpeg')
                             {
-                                var extension;
+                                let extension;
                                 
                                 if(mimeType === 'image/jpeg')
                                 {
@@ -1541,7 +1541,7 @@ function videoIdPreview_POST(req, res) {
                             
                             if(mimeType === 'image/jpeg')
                             {
-                                var extension;
+                                let extension;
                                 
                                 if(mimeType === 'image/jpeg')
                                 {
@@ -1646,7 +1646,7 @@ function videoIdPoster_POST(req, res) {
                             
                             if(mimeType === 'image/jpeg')
                             {
-                                var extension;
+                                let extension;
                                 
                                 if(mimeType === 'image/jpeg')
                                 {
@@ -1914,7 +1914,7 @@ function videoIdComments_GET(req, res) {
     const sort = req.query.sort;
     
     if(isVideoIdValid(videoId, false) && isTimestampValid(timestamp) && isCommentsTypeValid(type) && isSortValid(sort)) {
-        var sortTerm;
+        let sortTerm;
 
         if(sort === 'ascending') {
             sortTerm = 'ASC';
@@ -1977,8 +1977,8 @@ async function videoIdCommentsComment_POST(req, res) {
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
     if(isVideoIdValid(videoId, false) && isVideoCommentValid(commentPlainText) && isTimestampValid(timestamp) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-        var canProceed = true;
-        var errorMessage;
+        let canProceed = true;
+        let errorMessage;
 
         try {
             const nodeSettings = getNodeSettings();
@@ -2035,7 +2035,7 @@ async function videoIdCommentsComment_POST(req, res) {
 
                             performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp])
                             .then(comments => {
-                                var commentId = 0;
+                                let commentId = 0;
                                     
                                     for (let i = comments.length - 1; i >= 0; i--) {
                                         if(commentTimestamp === comments[i].timestamp) {
@@ -2115,8 +2115,8 @@ async function videoIdLike_POST(req, res) {
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
     if(isVideoIdValid(videoId, false) && isBooleanValid(isLiking) && isBooleanValid(isUnDisliking) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-        var canProceed = true;
-        var errorMessage;
+        let canProceed = true;
+        let errorMessage;
 
         try {
             const nodeSettings = getNodeSettings();
@@ -2221,8 +2221,8 @@ async function videoIdDislike_POST(req, res) {
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
     if(isVideoIdValid(videoId, false) && isBooleanValid(isDisliking) && isBooleanValid(isUnliking) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-        var canProceed = true;
-        var errorMessage;
+        let canProceed = true;
+        let errorMessage;
 
         try {
             const nodeSettings = getNodeSettings();
@@ -2376,14 +2376,14 @@ function tagsAll_GET(req, res) {
 
 async function videoIdReport_POST(req, res) {
     const videoId = req.params.videoId;
-    var email = req.body.email;
+    let email = req.body.email;
     const reportType = req.body.reportType;
-    var message = req.body.message;
+    let message = req.body.message;
     const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
     
     if(isVideoIdValid(videoId, false) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-        var canProceed = true;
-        var errorMessage;
+        let canProceed = true;
+        let errorMessage;
 
         try {
             const nodeSettings = getNodeSettings();
@@ -2479,8 +2479,8 @@ function commentsAll_GET(req, res) {
     });
 }
 
-var viewCounter = 0;
-var viewCounterIncrementTimer;
+let viewCounter = 0;
+let viewCounterIncrementTimer;
 function videoIdViewsIncrement_GET(req, res) {
     const videoId = req.params.videoId;
     
@@ -2528,7 +2528,7 @@ function videoIdWatch_GET(req, res) {
         performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
         .then(video => {
             if(video != null) {
-                var manifestType;
+                let manifestType;
 
                 if(video.is_streaming) {
                     manifestType = 'dynamic';
@@ -2548,10 +2548,10 @@ function videoIdWatch_GET(req, res) {
                 const progressiveSources = [];
                 const sourcesFormatsAndResolutions = {m3u8: [], mp4: [], webm: [], ogv: []};
                 
-                var isHlsAvailable = false;
-                var isMp4Available = false;
-                var isWebmAvailable = false;
-                var isOgvAvailable = false;
+                let isHlsAvailable = false;
+                let isMp4Available = false;
+                let isWebmAvailable = false;
+                let isOgvAvailable = false;
                 
                 adaptiveFormats.forEach(function(adaptiveFormat) {
                     const format = adaptiveFormat.format;

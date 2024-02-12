@@ -124,7 +124,7 @@ function cloudflare_purgeVideo(videoId, format, resolution) {
     return new Promise(function(resolve, reject) {
         const nodeBaseUrl = getNodebaseUrl();
 
-        var files = [];
+        let files = [];
 
         if(format === 'm3u8') {
             files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-master.m3u8`);
@@ -157,7 +157,7 @@ function cloudflare_purgeAdaptiveVideos(videoIds) {
     return new Promise(function(resolve, reject) {
         const nodeBaseUrl = getNodebaseUrl();
 
-        var files = [];
+        let files = [];
 
         for(const videoId of videoIds) {
             files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-master.m3u8`);
@@ -197,7 +197,7 @@ function cloudflare_purgeProgressiveVideos(videoIds) {
     return new Promise(function(resolve, reject) {
         const nodeBaseUrl = getNodebaseUrl();
 
-        var files = [];
+        let files = [];
 
         for(const videoId of videoIds) {
             const progressiveVideosDirectory = path.join(getVideosDirectoryPath(), videoId + '/progressive');
@@ -764,7 +764,7 @@ function getNodebaseUrl() {
 
     const publicNodeProtocol = nodeSettings.publicNodeProtocol;
     const publicNodeAddress = nodeSettings.publicNodeAddress;
-    var publicNodePort = nodeSettings.publicNodePort;
+    let publicNodePort = nodeSettings.publicNodePort;
 
     if(publicNodeProtocol === 'http') {
         publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;

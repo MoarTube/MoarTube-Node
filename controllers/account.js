@@ -6,9 +6,9 @@ const { getNodeSettings, getAuthenticationStatus, getJwtSecret } = require('../u
 const { isUsernameValid, isPasswordValid, isBooleanValid } = require('../utils/validators');
 
 function signIn_POST(req, res) {
-    var username = req.body.username;
-    var password = req.body.password;
-    var rememberMe = req.body.rememberMe;
+    let username = req.body.username;
+    let password = req.body.password;
+    let rememberMe = req.body.rememberMe;
     
     if(!isUsernameValid(username)) {
         logDebugMessageToConsole('attempted to sign in with invalid username: ' + username, null, new Error().stack, true);
@@ -26,7 +26,7 @@ function signIn_POST(req, res) {
         res.send({isError: true, message: 'invalid parameter: rememberMe value was ' + rememberMe + ', expected "on" or "off"'});
     }
     else {
-        var expiresIn;
+        let expiresIn;
         
         if(rememberMe) {
             expiresIn = '30d'; // 30 days

@@ -20,7 +20,7 @@ function endStreamedHlsManifestFiles() {
     return new Promise(async function(resolve, reject) {
         performDatabaseReadJob_ALL('SELECT video_id, is_stream_recorded_remotely FROM videos WHERE is_streamed = 1', [])
         .then(rows => {
-            for(var i = 0; i < rows.length; i++) {
+            for(let i = 0; i < rows.length; i++) {
                 const row = rows[i];
                 
                 if(row.is_stream_recorded_remotely) {
@@ -48,7 +48,7 @@ function endStreamedHlsManifestFiles() {
                     
                     const HLS_END_LIST_TAG = '#EXT-X-ENDLIST';
                     
-                    for(var j = 0; j < manifestFilePaths.length; j++) {
+                    for(let j = 0; j < manifestFilePaths.length; j++) {
                         const manifestFilePath = manifestFilePaths[j];
                         if (fs.existsSync(manifestFilePath)) {
                             const manifestFileText = fs.readFileSync(manifestFilePath, 'utf8')
@@ -75,7 +75,7 @@ function removeUnusedMasterManifests() {
     return new Promise(async function(resolve, reject) {
         performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
         .then(videos => {
-            for(var i = 0; i < videos.length; i++) {
+            for(let i = 0; i < videos.length; i++) {
                 const row = videos[i];
                 
                 const videoId = row.video_id;
@@ -152,14 +152,14 @@ function updateHlsVideoMasterManifestFile(videoId) {
         const hlsVideoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
         const masterManifestFilePath = path.join(hlsVideoDirectoryPath, '/manifest-master.m3u8');
         
-        var manifestFileString = '#EXTM3U\n#EXT-X-VERSION:3\n';
+        let manifestFileString = '#EXTM3U\n#EXT-X-VERSION:3\n';
 
         performDatabaseReadJob_GET('SELECT is_streaming FROM videos WHERE video_id = ?', [videoId])
         .then(videoData => {
             if(videoData != null) {
                 const is_streaming = videoData.is_streaming;
 
-                var manifestType;
+                let manifestType;
 
                 if(is_streaming) {
                     manifestType = 'dynamic';

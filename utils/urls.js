@@ -1,9 +1,9 @@
-var moartubeIndexerIp;
-var moartubeIndexerPort;
-var moartubeIndexerHttpProtocol;
-var moartubeAliaserIp;
-var moartubeAliaserPort;
-var moartubeAliaserHttpProtocol;
+let moartubeIndexerIp;
+let moartubeIndexerPort;
+let moartubeIndexerHttpProtocol;
+let moartubeAliaserIp;
+let moartubeAliaserPort;
+let moartubeAliaserHttpProtocol;
 
 function getMoarTubeIndexerUrl() {
     return (getMoarTubeIndexerHttpProtocol() + '://' + getMoarTubeIndexerIp() + ':' + getMoarTubeIndexerPort());

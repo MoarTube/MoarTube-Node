@@ -7,11 +7,11 @@ const { getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath, getVi
 const { performDatabaseReadJob_GET } = require('./database');
 const { indexer_getNodeIdentification, indexer_doNodeIdentificationRefresh } = require('./indexer-communications');
 
-var isDeveloperMode;
-var jwtSecret;
-var expressSessionName;
-var expressSessionSecret;
-var isDockerEnvironment;
+let isDeveloperMode;
+let jwtSecret;
+let expressSessionName;
+let expressSessionSecret;
+let isDockerEnvironment;
 
 function getAuthenticationStatus(token) {
     return new Promise(function(resolve, reject) {
@@ -160,7 +160,7 @@ function performNodeIdentification() {
 }
 
 function getNodeIconPngBase64() {
-	var pngImageBase64;
+	let pngImageBase64;
 
 	const customDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'icon.png');
 	const defaultDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'icon.png');
@@ -176,7 +176,7 @@ function getNodeIconPngBase64() {
 }
 
 function getNodeAvatarPngBase64() {
-	var pngImageBase64;
+	let pngImageBase64;
 
 	const customDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'avatar.png');
 	const defaultDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'avatar.png');
@@ -192,7 +192,7 @@ function getNodeAvatarPngBase64() {
 }
 
 function getNodeBannerPngBase64() {
-	var pngImageBase64;
+	let pngImageBase64;
 
 	const customDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'banner.png');
 	const defaultDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'banner.png');
@@ -208,7 +208,7 @@ function getNodeBannerPngBase64() {
 }
 
 function getVideoThumbnailJpgBase64(videoId) {
-	var jpgImageBase64;
+	let jpgImageBase64;
 
 	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/thumbnail.jpg');
 
@@ -223,7 +223,7 @@ function getVideoThumbnailJpgBase64(videoId) {
 }
 
 function getVideoPreviewJpgBase64(videoId) {
-	var jpgImageBase64;
+	let jpgImageBase64;
 
 	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg');
 
@@ -238,7 +238,7 @@ function getVideoPreviewJpgBase64(videoId) {
 }
 
 function getVideoPosterJpgBase64(videoId) {
-	var jpgImageBase64;
+	let jpgImageBase64;
 
 	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/poster.jpg');
 

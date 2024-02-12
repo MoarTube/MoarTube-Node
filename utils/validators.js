@@ -160,7 +160,7 @@ function isVideoIdValid(videoId, canBeEmpty) {
 }
 
 function isVideoIdsValid(videoIds) {
-    var result = true;
+    let result = true;
     
     if(videoIds != null) {
         videoIds.forEach(function(videoId) {
@@ -234,7 +234,7 @@ function isTagTermValid(tagTerm, canBeEmpty) {
     can contain spaces
     */
     
-    var regex = /^[a-zA-Z0-9\s]*$/;
+    let regex = /^[a-zA-Z0-9\s]*$/;
     
     if(canBeEmpty) {
         return (tagTerm != null && tagTerm.length <= 30 && regex.test(tagTerm));
@@ -245,7 +245,7 @@ function isTagTermValid(tagTerm, canBeEmpty) {
 }
 
 function isTagsValid(tags) {
-    var result = true;
+    let result = true;
     
     if(tags != null && tags.length > 0 && tags.length <= 150) {
         const tagsArray = tags.split(',');

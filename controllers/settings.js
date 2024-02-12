@@ -50,7 +50,7 @@ function avatar_GET(req, res) {
     const customAvatarDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'avatar.png');
     const defaultAvatarDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'avatar.png');
     
-    var avatarFilePath;
+    let avatarFilePath;
 
     if(fs.existsSync(customAvatarDirectoryPath)) {
         avatarFilePath = customAvatarDirectoryPath;
@@ -101,7 +101,7 @@ function avatar_POST(req, res) {
                         });
                     },
                     filename: function (req, file, cb) {
-                        var extension;
+                        let extension;
                         
                         if(file.mimetype === 'image/png') {
                             extension = '.png';
@@ -170,7 +170,7 @@ function banner_GET(req, res) {
     const customBannerDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'banner.png');
     const defaultBannerDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'banner.png');
     
-    var bannerFilePath;
+    let bannerFilePath;
 
     if(fs.existsSync(customBannerDirectoryPath)) {
         bannerFilePath = customBannerDirectoryPath;
@@ -221,7 +221,7 @@ function banner_POST(req, res) {
                         });
                     },
                     filename: function (req, file, cb) {
-                        var extension;
+                        let extension;
                         
                         if(file.mimetype === 'image/png') {
                             extension = '.png';
@@ -351,7 +351,7 @@ function secure_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            var isSecure = req.query.isSecure;
+            let isSecure = req.query.isSecure;
 
             if(isBooleanStringValid(isSecure)) {
                 isSecure = (isSecure === 'true');
@@ -395,8 +395,8 @@ function secure_POST(req, res) {
                             res.send({isError: true, message: 'error communicating with the MoarTube node'});
                         }
                         else {
-                            var keyFile = req.files['keyFile'];
-                            var certFile = req.files['certFile'];
+                            let keyFile = req.files['keyFile'];
+                            let certFile = req.files['certFile'];
                             const caFiles = req.files['caFiles'];
                             
                             if(keyFile == null || keyFile.length !== 1) {
@@ -495,7 +495,7 @@ function cloudflareTurnstile_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            var isCloudflareTurnstileEnabled = req.body.isCloudflareTurnstileEnabled;
+            let isCloudflareTurnstileEnabled = req.body.isCloudflareTurnstileEnabled;
 
             if(isBooleanStringValid(isCloudflareTurnstileEnabled)) {
                 isCloudflareTurnstileEnabled = (isCloudflareTurnstileEnabled === 'true');

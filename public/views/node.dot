@@ -340,19 +340,19 @@ body {
 		<script>
 			const INCOMING_PARAMETERS = [[= JSON.stringify(model) ]];
 
-			var CURRENT_SEARCH_TERM;
-			var CURRENT_SORT_TERM;
-			var CURRENT_TAG_TERM;
-			var CURRENT_TAG_TERM_ID;
+			let CURRENT_SEARCH_TERM;
+			let CURRENT_SORT_TERM;
+			let CURRENT_TAG_TERM;
+			let CURRENT_TAG_TERM_ID;
 
-			var TIMESTAMP_UPDATE_TRACKER = [];
+			let TIMESTAMP_UPDATE_TRACKER = [];
 		
 			$(document).ready(function() {
 				const params = new URL(window.location.href).searchParams;
 				
-				var searchTerm = params.get('searchTerm');
-				var sortTerm = params.get('sortTerm');
-				var tagTerm = params.get('tagTerm');
+				let searchTerm = params.get('searchTerm');
+				let sortTerm = params.get('sortTerm');
+				let tagTerm = params.get('tagTerm');
 				
 				if(searchTerm == null) {
 					searchTerm = '';
@@ -402,7 +402,7 @@ body {
 				
 				const nodeAboutHtml = nodeAbout.replace(/(?:\r\n|\r|\n)/g, '<br>');
 				
-				var nodeVideoCountDescriptor = '';
+				let nodeVideoCountDescriptor = '';
 				
 				if(nodeVideoCount != 1) {
 					nodeVideoCountDescriptor = ' videos';
@@ -481,7 +481,7 @@ body {
 					
 					const durationIndicator = '<i style="position: absolute; right: 5px; bottom: 5px; background-color: rgba(0, 0, 0, 0.8); color: white; border-radius: 4px; padding: 3px; font-size: 11px; font-weight: 500;width: unset;"><span class="video-streaming-timestamp">' + durationFormatted + '</span></i>';
 					
-					var liveStreamIndicator = '';
+					let liveStreamIndicator = '';
 					
 					if(isLive) {
 						if(isStreaming) {
@@ -625,7 +625,7 @@ body {
 				getVideos(CURRENT_SEARCH_TERM, CURRENT_SORT_TERM, CURRENT_TAG_TERM);
 			}
 			
-			var searchInputTimer;
+			let searchInputTimer;
 			function searchInputEntered(input) {
 				const value = input.value;
 				
@@ -649,7 +649,7 @@ body {
 
 			function showSettings() {
 				if(typeof(Storage) != null) {
-					var value = localStorage.getItem('dark-mode-enabled') === 'true';
+					let value = localStorage.getItem('dark-mode-enabled') === 'true';
 					
 					if(value) {
 						$('#darkModeSwitch').prop('checked', true);
@@ -689,7 +689,7 @@ body {
 			}
 			
 			function getCreationTimestampFormatted(creationTimestamp) {
-				var timeElapsed = '';
+				let timeElapsed = '';
 				
 				const timeDifference = Date.now() - creationTimestamp;
 				

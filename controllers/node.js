@@ -4,9 +4,9 @@ const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET } = require('../u
 const { node_getInformation, node_getVideosTags, node_getChannelSearch } = require('../utils/node-communications');
 
 async function root_GET(req, res) {
-    var searchTerm = req.query.searchTerm;
-    var sortTerm = req.query.sortTerm;
-    var tagTerm = req.query.tagTerm;
+    let searchTerm = req.query.searchTerm;
+    let sortTerm = req.query.sortTerm;
+    let tagTerm = req.query.tagTerm;
 
     if(!isSearchTermValid(searchTerm)) {
         searchTerm = '';
@@ -33,8 +33,8 @@ function search_GET(req, res) {
     const tagTerm = req.query.tagTerm;
     
     if(isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true)) {
-        var query;
-        var params;
+        let query;
+        let params;
 
         if(searchTerm.length === 0) {
             query = 'SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1)';
@@ -64,7 +64,7 @@ function search_GET(req, res) {
             }
             
             const tagLimitCounter = {};
-            var rowsToSend = [];
+            let rowsToSend = [];
             
             if(tagTerm.length === 0) {
                 const tagLimit = 4;
@@ -72,9 +72,9 @@ function search_GET(req, res) {
                 rows.forEach(function(row) {
                     const tagsArray = row.tags.split(',');
                     
-                    var addRow = false;
+                    let addRow = false;
                     
-                    for (var tag of tagsArray) {
+                    for (let tag of tagsArray) {
                         if(!tagLimitCounter.hasOwnProperty(tag)) {
                             tagLimitCounter[tag] = 0;
                         }

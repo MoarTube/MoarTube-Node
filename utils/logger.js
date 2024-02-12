@@ -12,7 +12,7 @@ function logDebugMessageToConsole(message, error, stackTrace, isLoggingToFile) {
         message = 'none';
     }
     
-    var errorMessage = '<message: ' + message + ', date: ' + humanReadableTimestamp + '>';
+    let errorMessage = '<message: ' + message + ', date: ' + humanReadableTimestamp + '>';
 
     if(error != null) {
         if(error.message != null) {
