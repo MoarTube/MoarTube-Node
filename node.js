@@ -221,7 +221,7 @@ if(cluster.isMaster) {
 		setInterval(function() {
 			performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
 			.then(async videos => {
-				logDebugMessageToConsole('clearing Cloudflare cache for all node page configurations and watch pages', true);
+				logDebugMessageToConsole('clearing Cloudflare cache for all node page configurations and watch pages', null, null, true);
 
 				const videoIds = videos.map(video => video.video_id);
 				const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
