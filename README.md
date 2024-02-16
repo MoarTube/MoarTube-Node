@@ -56,14 +56,14 @@ Choose any one of the following to set up your node.
 If you're using Docker, make sure that it is installed on your machine.
 
 ### npm
-If you're using npm to install the software, make sure that Node.js and npm is installed on your machine.
+If you're using npm to install the software, make sure that [Node.js and npm](https://nodejs.org/en) is installed on your machine.
 
 ### git
-You can clone the repo, but make sure that Node.js and npm is installed on your machine.
+You can clone the repo, but make sure that [Node.js and npm](https://nodejs.org/en) is installed on your machine.
 
 ### script (Ubuntu Linux)
 
-A script to automate your entire setup. Installs Node.js, clones the git repo, installs dependencies, and sets the node to autostart on system boot.
+A script to automate your entire setup. Installs Node.js using Snap, clones the git repo using git, installs dependencies using npm, and sets the node to autostart on system boot using systemctl
 
 ## Installation Methods
 
