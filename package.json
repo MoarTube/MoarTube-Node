@@ -5,6 +5,11 @@
   "author": "MoarTube, LLC",
   "license": "Custom License - See LICENSE.md file",
   "main": "moartube-node.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MoarTube/MoarTube-Node.git"
+  },
+  "keywords": ["alternative", "youtube", "twitch", "video", "stream", "live", "moartube"],
   "dependencies": {
     "async-mutex": "^0.4.0",
     "axios": "^1.6.2",
