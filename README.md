@@ -18,8 +18,8 @@ The default login credentials for your node are below. Be sure to change these u
 
 # Features
  - Cross platform support for Windows/macOS/Linux
- - Admin panel for managing videos and live streams
  - Video on demand (VoD) and HLS live streaming
+ - Admin panel for managing videos and live streams
  - **HLS** *(H.264, AAC)*, **MP4** *(H.264, AAC)*, **WEBM** *(VP9, Opus)*, **OGV** *(VP8, Opus)* container formats
  - Transcode static MP4/WEBM video to HLS/MP4/WEBM/OGV
  - Transcode RTMP stream ([such as from OBS](https://moartu.be/nodes/chris_moartube_node/videos/e9p_nivxkX7)) to HLS live stream
