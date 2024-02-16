@@ -65,9 +65,9 @@ A script will automate your entire setup, installing Node.js, clone the git repo
 
 ## Installation Methods
 
-### Docker
+### [DockerHub](https://hub.docker.com/repository/docker/moartube/moartube-node/general)
 
-MoarTube Node is available on [DockerHub](https://hub.docker.com/repository/docker/moartube/moartube-node/general) and can be easily set up using [Docker Desktop](https://www.docker.com/products/docker-desktop/) or via the command line for a more manual approach.
+MoarTube Node is available on DockerHub and can be easily set up using [Docker Desktop](https://www.docker.com/products/docker-desktop/) or via the command line for a more manual approach.
 
 #### Using Docker Desktop
 
@@ -83,7 +83,7 @@ docker run -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartub
 
 *note: the Docker container uses [**/data**](https://github.com/MoarTube/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
 
-### npm
+### [npm](https://www.npmjs.com/settings/moartube/packages)
 
 ```bash
 npm i @moartube/moartube-node
@@ -95,7 +95,7 @@ open a terminal in the installed directory and run:
 node moartube-node.js
 ```
 
-### git
+### [git](https://github.com/MoarTube/MoarTube-Node)
 
 ```bash
 git clone https://github.com/MoarTube/MoarTube-Node
@@ -111,7 +111,7 @@ npm install
 node moartube-node.js
 ```
 
-### script (Ubuntu Linux)
+### [script (Ubuntu Linux)](https://www.moartube.com/bash/install/node)
 
 ```bash
 bash <(wget -O - https://www.moartube.com/bash/install/node)
