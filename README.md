@@ -56,7 +56,7 @@ Your MoarTube node is now ready! :tada:
 
 Run the command **sudo snap install node --classic --channel=21**
 
-**git clone** the MoarTube-Node repository
+**git clone** the MoarTube-Node repository (or just download the zip)
 
 Open a terminal within the MoarTube-Node directory
 
