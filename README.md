@@ -13,7 +13,7 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
   - [Docker](#docker)
   - [npm](#npm)
   - [git](#git)
-  - [script](#script)
+  - [script (Ubuntu Linux)](#script-(Ubuntu-Linux))
 - [Next Steps](#next-steps)
   - [Default Login Credentials](#default-login-credentials)
   - [What Now?](#what-now)
