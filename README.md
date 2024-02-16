@@ -135,7 +135,9 @@ Once you've got your node up and running, it's time to get the [MoarTube Client]
 
 ## Guides
 
-### Ubuntu Autostart Guide
+### Ubuntu Linux Autostart Guide
+
+This guide will configure your node to autostart on system boot.
 
 Stop the Moartube Node software if it is running
 
