@@ -1,16 +1,16 @@
-<img src="https://github.com/cconley717/MoarTube-Node/assets/26640616/2dacfc1c-dbd0-4c71-b9a5-b11ac67d290f" alt="logo" width="200"/>
+<img src="https://github.com/MoarTube/MoarTube-Node/assets/26640616/2dacfc1c-dbd0-4c71-b9a5-b11ac67d290f" alt="logo" width="200"/>
 
 # MoarTube-Node
-A repository containing the MoarTube Node software, a cross-platform terminal-based Node.js Express application, managed by the [MoarTube Client](https://github.com/cconley717/MoarTube-Client). Share your node's videos with [MoarTube](https://www.moartube.com) or do your own thing and run your node privately. MoarTube makes video and live streaming so easy you'll be amazed beyond belief.
+A repository containing the MoarTube Node software, a cross-platform terminal-based Node.js Express application, managed by the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client). Share your node's videos with [MoarTube](https://www.moartube.com) or do your own thing and run your node privately. MoarTube makes video and live streaming so easy you'll be amazed beyond belief.
 
 # How to Get Started
-MoarTube Node can be found on [DockerHub](https://hub.docker.com/r/moartube/moartube-node) and can be managed with software like [Docker Desktop](https://www.docker.com/products/docker-desktop/), or follow the manual approach below to start your node if you don't want to use Docker. When ready, head over to [MoarTube Client](https://github.com/cconley717/MoarTube-Client) if you haven't yet.
+MoarTube Node can be found on [DockerHub](https://hub.docker.com/r/moartube/moartube-node) and can be managed with software like [Docker Desktop](https://www.docker.com/products/docker-desktop/), or follow the manual approach below to start your node if you don't want to use Docker. When ready, head over to [MoarTube Client](https://github.com/MoarTube/MoarTube-Client) if you haven't yet.
 
 If you're using Docker from the command line, the following command pulls the latest MoarTube Node image, creates a container from it called moartube-node-1, assigns it port 8181, and sets it to run in the background. It'll auto-restart if it was not stopped by you; it will auto-start when the Docker daemon starts, such as on system boot if the Docker daemon is configured to start on system boot.
 
 **docker run -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartube/moartube-node:latest**
 
-*note: the Docker container uses [**/data**](https://github.com/cconley717/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
+*note: the Docker container uses [**/data**](https://github.com/MoarTube/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
 
 The default login credentials for your node are below. Be sure to change these upon logging in.
 
@@ -38,11 +38,11 @@ The default login credentials for your node are below. Be sure to change these u
  - [Cloudflare Turnstile](https://moartu.be/nodes/chris_moartube_node/videos/gQcsrSmsmrY); next-generation bot detection and human verification without the annoyance of captcha.
  - [Cloudflare one-click integration](https://moartu.be/nodes/chris_moartube_node/videos/9aP6aY4DYeH); easily integrate your node into the [Cloudflare Network](https://www.cloudflare.com/network/), allowing for global media delivery capabilities of your videos and live streams that rivals major platforms, all from a single node. Features automated caching strategy configuration and automated cache management, and of course the best security from the world's leading CDN.
 
-![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/0d8ac95f-f68b-4e36-849e-28139b45ce50)
+![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/0d8ac95f-f68b-4e36-849e-28139b45ce50)
 
-![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/918aa074-b6e2-49f1-8d14-5c2ed1bcd582)
+![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/918aa074-b6e2-49f1-8d14-5c2ed1bcd582)
 
-![image](https://github.com/cconley717/MoarTube-Client/assets/26640616/068ec86b-a3d8-4285-9b64-4b71f64cce41)
+![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/068ec86b-a3d8-4285-9b64-4b71f64cce41)
 
 # Manual Approach
 
