@@ -61,7 +61,7 @@ You can clone the repo, but make sure that Node.js and npm is installed on your 
 
 ### script (Ubuntu Linux)
 
-A script will automate your entire setup, installing Node.js, clone the git repo, install dependencies, and set the node to autostart on system boot.
+A script to automate your entire setup, installing Node.js, clone the git repo, install dependencies, and set the node to autostart on system boot.
 
 ## Installation Methods
 
