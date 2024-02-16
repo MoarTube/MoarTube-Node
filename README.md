@@ -58,7 +58,8 @@ If you're using npm to install the software, make sure that Node.js and npm is i
 ### git
 You can clone the repo, but make sure that Node.js and npm is installed on your machine.
 
-### script
+### script (Ubuntu Linux)
+
 A script will automate your entire setup, but make sure that Node.js and npm is installed on your machine.
 
 ## Installation Methods
@@ -109,7 +110,7 @@ npm install
 node moartube-node.js
 ```
 
-### script
+### script (Ubuntu Linux)
 
 ```bash
 bash <(wget -O - https://www.moartube.com/bash/install/node)
