@@ -1,7 +1,7 @@
 {
   "name": "moartube-node",
   "version": "1.0.16",
-  "description": "The node software for hosting videos and streams.",
+  "description": "A free, open-source, self-hosted, anonymous, decentralized video/live stream platform. Scalable via Cloudflare, works in the cloud or from home WiFi.",
   "author": "Christopher Conley",
   "license": "Custom License - See LICENSE.md file",
   "dependencies": {
