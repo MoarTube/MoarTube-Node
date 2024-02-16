@@ -17,7 +17,7 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
 - [Next Steps](#next-steps)
   - [Default Login Credentials](#default-login-credentials)
   - [Cloudflare](#cloudflare)
-  - [Get The Client](#get-the-client)
+  - [Get MoarTube Client](#get-moartube-client)
 - [Guides](#guides)
 
 ## Features
@@ -129,9 +129,9 @@ The default login credentials for your node are below. Be sure to change these u
 
 At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://moartube.com/guides/how-to-integrate-your-node-with-cloudflare). With over 300 data centers worlwide, Cloudflare will distribute most of your node's content.
 
-### Get The Client
+### Get MoarTube Client
 
-Once you've got your node up and running, it's time to get the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client) so that you can connect to it.
+Once you've got your node up and running, it's time to get the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client).
 
 ## Guides
 
