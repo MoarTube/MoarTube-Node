@@ -50,6 +50,8 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
 
 ## Prerequisites
 
+Choose any one of the following to set up your node.
+
 ### Docker
 If you're using Docker, make sure that it is installed on your machine.
 
