@@ -64,7 +64,7 @@ Run the command **npm install**
 
 Run the command **node node.js**
 
-### Ubuntu Autostart Guide
+### Ubuntu Autostart Guide (optional)
 
 Stop the Moartube Node software if it is running
 
