@@ -19,4 +19,4 @@ EXPOSE 80
 VOLUME /data
 
 # Start the node
-CMD [ "node", "node.js" ]
+CMD [ "node", "moartube-node.js" ]

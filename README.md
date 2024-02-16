@@ -62,7 +62,7 @@ Open a terminal within the MoarTube-Node directory
 
 Run the command **npm install**
 
-Run the command **node node.js**
+Run the command **node moartube-node.js**
 
 ### Ubuntu Autostart Guide (optional)
 
@@ -82,7 +82,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/snap/bin/node /home/Moartube-Node/node.js
+ExecStart=/snap/bin/node /home/Moartube-Node/moartube-node.js
 Restart=always
 
 [Install]
