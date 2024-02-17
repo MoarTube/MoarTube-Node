@@ -91,10 +91,10 @@ docker run -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartub
 npm i @moartube/moartube-node
 ```
 
-open a terminal in the installed directory and run:
+open a terminal in the installation directory and run:
 
 ```bash
-node moartube-node.js
+node node_modules/@moartube/moartube-node/moartube-node.js
 ```
 
 ### [git](https://github.com/MoarTube/MoarTube-Node)
