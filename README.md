@@ -94,18 +94,7 @@ docker run -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartub
 *note: the Docker container uses [**/data**](https://github.com/MoarTube/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
 
 ### [npm](https://www.npmjs.com/settings/moartube/packages)
-
-```bash
-npm i @moartube/moartube-node
-```
-
-Open a terminal in the installation directory and run:
-
-```bash
-node node_modules/@moartube/moartube-node/moartube-node.js
-```
-
-You can also install MoarTube Node globally:
+You can install MoarTube Node globally:
 
 ```bash
 npm i @moartube/moartube-node -g
@@ -115,6 +104,20 @@ And run from the command-line globally:
 
 ```bash
 moartube-node
+```
+
+<br>
+
+You can install MoarTube Node locally:
+
+```bash
+npm i @moartube/moartube-node
+```
+
+And run from the command-line locally:
+
+```bash
+node node_modules/@moartube/moartube-node/moartube-node.js
 ```
 
 ### [git](https://github.com/MoarTube/MoarTube-Node)
