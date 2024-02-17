@@ -4,19 +4,23 @@
 A repository containing the MoarTube Node software, a cross-platform terminal-based Node.js Express application, managed by the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client). Share your node's videos with [MoarTube](https://www.moartube.com) or do your own thing and run your node privately. MoarTube makes video and live streaming so easy you'll be amazed beyond belief.
 
 # How to Get Started
-MoarTube Node can be found on [DockerHub](https://hub.docker.com/r/moartube/moartube-node) and can be managed with software like [Docker Desktop](https://www.docker.com/products/docker-desktop/), or follow the manual approach below to start your node if you don't want to use Docker. When ready, head over to [MoarTube Client](https://github.com/MoarTube/MoarTube-Client) if you haven't yet.
+Welcome to the MoarTube Node setup guide! This document will guide you through the different setup methods to get your MoarTube Node up and running. Don't worry; MoarTube is so easy to set up and use, you'll be done in minutes. When ready, head over to [MoarTube Client](https://github.com/MoarTube/MoarTube-Client) if you haven't yet.
 
-If you're using Docker from the command line, the following command pulls the latest MoarTube Node image, creates a container from it called moartube-node-1, assigns it port 8181, and sets it to run in the background. It'll auto-restart if it was not stopped by you; it will auto-start when the Docker daemon starts, such as on system boot if the Docker daemon is configured to start on system boot.
+## Table of Contents
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation Methods](#installation-methods)
+  - [Docker](#docker)
+  - [npm](#npm)
+  - [git](#git)
+  - [script (Ubuntu Linux)](#script-ubuntu-linux-1)
+- [Next Steps](#next-steps)
+  - [Default Login Credentials](#default-login-credentials)
+  - [Cloudflare](#cloudflare)
+  - [Get MoarTube Client](#get-moartube-client)
+- [Guides](#guides)
 
-**docker run -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartube/moartube-node:latest**
-
-*note: the Docker container uses [**/data**](https://github.com/MoarTube/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
-
-The default login credentials for your node are below. Be sure to change these upon logging in.
-
-**username**: admin<br/>**password**: admin
-
-# Features
+## Features
  - Cross platform support for Windows/macOS/Linux
  - Video on demand (VoD) and HLS live streaming
  - Admin panel for managing videos and live streams
@@ -33,6 +37,7 @@ The default login credentials for your node are below. Be sure to change these u
  - Reports section for comments and videos
  - Comment monitoring overview with moderation functionality
  - Run your node in the cloud or on your home WiFi
+ - Can run on a [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/)
  - Publicize your node's content on [MoarTube](http://www.moartube.com) or run your node privately
  - [Dual box compatible](https://moartu.be/nodes/chris_moartube_node/videos/f7w9spnInuN); broadcast an RTMP stream with software such as OBS from a primary system over a network (WAN or LAN) to a secondary system running the MoarTube Client, separating stream broadcasting from stream processing. This is achieved without any special plugins, such as NDI.
  - [Cloudflare Turnstile](https://moartu.be/nodes/chris_moartube_node/videos/gQcsrSmsmrY); next-generation bot detection and human verification without the annoyance of captcha.
@@ -44,31 +49,107 @@ The default login credentials for your node are below. Be sure to change these u
 
 ![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/068ec86b-a3d8-4285-9b64-4b71f64cce41)
 
-# Manual Approach
+## Prerequisites
 
-## (Ubuntu Linux, Digital Ocean) (automated)
+Observe the corresponding prerequisite for your installation method.
 
-Run the command ***bash <(wget -O - https://www.moartube.com/bash/install/node)***
+### Docker
+If you're using Docker, make sure that it is installed on your machine.
 
-Your MoarTube node is now ready! :tada:
+### npm
+If you're using npm to install the software, make sure that [Node.js and npm](https://nodejs.org/en) is installed on your machine.
 
-## (Ubuntu Linux, Digital Ocean) (manual)
+### git
+You can clone the repo, but make sure that [Node.js and npm](https://nodejs.org/en) is installed on your machine.
 
-Run the command **sudo snap install node --classic --channel=21**
+### script (Ubuntu Linux)
 
-**git clone** the MoarTube-Node repository (or just download the zip)
+A script to automate your entire setup. Installs Node.js using Snap, clones the git repo using git, installs dependencies using npm, and sets the node to autostart on system boot using systemctl
 
-Open a terminal within the MoarTube-Node directory
+## Installation Methods
 
-Run the command **npm install**
+Choose any of the following installation methods.
 
-Run the command **node moartube-node.js**
+### [DockerHub](https://hub.docker.com/repository/docker/moartube/moartube-node/general)
 
-### Ubuntu Autostart Guide (optional)
+MoarTube Node is available on DockerHub and can be easily set up using [Docker Desktop](https://www.docker.com/products/docker-desktop/) or via the command line for a more manual approach.
+
+#### Using Docker Desktop
+
+You can manage MoarTube Node using Docker Desktop by searching for `moartube/moartube-node` on DockerHub within the Docker Desktop interface.
+
+#### Manual Docker Setup
+
+To set up MoarTube Node manually using Docker, execute the following command in your terminal. This command pulls the latest MoarTube Node image, creates a container named `moartube-node-1`, assigns it port 8181, and configures it to auto-restart unless manually stopped.
+
+```bash
+docker run -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartube/moartube-node:latest
+```
+
+*note: the Docker container uses [**/data**](https://github.com/MoarTube/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
+
+### [npm](https://www.npmjs.com/settings/moartube/packages)
+
+```bash
+npm i @moartube/moartube-node
+```
+
+open a terminal in the installation directory and run:
+
+```bash
+node node_modules/@moartube/moartube-node/moartube-node.js
+```
+
+### [git](https://github.com/MoarTube/MoarTube-Node)
+
+```bash
+git clone https://github.com/MoarTube/MoarTube-Node
+```
+
+open a terminal in the installed directory and run:
+
+```bash
+npm install
+```
+
+```bash
+node moartube-node.js
+```
+
+### [script (Ubuntu Linux)](https://www.moartube.com/bash/install/node)
+
+```bash
+bash <(wget -O - https://www.moartube.com/bash/install/node)
+```
+
+## Next Steps
+
+### Default Login Credentials
+
+The default login credentials for your node are below. Be sure to change these upon logging in.
+
+**username**: admin<br/>**password**: admin
+
+### Cloudflare
+
+At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://moartube.com/guides/how-to-integrate-your-node-with-cloudflare). With over 300 data centers worlwide, Cloudflare will distribute most of your node's content.
+
+### Get MoarTube Client
+
+If you haven't already, it's time to get the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client).
+
+## Guides
+
+### Ubuntu Linux Autostart Guide
+
+This guide will configure your node to autostart on system boot.
 
 Stop the Moartube Node software if it is running
 
-Run the command **sudo nano /etc/systemd/system/moartube-node.service**
+Run the command:
+```bash
+sudo nano /etc/systemd/system/moartube-node.service
+```
 
 Below is an example of a moartube-node systemd service unit file
 
@@ -89,16 +170,46 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-Run the command **sudo systemctl daemon-reload** to reload all services
+Reload all services.
 
-Run the command **sudo systemctl enable moartube-node** to make the moartube-node service autostart on system boot
+```bash
+sudo systemctl daemon-reload
+```
 
-Run the command **sudo systemctl start moartube-node** to start the moartube-node service
+Make the moartube-node service autostart on system boot.
 
-Run the command **sudo systemctl status moartube-node** to view the status of the moartube-node service
+```bash
+sudo systemctl enable moartube-node
+```
+
+Start the moartube-node service.
+
+```bash
+sudo systemctl start moartube-node
+```
+
+View the status of the moartube-node service
+
+```bash
+sudo systemctl status moartube-node
+```
+
 
 #### some commands of interest
 
-Run the command **sudo systemctl stop moartube-node** to stop the moartube-node service
+Stop the moartube-node service.
 
-Run the command **sudo systemctl restart moartube-node** to restart the moartube-node service
+```bash
+sudo systemctl stop moartube-node
+```
+
+Restart the moartube-node service.
+
+```bash
+sudo systemctl restart moartube-node
+```
+
+
+
+
+
