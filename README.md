@@ -8,6 +8,7 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
 
 ## Table of Contents
 - [Features](#features)
+- [System Requirements](#system-requirements)
 - [Prerequisites](#prerequisites)
   - [Docker](#docker)
   - [npm](#npm)
@@ -53,6 +54,20 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
 ![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/918aa074-b6e2-49f1-8d14-5c2ed1bcd582)
 
 ![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/068ec86b-a3d8-4285-9b64-4b71f64cce41)
+
+## System Requirements
+
+Node.js is the only requirement to run a MoarTube Node, and all major operating systems support it.
+
+MoarTube Node has the smallest resource usage footprint out of any self-hosted video and live streaming solution available today; most of the heavy computational responsibilities and memory-intensive operations are handled by MoarTube Client; MoarTube Node is only responsible for storage and distribution. MoarTube Node is also multi-threaded, utilizing the full potential of the CPU of whatever system it is installed on.
+
+On Digital Ocean, an $8 VPS (1 vCPU, 1 GB RAM) provides a comfortable headroom to handle surprisingly moderate demand. Although this tier is likely adequate for most users, others will need to observe the resource usage monitor and adjust their instance accordingly. Or just simply forget all that and [host from your personal computer over home WiFi](https://moartu.be/nodes/chris_moartube_node/videos/t6WRz-CZjaD).
+
+The node software uses about 100MB of RAM while sitting idle with fluctuations depending on visitor (and user) demand. Much of the demand can be alleviated by the [Cloudflare integration](https://moartu.be/nodes/chris_moartube_node/videos/9aP6aY4DYeH) feature, leveraging the world's largest CDN to distribute your video and live stream data, giving your node capabilities that rival that of major platforms.
+
+To give you an idea of how tiny MoarTube Node really is, the software can run on a [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) on Raspberry Pi OS with approximately 100MB of system RAM remaining out of a total system availability of 512MB; the OS uses about 200MB RAM and reserves an additional 100MB for a swap file.
+
+As you can see, MoarTube Node is quite capable and can run on just about anything, anywhere.
 
 ## Prerequisites
 
