@@ -37,6 +37,7 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
  - Reports section for comments and videos
  - Comment monitoring overview with moderation functionality
  - Run your node in the cloud or on your home WiFi
+ - Can run on a [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/)
  - Publicize your node's content on [MoarTube](http://www.moartube.com) or run your node privately
  - [Dual box compatible](https://moartu.be/nodes/chris_moartube_node/videos/f7w9spnInuN); broadcast an RTMP stream with software such as OBS from a primary system over a network (WAN or LAN) to a secondary system running the MoarTube Client, separating stream broadcasting from stream processing. This is achieved without any special plugins, such as NDI.
  - [Cloudflare Turnstile](https://moartu.be/nodes/chris_moartube_node/videos/gQcsrSmsmrY); next-generation bot detection and human verification without the annoyance of captcha.
