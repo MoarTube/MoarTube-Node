@@ -10,6 +10,9 @@
     "type": "git",
     "url": "git+https://github.com/MoarTube/MoarTube-Node.git"
   },
+  "bin": {
+    "moartube-node": "./node_modules/@moartube/moartube-node/moartube-node.js"
+  },
   "keywords": ["alternative", "youtube", "twitch", "video", "stream", "live", "moartube"],
   "dependencies": {
     "async-mutex": "^0.4.0",
