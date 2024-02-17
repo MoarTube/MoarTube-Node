@@ -24,7 +24,7 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
   - [Cloudflare](#cloudflare)
   - [Get MoarTube Client](#get-moartube-client)
 - [Guides](#guides)
-  - [Ubuntu Linux Node.js install Guide](#ubuntu-linux-node.js-install-guide)
+  - [Ubuntu Linux Node.js install Guide](#ubuntu-linux-nodejs-install-guide)
   - [Ubuntu Linux Autostart Guide](#ubuntu-linux-autostart-guide)
 
 ## Features
