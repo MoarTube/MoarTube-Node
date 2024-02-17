@@ -19,6 +19,7 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
   - [Cloudflare](#cloudflare)
   - [Get MoarTube Client](#get-moartube-client)
 - [Guides](#guides)
+  - [Ubuntu Linux Autostart Guide](#ubuntu-linux-autostart-guide)
 
 ## Features
  - Cross platform support for Windows/macOS/Linux
