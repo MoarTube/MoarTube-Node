@@ -118,7 +118,7 @@ moartube-node
 git clone https://github.com/MoarTube/MoarTube-Node
 ```
 
-open a terminal in the installed directory and run:
+open a terminal in the cloned directory and run:
 
 ```bash
 npm install
