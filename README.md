@@ -24,6 +24,7 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
   - [Cloudflare](#cloudflare)
   - [Get MoarTube Client](#get-moartube-client)
 - [Guides](#guides)
+  - [Ubuntu Linux Node.js install Guide](#ubuntu-linux-node.js-install-guide)
   - [Ubuntu Linux Autostart Guide](#ubuntu-linux-autostart-guide)
 
 ## Features
@@ -174,6 +175,15 @@ At this point, you should probably look into creating a free [Cloudflare account
 If you haven't already, it's time to get the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client).
 
 ## Guides
+
+### Ubuntu Linux Node.js Install Guide
+
+Ubuntu Linux comes pre-installed with the Snap package manager. It's the easiest way to install Node.js.
+
+Run the command:
+```bash
+sudo snap install node --classic --channel=21
+```
 
 ### Ubuntu Linux Autostart Guide
 
