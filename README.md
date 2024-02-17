@@ -73,9 +73,9 @@ Choose any of the following installation methods.
 
 ### [DockerHub](https://hub.docker.com/repository/docker/moartube/moartube-node/general)
 
-MoarTube Node is available on DockerHub and can be easily set up using [Docker Desktop](https://www.docker.com/products/docker-desktop/) or via the command line for a more manual approach.
+MoarTube Node is available on DockerHub and can be easily set up using Docker Desktop or via the command line for a more manual approach.
 
-#### Using Docker Desktop
+#### Using [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 You can manage MoarTube Node using Docker Desktop by searching for `moartube/moartube-node` on DockerHub within the Docker Desktop interface.
 
@@ -95,7 +95,7 @@ docker run -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartub
 npm i @moartube/moartube-node
 ```
 
-open a terminal in the installation directory and run:
+Open a terminal in the installation directory and run:
 
 ```bash
 node node_modules/@moartube/moartube-node/moartube-node.js
@@ -119,7 +119,7 @@ moartube-node
 git clone https://github.com/MoarTube/MoarTube-Node
 ```
 
-open a terminal in the cloned directory and run:
+Open a terminal in the cloned directory and run:
 
 ```bash
 npm install
