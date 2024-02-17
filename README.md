@@ -75,7 +75,7 @@ A script to automate your entire setup. Installs Node.js using Snap, clones the 
 
 Choose any of the following installation methods.
 
-### [DockerHub](https://hub.docker.com/repository/docker/moartube/moartube-node/general)
+### [DockerHub](https://hub.docker.com/r/moartube/moartube-node)
 
 MoarTube Node is available on DockerHub and can be easily set up using Docker Desktop or via the command line for a more manual approach.
 
