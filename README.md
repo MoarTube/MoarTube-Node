@@ -134,7 +134,7 @@ At this point, you should probably look into creating a free [Cloudflare account
 
 ### Get MoarTube Client
 
-Once you've got your node up and running, it's time to get the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client).
+If you haven't already, it's time to get the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client).
 
 ## Guides
 
