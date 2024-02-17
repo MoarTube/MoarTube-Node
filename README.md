@@ -51,7 +51,7 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
 
 ## Prerequisites
 
-Choose any one of the following to set up your node.
+Observe the corresponding prerequisite for your installation method.
 
 ### Docker
 If you're using Docker, make sure that it is installed on your machine.
@@ -67,6 +67,8 @@ You can clone the repo, but make sure that [Node.js and npm](https://nodejs.org/
 A script to automate your entire setup. Installs Node.js using Snap, clones the git repo using git, installs dependencies using npm, and sets the node to autostart on system boot using systemctl
 
 ## Installation Methods
+
+Choose any of the following installation methods.
 
 ### [DockerHub](https://hub.docker.com/repository/docker/moartube/moartube-node/general)
 
