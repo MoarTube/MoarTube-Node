@@ -100,6 +100,18 @@ open a terminal in the installation directory and run:
 node node_modules/@moartube/moartube-node/moartube-node.js
 ```
 
+You can also install MoarTube Node globally:
+
+```bash
+npm i @moartube/moartube-node -g
+```
+
+And run from the command-line globally:
+
+```bash
+moartube-node
+```
+
 ### [git](https://github.com/MoarTube/MoarTube-Node)
 
 ```bash
