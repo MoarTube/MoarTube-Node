@@ -9,6 +9,10 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
 ## Table of Contents
 - [Features](#features)
 - [Prerequisites](#prerequisites)
+  - [Docker](#docker)
+  - [npm](#npm)
+  - [git](#git)
+  - [script (Ubuntu Linux)](#script-ubuntu-linux-1)
 - [Installation Methods](#installation-methods)
   - [Docker](#docker)
   - [npm](#npm)
