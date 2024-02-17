@@ -145,7 +145,7 @@ The default login credentials for your node are below. Be sure to change these u
 
 ### Cloudflare
 
-At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://moartube.com/guides/how-to-integrate-your-node-with-cloudflare). With over 300 data centers worlwide, Cloudflare will distribute most of your node's content.
+At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://moartube.com/guides/how-to-integrate-your-node-with-cloudflare). With over 300 data centers worlwide, Cloudflare will distribute most of your node's videos and live streams.
 
 ### Get MoarTube Client
 
