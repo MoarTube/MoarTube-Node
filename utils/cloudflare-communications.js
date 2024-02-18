@@ -469,8 +469,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                         "action_parameters": {
                             "cache": true,
                             "edge_ttl": {
-                                "mode": "override_origin",
-                                "default": 86400
+                                "mode": "respect_origin"
                             },
                             "browser_ttl": {
                                 "mode": "bypass"
