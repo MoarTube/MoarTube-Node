@@ -2214,12 +2214,16 @@ body {
 								$(chatMessageElement).addClass('pending-chat-message');
 							}
 
+							const scrollheight = $(chatMessagesContainer)[0].scrollHeight;
+							const scrollTop = $(chatMessagesContainer).scrollTop();
+							const outerheight = $(chatMessagesContainer).outerHeight();
+							
+							const isScrolledBottom = (scrollheight - scrollTop - outerheight) <= 0;
+
 							$(chatMessages).append(chatMessageElement);
-							
-							const isNearBottom = $(chatMessagesContainer)[0].scrollHeight - $(chatMessagesContainer).scrollTop() - $(chatMessagesContainer).outerHeight() < 100;
-							
-							if (isNearBottom) {
-								$(chatMessagesContainer).scrollTop($(chatMessagesContainer)[0].scrollHeight);
+
+							if (isScrolledBottom) {
+								$(chatMessagesContainer).scrollTop(scrollheight);
 							}
 
 							return chatMessageElement;
