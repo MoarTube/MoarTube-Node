@@ -2080,7 +2080,7 @@ body {
 											
 											const sentTimestamp = Date.now();
 
-											const chatMessageElement = appendMessageAndConditionallyScroll(chatMessageContent, LIVE_CHAT_USERNAME, LIVE_CHAT_USERNAME_COLOR_CODE, sentTimestamp);
+											const chatMessageElement = appendMessageAndConditionallyScroll(chatMessageContent, LIVE_CHAT_USERNAME, LIVE_CHAT_USERNAME_COLOR_CODE, sentTimestamp, true);
 
 											getCloudflareTurnstileToken()
 											.then(function(cloudflareTurnstileToken) {
@@ -2110,7 +2110,7 @@ body {
 											const liveChatUsername = chatMessage.username;
 											const liveChatUsernameColorCode = chatMessage.username_color_hex_code;
 											
-											appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null);
+											appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, true);
 										}
 									}
 								})
@@ -2125,7 +2125,7 @@ body {
 								const sentTimestamp = data.sentTimestamp;
 
 								if(liveChatUsername !== LIVE_CHAT_USERNAME && liveChatUsernameColorCode !== LIVE_CHAT_USERNAME_COLOR_CODE) {
-									appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null);
+									appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, false);
 								}
 								else {
 									$('#send-chat-message-input').val('');
@@ -2201,7 +2201,7 @@ body {
 							}
 						};
 						
-						function appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, sentTimestamp) {
+						function appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, sentTimestamp, forceScrollBottom) {
 							const chatMessagesContainer = $("#chat-messages-container");
 							const chatMessages = $("#chat-messages");
 
@@ -2218,11 +2218,11 @@ body {
 							const scrollTop = $(chatMessagesContainer).scrollTop();
 							const outerheight = $(chatMessagesContainer).outerHeight();
 							
-							const isScrolledBottom = (scrollheight - scrollTop - outerheight) <= 0;
+							const isScrolledBottom = (scrollheight - scrollTop - outerheight) <= 100;
 
 							$(chatMessages).append(chatMessageElement);
 
-							if (isScrolledBottom) {
+							if (isScrolledBottom || forceScrollBottom) {
 								$(chatMessagesContainer).scrollTop(scrollheight);
 							}
 
