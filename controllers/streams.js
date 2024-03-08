@@ -10,7 +10,7 @@ const {
 } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 
-const { updateHlsVideoMasterManifestFile } = require('../utils/filesystem');
+const { endStreamedHlsManifestFiles, updateHlsVideoMasterManifestFile } = require('../utils/filesystem');
 const { 
     cloudflare_purgeWatchPages, cloudflare_purgeNodePage
 } = require('../utils/cloudflare-communications');
@@ -169,6 +169,7 @@ function videoIdStop_POST(req, res) {
                     }
                     else {
                         try {
+                            await endStreamedHlsManifestFiles();
                             await updateHlsVideoMasterManifestFile(videoId);
                         }
                         catch(error) {

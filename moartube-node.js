@@ -25,7 +25,6 @@ const { provisionSqliteDatabase, openDatabase, finishPendingDatabaseWriteJob, su
 const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = require('./utils/httpserver');
 const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
 const { cloudflare_purgeWatchPages, cloudflare_purgeNodePage } = require('./utils/cloudflare-communications');
-const { maintainFileSystem } = require('./utils/filesystem');
 
 loadConfig();
 
@@ -247,10 +246,6 @@ if(cluster.isMaster) {
 				worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWatchingCountsTracker: liveStreamWatchingCountsTracker });
 			});
 		}, 1000);
-
-		setInterval(function() {
-			maintainFileSystem();
-		}, 10000);
 	})
 	.catch(error => {
 		logDebugMessageToConsole(null, error, new Error().stack, true);
@@ -281,6 +276,14 @@ else {
 		app.engine('dot', engine.__express);
 		app.set('views', getViewsDirectoryPath());
 		app.set('view engine', 'dot');
+
+		/*
+		app.use(function(req, res, next) {
+			console.log(`Received ${req.method} request for '${req.path}'`);
+
+			next();
+		});
+		*/
 
 		app.use('/', baseRoutes);
 		app.use('/account', accountRoutes);

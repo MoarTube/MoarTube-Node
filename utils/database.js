@@ -33,6 +33,11 @@ function provisionSqliteDatabase() {
 
                 await performDatabaseWriteJob('DELETE FROM liveChatMessages', []);
 
+                const { endStreamedHlsManifestFiles, removeOrphanedVideoDirectories } = require('./filesystem');
+
+                await endStreamedHlsManifestFiles();
+                await removeOrphanedVideoDirectories();
+
                 logDebugMessageToConsole('provisioned SQLite3 database', null, null, true);
 
                 resolve();

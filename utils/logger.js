@@ -1,3 +1,6 @@
+const path = require('path');
+const fs = require('fs');
+
 function logDebugMessageToConsole(message, error, stackTrace, isLoggingToFile) {
     const date = new Date(Date.now());
     const year = date.getFullYear();
@@ -37,13 +40,13 @@ function logDebugMessageToConsole(message, error, stackTrace, isLoggingToFile) {
     console.log(errorMessage);
     
     errorMessage += '\n';
-
     /*
     if(isLoggingToFile) {
         const logFilePath = path.join(__dirname, '/_node_log.txt');
         fs.appendFileSync(logFilePath, errorMessage);
     }
     */
+    
 }
 
 module.exports = {
