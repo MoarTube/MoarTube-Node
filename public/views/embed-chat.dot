@@ -694,7 +694,7 @@
 											
 											const sentTimestamp = Date.now();
 
-											const chatMessageElement = appendMessageAndConditionallyScroll(chatMessageContent, LIVE_CHAT_USERNAME, LIVE_CHAT_USERNAME_COLOR_CODE, sentTimestamp);
+											const chatMessageElement = appendMessageAndConditionallyScroll(chatMessageContent, LIVE_CHAT_USERNAME, LIVE_CHAT_USERNAME_COLOR_CODE, sentTimestamp, true);
 
 											getCloudflareTurnstileToken()
 											.then(function(cloudflareTurnstileToken) {
@@ -724,7 +724,7 @@
 											const liveChatUsername = chatMessage.username;
 											const liveChatUsernameColorCode = chatMessage.username_color_hex_code;
 											
-											appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null);
+											appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, true);
 										}
 									}
 								})
@@ -739,7 +739,7 @@
 								const sentTimestamp = data.sentTimestamp;
 								
 								if(liveChatUsername !== LIVE_CHAT_USERNAME && liveChatUsernameColorCode !== LIVE_CHAT_USERNAME_COLOR_CODE) {
-									appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null);
+									appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, false);
 								}
 								else {
 									$('#send-chat-message-input').val('');
@@ -815,7 +815,7 @@
 							}
 						};
 						
-						function appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, sentTimestamp) {
+						function appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, sentTimestamp, forceScrollBottom) {
 							const chatMessagesContainer = $("#chat-messages-container");
 							const chatMessages = $("#chat-messages");
 
@@ -828,12 +828,16 @@
 								$(chatMessageElement).addClass('pending-chat-message');
 							}
 
+							const scrollheight = $(chatMessagesContainer)[0].scrollHeight;
+							const scrollTop = $(chatMessagesContainer).scrollTop();
+							const outerheight = $(chatMessagesContainer).outerHeight();
+							
+							const isScrolledBottom = (scrollheight - scrollTop - outerheight) <= 100;
+
 							$(chatMessages).append(chatMessageElement);
-							
-							const isNearBottom = $(chatMessagesContainer)[0].scrollHeight - $(chatMessagesContainer).scrollTop() - $(chatMessagesContainer).outerHeight() < 100;
-							
-							if (isNearBottom) {
-								$(chatMessagesContainer).scrollTop($(chatMessagesContainer)[0].scrollHeight);
+
+							if (isScrolledBottom || forceScrollBottom) {
+								$(chatMessagesContainer).scrollTop(scrollheight);
 							}
 
 							return chatMessageElement;
