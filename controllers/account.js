@@ -26,13 +26,10 @@ function signIn_POST(req, res) {
         res.send({isError: true, message: 'invalid parameter: rememberMe value was ' + rememberMe + ', expected "on" or "off"'});
     }
     else {
-        let expiresIn;
+        let options = {};
         
-        if(rememberMe) {
-            expiresIn = '30d'; // 30 days
-        }
-        else {
-            expiresIn = '1d'; // 1 day
+        if(!rememberMe) {
+            options.expiresIn = '1d'; // 1 day
         }
         
         const nodeSettings = getNodeSettings();
@@ -46,7 +43,7 @@ function signIn_POST(req, res) {
         if(isUsernameValid && isPasswordValid) {
             logDebugMessageToConsole('user logged in: ' + username, null, null, true);
             
-            const token = jwt.sign({ username }, getJwtSecret(), { expiresIn: expiresIn });
+            const token = jwt.sign({ username }, getJwtSecret(), options);
             
             res.send({isError: false, isAuthenticated: true, token: token});
         }
