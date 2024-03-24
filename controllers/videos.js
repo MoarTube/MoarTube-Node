@@ -535,7 +535,7 @@ function videoIdStream_POST(req, res) {
                         }
                     })
                 }).fields([{ name: 'video_files' }])
-                (req, res, async function(error) {
+                (req, res, function(error) {
                     if(error) {
                         submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [1, videoId], function(isError) {
                             if(isError) {
