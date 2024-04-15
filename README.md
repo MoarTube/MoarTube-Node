@@ -70,6 +70,8 @@ To give you an idea of how tiny MoarTube Node really is, the software can run on
 
 As you can see, MoarTube Node is quite capable and can run on just about anything, anywhere.
 
+Node.js v20 and later required.
+
 ## Prerequisites
 
 Observe the corresponding prerequisite for your installation method.
