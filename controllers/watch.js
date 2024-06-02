@@ -10,25 +10,39 @@ async function root_GET(req, res) {
         const recommendedVideosData = await node_getRecommendedVideos();
         const commentsData = await node_getComments(videoId, Date.now(), 'before', 'ascending');
 
-        const adaptiveSources = videoData.video.adaptiveSources;
-        const progressiveSources = videoData.video.progressiveSources;
-        const isPublished = videoData.video.isPublished;
-        const isStreaming = videoData.video.isStreaming;
-        const isStreamed = videoData.video.isStreamed;
-
-        if((adaptiveSources.length === 0 && progressiveSources.length === 0) || (!isPublished && !isStreaming)) {
-            if(isStreamed) {
-                res.set('Cache-Control', 'public, s-maxage=86400');
-            }
-            else {
-                res.set('Cache-Control', 'no-store');
-            }
+        if(informationData.isError) {
+            res.send({isError: true, message: 'error retrieving node information data'});
+        }
+        else if(videoData.isError) {
+            res.send({isError: true, message: 'error retrieving node video data'});
+        }
+        else if(recommendedVideosData.isError) {
+            res.send({isError: true, message: 'error retrieving node recommended videos data'});
+        }
+        else if(commentsData.isError) {
+            res.send({isError: true, message: 'error retrieving node comments data'});
         }
         else {
-            res.set('Cache-Control', 'public, s-maxage=86400');
-        }
+            const adaptiveSources = videoData.video.adaptiveSources;
+            const progressiveSources = videoData.video.progressiveSources;
+            const isPublished = videoData.video.isPublished;
+            const isStreaming = videoData.video.isStreaming;
+            const isStreamed = videoData.video.isStreamed;
 
-        res.render('watch', {informationData: informationData, videoData: videoData, recommendedVideosData: recommendedVideosData, commentsData: commentsData});
+            if((adaptiveSources.length === 0 && progressiveSources.length === 0) || (!isPublished && !isStreaming)) {
+                if(isStreamed) {
+                    res.set('Cache-Control', 'public, s-maxage=86400');
+                }
+                else {
+                    res.set('Cache-Control', 'no-store');
+                }
+            }
+            else {
+                res.set('Cache-Control', 'public, s-maxage=86400');
+            }
+
+            res.render('watch', {informationData: informationData, videoData: videoData, recommendedVideosData: recommendedVideosData, commentsData: commentsData});
+        }
     }
     else {
         res.send({isError: true, message: 'invalid parameters'});
