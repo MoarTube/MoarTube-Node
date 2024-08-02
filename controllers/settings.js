@@ -288,8 +288,9 @@ function personalize_POST(req, res) {
 
                 nodeSettings.nodeName = nodeName;
                 nodeSettings.nodeAbout = nodeAbout;
-                nodeSettings.nodeId = nodeId;
 
+                setNodeSettings(nodeSettings);
+                
                 performNodeIdentification()
                 .then(() => {
                     const nodeIdentification = getNodeIdentification();
@@ -310,6 +311,8 @@ function personalize_POST(req, res) {
                             catch(error) {
                                 logDebugMessageToConsole(null, error, new Error().stack, true);
                             }
+
+                            nodeSettings.nodeId = nodeId;
                             
                             setNodeSettings(nodeSettings);
 
@@ -319,15 +322,13 @@ function personalize_POST(req, res) {
                     .catch(error => {
                         logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                        setNodeSettings(nodeSettings);
-
-                        res.send({isError: true, message: 'your settings were saved but could not be copied to the MoarTube platform'});
+                        res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
                     });
                 })
                 .catch(error => {
                     logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                    res.send({isError: true, message: 'your settings were saved but could not be copied to the MoarTube platform'});
+                    res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
                 });
             }
             else {
@@ -658,7 +659,6 @@ function networkExternal_POST(req, res) {
                 nodeSettings.publicNodeProtocol = publicNodeProtocol;
                 nodeSettings.publicNodeAddress = publicNodeAddress;
                 nodeSettings.publicNodePort = publicNodePort;
-                nodeSettings.isNodeConfigured = true;
                 
                 performNodeIdentification()
                 .then(() => {

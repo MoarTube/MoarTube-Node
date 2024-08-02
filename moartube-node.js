@@ -43,7 +43,6 @@ const reportsRoutes = require('./routes/reports');
 const settingsRoutes = require('./routes/settings');
 const streamsRoutes = require('./routes/streams');
 const videosRoutes = require('./routes/videos');
-const configureRoutes = require('./routes/configure');
 const assetsResourcesRoutes = require('./routes/assets-resources');
 const assetsVideosRoutes = require('./routes/assets-videos');
 
@@ -300,7 +299,6 @@ else {
 		app.use('/settings', settingsRoutes);
 		app.use('/streams', streamsRoutes);
 		app.use('/videos', videosRoutes);
-		app.use('/configure', configureRoutes);
 		app.use('/assets/resources', assetsResourcesRoutes);
 		app.use('/assets/videos', assetsVideosRoutes);
 
@@ -438,9 +436,8 @@ function loadConfig() {
 	if(!fs.existsSync(getNodeSettingsPath())) {
 		const nodeSettings = {
 			"nodeListeningPort":80,
-			"isNodeConfigured":false,
 			"isSecure":false,
-			"publicNodeProtocol":"http",
+			"publicNodeProtocol":"",
 			"publicNodeAddress":"",
 			"publicNodePort":"",
 			"nodeName":"moartube node",
