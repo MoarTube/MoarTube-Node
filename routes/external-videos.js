@@ -3,7 +3,7 @@ const express = require('express');
 const {
     videoIdThumbnail_GET, videoIdPreview_GET, videoIdPoster_GET, videoIdAdaptiveTypeFormatManifestsManifestName_GET, 
     videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET, videoIdProgressiveFormatResolution_GET, videoIdProgressiveFormatResolutionDownload_GET
-} = require('../controllers/assets-videos');
+} = require('../controllers/external-videos');
 
 const router = express.Router();
 

@@ -3,11 +3,11 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		
 		<title>MoarTube</title>
-		<link rel="icon" type="image/x-icon" href="/assets/resources/images/favicon.ico">
-		<link href="/assets/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
-		<script src="/assets/resources/javascript/jquery-3.6.4.min.js"></script>
-		<script src="/assets/resources/javascript/popper-2.11.6.min.js"></script> <!--popup menus, such as report buttons-->
-		<script src="/assets/resources/javascript/bootstrap-5.3.0.min.js"></script>
+		<link rel="icon" type="image/x-icon" href="/external/resources/images/favicon.ico">
+		<link href="/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
+		<script src="/external/resources/javascript/jquery-3.6.4.min.js"></script>
+		<script src="/external/resources/javascript/popper-2.11.6.min.js"></script> <!--popup menus, such as report buttons-->
+		<script src="/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
 		<style>
 			body {
 				background: #f9f9f9;

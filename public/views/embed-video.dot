@@ -1,14 +1,14 @@
 <html>
 	<head>
 		<title>MoarTube</title>
-		<link rel="icon" type="image/x-icon" href="/assets/resources/images/favicon.ico">
-		<link href="/assets/resources/css/videojs-8.6.1.css" rel="stylesheet" type="text/css"/>
-		<link href="/assets/resources/css/videojs-theme.css" rel="stylesheet" type="text/css"/>
-		<link href="/assets/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
-		<script src="/assets/resources/javascript/jquery-3.6.4.min.js"></script>
-		<script src="/assets/resources/javascript/videojs-8.6.1.js"></script>
-		<script src="/assets/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
-		<script src="/assets/resources/javascript/bootstrap-5.3.0.min.js"></script>
+		<link rel="icon" type="image/x-icon" href="/external/resources/images/favicon.ico">
+		<link href="/external/resources/css/videojs-8.6.1.css" rel="stylesheet" type="text/css"/>
+		<link href="/external/resources/css/videojs-theme.css" rel="stylesheet" type="text/css"/>
+		<link href="/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
+		<script src="/external/resources/javascript/jquery-3.6.4.min.js"></script>
+		<script src="/external/resources/javascript/videojs-8.6.1.js"></script>
+		<script src="/external/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
+		<script src="/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
 		<style>
 			body {
 				font-family: Arial, sans-serif;
@@ -479,7 +479,7 @@
 			<div id="video-player-container" class="ratio ratio-16x9" style="background: black; color: white;">
 				<div id="mtp-video-overlay-info" class="p-2 d-flex align-items-center mtp-video-overlay-info-fade-out" style="height:auto;background:#0000007a;">
 					<a id="mtp-channel-link" class="text-decoration-none me-2" href="/" target="_blank">
-						<img class="mpt-video-icon" src="/assets/resources/images/icon.png">
+						<img class="mpt-video-icon" src="/external/resources/images/icon.png">
 					</a>
 					<a id="mtp-video-link" class="text-decoration-none text-truncate" target="_blank" style="max-width: 100%;">
 						<div id="mtp-video-title" class="d-inline-block"></div>
@@ -607,7 +607,7 @@
 					$('#mtp-video-link').attr('href', '/watch?v=' + VIDEO_ID);
 					$('#watch-on-moartube-mtp-overlay-child').attr('href', '/watch?v=' + VIDEO_ID);
 
-					$('#video-poster').attr('src', '/assets/videos/' + VIDEO_ID + '/poster');
+					$('#video-poster').attr('src', '/external/videos/' + VIDEO_ID + '/poster');
 
 					$("#video-player").attr("controls", true);
 

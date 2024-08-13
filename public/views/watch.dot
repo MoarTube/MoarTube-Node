@@ -6,24 +6,24 @@
 		<meta name="twitter:site" content="@MoarTubes" />
 		<meta name="twitter:title" content="[[= model.videoData.video.title]]" />
 		<meta name="twitter:description" content="[[= model.videoData.video.description]]" />
-		<meta name="twitter:image" content="[[= model.informationData.information.publicNodeProtocol]]://[[= model.informationData.information.publicNodeAddress]]:[[= model.informationData.information.publicNodePort]]/assets/videos/[[= model.videoData.video.videoId]]/thumbnail" />
+		<meta name="twitter:image" content="[[= model.informationData.information.publicNodeProtocol]]://[[= model.informationData.information.publicNodeAddress]]:[[= model.informationData.information.publicNodePort]]/external/videos/[[= model.videoData.video.videoId]]/thumbnail" />
 		
 		<meta property="og:site_name" content="MoarTube.com" />
 		<meta property="og:title" content="[[= model.videoData.video.title]]" />
 		<meta property="og:description" content="[[= model.videoData.video.description]]" />
 		<meta property="og:type" content="desktopprofile" />
-		<meta property="og:image" content="[[= model.informationData.information.publicNodeProtocol]]://[[= model.informationData.information.publicNodeAddress]]:[[= model.informationData.information.publicNodePort]]/assets/videos/[[= model.videoData.video.videoId]]/thumbnail" />
+		<meta property="og:image" content="[[= model.informationData.information.publicNodeProtocol]]://[[= model.informationData.information.publicNodeAddress]]:[[= model.informationData.information.publicNodePort]]/external/videos/[[= model.videoData.video.videoId]]/thumbnail" />
 		
 		<title>MoarTube</title>
-		<link rel="icon" type="image/x-icon" href="/assets/resources/images/favicon.ico">
-		<link href="/assets/resources/css/keen-slider-6.8.5.min.css" rel="stylesheet" type="text/css"/> <!--recommendations slider-->
-		<link href="/assets/resources/css/videojs-8.6.1.css" rel="stylesheet" type="text/css"/>
-		<link href="/assets/resources/css/videojs-theme.css" rel="stylesheet" type="text/css"/>
-		<link href="/assets/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
-		<link href="/assets/resources/css/sweetalert2-11.0.11.min.css" rel="stylesheet" type="text/css" />
-		<script src="/assets/resources/javascript/jquery-3.6.4.min.js"></script>
-		<script src="/assets/resources/javascript/popper-2.11.6.min.js"></script> <!--popup menus, such as report buttons-->
-		<script src="/assets/resources/javascript/bootstrap-5.3.0.min.js"></script>
+		<link rel="icon" type="image/x-icon" href="/external/resources/images/favicon.ico">
+		<link href="/external/resources/css/keen-slider-6.8.5.min.css" rel="stylesheet" type="text/css"/> <!--recommendations slider-->
+		<link href="/external/resources/css/videojs-8.6.1.css" rel="stylesheet" type="text/css"/>
+		<link href="/external/resources/css/videojs-theme.css" rel="stylesheet" type="text/css"/>
+		<link href="/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
+		<link href="/external/resources/css/sweetalert2-11.0.11.min.css" rel="stylesheet" type="text/css" />
+		<script src="/external/resources/javascript/jquery-3.6.4.min.js"></script>
+		<script src="/external/resources/javascript/popper-2.11.6.min.js"></script> <!--popup menus, such as report buttons-->
+		<script src="/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
 		<style>
 			body {
 				background: #f9f9f9;
@@ -916,7 +916,7 @@ body {
 								<div id="stats-section" class="container-fluid w-100">
 									<div class="row align-items-center">
 										<div class="col-xl-6 col-md-12">
-											<a href="/"><img src="/assets/resources/images/icon.png" style="border-radius: 50%;width: 40px;height: 40px;"></a>
+											<a href="/"><img src="/external/resources/images/icon.png" style="border-radius: 50%;width: 40px;height: 40px;"></a>
 											<span id="node-name" class="text-break">........</span>
 										</div>
 										<div class="col-xl-6 col-md-12">
@@ -1065,10 +1065,10 @@ body {
 		  </div>
 		</div>
 
-		<script src="/assets/resources/javascript/videojs-8.6.1.js"></script>
-		<script src="/assets/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
-		<script src="/assets/resources/javascript/sweetalert-11.0.11.min.js"></script>
-		<script src="/assets/resources/javascript/keen-slider-6.8.5.min.js"></script>
+		<script src="/external/resources/javascript/videojs-8.6.1.js"></script>
+		<script src="/external/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
+		<script src="/external/resources/javascript/sweetalert-11.0.11.min.js"></script>
+		<script src="/external/resources/javascript/keen-slider-6.8.5.min.js"></script>
 		
 		<script>
             const INCOMING_PARAMETERS = [[= JSON.stringify(model) ]];
@@ -1131,7 +1131,7 @@ body {
 						}
 					}
 
-					$('#video-poster').attr('src', '/assets/videos/' + VIDEO_ID + '/poster');
+					$('#video-poster').attr('src', '/external/videos/' + VIDEO_ID + '/poster');
 
                     loadInformation(INCOMING_PARAMETERS.informationData.information);
 				    loadVideo(INCOMING_PARAMETERS.videoData.video);
@@ -1286,7 +1286,7 @@ body {
                                 <div class="row g-0 position-relative">\
                                     <div class="col-6 position-relative">\
                                         <div class="position-relative">\
-                                            <img src="/assets/videos/' + videoId + '/preview" class="rounded ratio ratio-16x9" alt="..."/>\
+                                            <img src="/external/videos/' + videoId + '/preview" class="rounded ratio ratio-16x9" alt="..."/>\
                                             <i class="video-streaming-timestamp">' + durationFormatted + '</i>\
                                             ' + liveStreamInidcator + '\
                                         </div>\

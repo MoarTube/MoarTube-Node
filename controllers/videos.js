@@ -574,7 +574,7 @@ function videoIdStream_POST(req, res) {
                                         publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
                                     }
 
-                                    const segmentFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/assets/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
+                                    const segmentFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/external/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
 
                                     cloudflare_cacheVideoSegment(segmentFileUrl)
                                     .then(() => {
@@ -1787,12 +1787,12 @@ function delete_POST(req, res) {
                     const allVideoIds = allVideos.map(video => video.video_id);
                     const allTags = Array.from(new Set(allVideos.map(video => video.tags.split(',')).flat()));
 
-                    submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = 0 AND is_publishing = 0 AND is_streaming = 0 AND is_indexed = 0) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids, function(isError) {
+                    submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = 0 AND is_publishing = 0 AND is_streaming = 0) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids, function(isError) {
                         if(isError) {
                             res.send({isError: true, message: 'error communicating with the MoarTube node'});
                         }
                         else {
-                            performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = 1 OR is_publishing = 1 OR is_streaming = 1 OR is_indexed = 1) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids)
+                            performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = 1 OR is_publishing = 1 OR is_streaming = 1) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids)
                             .then(async nonDeletedVideos => {
                                 const nonDeletedVideoIds = nonDeletedVideos.map(video => video.video_id);
                                 const deletedVideoIds = submittedVideoids.filter(videoId => !nonDeletedVideoIds.includes(videoId));
@@ -2565,7 +2565,7 @@ function videoIdWatch_GET(req, res) {
                             isHlsAvailable = true;
                         }
                         
-                        const src = '/assets/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-master.' + format;
+                        const src = '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-master.' + format;
                         
                         const source = {src: src, type: type};
                         
@@ -2578,7 +2578,7 @@ function videoIdWatch_GET(req, res) {
                         if(fs.existsSync(adaptiveVideoFilePath)) {
                             sourcesFormatsAndResolutions[format].push(resolution);
                             
-                            const src = '/assets/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-' + resolution + '.' + format;
+                            const src = '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-' + resolution + '.' + format;
                             
                             const source = {src: src, type: type};
                             
@@ -2607,7 +2607,7 @@ function videoIdWatch_GET(req, res) {
 
                             sourcesFormatsAndResolutions[format].push(resolution);
                             
-                            const src = '/assets/videos/' + videoId + '/progressive/' + format + '/' + resolution;
+                            const src = '/external/videos/' + videoId + '/progressive/' + format + '/' + resolution;
                             
                             const source = {src: src, type: type};
                             

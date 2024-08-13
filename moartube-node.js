@@ -43,8 +43,8 @@ const reportsRoutes = require('./routes/reports');
 const settingsRoutes = require('./routes/settings');
 const streamsRoutes = require('./routes/streams');
 const videosRoutes = require('./routes/videos');
-const assetsResourcesRoutes = require('./routes/assets-resources');
-const assetsVideosRoutes = require('./routes/assets-videos');
+const externalResourcesRoutes = require('./routes/external-resources');
+const externalVideosRoutes = require('./routes/external-videos');
 
 if(cluster.isMaster) {
 	process.on('uncaughtException', (error) => {
@@ -299,8 +299,8 @@ else {
 		app.use('/settings', settingsRoutes);
 		app.use('/streams', streamsRoutes);
 		app.use('/videos', videosRoutes);
-		app.use('/assets/resources', assetsResourcesRoutes);
-		app.use('/assets/videos', assetsVideosRoutes);
+		app.use('/external/resources', externalResourcesRoutes);
+		app.use('/external/videos', externalVideosRoutes);
 
 		await initializeHttpServer(app);
 		

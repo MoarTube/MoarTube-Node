@@ -127,20 +127,20 @@ function cloudflare_purgeVideo(videoId, format, resolution) {
         let files = [];
 
         if(format === 'm3u8') {
-            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-master.m3u8`);
-            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-${resolution}.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-master.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-${resolution}.m3u8`);
 
-            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-master.m3u8`);
-            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-${resolution}.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-master.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-${resolution}.m3u8`);
 
             const adaptiveVideoDirectory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
 
             const items = fs.readdirSync(adaptiveVideoDirectory);
 
-            files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/assets/videos/${videoId}/adaptive/m3u8/${resolution}/segments/segment-${resolution}-${i}.ts`));
+            files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${resolution}/segments/segment-${resolution}-${i}.ts`));
         }
         else if(format === 'mp4' || format === 'webm' || format === 'ogv') {
-            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/progressive/${format}/${resolution}`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/progressive/${format}/${resolution}`);
         }
 
         cloudflare_purgeCache(files, 'cloudflare_purgeVideo')
@@ -160,8 +160,8 @@ function cloudflare_purgeAdaptiveVideos(videoIds) {
         let files = [];
 
         for(const videoId of videoIds) {
-            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-master.m3u8`);
-            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-master.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-master.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-master.m3u8`);
 
             const adaptiveM3u8Directory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
 
@@ -172,12 +172,12 @@ function cloudflare_purgeAdaptiveVideos(videoIds) {
                     const entryPath = path.join(adaptiveM3u8Directory, entry);
 
                     if (fs.statSync(entryPath).isDirectory()) {
-                        files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-${entry}.m3u8`);
-                        files.push(`${nodeBaseUrl}/assets/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-${entry}.m3u8`);
+                        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-${entry}.m3u8`);
+                        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-${entry}.m3u8`);
 
                         const items = fs.readdirSync(entryPath);
 
-                        files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/assets/videos/${videoId}/adaptive/m3u8/${entry}/segments/segment-${entry}-${i}.ts`));
+                        files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${entry}/segments/segment-${entry}-${i}.ts`));
                     }
                 }
             }
@@ -212,7 +212,7 @@ function cloudflare_purgeProgressiveVideos(videoIds) {
 
                     for (const item of items) {
                         if (fs.statSync(entryPath).isDirectory()) {
-                            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/progressive/${entry}/${item}`);
+                            files.push(`${nodeBaseUrl}/external/videos/${videoId}/progressive/${entry}/${item}`);
                         }
                     }
                 }
@@ -313,9 +313,9 @@ function cloudflare_purgeNodeImages() {
 
         const files = [];
 
-        files.push(`${nodeBaseUrl}/assets/resources/images/icon.png`);
-        files.push(`${nodeBaseUrl}/assets/resources/images/avatar.png`);
-        files.push(`${nodeBaseUrl}/assets/resources/images/banner.png`);
+        files.push(`${nodeBaseUrl}/external/resources/images/icon.png`);
+        files.push(`${nodeBaseUrl}/external/resources/images/avatar.png`);
+        files.push(`${nodeBaseUrl}/external/resources/images/banner.png`);
 
         cloudflare_purgeCache(files, 'cloudflare_purgeNodeImages')
         .then(() => {
@@ -335,7 +335,7 @@ function cloudflare_purgeVideoThumbnailImages(videoIds) {
         const files = [];
 
         for(const videoId of videoIds) {
-            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/thumbnail`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/thumbnail`);
         }
 
         cloudflare_purgeCache(files, 'cloudflare_purgeVideoThumbnailImages')
@@ -355,7 +355,7 @@ function cloudflare_purgeVideoPreviewImages(videoIds) {
         const files = [];
 
         for(const videoId of videoIds) {
-            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/preview`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/preview`);
         }
 
         cloudflare_purgeCache(files, 'cloudflare_purgeVideoPreviewImages')
@@ -375,7 +375,7 @@ function cloudflare_purgeVideoPosterImages(videoIds) {
         const files = [];
 
         for(const videoId of videoIds) {
-            files.push(`${nodeBaseUrl}/assets/videos/${videoId}/poster`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/poster`);
         }
 
         cloudflare_purgeCache(files, 'cloudflare_purgeVideoPosterImages')
@@ -413,10 +413,10 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
             const newZoneRuleSet = {
                 "rules": [
                     {
-                        "description": "Node Assets - Video",
+                        "description": "Node External - Video",
                         "action": "set_cache_settings",
                         "enabled": true,
-                        "expression": "(starts_with(http.request.uri, \"/assets/videos\"))",
+                        "expression": "(starts_with(http.request.uri, \"/external/videos\"))",
                         "action_parameters": {
                             "cache": true,
                             "edge_ttl": {
@@ -429,10 +429,10 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                         }
                     },
                     {
-                        "description": "Node Assets - JavaScript, CSS",
+                        "description": "Node External - JavaScript, CSS",
                         "action": "set_cache_settings",
                         "enabled": true,
-                        "expression": "(starts_with(http.request.uri, \"/assets/resources/javascript\")) or (starts_with(http.request.uri, \"/assets/resources/css\"))",
+                        "expression": "(starts_with(http.request.uri, \"/external/resources/javascript\")) or (starts_with(http.request.uri, \"/external/resources/css\"))",
                         "action_parameters": {
                             "cache": true,
                             "edge_ttl": {
@@ -446,10 +446,10 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                         }
                     },
                     {
-                        "description": "Node Assets - Images",
+                        "description": "Node External - Images",
                         "action": "set_cache_settings",
                         "enabled": true,
-                        "expression": "(starts_with(http.request.uri, \"/assets/resources/images\"))",
+                        "expression": "(starts_with(http.request.uri, \"/external/resources/images\"))",
                         "action_parameters": {
                             "cache": true,
                             "edge_ttl": {
@@ -509,7 +509,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                         }
                     },
                     {
-                        "description": "Node Assets - Cache Bypass for Live (dynamic) HLS stream manifests",
+                        "description": "Node External - Cache Bypass for Live (dynamic) HLS stream manifests",
                         "action": "set_cache_settings",
                         "enabled": true,
                         "expression": "(http.request.uri.path contains \"/adaptive/dynamic/\")",

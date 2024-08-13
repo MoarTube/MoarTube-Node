@@ -1,6 +1,6 @@
 const express = require('express');
 
-const { javascript_GET, css_GET, fonts_GET, images1_GET, images2_GET } = require('../controllers/assets-resources');
+const { javascript_GET, css_GET, fonts_GET, images1_GET, images2_GET } = require('../controllers/external-resources');
 
 const router = express.Router();
 
