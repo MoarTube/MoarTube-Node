@@ -105,8 +105,14 @@ You can manage MoarTube Node using Docker Desktop by searching for `moartube/moa
 
 To set up MoarTube Node manually using Docker, execute the following command in your terminal. This command pulls the latest MoarTube Node image, creates a container named `moartube-node-1`, assigns it port 8181, and configures it to auto-restart unless manually stopped.
 
+##### For x86-64 architecture: 
 ```bash
-docker run -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartube/moartube-node:latest
+docker run --platform linux/amd64 -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartube/moartube-node:latest
+```
+
+##### For ARM64 architecture: 
+```bash
+docker run --platform linux/arm64 -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartube/moartube-node:latest
 ```
 
 *note: the Docker container uses [**/data**](https://github.com/MoarTube/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
