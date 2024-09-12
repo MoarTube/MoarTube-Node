@@ -2,7 +2,7 @@ const express = require('express');
 
 const { 
     import_POST, imported_POST, videoIdImportingStop_POST, publishing_POST, published_POST, videoIdPublishingStop_POST, videoIdUpload_POST, videoIdStream_POST, error_POST, videoIdSourceFileExtension_POST,
-    videoIdSourceFileExtension_GET, videoIdPublishes_GET, videoIdUnpublish_POST, videoIdInformation_GET, videoIdInformation_POST, videoIdIndexAdd_POST, videoIdIndexRemove_POST,
+    videoIdSourceFileExtension_GET, videoIdPublishes_GET, videoIdUnpublish_POST, videoIdData_POST, videoIdIndexAdd_POST, videoIdIndexRemove_POST,
     videoIdAlias_GET, search_GET, videoIdThumbnail_POST, videoIdPreview_POST, videoIdPoster_POST, videoIdLengths_POST, videoIdData_GET, delete_POST, finalize_POST, videoIdComments_GET, videoIdCommentsCommentId_GET, 
     videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST, recommended_GET, tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, commentsAll_GET,
     videoIdViewsIncrement_GET
@@ -54,8 +54,8 @@ router.post('/:videoId/unpublish', (req, res) => {
     videoIdUnpublish_POST(req, res);
 });
 
-router.post('/:videoId/information', (req, res) => {
-    videoIdInformation_POST(req, res);
+router.post('/:videoId/data', (req, res) => {
+    videoIdData_POST(req, res);
 });
 
 router.post('/:videoId/index/add', (req, res) => {
@@ -125,10 +125,6 @@ router.get('/:videoId/comments/:commentId', (req, res) => {
     videoIdCommentsCommentId_GET(req, res);
 });
 
-router.get('/:videoId/data', (req, res) => {
-    videoIdData_GET(req, res);
-});
-
 router.get('/:videoId/alias', (req, res) => {
     videoIdAlias_GET(req, res);
 });
@@ -141,8 +137,8 @@ router.get('/search', (req, res) => {
     search_GET(req, res);
 });
 
-router.get('/:videoId/information', (req, res) => {
-    videoIdInformation_GET(req, res);
+router.get('/:videoId/data', (req, res) => {
+    videoIdData_GET(req, res);
 });
 
 router.get('/comments/all', (req, res) => {

@@ -20,7 +20,7 @@ function removeOrphanedVideoDirectories() {
             
             const videosDirectoryPath = getVideosDirectoryPath();
 
-            fs.readdir(videosDirectoryPath, (error, videoDirectories) => {
+            fs.readdir(videosDirectoryPath, async (error, videoDirectories) => {
                 if(error) {
                     logDebugMessageToConsole(null, error, new Error().stack, true);
                 }
@@ -29,7 +29,7 @@ function removeOrphanedVideoDirectories() {
                         if(!videoIds.includes(videoDirectory)) {
                             const videoDirectoryPath = path.join(videosDirectoryPath, videoDirectory);
 
-                            deleteDirectoryRecursive(videoDirectoryPath);
+                            await deleteDirectoryRecursive(videoDirectoryPath);
                         }
                     }
                 }

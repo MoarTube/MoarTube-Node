@@ -910,7 +910,7 @@ function videoIdUnpublish_POST(req, res) {
                     videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution);
                 }
                 
-                deleteDirectoryRecursive(videoDirectoryPath);
+                await deleteDirectoryRecursive(videoDirectoryPath);
                 
                 if(fs.existsSync(manifestFilePath)) {
                     fs.unlinkSync(manifestFilePath);
@@ -944,67 +944,7 @@ function videoIdUnpublish_POST(req, res) {
     });
 }
 
-function videoIdInformation_GET(req, res) {
-    const videoId = req.params.videoId;
-    
-    if(isVideoIdValid(videoId, false)) {
-        performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
-        .then(video => {
-            if(video != null) {
-                const videoId = video.video_id;
-                const title = video.title;
-                const description = video.description;
-                const tags = video.tags;
-                const views = video.views;
-                const isIndexed = video.is_indexed;
-                const isLive = video.is_live;
-                const isStreaming = video.is_streaming;
-                const isFinalized = video.is_finalized;
-                const timestamp = video.creation_timestamp;
-
-                let videoAliasUrl = 'MoarTube Aliaser link unavailable';
-
-                if(video.is_indexed) {
-                    const nodeSettings = getNodeSettings();
-
-                    if(getIsDeveloperMode()) {
-                        videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
-                    }
-                    else {
-                        videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
-                    }
-                }
-
-                const information = {
-                    videoId: videoId,
-                    title: title,
-                    description: description,
-                    tags: tags,
-                    views: views,
-                    isIndexed: isIndexed,
-                    isLive: isLive,
-                    isStreaming: isStreaming,
-                    isFinalized: isFinalized,
-                    timestamp: timestamp,
-                    videoAliasUrl: videoAliasUrl
-                };
-                
-                res.send({isError: false, information: information});
-            }
-            else {
-                res.send({isError: true, message: 'that video does not exist'});
-            }
-        })
-        .catch(error => {
-            res.send({isError: true, message: 'error communicating with the MoarTube node'});
-        });
-    }
-    else {
-        res.send({isError: true, message: 'invalid parameters'});
-    }
-}
-
-function videoIdInformation_POST(req, res) {
+function videoIdData_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
@@ -1050,7 +990,7 @@ function videoIdInformation_POST(req, res) {
                             logDebugMessageToConsole(null, error, new Error().stack, true);
                         }
 
-                        res.send({isError: false, information: {title: title, tags: tags}});
+                        res.send({isError: false, videoData: {title: title, tags: tags}});
                     }
                 });
             }
@@ -1745,8 +1685,48 @@ function videoIdData_GET(req, res) {
             
             if(isVideoIdValid(videoId, false)) {
                 performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
-                .then(videoData => {
-                    if(videoData != null) {
+                .then(video => {
+                    if(video != null) {
+                        const videoId = video.video_id;
+                        const title = video.title;
+                        const description = video.description;
+                        const tags = video.tags;
+                        const views = video.views;
+                        const isIndexed = video.is_indexed;
+                        const isLive = video.is_live;
+                        const isStreaming = video.is_streaming;
+                        const isFinalized = video.is_finalized;
+                        const timestamp = video.creation_timestamp;
+                        const meta = JSON.parse(video.meta);
+
+                        let videoAliasUrl = 'MoarTube Aliaser link unavailable';
+
+                        if(video.is_indexed) {
+                            const nodeSettings = getNodeSettings();
+
+                            if(getIsDeveloperMode()) {
+                                videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
+                            }
+                            else {
+                                videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
+                            }
+                        }
+
+                        const videoData = {
+                            videoId: videoId,
+                            title: title,
+                            description: description,
+                            tags: tags,
+                            views: views,
+                            isIndexed: isIndexed,
+                            isLive: isLive,
+                            isStreaming: isStreaming,
+                            isFinalized: isFinalized,
+                            timestamp: timestamp,
+                            videoAliasUrl: videoAliasUrl,
+                            meta: meta
+                        };
+                    
                         res.send({isError: false, videoData: videoData});
                     }
                     else {
@@ -1808,10 +1788,10 @@ function delete_POST(req, res) {
                                     // do nothing
                                 }
     
-                                deletedVideoIds.forEach(function(deletedVideoId) {
+                                deletedVideoIds.forEach(async function(deletedVideoId) {
                                     const videoDirectoryPath = path.join(getVideosDirectoryPath(), deletedVideoId);
                 
-                                    deleteDirectoryRecursive(videoDirectoryPath);
+                                    await deleteDirectoryRecursive(videoDirectoryPath);
                                 });
     
                                 submitDatabaseWriteJob('DELETE FROM comments WHERE video_id IN (' + deletedVideoIds.map(() => '?').join(',') + ')', deletedVideoIds, function(isError) {
@@ -2666,8 +2646,7 @@ module.exports = {
     videoIdSourceFileExtension_GET,
     videoIdPublishes_GET,
     videoIdUnpublish_POST,
-    videoIdInformation_GET,
-    videoIdInformation_POST,
+    videoIdData_POST,
     videoIdIndexAdd_POST,
     videoIdIndexRemove_POST,
     videoIdAlias_GET,

@@ -2710,7 +2710,7 @@ body {
 					didOpen: () => {
 						Swal.showLoading();
 						
-						$.ajax({type: 'GET', url: '/videos/' + videoId + '/information'})
+						$.ajax({type: 'GET', url: '/videos/' + videoId + '/data'})
 						.done(async function(data, textStatus, xhr) {
 							if(data.isError) {
 								showAlert(true, data.message);
@@ -2718,10 +2718,10 @@ body {
 							else {
 								Swal.hideLoading();
 
-								const information = data.information;
+								const videoData = data.videoData;
 								
-								const title = information.title;
-								const videoAliasUrl = information.videoAliasUrl;
+								const title = videoData.title;
+								const videoAliasUrl = videoData.videoAliasUrl;
 								
 								let twitterLink;
 								let redditLink;
@@ -2788,7 +2788,7 @@ body {
 			like/dislike logic:
 				MoarTube does not conduct node-side like/dislike tracking of its users
 				such information is held entirely client-side utilizing the localstorage API
-				MoarTube node only keeps track of like/dislike counters
+				MoarTube Node only keeps track of like/dislike counters
 			*/
 			async function likeVideo() {
 				if(typeof(Storage) != null) {
@@ -2871,6 +2871,8 @@ body {
 				}
 				else {
 					console.log('localStorage is not supported in this browser.');
+
+					enableLikeDislikeButtons();
 				}
 			}
 			
@@ -2955,6 +2957,8 @@ body {
 				}
 				else {
 					console.log('localStorage is not supported in this browser.');
+
+					enableLikeDislikeButtons();
 				}
 			}
 

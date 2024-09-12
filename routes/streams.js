@@ -2,7 +2,7 @@ const express = require('express');
 
 const { 
     start_POST, videoIdStop_POST, videoIdAdaptiveFormatResolutionSegmentsNextExpectedSegmentIndex_GET, videoIdAdaptiveFormatResolutionSegmentsRemove_POST, videoIdBandwidth_GET,
-    videoIdChatSettings_POST, videoidChatHistory_GET
+    videoIdChatSettings_POST, videoIdChatHistory_GET
 } = require('../controllers/streams');
 
 const router = express.Router();
@@ -32,7 +32,7 @@ router.post('/:videoId/chat/settings', (req, res) => {
 });
 
 router.get('/:videoId/chat/history', (req, res) => {
-    videoidChatHistory_GET(req, res);
+    videoIdChatHistory_GET(req, res);
 });
 
 module.exports = router;

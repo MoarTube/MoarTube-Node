@@ -268,9 +268,13 @@ function setNodeidentification(nodeIdentification) {
 }
 
 function deleteDirectoryRecursive(directoryPath) {
-	fs.rm(directoryPath, { recursive: true, force: true }, function(error) {
-		// do nothing, best effort
-	});
+	return new Promise(function(resolve, reject) {
+        fs.rm(directoryPath, { recursive: true, force: true }, function(error) {
+            // do nothing, best effort
+
+            resolve();
+        });
+    });
 }
 
 function websocketNodeBroadcast(message) {
