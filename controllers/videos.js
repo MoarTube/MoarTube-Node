@@ -1678,80 +1678,65 @@ function videoIdLengths_POST(req, res) {
 }
 
 function videoIdData_GET(req, res) {
-    getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
-        if(isAuthenticated) {
-            const videoId = req.params.videoId;
-            
-            if(isVideoIdValid(videoId, false)) {
-                performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
-                .then(video => {
-                    if(video != null) {
-                        const videoId = video.video_id;
-                        const title = video.title;
-                        const description = video.description;
-                        const tags = video.tags;
-                        const views = video.views;
-                        const isIndexed = video.is_indexed;
-                        const isLive = video.is_live;
-                        const isStreaming = video.is_streaming;
-                        const isFinalized = video.is_finalized;
-                        const timestamp = video.creation_timestamp;
-                        const meta = JSON.parse(video.meta);
+    const videoId = req.params.videoId;
+    
+    if(isVideoIdValid(videoId, false)) {
+        performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+        .then(video => {
+            if(video != null) {
+                const videoId = video.video_id;
+                const title = video.title;
+                const description = video.description;
+                const tags = video.tags;
+                const views = video.views;
+                const isIndexed = video.is_indexed;
+                const isLive = video.is_live;
+                const isStreaming = video.is_streaming;
+                const isFinalized = video.is_finalized;
+                const timestamp = video.creation_timestamp;
+                const meta = JSON.parse(video.meta);
 
-                        let videoAliasUrl = 'MoarTube Aliaser link unavailable';
+                let videoAliasUrl = 'MoarTube Aliaser link unavailable';
 
-                        if(video.is_indexed) {
-                            const nodeSettings = getNodeSettings();
+                if(video.is_indexed) {
+                    const nodeSettings = getNodeSettings();
 
-                            if(getIsDeveloperMode()) {
-                                videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
-                            }
-                            else {
-                                videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
-                            }
-                        }
-
-                        const videoData = {
-                            videoId: videoId,
-                            title: title,
-                            description: description,
-                            tags: tags,
-                            views: views,
-                            isIndexed: isIndexed,
-                            isLive: isLive,
-                            isStreaming: isStreaming,
-                            isFinalized: isFinalized,
-                            timestamp: timestamp,
-                            videoAliasUrl: videoAliasUrl,
-                            meta: meta
-                        };
-                    
-                        res.send({isError: false, videoData: videoData});
+                    if(getIsDeveloperMode()) {
+                        videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
                     }
                     else {
-                        res.send({isError: true, message: 'that video does not exist'});
+                        videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
                     }
-                })
-                .catch(error => {
-                    res.send({isError: true, message: 'error retrieving video data'});
-                });
+                }
+
+                const videoData = {
+                    videoId: videoId,
+                    title: title,
+                    description: description,
+                    tags: tags,
+                    views: views,
+                    isIndexed: isIndexed,
+                    isLive: isLive,
+                    isStreaming: isStreaming,
+                    isFinalized: isFinalized,
+                    timestamp: timestamp,
+                    videoAliasUrl: videoAliasUrl,
+                    meta: meta
+                };
+            
+                res.send({isError: false, videoData: videoData});
             }
             else {
-                res.send({isError: true, message: 'invalid parameters'});
+                res.send({isError: true, message: 'that video does not exist'});
             }
-        }
-        else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-            res.send({isError: true, message: 'you are not logged in'});
-        }
-    })
-    .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-    });
+        })
+        .catch(error => {
+            res.send({isError: true, message: 'error retrieving video data'});
+        });
+    }
+    else {
+        res.send({isError: true, message: 'invalid parameters'});
+    }
 }
 
 function delete_POST(req, res) {

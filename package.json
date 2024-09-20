@@ -1,6 +1,6 @@
 {
   "name": "@moartube/moartube-node",
-  "version": "1.0.36",
+  "version": "1.0.37",
   "description": "A free, open-source, self-hosted, anonymous, decentralized video/live stream platform. Scalable via Cloudflare, works in the cloud or from home WiFi.",
   "author": "MoarTube, LLC",
   "homepage": "https://www.moartube.com",
