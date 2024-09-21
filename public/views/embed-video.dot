@@ -644,7 +644,8 @@
 						player.src(sources);
 						player.play()
 						.then(function() {
-						
+							$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-in');
+							$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-out');
 						})
 						.catch(function(error) {
 							console.log(error);
@@ -869,7 +870,8 @@
 
 									player.play()
 									.then(function() {
-										// do nothing
+										$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-in');
+										$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-out');
 									})
 									.catch(function(error) {
 										console.log(error);
@@ -960,6 +962,9 @@
 
 						$('.mtp-video-overlay-child').click(function(event) {
 							$('#mtp-video-overlay').remove();
+
+							$('#mtp-video-overlay-info').removeClass('mtp-video-overlay-info-fade-in');
+							$('#mtp-video-overlay-info').addClass('mtp-video-overlay-info-fade-out');
 							
 							player.src(sources);
 							player.play()
