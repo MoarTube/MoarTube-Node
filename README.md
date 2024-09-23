@@ -62,7 +62,7 @@ Node.js is the only requirement to run a MoarTube Node, and all major operating 
 
 MoarTube Node has the smallest resource usage footprint out of any self-hosted video and live streaming solution available today; most of the heavy computational responsibilities and memory-intensive operations are handled by MoarTube Client; MoarTube Node is only responsible for storage and distribution. MoarTube Node is also multi-threaded, utilizing the full potential of the CPU of whatever system it is installed on.
 
-On Digital Ocean, an $8 VPS (1 vCPU, 1 GB RAM) provides a comfortable headroom to handle surprisingly moderate demand. Although this tier is likely adequate for most users, others will need to observe the resource usage monitor and adjust their instance accordingly. Or just simply forget all that and [host from your personal computer over home WiFi](https://moartu.be/nodes/chris_moartube_node/videos/t6WRz-CZjaD).
+On Digital Ocean, an $8 VPS (1 vCPU, 1 GB RAM) provides a comfortable headroom to handle surprisingly moderate demand. Although this tier is likely adequate for most users, others will need to observe the resource usage monitor and adjust their instance accordingly. Or just simply forget all that and [host from your personal computer over home WiFi](https://www.moartube.com/guides/how-to-run-node-on-home-wifi).
 
 The node software uses about 100MB of RAM while sitting idle with fluctuations depending on visitor (and user) demand. Much of the demand can be alleviated by the [Cloudflare integration](https://www.moartube.com/guides/how-to-enable-cloudflare-integration) feature, leveraging the world's largest CDN to distribute your video and live stream data, giving your node capabilities that rival that of major platforms.
 
