@@ -3,6 +3,7 @@ const path = require('path');
 const multer = require('multer');
 const bcryptjs = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
+const packageJson = require('../package.json');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getImagesDirectoryPath, getCertificatesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
@@ -23,6 +24,8 @@ function root_GET(req, res) {
     .then((isAuthenticated) => {
         if(isAuthenticated) {
             const nodeSettings = getNodeSettings();
+
+            nodeSettings.version = packageJson.version;
             
             res.send({isError: false, nodeSettings: nodeSettings});
         }
