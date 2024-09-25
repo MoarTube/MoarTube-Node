@@ -209,7 +209,7 @@ function initializeHttpServer(value) {
                                 const nodeSettings = getNodeSettings();
                                 
                                 ws.send(JSON.stringify({eventName: 'registered'}));
-                                ws.send(JSON.stringify({eventName: 'information', isCloudflareTurnstileEnabled: nodeSettings.isCloudflareTurnstileEnabled}));
+                                ws.send(JSON.stringify({eventName: 'information', cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey}));
                             }
                             else {
                                 ws.send(JSON.stringify({eventName: 'error', errorType: 'register', message: 'invalid socket type'}));

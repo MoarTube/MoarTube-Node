@@ -31,11 +31,11 @@ function cloudflare_purgeEntireCache() {
     return new Promise(function(resolve, reject) {
         const nodeSettings = getNodeSettings();
 
-        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
-        if (cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
+        if (nodeSettings.isCloudflareIntegrationEnabled) {
+            const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+            const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+            const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+            
             axios.post('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId + '/purge_cache', {
                 purge_everything: true
             }, {
@@ -76,12 +76,12 @@ function cloudflare_purgeCache(files, source) {
     }
     else {
         const nodeSettings = getNodeSettings();
-
-        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
-        if (cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
+        
+        if (nodeSettings.isCloudflareIntegrationEnabled) {
+            const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+            const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+            const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+            
             const axiosPromises = filesofFiles.map(files => {
                 const filesJson = JSON.stringify(files);
 
@@ -603,6 +603,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
 
             const nodeSettings = getNodeSettings();
             
+            nodeSettings.isCloudflareIntegrationEnabled = true;
             nodeSettings.cloudflareEmailAddress = cloudflareEmailAddress;
             nodeSettings.cloudflareZoneId = cloudflareZoneId;
             nodeSettings.cloudflareGlobalApiKey = cloudflareGlobalApiKey;
@@ -625,12 +626,12 @@ async function cloudflare_resetIntegration() {
             logDebugMessageToConsole('resetting Cloudflare configuration for MoarTube Node', null, null, true);
 
             const nodeSettings = getNodeSettings();
-            
-            const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-            const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-            const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
 
-            if (cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
+            if (nodeSettings.isCloudflareIntegrationEnabled) {
+                const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+                const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+                const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+                
                 const headers = {
                     'X-Auth-Email': cloudflareEmailAddress,
                     'X-Auth-Key': cloudflareGlobalApiKey
@@ -707,6 +708,7 @@ async function cloudflare_resetIntegration() {
 
                 // step 5: save the configuration
                 
+                nodeSettings.isCloudflareIntegrationEnabled = false;
                 nodeSettings.cloudflareEmailAddress = '';
                 nodeSettings.cloudflareZoneId = '';
                 nodeSettings.cloudflareGlobalApiKey = '';
@@ -729,17 +731,32 @@ async function cloudflare_resetIntegration() {
 
 function cloudflare_validateTurnstileToken(token, ip) {
     return new Promise(function(resolve, reject) {
-        axios.post(`https://captcha.moartube.com/token/validate`, {
-            token: token,
-            ip: ip
-        })
+        const nodeSettings = getNodeSettings();
+
+        const cloudflareTurnstileSecretKey = nodeSettings.cloudflareTurnstileSecretKey;
+
+        const data = {
+            secret: cloudflareTurnstileSecretKey,
+            response: token
+        };
+        
+        if(ip != null) {
+            data.remoteip = ip;
+        }
+        
+        axios.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data)
         .then(response => {
             const data = response.data;
-
-            resolve(data);
+            
+            if (data.success) {
+                resolve({isError: false});
+            } 
+            else {
+                resolve({isError: true, message: 'human verification was unsuccessful'});
+            }
         })
         .catch(error => {
-            resolve({isError: true, message: 'human verification unavailable, please try again later'});
+            resolve({isError: true, message: 'human verification encountered an error'});
         });
     });
 }

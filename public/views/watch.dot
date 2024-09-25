@@ -1065,6 +1065,8 @@ body {
 		  </div>
 		</div>
 
+		<div id="captcha-container"></div>
+		<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
 		<script src="/external/resources/javascript/videojs-8.6.1.js"></script>
 		<script src="/external/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
 		<script src="/external/resources/javascript/sweetalert-11.0.11.min.js"></script>
@@ -1086,7 +1088,7 @@ body {
 			let NODE_PORT;
 			let NODE_BASE_URL;
 
-			let IS_CLOUDFLARE_TURNSTILE_ENABLED;
+			let CLOUDFLARE_TURNSTILE_SITE_KEY;
 			
 			const COMMENT_ELEMENT_CACHE = {};
 
@@ -1146,6 +1148,7 @@ body {
                     }
                     
 					setLikedOrDisliked();
+
 					refreshTextAreas();
 				}
 			});
@@ -1156,7 +1159,7 @@ body {
                 const publicNodeProtocol = information.publicNodeProtocol;
                 const publicNodeAddress = information.publicNodeAddress;
                 const publicNodePort = information.publicNodePort;
-				const isCloudflareTurnstileEnabled = information.isCloudflareTurnstileEnabled;
+				const cloudflareTurnstileSiteKey = information.cloudflareTurnstileSiteKey;
                 
                 NODE_ID = nodeId;
 
@@ -1177,7 +1180,7 @@ body {
 				
 				NODE_BASE_URL = NODE_PROTOCOL + '://' + NODE_ADDRESS  + port;
 
-				IS_CLOUDFLARE_TURNSTILE_ENABLED = isCloudflareTurnstileEnabled;
+				CLOUDFLARE_TURNSTILE_SITE_KEY = cloudflareTurnstileSiteKey;
             }
 
             function loadTags(recommendedVideos) {
@@ -2194,9 +2197,9 @@ body {
 								showAlert(true, data.message);
 							}
 							else if(data.eventName === 'information') {
-								const isCloudflareTurnstileEnabled = data.isCloudflareTurnstileEnabled;
+								const cloudflareTurnstileSiteKey = data.cloudflareTurnstileSiteKey;
 
-								IS_CLOUDFLARE_TURNSTILE_ENABLED = isCloudflareTurnstileEnabled;
+								CLOUDFLARE_TURNSTILE_SITE_KEY = cloudflareTurnstileSiteKey;
 							}
 						};
 						
@@ -2816,7 +2819,7 @@ body {
 								localStorage.setItem(localStorageKey, 'like');
 							})
 							.catch(error => {
-								
+								showAlert(true, error);
 							})
 							.finally(() => {
 								enableLikeDislikeButtons();
@@ -2835,7 +2838,7 @@ body {
 									localStorage.removeItem(localStorageKey);
 								})
 								.catch(error => {
-									
+									showAlert(true, error);
 								})
 								.finally(() => {
 									enableLikeDislikeButtons();
@@ -2855,7 +2858,7 @@ body {
 									localStorage.setItem(localStorageKey, 'like');
 								})
 								.catch(error => {
-									
+									showAlert(true, error);
 								})
 								.finally(() => {
 									enableLikeDislikeButtons();
@@ -2902,7 +2905,7 @@ body {
 								localStorage.setItem(localStorageKey, 'dislike');
 							})
 							.catch(error => {
-								
+								showAlert(true, error);
 							})
 							.finally(() => {
 								enableLikeDislikeButtons();
@@ -2921,7 +2924,7 @@ body {
 									localStorage.removeItem(localStorageKey);
 								})
 								.catch(error => {
-									
+									showAlert(true, error);
 								})
 								.finally(() => {
 									enableLikeDislikeButtons();
@@ -2941,7 +2944,7 @@ body {
 									localStorage.setItem(localStorageKey, 'dislike');
 								})
 								.catch(error => {
-									
+									showAlert(true, error);
 								})
 								.finally(() => {
 									enableLikeDislikeButtons();
@@ -3002,8 +3005,6 @@ body {
 						});
 					})
 					.catch(error => {
-						showAlert(true, error);
-
 						reject(error);
 					});
 				});
@@ -3033,8 +3034,6 @@ body {
 						});
 					})
 					.catch(error => {
-						showAlert(true, error);
-
 						reject(error);
 					});
 				});
@@ -3397,69 +3396,27 @@ body {
 
 			function getCloudflareTurnstileToken() {
 				return new Promise(function(resolve, reject) {
-					if(IS_CLOUDFLARE_TURNSTILE_ENABLED) {
-						fetch('https://captcha.moartube.com/heartbeat')
-						.then(data => {
-							const captchaIframeId = Date.now();
-
-							function processMessage (evt) {
-								if (evt.origin === "https://captcha.moartube.com") {
-									if (window.removeEventListener) {
-										window.removeEventListener("message", processMessage, false);
-									} 
-									else {
-										window.detachEvent("onmessage", processMessage);
-									}
-
-									const currentIframe = document.getElementById(captchaIframeId);
-
-									document.body.removeChild(currentIframe);
-
-									const token = evt.data;
-
-									if(token === 'unsupported') {
-										reject('unable to activate that feature');
-									}
-									else if(token === 'timeout') {
-										reject('human verification unsuccessful, please try again');
-									}
-									else if(token === 'error') {
-										reject('human verification unsuccessful, please try again');
-									}
-									else {
-										resolve(token);
-									}
-								}
-							}
-
-							if (window.addEventListener) {
-								window.addEventListener("message", processMessage, false);
-							}
-							else {
-								window.attachEvent("onmessage", processMessage);
-							}
-
-							const newIframe = document.createElement('iframe');
-
-							newIframe.id = captchaIframeId;
-							newIframe.className = 'hidden-elem';
-
-							newIframe.src = 'https://captcha.moartube.com/token/generate';
-
-							newIframe.onload = function() {
-								const iframe = document.getElementById(captchaIframeId).contentWindow;
-								
-								iframe.postMessage('get-captcha', '*');
-							};
-
-							document.body.appendChild(newIframe);
-						})
-						.catch(error => {
-							reject('human verification unavailable, please try again later');
-						});
+					if(CLOUDFLARE_TURNSTILE_SITE_KEY === '') {
+						resolve('');
 					}
 					else {
-						resolve('');
+						turnstile.render('#captcha-container', {
+							'sitekey': CLOUDFLARE_TURNSTILE_SITE_KEY,
+							'callback': function(token) {
+								resolve(token);
+							},
+							'unsupported-callback': function() {
+								reject('unable to activate that feature');
+							},
+							'timeout-callback': function() {
+								reject('human verification was unsuccessful');
+							},
+							'error-callback': function() {
+								reject('human verification encountered an error');
+							},
+							'refresh-expired': 'never',
+							'retry': 'never'
+						});
 					}
 				});
 			}

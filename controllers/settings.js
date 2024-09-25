@@ -23,13 +23,6 @@ function root_GET(req, res) {
     .then((isAuthenticated) => {
         if(isAuthenticated) {
             const nodeSettings = getNodeSettings();
-
-            if(nodeSettings.cloudflareEmailAddress !== '' && nodeSettings.cloudflareZoneId !== '' && nodeSettings.cloudflareGlobalApiKey !== '') {
-                nodeSettings.isCloudflareIntegrated = true;
-            }
-            else {
-                nodeSettings.isCloudflareIntegrated = false;
-            }
             
             res.send({isError: false, nodeSettings: nodeSettings});
         }
@@ -492,52 +485,6 @@ function cloudflareConfigure_POST(req, res) {
     });
 }
 
-function cloudflareTurnstile_POST(req, res) {
-    getAuthenticationStatus(req.headers.authorization)
-    .then(async (isAuthenticated) => {
-        if(isAuthenticated) {
-            let isCloudflareTurnstileEnabled = req.body.isCloudflareTurnstileEnabled;
-
-            if(isBooleanStringValid(isCloudflareTurnstileEnabled)) {
-                isCloudflareTurnstileEnabled = (isCloudflareTurnstileEnabled === 'true');
-
-                const nodeSettings = getNodeSettings();
-                
-                nodeSettings.isCloudflareTurnstileEnabled = isCloudflareTurnstileEnabled;
-
-                setNodeSettings(nodeSettings);
-
-                websocketChatBroadcast({eventName: 'information', videoId: 'all', isCloudflareTurnstileEnabled: isCloudflareTurnstileEnabled});
-
-                performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
-                .then(async videos => {
-                    const videoIds = videos.map(video => video.video_id);
-
-                    cloudflare_purgeWatchPages(videoIds);
-                })
-                .catch(error => {
-                    // do nothing
-                });
-
-                res.send({isError: false});
-            }
-            else {
-                res.send({ isError: true, message: 'invalid parameters' });
-            }
-        }
-        else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-            res.send({isError: true, message: 'you are not logged in'});
-        }
-    })
-    .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-    });
-}
-
 function cloudflareClear_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
@@ -553,6 +500,87 @@ function cloudflareClear_POST(req, res) {
 
                 res.send({isError: true, message: 'an error occurred while applying the settings'});
             }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+}
+
+function cloudflareTurnstileConfigure_POST(req, res) {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            const cloudflareTurnstileSiteKey = req.body.cloudflareTurnstileSiteKey;
+            const cloudflareTurnstileSecretKey = req.body.cloudflareTurnstileSecretKey;
+
+            const nodeSettings = getNodeSettings();
+
+            nodeSettings.isCloudflareTurnstileEnabled = true;
+            nodeSettings.cloudflareTurnstileSiteKey = cloudflareTurnstileSiteKey;
+            nodeSettings.cloudflareTurnstileSecretKey = cloudflareTurnstileSecretKey;
+
+            setNodeSettings(nodeSettings);
+
+            websocketChatBroadcast({eventName: 'information', videoId: 'all', cloudflareTurnstileSiteKey: cloudflareTurnstileSiteKey});
+
+            performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+            .then(async videos => {
+                const videoIds = videos.map(video => video.video_id);
+
+                cloudflare_purgeWatchPages(videoIds);
+            })
+            .catch(error => {
+                // do nothing
+            });
+
+            res.send({isError: false});
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+}
+
+function cloudflareTurnstileConfigureClear_POST(req, res) {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            const nodeSettings = getNodeSettings();
+
+            nodeSettings.isCloudflareTurnstileEnabled = false;
+            nodeSettings.cloudflareTurnstileSiteKey = '';
+            nodeSettings.cloudflareTurnstileSecretKey = '';
+
+            setNodeSettings(nodeSettings);
+
+            websocketChatBroadcast({eventName: 'information', videoId: 'all', cloudflareTurnstileSiteKey: ''});
+
+            performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+            .then(async videos => {
+                const videoIds = videos.map(video => video.video_id);
+
+                cloudflare_purgeWatchPages(videoIds);
+            })
+            .catch(error => {
+                // do nothing
+            });
+
+            res.send({isError: false});
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -715,7 +743,8 @@ module.exports = {
     personalize_POST,
     secure_POST,
     cloudflareConfigure_POST,
-    cloudflareTurnstile_POST,
+    cloudflareTurnstileConfigure_POST,
+    cloudflareTurnstileConfigureClear_POST,
     cloudflareClear_POST,
     account_POST,
     networkInternal_POST,

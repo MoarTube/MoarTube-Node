@@ -556,11 +556,7 @@ function videoIdStream_POST(req, res) {
 
                                 const nodeSettings = getNodeSettings();
 
-                                const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-                                const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-                                const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
-                                if(cloudflareEmailAddress !== '' && cloudflareZoneId !== '' && cloudflareGlobalApiKey !== '') {
+                                if(nodeSettings.isCloudflareIntegrationEnabled) {
                                     const publicNodeProtocol = nodeSettings.publicNodeProtocol;
                                     const publicNodeAddress = nodeSettings.publicNodeAddress;
                                     let publicNodePort = nodeSettings.publicNodePort;
