@@ -40,6 +40,7 @@ const reportsArchiveVideosRoutes = require('./routes/reports-archive-videos');
 const reportsCommentsRoutes = require('./routes/reports-comments');
 const reportsVideosRoutes = require('./routes/reports-videos');
 const reportsRoutes = require('./routes/reports');
+const monetizationRoutes = require('./routes/monetization');
 const settingsRoutes = require('./routes/settings');
 const streamsRoutes = require('./routes/streams');
 const videosRoutes = require('./routes/videos');
@@ -296,6 +297,7 @@ else {
 		app.use('/reports/comments', reportsCommentsRoutes);
 		app.use('/reports/videos', reportsVideosRoutes);
 		app.use('/reports', reportsRoutes);
+		app.use('/monetization', monetizationRoutes);
 		app.use('/settings', settingsRoutes);
 		app.use('/streams', streamsRoutes);
 		app.use('/videos', videosRoutes);
