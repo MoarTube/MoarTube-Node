@@ -14,7 +14,7 @@ const {
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isBooleanStringValid, isUsernameValid, isPasswordValid, 
     isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid
 } = require('../utils/validators');
-const { indexer_doNodePersonalizeUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
+const { indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
 const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
     cloudflare_purgeWatchPages } = require('../utils/cloudflare-communications');
 const { submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
@@ -271,19 +271,16 @@ function banner_POST(req, res) {
     });
 }
 
-function personalize_POST(req, res) {
+function personalizeNodeName_POST(req, res) {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
             const nodeName = req.body.nodeName;
-            const nodeAbout = req.body.nodeAbout;
-            const nodeId = req.body.nodeId;
             
-            if(isNodeNameValid(nodeName) && isNodeAboutValid(nodeAbout) && isNodeIdValid(nodeId)) {
+            if(isNodeNameValid(nodeName)) {
                 const nodeSettings = getNodeSettings();
 
                 nodeSettings.nodeName = nodeName;
-                nodeSettings.nodeAbout = nodeAbout;
 
                 setNodeSettings(nodeSettings);
                 
@@ -293,7 +290,7 @@ function personalize_POST(req, res) {
                     
                     const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
                     
-                    indexer_doNodePersonalizeUpdate(moarTubeTokenProof, nodeName, nodeAbout, nodeId)
+                    indexer_doNodePersonalizeNodeNameUpdate(moarTubeTokenProof, nodeName)
                     .then(indexerResponseData => {
                         if(indexerResponseData.isError) {
                             logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
@@ -307,6 +304,134 @@ function personalize_POST(req, res) {
                             catch(error) {
                                 logDebugMessageToConsole(null, error, new Error().stack, true);
                             }
+
+                            res.send({ isError: false });
+                        }
+                    })
+                    .catch(error => {
+                        logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                        res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
+                    });
+                })
+                .catch(error => {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                    res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
+                });
+            }
+            else {
+                res.send({ isError: true, message: 'invalid parameters' });
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+}
+
+function personalizeNodeAbout_POST(req, res) {
+    getAuthenticationStatus(req.headers.authorization)
+    .then((isAuthenticated) => {
+        if(isAuthenticated) {
+            const nodeAbout = req.body.nodeAbout;
+            
+            if(isNodeAboutValid(nodeAbout)) {
+                const nodeSettings = getNodeSettings();
+
+                nodeSettings.nodeAbout = nodeAbout;
+
+                setNodeSettings(nodeSettings);
+                
+                performNodeIdentification()
+                .then(() => {
+                    const nodeIdentification = getNodeIdentification();
+                    
+                    const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+                    
+                    indexer_doNodePersonalizeNodeAboutUpdate(moarTubeTokenProof, nodeAbout)
+                    .then(indexerResponseData => {
+                        if(indexerResponseData.isError) {
+                            logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+                            
+                            res.send({isError: true, message: indexerResponseData.message});
+                        }
+                        else {
+                            try {
+                                cloudflare_purgeNodePage([]);
+                            }
+                            catch(error) {
+                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                            }
+
+                            res.send({ isError: false });
+                        }
+                    })
+                    .catch(error => {
+                        logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                        res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
+                    });
+                })
+                .catch(error => {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                    res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
+                });
+            }
+            else {
+                res.send({ isError: true, message: 'invalid parameters' });
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+}
+
+function personalizeNodeId_POST(req, res) {
+    getAuthenticationStatus(req.headers.authorization)
+    .then((isAuthenticated) => {
+        if(isAuthenticated) {
+            const nodeId = req.body.nodeId;
+            
+            if(isNodeIdValid(nodeId)) {
+                performNodeIdentification()
+                .then(() => {
+                    const nodeIdentification = getNodeIdentification();
+                    
+                    const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+                    
+                    indexer_doNodePersonalizeNodeIdUpdate(moarTubeTokenProof, nodeId)
+                    .then(indexerResponseData => {
+                        if(indexerResponseData.isError) {
+                            logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+                            
+                            res.send({isError: true, message: indexerResponseData.message});
+                        }
+                        else {
+                            try {
+                                cloudflare_purgeNodePage([]);
+                            }
+                            catch(error) {
+                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                            }
+
+                            const nodeSettings = getNodeSettings();
 
                             nodeSettings.nodeId = nodeId;
                             
@@ -743,7 +868,9 @@ module.exports = {
     avatar_POST,
     banner_GET,
     banner_POST,
-    personalize_POST,
+    personalizeNodeName_POST,
+    personalizeNodeAbout_POST,
+    personalizeNodeId_POST,
     secure_POST,
     cloudflareConfigure_POST,
     cloudflareTurnstileConfigure_POST,

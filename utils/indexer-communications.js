@@ -65,11 +65,47 @@ function indexer_doIndexUpdate(data) {
 	});
 }
 
-function indexer_doNodePersonalizeUpdate(moarTubeTokenProof, nodeName, nodeAbout, nodeId) {
+function indexer_doNodePersonalizeNodeNameUpdate(moarTubeTokenProof, nodeName) {
     return new Promise(function(resolve, reject) {
-        axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/update', {
+        axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeName', {
             nodeName: nodeName,
+            moarTubeTokenProof: moarTubeTokenProof
+        })
+        .then(response => {
+            const data = response.data;
+            
+            resolve(data);
+        })
+        .catch(error => {
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+
+            resolve({isError: true, message: 'an error occurred while updating the personalize settings'});
+        });
+    });
+}
+
+function indexer_doNodePersonalizeNodeAboutUpdate(moarTubeTokenProof, nodeAbout) {
+    return new Promise(function(resolve, reject) {
+        axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeAbout', {
             nodeAbout: nodeAbout,
+            moarTubeTokenProof: moarTubeTokenProof
+        })
+        .then(response => {
+            const data = response.data;
+            
+            resolve(data);
+        })
+        .catch(error => {
+            logDebugMessageToConsole(null, error, new Error().stack, true);
+
+            resolve({isError: true, message: 'an error occurred while updating the personalize settings'});
+        });
+    });
+}
+
+function indexer_doNodePersonalizeNodeIdUpdate(moarTubeTokenProof, nodeId) {
+    return new Promise(function(resolve, reject) {
+        axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeId', {
             nodeId: nodeId,
             moarTubeTokenProof: moarTubeTokenProof
         })
@@ -146,7 +182,9 @@ function indexer_doNodeIdentificationRefresh(moarTubeTokenProof) {
 module.exports = {
     indexer_addVideoToIndex,
     indexer_removeVideoFromIndex,
-    indexer_doNodePersonalizeUpdate,
+    indexer_doNodePersonalizeNodeNameUpdate,
+    indexer_doNodePersonalizeNodeAboutUpdate,
+    indexer_doNodePersonalizeNodeIdUpdate,
     indexer_doNodeExternalNetworkUpdate,
     indexer_getNodeIdentification,
     indexer_doNodeIdentificationRefresh,

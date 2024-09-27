@@ -1,8 +1,8 @@
 const express = require('express');
 
 const { 
-    root_GET, avatar_GET, avatar_POST, banner_GET, banner_POST, personalize_POST, secure_POST, account_POST, networkInternal_POST, networkExternal_POST,
-    cloudflareConfigure_POST, cloudflareClear_POST, cloudflareTurnstileConfigure_POST, cloudflareTurnstileConfigureClear_POST
+    root_GET, avatar_GET, avatar_POST, banner_GET, banner_POST, personalizeNodeName_POST, personalizeNodeAbout_POST, personalizeNodeId_POST, secure_POST, account_POST, 
+    networkInternal_POST, networkExternal_POST, cloudflareConfigure_POST, cloudflareClear_POST, cloudflareTurnstileConfigure_POST, cloudflareTurnstileConfigureClear_POST
 } = require('../controllers/settings');
 
 const router = express.Router();
@@ -27,8 +27,16 @@ router.post('/banner', (req, res) => {
     banner_POST(req, res);
 });
 
-router.post('/personalize', (req, res) => {
-    personalize_POST(req, res);
+router.post('/personalize/nodeName', (req, res) => {
+    personalizeNodeName_POST(req, res);
+});
+
+router.post('/personalize/nodeAbout', (req, res) => {
+    personalizeNodeAbout_POST(req, res);
+});
+
+router.post('/personalize/nodeId', (req, res) => {
+    personalizeNodeId_POST(req, res);
 });
 
 router.post('/secure', async (req, res) => {
