@@ -311,13 +311,13 @@ function personalizeNodeName_POST(req, res) {
                     .catch(error => {
                         logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                        res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
+                        res.send({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
                     });
                 })
                 .catch(error => {
                     logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                    res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
+                    res.send({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
                 });
             }
             else {
@@ -377,13 +377,13 @@ function personalizeNodeAbout_POST(req, res) {
                     .catch(error => {
                         logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                        res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
+                        res.send({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
                     });
                 })
                 .catch(error => {
                     logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                    res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
+                    res.send({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
                 });
             }
             else {
@@ -443,13 +443,13 @@ function personalizeNodeId_POST(req, res) {
                     .catch(error => {
                         logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                        res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
+                        res.send({isError: true, message: 'your settings could not be saved to the MoarTube platform and were not saved to your node'});
                     });
                 })
                 .catch(error => {
                     logDebugMessageToConsole(null, error, new Error().stack, true);
 
-                    res.send({isError: true, message: 'your settings were saved to your node, but the node id could not be saved to the MoarTube platform'});
+                    res.send({isError: true, message: 'your settings could not be saved to the MoarTube platform and were not saved to your node'});
                 });
             }
             else {
