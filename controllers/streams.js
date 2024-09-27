@@ -113,8 +113,8 @@ function start_POST(req, res) {
 
                             meta = JSON.stringify(meta);
 
-                            query = 'UPDATE videos SET title = ?, description = ?, tags = ?, length_seconds = ?, length_timestamp = ?, views = ?, comments = ?, likes = ?, dislikes = ?, bandwidth = ?, is_publishing = ?, is_published = ?, is_streaming = ?, is_streamed = ?, is_stream_recorded_remotely = ?, is_stream_recorded_locally = ?, is_error = ?, meta = ? WHERE video_id = ?';
-                            parameters = [title, description, tags, 0, '', 0, 0, 0, 0, 0, 0, 0, 1, 0, isRecordingStreamRemotely, isRecordingStreamLocally, 0, meta, videoId];
+                            query = 'UPDATE videos SET title = ?, description = ?, tags = ?, length_seconds = ?, length_timestamp = ?, views = ?, comments = ?, likes = ?, dislikes = ?, bandwidth = ?, is_publishing = ?, is_published = ?, is_streaming = ?, is_streamed = ?, is_stream_recorded_remotely = ?, is_stream_recorded_locally = ?, is_error = ?, meta = ?, creation_timestamp = ? WHERE video_id = ?';
+                            parameters = [title, description, tags, 0, '', 0, 0, 0, 0, 0, 0, 0, 1, 0, isRecordingStreamRemotely, isRecordingStreamLocally, 0, meta, Date.now(), videoId];
 
                             performDatabaseWriteJob();
                         }
