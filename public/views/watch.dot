@@ -2812,8 +2812,9 @@ body {
 					const walletAddressId = cryptoWalletAddress.wallet_address_id;
 					const walletAddress = cryptoWalletAddress.wallet_address;
 					const chain = cryptoWalletAddress.chain;
+					const currency = cryptoWalletAddress.currency;
 
-					optionsHtml += '<option value="' + walletAddressId + '">' + walletAddress + ' (' + chain + ')</option>';
+					optionsHtml += '<option value="' + walletAddressId + '">' + walletAddress + ' (' + currency + ')</option>';
                 });
 
 				const html = $('\
@@ -2855,7 +2856,7 @@ body {
 									selectedCryptoWalletAddress = cryptoWalletAddress;
 
 									$('#chain-input').val(cryptoWalletAddress.chain);
-									$('#donation-amount-input').attr('placeholder', 'donation amount (' + cryptoWalletAddress.chain + ')');
+									$('#donation-amount-input').attr('placeholder', 'donation amount (' + cryptoWalletAddress.currency + ')');
 									$('#donation-amount-input').removeAttr('disabled');
 
 									break;

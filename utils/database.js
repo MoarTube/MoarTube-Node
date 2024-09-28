@@ -28,7 +28,7 @@ function provisionSqliteDatabase() {
                 await performDatabaseWriteJob('CREATE TABLE IF NOT EXISTS videoReportsArchive(archive_id INTEGER PRIMARY KEY, report_id INTEGER, timestamp INTEGER, video_timestamp INTEGER, video_id TEXT, email TEXT, type TEXT, message TEXT)', []);
                 await performDatabaseWriteJob('CREATE TABLE IF NOT EXISTS commentReportsArchive(archive_id INTEGER PRIMARY KEY, report_id INTEGER, timestamp INTEGER, comment_timestamp INTEGER, video_id TEXT, comment_id TEXT, email TEXT, type TEXT, message TEXT)', []);
                 await performDatabaseWriteJob('CREATE TABLE IF NOT EXISTS liveChatMessages(chat_message_id INTEGER PRIMARY KEY, video_id TEXT, username TEXT, username_color_hex_code TEXT, chat_message TEXT, timestamp INTEGER)', []);
-                await performDatabaseWriteJob('CREATE TABLE IF NOT EXISTS cryptoWalletAddresses(wallet_address_id INTEGER PRIMARY KEY, wallet_address TEXT, chain TEXT, chain_id TEXT, timestamp INTEGER)', []);
+                await performDatabaseWriteJob('CREATE TABLE IF NOT EXISTS cryptoWalletAddresses(wallet_address_id INTEGER PRIMARY KEY, wallet_address TEXT, chain TEXT, chain_id TEXT, currency TEXT, timestamp INTEGER)', []);
                 await performDatabaseWriteJob('UPDATE videos SET is_streamed = ? WHERE is_streaming = ?', [1, 1]);
                 await performDatabaseWriteJob('UPDATE videos SET is_importing = ?, is_publishing = ?, is_streaming = ?', [0, 0, 0]);
 

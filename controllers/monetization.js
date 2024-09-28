@@ -23,6 +23,7 @@ function walletAddressAdd_POST(req, res) {
         if(isAuthenticated) {
             const walletAddress = req.body.walletAddress;
             const chain = req.body.chain;
+            const currency = req.body.currency;
 
             let chainId = '';
 
@@ -35,8 +36,8 @@ function walletAddressAdd_POST(req, res) {
 
             const timestamp = Date.now();
 
-            const query = 'INSERT INTO cryptoWalletAddresses(wallet_address, chain, chain_id, timestamp) VALUES (?, ?, ?, ?)';
-            const params = [walletAddress, chain, chainId, timestamp];
+            const query = 'INSERT INTO cryptoWalletAddresses(wallet_address, chain, chain_id, currency, timestamp) VALUES (?, ?, ?, ?, ?)';
+            const params = [walletAddress, chain, chainId, currency, timestamp];
 
             submitDatabaseWriteJob(query, params, function(isError) {
                 if(isError) {

@@ -1162,8 +1162,9 @@ function videoIdIndexRemove_POST(req, res) {
     .then((isAuthenticated) => {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
+            const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
 
-            if(isVideoIdValid(videoId, false)) {
+            if(isVideoIdValid(videoId, false) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, false)) {
                 performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
                 .then(video => {
                     if(video != null) {
@@ -1175,7 +1176,8 @@ function videoIdIndexRemove_POST(req, res) {
                             
                             const data = {
                                 videoId: videoId,
-                                moarTubeTokenProof: moarTubeTokenProof
+                                moarTubeTokenProof: moarTubeTokenProof,
+                                cloudflareTurnstileToken: cloudflareTurnstileToken
                             };
                             
                             indexer_removeVideoFromIndex(data)
