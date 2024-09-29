@@ -18,6 +18,22 @@ function node_getInformation() {
     });
 }
 
+function node_getSocialMedias() {
+    return new Promise(function(resolve, reject) {
+        const localhostBaseUrl = getLocalhostBaseUrl();
+
+        axios.get(localhostBaseUrl + '/socials/socialMedia/all')
+        .then(response => {
+            const data = response.data;
+            
+            resolve(data);
+        })
+        .catch(error => {
+            resolve({isError: true, message: 'error'});
+        });
+    });
+}
+
 function node_getCryptoWalletAddresses() {
     return new Promise(function(resolve, reject) {
         const localhostBaseUrl = getLocalhostBaseUrl();
@@ -141,6 +157,7 @@ function getLocalhostBaseUrl() {
 
 module.exports = {
     node_getInformation,
+    node_getSocialMedias,
     node_getCryptoWalletAddresses,
     node_getVideosTags,
     node_getChannelSearch,

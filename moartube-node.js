@@ -41,6 +41,7 @@ const reportsCommentsRoutes = require('./routes/reports-comments');
 const reportsVideosRoutes = require('./routes/reports-videos');
 const reportsRoutes = require('./routes/reports');
 const monetizationRoutes = require('./routes/monetization');
+const socialsRoutes = require('./routes/socials');
 const settingsRoutes = require('./routes/settings');
 const streamsRoutes = require('./routes/streams');
 const videosRoutes = require('./routes/videos');
@@ -298,6 +299,7 @@ else {
 		app.use('/reports/videos', reportsVideosRoutes);
 		app.use('/reports', reportsRoutes);
 		app.use('/monetization', monetizationRoutes);
+		app.use('/socials', socialsRoutes);
 		app.use('/settings', settingsRoutes);
 		app.use('/streams', streamsRoutes);
 		app.use('/videos', videosRoutes);

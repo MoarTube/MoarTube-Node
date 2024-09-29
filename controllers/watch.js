@@ -1,11 +1,12 @@
 const { isVideoIdValid } = require('../utils/validators');
-const { node_getInformation, node_getCryptoWalletAddresses, node_getVideo, node_getComments, node_getRecommendedVideos } = require('../utils/node-communications');
+const { node_getInformation, node_getSocialMedias, node_getCryptoWalletAddresses, node_getVideo, node_getComments, node_getRecommendedVideos } = require('../utils/node-communications');
 
 async function root_GET(req, res) {
     const videoId = req.query.v;
     
     if(isVideoIdValid(videoId, false)) {
         const informationData = await node_getInformation();
+        const socialMediasData = await node_getSocialMedias();
         const cryptoWalletAddressesData = await node_getCryptoWalletAddresses();
         const videoData = await node_getVideo(videoId);
         const recommendedVideosData = await node_getRecommendedVideos();
@@ -13,6 +14,9 @@ async function root_GET(req, res) {
 
         if(informationData.isError) {
             res.send({isError: true, message: 'error retrieving node information data'});
+        }
+        else if(cryptoWalletAddressesData.isError) {
+            res.send({isError: true, message: 'error retrieving crypto wallet address data'});
         }
         else if(videoData.isError) {
             res.send({isError: true, message: 'error retrieving node video data'});
@@ -42,7 +46,14 @@ async function root_GET(req, res) {
                 res.set('Cache-Control', 'public, s-maxage=86400');
             }
 
-            res.render('watch', {informationData: informationData, cryptoWalletAddressesData: cryptoWalletAddressesData, videoData: videoData, recommendedVideosData: recommendedVideosData, commentsData: commentsData});
+            res.render('watch', {
+                informationData: informationData,
+                socialMediasData: socialMediasData,
+                cryptoWalletAddressesData: cryptoWalletAddressesData, 
+                videoData: videoData, 
+                recommendedVideosData: recommendedVideosData, 
+                commentsData: commentsData
+            });
         }
     }
     else {
