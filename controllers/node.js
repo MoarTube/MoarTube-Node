@@ -1,7 +1,7 @@
 const { logDebugMessageToConsole, getLastCheckedContentTracker, setLastCheckedContentTracker, getAuthenticationStatus } = require('../utils/helpers');
 const { isSearchTermValid, isSortTermValid, isTagTermValid } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET } = require('../utils/database');
-const { node_getInformation, node_getSocialMedias, node_getVideosTags, node_getChannelSearch } = require('../utils/node-communications');
+const { node_getInformation, node_getSocialMedias, node_getCryptoWalletAddresses, node_getVideosTags, node_getChannelSearch } = require('../utils/node-communications');
 
 async function root_GET(req, res) {
     let searchTerm = req.query.searchTerm;
@@ -22,10 +22,11 @@ async function root_GET(req, res) {
 
     const informationData = await node_getInformation();
     const socialMediasData = await node_getSocialMedias();
+    const cryptoWalletAddressesData = await node_getCryptoWalletAddresses();
     const tagsData = await node_getVideosTags();
     const searchResultsData = await node_getChannelSearch(searchTerm, sortTerm, tagTerm);
 
-    res.render('node', {informationData: informationData, socialMediasData: socialMediasData, tagsData: tagsData, searchResultsData: searchResultsData});
+    res.render('node', {informationData: informationData, socialMediasData: socialMediasData, cryptoWalletAddressesData: cryptoWalletAddressesData, tagsData: tagsData, searchResultsData: searchResultsData});
 }
 
 function search_GET(req, res) {

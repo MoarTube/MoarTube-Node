@@ -17,6 +17,7 @@
 		<title>MoarTube</title>
 		<link rel="icon" type="image/x-icon" href="/external/resources/images/favicon.ico">
 		<link href="/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" />
+		<link href="/external/resources/css/sweetalert2-11.0.11.min.css" rel="stylesheet" type="text/css" />
 		<script src="/external/resources/javascript/jquery-3.6.4.min.js"></script>
 		<script src="/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
 		<script src="/external/resources/javascript/clamp.js"></script>
@@ -24,6 +25,8 @@
 			body {
 				background: #f9f9f9;
 				font-family: Arial, sans-serif;
+				font-weight: 400;
+				line-height: 1.6;
 				margin: 0;
 				padding: 0;
 				margin-bottom: 100px;
@@ -187,6 +190,93 @@
 					display: block !important;
 				}
 			}
+
+			.swal2-input {
+				padding: 0.5rem 0.75rem;
+				font-size: .875rem;
+				font-weight: 400;
+				line-height: 1.4rem;
+				color: #495057;
+				background-color: #fff;
+				background-clip: padding-box;
+				border: 1px solid #d2d6da;
+			}
+
+			.swal2-input {
+				margin: 0;
+				width: 100%;
+			}
+
+			.swal2-textarea {
+				margin: 0;
+				width: 100%;
+			}
+
+			.swal2-styled.swal2-confirm {
+				border: 0;
+				border-radius: 0.25em;
+				background: initial;
+				background-color: #7367f0;
+				color: #fff;
+				font-size: 1em;
+			}
+			.swal2-styled.swal2-confirm {
+				background-image: linear-gradient(310deg,#7928ca,#ff0080);
+				background-color: transparent;
+				--bs-btn-padding-y: 0.75rem;
+				--bs-btn-padding-x: 1.5rem;
+				--bs-btn-font-size: 0.75rem;
+				--bs-btn-border-radius: 0.5rem
+			}
+
+			.swal2-styled.swal2-confirm:focus,.swal2-styled.swal2-confirm:hover {
+				background-image: linear-gradient(130deg,#7928ca,#ff0080)!important;
+				outline: 0;
+				box-shadow: 0 3px 5px -1px rgba(0,0,0,.09),0 2px 3px -1px rgba(0,0,0,.07)
+			}
+
+			.form-control:focus {
+				border-left: 1px solid #e293d3!important;
+				border-right: 1px solid #e293d3!important
+			}
+
+			.form-control:focus {
+				color: #495057;
+				background-color: #fff;
+				border-color: #e293d3;
+				outline: 0;
+				box-shadow: 0 0 0 2px #e9aede
+			}
+
+			.form-control {
+				border-radius: 0.5rem;
+				border-top-right-radius: 0.5rem!important;
+				border-bottom-right-radius: 0.5rem!important;
+				border-left-width: 1px;
+			}
+
+			.me-1 {
+				margin-right: 0.25rem!important;
+			}
+
+			.form-control {
+				display: block;
+				width: 100%;
+				padding: 0.5rem 0.75rem;
+				font-size: .875rem;
+				font-weight: 400;
+				line-height: 1.4rem;
+				color: #495057;
+				background-color: #fff;
+				background-clip: padding-box;
+				border: 1px solid #d2d6da;
+				appearance: none;
+				transition: box-shadow .15s ease,border-color .15s ease;
+			}
+
+			.form-control {
+			font-family: "Open Sans";
+			}
 		</style>
 
 <script>
@@ -269,6 +359,11 @@ body {
 					</svg>
 				</a>
 				<div id="navbar-settings-buttons">
+					<a class="navbar-settings-button navbar-brand" role="button" onclick="donateVideo();">
+						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-currency-bitcoin" viewBox="0 0 16 16">
+							<path d="M5.5 13v1.25c0 .138.112.25.25.25h1a.25.25 0 0 0 .25-.25V13h.5v1.25c0 .138.112.25.25.25h1a.25.25 0 0 0 .25-.25V13h.084c1.992 0 3.416-1.033 3.416-2.82 0-1.502-1.007-2.323-2.186-2.44v-.088c.97-.242 1.683-.974 1.683-2.19C11.997 3.93 10.847 3 9.092 3H9V1.75a.25.25 0 0 0-.25-.25h-1a.25.25 0 0 0-.25.25V3h-.573V1.75a.25.25 0 0 0-.25-.25H5.75a.25.25 0 0 0-.25.25V3l-1.998.011a.25.25 0 0 0-.25.25v.989c0 .137.11.25.248.25l.755-.005a.75.75 0 0 1 .745.75v5.505a.75.75 0 0 1-.75.75l-.748.011a.25.25 0 0 0-.25.25v1c0 .138.112.25.25.25zm1.427-8.513h1.719c.906 0 1.438.498 1.438 1.312 0 .871-.575 1.362-1.877 1.362h-1.28zm0 4.051h1.84c1.137 0 1.756.58 1.756 1.524 0 .953-.626 1.45-2.158 1.45H6.927z"></path>
+						</svg>
+					</a>
 					<a class="navbar-settings-button navbar-brand" role="button" data-bs-toggle="modal" data-bs-target="#settingsModal" onclick="showSettings();">
 						<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-gear-fill" viewBox="0 0 16 16">
 							<path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"></path>
@@ -335,6 +430,8 @@ body {
 				</div>
 			</div>
 		</div>
+		<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+		<script src="/external/resources/javascript/sweetalert-11.0.11.min.js"></script>
 
 		<script>
 			const INCOMING_PARAMETERS = [[= JSON.stringify(model) ]];
@@ -345,6 +442,8 @@ body {
 			let CURRENT_TAG_TERM_ID;
 
 			let TIMESTAMP_UPDATE_TRACKER = [];
+
+			let CRYPTO_WALLET_ADDRESSES = [];
 		
 			$(document).ready(function() {
 				const params = new URL(window.location.href).searchParams;
@@ -391,6 +490,7 @@ body {
 				
 				loadInformation(INCOMING_PARAMETERS.informationData.information);
 				loadSocialMedias(INCOMING_PARAMETERS.socialMediasData.socialMedias);
+				loadCryptoWalletAddresses(INCOMING_PARAMETERS.cryptoWalletAddressesData.cryptoWalletAddresses);
 				loadTags(INCOMING_PARAMETERS.tagsData.tags);
 				loadVideos(INCOMING_PARAMETERS.searchResultsData.searchResults);
 			});
@@ -432,6 +532,10 @@ body {
 
 					$('#navbar-settings-buttons').prepend(html);
 				}
+			}
+
+			function loadCryptoWalletAddresses(cryptoWalletAddresses) {
+				CRYPTO_WALLET_ADDRESSES = cryptoWalletAddresses;
 			}
 
 			function loadTags(tags) {
@@ -659,7 +763,145 @@ body {
 
 
 
+			function donateVideo() {
+				if(window.ethereum) {
+					let selectedCryptoWalletAddress;
+					let selectedChainId;
 
+					let optionsHtml = '<option selected disabled>Donate to crypto address...</option>';
+
+					CRYPTO_WALLET_ADDRESSES.forEach(function(cryptoWalletAddress) {
+						const walletAddressId = cryptoWalletAddress.wallet_address_id;
+						const walletAddress = cryptoWalletAddress.wallet_address;
+						const chain = cryptoWalletAddress.chain;
+
+						optionsHtml += '<option value="' + walletAddressId + '">' + walletAddress + ' (' + chain + ')</option>';
+					});
+
+					const html = $('\
+						<div class="multisteps-form__content">\
+							<div class="text-center">\
+								<image class="img-fluid" src="/external/resources/images/donate.jpg" style="max-width: 500px;"/>\
+							</div>\
+							<div class="row mt-3">\
+								<div class="col-12">\
+									<select id="wallet-address-select" class="multisteps-form__select form-control">' + optionsHtml + '</select>\
+								</div>\
+							</div>\
+							<div class="mt-3">\
+								<input id="donation-amount-input" class="multisteps-form__input form-control text-center" type="number" placeholder="donation amount" disabled>\
+							</div>\
+						</div>\
+					');
+
+					Swal.fire({
+						title: 'Donate to Creator',
+						html: html,
+						width: 'auto',
+						showConfirmButton: true,
+						confirmButtonText: 'Continue',
+						showCloseButton: true,
+						showCancelButton: true,
+						willOpen: () => {
+							$(swal.getConfirmButton()).prop('disabled', true)
+						},
+						didOpen: () => {
+							$('#wallet-address-select').on('change', function() {
+								const walletAddressId = Number(this.value);
+
+								for(const cryptoWalletAddress of CRYPTO_WALLET_ADDRESSES) {
+									if(cryptoWalletAddress.wallet_address_id === walletAddressId) {
+										selectedCryptoWalletAddress = cryptoWalletAddress;
+
+										$('#donation-amount-input').attr('placeholder', 'donation amount (' + cryptoWalletAddress.currency + ')');
+										$('#donation-amount-input').removeAttr('disabled');
+
+										break;
+									}
+								}
+							});
+
+							$('#donation-amount-input').on('input', function() {
+								const donationAmount = this.value;
+
+								if(donationAmount.length === 0) {
+									$(swal.getConfirmButton()).prop('disabled', true)
+								}
+								else {
+									$(swal.getConfirmButton()).prop('disabled', false)
+								}
+							});
+						}
+					})
+					.then((result) => {
+						if (result.isConfirmed) {
+							const walletAddress = selectedCryptoWalletAddress.wallet_address;
+							const chain = selectedCryptoWalletAddress.chain;
+							const chainId = selectedCryptoWalletAddress.chain_id;
+							const donationAmount = $('#donation-amount-input').val();
+
+							openCryptoClient(walletAddress, chain, chainId, donationAmount);
+						}
+					});
+				}
+				else {
+					Swal.fire({
+						title: 'Missing Crypto Wallet',
+						html: 'Your browser doesn\'t have a supported crypto wallet installed.<br>MoarTube supports crypto wallets that conform to the EIP-1193 standard.<br>Would you like to be directed to a supported crypto wallet? ',
+						width: 'auto',
+						icon: "info",
+						showConfirmButton: true,
+						confirmButtonText: '<a href="https://metamask.io/download" target="_blank" style="text-decoration: none; color: white;">Continue</a>',
+						cancelButtonText: 'Cancel',
+						showCloseButton: true,
+						showCancelButton: true
+					});
+				}
+			}
+
+			if (window.ethereum != null) {
+				console.log('EIP-1193 compatible crypto wallet detected.');
+			} else {
+				console.log('EIP-1193 compatible crypto wallet not detected!');
+			}
+
+			async function openCryptoClient(walletAddress, chain, chainId, donationAmount) {
+				if (window.ethereum) {
+					try {
+						await ethereum.request({
+							method: 'wallet_switchEthereumChain',
+							params: [{ chainId: chainId }]
+						});
+
+						console.log('Crypto wallet changed to Mainnet ' + chain);
+
+						const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+
+						if (accounts) {
+							const web3 = new Web3(ethereum);
+
+							const weiAmount = web3.utils.toWei(donationAmount, 'ether');
+							const weiAmountHex = web3.utils.toHex(BigInt(weiAmount));
+							
+							const transactionParams = {
+								to: walletAddress,
+								from: accounts[0],
+								value: weiAmountHex
+							};
+
+							await ethereum.request({
+								method: 'eth_sendTransaction',
+								params: [transactionParams]
+							});
+
+							console.log('Crypto wallet transaction initiated');
+						}
+					} 
+					catch (error) {
+						console.error(error);
+					}
+				}
+			}
 
 			function showSettings() {
 				if(typeof(Storage) != null) {

@@ -1,4 +1,4 @@
-const { cloudflare_purgeWatchPages } = require('../utils/cloudflare-communications');
+const { cloudflare_purgeWatchPages, cloudflare_purgeNodePage } = require('../utils/cloudflare-communications');
 const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 
@@ -47,8 +47,10 @@ function walletAddressAdd_POST(req, res) {
                     performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
                     .then(async videos => {
                         const videoIds = videos.map(video => video.video_id);
+                        const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
 
                         cloudflare_purgeWatchPages(videoIds);
+                        cloudflare_purgeNodePage(tags);
                     })
                     .catch(error => {
                         // do nothing
@@ -94,8 +96,10 @@ function walletAddressDelete_POST(req, res) {
                     performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
                     .then(async videos => {
                         const videoIds = videos.map(video => video.video_id);
+                        const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
 
                         cloudflare_purgeWatchPages(videoIds);
+                        cloudflare_purgeNodePage(tags);
                     })
                     .catch(error => {
                         // do nothing
