@@ -47,8 +47,8 @@ function socialMediaAdd_POST(req, res) {
                     });
 
                     performDatabaseReadJob_GET('SELECT * FROM socialMedias WHERE timestamp = ?', [timestamp])
-                    .then(socialmedia => {
-                        res.send({isError: false, socialmedia: socialmedia});
+                    .then(socialMedia => {
+                        res.send({isError: false, socialMedia: socialMedia});
                     })
                     .catch(error => {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
