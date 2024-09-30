@@ -1,7 +1,7 @@
-function root_GET(req, res) {
-    const url = '/node' + req.originalUrl.substring(req.path.length);
+function root_GET(originalUrl, path) {
+    const url = '/node' + originalUrl.substring(path.length);
     
-    res.redirect(url);
+    return url;
 }
 
 module.exports = {

@@ -729,7 +729,7 @@ async function cloudflare_resetIntegration() {
     });
 }
 
-function cloudflare_validateTurnstileToken(token, ip) {
+function cloudflare_validateTurnstileToken(token, cloudflareConnectingIp) {
     return new Promise(function(resolve, reject) {
         const nodeSettings = getNodeSettings();
 
@@ -740,8 +740,8 @@ function cloudflare_validateTurnstileToken(token, ip) {
             response: token
         };
         
-        if(ip != null) {
-            data.remoteip = ip;
+        if(cloudflareConnectingIp != null) {
+            data.remoteip = cloudflareConnectingIp;
         }
         
         axios.post('https://challenges.cloudflare.com/turnstile/v0/siteverify', data)

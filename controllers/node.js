@@ -6,11 +6,7 @@ const { socialmediaAll_GET } = require('../controllers/socials');
 const { walletAddressAll_GET } = require('../controllers/monetization');
 const { tags_GET } = require('../controllers/videos');
 
-async function root_GET(req, res) {
-    let searchTerm = req.query.searchTerm;
-    let sortTerm = req.query.sortTerm;
-    let tagTerm = req.query.tagTerm;
-
+async function root_GET(searchTerm, sortTerm, tagTerm) {
     if(!isSearchTermValid(searchTerm)) {
         searchTerm = '';
     }
@@ -29,7 +25,7 @@ async function root_GET(req, res) {
     const tagsData = await tags_GET();
     const searchResultsData = await search_GET(searchTerm, sortTerm, tagTerm);
 
-    res.render('node', {informationData: informationData, socialMediasData: socialMediasData, cryptoWalletAddressesData: cryptoWalletAddressesData, tagsData: tagsData, searchResultsData: searchResultsData});
+    return {informationData: informationData, socialMediasData: socialMediasData, cryptoWalletAddressesData: cryptoWalletAddressesData, tagsData: tagsData, searchResultsData: searchResultsData};
 }
 
 function search_GET(searchTerm, sortTerm, tagTerm) {
@@ -115,47 +111,28 @@ function search_GET(searchTerm, sortTerm, tagTerm) {
     });
 }
 
-async function newContentCounts_GET(req, res) {
-    getAuthenticationStatus(req.headers.authorization)
-    .then(async (isAuthenticated) => {
-        if(isAuthenticated) {
-            const lastCheckedContentTracker = getLastCheckedContentTracker();
+async function newContentCounts_GET() {
+    const lastCheckedContentTracker = getLastCheckedContentTracker();
 
-            const lastCheckedCommentsTimestamp = lastCheckedContentTracker.lastCheckedCommentsTimestamp;
-            const lastCheckedVideoReportsTimestamp = lastCheckedContentTracker.lastCheckedVideoReportsTimestamp;
-            const lastCheckedCommentReportsTimestamp = lastCheckedContentTracker.lastCheckedCommentReportsTimestamp;
+    const lastCheckedCommentsTimestamp = lastCheckedContentTracker.lastCheckedCommentsTimestamp;
+    const lastCheckedVideoReportsTimestamp = lastCheckedContentTracker.lastCheckedVideoReportsTimestamp;
+    const lastCheckedCommentReportsTimestamp = lastCheckedContentTracker.lastCheckedCommentReportsTimestamp;
 
-            try {
-                const newCommentsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newCommentsCount FROM comments WHERE timestamp > ?', [lastCheckedCommentsTimestamp])).newCommentsCount;
-                const newVideoReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newVideoReportsCount FROM videoReports WHERE timestamp > ?', [lastCheckedVideoReportsTimestamp])).newVideoReportsCount;
-                const newCommentReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newCommentReportsCount FROM commentReports WHERE timestamp > ?', [lastCheckedCommentReportsTimestamp])).newCommentReportsCount;
+    try {
+        const newCommentsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newCommentsCount FROM comments WHERE timestamp > ?', [lastCheckedCommentsTimestamp])).newCommentsCount;
+        const newVideoReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newVideoReportsCount FROM videoReports WHERE timestamp > ?', [lastCheckedVideoReportsTimestamp])).newVideoReportsCount;
+        const newCommentReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newCommentReportsCount FROM commentReports WHERE timestamp > ?', [lastCheckedCommentReportsTimestamp])).newCommentReportsCount;
 
-                res.send({isError: false, newContentCounts: {newCommentsCount: newCommentsCount, newVideoReportsCount: newVideoReportsCount, newCommentReportsCount: newCommentReportsCount}});
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
-
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-        }
-        else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-            res.send({isError: true, message: 'you are not logged in'});
-        }
-    })
-    .catch(error => {
+        return {isError: false, newContentCounts: {newCommentsCount: newCommentsCount, newVideoReportsCount: newVideoReportsCount, newCommentReportsCount: newCommentReportsCount}};
+    }
+    catch(error) {
         logDebugMessageToConsole(null, error, new Error().stack, true);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-    });
+
+        return {isError: true, message: 'error communicating with the MoarTube node'};
+    }
 }
 
-function contentChecked_POST(req, res) {
-    const contentType = req.body.contentType;
-
-    //validate here
-
+function contentChecked_POST(contentType) {
     const lastCheckedContentTracker = getLastCheckedContentTracker();
 
     const timestamp = Date.now();
@@ -172,7 +149,7 @@ function contentChecked_POST(req, res) {
 
     setLastCheckedContentTracker(lastCheckedContentTracker);
 
-    res.send({isError: false});
+    return {isError: false};
 }
 
 module.exports = {

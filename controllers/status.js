@@ -2,7 +2,7 @@ const { logDebugMessageToConsole } = require('../utils/logger');
 const { getNodeSettings } = require('../utils/helpers');
 const { performDatabaseReadJob_GET, performDatabaseReadJob_ALL } = require('../utils/database');
 
-function information_GET(req, res) {
+function information_GET() {
     return new Promise(function(resolve, reject) {
         performDatabaseReadJob_GET('SELECT COUNT(*) AS videoCount FROM videos WHERE (is_published = 1 OR is_live = 1)', [])
         .then(row => {
@@ -42,7 +42,7 @@ function information_GET(req, res) {
     });
 }
 
-function heartbeat_GET(req, res) {
+function heartbeat_GET() {
     return new Promise(function(resolve, reject) {
         resolve({isError: false, timestamp: Date.now()});
     });

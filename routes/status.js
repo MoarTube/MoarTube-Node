@@ -5,13 +5,13 @@ const { information_GET, heartbeat_GET, videos_POST } = require('../controllers/
 const router = express.Router();
 
 router.get('/information', async (req, res) => {
-    const data = await information_GET(req, res);
+    const data = await information_GET();
 
     res.send(data);
 });
 
 router.get('/heartbeat', async (req, res) => {
-    const data = await heartbeat_GET(req, res);
+    const data = await heartbeat_GET();
 
     res.send(data);
 });

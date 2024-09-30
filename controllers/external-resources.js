@@ -16,23 +16,23 @@ function fonts_GET() {
     return express.static(path.join(getPublicDirectoryPath(), 'fonts'));
 }
 
-function images1_GET(req, res, next) {
-    const imageName = path.basename(req.url).replace('/', '');
+function images1_GET(url) {
+    const imageName = path.basename(url).replace('/', '');
 
     if(imageName === 'icon.png' || imageName === 'avatar.png' || imageName === 'banner.png') {
         const customImageDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), imageName);
 
         if(fs.existsSync(customImageDirectoryPath)) {
             const fileStream = fs.createReadStream(customImageDirectoryPath);
-            res.setHeader('Content-Type', 'image/png');
-            fileStream.pipe(res);
+
+            return fileStream;
         }
         else {
-            next();
+            return null;
         }
     }
     else {
-        next();
+        return null;
     }
 }
 

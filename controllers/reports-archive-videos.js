@@ -3,63 +3,35 @@ const { getAuthenticationStatus } = require('../utils/helpers');
 const { isArchiveIdValid } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, submitDatabaseWriteJob } = require('../utils/database');
 
-function reportsArchiveVideos_GET(req, res) {
-    getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
-        if(isAuthenticated) {
-            performDatabaseReadJob_ALL('SELECT * FROM videoReportsArchive ORDER BY archive_id DESC', [])
-            .then(reports => {
-                res.send({isError: false, reports: reports});
-            })
-            .catch(error => {
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            });
-        }
-        else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-            res.send({isError: true, message: 'you are not logged in'});
-        }
-    })
-    .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+function reportsArchiveVideos_GET() {
+    return new Promise(function(resolve, reject) {
+        performDatabaseReadJob_ALL('SELECT * FROM videoReportsArchive ORDER BY archive_id DESC', [])
+        .then(reports => {
+            resolve({isError: false, reports: reports});
+        })
+        .catch(error => {
+            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+        });
     });
 }
 
-function reportsArchiveVideosArchiveIdDelete_DELETE(req, res) {
-    getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
-        if(isAuthenticated) {
-            const archiveId = req.params.archiveId;
-            
-            if(isArchiveIdValid(archiveId)) {
-                submitDatabaseWriteJob('DELETE FROM videoReportsArchive WHERE archive_id = ?', [archiveId], function(isError) {
-                    if(isError) {
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                    }
-                    else {
-                        res.send({isError: false});
-                    }
-                });
-            }
-            else {
-                logDebugMessageToConsole('invalid archive id: ' + archiveId, null, new Error().stack, true);
-                
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            }
+function reportsArchiveVideosArchiveIdDelete_DELETE(archiveId) {
+    return new Promise(function(resolve, reject) {
+        if(isArchiveIdValid(archiveId)) {
+            submitDatabaseWriteJob('DELETE FROM videoReportsArchive WHERE archive_id = ?', [archiveId], function(isError) {
+                if(isError) {
+                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                }
+                else {
+                    resolve({isError: false});
+                }
+            });
         }
         else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-            res.send({isError: true, message: 'you are not logged in'});
+            logDebugMessageToConsole('invalid archive id: ' + archiveId, null, new Error().stack, true);
+            
+            resolve({isError: true, message: 'error communicating with the MoarTube node'});
         }
-    })
-    .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });
 }
 

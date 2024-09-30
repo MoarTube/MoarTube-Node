@@ -8,7 +8,17 @@ router.use('/javascript', javascript_GET());
 router.use('/css', css_GET());
 router.use('/fonts', fonts_GET());
 router.use('/images', (req, res, next) => {
-    images1_GET(req, res, next);
+    const url = req.url;
+
+    const fileStream = images1_GET(url);
+
+    if(fileStream != null) {
+        res.setHeader('Content-Type', 'image/png');
+        fileStream.pipe(res);
+    }
+    else {
+        next();
+    }
 });
 router.use('/images', images2_GET());
 
