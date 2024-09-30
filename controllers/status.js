@@ -48,10 +48,8 @@ function heartbeat_GET(req, res) {
     });
 }
 
-function videos_POST(req, res) {
+function videos_POST(videoIds) {
     return new Promise(function(resolve, reject) {
-        const videoIds = req.body.videoIds;
-
         if(videoIds != null && Array.isArray(videoIds) && videoIds.length <= 30) {
             const videoIdsString = videoIds.map(() => '?').join(',');
 

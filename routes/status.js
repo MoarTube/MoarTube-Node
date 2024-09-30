@@ -17,7 +17,9 @@ router.get('/heartbeat', async (req, res) => {
 });
 
 router.post('/videos', async (req, res) => {
-    const data = await videos_POST(req, res);
+    const videoIds = req.body.videoIds;
+
+    const data = await videos_POST(videoIds);
 
     res.send(data);
 });
