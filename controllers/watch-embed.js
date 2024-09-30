@@ -12,14 +12,12 @@ async function videoVideoId_GET(videoId) {
     }
 }
 
-function chatVideoId_GET(req, res) {
-    const videoId = req.params.videoId;
-    
+function chatVideoId_GET(videoId) {
     if(isVideoIdValid(videoId, false)) {
-        res.render('embed-chat', {videoId: videoId});
+        return {videoId: videoId};
     }
     else {
-        res.status(404).send('embed chat not found');
+        return null;
     }
 }
 

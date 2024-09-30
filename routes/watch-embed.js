@@ -18,7 +18,16 @@ router.get('/video/:videoId', async (req, res) => {
 });
 
 router.get('/chat/:videoId', async (req, res) => {
-    chatVideoId_GET(req, res);
+    const videoId = req.params.videoId;
+
+    const data = chatVideoId_GET(videoId);
+
+    if(data != null) {
+        res.render('embed-chat', data);
+    }
+    else {
+        res.status(404).send('embed chat not found');
+    }
 });
 
 module.exports = router;

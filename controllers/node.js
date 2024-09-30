@@ -2,7 +2,7 @@ const { logDebugMessageToConsole, getLastCheckedContentTracker, setLastCheckedCo
 const { isSearchTermValid, isSortTermValid, isTagTermValid } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET } = require('../utils/database');
 const { information_GET } = require('../controllers/status');
-const { socialmediaAll_GET } = require('../controllers/socials');
+const { socialMediaAll_GET } = require('../controllers/socials');
 const { walletAddressAll_GET } = require('../controllers/monetization');
 const { tags_GET } = require('../controllers/videos');
 
@@ -20,7 +20,7 @@ async function root_GET(searchTerm, sortTerm, tagTerm) {
     }
 
     const informationData = await information_GET();
-    const socialMediasData = await socialmediaAll_GET();
+    const socialMediasData = await socialMediaAll_GET();
     const cryptoWalletAddressesData = await walletAddressAll_GET();
     const tagsData = await tags_GET();
     const searchResultsData = await search_GET(searchTerm, sortTerm, tagTerm);
