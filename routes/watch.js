@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
 
     res.render('watch', {
         informationData: data.informationData,
-        socialMediasData: data.socialMediasData,
+        linksData: data.linksData,
         cryptoWalletAddressesData: data.cryptoWalletAddressesData, 
         videoData: data.videoData, 
         recommendedVideosData: data.recommendedVideosData, 

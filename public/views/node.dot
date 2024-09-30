@@ -489,7 +489,7 @@ body {
 				$('#search-input').val(searchTerm);
 				
 				loadInformation(INCOMING_PARAMETERS.informationData.information);
-				loadSocialMedias(INCOMING_PARAMETERS.socialMediasData.socialMedias);
+				loadLinks(INCOMING_PARAMETERS.linksData.links);
 				loadCryptoWalletAddresses(INCOMING_PARAMETERS.cryptoWalletAddressesData.cryptoWalletAddresses);
 				loadTags(INCOMING_PARAMETERS.tagsData.tags);
 				loadVideos(INCOMING_PARAMETERS.searchResultsData.searchResults);
@@ -520,12 +520,10 @@ body {
 				}
 			}
 
-			function loadSocialMedias(socialMedias) {
-				for (let i = socialMedias.length - 1; i >= 0; i--) {
-					const socialMedia = socialMedias[i];
-
-					const link = socialMedia.link;
-					const svgGraphic = socialMedia.svg_graphic;
+			function loadLinks(links) {
+				for (let i = links.length - 1; i >= 0; i--) {
+					const link = links[i].link;
+					const svgGraphic = links[i].svg_graphic;
 
 					const html = '\
 					<a href="' + link + '" target="_blank" class="navbar-settings-button navbar-brand" role="button">' + svgGraphic + '</a>';

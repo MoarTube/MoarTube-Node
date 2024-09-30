@@ -1,25 +1,25 @@
 const express = require('express');
 
-const { socialMediaAll_GET, socialMediaAdd_POST, socialMediaDelete_POST } = require('../controllers/socials.js');
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { getAuthenticationStatus } = require('../utils/helpers');
+const { linksAll_GET, linksAdd_POST, linksDelete_POST } = require('../controllers/links.js');
+const { logDebugMessageToConsole } = require('../utils/logger.js');
+const { getAuthenticationStatus } = require('../utils/helpers.js');
 
 const router = express.Router();
 
-router.get('/socialMedia/all', async (req, res) => {
-    const data = await socialMediaAll_GET();
+router.get('/all', async (req, res) => {
+    const data = await linksAll_GET();
 
     res.send(data);
 });
 
-router.post('/socialMedia/add', async (req, res) => {
+router.post('/add', async (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
             const link = req.body.link;
             const svgGraphic = req.body.svgGraphic;
 
-            const data = await socialMediaAdd_POST(link, svgGraphic);
+            const data = await linksAdd_POST(link, svgGraphic);
 
             res.send(data);
         }
@@ -36,13 +36,13 @@ router.post('/socialMedia/add', async (req, res) => {
     });
 });
 
-router.post('/socialMedia/delete', (req, res) => {
+router.post('/delete', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const socialMediaId = req.body.socialMediaId;
+            const linkId = req.body.linkId;
 
-            const data = await socialMediaDelete_POST(socialMediaId);
+            const data = await linksDelete_POST(linkId);
 
             res.send(data);
         }

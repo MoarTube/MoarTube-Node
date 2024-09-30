@@ -1,6 +1,6 @@
 const { isVideoIdValid } = require('../utils/validators');
 const { information_GET } = require('../controllers/status');
-const { socialMediaAll_GET } = require('../controllers/socials');
+const { linksAll_GET } = require('./links');
 const { walletAddressAll_GET } = require('../controllers/monetization');
 const { videoIdWatch_GET, recommended_GET, videoIdComments_GET} = require('../controllers/videos');
 
@@ -8,7 +8,7 @@ function root_GET(videoId) {
     return new Promise(async function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
             const informationData = await information_GET();
-            const socialMediasData = await socialMediaAll_GET();
+            const linksData = await linksAll_GET();
             const cryptoWalletAddressesData = await walletAddressAll_GET();
             const videoData = await videoIdWatch_GET(videoId);
             const recommendedVideosData = await recommended_GET();
@@ -17,8 +17,8 @@ function root_GET(videoId) {
             if(informationData.isError) {
                 resolve({isError: true, message: 'error retrieving node information data'});
             }
-            else if(socialMediasData.isError) {
-                resolve({isError: true, message: 'error retrieving social media data'});
+            else if(linksData.isError) {
+                resolve({isError: true, message: 'error retrieving links data'});
             }
             else if(cryptoWalletAddressesData.isError) {
                 resolve({isError: true, message: 'error retrieving crypto wallet address data'});
@@ -35,7 +35,7 @@ function root_GET(videoId) {
             else {
                 resolve({
                     informationData: informationData,
-                    socialMediasData: socialMediasData,
+                    linksData: linksData,
                     cryptoWalletAddressesData: cryptoWalletAddressesData, 
                     videoData: videoData, 
                     recommendedVideosData: recommendedVideosData, 

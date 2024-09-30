@@ -2,14 +2,14 @@ const { cloudflare_purgeWatchPages, cloudflare_purgeNodePage } = require('../uti
 const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 
-function socialMediaAll_GET() {
+function linksAll_GET() {
     return new Promise(function(resolve, reject) {
-        const query = 'SELECT * FROM socialMedias';
+        const query = 'SELECT * FROM links';
         const params = [];
 
         performDatabaseReadJob_ALL(query, params)
-        .then(socialMedias => {
-            resolve({isError: false, socialMedias: socialMedias});
+        .then(links => {
+            resolve({isError: false, links: links});
         })
         .catch(error => {
             logDebugMessageToConsole(null, error, new Error().stack, true);
@@ -19,11 +19,11 @@ function socialMediaAll_GET() {
     });
 }
 
-function socialMediaAdd_POST(link, svgGraphic) {
+function linksAdd_POST(link, svgGraphic) {
     return new Promise(function(resolve, reject) {
         const timestamp = Date.now();
 
-        const query = 'INSERT INTO socialMedias(link, svg_graphic, timestamp) VALUES (?, ?, ?)';
+        const query = 'INSERT INTO links(link, svg_graphic, timestamp) VALUES (?, ?, ?)';
         const params = [link, svgGraphic, timestamp];
 
         submitDatabaseWriteJob(query, params, function(isError) {
@@ -43,9 +43,9 @@ function socialMediaAdd_POST(link, svgGraphic) {
                     // do nothing
                 });
 
-                performDatabaseReadJob_GET('SELECT * FROM socialMedias WHERE timestamp = ?', [timestamp])
-                .then(socialMedia => {
-                    resolve({isError: false, socialMedia: socialMedia});
+                performDatabaseReadJob_GET('SELECT * FROM links WHERE timestamp = ?', [timestamp])
+                .then(link => {
+                    resolve({isError: false, link: link});
                 })
                 .catch(error => {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
@@ -55,10 +55,10 @@ function socialMediaAdd_POST(link, svgGraphic) {
     });
 }
 
-function socialMediaDelete_POST(socialMediaId) {
+function linksDelete_POST(linkId) {
     return new Promise(function(resolve, reject) {
-        const query = 'DELETE FROM socialMedias WHERE social_media_id = ?';
-        const params = [socialMediaId];
+        const query = 'DELETE FROM links WHERE link_id = ?';
+        const params = [linkId];
 
         submitDatabaseWriteJob(query, params, function(isError) {
             if(isError) {
@@ -84,7 +84,7 @@ function socialMediaDelete_POST(socialMediaId) {
 }
 
 module.exports = {
-    socialMediaAll_GET,
-    socialMediaAdd_POST,
-    socialMediaDelete_POST
+    linksAll_GET,
+    linksAdd_POST,
+    linksDelete_POST
 }
