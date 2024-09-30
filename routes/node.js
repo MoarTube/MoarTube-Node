@@ -6,12 +6,12 @@ const { getAuthenticationStatus } = require('../utils/helpers');
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     let searchTerm = req.query.searchTerm;
     let sortTerm = req.query.sortTerm;
     let tagTerm = req.query.tagTerm;
 
-    const data = root_GET(searchTerm, sortTerm, tagTerm);
+    const data = await root_GET(searchTerm, sortTerm, tagTerm);
 
     res.render('node', data);
 });
