@@ -8,8 +8,14 @@ router.get('/', (req, res) => {
     root_GET(req, res);
 });
 
-router.get('/search', (req, res) => {
-    search_GET(req, res);
+router.get('/search', async (req, res) => {
+    const searchTerm = req.query.searchTerm;
+    const sortTerm = req.query.sortTerm;
+    const tagTerm = req.query.tagTerm;
+
+    const data = await search_GET(searchTerm, sortTerm, tagTerm);
+
+    res.send(data);
 });
 
 router.get('/newContentCounts', (req, res) => {

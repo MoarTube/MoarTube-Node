@@ -1,16 +1,19 @@
 const { isVideoIdValid } = require('../utils/validators');
-const { node_getInformation, node_getSocialMedias, node_getCryptoWalletAddresses, node_getVideo, node_getComments, node_getRecommendedVideos } = require('../utils/node-communications');
+const { information_GET } = require('../controllers/status');
+const { socialmediaAll_GET } = require('../controllers/socials');
+const { walletAddressAll_GET } = require('../controllers/monetization');
+const { videoIdWatch_GET, recommended_GET, videoIdComments_GET} = require('../controllers/videos');
 
 async function root_GET(req, res) {
     const videoId = req.query.v;
     
     if(isVideoIdValid(videoId, false)) {
-        const informationData = await node_getInformation();
-        const socialMediasData = await node_getSocialMedias();
-        const cryptoWalletAddressesData = await node_getCryptoWalletAddresses();
-        const videoData = await node_getVideo(videoId);
-        const recommendedVideosData = await node_getRecommendedVideos();
-        const commentsData = await node_getComments(videoId, Date.now(), 'before', 'ascending');
+        const informationData = await information_GET();
+        const socialMediasData = await socialmediaAll_GET();
+        const cryptoWalletAddressesData = await walletAddressAll_GET();
+        const videoData = await videoIdWatch_GET(videoId);
+        const recommendedVideosData = await recommended_GET();
+        const commentsData = await videoIdComments_GET(videoId, 'before', 'ascending', Date.now());
 
         if(informationData.isError) {
             res.send({isError: true, message: 'error retrieving node information data'});

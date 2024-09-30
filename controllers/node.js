@@ -1,7 +1,10 @@
 const { logDebugMessageToConsole, getLastCheckedContentTracker, setLastCheckedContentTracker, getAuthenticationStatus } = require('../utils/helpers');
 const { isSearchTermValid, isSortTermValid, isTagTermValid } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET } = require('../utils/database');
-const { node_getInformation, node_getSocialMedias, node_getCryptoWalletAddresses, node_getVideosTags, node_getChannelSearch } = require('../utils/node-communications');
+const { information_GET } = require('../controllers/status');
+const { socialmediaAll_GET } = require('../controllers/socials');
+const { walletAddressAll_GET } = require('../controllers/monetization');
+const { tags_GET } = require('../controllers/videos');
 
 async function root_GET(req, res) {
     let searchTerm = req.query.searchTerm;
@@ -20,98 +23,96 @@ async function root_GET(req, res) {
         tagTerm = '';
     }
 
-    const informationData = await node_getInformation();
-    const socialMediasData = await node_getSocialMedias();
-    const cryptoWalletAddressesData = await node_getCryptoWalletAddresses();
-    const tagsData = await node_getVideosTags();
-    const searchResultsData = await node_getChannelSearch(searchTerm, sortTerm, tagTerm);
+    const informationData = await information_GET();
+    const socialMediasData = await socialmediaAll_GET();
+    const cryptoWalletAddressesData = await walletAddressAll_GET();
+    const tagsData = await tags_GET();
+    const searchResultsData = await search_GET(searchTerm, sortTerm, tagTerm);
 
     res.render('node', {informationData: informationData, socialMediasData: socialMediasData, cryptoWalletAddressesData: cryptoWalletAddressesData, tagsData: tagsData, searchResultsData: searchResultsData});
 }
 
-function search_GET(req, res) {
-    const searchTerm = req.query.searchTerm;
-    const sortTerm = req.query.sortTerm;
-    const tagTerm = req.query.tagTerm;
-    
-    if(isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true)) {
-        let query;
-        let params;
+function search_GET(searchTerm, sortTerm, tagTerm) {
+    return new Promise(function(resolve, reject) {
+        if(isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true)) {
+            let query;
+            let params;
 
-        if(searchTerm.length === 0) {
-            query = 'SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1)';
-            params = [];
-        }
-        else {
-            query = 'SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) AND title LIKE ?';
-            params = ['%' + searchTerm + '%'];
-        }
-
-        performDatabaseReadJob_ALL(query, params)
-        .then(rows => {
-            if(sortTerm === 'latest') {
-                rows.sort(function compareByTimestampDescending(a, b) {
-                    return b.creation_timestamp - a.creation_timestamp;
-                });
-            }
-            else if(sortTerm === 'popular') {
-                rows.sort(function compareByTimestampDescending(a, b) {
-                    return b.views - a.views;
-                });
-            }
-            else if(sortTerm === 'oldest') {
-                rows.sort(function compareByTimestampDescending(a, b) {
-                    return a.creation_timestamp - b.creation_timestamp;
-                });
-            }
-            
-            const tagLimitCounter = {};
-            let rowsToSend = [];
-            
-            if(tagTerm.length === 0) {
-                const tagLimit = 4;
-
-                rows.forEach(function(row) {
-                    const tagsArray = row.tags.split(',');
-                    
-                    let addRow = false;
-                    
-                    for (let tag of tagsArray) {
-                        if(!tagLimitCounter.hasOwnProperty(tag)) {
-                            tagLimitCounter[tag] = 0;
-                        }
-                        
-                        if(tagLimitCounter[tag] < tagLimit) {
-                            tagLimitCounter[tag]++;
-                            addRow = true;
-                            break;
-                        }
-                    }
-                    
-                    if(addRow) {
-                        rowsToSend.push(row);
-                    }
-                });
+            if(searchTerm.length === 0) {
+                query = 'SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1)';
+                params = [];
             }
             else {
-                rows.forEach(function(row) {
-                    const tagsArray = row.tags.split(',');
-
-                    if(tagsArray.includes(tagTerm) && !rowsToSend.includes(row)) {
-                        rowsToSend.push(row);
-                    }
-                });
+                query = 'SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) AND title LIKE ?';
+                params = ['%' + searchTerm + '%'];
             }
-            
-            res.send({isError: false, searchResults: rowsToSend});
-        })
-        .catch(error => {
-            res.send({isError: true});
-        });
-    }
-    else {
-        res.send({isError: true, message: 'invalid parameters'});
-    }
+
+            performDatabaseReadJob_ALL(query, params)
+            .then(rows => {
+                if(sortTerm === 'latest') {
+                    rows.sort(function compareByTimestampDescending(a, b) {
+                        return b.creation_timestamp - a.creation_timestamp;
+                    });
+                }
+                else if(sortTerm === 'popular') {
+                    rows.sort(function compareByTimestampDescending(a, b) {
+                        return b.views - a.views;
+                    });
+                }
+                else if(sortTerm === 'oldest') {
+                    rows.sort(function compareByTimestampDescending(a, b) {
+                        return a.creation_timestamp - b.creation_timestamp;
+                    });
+                }
+                
+                const tagLimitCounter = {};
+                let rowsToSend = [];
+                
+                if(tagTerm.length === 0) {
+                    const tagLimit = 4;
+
+                    rows.forEach(function(row) {
+                        const tagsArray = row.tags.split(',');
+                        
+                        let addRow = false;
+                        
+                        for (let tag of tagsArray) {
+                            if(!tagLimitCounter.hasOwnProperty(tag)) {
+                                tagLimitCounter[tag] = 0;
+                            }
+                            
+                            if(tagLimitCounter[tag] < tagLimit) {
+                                tagLimitCounter[tag]++;
+                                addRow = true;
+                                break;
+                            }
+                        }
+                        
+                        if(addRow) {
+                            rowsToSend.push(row);
+                        }
+                    });
+                }
+                else {
+                    rows.forEach(function(row) {
+                        const tagsArray = row.tags.split(',');
+
+                        if(tagsArray.includes(tagTerm) && !rowsToSend.includes(row)) {
+                            rowsToSend.push(row);
+                        }
+                    });
+                }
+                
+                resolve({isError: false, searchResults: rowsToSend});
+            })
+            .catch(error => {
+                resolve({isError: true});
+            });
+        }
+        else {
+            resolve({isError: true, message: 'invalid parameters'});
+        }
+    });
 }
 
 async function newContentCounts_GET(req, res) {

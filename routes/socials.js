@@ -4,16 +4,22 @@ const { socialmediaAll_GET, socialMediaAdd_POST, socialMediaDelete_POST } = requ
 
 const router = express.Router();
 
-router.get('/socialMedia/all', (req, res) => {
-    socialmediaAll_GET(req, res);
+router.get('/socialMedia/all', async (req, res) => {
+    const data = await socialmediaAll_GET(req, res);
+
+    res.send(data);
 });
 
-router.post('/socialMedia/add', (req, res) => {
-    socialMediaAdd_POST(req, res);
+router.post('/socialMedia/add', async (req, res) => {
+    const data = await socialMediaAdd_POST(req, res);
+
+    res.send(data);
 });
 
-router.post('/socialMedia/delete', (req, res) => {
-    socialMediaDelete_POST(req, res);
+router.post('/socialMedia/delete', async (req, res) => {
+    const data = await socialMediaDelete_POST(req, res);
+
+    res.send(data);
 });
 
 module.exports = router;

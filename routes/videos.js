@@ -117,8 +117,15 @@ router.get('/:videoId/publishes', (req, res) => {
     videoIdPublishes_GET(req, res);
 });
 
-router.get('/:videoId/comments', (req, res) => {
-    videoIdComments_GET(req, res);
+router.get('/:videoId/comments', async (req, res) => {
+    const videoId = req.params.videoId;
+    const type = req.query.type;
+    const sort = req.query.sort;
+    const timestamp = req.query.timestamp;
+
+    const data = await videoIdComments_GET(videoId, type, sort, timestamp);
+
+    res.send(data);
 });
 
 router.get('/:videoId/comments/:commentId', (req, res) => {
@@ -145,24 +152,32 @@ router.get('/comments/all', (req, res) => {
     commentsAll_GET(req, res);
 });
 
-router.get('/tags', (req, res) => {
-    tags_GET(req, res);
+router.get('/tags', async (req, res) => {
+    const data = await tags_GET(req, res);
+
+    res.send(data);
 });
 
 router.get('/tags/all', (req, res) => {
     tagsAll_GET(req, res);
 });
 
-router.get('/recommended', (req, res) => {
-    recommended_GET(req, res);
+router.get('/recommended', async (req, res) => {
+    const data = await recommended_GET(req, res);
+
+    res.send(data);
 });
 
 router.get('/:videoId/views/increment', (req, res) => {
     videoIdViewsIncrement_GET(req, res);
 });
 
-router.get('/:videoId/watch', (req, res) => {
-    videoIdWatch_GET(req, res);
+router.get('/:videoId/watch', async (req, res) => {
+    const videoId = req.params.videoId;
+
+    const data = await videoIdWatch_GET(videoId);
+
+    res.send(data);
 });
 
 module.exports = router;

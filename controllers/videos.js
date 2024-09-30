@@ -1870,44 +1870,41 @@ function finalize_POST(req, res) {
     });
 }
 
-function videoIdComments_GET(req, res) {
-    const videoId = req.params.videoId;
-    const timestamp = req.query.timestamp;
-    const type = req.query.type;
-    const sort = req.query.sort;
-    
-    if(isVideoIdValid(videoId, false) && isTimestampValid(timestamp) && isCommentsTypeValid(type) && isSortValid(sort)) {
-        let sortTerm;
+function videoIdComments_GET(videoId, type, sort, timestamp) {
+    return new Promise(function(resolve, reject) {
+        if(isVideoIdValid(videoId, false) && isCommentsTypeValid(type) && isSortValid(sort) && isTimestampValid(timestamp)) {
+            let sortTerm;
 
-        if(sort === 'ascending') {
-            sortTerm = 'ASC';
-        }
-        else if(sort === 'descending') {
-            sortTerm = 'DESC';
-        }
+            if(sort === 'ascending') {
+                sortTerm = 'ASC';
+            }
+            else if(sort === 'descending') {
+                sortTerm = 'DESC';
+            }
 
-        if(type === 'after') {
-            performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ' + sortTerm, [videoId, timestamp])
-            .then(comments => {
-                res.send({isError: false, comments: comments});
-            })
-            .catch(error => {
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            });
+            if(type === 'after') {
+                performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ' + sortTerm, [videoId, timestamp])
+                .then(comments => {
+                    resolve({isError: false, comments: comments});
+                })
+                .catch(error => {
+                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                });
+            }
+            else if(type === 'before') {
+                performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? ORDER BY timestamp ' + sortTerm, [videoId, timestamp])
+                .then(comments => {
+                    resolve({isError: false, comments: comments});
+                })
+                .catch(error => {
+                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                });
+            }
         }
-        else if(type === 'before') {
-            performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? ORDER BY timestamp ' + sortTerm, [videoId, timestamp])
-            .then(comments => {
-                res.send({isError: false, comments: comments});
-            })
-            .catch(error => {
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            });
+        else {
+            resolve({isError: true, message: 'invalid parameters'});
         }
-    }
-    else {
-        res.send({isError: true, message: 'invalid parameters'});
-    }
+    });
 }
 
 function videoIdCommentsCommentId_GET(req, res) {
@@ -2284,34 +2281,38 @@ async function videoIdDislike_POST(req, res) {
 }
 
 function recommended_GET(req, res) {
-    performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) ORDER BY creation_timestamp DESC', [])
-    .then(recommendedVideos => {
-        res.send({isError: false, recommendedVideos: recommendedVideos});
-    })
-    .catch(error => {
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    return new Promise(function(resolve, reject) {
+        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) ORDER BY creation_timestamp DESC', [])
+        .then(recommendedVideos => {
+            resolve({isError: false, recommendedVideos: recommendedVideos});
+        })
+        .catch(error => {
+            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+        });
     });
 }
 
 function tags_GET(req, res) {
-    performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) ORDER BY creation_timestamp DESC', [])
-    .then(rows => {
-        const tags = [];
+    return new Promise(function(resolve, reject) {
+        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) ORDER BY creation_timestamp DESC', [])
+        .then(rows => {
+            const tags = [];
 
-        rows.forEach(function(row) {
-            const tagsArray = row.tags.split(',');
-            
-            tagsArray.forEach(function(tag) {
-                if (!tags.includes(tag)) {
-                    tags.push(tag);
-                }
+            rows.forEach(function(row) {
+                const tagsArray = row.tags.split(',');
+                
+                tagsArray.forEach(function(tag) {
+                    if (!tags.includes(tag)) {
+                        tags.push(tag);
+                    }
+                });
             });
+            
+            resolve({isError: false, tags: tags});
+        })
+        .catch(error => {
+            resolve({isError: true, message: 'error communicating with the MoarTube node'});
         });
-        
-        res.send({isError: false, tags: tags});
-    })
-    .catch(error => {
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });
 }
 
@@ -2484,135 +2485,135 @@ function videoIdViewsIncrement_GET(req, res) {
     }
 }
 
-function videoIdWatch_GET(req, res) {
-    const videoId = req.params.videoId;
-    
-    if(isVideoIdValid(videoId, false)) {
-        performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
-        .then(video => {
-            if(video != null) {
-                let manifestType;
+function videoIdWatch_GET(videoId) {
+    return new Promise(function(resolve, reject) {
+        if(isVideoIdValid(videoId, false)) {
+            performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+            .then(video => {
+                if(video != null) {
+                    let manifestType;
 
-                if(video.is_streaming) {
-                    manifestType = 'dynamic';
-                }
-                else {
-                    manifestType = 'static';
-                }
-                
-                const adaptiveVideosDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive');
-                const progressiveVideosDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive');
-                
-                const adaptiveFormats = [{format: 'm3u8', type: 'application/vnd.apple.mpegurl'}];
-                const progressiveFormats = [{format: 'mp4', type: 'video/mp4'}, {format: 'webm', type: 'video/webm'}, {format: 'ogv', type: 'video/ogg'}];
-                const resolutions = ['2160p', '1440p', '1080p', '720p', '480p', '360p', '240p'];
-                
-                const adaptiveSources = [];
-                const progressiveSources = [];
-                const sourcesFormatsAndResolutions = {m3u8: [], mp4: [], webm: [], ogv: []};
-                
-                let isHlsAvailable = false;
-                let isMp4Available = false;
-                let isWebmAvailable = false;
-                let isOgvAvailable = false;
-                
-                adaptiveFormats.forEach(function(adaptiveFormat) {
-                    const format = adaptiveFormat.format;
-                    const type = adaptiveFormat.type;
-
-                    const adaptiveVideoFormatPath = path.join(adaptiveVideosDirectoryPath, format);
-                    const adaptiveVideoMasterManifestPath = path.join(adaptiveVideoFormatPath, 'manifest-master.' + format);
-                    
-                    if(fs.existsSync(adaptiveVideoMasterManifestPath)) {
-                        if(format === 'm3u8') {
-                            isHlsAvailable = true;
-                        }
-                        
-                        const src = '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-master.' + format;
-                        
-                        const source = {src: src, type: type};
-                        
-                        adaptiveSources.push(source);
+                    if(video.is_streaming) {
+                        manifestType = 'dynamic';
                     }
+                    else {
+                        manifestType = 'static';
+                    }
+                    
+                    const adaptiveVideosDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive');
+                    const progressiveVideosDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive');
+                    
+                    const adaptiveFormats = [{format: 'm3u8', type: 'application/vnd.apple.mpegurl'}];
+                    const progressiveFormats = [{format: 'mp4', type: 'video/mp4'}, {format: 'webm', type: 'video/webm'}, {format: 'ogv', type: 'video/ogg'}];
+                    const resolutions = ['2160p', '1440p', '1080p', '720p', '480p', '360p', '240p'];
+                    
+                    const adaptiveSources = [];
+                    const progressiveSources = [];
+                    const sourcesFormatsAndResolutions = {m3u8: [], mp4: [], webm: [], ogv: []};
+                    
+                    let isHlsAvailable = false;
+                    let isMp4Available = false;
+                    let isWebmAvailable = false;
+                    let isOgvAvailable = false;
+                    
+                    adaptiveFormats.forEach(function(adaptiveFormat) {
+                        const format = adaptiveFormat.format;
+                        const type = adaptiveFormat.type;
 
-                    resolutions.forEach(function(resolution) {
-                        const adaptiveVideoFilePath = path.join(adaptiveVideosDirectoryPath, format + '/manifest-' + resolution + '.' + format);
+                        const adaptiveVideoFormatPath = path.join(adaptiveVideosDirectoryPath, format);
+                        const adaptiveVideoMasterManifestPath = path.join(adaptiveVideoFormatPath, 'manifest-master.' + format);
                         
-                        if(fs.existsSync(adaptiveVideoFilePath)) {
-                            sourcesFormatsAndResolutions[format].push(resolution);
+                        if(fs.existsSync(adaptiveVideoMasterManifestPath)) {
+                            if(format === 'm3u8') {
+                                isHlsAvailable = true;
+                            }
                             
-                            const src = '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-' + resolution + '.' + format;
+                            const src = '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-master.' + format;
                             
                             const source = {src: src, type: type};
                             
                             adaptiveSources.push(source);
                         }
-                    });
-                });
-                
-                progressiveFormats.forEach(function(progressiveFormat) {
-                    const format = progressiveFormat.format;
-                    const type = progressiveFormat.type;
-                    
-                    resolutions.forEach(function(resolution) {
-                        const progressiveVideoFilePath = path.join(progressiveVideosDirectoryPath, format + '/' + resolution + '/' + resolution + '.' + format);
-                        
-                        if(fs.existsSync(progressiveVideoFilePath)) {
-                            if(format === 'mp4') {
-                                isMp4Available = true;
-                            }
-                            else if(format === 'webm') {
-                                isWebmAvailable = true;
-                            }
-                            else if(format === 'ogv') {
-                                isOgvAvailable = true;
-                            }
 
-                            sourcesFormatsAndResolutions[format].push(resolution);
+                        resolutions.forEach(function(resolution) {
+                            const adaptiveVideoFilePath = path.join(adaptiveVideosDirectoryPath, format + '/manifest-' + resolution + '.' + format);
                             
-                            const src = '/external/videos/' + videoId + '/progressive/' + format + '/' + resolution;
-                            
-                            const source = {src: src, type: type};
-                            
-                            progressiveSources.push(source);
-                        }
+                            if(fs.existsSync(adaptiveVideoFilePath)) {
+                                sourcesFormatsAndResolutions[format].push(resolution);
+                                
+                                const src = '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-' + resolution + '.' + format;
+                                
+                                const source = {src: src, type: type};
+                                
+                                adaptiveSources.push(source);
+                            }
+                        });
                     });
-                });
-                
-                res.send({isError: false, video: {
-                    videoId: videoId,
-                    title: video.title,
-                    description: video.description,
-                    views: video.views,
-                    likes: video.likes,
-                    dislikes: video.dislikes,
-                    isPublished: video.is_published,
-                    isPublishing: video.is_publishing,
-                    isLive: video.is_live,
-                    isStreaming: video.is_streaming,
-                    isStreamed: video.is_streamed,
-                    comments: video.comments,
-                    creationTimestamp: video.creation_timestamp,
-                    isHlsAvailable: isHlsAvailable,
-                    isMp4Available: isMp4Available,
-                    isWebmAvailable: isWebmAvailable,
-                    isOgvAvailable: isOgvAvailable,
-                    adaptiveSources: adaptiveSources,
-                    progressiveSources: progressiveSources,
-                    sourcesFormatsAndResolutions: sourcesFormatsAndResolutions
-                }});
-            }
-            else {
-                res.send({isError: true, message: 'that video does not exist'});
-            }
-        })
-        .catch(error => {
-            res.send({isError: true, message: 'database communication error'});
-        });
-    }
-    else {
-        res.send({isError: true, message: 'invalid parameters'});
-    }
+                    
+                    progressiveFormats.forEach(function(progressiveFormat) {
+                        const format = progressiveFormat.format;
+                        const type = progressiveFormat.type;
+                        
+                        resolutions.forEach(function(resolution) {
+                            const progressiveVideoFilePath = path.join(progressiveVideosDirectoryPath, format + '/' + resolution + '/' + resolution + '.' + format);
+                            
+                            if(fs.existsSync(progressiveVideoFilePath)) {
+                                if(format === 'mp4') {
+                                    isMp4Available = true;
+                                }
+                                else if(format === 'webm') {
+                                    isWebmAvailable = true;
+                                }
+                                else if(format === 'ogv') {
+                                    isOgvAvailable = true;
+                                }
+
+                                sourcesFormatsAndResolutions[format].push(resolution);
+                                
+                                const src = '/external/videos/' + videoId + '/progressive/' + format + '/' + resolution;
+                                
+                                const source = {src: src, type: type};
+                                
+                                progressiveSources.push(source);
+                            }
+                        });
+                    });
+                    
+                    resolve({isError: false, video: {
+                        videoId: videoId,
+                        title: video.title,
+                        description: video.description,
+                        views: video.views,
+                        likes: video.likes,
+                        dislikes: video.dislikes,
+                        isPublished: video.is_published,
+                        isPublishing: video.is_publishing,
+                        isLive: video.is_live,
+                        isStreaming: video.is_streaming,
+                        isStreamed: video.is_streamed,
+                        comments: video.comments,
+                        creationTimestamp: video.creation_timestamp,
+                        isHlsAvailable: isHlsAvailable,
+                        isMp4Available: isMp4Available,
+                        isWebmAvailable: isWebmAvailable,
+                        isOgvAvailable: isOgvAvailable,
+                        adaptiveSources: adaptiveSources,
+                        progressiveSources: progressiveSources,
+                        sourcesFormatsAndResolutions: sourcesFormatsAndResolutions
+                    }});
+                }
+                else {
+                    resolve({isError: true, message: 'that video does not exist'});
+                }
+            })
+            .catch(error => {
+                resolve({isError: true, message: 'database communication error'});
+            });
+        }
+        else {
+            resolve({isError: true, message: 'invalid parameters'});
+        }
+    });
 }
 
 module.exports = {
