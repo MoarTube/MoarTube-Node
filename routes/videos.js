@@ -632,10 +632,10 @@ router.post('/:videoId/data', (req, res) => {
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
             try {
-                let videoId = req.params.videoId;
-                let title = req.body.title;
-                let description = req.body.description;
-                let tags = req.body.tags;
+                const videoId = req.params.videoId;
+                const title = req.body.title;
+                const description = req.body.description;
+                const tags = req.body.tags;
 
                 const data = await videoIdData_POST(videoId, title, description, tags);
 
@@ -1342,34 +1342,6 @@ router.post('/:videoId/report', async (req, res) => {
     
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     }
-});
-
-router.get('/comments/all', (req, res) => {
-    getAuthenticationStatus(req.headers.authorization)
-    .then(async (isAuthenticated) => {
-        if(isAuthenticated) {
-            try {
-                const data = await commentsAll_GET();
-
-                res.send(data);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
-
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-        }
-        else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
-
-            res.send({isError: true, message: 'you are not logged in'});
-        }
-    })
-    .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-    });
 });
 
 router.get('/:videoId/views/increment', async (req, res) => {

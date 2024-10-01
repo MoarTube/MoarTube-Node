@@ -1653,18 +1653,6 @@ async function videoIdReport_POST(videoId, email, reportType, message, cloudflar
     });
 }
 
-function commentsAll_GET() {
-    return new Promise(function(resolve, reject) {
-        performDatabaseReadJob_ALL('SELECT * FROM comments ORDER BY timestamp DESC', [])
-        .then(comments => {
-            resolve({isError: false, comments: comments});
-        })
-        .catch(error => {
-            resolve({isError: true, message: 'error communicating with the MoarTube node'});
-        });
-    });
-}
-
 let viewCounter = 0;
 let viewCounterIncrementTimer;
 function videoIdViewsIncrement_GET(videoId) {
@@ -1875,6 +1863,5 @@ module.exports = {
     tagsAll_GET,
     videoIdViewsIncrement_GET,
     videoIdReport_POST,
-    commentsAll_GET,
     videoIdWatch_GET
 };
