@@ -7,16 +7,23 @@ const { getAuthenticationStatus } = require('../utils/helpers');
 const router = express.Router();
 
 router.post('/signin', (req, res) => {
-    let username = req.body.username;
-    let password = req.body.password;
-    let moarTubeNodeHttpProtocol = req.body.moarTubeNodeHttpProtocol;
-    let moarTubeNodeIp = req.body.moarTubeNodeIp;
-    let moarTubeNodePort = req.body.moarTubeNodePort;
-    let rememberMe = req.body.rememberMe;
+    try {
+        const username = req.body.username;
+        const password = req.body.password;
+        const moarTubeNodeHttpProtocol = req.body.moarTubeNodeHttpProtocol;
+        const moarTubeNodeIp = req.body.moarTubeNodeIp;
+        const moarTubeNodePort = req.body.moarTubeNodePort;
+        const rememberMe = req.body.rememberMe;
 
-    const data = signIn_POST(username, password, moarTubeNodeHttpProtocol, moarTubeNodeIp, moarTubeNodePort, rememberMe);
+        const data = signIn_POST(username, password, moarTubeNodeHttpProtocol, moarTubeNodeIp, moarTubeNodePort, rememberMe);
 
-    res.send(data);
+        res.send(data);
+    }
+    catch (error) {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    }
 });
 
 router.get('/signout', async (req, res) => {
@@ -24,7 +31,14 @@ router.get('/signout', async (req, res) => {
     .then((isAuthenticated) => {
         if(isAuthenticated) {
             req.logout(function(error) {
-                res.send({isError: false, wasAuthenticated: true});
+                if(error) {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                }
+                else {
+                    res.send({isError: false, wasAuthenticated: true});
+                }
             });
         }
         else {

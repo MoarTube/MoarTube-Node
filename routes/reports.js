@@ -10,9 +10,16 @@ router.get('/count', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const data = await reportsCount_GET();
+            try {
+                const data = await reportsCount_GET();
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);

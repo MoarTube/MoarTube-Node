@@ -19,12 +19,12 @@ function linksAll_GET() {
     });
 }
 
-function linksAdd_POST(link, svgGraphic) {
+function linksAdd_POST(url, svgGraphic) {
     return new Promise(function(resolve, reject) {
         const timestamp = Date.now();
 
-        const query = 'INSERT INTO links(link, svg_graphic, timestamp) VALUES (?, ?, ?)';
-        const params = [link, svgGraphic, timestamp];
+        const query = 'INSERT INTO links(url, svg_graphic, timestamp) VALUES (?, ?, ?)';
+        const params = [url, svgGraphic, timestamp];
 
         submitDatabaseWriteJob(query, params, function(isError) {
             if(isError) {

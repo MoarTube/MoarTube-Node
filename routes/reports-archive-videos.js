@@ -10,9 +10,16 @@ router.get('/', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const data = await reportsArchiveVideos_GET();
+            try {
+                const data = await reportsArchiveVideos_GET();
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -31,11 +38,18 @@ router.delete('/:archiveId/delete', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const archiveId = req.params.archiveId;
+            try {
+                const archiveId = req.params.archiveId;
 
-            const data = await reportsArchiveVideosArchiveIdDelete_DELETE(archiveId);
+                const data = await reportsArchiveVideosArchiveIdDelete_DELETE(archiveId);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);

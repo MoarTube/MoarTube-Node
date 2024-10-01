@@ -19,9 +19,16 @@ router.get('/', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
-            const data = root_GET();
+            try {
+                const data = root_GET();
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -37,15 +44,22 @@ router.get('/', (req, res) => {
 });
 
 router.get('/avatar', (req, res) => {
-    const fileStream = avatar_GET();
+    try {
+        const fileStream = avatar_GET();
 
-    if(fileStream != null) {
-        res.setHeader('Content-Type', 'image/png');
-        
-        fileStream.pipe(res);
+        if(fileStream != null) {
+            res.setHeader('Content-Type', 'image/png');
+            
+            fileStream.pipe(res);
+        }
+        else {
+            res.status(404).send('avatar not found');
+        }
     }
-    else {
-        res.status(404).send('avatar not found');
+    catch(error) {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+
+        res.status(500).send('node avatar retrieval error');
     }
 });
 
@@ -101,12 +115,19 @@ router.post('/avatar', (req, res) => {
                 else {
                     logDebugMessageToConsole('uploaded node avatar', null, null, true);
 
-                    const iconFile = req.files['iconFile'][0];
-                    const avatarFile = req.files['avatarFile'][0];
-                    
-                    const data = await avatar_POST(iconFile, avatarFile);
+                    try {
+                        const iconFile = req.files['iconFile'][0];
+                        const avatarFile = req.files['avatarFile'][0];
+                        
+                        const data = await avatar_POST(iconFile, avatarFile);
 
-                    res.send(data);
+                        res.send(data);
+                    }
+                    catch(error) {
+                        logDebugMessageToConsole(null, error, new Error().stack, true);
+                    
+                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    }
                 }
             });
         }
@@ -124,15 +145,22 @@ router.post('/avatar', (req, res) => {
 });
 
 router.get('/banner', (req, res) => {
-    const fileStream = banner_GET();
+    try {
+        const fileStream = banner_GET();
 
-    if(fileStream != null) {
-        res.setHeader('Content-Type', 'image/png');
-        
-        fileStream.pipe(res);
+        if(fileStream != null) {
+            res.setHeader('Content-Type', 'image/png');
+            
+            fileStream.pipe(res);
+        }
+        else {
+            res.status(404).send('banner not found');
+        }
     }
-    else {
-        res.status(404).send('banner not found');
+    catch(error) {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+    
+        res.status(500).send('node banner retrieval error');
     }
 });
 
@@ -188,11 +216,18 @@ router.post('/banner', (req, res) => {
                 else {
                     logDebugMessageToConsole('uploaded node banner', null, null, true);
 
-                    const bannerFile = req.files['bannerFile'][0];
+                    try {
+                        const bannerFile = req.files['bannerFile'][0];
 
-                    const data = banner_POST(bannerFile);
+                        const data = banner_POST(bannerFile);
 
-                    res.send(data);
+                        res.send(data);
+                    }
+                    catch(error) {
+                        logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    }
                 }
             });
         }
@@ -213,11 +248,18 @@ router.post('/personalize/nodeName', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const nodeName = req.body.nodeName;
+            try {
+                const nodeName = req.body.nodeName;
 
-            const data = await personalizeNodeName_POST(nodeName);
+                const data = await personalizeNodeName_POST(nodeName);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -236,11 +278,18 @@ router.post('/personalize/nodeAbout', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const nodeAbout = req.body.nodeAbout;
+            try {
+                const nodeAbout = req.body.nodeAbout;
 
-            const data = await personalizeNodeAbout_POST(nodeAbout);
+                const data = await personalizeNodeAbout_POST(nodeAbout);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -259,11 +308,18 @@ router.post('/personalize/nodeId', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const nodeId = req.body.nodeId;
+            try {
+                const nodeId = req.body.nodeId;
 
-            const data = await personalizeNodeId_POST(nodeId);
+                const data = await personalizeNodeId_POST(nodeId);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -323,24 +379,38 @@ router.post('/secure', async (req, res) => {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
-                        const keyFile = req.files['keyFile'];
-                        const certFile = req.files['certFile'];
-                        const caFiles = req.files['caFiles'];
+                        try {
+                            const keyFile = req.files['keyFile'];
+                            const certFile = req.files['certFile'];
+                            const caFiles = req.files['caFiles'];
 
-                        const data = secure_POST(isSecure, keyFile, certFile, caFiles);
+                            const data = secure_POST(isSecure, keyFile, certFile, caFiles);
 
-                        res.send(data);
+                            res.send(data);
 
-                        process.send({ cmd: 'restart_server' });
+                            process.send({ cmd: 'restart_server' });
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                        
+                            res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                        }
                     }
                 });
             }
             else {
-                const data = secure_POST(isSecure);
+                try {
+                    const data = secure_POST(isSecure);
 
-                res.send(data);
+                    res.send(data);
 
-                process.send({ cmd: 'restart_server' });
+                    process.send({ cmd: 'restart_server' });
+                }
+                catch(error) {
+                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                
+                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                }
             }
         }
         else {
@@ -360,13 +430,20 @@ router.post('/cloudflare/configure', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const cloudflareEmailAddress = req.body.cloudflareEmailAddress;
-            const cloudflareZoneId = req.body.cloudflareZoneId;
-            const cloudflareGlobalApiKey = req.body.cloudflareGlobalApiKey;
+            try {
+                const cloudflareEmailAddress = req.body.cloudflareEmailAddress;
+                const cloudflareZoneId = req.body.cloudflareZoneId;
+                const cloudflareGlobalApiKey = req.body.cloudflareGlobalApiKey;
 
-            const data = await cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
+                const data = await cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -385,9 +462,16 @@ router.post('/cloudflare/clear', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
-            const data = cloudflareClear_POST();
+            try {
+                const data = cloudflareClear_POST();
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -406,12 +490,19 @@ router.post('/cloudflare/turnstile/configure', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
-            const cloudflareTurnstileSiteKey = req.body.cloudflareTurnstileSiteKey;
-            const cloudflareTurnstileSecretKey = req.body.cloudflareTurnstileSecretKey;
-            
-            const data = cloudflareTurnstileConfigure_POST(cloudflareTurnstileSiteKey, cloudflareTurnstileSecretKey);
+            try {
+                const cloudflareTurnstileSiteKey = req.body.cloudflareTurnstileSiteKey;
+                const cloudflareTurnstileSecretKey = req.body.cloudflareTurnstileSecretKey;
+                
+                const data = cloudflareTurnstileConfigure_POST(cloudflareTurnstileSiteKey, cloudflareTurnstileSecretKey);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -430,9 +521,16 @@ router.post('/cloudflare/turnstile/clear', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const data = cloudflareTurnstileConfigureClear_POST();
+            try {
+                const data = cloudflareTurnstileConfigureClear_POST();
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -451,12 +549,19 @@ router.post('/account', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
-            const username = req.body.username;
-            const password = req.body.password;
+            try {
+                const username = req.body.username;
+                const password = req.body.password;
 
-            const data = account_POST(username, password);
+                const data = account_POST(username, password);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -475,13 +580,20 @@ router.post('/network/internal', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
-            const listeningNodePort = req.body.listeningNodePort;
+            try {
+                const listeningNodePort = req.body.listeningNodePort;
 
-            const data = networkInternal_POST(listeningNodePort);
+                const data = networkInternal_POST(listeningNodePort);
 
-            res.send(data);
+                res.send(data);
 
-            process.send({ cmd: 'restart_server' });
+                process.send({ cmd: 'restart_server' });
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -500,13 +612,20 @@ router.post('/network/external', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const publicNodeProtocol = req.body.publicNodeProtocol;
-            const publicNodeAddress = req.body.publicNodeAddress;
-            const publicNodePort = req.body.publicNodePort;
+            try {
+                const publicNodeProtocol = req.body.publicNodeProtocol;
+                const publicNodeAddress = req.body.publicNodeAddress;
+                const publicNodePort = req.body.publicNodePort;
 
-            const data = await networkExternal_POST(publicNodeProtocol, publicNodeAddress, publicNodePort);
+                const data = await networkExternal_POST(publicNodeProtocol, publicNodeAddress, publicNodePort);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);

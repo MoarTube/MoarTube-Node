@@ -10,9 +10,16 @@ router.get('/', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const data = await reportsComments_GET();
+            try {
+                const data = await reportsComments_GET();
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -31,11 +38,18 @@ router.post('/archive', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const reportId = req.body.reportId;
+            try {
+                const reportId = req.body.reportId;
 
-            const data = await reportsCommentsArchive_POST(reportId);
+                const data = await reportsCommentsArchive_POST(reportId);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -55,11 +69,18 @@ router.delete('/:reportId/delete', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const reportId = req.params.reportId;
+            try {
+                const reportId = req.params.reportId;
 
-            const data = await reportsCommentsReportIdDelete_DELETE(reportId);
+                const data = await reportsCommentsReportIdDelete_DELETE(reportId);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);

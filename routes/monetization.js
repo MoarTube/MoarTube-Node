@@ -6,23 +6,37 @@ const { getAuthenticationStatus } = require('../utils/helpers');
 
 const router = express.Router();
 
-router.get('/walletAddress/all', async (req, res) => {
-    const data = await walletAddressAll_GET();
+router.get('/all', async (req, res) => {
+    try {
+        const data = await walletAddressAll_GET();
+        
+        res.send(data);
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
 
-    res.send(data);
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    }
 });
 
-router.post('/walletAddress/add', (req, res) => {
+router.post('/add', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const walletAddress = req.body.walletAddress;
-            const chain = req.body.chain;
-            const currency = req.body.currency;
+            try {
+                const walletAddress = req.body.walletAddress;
+                const chain = req.body.chain;
+                const currency = req.body.currency;
 
-            const data = await walletAddressAdd_POST(walletAddress, chain, currency);
-            
-            res.send(data);
+                const data = await walletAddressAdd_POST(walletAddress, chain, currency);
+                
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -37,15 +51,22 @@ router.post('/walletAddress/add', (req, res) => {
     });
 });
 
-router.post('/walletAddress/delete', (req, res) => {
+router.post('/delete', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const cryptoWalletAddressId = req.body.cryptoWalletAddressId;
+            try {
+                const cryptoWalletAddressId = req.body.cryptoWalletAddressId;
 
-            const data = await walletAddressDelete_POST(cryptoWalletAddressId);
+                const data = await walletAddressDelete_POST(cryptoWalletAddressId);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+                
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);

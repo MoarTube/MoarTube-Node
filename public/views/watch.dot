@@ -2700,7 +2700,7 @@ body {
 					}
 
 					Swal.fire({
-						title: 'download video',
+						title: 'Download Video',
 						html: html,
 						showCloseButton: true,
 						showConfirmButton: false

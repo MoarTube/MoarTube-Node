@@ -7,21 +7,35 @@ const { getAuthenticationStatus } = require('../utils/helpers.js');
 const router = express.Router();
 
 router.get('/all', async (req, res) => {
-    const data = await linksAll_GET();
+    try {
+        const data = await linksAll_GET();
 
-    res.send(data);
+        res.send(data);
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, new Error().stack, true);
+
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    }
 });
 
 router.post('/add', async (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const link = req.body.link;
-            const svgGraphic = req.body.svgGraphic;
+            try {
+                const url = req.body.url;
+                const svgGraphic = req.body.svgGraphic;
 
-            const data = await linksAdd_POST(link, svgGraphic);
+                const data = await linksAdd_POST(url, svgGraphic);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+                
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
@@ -40,11 +54,18 @@ router.post('/delete', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
-            const linkId = req.body.linkId;
+            try {
+                const linkId = req.body.linkId;
 
-            const data = await linksDelete_POST(linkId);
+                const data = await linksDelete_POST(linkId);
 
-            res.send(data);
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack, true);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
         }
         else {
             logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
