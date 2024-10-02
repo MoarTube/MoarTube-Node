@@ -50,14 +50,14 @@ const externalVideosRoutes = require('./routes/external-videos');
 
 if(cluster.isMaster) {
 	process.on('uncaughtException', (error) => {
-		logDebugMessageToConsole(null, error, error.stackTrace, true);
+		logDebugMessageToConsole(null, error, new Error().stack);
 	});
 
 	process.on('unhandledRejection', (reason, promise) => {
-		logDebugMessageToConsole(null, reason, reason.stack, true);
+		logDebugMessageToConsole(null, reason, new Error().stack);
 	});
 
-	logDebugMessageToConsole('starting MoarTube Node', null, null, true);
+	logDebugMessageToConsole('starting MoarTube Node', null, null);
 
 	provisionSqliteDatabase()
 	.then(async () => {
@@ -142,7 +142,7 @@ if(cluster.isMaster) {
 		}
 
 		cluster.on('exit', (worker, code, signal) => {
-			logDebugMessageToConsole('worker exited with id <' + worker.id + '> code <' + code + '> signal <' + signal + '>', null, null, true);
+			logDebugMessageToConsole('worker exited with id <' + worker.id + '> code <' + code + '> signal <' + signal + '>', null, null);
 
 			delete liveStreamWatchingCountsTracker[worker.id];
 
@@ -190,26 +190,26 @@ if(cluster.isMaster) {
 							indexer_doIndexUpdate(data)
 							.then(async indexerResponseData => {
 								if(indexerResponseData.isError) {
-									logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+									logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack);
 								}
 								else {
 									submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = 0 WHERE video_id = ?', [videoId], function(isError) {
 										if(isError) {
-											logDebugMessageToConsole(null, null, new Error().stack, true);
+											logDebugMessageToConsole(null, null, new Error().stack);
 										}
 										else {
-											logDebugMessageToConsole('updated video id with index successfully: ' + videoId, null, null, true);
+											logDebugMessageToConsole('updated video id with index successfully: ' + videoId, null, null);
 										}
 									});
 								}
 							})
 							.catch(error => {
-								logDebugMessageToConsole(null, error, new Error().stack, true);
+								logDebugMessageToConsole(null, error, new Error().stack);
 							});
 						});
 					})
 					.catch(error => {
-						logDebugMessageToConsole('unable to communicate with the MoarTube platform', error, new Error().stack, true);
+						logDebugMessageToConsole('unable to communicate with the MoarTube platform', error, new Error().stack);
 					});
 				}
 			})
@@ -221,7 +221,7 @@ if(cluster.isMaster) {
 		setInterval(function() {
 			performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
 			.then(async videos => {
-				logDebugMessageToConsole('clearing Cloudflare cache for all node page configurations and watch pages', null, null, true);
+				logDebugMessageToConsole('clearing Cloudflare cache for all node page configurations and watch pages', null, null);
 
 				const videoIds = videos.map(video => video.video_id);
 				const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
@@ -249,7 +249,7 @@ if(cluster.isMaster) {
 		}, 1000);
 	})
 	.catch(error => {
-		logDebugMessageToConsole(null, error, new Error().stack, true);
+		logDebugMessageToConsole(null, error, new Error().stack);
 	});
 }
 else {

@@ -51,9 +51,7 @@ function search_GET(videoId, searchTerm, timestamp, limit) {
                 resolve({isError: false, comments: comments});
             })
             .catch(error => {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
-
-                resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                reject(error);
             });
         }
         else {
@@ -81,7 +79,7 @@ async function commentIdReport_POST(commentId, email, reportType, message, cloud
                         const response = await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, cloudflareConnectingIp);
 
                         if(response.isError) {
-                            logDebugMessageToConsole(null, response.message, new Error().stack, true);
+                            logDebugMessageToConsole(response.message, null, new Error().stack);
 
                             errorMessage = response.message;
 
@@ -91,7 +89,7 @@ async function commentIdReport_POST(commentId, email, reportType, message, cloud
                 }
             }
             catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
 
                 errorMessage = 'error communicating with the MoarTube node';
 
@@ -122,9 +120,7 @@ async function commentIdReport_POST(commentId, email, reportType, message, cloud
                     }
                 })
                 .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
-
-                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                    reject(error);
                 });
             }
             else {

@@ -12,9 +12,7 @@ function linksAll_GET() {
             resolve({isError: false, links: links});
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
-
-            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+            reject(error);
         });
     });
 }
@@ -31,7 +29,7 @@ function linksAdd_POST(url, svgGraphic) {
                 resolve({isError: true, message: 'error communicating with the MoarTube node'});
             }
             else {
-                performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+                performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
                 .then(async videos => {
                     const videoIds = videos.map(video => video.video_id);
                     const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
@@ -40,7 +38,7 @@ function linksAdd_POST(url, svgGraphic) {
                     cloudflare_purgeNodePage(tags);
                 })
                 .catch(error => {
-                    // do nothing
+                    logDebugMessageToConsole(null, error, new Error().stack);
                 });
 
                 performDatabaseReadJob_GET('SELECT * FROM links WHERE timestamp = ?', [timestamp])
@@ -48,7 +46,7 @@ function linksAdd_POST(url, svgGraphic) {
                     resolve({isError: false, link: link});
                 })
                 .catch(error => {
-                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                    reject(error);
                 });
             }
         });
@@ -65,7 +63,7 @@ function linksDelete_POST(linkId) {
                 resolve({isError: true, message: 'error communicating with the MoarTube node'});
             }
             else {
-                performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+                performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
                 .then(async videos => {
                     const videoIds = videos.map(video => video.video_id);
                     const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
@@ -74,7 +72,7 @@ function linksDelete_POST(linkId) {
                     cloudflare_purgeNodePage(tags);
                 })
                 .catch(error => {
-                    // do nothing
+                    logDebugMessageToConsole(null, error, new Error().stack);
                 });
 
                 resolve({isError: false});

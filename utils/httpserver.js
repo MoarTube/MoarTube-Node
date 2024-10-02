@@ -61,7 +61,7 @@ function initializeHttpServer(value) {
                         ca: ca
                     };
 
-                    logDebugMessageToConsole('MoarTube Node worker ' + cluster.worker.id + ' is entering secure HTTPS mode', null, null, true);
+                    logDebugMessageToConsole('MoarTube Node worker ' + cluster.worker.id + ' is entering secure HTTPS mode', null, null);
                     
                     httpServer = https.createServer(sslCredentials, app);
                 }
@@ -71,7 +71,7 @@ function initializeHttpServer(value) {
             }
         }
         else {
-            logDebugMessageToConsole('MoarTube Node worker ' + cluster.worker.id + ' is entering non-secure HTTP mode', null, null, true);
+            logDebugMessageToConsole('MoarTube Node worker ' + cluster.worker.id + ' is entering non-secure HTTP mode', null, null);
 
             httpServer = http.createServer(app);
         }
@@ -80,7 +80,7 @@ function initializeHttpServer(value) {
         httpServer.keepAliveTimeout = 10000;
         
         httpServer.listen(nodeSettings.nodeListeningPort, function() {
-            logDebugMessageToConsole('MoarTube Node worker ' + cluster.worker.id + ' is listening on port ' + nodeSettings.nodeListeningPort, null, null, true);
+            logDebugMessageToConsole('MoarTube Node worker ' + cluster.worker.id + ' is listening on port ' + nodeSettings.nodeListeningPort, null, null);
             
             const websocketServer = new webSocket.Server({ 
                 noServer: true, 
@@ -88,7 +88,7 @@ function initializeHttpServer(value) {
             });
             
             websocketServer.on('connection', function connection(ws, req) {
-                logDebugMessageToConsole('MoarTube Client websocket connected', null, null, true);
+                logDebugMessageToConsole('MoarTube Client websocket connected', null, null);
                 
                 let ip = req.headers['CF-Connecting-IP'];
 
@@ -97,7 +97,7 @@ function initializeHttpServer(value) {
                 }
 
                 ws.on('close', () => {
-                    logDebugMessageToConsole('MoarTube Client websocket disconnected', null, null, true);
+                    logDebugMessageToConsole('MoarTube Client websocket disconnected', null, null);
                 });
                 
                 ws.on('message', async (message) => {
@@ -112,10 +112,10 @@ function initializeHttpServer(value) {
                         .then((isAuthenticated) => {
                             if(isAuthenticated) {
                                 if(parsedMessage.eventName === 'ping') {
-                                    //logDebugMessageToConsole('received ping from client', null, null, true);
+                                    //logDebugMessageToConsole('received ping from client', null, null);
 
                                     if(ws.socketType === 'moartube_client') {
-                                        //logDebugMessageToConsole('sending pong to client', null, null, true);
+                                        //logDebugMessageToConsole('sending pong to client', null, null);
 
                                         ws.send(JSON.stringify({eventName: 'pong'}));
                                     }
@@ -196,7 +196,7 @@ function initializeHttpServer(value) {
                             }
                         })
                         .catch(error => {
-                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                            logDebugMessageToConsole(null, error, new Error().stack);
                         });
                     }
                     else {
@@ -271,7 +271,7 @@ function initializeHttpServer(value) {
                                                     const response = await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip);
 
                                                     if(response.isError) {
-                                                        logDebugMessageToConsole(null, response.message, new Error().stack, true);
+                                                        logDebugMessageToConsole(null, response.message, new Error().stack);
 
                                                         errorMessage = response.message;
 
@@ -281,7 +281,7 @@ function initializeHttpServer(value) {
                                             }
                                         }
                                         catch(error) {
-                                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                                            logDebugMessageToConsole(null, error, new Error().stack);
 
                                             errorMessage = 'error communicating with the MoarTube node';
 
@@ -378,7 +378,7 @@ function initializeHttpServer(value) {
                                                 }
                                             })
                                             .catch(error => {
-                                                logDebugMessageToConsole(null, error, new Error().stack, true);
+                                                logDebugMessageToConsole(null, error, new Error().stack);
                                             });
                                         }
                                         else {
@@ -424,21 +424,21 @@ async function restartHttpServer() {
         }
     });
 
-    logDebugMessageToConsole('attempting to terminate node', null, null, true);
+    logDebugMessageToConsole('attempting to terminate node', null, null);
 
     const terminator = httpTerminator.createHttpTerminator({server: httpServerWrapper.httpServer});
     
-    logDebugMessageToConsole('termination of node in progress', null, null, true);
+    logDebugMessageToConsole('termination of node in progress', null, null);
     
     await terminator.terminate();
     
-    logDebugMessageToConsole('terminated node', null, null, true);
+    logDebugMessageToConsole('terminated node', null, null);
     
     httpServerWrapper.websocketServer.close(function() {
-        logDebugMessageToConsole('node websocketServer closed', null, null, true);
+        logDebugMessageToConsole('node websocketServer closed', null, null);
         
         httpServerWrapper.httpServer.close(async () => {
-            logDebugMessageToConsole('node web server closed', null, null, true);
+            logDebugMessageToConsole('node web server closed', null, null);
 
             await initializeHttpServer();
         });

@@ -96,7 +96,7 @@ async function generateVideoId() {
 
 function performNodeIdentification() {
 	return new Promise(function(resolve, reject) {
-		logDebugMessageToConsole('validating node to MoarTube network', null, null, true);
+		logDebugMessageToConsole('validating node to MoarTube network', null, null);
 		
 		if (getNodeIdentification() == null) {
 			setNodeidentification({moarTubeTokenProof: ''});
@@ -107,12 +107,12 @@ function performNodeIdentification() {
 		const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
 		
 		if(moarTubeTokenProof === '') {
-			logDebugMessageToConsole('this node is unidentified, creating node identification', null, null, true);
+			logDebugMessageToConsole('this node is unidentified, creating node identification', null, null);
 			
 			indexer_getNodeIdentification()
 			.then(indexerResponseData => {
 				if(indexerResponseData.isError) {
-					logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+					logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack);
 					
 					reject(indexerResponseData.message);
 				}
@@ -121,19 +121,19 @@ function performNodeIdentification() {
 
 					setNodeidentification(nodeIdentification);
 
-					logDebugMessageToConsole('node identification successful', null, null, true);
+					logDebugMessageToConsole('node identification successful', null, null);
 					
 					resolve();
 				}
 			})
 			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
+				logDebugMessageToConsole(null, error, new Error().stack);
 
 				reject(error);
 			});
 		}
 		else {
-			logDebugMessageToConsole('node identification found, validating node identification', null, null, true);
+			logDebugMessageToConsole('node identification found, validating node identification', null, null);
 			
 			indexer_doNodeIdentificationRefresh(moarTubeTokenProof)
 			.then(indexerResponseData => {
@@ -141,7 +141,7 @@ function performNodeIdentification() {
 					reject(indexerResponseData.message);
 				}
 				else {
-					logDebugMessageToConsole('node identification valid', null, null, true);
+					logDebugMessageToConsole('node identification valid', null, null);
 					
 					nodeIdentification.moarTubeTokenProof = indexerResponseData.moarTubeTokenProof;
 
@@ -151,7 +151,7 @@ function performNodeIdentification() {
 				}
 			})
 			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack, true);
+				logDebugMessageToConsole(null, error, new Error().stack);
 
 				reject(error);
 			});

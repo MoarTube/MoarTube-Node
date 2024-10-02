@@ -12,7 +12,7 @@ router.get('/information', async (req, res) => {
         res.send(data);
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
     
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     }
@@ -25,7 +25,7 @@ router.get('/heartbeat', async (req, res) => {
         res.send(data);
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
 
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     }
@@ -40,9 +40,9 @@ router.post('/videos', async (req, res) => {
         res.send(data);
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
     
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({isError: true});
     }
 });
 

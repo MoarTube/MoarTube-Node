@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
         res.render('node', data);
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
 
         res.status(500).send('node page rendering error');
     }
@@ -34,7 +34,7 @@ router.get('/search', async (req, res) => {
         res.send(data);
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
 
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     }
@@ -50,19 +50,19 @@ router.get('/newContentCounts', (req, res) => {
                 res.send(data);
             }
             catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
 
                 res.send({isError: true, message: 'error communicating with the MoarTube node'});
             }
         }
         else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
 
             res.send({isError: true, message: 'you are not logged in'});
         }
     })
     .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
         
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });
@@ -80,19 +80,19 @@ router.post('/contentChecked', (req, res) => {
                 res.send(data);
             }
             catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
             
                 res.send({isError: true, message: 'error communicating with the MoarTube node'});
             }
         }
         else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack, true);
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
 
             res.send({isError: true, message: 'you are not logged in'});
         }
     })
     .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
         
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });

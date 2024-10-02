@@ -13,11 +13,11 @@ function reportsCount_GET() {
                 resolve({isError: false, videoReportCount: videoReportCount, commentReportCount: commentReportCount, totalReportCount: totalReportCount});
             })
             .catch(error => {
-                resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                reject(error);
             });
         })
         .catch(error => {
-            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+            reject(error);
         });
     });
 }

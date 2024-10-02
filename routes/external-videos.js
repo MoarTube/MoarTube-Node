@@ -24,7 +24,7 @@ router.get('/:videoId/thumbnail', (req, res) => {
         }
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
     
         res.status(404).send('thumbnail not found');
     }
@@ -46,7 +46,7 @@ router.get('/:videoId/preview', (req, res) => {
         }
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
 
         res.status(404).send('preview not found');
     }
@@ -68,7 +68,7 @@ router.get('/:videoId/poster', (req, res) => {
         }
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
 
         res.status(404).send('poster not found');
     }
@@ -93,7 +93,7 @@ router.get('/:videoId/adaptive/:type/:format/manifests/:manifestName', (req, res
         }
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
 
         res.status(404).send('video not found');
     }
@@ -118,7 +118,7 @@ router.get('/:videoId/adaptive/:format/:resolution/segments/:segmentName', (req,
         }
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
 
         res.status(404).send('video not found');
     }
@@ -144,7 +144,7 @@ router.get('/:videoId/progressive/:format/:resolution', (req, res) => {
         }
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
 
         res.status(404).send('video not found');
     }
@@ -173,7 +173,7 @@ router.get('/:videoId/progressive/:format/:resolution/download', (req, res) => {
         }
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
 
         res.status(404).send('video not found');
     }

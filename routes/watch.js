@@ -39,7 +39,7 @@ router.get('/', async (req, res) => {
         });
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
 
         res.status(500).send('watch video error');
     }

@@ -12,9 +12,7 @@ function walletAddressAll_GET() {
             resolve({isError: false, cryptoWalletAddresses: cryptoWalletAddresses});
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
-
-            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+            reject(error);
         });
     });
 }
@@ -40,7 +38,7 @@ function walletAddressAdd_POST(walletAddress, chain, currency) {
                 resolve({isError: true, message: 'error communicating with the MoarTube node'});
             }
             else {
-                performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+                performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
                 .then(async videos => {
                     const videoIds = videos.map(video => video.video_id);
                     const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
@@ -49,7 +47,7 @@ function walletAddressAdd_POST(walletAddress, chain, currency) {
                     cloudflare_purgeNodePage(tags);
                 })
                 .catch(error => {
-                    // do nothing
+                    logDebugMessageToConsole(null, error, new Error().stack);
                 });
 
                 performDatabaseReadJob_GET('SELECT * FROM cryptoWalletAddresses WHERE timestamp = ?', [timestamp])
@@ -57,7 +55,7 @@ function walletAddressAdd_POST(walletAddress, chain, currency) {
                     resolve({isError: false, cryptoWalletAddress: cryptoWalletAddress});
                 })
                 .catch(error => {
-                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                    reject(error);
                 });
             }
         });
@@ -74,7 +72,7 @@ function walletAddressDelete_POST(cryptoWalletAddressId) {
                 resolve({isError: true, message: 'error communicating with the MoarTube node'});
             }
             else {
-                performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
+                performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
                 .then(async videos => {
                     const videoIds = videos.map(video => video.video_id);
                     const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
@@ -83,7 +81,7 @@ function walletAddressDelete_POST(cryptoWalletAddressId) {
                     cloudflare_purgeNodePage(tags);
                 })
                 .catch(error => {
-                    // do nothing
+                    logDebugMessageToConsole(null, error, new Error().stack);
                 });
 
                 resolve({isError: false});

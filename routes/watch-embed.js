@@ -19,7 +19,7 @@ router.get('/video/:videoId', async (req, res) => {
         }
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
     
         res.status(500).send('embed video error');
     }
@@ -39,7 +39,7 @@ router.get('/chat/:videoId', async (req, res) => {
         }
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
     
         res.status(500).send('embed chat error');
     }

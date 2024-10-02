@@ -10,7 +10,7 @@ function reportsVideos_GET() {
             resolve({isError: false, reports: reports});
         })
         .catch(error => {
-            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+            reject(error);
         });
     });
 }
@@ -46,19 +46,17 @@ function reportsVideosArchive_POST(reportId) {
                     });
                 }
                 else {
-                    logDebugMessageToConsole('report with id does not exist: ' + reportId, null, new Error().stack, true);
+                    logDebugMessageToConsole('report with id does not exist: ' + reportId, null, new Error().stack);
                     
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
             })
             .catch(error => {
-                resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                reject(error);
             });
         }
         else {
-            logDebugMessageToConsole('invalid report id: ' + reportId, null, new Error().stack, true);
-            
-            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+            reject(new Error('invalid report id: ' + reportId));
         }
     });
 }
@@ -76,7 +74,7 @@ function reportsVideosReportIdDelete_DELETE(reportId) {
             });
         }
         else {
-            logDebugMessageToConsole('invalid report id: ' + reportId, null, new Error().stack, true);
+            logDebugMessageToConsole('invalid report id: ' + reportId, null, new Error().stack);
             
             resolve({isError: true, message: 'error communicating with the MoarTube node'});
         }

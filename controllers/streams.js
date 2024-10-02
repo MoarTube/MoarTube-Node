@@ -110,9 +110,7 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                     }
                 })
                 .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
-
-                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                    reject(error);
                 });
             }
             else {
@@ -145,22 +143,17 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                         resolve({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
-                        try {
-                            performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
-                            .then(async videos => {
-                                const videoIds = videos.map(video => video.video_id);
-                                const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
+                        performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
+                        .then(async videos => {
+                            const videoIds = videos.map(video => video.video_id);
+                            const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
 
-                                cloudflare_purgeWatchPages(videoIds);
-                                cloudflare_purgeNodePage(tags);
-                            })
-                            .catch(error => {
-                                // do nothing
-                            });
-                        }
-                        catch(error) {
-                            logDebugMessageToConsole(null, error, new Error().stack, true);
-                        }
+                            cloudflare_purgeWatchPages(videoIds);
+                            cloudflare_purgeNodePage(tags);
+                        })
+                        .catch(error => {
+                            logDebugMessageToConsole(null, error, new Error().stack);
+                        });
 
                         if (isResumingStream) {
                             submitDatabaseWriteJob('DELETE FROM comments WHERE video_id = ?', [videoId], null);
@@ -217,25 +210,20 @@ function videoIdStop_POST(videoId) {
                         await updateHlsVideoMasterManifestFile(videoId);
                     }
                     catch(error) {
-                        logDebugMessageToConsole(null, error, new Error().stack, true);
+                        logDebugMessageToConsole(null, error, new Error().stack);
                     }
 
-                    try {
-                        performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
-                        .then(async videos => {
-                            const videoIds = videos.map(video => video.video_id);
-                            const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
-                            
-                            cloudflare_purgeWatchPages(videoIds);
-                            cloudflare_purgeNodePage(tags);
-                        })
-                        .catch(error => {
-                            // do nothing
-                        });
-                    }
-                    catch(error) {
-                        logDebugMessageToConsole(null, error, new Error().stack, true);
-                    }
+                    performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
+                    .then(async videos => {
+                        const videoIds = videos.map(video => video.video_id);
+                        const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
+                        
+                        cloudflare_purgeWatchPages(videoIds);
+                        cloudflare_purgeNodePage(tags);
+                    })
+                    .catch(error => {
+                        logDebugMessageToConsole(null, error, new Error().stack);
+                    });
 
                     performDatabaseReadJob_GET('SELECT is_stream_recorded_remotely FROM videos WHERE video_id = ?', [videoId])
                     .then(async video => {
@@ -269,7 +257,7 @@ function videoIdStop_POST(videoId) {
                         resolve({isError: false});
                     })
                     .catch(error => {
-                        resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                        reject(error);
                     });
                 }
             });
@@ -316,7 +304,7 @@ function videoIdAdaptiveFormatResolutionSegmentsRemove_POST(videoId, format, res
             }
         }
         catch(error) {
-            // do nothing
+            logDebugMessageToConsole(null, error, new Error().stack);
         }
         
         return {isError: false};
@@ -341,7 +329,7 @@ function videoIdBandwidth_GET(videoId) {
                 }
             })
             .catch(error => {
-                resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                reject(error);
             });
         }
         else {
@@ -396,7 +384,7 @@ function videoIdChatSettings_POST(videoId, isChatHistoryEnabled, chatHistoryLimi
                 }
             })
             .catch(error => {
-                resolve({isError: true, message: 'error retrieving video data'});
+                reject(error);
             });
         }
         else {
@@ -413,7 +401,7 @@ function videoIdChatHistory_GET(videoId) {
                 resolve({isError: false, chatHistory: chatHistory});
             })
             .catch(error => {
-                resolve({isError: true, message: 'error retrieving chat history'});
+                reject(error);
             });
         }
         else {

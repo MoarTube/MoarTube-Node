@@ -37,7 +37,7 @@ function information_GET() {
             }
         })
         .catch(error => {
-            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+            reject(error);
         });
     });
 }
@@ -67,15 +67,11 @@ function videos_POST(videoIds) {
                 resolve({isError: false, results: results});
             })
             .catch(error => {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
-
-                // no error message to report to the MoarTube Indexer because not trusted
-                resolve({isError: true});
+                reject(error);
             });
         }
         else {
-            // no error message to report to the MoarTube Indexer because not trusted
-            resolve({isError: true});
+            reject();
         }
     });
 }

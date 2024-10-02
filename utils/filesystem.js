@@ -22,7 +22,7 @@ function removeOrphanedVideoDirectories() {
 
             fs.readdir(videosDirectoryPath, async (error, videoDirectories) => {
                 if(error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                    logDebugMessageToConsole(null, error, new Error().stack);
                 }
                 else {
                     for(const videoDirectory of videoDirectories) {
@@ -38,7 +38,7 @@ function removeOrphanedVideoDirectories() {
             });
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
             
             resolve();
         });
@@ -93,7 +93,7 @@ function endStreamedHlsManifestFiles() {
             resolve();
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
 
             resolve();
         });
@@ -164,7 +164,7 @@ function updateHlsVideoMasterManifestFile(videoId) {
             }
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
 
             reject('updateHlsVideoMasterManifestFile failed: videoData is null for videoId: ' + videoId + '.');
         });

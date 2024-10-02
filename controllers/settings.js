@@ -65,7 +65,7 @@ function avatar_POST(iconFile, avatarFile) {
             cloudflare_purgeNodeImages();
         }
         catch(error) {
-            // do nothing
+            logDebugMessageToConsole(null, error, new Error().stack);
         }
 
         submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END', [], function(isError) {
@@ -113,7 +113,7 @@ function banner_POST(bannerFile) {
         cloudflare_purgeNodeImages();
     }
     catch(error) {
-        // do nothing
+        logDebugMessageToConsole(null, error, new Error().stack);
     }
     
     return {isError: false};
@@ -137,7 +137,7 @@ function personalizeNodeName_POST(nodeName) {
                 indexer_doNodePersonalizeNodeNameUpdate(moarTubeTokenProof, nodeName)
                 .then(indexerResponseData => {
                     if(indexerResponseData.isError) {
-                        logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+                        logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack);
                         
                         resolve({isError: true, message: indexerResponseData.message});
                     }
@@ -146,20 +146,20 @@ function personalizeNodeName_POST(nodeName) {
                             cloudflare_purgeNodePage([]);
                         }
                         catch(error) {
-                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                            logDebugMessageToConsole(null, error, new Error().stack);
                         }
 
                         resolve({ isError: false });
                     }
                 })
                 .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                    logDebugMessageToConsole(null, error, new Error().stack);
 
                     resolve({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
                 });
             })
             .catch(error => {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
 
                 resolve({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
             });
@@ -188,7 +188,7 @@ function personalizeNodeAbout_POST(nodeAbout) {
                 indexer_doNodePersonalizeNodeAboutUpdate(moarTubeTokenProof, nodeAbout)
                 .then(indexerResponseData => {
                     if(indexerResponseData.isError) {
-                        logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+                        logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack);
                         
                         resolve({isError: true, message: indexerResponseData.message});
                     }
@@ -197,20 +197,20 @@ function personalizeNodeAbout_POST(nodeAbout) {
                             cloudflare_purgeNodePage([]);
                         }
                         catch(error) {
-                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                            logDebugMessageToConsole(null, error, new Error().stack);
                         }
 
                         resolve({ isError: false });
                     }
                 })
                 .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                    logDebugMessageToConsole(null, error, new Error().stack);
 
                     resolve({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
                 });
             })
             .catch(error => {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
 
                 resolve({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
             });
@@ -233,7 +233,7 @@ function personalizeNodeId_POST(nodeId) {
                 indexer_doNodePersonalizeNodeIdUpdate(moarTubeTokenProof, nodeId)
                 .then(indexerResponseData => {
                     if(indexerResponseData.isError) {
-                        logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack, true);
+                        logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack);
                         
                         resolve({isError: true, message: indexerResponseData.message});
                     }
@@ -242,7 +242,7 @@ function personalizeNodeId_POST(nodeId) {
                             cloudflare_purgeNodePage([]);
                         }
                         catch(error) {
-                            logDebugMessageToConsole(null, error, new Error().stack, true);
+                            logDebugMessageToConsole(null, error, new Error().stack);
                         }
 
                         const nodeSettings = getNodeSettings();
@@ -255,13 +255,13 @@ function personalizeNodeId_POST(nodeId) {
                     }
                 })
                 .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                    logDebugMessageToConsole(null, error, new Error().stack);
 
                     resolve({isError: true, message: 'your node ID could not be saved to the MoarTube platform and was not saved to your node'});
                 });
             })
             .catch(error => {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
 
                 resolve({isError: true, message: 'your node ID could not be saved to the MoarTube platform and was not saved to your node'});
             });
@@ -281,7 +281,7 @@ function secure_POST(isSecure, keyFile, certFile, caFiles) {
             return {isError: true, message: 'cert file is missing'};
         }
         else {
-            logDebugMessageToConsole('switching node to HTTPS mode', null, null, true);
+            logDebugMessageToConsole('switching node to HTTPS mode', null, null);
 
             const nodeSettings = getNodeSettings();
             
@@ -293,7 +293,7 @@ function secure_POST(isSecure, keyFile, certFile, caFiles) {
         }
     }
     else {
-        logDebugMessageToConsole('switching node to HTTP mode', null, null, true);
+        logDebugMessageToConsole('switching node to HTTP mode', null, null);
 
         const nodeSettings = getNodeSettings();
         
@@ -315,9 +315,7 @@ function cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId, clou
                     resolve({ isError: false });
                 })
                 .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
-        
-                    resolve({isError: true, message: 'your node ID could not be saved to the MoarTube platform and was not saved to your node'});
+                    reject(error);
                 });
             }
             else {
@@ -325,9 +323,7 @@ function cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId, clou
             }
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
-
-            resolve({isError: true, message: 'your node ID could not be saved to the MoarTube platform and was not saved to your node'});
+            reject(error);
         });
     });
 }
@@ -340,9 +336,7 @@ function cloudflareClear_POST() {
         return { isError: false };
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
-
-        return {isError: true, message: 'an error occurred while applying the settings'};
+        throw error;
     }
 }
 
@@ -364,7 +358,7 @@ function cloudflareTurnstileConfigure_POST(cloudflareTurnstileSiteKey, cloudflar
         cloudflare_purgeWatchPages(videoIds);
     })
     .catch(error => {
-        // do nothing
+        logDebugMessageToConsole(null, error, new Error().stack);
     });
 
     return {isError: false};
@@ -388,7 +382,7 @@ function cloudflareTurnstileConfigureClear_POST() {
         cloudflare_purgeWatchPages(videoIds);
     })
     .catch(error => {
-        // do nothing
+        logDebugMessageToConsole(null, error, new Error().stack);
     });
 
     return {isError: false};
@@ -419,7 +413,7 @@ function networkInternal_POST(listeningNodePort) {
     }
     else {
         if(isPortValid(listeningNodePort)) {
-            logDebugMessageToConsole('switching node to HTTPS mode', null, null, true);
+            logDebugMessageToConsole('switching node to HTTPS mode', null, null);
 
             const nodeSettings = getNodeSettings();
             
@@ -462,13 +456,13 @@ function networkExternal_POST(publicNodeProtocol, publicNodeAddress, publicNodeP
                     }
                 })
                 .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                    logDebugMessageToConsole(null, error, new Error().stack);
                     
                     resolve({isError: true, message: 'your settings were not saved because they could not be sent to the MoarTube platform'});
                 });
             })
             .catch(error => {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
                 
                 resolve({isError: true, message: 'your settings were not saved because they could not be sent to the MoarTube platform'});
             });

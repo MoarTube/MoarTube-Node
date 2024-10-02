@@ -20,7 +20,7 @@ function cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflar
             resolve(data);
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
             
             resolve({isError: true, message: 'error'});
         });
@@ -48,7 +48,7 @@ function cloudflare_purgeEntireCache() {
                 const data = response.data;
 
                 if(data.success) {
-                    logDebugMessageToConsole('cloudflare_purgeEntireCache success', null, null, true);
+                    logDebugMessageToConsole('cloudflare_purgeEntireCache success', null, null);
 
                     resolve();
                 }
@@ -57,7 +57,7 @@ function cloudflare_purgeEntireCache() {
                 }
             })
             .catch(error => {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
                 
                 reject('an error occurred while purging the cloudflare cache');
             });
@@ -97,16 +97,16 @@ function cloudflare_purgeCache(files, source) {
                     const data = response.data;
 
                     if(data.success) {
-                        logDebugMessageToConsole(source + ' success: ' + filesJson, null, null, true);
+                        logDebugMessageToConsole(source + ' success: ' + filesJson, null, null);
                     }
                     else {
-                        logDebugMessageToConsole(source + ' failed: ' + filesJson, null, null, true);
+                        logDebugMessageToConsole(source + ' failed: ' + filesJson, null, null);
                     }
 
                     return { status: 'fulfilled' };
                 })
                 .catch(error => {
-                    logDebugMessageToConsole(source + ' error: ' + filesJson, error, new Error().stack, true);
+                    logDebugMessageToConsole(source + ' error: ' + filesJson, error, new Error().stack);
 
                     return { status: 'rejected' };
                 });
@@ -391,7 +391,7 @@ function cloudflare_purgeVideoPosterImages(videoIds) {
 function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
     return new Promise(async function(resolve, reject) {
         try {
-            logDebugMessageToConsole('setting Cloudflare configuration for MoarTube Node', null, null, true);
+            logDebugMessageToConsole('setting Cloudflare configuration for MoarTube Node', null, null);
             
             const headers = {
                 'X-Auth-Email': cloudflareEmailAddress,
@@ -402,13 +402,13 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                 await cloudflare_resetIntegration();
             }
             catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
             }
 
 
             // step 1: create new http_request_cache_settings phase rule set in the zone and initialize it with rules
 
-            logDebugMessageToConsole('creating zone http_request_cache_settings phase rule set', null, null, true);
+            logDebugMessageToConsole('creating zone http_request_cache_settings phase rule set', null, null);
 
             const newZoneRuleSet = {
                 "rules": [
@@ -528,12 +528,12 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
 
             const response_newZoneRuleSet_result = response_newZoneRuleSet.data.result;
 
-            logDebugMessageToConsole('created zone http_request_cache_settings phase rule set: ' + JSON.stringify(response_newZoneRuleSet_result), null, null, true);
+            logDebugMessageToConsole('created zone http_request_cache_settings phase rule set: ' + JSON.stringify(response_newZoneRuleSet_result), null, null);
 
 
             // step 2: set Browser Cache TTL to "Respect Existing Headers"
 
-            logDebugMessageToConsole('setting Browser Cache TTL to Respect Existing Headers', null, null, true);
+            logDebugMessageToConsole('setting Browser Cache TTL to Respect Existing Headers', null, null);
 
             const browserCacheTtlData = {
                 value: 0
@@ -545,12 +545,12 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                 throw new Error('failed to set Browser Cache TTL');
             }
 
-            logDebugMessageToConsole('set Browser Cache TTL to Respect Existing Headers: ' + JSON.stringify(response_BrowserCacheTtl.data), null, null, true);
+            logDebugMessageToConsole('set Browser Cache TTL to Respect Existing Headers: ' + JSON.stringify(response_BrowserCacheTtl.data), null, null);
 
 
             // step 3: enable Always Use HTTPS
 
-            logDebugMessageToConsole('enabling Always Use HTTPS', null, null, true);
+            logDebugMessageToConsole('enabling Always Use HTTPS', null, null);
 
             const alwaysUseHttpsData = {
                 value: 'on'
@@ -562,12 +562,12 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                 throw new Error('failed to enable Always Use HTTPS');
             }
 
-            logDebugMessageToConsole('enabled Always Use HTTPS: ' + JSON.stringify(alwaysUseHttpsData.data), null, null, true);
+            logDebugMessageToConsole('enabled Always Use HTTPS: ' + JSON.stringify(alwaysUseHttpsData.data), null, null);
 
 
             // step 4: enable Argo Tiered Caching
 
-            logDebugMessageToConsole('enabling Argo Tiered Caching', null, null, true);
+            logDebugMessageToConsole('enabling Argo Tiered Caching', null, null);
 
             const tieredCachingData = {
                 value: 'on'
@@ -579,12 +579,12 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                 throw new Error('failed to enable Argo Tiered Caching');
             }
 
-            logDebugMessageToConsole('enabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null, true);
+            logDebugMessageToConsole('enabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null);
             
             
             // step 5: enable Tiered Cache Smart Topology
 
-            logDebugMessageToConsole('enabling Tiered Cache Smart Topology', null, null, true);
+            logDebugMessageToConsole('enabling Tiered Cache Smart Topology', null, null);
 
             const tieredCacheSmartTopologyData = {
                 value: 'on'
@@ -596,7 +596,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                 throw new Error('failed to enable Tiered Cache Smart Topology');
             }
 
-            logDebugMessageToConsole('enabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null, true);
+            logDebugMessageToConsole('enabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null);
 
             
             // step 6: save the configuration
@@ -610,7 +610,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
 
             setNodeSettings(nodeSettings);
 
-            logDebugMessageToConsole('successfully set Cloudflare configuration for MoarTube Node', null, null, true);
+            logDebugMessageToConsole('successfully set Cloudflare configuration for MoarTube Node', null, null);
 
             resolve();
         }
@@ -623,7 +623,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
 async function cloudflare_resetIntegration() {
     return new Promise(async function(resolve, reject) {
         try {
-            logDebugMessageToConsole('resetting Cloudflare configuration for MoarTube Node', null, null, true);
+            logDebugMessageToConsole('resetting Cloudflare configuration for MoarTube Node', null, null);
 
             const nodeSettings = getNodeSettings();
 
@@ -639,7 +639,7 @@ async function cloudflare_resetIntegration() {
 
                 // step 1: get all rule sets in the zone
 
-                logDebugMessageToConsole('retrieving zone rule sets', null, null, true);
+                logDebugMessageToConsole('retrieving zone rule sets', null, null);
 
                 const response_ruleSets = await axios.get(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets`, { headers });
 
@@ -649,21 +649,21 @@ async function cloudflare_resetIntegration() {
 
                 const response_ruleSets_result = response_ruleSets.data.result;
 
-                logDebugMessageToConsole('discovered zone rule sets: ' + JSON.stringify(response_ruleSets.data), null, null, true);
+                logDebugMessageToConsole('discovered zone rule sets: ' + JSON.stringify(response_ruleSets.data), null, null);
 
                 
                 // step 2: delete all http_request_cache_settings phase rule sets in the zone
 
-                logDebugMessageToConsole('deleting zone http_request_cache_settings phase rule set if discovered', null, null, true);
+                logDebugMessageToConsole('deleting zone http_request_cache_settings phase rule set if discovered', null, null);
 
                 for(const ruleSet of response_ruleSets_result) {
                     if(ruleSet.phase === 'http_request_cache_settings') {
-                        logDebugMessageToConsole('deleting discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null, true);
+                        logDebugMessageToConsole('deleting discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null);
 
                         const response_deleteRuleSet = await axios.delete(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets/${ruleSet.id}`, { headers });
 
                         if(response_deleteRuleSet.status === 204) {
-                            logDebugMessageToConsole('deleted discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null, true);
+                            logDebugMessageToConsole('deleted discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null);
                         }
                         else {
                             throw new Error('failed to delete zone http_request_cache_settings phase rule set');
@@ -674,7 +674,7 @@ async function cloudflare_resetIntegration() {
 
                 // step 3: disable Argo Tiered Caching
 
-                logDebugMessageToConsole('disabling Argo Tiered Caching', null, null, true);
+                logDebugMessageToConsole('disabling Argo Tiered Caching', null, null);
 
                 const tieredCachingData = {
                     value: 'off'
@@ -686,12 +686,12 @@ async function cloudflare_resetIntegration() {
                     throw new Error('failed to disable Argo Tiered Caching');
                 }
 
-                logDebugMessageToConsole('disabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null, true);
+                logDebugMessageToConsole('disabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null);
                 
                 
                 // step 4: disable Tiered Cache Smart Topology
 
-                logDebugMessageToConsole('disabling Tiered Cache Smart Topology', null, null, true);
+                logDebugMessageToConsole('disabling Tiered Cache Smart Topology', null, null);
 
                 const tieredCacheSmartTopologyData = {
                     value: 'off'
@@ -703,7 +703,7 @@ async function cloudflare_resetIntegration() {
                     throw new Error('failed to disable Tiered Cache Smart Topology');
                 }
 
-                logDebugMessageToConsole('disabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null, true);
+                logDebugMessageToConsole('disabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null);
 
 
                 // step 5: save the configuration
@@ -715,7 +715,7 @@ async function cloudflare_resetIntegration() {
 
                 setNodeSettings(nodeSettings);
 
-                logDebugMessageToConsole('successfully reset Cloudflare configuration for MoarTube Node', null, null, true);
+                logDebugMessageToConsole('successfully reset Cloudflare configuration for MoarTube Node', null, null);
 
                 resolve();
             }

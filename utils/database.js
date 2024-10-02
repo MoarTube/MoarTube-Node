@@ -11,11 +11,11 @@ let PENDING_DATABASE_WRITE_JOBS = {};
 
 function provisionSqliteDatabase() {
     return new Promise(function(resolve, reject) {
-        logDebugMessageToConsole('provisioning SQLite3 database', null, null, true);
+        logDebugMessageToConsole('provisioning SQLite3 database', null, null);
         
         database = new sqlite3.Database(getDatabaseFilePath(), async function(error) {
             if (error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
                 
                 reject();
             }
@@ -66,7 +66,7 @@ function provisionSqliteDatabase() {
                     await performDatabaseWriteJob('INSERT INTO links(url, svg_graphic, timestamp) VALUES (?, ?, ?)', [url, svgGraphic, timestamp]);
                 }
 
-                logDebugMessageToConsole('provisioned SQLite3 database', null, null, true);
+                logDebugMessageToConsole('provisioned SQLite3 database', null, null);
 
                 resolve();
             }
@@ -102,7 +102,7 @@ function performDatabaseWriteJob(query, parameters) {
     return new Promise(function(resolve, reject) {
         database.run(query, parameters, function(error) {
             if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
 
                 reject();
             }
@@ -117,7 +117,7 @@ function performDatabaseReadJob_ALL(query, parameters) {
     return new Promise(function(resolve, reject) {
         database.all(query, parameters, function(error, rows) {
             if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
 
                 reject(error);
             }
@@ -132,7 +132,7 @@ function performDatabaseReadJob_GET(query, parameters) {
     return new Promise(function(resolve, reject) {
         database.get(query, parameters, function(error, rows) {
             if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack, true);
+                logDebugMessageToConsole(null, error, new Error().stack);
 
                 reject();
             }
@@ -148,7 +148,7 @@ function openDatabase() {
         if(database == null) {
             database = new sqlite3.Database(path.join(getDatabaseFilePath()), function(error) {
                 if (error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                    logDebugMessageToConsole(null, error, new Error().stack);
                     
                     reject();
                 }

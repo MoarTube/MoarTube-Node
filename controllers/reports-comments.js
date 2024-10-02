@@ -10,7 +10,7 @@ function reportsComments_GET() {
             resolve({isError: false, reports: rows});
         })
         .catch(error => {
-            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+            reject(error);
         });
     });
 }
@@ -32,12 +32,12 @@ function reportsCommentsArchive_POST(reportId) {
                     
                     submitDatabaseWriteJob('INSERT INTO commentReportsArchive(report_id, timestamp, comment_timestamp, video_id, comment_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [reportId, timestamp, commentTimestamp, videoId, commentId, email, type, message], function(isError) {
                         if(isError) {
-                            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                            reject();
                         }
                         else {
                             submitDatabaseWriteJob('DELETE FROM commentReports WHERE report_id = ?', [reportId], function(isError) {
                                 if(isError) {
-                                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                                    reject();
                                 }
                                 else {
                                     resolve({isError: false});
@@ -47,17 +47,15 @@ function reportsCommentsArchive_POST(reportId) {
                     });
                 }
                 else {
-                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                    reject();
                 }
             })
             .catch(error => {
-                resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                reject(error);
             });
         }
         else {
-            logDebugMessageToConsole('invalid report id: ' + reportId, null, new Error().stack, true);
-            
-            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+            reject(new Error('invalid report id: ' + reportId));
         }
     });
 }
@@ -75,7 +73,7 @@ function reportsCommentsReportIdDelete_DELETE(reportId) {
             });
         }
         else {
-            logDebugMessageToConsole('invalid report id: ' + reportId, null, new Error().stack, true);
+            logDebugMessageToConsole('invalid report id: ' + reportId, null, new Error().stack);
             
             resolve({isError: true, message: 'error communicating with the MoarTube node'});
         }

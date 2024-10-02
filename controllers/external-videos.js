@@ -89,7 +89,7 @@ function videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET(videoId, format,
         if(fs.existsSync(segmentPath)) {
             fs.stat(segmentPath, function(error, stats) {
                 if (error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                    logDebugMessageToConsole(null, error, new Error().stack);
                 } else {
                     segmentBandwidthCounter += stats.size;
         

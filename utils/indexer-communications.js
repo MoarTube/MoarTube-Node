@@ -12,7 +12,7 @@ function indexer_addVideoToIndex(data) {
             resolve(data);
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
 
             if(error.response.status === 413) {
                 const kilobytes = Math.ceil(error.request._contentLength / 1024);
@@ -35,7 +35,7 @@ function indexer_removeVideoFromIndex(data) {
             resolve(data);
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
 
             resolve({isError: true, message: 'an error occurred while removing from the MoarTube Indexer'});
         });
@@ -51,7 +51,7 @@ function indexer_doIndexUpdate(data) {
 			resolve(data);
 		})
 		.catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
 
             if(error.response.status === 413) {
                 const kilobytes = Math.ceil(error.request._contentLength / 1024);
@@ -77,7 +77,7 @@ function indexer_doNodePersonalizeNodeNameUpdate(moarTubeTokenProof, nodeName) {
             resolve(data);
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
 
             resolve({isError: true, message: 'an error occurred while updating the personalize settings'});
         });
@@ -96,7 +96,7 @@ function indexer_doNodePersonalizeNodeAboutUpdate(moarTubeTokenProof, nodeAbout)
             resolve(data);
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
 
             resolve({isError: true, message: 'an error occurred while updating the personalize settings'});
         });
@@ -115,7 +115,7 @@ function indexer_doNodePersonalizeNodeIdUpdate(moarTubeTokenProof, nodeId) {
             resolve(data);
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
 
             resolve({isError: true, message: 'an error occurred while updating the personalize settings'});
         });
@@ -136,7 +136,7 @@ function indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProto
             resolve(data);
         })
         .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
 
             resolve({isError: true, message: 'an error occurred while updating the network settings'});
         });
@@ -152,7 +152,7 @@ function indexer_getNodeIdentification() {
 			resolve(data);
 		})
 		.catch(error => {
-			logDebugMessageToConsole(null, error, new Error().stack, true);
+			logDebugMessageToConsole(null, error, new Error().stack);
 
             resolve({isError: true, message: 'an error occurred while identifying the node with the MoarTube Indexer'});
 		});
@@ -172,7 +172,7 @@ function indexer_doNodeIdentificationRefresh(moarTubeTokenProof) {
 			resolve(data);
 		})
 		.catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack, true);
+            logDebugMessageToConsole(null, error, new Error().stack);
 
 			resolve({isError: true, message: 'an error occurred while refreshing the node with the MoarTube Indexer'});
 		});

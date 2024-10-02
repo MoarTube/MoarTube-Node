@@ -10,7 +10,7 @@ function reportsArchiveComments_GET() {
             resolve({isError: false, reports: reports});
         })
         .catch(error => {
-            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+            reject(error);
         });
     });
 }
@@ -28,7 +28,7 @@ function reportsArchiveCommentsArchiveIdDelete_DELETE(archiveId) {
             });
         }
         else {
-            logDebugMessageToConsole('invalid archive id: ' + archiveId, null, new Error().stack, true);
+            logDebugMessageToConsole('invalid archive id: ' + archiveId, null, new Error().stack);
             
             resolve({isError: true, message: 'error communicating with the MoarTube node'});
         }

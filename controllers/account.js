@@ -7,34 +7,22 @@ const { isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNod
 
 function signIn_POST(username, password, moarTubeNodeHttpProtocol, moarTubeNodeIp, moarTubeNodePort, rememberMe) {
     if(!isUsernameValid(username)) {
-        logDebugMessageToConsole('attempted to sign in with invalid username: ' + username, null, new Error().stack, true);
-
-        return {isError: true, message: 'usernames can contain letters aA-zZ, digits, symbols !@#$%^&*()-_=+[], and can be up to 100 characters long'};
+        throw new Error('username was not valid');
     }
     else if(!isPasswordValid(password)) {
-        logDebugMessageToConsole('attempted to sign in with invalid password: ' + password, null, new Error().stack, true);
-
-        return {isError: true, message: 'passwords can contain letters aA-zZ, digits, symbols !@#$%^&*()-_=+[], and can be up to 100 characters long'};
+        throw new Error('password was not valid');
     }
     else if(!isPublicNodeProtocolValid(moarTubeNodeHttpProtocol)) {
-        logDebugMessageToConsole('attempted to sign in with invalid protocol: ' + moarTubeNodeHttpProtocol, null, null, true);
-        
-        return {isError: true, message: 'ip address or domain name is not valid'};
+        throw new Error('protocol was not valid');
     }
     else if(!isPublicNodeAddressValid(moarTubeNodeIp)) {
-        logDebugMessageToConsole('attempted to sign in with invalid ip address or domian name: ' + moarTubeNodeIp, null, null, true);
-        
-        return {isError: true, message: 'ip address or domain name is not valid'};
+        throw new Error('ip address or domain name was not valid');
     }
     else if(!isPortValid(moarTubeNodePort)) {
-        logDebugMessageToConsole('attempted to sign in with invalid port: ' + moarTubeNodePort, null, null, true);
-        
-        return {isError: true, message: 'port is not valid'};
+        throw new Error('port was not valid');
     }
     else if(!isBooleanValid(rememberMe)) {
-        logDebugMessageToConsole('attempted to sign in with invalid rememberMe: ' + rememberMe, null, new Error().stack, true);
-
-        return {isError: true, message: 'invalid parameter: rememberMe value was ' + rememberMe + ', expected "on" or "off"'};
+        throw new Error('rememberMe was not valid');
     }
     else {
         let options = {};
@@ -52,7 +40,7 @@ function signIn_POST(username, password, moarTubeNodeHttpProtocol, moarTubeNodeI
         const isPasswordValid = bcryptjs.compareSync(password, passwordHash);
         
         if(isUsernameValid && isPasswordValid) {
-            logDebugMessageToConsole('user logged in: ' + username, null, null, true);
+            logDebugMessageToConsole('user logged in: ' + username, null, null);
 
             if(nodeSettings.publicNodeProtocol === "" && nodeSettings.publicNodeAddress === "" && nodeSettings.publicNodePort === "") {
                 nodeSettings.publicNodeProtocol = moarTubeNodeHttpProtocol;

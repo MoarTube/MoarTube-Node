@@ -24,7 +24,7 @@ router.use('/images', (req, res, next) => {
         }
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
     
         next();
     }

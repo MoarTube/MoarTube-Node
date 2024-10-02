@@ -20,7 +20,7 @@ router.post('/signin', (req, res) => {
         res.send(data);
     }
     catch (error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
 
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     }
@@ -32,7 +32,7 @@ router.get('/signout', async (req, res) => {
         if(isAuthenticated) {
             req.logout(function(error) {
                 if(error) {
-                    logDebugMessageToConsole(null, error, new Error().stack, true);
+                    logDebugMessageToConsole(error, new Error().stack);
 
                     res.send({isError: true, message: 'error communicating with the MoarTube node'});
                 }
@@ -46,7 +46,7 @@ router.get('/signout', async (req, res) => {
         }
     })
     .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
         
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });
@@ -58,7 +58,7 @@ router.get('/authenticated', async (req, res) => {
         res.send({isError: false, isAuthenticated: isAuthenticated});
     })
     .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
+        logDebugMessageToConsole(null, error, new Error().stack);
         
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });

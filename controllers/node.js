@@ -1,4 +1,4 @@
-const { logDebugMessageToConsole, getLastCheckedContentTracker, setLastCheckedContentTracker, getAuthenticationStatus } = require('../utils/helpers');
+const { getLastCheckedContentTracker, setLastCheckedContentTracker, getAuthenticationStatus } = require('../utils/helpers');
 const { isSearchTermValid, isSortTermValid, isTagTermValid } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET } = require('../utils/database');
 const { information_GET } = require('../controllers/status');
@@ -102,7 +102,7 @@ function search_GET(searchTerm, sortTerm, tagTerm) {
                 resolve({isError: false, searchResults: rowsToSend});
             })
             .catch(error => {
-                resolve({isError: true});
+                reject(error);
             });
         }
         else {
@@ -126,9 +126,7 @@ async function newContentCounts_GET() {
         return {isError: false, newContentCounts: {newCommentsCount: newCommentsCount, newVideoReportsCount: newVideoReportsCount, newCommentReportsCount: newCommentReportsCount}};
     }
     catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack, true);
-
-        return {isError: true, message: 'error communicating with the MoarTube node'};
+        throw error;
     }
 }
 
