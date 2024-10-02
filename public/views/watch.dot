@@ -1166,8 +1166,6 @@ body {
                             $(HASH_VALUE + ' .postNum a:first-child')[0].click();
                         }
                     }
-                    
-					setLikedOrDisliked();
 
 					refreshTextAreas();
 				}
@@ -1374,19 +1372,6 @@ body {
 				TIMESTAMP_UPDATE_TRACKER.forEach(function(interval) {
 					clearInterval(interval);
 				});
-			}
-			
-			function setLikedOrDisliked() {
-				if(typeof(Storage) != null) {
-					const value = localStorage.getItem(VIDEO_ID + '-like-dislike');
-					
-					if(value === 'like') {
-						$('#video-like-button').addClass('btn-primary').removeClass('btn-outline-primary');
-					}
-					else if(value === 'dislike') {
-						$('#video-dislike-button').addClass('btn-primary').removeClass('btn-outline-primary');
-					}
-				}
 			}
 			
 			function setClipboard(value) {
@@ -2307,8 +2292,6 @@ body {
 								const commentId = data.commentId;
 								const comments = data.comments;
 								
-								addToCommentHistory(commentId);
-								
 								loadComments(comments, true);
 							}
 
@@ -2350,8 +2333,6 @@ body {
 				commentsContainer.find('.post.reply').removeClass('new-comment-highlight');
 				
 				if(comments.length > 0) {
-					const commentHistory = getCommentHistory();
-					
 					$('.comments-navigation-button').removeClass('hidden-elem');
 					
 					const commentSectionCounter = $('#comment-section-counter');
@@ -2394,32 +2375,10 @@ body {
 						// cache comments in memory for efficient access
 						COMMENT_ELEMENT_CACHE[commentId] = commentElement;
 						
-						// append (you) to quotelinks within the body of the comment that references comments this user has made
-						for(const commentHistoryId of commentHistory) {
-							if(replyToCommentIds.includes(commentHistoryId)) {
-								$(commentElement).find('#m' + commentId).find('.quotelink').each(function(index, element) {
-									let elementHref = $(element).attr('href');
-									if(elementHref === ('#p' + commentHistoryId)) {
-										$(element).append(' (you)');
-										
-										if($('#p' + commentHistoryId).length === 0) {
-											$(element).addClass('dead-link');
-										}
-									}
-								});
-							}
-						}
-						
 						// append links to backlinks of comments that reference the comments being prepended to the comments
 						for(const replyToCommentId of replyToCommentIds) {
 							if(COMMENT_ELEMENT_CACHE.hasOwnProperty(replyToCommentId)) {
-								let youString = '';
-
-								if(commentHistory.includes(commentId)) {
-									youString = ' (you)';
-								}
-
-								$(COMMENT_ELEMENT_CACHE[replyToCommentId]).find('#bl_' + replyToCommentId).append('<a href="#p' + commentId + '" class="quotelink">&gt;&gt;' + commentId + youString + '</a> ');
+								$(COMMENT_ELEMENT_CACHE[replyToCommentId]).find('#bl_' + replyToCommentId).append('<a href="#p' + commentId + '" class="quotelink">&gt;&gt;' + commentId + '</a> ');
 								
 								attachQuotelinkListeners(COMMENT_ELEMENT_CACHE[replyToCommentId]);
 							}
@@ -2923,180 +2882,59 @@ body {
 			
 			/*
 			like/dislike logic:
-				MoarTube does not conduct node-side like/dislike tracking of its users
-				such information is held entirely client-side utilizing the localstorage API
-				MoarTube Node only keeps track of like/dislike counters
+				MoarTube does not conduct node-side like/dislike tracking of its users.
+				MoarTube Node only keeps track of like/dislike counters.
 			*/
 			async function likeVideo() {
-				if(typeof(Storage) != null) {
-					const localStorageKey = VIDEO_ID + '-like-dislike';
+				disableLikeDislikeButtons();
 
-					disableLikeDislikeButtons();
-					
-					const videoLikeButton = $('#video-like-button');
-					const videoDislikeButton = $('#video-dislike-button');
+				const videoLikeButton = $('#video-like-button');
 
-					const value = localStorage.getItem(localStorageKey);
-					
-					$(videoLikeButton).blur();
-					
-					try {
-						if(value == null) {
-							performLike(true, false)
-							.then(() => {
-								console.log('no like or dislike for this video; user is liking');
-								
-								incrementLikeCount();
-								
-								$(videoLikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
-								
-								localStorage.setItem(localStorageKey, 'like');
-							})
-							.catch(error => {
-								showAlert(true, error);
-							})
-							.finally(() => {
-								enableLikeDislikeButtons();
-							});
-						}
-						else {
-							if(value === 'like') {
-								performLike(false, false)
-								.then(() => {
-									console.log('liked this video already, so un-liking');
-									
-									decrementLikeCount();
-									
-									$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
-									
-									localStorage.removeItem(localStorageKey);
-								})
-								.catch(error => {
-									showAlert(true, error);
-								})
-								.finally(() => {
-									enableLikeDislikeButtons();
-								});
-							}
-							else if(value === 'dislike') {
-								performLike(true, true)
-								.then(() => {
-									console.log('disliked this video already, so changing from disliked to liked');
-									
-									decrementDislikeCount();
-									incrementLikeCount();
-									
-									$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
-									$(videoLikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
-									
-									localStorage.setItem(localStorageKey, 'like');
-								})
-								.catch(error => {
-									showAlert(true, error);
-								})
-								.finally(() => {
-									enableLikeDislikeButtons();
-								});
-							}
-						}
-					}
-					catch(error) {
-						showAlert(true, error);
+				$(videoLikeButton).blur();
 
-						enableLikeDislikeButtons();
-					}
-				}
-				else {
-					console.log('localStorage is not supported in this browser.');
+				$(videoLikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
 
+				performLike()
+				.then(() => {
+					const likeCount = $('#video-like-count').text();
+					let likeCountParsed = parseInt(likeCount);
+					likeCountParsed++;
+					$('#video-like-count').text(likeCountParsed);
+				})
+				.catch(error => {
+					showAlert(true, error);
+				})
+				.finally(() => {
 					enableLikeDislikeButtons();
-				}
+
+					$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+				});
 			}
 			
 			async function dislikeVideo() {
-				if(typeof(Storage) != null) {
-					const localStorageKey = VIDEO_ID + '-like-dislike';
+				disableLikeDislikeButtons();
 
-					disableLikeDislikeButtons();
-					
-					const videoLikeButton = $('#video-like-button');
-					const videoDislikeButton = $('#video-dislike-button');
-					
-					const value = localStorage.getItem(localStorageKey);
-					
-					$(videoDislikeButton).blur();
-					
-					try {
-						if(value == null) {
-							performDislike(true, false)
-							.then(() => {
-								console.log('no like or dislike for this video; user is disliking');
-								
-								incrementDislikeCount();
-								
-								$(videoDislikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
-							
-								localStorage.setItem(localStorageKey, 'dislike');
-							})
-							.catch(error => {
-								showAlert(true, error);
-							})
-							.finally(() => {
-								enableLikeDislikeButtons();
-							});
-						}
-						else {
-							if(value === 'dislike') {
-								performDislike(false, false)
-								.then(() => {
-									console.log('disliked this video already, so un-disliking');
-									
-									decrementDislikeCount();
-									
-									$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
-								
-									localStorage.removeItem(localStorageKey);
-								})
-								.catch(error => {
-									showAlert(true, error);
-								})
-								.finally(() => {
-									enableLikeDislikeButtons();
-								});
-							}
-							else if(value === 'like') {
-								performDislike(true, true)
-								.then(() => {
-									console.log('liked this video already, so changing from liked to disliked');
-									
-									decrementLikeCount();
-									incrementDislikeCount();
-									
-									$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
-									$(videoDislikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
-								
-									localStorage.setItem(localStorageKey, 'dislike');
-								})
-								.catch(error => {
-									showAlert(true, error);
-								})
-								.finally(() => {
-									enableLikeDislikeButtons();
-								});
-							}
-						}
-					}
-					catch(error) {
-						showAlert(true, error);
+				const videoDislikeButton = $('#video-dislike-button');
 
-						enableLikeDislikeButtons();
-					}
-				}
-				else {
-					console.log('localStorage is not supported in this browser.');
+				$(videoDislikeButton).blur();
 
+				$(videoDislikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
+
+				performDislike()
+				.then(() => {
+					const dislikeCount = $('#video-dislike-count').text();
+					let dislikeCountParsed = parseInt(dislikeCount);
+					dislikeCountParsed++;
+					$('#video-dislike-count').text(dislikeCountParsed);
+				})
+				.catch(error => {
+					showAlert(true, error);
+				})
+				.finally(() => {
 					enableLikeDislikeButtons();
-				}
+
+					$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+				});
 			}
 
 			function disableLikeDislikeButtons() {
@@ -3115,11 +2953,11 @@ body {
 				$(videoDislikeButton).prop('disabled', false);
 			}
 			
-			function performLike(isLiking, isUnDisliking) {
+			function performLike() {
 				return new Promise(function(resolve, reject) {
 					getCloudflareTurnstileToken()
 					.then(cloudflareTurnstileToken => {
-						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/like', data: JSON.stringify({ isLiking: isLiking, isUnDisliking: isUnDisliking, cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
+						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/like', data: JSON.stringify({ cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
 						.done(function (data, textStatus, xhr) {
 							if(data.isError) {
 								showAlert(true, error);
@@ -3144,11 +2982,11 @@ body {
 				});
 			}
 			
-			function performDislike(isDisliking, isUnliking) {
+			function performDislike() {
 				return new Promise(function(resolve, reject) {
 					getCloudflareTurnstileToken()
 					.then(cloudflareTurnstileToken => {
-						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/dislike', data: JSON.stringify({ isDisliking: isDisliking, isUnliking: isUnliking, cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
+						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/dislike', data: JSON.stringify({ cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
 						.done(function (data, textStatus, xhr) {
 							if(data.isError) {
 								showAlert(true, error);
@@ -3199,47 +3037,6 @@ body {
 				let dislikeCountParsed = parseInt(dislikeCount);
 				dislikeCountParsed--;
 				$('#video-dislike-count').text(dislikeCountParsed);
-			}
-			
-			
-			function addToCommentHistory(commentId) {
-				if(typeof(Storage) != null) {
-					const localStorageKey = VIDEO_ID + '-yous';
-					
-					let yous = localStorage.getItem(localStorageKey);
-					
-					if(yous == null) {
-						yous = [];
-					}
-					else {
-						yous = JSON.parse(yous);
-					}
-					
-					yous.push(commentId);
-					
-					localStorage.setItem(localStorageKey, JSON.stringify(yous));
-				}
-			}
-			
-			function getCommentHistory() {
-				if(typeof(Storage) != null) {
-					const localStorageKey = VIDEO_ID + '-yous';
-					
-					let yous = localStorage.getItem(localStorageKey);
-					
-					if(yous == null) {
-						yous = [];
-						localStorage.setItem(localStorageKey, JSON.stringify(yous));
-					}
-					else {
-						yous = JSON.parse(yous);
-					}
-					
-					return yous;
-				}
-				else {
-					return [];
-				}
 			}
 			
 			function reportVideo() {

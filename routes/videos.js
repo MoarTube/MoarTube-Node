@@ -1247,13 +1247,11 @@ router.delete('/:videoId/comments/:commentId/delete', (req, res) => {
 router.post('/:videoId/like', async (req, res) => {
     try {
         const videoId = req.params.videoId;
-        const isLiking = req.body.isLiking;
-        const isUnDisliking = req.body.isUnDisliking;
         const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
 
         const cloudflareConnectingIp = req.header('CF-Connecting-IP');
 
-        const data = await videoIdLike_POST(videoId, isLiking, isUnDisliking, cloudflareTurnstileToken, cloudflareConnectingIp);
+        const data = await videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareConnectingIp);
 
         res.send(data);
     }
@@ -1267,13 +1265,11 @@ router.post('/:videoId/like', async (req, res) => {
 router.post('/:videoId/dislike', async (req, res) => {
     try {
         const videoId = req.params.videoId;
-        const isDisliking = req.body.isDisliking;
-        const isUnliking = req.body.isUnliking;
         const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
 
         const cloudflareConnectingIp = req.header('CF-Connecting-IP');
 
-        const data = await videoIdDislike_POST(videoId, isDisliking, isUnliking, cloudflareTurnstileToken, cloudflareConnectingIp);
+        const data = await videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflareConnectingIp);
 
         res.send(data);
     }
