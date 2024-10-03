@@ -31,6 +31,10 @@
 				padding: 0;
 				margin-bottom: 100px;
 			}
+
+			#donate-modal .img-fluid {
+				width: 100%;
+			}
 				
 			#node-avatar {
 				border-radius: 50%;
@@ -779,7 +783,7 @@ body {
 					});
 
 					const html = $('\
-						<div class="multisteps-form__content">\
+						<div id="donate-modal" class="multisteps-form__content">\
 							<div class="text-center">\
 								<image class="img-fluid" src="/external/resources/images/donate.jpg" style="max-width: 500px;"/>\
 							</div>\

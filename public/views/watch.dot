@@ -46,7 +46,7 @@
 				color: #606060;
 			}
 			
-			.img-fluid {
+			#donate-modal .img-fluid {
 				width: 100%;
 			}
 			
@@ -2798,7 +2798,7 @@ body {
 					});
 
 					const html = $('\
-						<div class="multisteps-form__content">\
+						<div id="donate-modal" class="multisteps-form__content">\
 							<div class="text-center">\
 								<image class="img-fluid" src="/external/resources/images/donate.jpg" style="max-width: 500px;"/>\
 							</div>\
