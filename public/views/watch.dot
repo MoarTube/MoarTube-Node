@@ -2890,10 +2890,12 @@ body {
 				disableLikeDislikeButtons();
 
 				const videoLikeButton = $('#video-like-button');
+				const videoDislikeButton = $('#video-dislike-button');
 
 				$(videoLikeButton).blur();
 
 				$(videoLikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
+				$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
 
 				performLike()
 				.then(() => {
@@ -2907,8 +2909,6 @@ body {
 				})
 				.finally(() => {
 					enableLikeDislikeButtons();
-
-					$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
 				});
 			}
 			
@@ -2916,10 +2916,12 @@ body {
 				disableLikeDislikeButtons();
 
 				const videoDislikeButton = $('#video-dislike-button');
+				const videoLikeButton = $('#video-like-button');
 
 				$(videoDislikeButton).blur();
 
 				$(videoDislikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
+				$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
 
 				performDislike()
 				.then(() => {
@@ -2933,8 +2935,6 @@ body {
 				})
 				.finally(() => {
 					enableLikeDislikeButtons();
-
-					$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
 				});
 			}
 
