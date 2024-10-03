@@ -2883,7 +2883,6 @@ body {
 			/*
 			like/dislike logic:
 				MoarTube does not conduct node or client like/dislike tracking of its users.
-					localstorage does not store any information relevant to likes/dislikes and comments.
 				MoarTube Node only keeps track of like/dislike counters.
 			*/
 			async function likeVideo() {
@@ -2922,7 +2921,7 @@ body {
 					const videoLikeButton = $('#video-like-button');
 
 					disableLikeDislikeButtons();
-					
+
 					$(videoDislikeButton).blur();
 
 					$(videoDislikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
