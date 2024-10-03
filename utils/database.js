@@ -22,6 +22,8 @@ function provisionSqliteDatabase() {
             else {
                 await performDatabaseWriteJob('PRAGMA journal_mode=WAL', []);
 
+                await vacuumDatabase();
+
                 const didLinksTableExist = ((await performDatabaseReadJob_GET(`SELECT name FROM sqlite_master WHERE type='table' AND name='links';`, [])) != null);
                 
                 await performDatabaseWriteJob('CREATE TABLE IF NOT EXISTS videos(id INTEGER PRIMARY KEY, video_id TEXT, source_file_extension TEXT, title TEXT, description TEXT, tags TEXT, length_seconds INTEGER, length_timestamp INTEGER, views INTEGER, comments INTEGER, likes INTEGER, dislikes INTEGER, bandwidth INTEGER, is_importing INTEGER, is_imported INTEGER, is_publishing INTEGER, is_published INTEGER, is_streaming INTEGER, is_streamed INTEGER, is_stream_recorded_remotely INTEGER, is_stream_recorded_locally INTEGER, is_live INTEGER, is_indexing INTEGER, is_indexed INTEGER, is_index_outdated INTEGER, is_error INTEGER, is_finalized INTEGER, meta TEXT, creation_timestamp INTEGER)', []);
@@ -93,6 +95,29 @@ function submitDatabaseWriteJob(query, parameters, callback) {
             finishPendingDatabaseWriteJob(databaseWriteJobId, true);
         });
     }
+}
+
+/* 
+Rebuilds the database file, reclaiming free space and defragmenting it. 
+This can sometimes repair minor corruption issues.
+*/
+function vacuumDatabase() {
+    return new Promise(function(resolve, reject) {
+        console.log('Vacuuming database');
+
+        database.run('VACUUM', function(error) {
+            if(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+
+                reject();
+            }
+            else {
+                console.log('Database vacuumed successfully');
+
+                resolve();
+            }
+        });
+    });
 }
 
 /* 
