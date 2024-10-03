@@ -2887,55 +2887,61 @@ body {
 				MoarTube Node only keeps track of like/dislike counters.
 			*/
 			async function likeVideo() {
-				disableLikeDislikeButtons();
-
 				const videoLikeButton = $('#video-like-button');
-				const videoDislikeButton = $('#video-dislike-button');
 
-				$(videoLikeButton).blur();
+				if(!$(videoLikeButton).hasClass('btn-primary')) {
+					const videoDislikeButton = $('#video-dislike-button');
 
-				$(videoLikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
-				$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+					disableLikeDislikeButtons();
 
-				performLike()
-				.then(() => {
-					const likeCount = $('#video-like-count').text();
-					let likeCountParsed = parseInt(likeCount);
-					likeCountParsed++;
-					$('#video-like-count').text(likeCountParsed);
-				})
-				.catch(error => {
-					showAlert(true, error);
-				})
-				.finally(() => {
-					enableLikeDislikeButtons();
-				});
+					$(videoLikeButton).blur();
+
+					$(videoLikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
+					$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+
+					performLike()
+					.then(() => {
+						const likeCount = $('#video-like-count').text();
+						let likeCountParsed = parseInt(likeCount);
+						likeCountParsed++;
+						$('#video-like-count').text(likeCountParsed);
+					})
+					.catch(error => {
+						showAlert(true, error);
+					})
+					.finally(() => {
+						enableLikeDislikeButtons();
+					});
+				}
 			}
 			
 			async function dislikeVideo() {
-				disableLikeDislikeButtons();
-
 				const videoDislikeButton = $('#video-dislike-button');
-				const videoLikeButton = $('#video-like-button');
 
-				$(videoDislikeButton).blur();
+				if(!$(videoDislikeButton).hasClass('btn-primary')) {
+					const videoLikeButton = $('#video-like-button');
 
-				$(videoDislikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
-				$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+					disableLikeDislikeButtons();
+					
+					$(videoDislikeButton).blur();
 
-				performDislike()
-				.then(() => {
-					const dislikeCount = $('#video-dislike-count').text();
-					let dislikeCountParsed = parseInt(dislikeCount);
-					dislikeCountParsed++;
-					$('#video-dislike-count').text(dislikeCountParsed);
-				})
-				.catch(error => {
-					showAlert(true, error);
-				})
-				.finally(() => {
-					enableLikeDislikeButtons();
-				});
+					$(videoDislikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
+					$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+
+					performDislike()
+					.then(() => {
+						const dislikeCount = $('#video-dislike-count').text();
+						let dislikeCountParsed = parseInt(dislikeCount);
+						dislikeCountParsed++;
+						$('#video-dislike-count').text(dislikeCountParsed);
+					})
+					.catch(error => {
+						showAlert(true, error);
+					})
+					.finally(() => {
+						enableLikeDislikeButtons();
+					});
+				}
 			}
 
 			function disableLikeDislikeButtons() {
