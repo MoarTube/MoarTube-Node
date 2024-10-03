@@ -103,7 +103,7 @@ This can sometimes repair minor corruption issues.
 */
 function vacuumDatabase() {
     return new Promise(function(resolve, reject) {
-        console.log('Vacuuming database');
+        logDebugMessageToConsole('vacuuming database', null, null);
 
         database.run('VACUUM', function(error) {
             if(error) {
@@ -112,7 +112,7 @@ function vacuumDatabase() {
                 reject();
             }
             else {
-                console.log('Database vacuumed successfully');
+                logDebugMessageToConsole('database vacuumed', null, null);
 
                 resolve();
             }
