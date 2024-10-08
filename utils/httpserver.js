@@ -76,7 +76,7 @@ function initializeHttpServer(value) {
             httpServer = http.createServer(app);
         }
         
-        httpServer.requestTimeout = 0; // needed for long duration requests (streaming, large uploads)
+        httpServer.requestTimeout = 300000;
         httpServer.keepAliveTimeout = 10000;
         
         httpServer.listen(nodeSettings.nodeListeningPort, function() {

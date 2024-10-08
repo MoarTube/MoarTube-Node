@@ -1,9 +1,6 @@
 const express = require('express');
 
-const { 
-    start_POST, videoIdStop_POST, videoIdAdaptiveFormatResolutionSegmentsNextExpectedSegmentIndex_GET, videoIdAdaptiveFormatResolutionSegmentsRemove_POST, videoIdBandwidth_GET,
-    videoIdChatSettings_POST, videoIdChatHistory_GET
-} = require('../controllers/streams');
+const { start_POST, videoIdStop_POST, videoIdAdaptiveFormatResolutionSegmentsRemove_POST, videoIdBandwidth_GET, videoIdChatSettings_POST, videoIdChatHistory_GET } = require('../controllers/streams');
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getAuthenticationStatus } = require('../utils/helpers');
 
@@ -56,38 +53,6 @@ router.post('/:videoId/stop', (req, res) => {
                 const videoId = req.params.videoId;
 
                 const data = await videoIdStop_POST(videoId);
-
-                res.send(data);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-            
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-        }
-        else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
-
-            res.send({isError: true, message: 'you are not logged in'});
-        }
-    })
-    .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-    });
-});
-
-router.get('/:videoId/adaptive/:format/:resolution/segments/nextExpectedSegmentIndex', (req, res) => {
-    getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
-        if(isAuthenticated) {
-            try {
-                const videoId = req.params.videoId;
-                const format = req.params.format;
-                const resolution = req.params.resolution;
-
-                const data = videoIdAdaptiveFormatResolutionSegmentsNextExpectedSegmentIndex_GET(videoId, format, resolution);
 
                 res.send(data);
             }

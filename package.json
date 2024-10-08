@@ -1,6 +1,6 @@
 {
   "name": "@moartube/moartube-node",
-  "version": "1.0.41",
+  "version": "1.0.42",
   "description": "A free, open-source, self-hosted, anonymous, decentralized video/live stream platform. Scalable via Cloudflare, works in the cloud or from home WiFi.",
   "author": "MoarTube, LLC",
   "homepage": "https://www.moartube.com",
@@ -13,23 +13,31 @@
   "bin": {
     "moartube-node": "./bin/moartube-node-start"
   },
-  "keywords": ["alternative", "youtube", "twitch", "video", "stream", "live", "moartube"],
+  "keywords": [
+    "alternative",
+    "youtube",
+    "twitch",
+    "video",
+    "stream",
+    "live",
+    "moartube"
+  ],
   "dependencies": {
-    "async-mutex": "^0.4.0",
-    "axios": "^1.6.2",
+    "async-mutex": "^0.5.0",
+    "axios": "^1.7.7",
     "bcryptjs": "^2.4.3",
-    "body-parser": "^1.20.2",
+    "body-parser": "^1.20.3",
     "cors": "^2.8.5",
-    "express": "^4.18.2",
+    "express": "^4.21.0",
     "express-dot-engine": "^1.0.8",
-    "express-session": "^1.17.3",
+    "express-session": "^1.18.0",
     "http-terminator": "^3.2.0",
-    "jsonwebtoken": "^9.0.0",
+    "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
-    "sanitize-html": "^2.10.0",
-    "sharp": "^0.32.1",
-    "sqlite3": "^5.1.6",
-    "uuid": "^9.0.0",
-    "ws": "^8.13.0"
+    "sanitize-html": "^2.13.1",
+    "sharp": "^0.33.5",
+    "sqlite3": "^5.1.7",
+    "uuid": "^10.0.0",
+    "ws": "^8.18.0"
   }
 }

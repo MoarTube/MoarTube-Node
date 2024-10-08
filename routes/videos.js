@@ -384,29 +384,13 @@ router.post('/:videoId/stream', (req, res) => {
                                     directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
                                 }
                             }
-                            else if(format === 'mp4') {
-                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/mp4/' + resolution);
-                            }
-                            else if(format === 'webm') {
-                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/webm/' + resolution);
-                            }
-                            else if(format === 'ogv') {
-                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/ogv/' + resolution);
-                            }
                             
                             if(directoryPath !== '') {
                                 //logDebugMessageToConsole('storing stream with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '> to directory <' + directoryPath + '>', null, null);
                                 
                                 fs.mkdirSync(directoryPath, { recursive: true });
                                 
-                                fs.access(directoryPath, fs.constants.F_OK, function(error) {
-                                    if(error) {
-                                        cb(new Error('directory creation error'), null);
-                                    }
-                                    else {
-                                        cb(null, directoryPath);
-                                    }
-                                });
+                                cb(null, directoryPath);
                             }
                             else {
                                 cb(new Error('invalid directory path'), null);

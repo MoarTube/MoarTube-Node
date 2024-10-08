@@ -76,8 +76,10 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
             const videoPosterImageFilePath = path.join(videoImagesDirectory, 'poster.jpg');
 
             fs.mkdirSync(videoImagesDirectory, { recursive: true });
+
             fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/adaptive'), { recursive: true });
             fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/progressive'), { recursive: true });
+            fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution), { recursive: true });
 
             fs.copyFileSync(publicThumbnailImageFilePath, videoThumbnailImageFilePath);
             fs.copyFileSync(publicPreviewImageFilePath, videoPreviewImageFilePath);
@@ -268,32 +270,6 @@ function videoIdStop_POST(videoId) {
     });
 }
 
-function videoIdAdaptiveFormatResolutionSegmentsNextExpectedSegmentIndex_GET(videoId, format, resolution) {
-    if(isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isResolutionValid(resolution)) {
-        let nextExpectedSegmentIndex = -1;
-        
-        const segmentsDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution);
-        
-        if (fs.existsSync(segmentsDirectoryPath) && fs.statSync(segmentsDirectoryPath).isDirectory()) {
-            fs.readdirSync(segmentsDirectoryPath).forEach(segmentFileName => {
-                const segmentFileNameArray = segmentFileName.split('-');
-                const nextExpectedSegmentIndexTemp = Number(segmentFileNameArray[2].split('.')[0]);
-
-                if(nextExpectedSegmentIndexTemp > nextExpectedSegmentIndex) {
-                    nextExpectedSegmentIndex = nextExpectedSegmentIndexTemp;
-                }
-            });
-        }
-        
-        nextExpectedSegmentIndex++;
-        
-        return {isError: false, nextExpectedSegmentIndex: nextExpectedSegmentIndex};
-    }
-    else {
-        return {isError: true, message: 'invalid parameters'};
-    }
-}
-
 function videoIdAdaptiveFormatResolutionSegmentsRemove_POST(videoId, format, resolution, segmentName) {
     if(isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
         const segmentPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
@@ -413,7 +389,6 @@ function videoIdChatHistory_GET(videoId) {
 module.exports = {
     start_POST,
     videoIdStop_POST,
-    videoIdAdaptiveFormatResolutionSegmentsNextExpectedSegmentIndex_GET,
     videoIdAdaptiveFormatResolutionSegmentsRemove_POST,
     videoIdBandwidth_GET,
     videoIdChatSettings_POST,

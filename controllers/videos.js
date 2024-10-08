@@ -240,7 +240,12 @@ function videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, 
         if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
             if(format === 'm3u8') {
                 try {
-                    updateHlsVideoMasterManifestFile(videoId);
+                    const hlsVideoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
+                    const masterManifestFilePath = path.join(hlsVideoDirectoryPath, '/manifest-master.m3u8');
+                    
+                    if(!fs.existsSync(masterManifestFilePath)) {
+                        updateHlsVideoMasterManifestFile(videoId);
+                    }
 
                     const nodeSettings = getNodeSettings();
 
@@ -284,7 +289,7 @@ function videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, 
                     logDebugMessageToConsole(null, error, new Error().stack);
                 }
             }
-
+            
             resolve({isError: false});
         }
         else {
