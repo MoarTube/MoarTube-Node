@@ -13,7 +13,7 @@ const engine = require('express-dot-engine');
 const {logDebugMessageToConsole} = require('./utils/logger');
 const {
 	getNodeSettings, setNodeSettings, generateVideoId,
-	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, setJwtSecret, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret, 
+	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, getIsDeveloperMode, setJwtSecret, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret, 
 	performNodeIdentification, getNodeIdentification, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64, getVideoPreviewJpgBase64, setLastCheckedContentTracker
 } = require('./utils/helpers');
 const { setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort } = require('./utils/urls');
@@ -58,6 +58,7 @@ if(cluster.isMaster) {
 	});
 
 	logDebugMessageToConsole('starting MoarTube Node', null, null);
+	logDebugMessageToConsole('moartube-node directory: ' + discoverDataDirectoryPath(), null, null);
 
 	provisionSqliteDatabase()
 	.then(async () => {
@@ -396,35 +397,18 @@ else {
 	}
 }
 
+function discoverDataDirectoryPath() {
+	const dataDirectory = process.env.APPDATA || (process.platform == 'darwin' ? process.env.HOME + '/Library/Preferences' : process.env.HOME + '/.local/share');
+	const dataDirectoryPath = path.join(dataDirectory, 'moartube-node');
+
+	return dataDirectoryPath;
+}
+
 function loadConfig() {
 	process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
-	setPublicDirectoryPath(path.join(__dirname, 'public'));
-	setViewsDirectoryPath(path.join(getPublicDirectoryPath(), 'views'));
-
 	setIsDockerEnvironment(process.env.IS_DOCKER_ENVIRONMENT === 'true');
 
-	if(getIsDockerEnvironment()) {
-		setDataDirectoryPath('/data');
-	}
-	else {
-		setDataDirectoryPath(path.join(__dirname, 'data'));
-	}
-
-	setNodeSettingsPath(path.join(getDataDirectoryPath(), '_node_settings.json'));
-	setLastCheckedContentTrackerPath(path.join(getDataDirectoryPath(), '_last_checked_content_tracker.json'));
-
-	setImagesDirectoryPath(path.join(getDataDirectoryPath(), 'images'));
-	setVideosDirectoryPath(path.join(getDataDirectoryPath(), 'media/videos'));
-	setDatabaseDirectoryPath(path.join(getDataDirectoryPath(), 'db'));
-    setDatabaseFilePath(path.join(getDatabaseDirectoryPath(), 'node_db.sqlite'));
-	setCertificatesDirectoryPath(path.join(getDataDirectoryPath(), 'certificates'));
-
-	fs.mkdirSync(getImagesDirectoryPath(), { recursive: true });
-	fs.mkdirSync(getVideosDirectoryPath(), { recursive: true });
-	fs.mkdirSync(getDatabaseDirectoryPath(), { recursive: true });
-	fs.mkdirSync(getCertificatesDirectoryPath(), { recursive: true });
-	
 	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
 
 	setIsDeveloperMode(config.isDeveloperMode);
@@ -436,6 +420,36 @@ function loadConfig() {
 	setMoarTubeAliaserHttpProtocol(config.aliaserConfig.httpProtocol);
 	setMoarTubeAliaserIp(config.aliaserConfig.host);
 	setMoarTubeAliaserPort(config.aliaserConfig.port);
+
+	setPublicDirectoryPath(path.join(__dirname, 'public'));
+	setViewsDirectoryPath(path.join(getPublicDirectoryPath(), 'views'));
+
+	if(getIsDockerEnvironment()) {
+		setDataDirectoryPath('/data');
+	}
+	else {
+		if(getIsDeveloperMode()) {
+			setDataDirectoryPath(path.join(__dirname, 'data'));
+		}
+		else {
+			setDataDirectoryPath(discoverDataDirectoryPath());
+		}
+	}
+
+	setNodeSettingsPath(path.join(getDataDirectoryPath(), '_node_settings.json'));
+	setLastCheckedContentTrackerPath(path.join(getDataDirectoryPath(), '_last_checked_content_tracker.json'));
+
+	setImagesDirectoryPath(path.join(getDataDirectoryPath(), 'images'));
+	setVideosDirectoryPath(path.join(getDataDirectoryPath(), 'media/videos'));
+	setDatabaseDirectoryPath(path.join(getDataDirectoryPath(), 'db'));
+	setCertificatesDirectoryPath(path.join(getDataDirectoryPath(), 'certificates'));
+
+	setDatabaseFilePath(path.join(getDatabaseDirectoryPath(), 'node_db.sqlite'));
+
+	fs.mkdirSync(getImagesDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getVideosDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getDatabaseDirectoryPath(), { recursive: true });
+	fs.mkdirSync(getCertificatesDirectoryPath(), { recursive: true });
 	
 	if(!fs.existsSync(getNodeSettingsPath())) {
 		const nodeSettings = {
