@@ -243,10 +243,6 @@ function videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, 
                     const hlsVideoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
                     const masterManifestFilePath = path.join(hlsVideoDirectoryPath, '/manifest-master.m3u8');
                     
-                    if(!fs.existsSync(masterManifestFilePath)) {
-                        updateHlsVideoMasterManifestFile(videoId);
-                    }
-
                     const nodeSettings = getNodeSettings();
 
                     if(nodeSettings.isCloudflareIntegrationEnabled) {
@@ -276,13 +272,21 @@ function videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, 
                             else {
                                 fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
                             }
+
+                            if(!fs.existsSync(masterManifestFilePath)) {
+                                updateHlsVideoMasterManifestFile(videoId);
+                            }
                         })
                         .catch(error => {
                             logDebugMessageToConsole(null, error, new Error().stack);
                         });
                     }
                     else {
-                        fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
+                        fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new);
+
+                        if(!fs.existsSync(masterManifestFilePath)) {
+                            updateHlsVideoMasterManifestFile(videoId);
+                        }
                     }
                 }
                 catch(error) {
