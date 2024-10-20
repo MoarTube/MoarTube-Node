@@ -176,6 +176,8 @@ bash <(wget -O - https://www.moartube.com/bash/install/node)
 
 The default login credentials for your node are below. Be sure to change these upon logging in.
 
+By default, MoarTube Node listens on port 80.
+
 **username**: admin<br/>**password**: admin
 
 ### Cloudflare
