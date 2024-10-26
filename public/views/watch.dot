@@ -362,6 +362,19 @@
 				width: unset;
 			}
 
+			.video-js {
+				background-color: unset;
+			}
+
+			.video-player-initialize-success {
+				background-color: #f9f9f9;
+			}
+
+			.video-player-initialize-fail {
+				color: white;
+				background-color: black;
+			}
+
 			@media (min-width: 0px) {
 				.container-fluid {
 					width: 100%;
@@ -899,7 +912,7 @@ body {
 			<div class="row gutters"> 
 				<div id="video-comments-outer" class="col-12 col-lg-9 p-0">
 					<div id="video-comments-inner">
-						<div id="video-player-container" class="ratio ratio-16x9 d-flex align-items-center justify-content-center" style="background: black; color: white;">
+						<div id="video-player-container" class="ratio ratio-16x9 d-flex align-items-center justify-content-center video-player-initialize-fail">
 							<div id="mtp-video-overlay" class="ratio ratio-16x9 hidden-elem" style="position: absolute; z-index: 9;width: 100%;" role="button">
 								<div id="big-play-button-poster-container" class="ratio ratio-16x9">
 									<button class="mtp-button mtp-large-play-button">
@@ -1553,6 +1566,8 @@ body {
 				}
 				
 				function initializeVideoJsPlayer() {
+					$('#video-player-container').removeClass('video-player-initialize-fail').addClass('video-player-initialize-success');
+
 					window.videojs.log.level("off");
 					
 					$("#video-player").attr("controls", true);
