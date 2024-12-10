@@ -398,8 +398,16 @@ else {
 }
 
 function discoverDataDirectoryPath() {
-	const dataDirectory = process.env.APPDATA || (process.platform == 'darwin' ? process.env.HOME + '/Library/Preferences' : process.env.HOME + '/.local/share');
-	const dataDirectoryPath = path.join(dataDirectory, 'moartube-node');
+	let dataDirectoryPath;
+
+	if(getIsDockerEnvironment()) {
+		dataDirectoryPath = '/data';
+	}
+	else {
+		const dataDirectory = process.env.APPDATA || (process.platform == 'darwin' ? process.env.HOME + '/Library/Preferences' : process.env.HOME + '/.local/share');
+
+		dataDirectoryPath = path.join(dataDirectory, 'moartube-node');
+	}
 
 	return dataDirectoryPath;
 }
@@ -425,7 +433,7 @@ function loadConfig() {
 	setViewsDirectoryPath(path.join(getPublicDirectoryPath(), 'views'));
 
 	if(getIsDockerEnvironment()) {
-		setDataDirectoryPath('/data');
+		setDataDirectoryPath(discoverDataDirectoryPath());
 	}
 	else {
 		if(getIsDeveloperMode()) {
