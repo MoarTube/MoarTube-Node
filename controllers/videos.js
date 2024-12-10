@@ -48,8 +48,8 @@ function import_POST(title, description, tags) {
             fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/adaptive'), { recursive: true });
             fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/progressive'), { recursive: true });
             
-            const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-            const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, meta, creationTimestamp];
+            const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+            const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 1, 1, 1, 1, 1, meta, creationTimestamp];
             
             submitDatabaseWriteJob(query, parameters, function(isError) {
                 if(isError) {
@@ -1180,8 +1180,13 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
 
             try {
                 const nodeSettings = getNodeSettings();
-                
-                if(nodeSettings.isCloudflareTurnstileEnabled) {
+
+                if(!nodeSettings.isCommentsEnabled) {
+                    errorMessage = 'commenting is currently disabled for this node';
+
+                    canProceed = false;
+                }
+                else if(nodeSettings.isCloudflareTurnstileEnabled) {
                     if(cloudflareTurnstileToken.length === 0) {
                         errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
 
@@ -1311,8 +1316,13 @@ async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareCon
 
             try {
                 const nodeSettings = getNodeSettings();
-                
-                if(nodeSettings.isCloudflareTurnstileEnabled) {
+
+                if(!nodeSettings.isLikesEnabled) {
+                    errorMessage = 'liking is currently disabled for this node';
+
+                    canProceed = false;
+                }
+                else if(nodeSettings.isCloudflareTurnstileEnabled) {
                     if(cloudflareTurnstileToken.length === 0) {
                         errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
 
@@ -1375,7 +1385,12 @@ async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflare
             try {
                 const nodeSettings = getNodeSettings();
                 
-                if(nodeSettings.isCloudflareTurnstileEnabled) {
+                if(!nodeSettings.isDislikesEnabled) {
+                    errorMessage = 'disliking is currently disabled for this node';
+
+                    canProceed = false;
+                }
+                else if(nodeSettings.isCloudflareTurnstileEnabled) {
                     if(cloudflareTurnstileToken.length === 0) {
                         errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
 
@@ -1497,8 +1512,13 @@ async function videoIdReport_POST(videoId, email, reportType, message, cloudflar
 
             try {
                 const nodeSettings = getNodeSettings();
-                
-                if(nodeSettings.isCloudflareTurnstileEnabled) {
+
+                if(!nodeSettings.isReportsEnabled) {
+                    errorMessage = 'reporting is currently disabled for this node';
+
+                    canProceed = false;
+                }
+                else if(nodeSettings.isCloudflareTurnstileEnabled) {
                     if(cloudflareTurnstileToken.length === 0) {
                         errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
 

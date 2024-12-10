@@ -58,7 +58,7 @@ if(cluster.isMaster) {
 	});
 
 	logDebugMessageToConsole('starting MoarTube Node', null, null);
-	logDebugMessageToConsole('moartube-node directory: ' + discoverDataDirectoryPath(), null, null);
+	logDebugMessageToConsole('configured MoarTube Node to use data directory path: ' + discoverDataDirectoryPath(), null, null);
 
 	provisionSqliteDatabase()
 	.then(async () => {
@@ -471,7 +471,12 @@ function loadConfig() {
 			"cloudflareGlobalApiKey":"",
 			"isCloudflareTurnstileEnabled":false,
 			"cloudflareTurnstileSiteKey":"",
-			"cloudflareTurnstileSecretKey":""
+			"cloudflareTurnstileSecretKey":"",
+			"isCommentsEnabled":true,
+			"isLikesEnabled":true,
+			"isDislikesEnabled":true,
+			"isReportsEnabled":true,
+			"isLiveChatEnabled":true
 		};
 
 		setNodeSettings(nodeSettings);

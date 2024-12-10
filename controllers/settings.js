@@ -1,18 +1,16 @@
 const fs = require('fs');
 const path = require('path');
-const multer = require('multer');
 const bcryptjs = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
 const packageJson = require('../package.json');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { getImagesDirectoryPath, getCertificatesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
+const { getImagesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
 } = require('../utils/paths');
-const { getAuthenticationStatus, getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast
+const { getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast
 } = require('../utils/helpers');
 const { 
-    isNodeNameValid, isNodeAboutValid, isNodeIdValid, isBooleanStringValid, isUsernameValid, isPasswordValid, 
-    isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid
+    isNodeNameValid, isNodeAboutValid, isNodeIdValid, isUsernameValid, isPasswordValid, 
+    isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid, isBooleanValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
 const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
@@ -388,6 +386,81 @@ function cloudflareTurnstileConfigureClear_POST() {
     return {isError: false};
 }
 
+function commentsToggle_POST(isCommentsEnabled) {
+    if(isBooleanValid(isCommentsEnabled)) {
+        const nodeSettings = getNodeSettings();
+
+        nodeSettings.isCommentsEnabled = isCommentsEnabled;
+
+        setNodeSettings(nodeSettings);
+
+        return {isError: false};
+    }
+    else {
+        return {isError: true, message: 'invalid parameters'};
+    }
+}
+
+function likesToggle_POST(isLikesEnabled) {
+    if(isBooleanValid(isLikesEnabled)) {
+        const nodeSettings = getNodeSettings();
+
+        nodeSettings.isLikesEnabled = isLikesEnabled;
+
+        setNodeSettings(nodeSettings);
+
+        return {isError: false};
+    }
+    else {
+        return {isError: true, message: 'invalid parameters'};
+    }
+}
+
+function dislikesToggle_POST(isDislikesEnabled) {
+    if(isBooleanValid(isDislikesEnabled)) {
+        const nodeSettings = getNodeSettings();
+
+        nodeSettings.isDislikesEnabled = isDislikesEnabled;
+
+        setNodeSettings(nodeSettings);
+
+        return {isError: false};
+    }
+    else {
+        return {isError: true, message: 'invalid parameters'};
+    }
+}
+
+function reportsToggle_POST(isReportsEnabled) {
+    if(isBooleanValid(isReportsEnabled)) {
+        const nodeSettings = getNodeSettings();
+
+        nodeSettings.isReportsEnabled = isReportsEnabled;
+
+        setNodeSettings(nodeSettings);
+
+        return {isError: false};
+    }
+    else {
+        return {isError: true, message: 'invalid parameters'};
+    }
+}
+
+function liveChatToggle_POST(isLiveChatEnabled) {
+    if(isBooleanValid(isLiveChatEnabled)) {
+        const nodeSettings = getNodeSettings();
+
+        nodeSettings.isLiveChatEnabled = isLiveChatEnabled;
+
+        setNodeSettings(nodeSettings);
+
+        return {isError: false};
+    }
+    else {
+        return {isError: true, message: 'invalid parameters'};
+    }
+}
+
 function account_POST(username, password) {
     if(isUsernameValid(username) && isPasswordValid(password)) {
         const usernameHash = encodeURIComponent(Buffer.from(bcryptjs.hashSync(username, 10), 'utf8').toString('base64'));
@@ -487,6 +560,11 @@ module.exports = {
     cloudflareTurnstileConfigure_POST,
     cloudflareTurnstileConfigureClear_POST,
     cloudflareClear_POST,
+    commentsToggle_POST,
+    likesToggle_POST,
+    dislikesToggle_POST,
+    reportsToggle_POST,
+    liveChatToggle_POST,
     account_POST,
     networkInternal_POST,
     networkExternal_POST

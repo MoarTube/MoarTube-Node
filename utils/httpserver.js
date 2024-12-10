@@ -260,8 +260,13 @@ function initializeHttpServer(value) {
 
                                         try {
                                             const nodeSettings = getNodeSettings();
-                                            
-                                            if(nodeSettings.isCloudflareTurnstileEnabled) {
+
+                                            if(!nodeSettings.isLiveChatEnabled) {
+                                                errorMessage = 'live chat is currently disabled for this node';
+                                                
+                                                canProceed = false;
+                                            }
+                                            else if(nodeSettings.isCloudflareTurnstileEnabled) {
                                                 if(cloudflareTurnstileToken.length === 0) {
                                                     errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
 

@@ -366,11 +366,11 @@
 				background-color: unset;
 			}
 
-			.video-player-initialize-success {
+			.video-player-background-white {
 				background-color: #f9f9f9;
 			}
 
-			.video-player-initialize-fail {
+			.video-player-background-black {
 				color: white;
 				background-color: black;
 			}
@@ -905,14 +905,14 @@ body {
 				</div>
 			</div>
 		</nav>
-		<div id="theater-container" class="container-fluid p-0 mt-2 gutters" style="width: 100%; background: black;">
+		<div id="theater-container" class="container-fluid p-0 mt-2 gutters w-100">
 		
 		</div>
 		<div id="main-container" class="container-fluid mt-2 gutters">
 			<div class="row gutters"> 
 				<div id="video-comments-outer" class="col-12 col-lg-9 p-0">
 					<div id="video-comments-inner">
-						<div id="video-player-container" class="ratio ratio-16x9 d-flex align-items-center justify-content-center video-player-initialize-fail">
+						<div id="video-player-container" class="ratio ratio-16x9 d-flex align-items-center justify-content-center video-player-background-black">
 							<div id="mtp-video-overlay" class="ratio ratio-16x9 hidden-elem" style="position: absolute; z-index: 9;width: 100%;" role="button">
 								<div id="big-play-button-poster-container" class="ratio ratio-16x9">
 									<button class="mtp-button mtp-large-play-button">
@@ -1566,7 +1566,7 @@ body {
 				}
 				
 				function initializeVideoJsPlayer() {
-					$('#video-player-container').removeClass('video-player-initialize-fail').addClass('video-player-initialize-success');
+					$('#video-player-container').removeClass('video-player-background-black').addClass('video-player-background-white');
 
 					window.videojs.log.level("off");
 					
@@ -1653,24 +1653,31 @@ body {
 						const theaterModeButton = player.getChild('ControlBar').addChild('button', {
 							clickHandler: function(event) {
 								event[0].stopPropagation();
+
+								const videoPlayerContainer = $('#video-player-container');
+								const videoPlayer = $('#video-player');
 								
 								if(isShowingTheaterMode) {
 									isShowingTheaterMode = false;
 									
 									theaterModeButton.el().innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
 									
-									$('#video-player-container').addClass('ratio').removeClass('position-relative');
-									$('#video-player').removeClass('video-player-theater-mode').removeClass('vjs-fluid');
-									$("#video-player-container").prependTo("#video-comments-inner");
+									$(videoPlayerContainer).removeClass('video-player-background-black').addClass('video-player-background-white');
+
+									$(videoPlayerContainer).addClass('ratio').removeClass('position-relative');
+									$(videoPlayer).removeClass('video-player-theater-mode').removeClass('vjs-fluid');
+									$(videoPlayerContainer).prependTo("#video-comments-inner");
 								}
 								else {
 									isShowingTheaterMode = true;
 									
 									theaterModeButton.el().innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 26,13 0,10 -16,0 0,-10 z m -14,2 12,0 0,6 -12,0 0,-6 z" fill="#fff" fill-rule="evenodd"></path></svg>';
 									
-									$('#video-player-container').removeClass('ratio').addClass('position-relative');
-									$('#video-player').addClass('video-player-theater-mode').addClass('vjs-fluid');
-									$("#video-player-container").appendTo("#theater-container");
+									$(videoPlayerContainer).removeClass('video-player-background-white').addClass('video-player-background-black');
+
+									$(videoPlayerContainer).removeClass('ratio').addClass('position-relative');
+									$(videoPlayer).addClass('video-player-theater-mode').addClass('vjs-fluid');
+									$(videoPlayerContainer).appendTo("#theater-container");
 								}
 							}
 						});
@@ -2921,6 +2928,8 @@ body {
 						$('#video-like-count').text(likeCountParsed);
 					})
 					.catch(error => {
+						$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+						
 						showAlert(true, error);
 					})
 					.finally(() => {
@@ -2950,6 +2959,8 @@ body {
 						$('#video-dislike-count').text(dislikeCountParsed);
 					})
 					.catch(error => {
+						$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+						
 						showAlert(true, error);
 					})
 					.finally(() => {
@@ -2981,7 +2992,7 @@ body {
 						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/like', data: JSON.stringify({ cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
 						.done(function (data, textStatus, xhr) {
 							if(data.isError) {
-								showAlert(true, error);
+								showAlert(true, data.message);
 
 								reject(data.message);
 							}
@@ -3010,7 +3021,7 @@ body {
 						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/dislike', data: JSON.stringify({ cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
 						.done(function (data, textStatus, xhr) {
 							if(data.isError) {
-								showAlert(true, error);
+								showAlert(true, data.message);
 
 								reject(data.message);
 							}
@@ -3099,8 +3110,7 @@ body {
 							  <input id="report-other" class="form-check-input" type="radio" name="reportTypeRadioButton" value="other">\
 							</div>\
 						</div>\
-					</div>\
-					<span id="report-error-message"></span>';
+					</div>';
 				
 				Swal.fire({
 					title: modalTitle,
@@ -3136,18 +3146,14 @@ body {
 							const data = await response.json();
 
 							if(data.isError) {
-								$('#report-error-message').text(data.message);
-
-								Swal.hideLoading();
+								showAlert(true, data.message);
 							}
 							else {
 								Swal.close();
 							}
 						}
 						catch(error) {
-							$('#report-error-message').text(error);
-
-							Swal.hideLoading();
+							showAlert(true, error);
 						}
 					}
 				});

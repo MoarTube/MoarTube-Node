@@ -3,7 +3,7 @@ const path = require('path');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath, getPublicDirectoryPath } = require('../utils/paths');
-const { getAuthenticationStatus, generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, deleteDirectoryRecursive } = require('../utils/helpers');
+const { generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, deleteDirectoryRecursive } = require('../utils/helpers');
 const { 
     isTitleValid, isDescriptionValid, isTagsValid, isPortValid, isVideoIdValid, isAdaptiveFormatValid, isResolutionValid, isSegmentNameValid, isBooleanValid, 
     isNetworkAddressValid, isChatHistoryLimitValid 
@@ -133,8 +133,8 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                     }
                 );
 
-                query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-                parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, isRecordingStreamRemotely, isRecordingStreamLocally, 1, 0, 0, 0, 0, 0, meta, creationTimestamp];
+                query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+                parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, isRecordingStreamRemotely, isRecordingStreamLocally, 1, 0, 0, 0, 0, 0, 0, 0, '', 1, 1, 1, 1, 1, meta, creationTimestamp];
 
                 performDatabaseWriteJob();
             }

@@ -6,9 +6,10 @@ const { v4: uuidv4 } = require('uuid');
 
 const { 
     root_GET, avatar_GET, avatar_POST, banner_GET, banner_POST, personalizeNodeName_POST, personalizeNodeAbout_POST, personalizeNodeId_POST, secure_POST, account_POST, 
-    networkInternal_POST, networkExternal_POST, cloudflareConfigure_POST, cloudflareClear_POST, cloudflareTurnstileConfigure_POST, cloudflareTurnstileConfigureClear_POST
+    networkInternal_POST, networkExternal_POST, cloudflareConfigure_POST, cloudflareClear_POST, cloudflareTurnstileConfigure_POST, cloudflareTurnstileConfigureClear_POST,
+    commentsToggle_POST, likesToggle_POST, dislikesToggle_POST, reportsToggle_POST, liveChatToggle_POST
 } = require('../controllers/settings');
-const { getImagesDirectoryPath, getCertificatesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
+const { getImagesDirectoryPath, getCertificatesDirectoryPath
 } = require('../utils/paths');
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getAuthenticationStatus } = require('../utils/helpers');
@@ -529,6 +530,156 @@ router.post('/cloudflare/turnstile/clear', (req, res) => {
             catch(error) {
                 logDebugMessageToConsole(null, error, new Error().stack);
             
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+});
+
+router.post('/comments/toggle', async (req, res) => {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            try {
+                const isCommentsEnabled = req.body.isCommentsEnabled;
+
+                const data = commentsToggle_POST(isCommentsEnabled);
+
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+});
+
+router.post('/likes/toggle', async (req, res) => {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            try {
+                const isLikesEnabled = req.body.isLikesEnabled;
+
+                const data = likesToggle_POST(isLikesEnabled);
+
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+});
+
+router.post('/dislikes/toggle', async (req, res) => {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            try {
+                const isDislikesEnabled = req.body.isDislikesEnabled;
+
+                const data = dislikesToggle_POST(isDislikesEnabled);
+
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+});
+
+router.post('/reports/toggle', async (req, res) => {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            try {
+                const isReportsEnabled = req.body.isReportsEnabled;
+
+                const data = reportsToggle_POST(isReportsEnabled);
+
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+});
+
+router.post('/liveChat/toggle', async (req, res) => {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            try {
+                const isLiveChatEnabled = req.body.isLiveChatEnabled;
+
+                const data = liveChatToggle_POST(isLiveChatEnabled);
+
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+
                 res.send({isError: true, message: 'error communicating with the MoarTube node'});
             }
         }
