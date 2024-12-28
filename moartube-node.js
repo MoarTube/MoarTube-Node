@@ -21,7 +21,7 @@ const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, se
 	setVideosDirectoryPath, setDatabaseDirectoryPath, setDatabaseFilePath, setCertificatesDirectoryPath, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
 	getCertificatesDirectoryPath, getNodeSettingsPath, setViewsDirectoryPath, getViewsDirectoryPath, setLastCheckedContentTrackerPath, getLastCheckedContentTrackerPath
 } = require('./utils/paths');
-const { provisionSqliteDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL } = require('./utils/database');
+const { provisionDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL } = require('./utils/database');
 const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = require('./utils/httpserver');
 const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
 const { cloudflare_purgeWatchPages, cloudflare_purgeNodePage } = require('./utils/cloudflare-communications');
@@ -60,7 +60,7 @@ if(cluster.isMaster) {
 	logDebugMessageToConsole('starting MoarTube Node', null, null);
 	logDebugMessageToConsole('configured MoarTube Node to use data directory path: ' + discoverDataDirectoryPath(), null, null);
 
-	provisionSqliteDatabase()
+	provisionDatabase()
 	.then(async () => {
 		const mutex = new Mutex();
 
@@ -417,7 +417,7 @@ function loadConfig() {
 
 	setIsDockerEnvironment(process.env.IS_DOCKER_ENVIRONMENT === 'true');
 
-	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
+	const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config_test.json'), 'utf8'));
 
 	setIsDeveloperMode(config.isDeveloperMode);
 
@@ -484,7 +484,8 @@ function loadConfig() {
 			"isLikesEnabled":true,
 			"isDislikesEnabled":true,
 			"isReportsEnabled":true,
-			"isLiveChatEnabled":true
+			"isLiveChatEnabled":true,
+			"databaseDialect":"sqlite"
 		};
 
 		setNodeSettings(nodeSettings);
