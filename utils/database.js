@@ -32,7 +32,7 @@ function provisionDatabase() {
 
         if (sequelize.getDialect() === 'sqlite') {
             try {
-                logDebugMessageToConsole('performing SQLite database VACUUM', null, null);
+                logDebugMessageToConsole(`performing ${sequelize.getDialect()} database vacuum`, null, null);
 
                 /* 
                 Rebuilds the database file, reclaiming free space and defragmenting it. 
@@ -40,13 +40,19 @@ function provisionDatabase() {
                 */
                 await sequelize.query('VACUUM');
 
-                logDebugMessageToConsole('performed SQLite database VACUUM', null, null);
+                logDebugMessageToConsole(`performed ${sequelize.getDialect()} database vacuum`, null, null);
+
+                logDebugMessageToConsole(`enabling ${sequelize.getDialect()} WAL mode`, null, null);
+
+                await sequelize.query('PRAGMA journal_mode=WAL');
+
+                logDebugMessageToConsole(`enabled ${sequelize.getDialect()} WAL mode`, null, null);
 
             }
             catch (error) {
                 logDebugMessageToConsole(null, error, new Error().stack);
 
-                throw new Error('SQLite database vacuum failed');
+                throw new Error(`${sequelize.getDialect()} database provisioning failed`);
             }
         }
 
@@ -88,6 +94,16 @@ function provisionDatabase() {
         }
 
         logDebugMessageToConsole('provisioned ' + sequelize.getDialect() + ' database', null, null);
+
+        resolve();
+    });
+}
+
+function openDatabase() {
+    return new Promise(async function(resolve, reject) {
+        sequelize = require('../database/sequelize.js');
+
+        await sequelize.sync({ alter: true });
 
         resolve();
     });
@@ -163,16 +179,6 @@ function performDatabaseReadJob_GET(query, parameters) {
 
             reject(error);
         }
-    });
-}
-
-function openDatabase() {
-    return new Promise(async function(resolve, reject) {
-        sequelize = require('../database/sequelize.js');
-
-        await sequelize.sync({ alter: true });
-
-        resolve();
     });
 }
 

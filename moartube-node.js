@@ -58,7 +58,8 @@ if(cluster.isMaster) {
 	});
 
 	logDebugMessageToConsole('starting MoarTube Node', null, null);
-	logDebugMessageToConsole('configured MoarTube Node to use data directory path: ' + discoverDataDirectoryPath(), null, null);
+	
+	logDebugMessageToConsole('configured MoarTube Node to use data directory path: ' + getDataDirectoryPath(), null, null);
 
 	provisionDatabase()
 	.then(async () => {
