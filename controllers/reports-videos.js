@@ -5,7 +5,7 @@ const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWr
 
 function reportsVideos_GET() {
     return new Promise(function(resolve, reject) {
-        performDatabaseReadJob_ALL('SELECT * FROM videoReports', [])
+        performDatabaseReadJob_ALL('SELECT * FROM videoreports', [])
         .then(reports => {
             resolve({isError: false, reports: reports});
         })
@@ -18,7 +18,7 @@ function reportsVideos_GET() {
 function reportsVideosArchive_POST(reportId) {
     return new Promise(function(resolve, reject) {
         if(isReportIdValid(reportId)) {
-            performDatabaseReadJob_GET('SELECT * FROM videoReports WHERE report_id = ?', [reportId])
+            performDatabaseReadJob_GET('SELECT * FROM videoreports WHERE report_id = ?', [reportId])
             .then(report => {
                 if(report != null) {
                     const reportId = report.report_id;
@@ -29,12 +29,12 @@ function reportsVideosArchive_POST(reportId) {
                     const type = report.type;
                     const message = report.message;
                     
-                    submitDatabaseWriteJob('INSERT INTO videoReportsArchive(report_id, timestamp, video_timestamp, video_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?)', [reportId, timestamp, videoTimestamp, videoId, email, type, message], function(isError) {
+                    submitDatabaseWriteJob('INSERT INTO videoreportsarchives(report_id, timestamp, video_timestamp, video_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?)', [reportId, timestamp, videoTimestamp, videoId, email, type, message], function(isError) {
                         if(isError) {
                             resolve({isError: true, message: 'error communicating with the MoarTube node'});
                         }
                         else {
-                            submitDatabaseWriteJob('DELETE FROM videoReports WHERE report_id = ?', [reportId], function(isError) {
+                            submitDatabaseWriteJob('DELETE FROM videoreports WHERE report_id = ?', [reportId], function(isError) {
                                 if(isError) {
                                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                                 }
@@ -64,7 +64,7 @@ function reportsVideosArchive_POST(reportId) {
 function reportsVideosReportIdDelete_DELETE(reportId) {
     return new Promise(function(resolve, reject) {
         if(isReportIdValid(reportId)) {
-            submitDatabaseWriteJob('DELETE FROM videoReports WHERE report_id = ?', [reportId], function(isError) {
+            submitDatabaseWriteJob('DELETE FROM videoreports WHERE report_id = ?', [reportId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }

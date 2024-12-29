@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../sequelize');
 
-const CryptoWalletAddresses = sequelize.define('CryptoWalletAddresses', {
+const CryptoWalletAddresses = sequelize.define('CryptoWalletAddress', {
     wallet_address_id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -28,7 +28,7 @@ const CryptoWalletAddresses = sequelize.define('CryptoWalletAddresses', {
         allowNull: false
     }
 }, {
-    tableName: 'cryptoWalletAddresses',
+    tableName: 'cryptowalletaddresses',
     timestamps: false
 });
 

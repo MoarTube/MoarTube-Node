@@ -35,12 +35,12 @@ function search_GET(searchTerm, sortTerm, tagTerm) {
             let params;
 
             if(searchTerm.length === 0) {
-                query = 'SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1)';
-                params = [];
+                query = 'SELECT * FROM videos WHERE (is_published = ? OR is_live = ?)';
+                params = [true, true];
             }
             else {
-                query = 'SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) AND title LIKE ?';
-                params = ['%' + searchTerm + '%'];
+                query = 'SELECT * FROM videos WHERE (is_published = ? OR is_live = ?) AND title LIKE ?';
+                params = [true, true, '%' + searchTerm + '%'];
             }
 
             performDatabaseReadJob_ALL(query, params)
@@ -119,9 +119,9 @@ async function newContentCounts_GET() {
     const lastCheckedCommentReportsTimestamp = lastCheckedContentTracker.lastCheckedCommentReportsTimestamp;
 
     try {
-        const newCommentsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newCommentsCount FROM comments WHERE timestamp > ?', [lastCheckedCommentsTimestamp])).newCommentsCount;
-        const newVideoReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newVideoReportsCount FROM videoReports WHERE timestamp > ?', [lastCheckedVideoReportsTimestamp])).newVideoReportsCount;
-        const newCommentReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS newCommentReportsCount FROM commentReports WHERE timestamp > ?', [lastCheckedCommentReportsTimestamp])).newCommentReportsCount;
+        const newCommentsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS "newCommentsCount" FROM comments WHERE timestamp > ?', [lastCheckedCommentsTimestamp])).newCommentsCount;
+        const newVideoReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS "newVideoReportsCount" FROM videoreports WHERE timestamp > ?', [lastCheckedVideoReportsTimestamp])).newVideoReportsCount;
+        const newCommentReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS "newCommentReportsCount" FROM commentreports WHERE timestamp > ?', [lastCheckedCommentReportsTimestamp])).newCommentReportsCount;
 
         return {isError: false, newContentCounts: {newCommentsCount: newCommentsCount, newVideoReportsCount: newVideoReportsCount, newCommentReportsCount: newCommentReportsCount}};
     }

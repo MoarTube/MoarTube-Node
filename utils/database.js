@@ -59,12 +59,11 @@ function provisionDatabase() {
         await performDatabaseWriteJob('UPDATE videos SET is_streamed = ? WHERE is_streaming = ?', [true, true]);
         await performDatabaseWriteJob('UPDATE videos SET is_importing = ?, is_publishing = ?, is_streaming = ?', [false, false, false]);
 
-        await performDatabaseWriteJob('DELETE FROM liveChatMessages', []);
+        await performDatabaseWriteJob('DELETE FROM livechatmessages', []);
 
-        const { endStreamedHlsManifestFiles, removeOrphanedVideoDirectories } = require('./filesystem');
+        const { endStreamedHlsManifestFiles } = require('./filesystem');
 
         await endStreamedHlsManifestFiles();
-        await removeOrphanedVideoDirectories();
 
         if (!didLinksTableExist) {
             const timestamp = Date.now();
@@ -170,7 +169,7 @@ function performDatabaseReadJob_GET(query, parameters) {
         try {
             const rows = await sequelize.query(query, { replacements: parameters });
 
-            const row = rows.length === 1 ? rows[0] : null;
+            const row = rows[0].length === 1 ? rows[0][0] : null;
 
             resolve(row);
         }

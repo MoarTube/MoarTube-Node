@@ -36,7 +36,7 @@ const CommentReport = sequelize.define('CommentReport', {
         allowNull: false
     },
 }, {
-    tableName: 'commentReports',
+    tableName: 'commentreports',
     timestamps: false
 });
 

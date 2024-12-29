@@ -5,7 +5,7 @@ const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWr
 
 function reportsComments_GET() {
     return new Promise(function(resolve, reject) {
-        performDatabaseReadJob_ALL('SELECT * FROM commentReports', [])
+        performDatabaseReadJob_ALL('SELECT * FROM commentreports', [])
         .then(rows => {
             resolve({isError: false, reports: rows});
         })
@@ -18,7 +18,7 @@ function reportsComments_GET() {
 function reportsCommentsArchive_POST(reportId) {
     return new Promise(function(resolve, reject) {
         if(isReportIdValid(reportId)) {
-            performDatabaseReadJob_GET('SELECT * FROM commentReports WHERE report_id = ?', [reportId])
+            performDatabaseReadJob_GET('SELECT * FROM commentreports WHERE report_id = ?', [reportId])
             .then(report => {
                 if(report != null) {
                     const reportId = report.report_id;
@@ -30,12 +30,12 @@ function reportsCommentsArchive_POST(reportId) {
                     const type = report.type;
                     const message = report.message;
                     
-                    submitDatabaseWriteJob('INSERT INTO commentReportsArchive(report_id, timestamp, comment_timestamp, video_id, comment_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [reportId, timestamp, commentTimestamp, videoId, commentId, email, type, message], function(isError) {
+                    submitDatabaseWriteJob('INSERT INTO commentreportsarchives(report_id, timestamp, comment_timestamp, video_id, comment_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [reportId, timestamp, commentTimestamp, videoId, commentId, email, type, message], function(isError) {
                         if(isError) {
                             reject();
                         }
                         else {
-                            submitDatabaseWriteJob('DELETE FROM commentReports WHERE report_id = ?', [reportId], function(isError) {
+                            submitDatabaseWriteJob('DELETE FROM commentreports WHERE report_id = ?', [reportId], function(isError) {
                                 if(isError) {
                                     reject();
                                 }
@@ -63,7 +63,7 @@ function reportsCommentsArchive_POST(reportId) {
 function reportsCommentsReportIdDelete_DELETE(reportId) {
     return new Promise(function(resolve, reject) {
         if(isReportIdValid(reportId)) {
-            submitDatabaseWriteJob('DELETE FROM commentReports WHERE report_id = ?', [reportId], function(isError) {
+            submitDatabaseWriteJob('DELETE FROM commentreports WHERE report_id = ?', [reportId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }

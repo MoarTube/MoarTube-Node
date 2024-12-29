@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../sequelize');
 
-const LiveChatMessages = sequelize.define('LiveChatMessages', {
+const LiveChatMessages = sequelize.define('LiveChatMessage', {
     chat_message_id: {
         type: DataTypes.INTEGER,
         primaryKey: true,
@@ -28,7 +28,7 @@ const LiveChatMessages = sequelize.define('LiveChatMessages', {
         allowNull: false
     }
 }, {
-    tableName: 'liveChatMessages',
+    tableName: 'livechatmessages',
     timestamps: false
 });
 

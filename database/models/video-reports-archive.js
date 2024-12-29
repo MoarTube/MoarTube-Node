@@ -36,7 +36,7 @@ const VideoReportsArchive = sequelize.define('VideoReportsArchive', {
         allowNull: false
     }
 }, {
-    tableName: 'videoReportsArchive',
+    tableName: 'videoreportsarchives',
     timestamps: false
 });
 

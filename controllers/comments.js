@@ -106,7 +106,7 @@ async function commentIdReport_POST(commentId, email, reportType, message, cloud
                         const videoId = row.video_id;
                         const commentTimestamp = row.timestamp;
                         
-                        submitDatabaseWriteJob('INSERT INTO commentReports(timestamp, comment_timestamp, video_id, comment_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?)', [Date.now(), commentTimestamp, videoId, commentId, email, reportType, message], function(isError) {
+                        submitDatabaseWriteJob('INSERT INTO commentreports(timestamp, comment_timestamp, video_id, comment_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?)', [Date.now(), commentTimestamp, videoId, commentId, email, reportType, message], function(isError) {
                             if(isError) {
                                 resolve({isError: true, message: 'error communicating with the MoarTube node'});
                             }

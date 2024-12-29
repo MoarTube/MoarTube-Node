@@ -60,9 +60,6 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                 await deleteDirectoryRecursive(path.join(getVideosDirectoryPath(), videoId));
             }
 
-            isRecordingStreamRemotely = isRecordingStreamRemotely ? 1 : 0;
-            isRecordingStreamLocally = isRecordingStreamLocally ? 1 : 0;
-
             const tagsSanitized = sanitizeTagsSpaces(tags);
 
             const publicImagesDirectory = path.join(getPublicDirectoryPath(), '/images');
@@ -103,7 +100,7 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                         meta = JSON.stringify(meta);
 
                         query = 'UPDATE videos SET title = ?, description = ?, tags = ?, length_seconds = ?, length_timestamp = ?, views = ?, comments = ?, likes = ?, dislikes = ?, bandwidth = ?, is_publishing = ?, is_published = ?, is_streaming = ?, is_streamed = ?, is_stream_recorded_remotely = ?, is_stream_recorded_locally = ?, is_error = ?, meta = ?, creation_timestamp = ? WHERE video_id = ?';
-                        parameters = [title, description, tags, 0, '', 0, 0, 0, 0, 0, 0, 0, 1, 0, isRecordingStreamRemotely, isRecordingStreamLocally, 0, meta, Date.now(), videoId];
+                        parameters = [title, description, tags, 0, '', 0, 0, 0, 0, 0, false, false, true, false, isRecordingStreamRemotely, isRecordingStreamLocally, false, meta, Date.now(), videoId];
 
                         performDatabaseWriteJob();
                     }
@@ -134,7 +131,7 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                 );
 
                 query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-                parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, isRecordingStreamRemotely, isRecordingStreamLocally, 1, 0, 0, 0, 0, 0, 0, 0, '', 1, 1, 1, 1, 1, meta, creationTimestamp];
+                parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, false, false, false, false, true, false, isRecordingStreamRemotely, isRecordingStreamLocally, true, false, false, false, false, false, false, false, '', true, true, true, true, true, meta, creationTimestamp];
 
                 performDatabaseWriteJob();
             }
@@ -202,7 +199,7 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
 function videoIdStop_POST(videoId) {
     return new Promise(function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
-            submitDatabaseWriteJob('UPDATE videos SET is_streaming = 0, is_streamed = 1, is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END WHERE video_id = ?', [videoId], async function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET is_streaming = ?, is_streamed = ?, is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [false, true, true, true, videoId], async function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
@@ -231,7 +228,7 @@ function videoIdStop_POST(videoId) {
                     .then(async video => {
                         if(video != null) {
                             if(video.is_stream_recorded_remotely) {
-                                submitDatabaseWriteJob('UPDATE videos SET is_published = 1 WHERE video_id = ?', [videoId], function(isError) {
+                                submitDatabaseWriteJob('UPDATE videos SET is_published = ? WHERE video_id = ?', [true, videoId], function(isError) {
                                     if(isError) {
                                         
                                     }
@@ -247,7 +244,7 @@ function videoIdStop_POST(videoId) {
                             }
                         }
 
-                        submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE video_id = ?', [videoId], function(isError) {
+                        submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE video_id = ?', [videoId], function(isError) {
                             if(isError) {
                                 
                             }
@@ -331,7 +328,7 @@ function videoIdChatSettings_POST(videoId, isChatHistoryEnabled, chatHistoryLimi
                         }
                         else {
                             if(!isChatHistoryEnabled) {
-                                submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE video_id = ?', [videoId], function(isError) {
+                                submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE video_id = ?', [videoId], function(isError) {
                                     if(isError) {
                                         
                                     }
@@ -341,7 +338,7 @@ function videoIdChatSettings_POST(videoId, isChatHistoryEnabled, chatHistoryLimi
                                 });
                             }
                             else if(chatHistoryLimit !== 0) {
-                                submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM liveChatMessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
+                                submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM livechatmessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
                                     if(isError) {
                                         
                                     }
@@ -372,7 +369,7 @@ function videoIdChatSettings_POST(videoId, isChatHistoryEnabled, chatHistoryLimi
 function videoIdChatHistory_GET(videoId) {
     return new Promise(function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
-            performDatabaseReadJob_ALL('SELECT * FROM liveChatMessages WHERE video_id = ?', [videoId])
+            performDatabaseReadJob_ALL('SELECT * FROM livechatmessages WHERE video_id = ?', [videoId])
             .then(chatHistory => {
                 resolve({isError: false, chatHistory: chatHistory});
             })

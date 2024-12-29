@@ -49,7 +49,7 @@ function import_POST(title, description, tags) {
             fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/progressive'), { recursive: true });
             
             const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-            const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '', 1, 1, 1, 1, 1, meta, creationTimestamp];
+            const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, '', true, true, true, true, true, meta, creationTimestamp];
             
             submitDatabaseWriteJob(query, parameters, function(isError) {
                 if(isError) {
@@ -103,7 +103,7 @@ function import_POST(title, description, tags) {
 function imported_POST(videoId) {
     return new Promise(async function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
-            submitDatabaseWriteJob('UPDATE videos SET is_importing = ?, is_imported = ? WHERE video_id = ?', [0, 1, videoId], function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET is_importing = ?, is_imported = ? WHERE video_id = ?', [false, true, videoId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
@@ -121,7 +121,7 @@ function imported_POST(videoId) {
 function videoIdImportingStop_POST(videoId) {
     return new Promise(async function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
-            submitDatabaseWriteJob('UPDATE videos SET is_importing = 0 WHERE video_id = ?', [videoId], function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET is_importing = ? WHERE video_id = ?', [false, videoId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
@@ -139,7 +139,7 @@ function videoIdImportingStop_POST(videoId) {
 function publishing_POST(videoId) {
     return new Promise(async function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
-            submitDatabaseWriteJob('UPDATE videos SET is_publishing = ? WHERE video_id = ?', [1, videoId], function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET is_publishing = ? WHERE video_id = ?', [true, videoId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
@@ -157,7 +157,7 @@ function publishing_POST(videoId) {
 function published_POST(videoId) {
     return new Promise(async function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
-            submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_published = ? WHERE video_id = ?', [0, 1, videoId], function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_published = ? WHERE video_id = ?', [false, true, videoId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
@@ -175,7 +175,7 @@ function published_POST(videoId) {
 function videoIdPublishingStop_POST(videoId) {
     return new Promise(async function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
-            submitDatabaseWriteJob('UPDATE videos SET is_publishing = 0 WHERE video_id = ?', [videoId], function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET is_publishing = ? WHERE video_id = ?', [false, videoId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
@@ -223,7 +223,7 @@ function videoIdUpload_POST(videoId, format, resolution) {
             resolve({isError: false});
         }
         else {
-            submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [0, 1, videoId], function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [false, true, videoId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
@@ -297,7 +297,7 @@ function videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, 
             resolve({isError: false});
         }
         else {
-            submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [1, videoId], function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId], function(isError) {
                 reject();
             });
         }
@@ -307,7 +307,7 @@ function videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, 
 function error_POST(videoId) {
     return new Promise(async function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
-            submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [1, videoId], function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
@@ -558,7 +558,7 @@ function videoIdData_POST(videoId, title, description, tags) {
         else {
             const tagsSanitized = sanitizeTagsSpaces(tags);
             
-            submitDatabaseWriteJob('UPDATE videos SET title = ?, description = ?, tags = ?, is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END WHERE video_id = ?', [title, description, tagsSanitized, videoId], function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET title = ?, description = ?, tags = ?, is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [title, description, tagsSanitized, true, true, videoId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
@@ -608,8 +608,8 @@ function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServiceAgree
                                 const title = video.title;
                                 const tags = video.tags;
                                 const views = video.views;
-                                const isLive = (video.is_live === 1);
-                                const isStreaming = (video.is_streaming === 1);
+                                const isLive = video.is_live;
+                                const isStreaming = video.is_streaming;
                                 const lengthSeconds = video.length_seconds;
                                 const creationTimestamp = video.creation_timestamp;
 
@@ -642,7 +642,7 @@ function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServiceAgree
                                     cloudflareTurnstileToken: cloudflareTurnstileToken
                                 };
                                 
-                                submitDatabaseWriteJob('UPDATE videos SET is_indexing = 1 WHERE video_id = ?', [videoId], function(isError) {
+                                submitDatabaseWriteJob('UPDATE videos SET is_indexing = ? WHERE video_id = ?', [true, videoId], function(isError) {
                                     if(isError) {
                                         resolve({isError: true, message: 'error communicating with the MoarTube node'});
                                     }
@@ -650,7 +650,7 @@ function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServiceAgree
                                         indexer_addVideoToIndex(data)
                                         .then(indexerResponseData => {
                                             if(indexerResponseData.isError) {
-                                                submitDatabaseWriteJob('UPDATE videos SET is_indexing = 0, is_indexed = 0 WHERE video_id = ?', [videoId], function(isError) {
+                                                submitDatabaseWriteJob('UPDATE videos SET is_indexing = ?, is_indexed = ? WHERE video_id = ?', [false, false, videoId], function(isError) {
                                                     if(isError) {
                                                         resolve({isError: true, message: 'error communicating with the MoarTube node'});
                                                     }
@@ -660,7 +660,7 @@ function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServiceAgree
                                                 });
                                             }
                                             else {
-                                                submitDatabaseWriteJob('UPDATE videos SET is_indexing = 0, is_indexed = 1 WHERE video_id = ?', [videoId], function(isError) {
+                                                submitDatabaseWriteJob('UPDATE videos SET is_indexing = ?, is_indexed = ? WHERE video_id = ?', [false, true, videoId], function(isError) {
                                                     if(isError) {
                                                         resolve({isError: true, message: 'error communicating with the MoarTube node'});
                                                     }
@@ -671,7 +671,7 @@ function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServiceAgree
                                             }
                                         })
                                         .catch(error => {
-                                            submitDatabaseWriteJob('UPDATE videos SET is_indexing = 0, is_indexed = 0 WHERE video_id = ?', [videoId], function(isError) {
+                                            submitDatabaseWriteJob('UPDATE videos SET is_indexing = ?, is_indexed = ? WHERE video_id = ?', [false, false, videoId], function(isError) {
 
                                             });
 
@@ -730,7 +730,7 @@ function videoIdIndexRemove_POST(videoId, cloudflareTurnstileToken) {
                                 resolve({isError: true, message: indexerResponseData.message});
                             }
                             else {
-                                submitDatabaseWriteJob('UPDATE videos SET is_indexed = 0 WHERE video_id = ?', [videoId], function(isError) {
+                                submitDatabaseWriteJob('UPDATE videos SET is_indexed = ? WHERE video_id = ?', [false, videoId], function(isError) {
                                     if(isError) {
                                         resolve({isError: true, message: 'error communicating with the MoarTube node'});
                                     }
@@ -899,7 +899,7 @@ function videoIdPreview_POST(videoId) {
                 logDebugMessageToConsole(null, error, new Error().stack);
             }
 
-            submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END WHERE video_id = ?', [videoId], function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [true, true, videoId], function(isError) {
                 if(isError) {
                     reject();
                 }
@@ -933,7 +933,7 @@ function videoIdPoster_POST(videoId) {
 function videoIdLengths_POST(videoId, lengthSeconds, lengthTimestamp) {
     return new Promise(function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
-            submitDatabaseWriteJob('UPDATE videos SET length_seconds = ?, length_timestamp = ?, is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END WHERE video_id = ?', [lengthSeconds, lengthTimestamp, videoId], function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET length_seconds = ?, length_timestamp = ?, is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [lengthSeconds, lengthTimestamp, true, true, videoId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
@@ -1020,12 +1020,12 @@ function delete_POST(videoIdsJson) {
                 const allVideoIds = allVideos.map(video => video.video_id);
                 const allTags = Array.from(new Set(allVideos.map(video => video.tags.split(',')).flat()));
 
-                submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = 0 AND is_publishing = 0 AND is_streaming = 0) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids, function(isError) {
+                submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids, function(isError) {
                     if(isError) {
                         resolve({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
-                        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = 1 OR is_publishing = 1 OR is_streaming = 1) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids)
+                        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids)
                         .then(async nonDeletedVideos => {
                             const nonDeletedVideoIds = nonDeletedVideos.map(video => video.video_id);
                             const deletedVideoIds = submittedVideoids.filter(videoId => !nonDeletedVideoIds.includes(videoId));
@@ -1077,12 +1077,12 @@ function finalize_POST(videoIdsJson) {
         const videoIds = JSON.parse(videoIdsJson);
 
         if(isVideoIdsValid(videoIds)) {
-            submitDatabaseWriteJob('UPDATE videos SET is_finalized = 1 WHERE (is_importing = 0 AND is_publishing = 0 AND is_streaming = 0) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds, function(isError) {
+            submitDatabaseWriteJob('UPDATE videos SET is_finalized = 1 WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds, function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
                 else {
-                    performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = 1 OR is_publishing = 1 OR is_streaming = 1) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds)
+                    performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds)
                     .then(videos => {
                         const finalizedVideoIds = [];
                         const nonFinalizedVideoIds = [];
@@ -1446,7 +1446,7 @@ async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflare
 
 function recommended_GET() {
     return new Promise(function(resolve, reject) {
-        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) ORDER BY creation_timestamp DESC', [])
+        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = ? OR is_live = ?) ORDER BY creation_timestamp DESC', [true, true])
         .then(recommendedVideos => {
             resolve({isError: false, recommendedVideos: recommendedVideos});
         })
@@ -1458,7 +1458,7 @@ function recommended_GET() {
 
 function tags_GET() {
     return new Promise(function(resolve, reject) {
-        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = 1 OR is_live = 1) ORDER BY creation_timestamp DESC', [])
+        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = ? OR is_live = ?) ORDER BY creation_timestamp DESC', [true, true])
         .then(rows => {
             const tags = [];
 
@@ -1554,7 +1554,7 @@ async function videoIdReport_POST(videoId, email, reportType, message, cloudflar
                     if(video != null) {
                         const creationTimestamp = video.creation_timestamp;
                         
-                        submitDatabaseWriteJob('INSERT INTO videoReports(timestamp, video_timestamp, video_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?)', [Date.now(), creationTimestamp, videoId, email, reportType, message], function(isError) {
+                        submitDatabaseWriteJob('INSERT INTO videoreports(timestamp, video_timestamp, video_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?)', [Date.now(), creationTimestamp, videoId, email, reportType, message], function(isError) {
                             if(isError) {
                                 reject();
                             }
@@ -1595,7 +1595,7 @@ function videoIdViewsIncrement_GET(videoId) {
                 
                 viewCounter = 0;
                 
-                submitDatabaseWriteJob('UPDATE videos SET views = views + ?, is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END WHERE video_id = ?', [viewCounterTemp, videoId], function(isError) {
+                submitDatabaseWriteJob('UPDATE videos SET views = views + ?, is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [viewCounterTemp, true, true, videoId], function(isError) {
                     if(isError) {
                         resolve({isError: true, message: 'error communicating with the MoarTube node'});
                     }

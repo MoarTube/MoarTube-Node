@@ -2,9 +2,9 @@ const { performDatabaseReadJob_GET } = require('../utils/database');
 
 function reportsCount_GET() {
     return new Promise(function(resolve, reject) {
-        performDatabaseReadJob_GET('SELECT COUNT(*) AS reportCount FROM videoReports', [])
+        performDatabaseReadJob_GET('SELECT COUNT(*) AS "reportCount" FROM videoreports', [])
         .then(videoCountResult => {
-            performDatabaseReadJob_GET('SELECT COUNT(*) AS reportCount FROM commentReports', [])
+            performDatabaseReadJob_GET('SELECT COUNT(*) AS "reportCount" FROM commentreports', [])
             .then(commentCountResult => {
                 const videoReportCount = videoCountResult.reportCount;
                 const commentReportCount = commentCountResult.reportCount;

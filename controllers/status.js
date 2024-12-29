@@ -4,7 +4,7 @@ const { performDatabaseReadJob_GET, performDatabaseReadJob_ALL } = require('../u
 
 function information_GET() {
     return new Promise(function(resolve, reject) {
-        performDatabaseReadJob_GET('SELECT COUNT(*) AS videoCount FROM videos WHERE (is_published = 1 OR is_live = 1)', [])
+        performDatabaseReadJob_GET('SELECT COUNT(*) AS "videoCount" FROM videos WHERE (is_published = ? OR is_live = ?)', [true, true])
         .then(row => {
             if(row != null) {
                 const nodeVideoCount = row.videoCount;
@@ -48,36 +48,7 @@ function heartbeat_GET() {
     });
 }
 
-function videos_POST(videoIds) {
-    return new Promise(function(resolve, reject) {
-        if(videoIds != null && Array.isArray(videoIds) && videoIds.length <= 30) {
-            const videoIdsString = videoIds.map(() => '?').join(',');
-
-            performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexing = 0 AND video_id IN (' + videoIdsString + ')', videoIds)
-            .then(videos => {
-                const results = [];
-
-                for(const video of videos) {
-                    const videoId = video.video_id;
-                    const isIndexed = video.is_indexed;
-
-                    results.push({ videoId: videoId, isIndexed: isIndexed });
-                }
-
-                resolve({isError: false, results: results});
-            })
-            .catch(error => {
-                reject(error);
-            });
-        }
-        else {
-            reject();
-        }
-    });
-}
-
 module.exports = {
     information_GET,
-    heartbeat_GET,
-    videos_POST
+    heartbeat_GET
 };

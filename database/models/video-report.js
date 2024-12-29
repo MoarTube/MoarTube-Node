@@ -32,7 +32,7 @@ const VideoReport = sequelize.define('VideoReport', {
         allowNull: false
     },
 }, {
-    tableName: 'videoReports',
+    tableName: 'videoreports',
     timestamps: false
 });
 

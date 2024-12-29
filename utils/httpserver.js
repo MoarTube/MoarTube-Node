@@ -362,13 +362,13 @@ function initializeHttpServer(value) {
                                                     if(isChatHistoryEnabled) {
                                                         const chatHistoryLimit = meta.chatSettings.chatHistoryLimit;
                                                         
-                                                        submitDatabaseWriteJob('INSERT INTO liveChatMessages(video_id, username, username_color_hex_code, chat_message, timestamp) VALUES (?, ?, ?, ?, ?)', [videoId, liveChatUsername, liveChatUsernameColorCode, chatMessageContent, timestamp], function(isError) {
+                                                        submitDatabaseWriteJob('INSERT INTO livechatmessages(video_id, username, username_color_hex_code, chat_message, timestamp) VALUES (?, ?, ?, ?, ?)', [videoId, liveChatUsername, liveChatUsernameColorCode, chatMessageContent, timestamp], function(isError) {
                                                             if(isError) {
                                                                 
                                                             }
                                                             else {
                                                                 if(chatHistoryLimit !== 0) {
-                                                                    submitDatabaseWriteJob('DELETE FROM liveChatMessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM liveChatMessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
+                                                                    submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM livechatmessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
                                                                         if(isError) {
                                                                             
                                                                         }

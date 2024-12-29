@@ -5,7 +5,7 @@ const { performDatabaseReadJob_ALL, submitDatabaseWriteJob } = require('../utils
 
 function reportsArchiveVideos_GET() {
     return new Promise(function(resolve, reject) {
-        performDatabaseReadJob_ALL('SELECT * FROM videoReportsArchive ORDER BY archive_id DESC', [])
+        performDatabaseReadJob_ALL('SELECT * FROM videoreportsarchives ORDER BY archive_id DESC', [])
         .then(reports => {
             resolve({isError: false, reports: reports});
         })
@@ -18,7 +18,7 @@ function reportsArchiveVideos_GET() {
 function reportsArchiveVideosArchiveIdDelete_DELETE(archiveId) {
     return new Promise(function(resolve, reject) {
         if(isArchiveIdValid(archiveId)) {
-            submitDatabaseWriteJob('DELETE FROM videoReportsArchive WHERE archive_id = ?', [archiveId], function(isError) {
+            submitDatabaseWriteJob('DELETE FROM videoreportsarchives WHERE archive_id = ?', [archiveId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }

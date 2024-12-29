@@ -154,7 +154,7 @@ if(cluster.isMaster) {
 		});
 
 		setInterval(function() {
-			performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1', [])
+			performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = ? AND is_index_outdated = ?', [true, true])
 			.then(rows => {
 				if(rows.length > 0) {
 					performNodeIdentification()
@@ -168,7 +168,7 @@ if(cluster.isMaster) {
 							const title = row.title;
 							const tags = row.tags;
 							const views = row.views;
-							const isStreaming = (row.is_streaming === 1);
+							const isStreaming = row.is_streaming;
 							const lengthSeconds = row.length_seconds;
 
 							const nodeIconPngBase64 = getNodeIconPngBase64();
@@ -195,7 +195,7 @@ if(cluster.isMaster) {
 									logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack);
 								}
 								else {
-									submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = 0 WHERE video_id = ?', [videoId], function(isError) {
+									submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = ? WHERE video_id = ?', [false, videoId], function(isError) {
 										if(isError) {
 											logDebugMessageToConsole(null, null, new Error().stack);
 										}
@@ -486,7 +486,7 @@ function loadConfig() {
 			"isDislikesEnabled":true,
 			"isReportsEnabled":true,
 			"isLiveChatEnabled":true,
-			"databaseDialect":"sqlite"
+			"databaseDialect":"postgres"
 		};
 
 		setNodeSettings(nodeSettings);

@@ -4,7 +4,7 @@ const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWr
 
 function walletAddressAll_GET() {
     return new Promise(function(resolve, reject) {
-        const query = 'SELECT * FROM cryptoWalletAddresses';
+        const query = 'SELECT * FROM cryptowalletaddresses';
         const params = [];
 
         performDatabaseReadJob_ALL(query, params)
@@ -30,7 +30,7 @@ function walletAddressAdd_POST(walletAddress, chain, currency) {
 
         const timestamp = Date.now();
 
-        const query = 'INSERT INTO cryptoWalletAddresses(wallet_address, chain, chain_id, currency, timestamp) VALUES (?, ?, ?, ?, ?)';
+        const query = 'INSERT INTO cryptowalletaddresses(wallet_address, chain, chain_id, currency, timestamp) VALUES (?, ?, ?, ?, ?)';
         const params = [walletAddress, chain, chainId, currency, timestamp];
 
         submitDatabaseWriteJob(query, params, function(isError) {
@@ -50,7 +50,7 @@ function walletAddressAdd_POST(walletAddress, chain, currency) {
                     logDebugMessageToConsole(null, error, new Error().stack);
                 });
 
-                performDatabaseReadJob_GET('SELECT * FROM cryptoWalletAddresses WHERE timestamp = ?', [timestamp])
+                performDatabaseReadJob_GET('SELECT * FROM cryptowalletaddresses WHERE timestamp = ?', [timestamp])
                 .then(cryptoWalletAddress => {
                     resolve({isError: false, cryptoWalletAddress: cryptoWalletAddress});
                 })
@@ -64,7 +64,7 @@ function walletAddressAdd_POST(walletAddress, chain, currency) {
 
 function walletAddressDelete_POST(cryptoWalletAddressId) {
     return new Promise(function(resolve, reject) {
-        const query = 'DELETE FROM cryptoWalletAddresses WHERE wallet_address_id = ?';
+        const query = 'DELETE FROM cryptowalletaddresses WHERE wallet_address_id = ?';
         const params = [cryptoWalletAddressId];
 
         submitDatabaseWriteJob(query, params, function(isError) {

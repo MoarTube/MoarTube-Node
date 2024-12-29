@@ -66,7 +66,7 @@ function avatar_POST(iconFile, avatarFile) {
             logDebugMessageToConsole(null, error, new Error().stack);
         }
 
-        submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = 1 THEN 1 ELSE is_index_outdated END', [], function(isError) {
+        submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END', [true, true], function(isError) {
             if(isError) {
                 resolve({isError: true, message: 'error communicating with the MoarTube node'});
             }

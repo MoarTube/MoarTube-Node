@@ -1,53 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const { deleteDirectoryRecursive } = require('./helpers');
 const { logDebugMessageToConsole } = require('./logger');
 const { getVideosDirectoryPath } = require('./paths');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET } = require('./database');
 
-function removeOrphanedVideoDirectories() {
-    return new Promise(async function(resolve, reject) {
-        performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
-        .then(videos => {
-            const videoIds = [];
-            
-            for(const video of videos) {
-                const videoId = video.video_id;
-                
-                videoIds.push(videoId);
-            }
-            
-            const videosDirectoryPath = getVideosDirectoryPath();
-
-            fs.readdir(videosDirectoryPath, async (error, videoDirectories) => {
-                if(error) {
-                    logDebugMessageToConsole(null, error, new Error().stack);
-                }
-                else {
-                    for(const videoDirectory of videoDirectories) {
-                        if(!videoIds.includes(videoDirectory)) {
-                            const videoDirectoryPath = path.join(videosDirectoryPath, videoDirectory);
-
-                            await deleteDirectoryRecursive(videoDirectoryPath);
-                        }
-                    }
-                }
-
-                resolve();
-            });
-        })
-        .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack);
-            
-            resolve();
-        });
-    });
-}
-
 function endStreamedHlsManifestFiles() {
     return new Promise(async function(resolve, reject) {
-        performDatabaseReadJob_ALL('SELECT video_id, is_stream_recorded_remotely FROM videos WHERE is_streamed = 1', [])
+        performDatabaseReadJob_ALL('SELECT video_id, is_stream_recorded_remotely FROM videos WHERE is_streamed = ?', [true])
         .then(rows => {
             for(let i = 0; i < rows.length; i++) {
                 const row = rows[i];
@@ -172,7 +132,6 @@ function updateHlsVideoMasterManifestFile(videoId) {
 }
 
 module.exports = {
-    removeOrphanedVideoDirectories,
     endStreamedHlsManifestFiles,
     updateHlsVideoMasterManifestFile
 };

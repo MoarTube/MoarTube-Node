@@ -302,7 +302,7 @@ router.post('/:videoId/upload', (req, res) => {
                     if(error) {
                         logDebugMessageToConsole(null, error, new Error().stack);
                         
-                        submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [0, 1, videoId], function(isError) {
+                        submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [false, true, videoId], function(isError) {
                             if(isError) {
                                 res.send({isError: true, message: 'error communicating with the MoarTube node'});
                             }
@@ -326,7 +326,7 @@ router.post('/:videoId/upload', (req, res) => {
                 });
             }
             else {
-                submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [0, 1, videoId], function(isError) {
+                submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [false, true, videoId], function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }
@@ -408,7 +408,7 @@ router.post('/:videoId/stream', (req, res) => {
                 }).fields([{ name: 'video_files' }])
                 (req, res, async function(error) {
                     if(error) {
-                        submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [1, videoId], function(isError) {
+                        submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId], function(isError) {
                             if(isError) {
                                 res.send({isError: true, message: 'error communicating with the MoarTube node'});
                             }
@@ -436,7 +436,7 @@ router.post('/:videoId/stream', (req, res) => {
                 });
             }
             else {
-                submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [1, videoId], function(isError) {
+                submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId], function(isError) {
                     if(isError) {
                         res.send({isError: true, message: 'error communicating with the MoarTube node'});
                     }

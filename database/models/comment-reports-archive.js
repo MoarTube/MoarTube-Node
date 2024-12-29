@@ -40,7 +40,7 @@ const CommentReportsArchive = sequelize.define('CommentReportsArchive', {
         allowNull: false
     }
 }, {
-    tableName: 'commentReportsArchive',
+    tableName: 'commentreportsarchives',
     timestamps: false
 });
 
