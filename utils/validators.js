@@ -55,6 +55,47 @@ function isBooleanValid(value) {
     return (value != null && (typeof value === 'boolean'));
 }
 
+function isDatabaseConfigValid(databaseConfig) {
+    let isValid = true;
+
+    if (!databaseConfig || typeof databaseConfig !== 'object') {
+        isValid = false;
+    }
+    else {
+        const validDialects = ['sqlite', 'postgres'];
+
+        if (!databaseConfig.databaseDialect || !validDialects.includes(databaseConfig.databaseDialect)) {
+            isValid = false;
+        }
+        else {
+            if (databaseConfig.databaseDialect === 'postgres') {
+                const postgresConfig = databaseConfig.postgresConfig;
+    
+                if (!postgresConfig || typeof postgresConfig !== 'object') {
+                    isValid = false;
+                }
+                else {
+                    const requiredFields = ['databaseName', 'username', 'password', 'host', 'port'];
+
+                    for (const field of requiredFields) {
+                        if (!postgresConfig[field] || typeof postgresConfig[field] !== (field === 'port' ? 'number' : 'string')) {
+                            isValid = false;
+
+                            break;
+                        }
+                    }
+    
+                    if (postgresConfig.port <= 0 || postgresConfig.port > 65535) {
+                        isValid = false;
+                    }
+                }
+            }
+        }
+    }
+
+    return isValid;
+}
+
 function isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, canBeEmpty) {
     /*
     https://developers.cloudflare.com/turnstile/frequently-asked-questions/#what-is-the-length-of-a-turnstile-token
@@ -337,5 +378,6 @@ module.exports = {
     isCloudflareCredentialsValid,
     isCloudflareTurnstileTokenValid,
     isSortValid,
-    isLimitValid
+    isLimitValid,
+    isDatabaseConfigValid
 }

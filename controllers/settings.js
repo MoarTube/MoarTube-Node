@@ -4,13 +4,13 @@ const bcryptjs = require('bcryptjs');
 const packageJson = require('../package.json');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { getImagesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath
+const { getImagesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath, getDatabaseFilePath
 } = require('../utils/paths');
 const { getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast
 } = require('../utils/helpers');
 const { 
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isUsernameValid, isPasswordValid, 
-    isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid, isBooleanValid
+    isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid, isBooleanValid, isDatabaseConfigValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
 const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
@@ -401,6 +401,62 @@ function commentsToggle_POST(isCommentsEnabled) {
     }
 }
 
+function databaseConfigToggle_POST(databaseConfig) {
+    return new Promise(async function(resolve, reject) {
+        if(isDatabaseConfigValid(databaseConfig)) {
+            try {
+                const { Sequelize } = require('sequelize');
+
+                const databaseDialect = databaseConfig.databaseDialect;
+
+                let sequelize;
+
+                if (databaseDialect === 'sqlite') {
+                    sequelize = new Sequelize({
+                        dialect: 'sqlite',
+                        storage: getDatabaseFilePath(),
+                        logging: false
+                    });
+                } 
+                else if (databaseDialect === 'postgres') {
+                    const postgresConfig = databaseConfig.postgresConfig;
+                
+                    const databaseName = postgresConfig.databaseName;
+                    const username = postgresConfig.username;
+                    const password = postgresConfig.password;
+                    const host = postgresConfig.host;
+                    const port = postgresConfig.port;
+                
+                    sequelize = new Sequelize(databaseName, username, password, {
+                        dialect: 'postgres',
+                        host: host,
+                        port: port,
+                        logging: false
+                    });
+                }
+
+                await sequelize.authenticate();
+
+                await sequelize.close();
+
+                const nodeSettings = getNodeSettings();
+
+                nodeSettings.databaseConfig = databaseConfig;
+
+                setNodeSettings(nodeSettings);
+
+                resolve({isError: false});
+            }
+            catch(e) {
+                resolve({isError: true, message: 'database connect error'});
+            }
+        }
+        else {
+            resolve({isError: true, message: 'invalid parameters'});
+        }
+    });
+}
+
 function likesToggle_POST(isLikesEnabled) {
     if(isBooleanValid(isLikesEnabled)) {
         const nodeSettings = getNodeSettings();
@@ -567,5 +623,6 @@ module.exports = {
     liveChatToggle_POST,
     account_POST,
     networkInternal_POST,
-    networkExternal_POST
+    networkExternal_POST,
+    databaseConfigToggle_POST
 };

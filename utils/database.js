@@ -100,6 +100,12 @@ function provisionDatabase() {
 
 function openDatabase() {
     return new Promise(async function(resolve, reject) {
+        if(sequelize != null) {
+            await sequelize.close();
+
+            delete require.cache[require.resolve('../database/sequelize.js')];
+        }
+
         sequelize = require('../database/sequelize.js');
 
         await sequelize.sync({ alter: true });

@@ -7,7 +7,7 @@ const { getNodeSettings } = require("../utils/helpers.js");
 
 const nodeSettings = getNodeSettings();
 
-const databaseDialect = nodeSettings.databaseDialect;
+const databaseDialect = nodeSettings.databaseConfig.databaseDialect;
 
 let sequelize;
 
@@ -19,13 +19,21 @@ if (databaseDialect === 'sqlite') {
     });
 } 
 else if (databaseDialect === 'postgres') {
-    sequelize = new Sequelize('postgres', 'postgres', 'postgres', { // dbName, dbUser, dbPassword
+    const postgresConfig = nodeSettings.databaseConfig.postgresConfig;
+
+    const databaseName = postgresConfig.databaseName;
+    const username = postgresConfig.username;
+    const password = postgresConfig.password;
+    const host = postgresConfig.host;
+    const port = postgresConfig.port;
+
+    sequelize = new Sequelize(databaseName, username, password, {
         dialect: 'postgres',
-        host: 'localhost',
-        port: 5432,
+        host: host,
+        port: port,
         logging: false
     });
-} 
+}
 else {
     throw new Error(`Unsupported database dialect: ${databaseDialect}`);
 }

@@ -140,11 +140,20 @@ if(cluster.isMaster) {
 						worker.send({ cmd: 'restart_server_response' });
 					});
 				}
+				else if (msg.cmd && msg.cmd === 'restart_database') {
+					const databaseDialect = msg.databaseDialect;
+
+					logDebugMessageToConsole('MoarTube Node changing database configuration to dialect: ' + databaseDialect, null, null);
+
+					Object.values(cluster.workers).forEach((worker) => {
+						worker.send({ cmd: 'restart_database_response' });
+					});
+				}
 			});
 		}
 
 		cluster.on('exit', (worker, code, signal) => {
-			logDebugMessageToConsole('worker exited with id <' + worker.id + '> code <' + code + '> signal <' + signal + '>', null, null);
+			logDebugMessageToConsole('MoarTube Node worker exited with id <' + worker.id + '> code <' + code + '> signal <' + signal + '>', null, null);
 
 			delete liveStreamWatchingCountsTracker[worker.id];
 
@@ -392,6 +401,9 @@ else {
 			else if(msg.cmd === 'restart_server_response') {
 				restartHttpServer();
 			}
+			else if(msg.cmd === 'restart_database_response') {
+				openDatabase();
+			}
 		});
 		
 		process.send({ cmd: 'get_jwt_secret' });
@@ -486,7 +498,9 @@ function loadConfig() {
 			"isDislikesEnabled":true,
 			"isReportsEnabled":true,
 			"isLiveChatEnabled":true,
-			"databaseDialect":"postgres"
+			"databaseConfig": {
+				"databaseDialect":"sqlite"
+			}
 		};
 
 		setNodeSettings(nodeSettings);
