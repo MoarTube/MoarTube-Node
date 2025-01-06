@@ -96,6 +96,33 @@ function isDatabaseConfigValid(databaseConfig) {
     return isValid;
 }
 
+function isStorageConfigValid(storageConfig) {
+    let isValid = true;
+
+    if (!storageConfig || typeof storageConfig !== 'object') {
+        isValid = false;
+    }
+    else {
+        const validStorageModes = ['filesystem', 's3provider'];
+
+        if (!storageConfig.storageMode || !validStorageModes.includes(storageConfig.storageMode)) {
+            isValid = false;
+        }
+        else {
+            if (storageConfig.storageMode === 's3provider') {
+                if (!storageConfig.s3Config || typeof storageConfig.s3Config !== "object") {
+                    isValid = false;
+                }
+                else if (!storageConfig.s3Config.Bucket || typeof storageConfig.s3Config.Bucket !== "string" || storageConfig.s3Config.Bucket.trim() === "") {
+                    isValid = false;
+                }
+            }
+        }
+    }
+
+    return isValid;
+}
+
 function isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, canBeEmpty) {
     /*
     https://developers.cloudflare.com/turnstile/frequently-asked-questions/#what-is-the-length-of-a-turnstile-token
@@ -379,5 +406,6 @@ module.exports = {
     isCloudflareTurnstileTokenValid,
     isSortValid,
     isLimitValid,
-    isDatabaseConfigValid
+    isDatabaseConfigValid,
+    isStorageConfigValid
 }

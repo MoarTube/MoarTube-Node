@@ -10,7 +10,8 @@ const { getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIden
 } = require('../utils/helpers');
 const { 
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isUsernameValid, isPasswordValid, 
-    isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid, isBooleanValid, isDatabaseConfigValid
+    isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid, isBooleanValid, isDatabaseConfigValid,
+    isStorageConfigValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
 const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
@@ -457,6 +458,39 @@ function databaseConfigToggle_POST(databaseConfig) {
     });
 }
 
+function storageConfigToggle_POST(storageConfig) {
+    return new Promise(async function(resolve, reject) {
+        if(isStorageConfigValid(storageConfig)) {
+            try {
+                const storageMode = storageConfig.storageMode;
+
+                if (storageMode === 'filesystem') {
+                    
+                } 
+                else if (storageMode === 's3provider') {
+                    const s3Config = storageConfig.s3Config;
+                    
+                    // s3 testing here
+                }
+
+                const nodeSettings = getNodeSettings();
+
+                nodeSettings.storageConfig = storageConfig;
+
+                setNodeSettings(nodeSettings);
+
+                resolve({isError: false});
+            }
+            catch(e) {
+                resolve({isError: true, message: 'database connect error'});
+            }
+        }
+        else {
+            resolve({isError: true, message: 'invalid parameters'});
+        }
+    });
+}
+
 function likesToggle_POST(isLikesEnabled) {
     if(isBooleanValid(isLikesEnabled)) {
         const nodeSettings = getNodeSettings();
@@ -624,5 +658,6 @@ module.exports = {
     account_POST,
     networkInternal_POST,
     networkExternal_POST,
-    databaseConfigToggle_POST
+    databaseConfigToggle_POST,
+    storageConfigToggle_POST
 };

@@ -145,6 +145,8 @@ if(cluster.isMaster) {
 
 					logDebugMessageToConsole('MoarTube Node changing database configuration to dialect: ' + databaseDialect, null, null);
 
+					openDatabase();
+
 					Object.values(cluster.workers).forEach((worker) => {
 						worker.send({ cmd: 'restart_database_response' });
 					});
@@ -500,7 +502,10 @@ function loadConfig() {
 			"isLiveChatEnabled":true,
 			"databaseConfig": {
 				"databaseDialect":"sqlite"
-			}
+			},
+			"storageConfig": {
+				"storageMode":"filesystem"
+			},
 		};
 
 		setNodeSettings(nodeSettings);
