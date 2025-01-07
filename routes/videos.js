@@ -8,7 +8,7 @@ const {
     videoIdSourceFileExtension_POST, videoIdSourceFileExtension_GET, videoIdPublishes_GET, videoIdUnpublish_POST, videoIdData_POST, videoIdIndexAdd_POST, videoIdIndexRemove_POST,
     videoIdAlias_GET, search_GET, videoIdThumbnail_POST, videoIdPreview_POST, videoIdPoster_POST, videoIdLengths_POST, videoIdData_GET, delete_POST, finalize_POST, 
     videoIdComments_GET, videoIdCommentsCommentId_GET, videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST, recommended_GET, 
-    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET
+    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST
 } = require('../controllers/videos');
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getAuthenticationStatus, websocketNodeBroadcast } = require('../utils/helpers');
@@ -150,6 +150,38 @@ router.post('/published', (req, res) => {
                 const videoId = req.body.videoId;
 
                 const data = await published_POST(videoId);
+
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+});
+
+router.post('/:format/:resolution/published', (req, res) => {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            try {
+                const videoId = req.body.videoId;
+                const format = req.params.format;
+                const resolution = req.params.resolution;
+
+                const data = await formatResolutionPublished_POST(videoId, format, resolution);
 
                 res.send(data);
             }

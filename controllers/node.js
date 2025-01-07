@@ -1,4 +1,4 @@
-const { getLastCheckedContentTracker, setLastCheckedContentTracker, getAuthenticationStatus } = require('../utils/helpers');
+const { getLastCheckedContentTracker, setLastCheckedContentTracker, getExternalVideosBaseUrl } = require('../utils/helpers');
 const { isSearchTermValid, isSortTermValid, isTagTermValid } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET } = require('../utils/database');
 const { information_GET } = require('../controllers/status');
@@ -24,8 +24,16 @@ async function root_GET(searchTerm, sortTerm, tagTerm) {
     const cryptoWalletAddressesData = await walletAddressAll_GET();
     const tagsData = await tags_GET();
     const searchResultsData = await search_GET(searchTerm, sortTerm, tagTerm);
+    const externalVideosBaseUrl = getExternalVideosBaseUrl();
 
-    return {informationData: informationData, linksData: linksData, cryptoWalletAddressesData: cryptoWalletAddressesData, tagsData: tagsData, searchResultsData: searchResultsData};
+    return {
+        informationData: informationData, 
+        linksData: linksData, 
+        cryptoWalletAddressesData: cryptoWalletAddressesData, 
+        tagsData: tagsData, 
+        searchResultsData: searchResultsData,
+        externalVideosBaseUrl: externalVideosBaseUrl
+    };
 }
 
 function search_GET(searchTerm, sortTerm, tagTerm) {

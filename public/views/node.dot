@@ -496,7 +496,7 @@ body {
 				loadLinks(INCOMING_PARAMETERS.linksData.links);
 				loadCryptoWalletAddresses(INCOMING_PARAMETERS.cryptoWalletAddressesData.cryptoWalletAddresses);
 				loadTags(INCOMING_PARAMETERS.tagsData.tags);
-				loadVideos(INCOMING_PARAMETERS.searchResultsData.searchResults);
+				loadVideos(INCOMING_PARAMETERS.searchResultsData.searchResults, INCOMING_PARAMETERS.externalVideosBaseUrl);
 			});
 
 			function loadInformation(information) {
@@ -578,12 +578,12 @@ body {
 				});
 			}
 
-			function loadVideos(videos) {
+			function loadVideos(videos, externalVideosBaseUrl) {
 				clearTimestampUpdateTracker();
 
 				videos.forEach(function(row) {
 					const videoId = row.video_id;
-					const thumbnail = '/external/videos/' + videoId + '/thumbnail';
+					const preview = externalVideosBaseUrl + '/external/videos/' + videoId + '/preview';
 					const title = row.title;
 					const tags = row.tags;
 					const lengthTimestamp = row.length_timestamp;
@@ -630,7 +630,7 @@ body {
 								<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
 									<div class="card">\
 										<div class="position-relative ratio-16x9">\
-											<img src="/external/videos/' + videoId + '/preview" class="card-img-top" alt="...">\
+											<img src="' + preview + '" class="card-img-top" alt="...">\
 											' + durationIndicator + '\
 											' + liveStreamIndicator + '\
 										</div>\
@@ -669,7 +669,7 @@ body {
 										<a href="/watch?v=' + videoId + '" class="text-decoration-none">\
 											<div class="card">\
 												<div class="position-relative ratio-16x9">\
-													<img src="/external/videos/' + videoId + '/preview" class="card-img-top" alt="...">\
+													<img src="' + preview + '" class="card-img-top" alt="...">\
 													' + durationIndicator + '\
 													' + liveStreamIndicator + '\
 												</div>\

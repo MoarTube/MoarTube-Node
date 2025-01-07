@@ -554,6 +554,8 @@
 				const adaptiveSources = video.adaptiveSources;
 				const progressiveSources = video.progressiveSources;
 				const sourcesFormatsAndResolutions = video.sourcesFormatsAndResolutions;
+
+				const externalVideosBaseUrl = video.externalVideosBaseUrl;
 				
 				document.title = title + ' - MoarTube';
 				
@@ -607,7 +609,7 @@
 					$('#mtp-video-link').attr('href', '/watch?v=' + VIDEO_ID);
 					$('#watch-on-moartube-mtp-overlay-child').attr('href', '/watch?v=' + VIDEO_ID);
 
-					$('#video-poster').attr('src', '/external/videos/' + VIDEO_ID + '/poster');
+					$('#video-poster').attr('src', externalVideosBaseUrl + '/external/videos/' + VIDEO_ID + '/poster');
 
 					$("#video-player").attr("controls", true);
 

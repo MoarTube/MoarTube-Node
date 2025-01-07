@@ -7,6 +7,13 @@ const { submitDatabaseWriteJob } = require('../utils/database');
 const { 
     isManifestNameValid, isSegmentNameValid, isVideoIdValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid, isManifestTypeValid
 } = require('../utils/validators');
+const { getExternalVideosBaseUrl } = require('../utils/helpers');
+
+function externalVideosBaseUrl_GET() {
+    const externalVideosBaseUrl = getExternalVideosBaseUrl();
+
+    return externalVideosBaseUrl;
+}
 
 function videoIdThumbnail_GET(videoId) {
     if(isVideoIdValid(videoId, false)) {
@@ -211,6 +218,7 @@ function videoIdProgressiveFormatResolutionDownload_GET(videoId, format, resolut
 }
 
 module.exports = {
+    externalVideosBaseUrl_GET,
     videoIdThumbnail_GET,
     videoIdPreview_GET,
     videoIdPoster_GET,

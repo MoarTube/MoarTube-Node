@@ -263,6 +263,36 @@ function getNodeIdentification() {
 	}
 }
 
+function getExternalVideosBaseUrl() {
+	const { isIpv4Address } = require('./validators');
+
+	const nodeSettings = getNodeSettings();
+
+	const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+	const publicNodeAddress = nodeSettings.publicNodeAddress;
+	let publicNodePort = nodeSettings.publicNodePort;
+
+	if(publicNodeProtocol === 'http') {
+		publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+	} 
+	else if(publicNodeProtocol === 'https') {
+		publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+	}
+
+	const isIpv4Addresss = isIpv4Address(publicNodeAddress);
+
+	let externalVideosBaseUrl;
+
+	if(isIpv4Addresss) {
+		externalVideosBaseUrl = `${publicNodeProtocol}://${publicNodeAddress}${publicNodePort}`;
+	}
+	else {
+		externalVideosBaseUrl = `${publicNodeProtocol}://external.videos.${publicNodeAddress}${publicNodePort}`;
+	}
+
+	return externalVideosBaseUrl;
+}
+
 function setNodeidentification(nodeIdentification) {
 	fs.writeFileSync(path.join(getDataDirectoryPath(), '_node_identification.json'), JSON.stringify(nodeIdentification));
 }
@@ -270,6 +300,16 @@ function setNodeidentification(nodeIdentification) {
 function deleteDirectoryRecursive(directoryPath) {
 	return new Promise(function(resolve, reject) {
         fs.rm(directoryPath, { recursive: true, force: true }, function(error) {
+            // do nothing, best effort
+
+            resolve();
+        });
+    });
+}
+
+function deleteFile(filePath) {
+	return new Promise(function(resolve, reject) {
+        fs.rm(filePath, { force: true }, function(error) {
             // do nothing, best effort
 
             resolve();
@@ -355,6 +395,7 @@ module.exports = {
     websocketChatBroadcast,
     sanitizeTagsSpaces,
     deleteDirectoryRecursive,
+	deleteFile,
     performNodeIdentification,
     generateVideoId,
     getJwtSecret,
@@ -379,5 +420,6 @@ module.exports = {
     setIsDeveloperMode,
     setExpressSessionName,
     setExpressSessionSecret,
-    setNodeidentification
+    setNodeidentification,
+	getExternalVideosBaseUrl
 };

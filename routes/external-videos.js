@@ -2,11 +2,41 @@ const express = require('express');
 
 const {
     videoIdThumbnail_GET, videoIdPreview_GET, videoIdPoster_GET, videoIdAdaptiveTypeFormatManifestsManifestName_GET, 
-    videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET, videoIdProgressiveFormatResolution_GET, videoIdProgressiveFormatResolutionDownload_GET
+    videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET, videoIdProgressiveFormatResolution_GET, videoIdProgressiveFormatResolutionDownload_GET,
+    externalVideosBaseUrl_GET
 } = require('../controllers/external-videos');
 const { logDebugMessageToConsole } = require('../utils/logger');
+const { getAuthenticationStatus } = require('../utils/helpers');
 
 const router = express.Router();
+
+router.get('/baseUrl', (req, res) => {
+    getAuthenticationStatus(req.headers.authorization)
+    .then((isAuthenticated) => {
+        if(isAuthenticated) {
+            try {
+                const externalVideosBaseUrl = externalVideosBaseUrl_GET();
+
+                res.send({isError: false, externalVideosBaseUrl: externalVideosBaseUrl});
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+            
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack);
+
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+});
 
 router.get('/:videoId/thumbnail', (req, res) => {
     try {

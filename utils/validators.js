@@ -257,6 +257,12 @@ function isPasswordValid(password) {
     return password != null && password.length > 0 && password.length <= 100 && regex.test(password)
 }
 
+function isIpv4Address(value) {
+    const ipv4Regex = /^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$/;
+
+    return ipv4Regex.test(value);
+}
+
 function isNetworkAddressValid(networkAddress) {
     return networkAddress != null && networkAddress.length > 0 && networkAddress.length <= 100;
 }
@@ -407,5 +413,6 @@ module.exports = {
     isSortValid,
     isLimitValid,
     isDatabaseConfigValid,
-    isStorageConfigValid
+    isStorageConfigValid,
+    isIpv4Address
 }

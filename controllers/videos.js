@@ -7,7 +7,8 @@ const { getVideosDirectoryPath } = require('../utils/paths');
 const { updateHlsVideoMasterManifestFile } = require('../utils/filesystem');
 const { 
     getNodeSettings, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, performNodeIdentification, getNodeIdentification, 
-    sanitizeTagsSpaces, deleteDirectoryRecursive, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64, getVideoPreviewJpgBase64
+    sanitizeTagsSpaces, deleteDirectoryRecursive, deleteFile, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64, 
+    getVideoPreviewJpgBase64, getExternalVideosBaseUrl
 } = require('../utils/helpers');
 const { getMoarTubeAliaserPort } = require('../utils/urls');
 const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
@@ -155,13 +156,42 @@ function publishing_POST(videoId) {
 }
 
 function published_POST(videoId) {
-    return new Promise(async function(resolve, reject) {
+    return new Promise(function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
             submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_published = ? WHERE video_id = ?', [false, true, videoId], function(isError) {
                 if(isError) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
                 else {
+                    resolve({isError: false});
+                }
+            });
+        }
+        else {
+            resolve({isError: true, message: 'invalid parameters'});
+        }
+    });
+}
+
+function formatResolutionPublished_POST(videoId, format, resolution) {
+    return new Promise(function(resolve, reject) {
+        if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
+            const timestamp = Date.now();
+
+            submitDatabaseWriteJob('INSERT INTO published(video_id, format, resolution, timestamp) VALUES (?, ?, ?, ?) ON CONFLICT (video_id, format, resolution) DO UPDATE SET timestamp = excluded.timestamp', [videoId, format, resolution, timestamp], function(isError) {
+                if(isError) {
+                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                }
+                else {
+                    if(format === 'm3u8') {
+                        try {
+                            updateHlsVideoMasterManifestFile(videoId);
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack);
+                        }
+                    }
+
                     resolve({isError: false});
                 }
             });
@@ -246,18 +276,7 @@ function videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, 
                     const nodeSettings = getNodeSettings();
 
                     if(nodeSettings.isCloudflareIntegrationEnabled) {
-                        const publicNodeProtocol = nodeSettings.publicNodeProtocol;
-                        const publicNodeAddress = nodeSettings.publicNodeAddress;
-                        let publicNodePort = nodeSettings.publicNodePort;
-
-                        if(publicNodeProtocol === 'http') {
-                            publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
-                        } 
-                        else if(publicNodeProtocol === 'https') {
-                            publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
-                        }
-
-                        const segmentFileUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort + '/external/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
+                        const segmentFileUrl = getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
 
                         cloudflare_cacheVideoSegment(segmentFileUrl)
                         .then(() => {
@@ -401,70 +420,44 @@ function videoIdPublishes_GET(videoId) {
                         { format: 'ogv', resolution: '720p', isPublished: false },
                         { format: 'ogv', resolution: '480p', isPublished: false },
                         { format: 'ogv', resolution: '360p', isPublished: false },
-                        { format: 'ogv', resolution: '240p', isPublished: false },
+                        { format: 'ogv', resolution: '240p', isPublished: false }
                     ];
-                    
+
                     if(video.is_published) {
-                        const videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId);
-                        const m3u8DirectoryPath = path.join(videoDirectoryPath, 'adaptive/m3u8');
-                        const mp4DirectoryPath = path.join(videoDirectoryPath, 'progressive/mp4');
-                        const webmDirectoryPath = path.join(videoDirectoryPath, 'progressive/webm');
-                        const ogvDirectoryPath = path.join(videoDirectoryPath, 'progressive/ogv');
-                        
-                        if (fs.existsSync(m3u8DirectoryPath)) {
-                            fs.readdirSync(m3u8DirectoryPath).forEach(fileName => {
-                                const filePath = path.join(m3u8DirectoryPath, fileName);
-                                if (fs.lstatSync(filePath).isDirectory()) {
-                                    modifyPublishMatrix('m3u8', fileName);
-                                }
-                            });
-                        }
-                        
-                        if (fs.existsSync(mp4DirectoryPath)) {
-                            fs.readdirSync(mp4DirectoryPath).forEach(fileName => {
-                                const filePath = path.join(mp4DirectoryPath, fileName);
-                                if (fs.lstatSync(filePath).isDirectory()) {
-                                    modifyPublishMatrix('mp4', fileName);
-                                }
-                            });
-                        }
-                        
-                        if (fs.existsSync(webmDirectoryPath)) {
-                            fs.readdirSync(webmDirectoryPath).forEach(fileName => {
-                                const filePath = path.join(webmDirectoryPath, fileName);
-                                if (fs.lstatSync(filePath).isDirectory()) {
-                                    modifyPublishMatrix('webm', fileName);
-                                }
-                            });
-                        }
-                        
-                        if (fs.existsSync(ogvDirectoryPath)) {
-                            fs.readdirSync(ogvDirectoryPath).forEach(fileName => {
-                                const filePath = path.join(ogvDirectoryPath, fileName);
-                                if (fs.lstatSync(filePath).isDirectory()) {
-                                    modifyPublishMatrix('ogv', fileName);
-                                }
-                            });
-                        }
-                        
-                        function modifyPublishMatrix(format, resolution) {
-                            for(const publish of publishes) {
-                                if(publish.format === format && publish.resolution === resolution) {
-                                    publish.isPublished = true;
-                                    break;
+                        performDatabaseReadJob_ALL('SELECT * FROM published WHERE video_id = ?', [videoId])
+			            .then(videos => {
+                            for(const video of videos) {
+                                const format = video.format;
+                                const resolution = video.resolution;
+
+                                for(const publish of publishes) {
+                                    if(publish.format === format && publish.resolution === resolution) {
+                                        publish.isPublished = true;
+                                        break;
+                                    }
                                 }
                             }
-                        }
+
+                            resolve({isError: false, publishes: publishes});
+                        })
+                        .catch(error => {
+                            logDebugMessageToConsole(null, error, new Error().stack);
+
+                            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                        });
                     }
-                    
-                    resolve({isError: false, publishes: publishes});
+                    else {
+                        resolve({isError: false, publishes: publishes});
+                    }
                 }
                 else {
                     resolve({isError: true, message: 'that video does not exist'});
                 }
             })
             .catch(error => {
-                reject(error);
+                logDebugMessageToConsole(null, error, new Error().stack);
+
+                resolve({isError: true, message: 'error communicating with the MoarTube node'});
             });
         }
         else {
@@ -483,12 +476,6 @@ function videoIdUnpublish_POST(videoId, format, resolution) {
                 .then(async videos => {
                     const videoIds = videos.map(video => video.video_id);
 
-                    /*
-                    awaits are needed because Cloudflare purge logic needs directory names,
-                    yet they are subsequently deleted; the purge will intermitently
-                    fail due to race condition.
-                    */
-
                     await cloudflare_purgeEmbedVideoPages(videoIds);
                     await cloudflare_purgeWatchPages(videoIds);
                     await cloudflare_purgeVideo(videoId, format, resolution);
@@ -500,7 +487,7 @@ function videoIdUnpublish_POST(videoId, format, resolution) {
             catch(error) {
                 logDebugMessageToConsole(null, error, new Error().stack);
             }
-            
+
             let videoDirectoryPath = '';
             let manifestFilePath = '';
             
@@ -517,23 +504,27 @@ function videoIdUnpublish_POST(videoId, format, resolution) {
             else if(format === 'ogv') {
                 videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution);
             }
-            
-            await deleteDirectoryRecursive(videoDirectoryPath);
-            
-            if(fs.existsSync(manifestFilePath)) {
-                fs.unlinkSync(manifestFilePath);
-            }
-            
-            if(format === 'm3u8') {
-                try {
-                    await updateHlsVideoMasterManifestFile(videoId);
+
+            submitDatabaseWriteJob('DELETE FROM published WHERE video_id = ? AND format = ? AND resolution = ?', [videoId, format, resolution], async function(isError) {
+                if(isError) {
+                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
-                catch(error) {
-                    logDebugMessageToConsole(null, error, new Error().stack);
+                else {
+                    await deleteDirectoryRecursive(videoDirectoryPath);
+                    await deleteFile(manifestFilePath);
+                    
+                    if(format === 'm3u8') {
+                        try {
+                            await updateHlsVideoMasterManifestFile(videoId);
+                        }
+                        catch(error) {
+                            logDebugMessageToConsole(null, error, new Error().stack);
+                        }
+                    }
+                    
+                    resolve({isError: false});
                 }
-            }
-            
-            resolve({isError: false});
+            });
         }
         else {
             resolve({isError: true, message: 'incorrect parameters'});
@@ -1629,6 +1620,8 @@ function videoIdWatch_GET(videoId) {
             performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
             .then(video => {
                 if(video != null) {
+                    const externalVideosBaseUrl = getExternalVideosBaseUrl();
+
                     let manifestType;
 
                     if(video.is_streaming) {
@@ -1666,7 +1659,7 @@ function videoIdWatch_GET(videoId) {
                                 isHlsAvailable = true;
                             }
                             
-                            const src = '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-master.' + format;
+                            const src = getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-master.' + format;
                             
                             const source = {src: src, type: type};
                             
@@ -1679,7 +1672,7 @@ function videoIdWatch_GET(videoId) {
                             if(fs.existsSync(adaptiveVideoFilePath)) {
                                 sourcesFormatsAndResolutions[format].push(resolution);
                                 
-                                const src = '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-' + resolution + '.' + format;
+                                const src = getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-' + resolution + '.' + format;
                                 
                                 const source = {src: src, type: type};
                                 
@@ -1708,7 +1701,7 @@ function videoIdWatch_GET(videoId) {
 
                                 sourcesFormatsAndResolutions[format].push(resolution);
                                 
-                                const src = '/external/videos/' + videoId + '/progressive/' + format + '/' + resolution;
+                                const src = externalVideosBaseUrl + '/external/videos/' + videoId + '/progressive/' + format + '/' + resolution;
                                 
                                 const source = {src: src, type: type};
                                 
@@ -1737,7 +1730,8 @@ function videoIdWatch_GET(videoId) {
                         isOgvAvailable: isOgvAvailable,
                         adaptiveSources: adaptiveSources,
                         progressiveSources: progressiveSources,
-                        sourcesFormatsAndResolutions: sourcesFormatsAndResolutions
+                        sourcesFormatsAndResolutions: sourcesFormatsAndResolutions,
+                        externalVideosBaseUrl: externalVideosBaseUrl
                     }});
                 }
                 else {
@@ -1760,6 +1754,7 @@ module.exports = {
     videoIdImportingStop_POST,
     publishing_POST,
     published_POST,
+    formatResolutionPublished_POST,
     videoIdPublishingStop_POST,
     videoIdUpload_POST,
     videoIdStream_POST,

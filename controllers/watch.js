@@ -1,4 +1,5 @@
 const { isVideoIdValid } = require('../utils/validators');
+const { getExternalVideosBaseUrl } = require('../utils/helpers');
 const { information_GET } = require('../controllers/status');
 const { linksAll_GET } = require('./links');
 const { walletAddressAll_GET } = require('../controllers/monetization');
@@ -13,6 +14,7 @@ function root_GET(videoId) {
             const videoData = await videoIdWatch_GET(videoId);
             const recommendedVideosData = await recommended_GET();
             const commentsData = await videoIdComments_GET(videoId, 'before', 'ascending', Date.now());
+            const externalVideosBaseUrl = getExternalVideosBaseUrl();
 
             if(informationData.isError) {
                 resolve({isError: true, message: 'error retrieving node information data'});
@@ -39,7 +41,8 @@ function root_GET(videoId) {
                     cryptoWalletAddressesData: cryptoWalletAddressesData, 
                     videoData: videoData, 
                     recommendedVideosData: recommendedVideosData, 
-                    commentsData: commentsData
+                    commentsData: commentsData,
+                    externalVideosBaseUrl: externalVideosBaseUrl
                 });
             }
         }

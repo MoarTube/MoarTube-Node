@@ -1,4 +1,5 @@
 const express = require('express');
+const expressSubdomain = require('express-subdomain');
 const expressSession = require('express-session');
 const bodyParser = require('body-parser');
 const path = require('path');
@@ -288,16 +289,12 @@ else {
 		app.use(bodyParser.json());
 
 		app.engine('dot', engine.__express);
+		
 		app.set('views', getViewsDirectoryPath());
 		app.set('view engine', 'dot');
 
-		/*
-		app.use(function(req, res, next) {
-			console.log(`Received ${req.method} request for '${req.path}'`);
-
-			next();
-		});
-		*/
+		app.use(expressSubdomain('external.videos', externalVideosRoutes));
+		app.use(expressSubdomain('external.resources', externalResourcesRoutes));
 
 		app.use('/', baseRoutes);
 		app.use('/account', accountRoutes);
@@ -316,9 +313,9 @@ else {
 		app.use('/settings', settingsRoutes);
 		app.use('/streams', streamsRoutes);
 		app.use('/videos', videosRoutes);
-		app.use('/external/resources', externalResourcesRoutes);
 		app.use('/external/videos', externalVideosRoutes);
-
+		app.use('/external/resources', externalResourcesRoutes);
+		
 		await initializeHttpServer(app);
 		
 		process.on('message', async (msg) => {

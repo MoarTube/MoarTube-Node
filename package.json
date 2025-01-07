@@ -31,6 +31,7 @@
     "express": "^4.21.0",
     "express-dot-engine": "^1.0.8",
     "express-session": "^1.18.0",
+    "express-subdomain": "^1.0.6",
     "http-terminator": "^3.2.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",

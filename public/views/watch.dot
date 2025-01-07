@@ -6,13 +6,13 @@
 		<meta name="twitter:site" content="@MoarTubes" />
 		<meta name="twitter:title" content="[[= model.videoData.video.title]]" />
 		<meta name="twitter:description" content="[[= model.videoData.video.description]]" />
-		<meta name="twitter:image" content="[[= model.informationData.information.publicNodeProtocol]]://[[= model.informationData.information.publicNodeAddress]]:[[= model.informationData.information.publicNodePort]]/external/videos/[[= model.videoData.video.videoId]]/thumbnail" />
+		<meta name="twitter:image" content="[[=model.externalVideosBaseUrl]]/external/videos/[[= model.videoData.video.videoId]]/thumbnail" />
 		
 		<meta property="og:site_name" content="MoarTube.com" />
 		<meta property="og:title" content="[[= model.videoData.video.title]]" />
 		<meta property="og:description" content="[[= model.videoData.video.description]]" />
 		<meta property="og:type" content="desktopprofile" />
-		<meta property="og:image" content="[[= model.informationData.information.publicNodeProtocol]]://[[= model.informationData.information.publicNodeAddress]]:[[= model.informationData.information.publicNodePort]]/external/videos/[[= model.videoData.video.videoId]]/thumbnail" />
+		<meta property="og:image" content="[[=model.externalVideosBaseUrl]]/external/videos/[[= model.videoData.video.videoId]]/thumbnail" />
 		
 		<title>MoarTube</title>
 		<link rel="icon" type="image/x-icon" href="/external/resources/images/favicon.ico">
@@ -1134,6 +1134,8 @@ body {
 
 			let CRYPTO_WALLET_ADDRESSES = [];
 
+			let EXTERNAL_VIDEOS_BASE_URL;
+
             const COMMENT_INPUT_FORM_DYNAMIC = $('\
 			<form id="comment-input-form-dynamic" class="comment-input-form" role="form" method="POST" data-commentformtype="dynamic" style="background: #cb0c9f12;padding: 5px 5px 5px 5px;">\
 				<textarea class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area" rows="1" placeholder="Add a comment..." maxlength="500" name="commentPlainText"></textarea>\
@@ -1164,7 +1166,7 @@ body {
 						}
 					}
 
-					$('#video-poster').attr('src', '/external/videos/' + VIDEO_ID + '/poster');
+					EXTERNAL_VIDEOS_BASE_URL = INCOMING_PARAMETERS.externalVideosBaseUrl;
 
                     loadInformation(INCOMING_PARAMETERS.informationData.information);
 					loadLinks(INCOMING_PARAMETERS.linksData.links);
@@ -1173,6 +1175,8 @@ body {
                     loadTags(INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos);
                     loadRecommendedVideos(INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos, true);
                     loadComments(INCOMING_PARAMETERS.commentsData.comments, false);
+
+					$('#video-poster').attr('src', EXTERNAL_VIDEOS_BASE_URL + '/external/videos/' + VIDEO_ID + '/poster');
 
                     if(HASH_VALUE !== '') {
                         if($(HASH_VALUE + ' .postNum a:first-child').length) {
@@ -1338,7 +1342,7 @@ body {
                                 <div class="row g-0 position-relative">\
                                     <div class="col-6 position-relative">\
                                         <div class="position-relative">\
-                                            <img src="/external/videos/' + videoId + '/preview" class="rounded ratio ratio-16x9" alt="..."/>\
+                                            <img src="' + EXTERNAL_VIDEOS_BASE_URL + '/external/videos/' + videoId + '/preview" class="rounded ratio ratio-16x9" alt="..."/>\
                                             <i class="video-streaming-timestamp">' + durationFormatted + '</i>\
                                             ' + liveStreamInidcator + '\
                                         </div>\

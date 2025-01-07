@@ -16,6 +16,7 @@ router.get('/', async (req, res) => {
         const isPublished = data.videoData.video.isPublished;
         const isStreaming = data.videoData.video.isStreaming;
         const isStreamed = data.videoData.video.isStreamed;
+        const externalVideosBaseUrl = data.externalVideosBaseUrl;
 
         if((adaptiveSources.length === 0 && progressiveSources.length === 0) || (!isPublished && !isStreaming)) {
             if(isStreamed) {
@@ -35,7 +36,8 @@ router.get('/', async (req, res) => {
             cryptoWalletAddressesData: data.cryptoWalletAddressesData, 
             videoData: data.videoData, 
             recommendedVideosData: data.recommendedVideosData, 
-            commentsData: data.commentsData
+            commentsData: data.commentsData,
+            externalVideosBaseUrl: externalVideosBaseUrl
         });
     }
     catch(error) {

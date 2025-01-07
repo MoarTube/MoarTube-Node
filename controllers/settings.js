@@ -463,11 +463,8 @@ function storageConfigToggle_POST(storageConfig) {
         if(isStorageConfigValid(storageConfig)) {
             try {
                 const storageMode = storageConfig.storageMode;
-
-                if (storageMode === 'filesystem') {
-                    
-                } 
-                else if (storageMode === 's3provider') {
+                
+                if (storageMode === 's3provider') {
                     const s3Config = storageConfig.s3Config;
                     
                     // s3 testing here
@@ -600,34 +597,51 @@ function networkExternal_POST(publicNodeProtocol, publicNodeAddress, publicNodeP
             nodeSettings.publicNodeProtocol = publicNodeProtocol;
             nodeSettings.publicNodeAddress = publicNodeAddress;
             nodeSettings.publicNodePort = publicNodePort;
-            
-            performNodeIdentification()
-            .then(() => {
-                const nodeIdentification = getNodeIdentification();
-                
-                const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-                
-                indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProtocol, publicNodeAddress, publicNodePort)
-                .then(indexerResponseData => {
-                    if(indexerResponseData.isError) {
-                        resolve({isError: true, message: indexerResponseData.message});
-                    }
-                    else {
-                        setNodeSettings(nodeSettings);
+
+            performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = ?', [true])
+            .then(videos => {
+                if(videos.length > 0) {
+                    performNodeIdentification()
+                    .then(() => {
+                        const nodeIdentification = getNodeIdentification();
                         
-                        resolve({ isError: false });
-                    }
-                })
-                .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack);
+                        const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+                        
+                        indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProtocol, publicNodeAddress, publicNodePort)
+                        .then(indexerResponseData => {
+                            if(indexerResponseData.isError) {
+                                resolve({isError: true, message: indexerResponseData.message});
+                            }
+                            else {
+                                // update HLS manifests here with the new external videos base url
+
+                                setNodeSettings(nodeSettings);
+                                
+                                resolve({ isError: false });
+                            }
+                        })
+                        .catch(error => {
+                            logDebugMessageToConsole(null, error, new Error().stack);
+                            
+                            resolve({isError: true, message: 'your settings were not saved because they could not be sent to the MoarTube platform'});
+                        });
+                    })
+                    .catch(error => {
+                        logDebugMessageToConsole(null, error, new Error().stack);
+                        
+                        resolve({isError: true, message: 'your settings were not saved because they could not be sent to the MoarTube platform'});
+                    });
+                }
+                else {
+                    // update HLS manifests here with the new external videos base url
                     
-                    resolve({isError: true, message: 'your settings were not saved because they could not be sent to the MoarTube platform'});
-                });
+                    setNodeSettings(nodeSettings);
+                    
+                    resolve({ isError: false });
+                }
             })
             .catch(error => {
                 logDebugMessageToConsole(null, error, new Error().stack);
-                
-                resolve({isError: true, message: 'your settings were not saved because they could not be sent to the MoarTube platform'});
             });
         }
         else {
