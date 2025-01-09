@@ -774,7 +774,7 @@ router.get('/search', async (req, res) => {
     }
 });
 
-router.post('/:videoId/thumbnail', (req, res) => {
+router.post('/:videoId/images/thumbnail', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
@@ -871,7 +871,7 @@ router.post('/:videoId/thumbnail', (req, res) => {
     });
 });
 
-router.post('/:videoId/preview', (req, res) => {
+router.post('/:videoId/images/preview', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {
@@ -969,7 +969,7 @@ router.post('/:videoId/preview', (req, res) => {
     });
 });
 
-router.post('/:videoId/poster', (req, res) => {
+router.post('/:videoId/images/poster', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then((isAuthenticated) => {
         if(isAuthenticated) {

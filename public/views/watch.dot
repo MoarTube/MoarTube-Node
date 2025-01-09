@@ -1342,7 +1342,7 @@ body {
                                 <div class="row g-0 position-relative">\
                                     <div class="col-6 position-relative">\
                                         <div class="position-relative">\
-                                            <img src="' + EXTERNAL_VIDEOS_BASE_URL + '/external/videos/' + videoId + '/preview" class="rounded ratio ratio-16x9" alt="..."/>\
+                                            <img src="' + EXTERNAL_VIDEOS_BASE_URL + '/external/videos/' + videoId + '/images/preview" class="rounded ratio ratio-16x9" alt="..."/>\
                                             <i class="video-streaming-timestamp">' + durationFormatted + '</i>\
                                             ' + liveStreamInidcator + '\
                                         </div>\
@@ -1579,7 +1579,7 @@ body {
 					const sources = adaptiveSources.concat(progressiveSources);
 
 					let player = videojs('video-player', {
-						sources: sources,
+						sources: ['https://testing-external-videos-moartube-node-chris-com.s3.us-west-2.amazonaws.com/external/videos/RGroMLunY_2/adaptive/static/m3u8/manifests/manifest-master.m3u8'],
 						html5: {
 							vhs: {
 								overrideNative: !videojs.browser.IS_SAFARI,

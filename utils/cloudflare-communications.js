@@ -355,7 +355,7 @@ function cloudflare_purgeVideoPreviewImages(videoIds) {
         const files = [];
 
         for(const videoId of videoIds) {
-            files.push(`${nodeBaseUrl}/external/videos/${videoId}/preview`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/images/preview`);
         }
 
         cloudflare_purgeCache(files, 'cloudflare_purgeVideoPreviewImages')

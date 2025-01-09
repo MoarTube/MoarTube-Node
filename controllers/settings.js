@@ -462,14 +462,6 @@ function storageConfigToggle_POST(storageConfig) {
     return new Promise(async function(resolve, reject) {
         if(isStorageConfigValid(storageConfig)) {
             try {
-                const storageMode = storageConfig.storageMode;
-                
-                if (storageMode === 's3provider') {
-                    const s3Config = storageConfig.s3Config;
-                    
-                    // s3 testing here
-                }
-
                 const nodeSettings = getNodeSettings();
 
                 nodeSettings.storageConfig = storageConfig;

@@ -113,7 +113,13 @@ function isStorageConfigValid(storageConfig) {
                 if (!storageConfig.s3Config || typeof storageConfig.s3Config !== "object") {
                     isValid = false;
                 }
-                else if (!storageConfig.s3Config.Bucket || typeof storageConfig.s3Config.Bucket !== "string" || storageConfig.s3Config.Bucket.trim() === "") {
+                else if (!storageConfig.s3Config.bucketName || typeof storageConfig.s3Config.bucketName !== "string") {
+                    isValid = false;
+                }
+                else if (!storageConfig.s3Config.bucketEndpoint || typeof storageConfig.s3Config.bucketEndpoint !== "string") {
+                    isValid = false;
+                }
+                else if (!storageConfig.s3Config.s3ProviderClientConfig || typeof storageConfig.s3Config.s3ProviderClientConfig !== "object") {
                     isValid = false;
                 }
             }

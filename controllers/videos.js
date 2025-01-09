@@ -223,15 +223,6 @@ function videoIdPublishingStop_POST(videoId) {
 function videoIdUpload_POST(videoId, format, resolution) {
     return new Promise(async function(resolve, reject) {
         if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
-            if(format === 'm3u8') {
-                try {
-                    await updateHlsVideoMasterManifestFile(videoId);
-                }
-                catch(error) {
-                    logDebugMessageToConsole(null, error, new Error().stack);
-                }
-            }
-
             try {
                 performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
                 .then(async videos => {

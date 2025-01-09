@@ -38,7 +38,7 @@ router.get('/baseUrl', (req, res) => {
     });
 });
 
-router.get('/:videoId/thumbnail', (req, res) => {
+router.get('/:videoId/images/thumbnail.jpg', (req, res) => {
     try {
         const videoId = req.params.videoId;
 
@@ -60,7 +60,7 @@ router.get('/:videoId/thumbnail', (req, res) => {
     }
 });
 
-router.get('/:videoId/preview', (req, res) => {
+router.get('/:videoId/images/preview.jpg', (req, res) => {
     try {
         const videoId = req.params.videoId;
 
@@ -82,7 +82,7 @@ router.get('/:videoId/preview', (req, res) => {
     }
 });
 
-router.get('/:videoId/poster', (req, res) => {
+router.get('/:videoId/images/poster.jpg', (req, res) => {
     try {
         const videoId = req.params.videoId;
 
