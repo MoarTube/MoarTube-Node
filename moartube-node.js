@@ -293,8 +293,14 @@ else {
 		app.set('views', getViewsDirectoryPath());
 		app.set('view engine', 'dot');
 
-		app.use(expressSubdomain('external.videos', externalVideosRoutes));
-		app.use(expressSubdomain('external.resources', externalResourcesRoutes));
+		if(getIsDeveloperMode()) {
+			app.use(expressSubdomain('testingexternalvideos', externalVideosRoutes));
+			app.use(expressSubdomain('testingexternalresources', externalResourcesRoutes));
+		}
+		else {
+			app.use(expressSubdomain('externalvideos', externalVideosRoutes));
+			app.use(expressSubdomain('externalresources', externalResourcesRoutes));
+		}
 
 		app.use('/', baseRoutes);
 		app.use('/account', accountRoutes);

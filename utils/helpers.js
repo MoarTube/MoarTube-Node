@@ -264,44 +264,9 @@ function getNodeIdentification() {
 }
 
 function getExternalVideosBaseUrl() {
-	const { isIpv4Address } = require('./validators');
-
 	const nodeSettings = getNodeSettings();
 
-	const storageConfig = nodeSettings.storageConfig;
-	const storageMode = storageConfig.storageMode;
-
-	const publicNodeProtocol = nodeSettings.publicNodeProtocol;
-	const publicNodeAddress = nodeSettings.publicNodeAddress;
-	let publicNodePort = nodeSettings.publicNodePort;
-	
-	if(publicNodeProtocol === 'http') {
-		publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
-	} 
-	else if(publicNodeProtocol === 'https') {
-		publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
-	}
-
-	const isIpv4Addresss = isIpv4Address(publicNodeAddress);
-
-	let externalVideosBaseUrl;
-
-	if(storageMode === 'filesystem') {
-		if(isIpv4Addresss) {
-			externalVideosBaseUrl = `${publicNodeProtocol}://${publicNodeAddress}${publicNodePort}`;
-		}
-		else {
-			externalVideosBaseUrl = `${publicNodeProtocol}://external.videos.${publicNodeAddress}${publicNodePort}`;
-		}
-	}
-	else if(storageMode === 's3provider') {
-		if(isDeveloperMode) {
-			externalVideosBaseUrl = storageConfig.s3Config.bucketEndpoint; // https://testing-external-videos-moartube-node-chris-com.s3.us-west-2.amazonaws.com
-		}
-		else {
-			// TODO: DNS CNAME handling
-		}
-	}
+	const externalVideosBaseUrl = nodeSettings.externalVideosBaseUrl;
 
 	return externalVideosBaseUrl;
 }

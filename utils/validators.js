@@ -108,15 +108,15 @@ function isStorageConfigValid(storageConfig) {
         if (!storageConfig.storageMode || !validStorageModes.includes(storageConfig.storageMode)) {
             isValid = false;
         }
+        else if (!storageConfig.externalVideosBaseUrl || typeof storageConfig.externalVideosBaseUrl !== "string") {
+            isValid = false;
+        }
         else {
             if (storageConfig.storageMode === 's3provider') {
                 if (!storageConfig.s3Config || typeof storageConfig.s3Config !== "object") {
                     isValid = false;
                 }
                 else if (!storageConfig.s3Config.bucketName || typeof storageConfig.s3Config.bucketName !== "string") {
-                    isValid = false;
-                }
-                else if (!storageConfig.s3Config.bucketEndpoint || typeof storageConfig.s3Config.bucketEndpoint !== "string") {
                     isValid = false;
                 }
                 else if (!storageConfig.s3Config.s3ProviderClientConfig || typeof storageConfig.s3Config.s3ProviderClientConfig !== "object") {
@@ -261,12 +261,6 @@ function isPasswordValid(password) {
     const regex = /^[\w!@#$%^&*()-_=+]+$/;
     
     return password != null && password.length > 0 && password.length <= 100 && regex.test(password)
-}
-
-function isIpv4Address(value) {
-    const ipv4Regex = /^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$/;
-
-    return ipv4Regex.test(value);
 }
 
 function isNetworkAddressValid(networkAddress) {
@@ -419,6 +413,5 @@ module.exports = {
     isSortValid,
     isLimitValid,
     isDatabaseConfigValid,
-    isStorageConfigValid,
-    isIpv4Address
+    isStorageConfigValid
 }
