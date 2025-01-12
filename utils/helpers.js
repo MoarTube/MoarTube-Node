@@ -6,6 +6,7 @@ const { logDebugMessageToConsole } = require('./logger');
 const { getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath, getVideosDirectoryPath, getLastCheckedContentTrackerPath } = require('./paths');
 const { performDatabaseReadJob_GET } = require('./database');
 const { indexer_getNodeIdentification, indexer_doNodeIdentificationRefresh } = require('./indexer-communications');
+const { isIpv4Address } = require('../utils/validators');
 
 let isDeveloperMode;
 let jwtSecret;
@@ -266,7 +267,45 @@ function getNodeIdentification() {
 function getExternalVideosBaseUrl() {
 	const nodeSettings = getNodeSettings();
 
-	const externalVideosBaseUrl = nodeSettings.externalVideosBaseUrl;
+	const storageConfig = nodeSettings.storageConfig;
+
+	let externalVideosBaseUrl;
+
+	if(storageConfig.storageMode === 'filesystem') {
+		const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+		const publicNodeAddress = nodeSettings.publicNodeAddress;
+		let publicNodePort = nodeSettings.publicNodePort;
+		
+		if(publicNodeProtocol === 'http') {
+			publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+		} 
+		else if(publicNodeProtocol === 'https') {
+			publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+		}
+		
+		if(isIpv4Address(publicNodeAddress)) {
+			externalVideosBaseUrl = `${publicNodeProtocol}://${publicNodeAddress}${publicNodePort}`;
+		}
+		else {
+			if(getIsDeveloperMode()) {
+				externalVideosBaseUrl = `${publicNodeProtocol}://testingexternalvideos.${publicNodeAddress}${publicNodePort}`;
+			}
+			else {
+				externalVideosBaseUrl = `${publicNodeProtocol}://externalvideos.${publicNodeAddress}${publicNodePort}`;
+			}
+		}
+	}
+	else if(storageConfig.storageMode === 's3provider') {
+		const bucketName = storageConfig.s3Config.bucketName;
+		const region = storageConfig.s3Config.s3ProviderClientConfig.region
+		
+		if(storageConfig.s3Config.isCnameConfigured) {
+			externalVideosBaseUrl = `https://${bucketName}`;
+		}
+		else {
+			externalVideosBaseUrl = `http://${bucketName}.s3.${region}.amazonaws.com`;
+		}
+	}
 
 	return externalVideosBaseUrl;
 }

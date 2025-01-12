@@ -508,7 +508,7 @@ function loadConfig() {
 			},
 			"storageConfig": {
 				"storageMode":"filesystem"
-			},
+			}
 		};
 
 		setNodeSettings(nodeSettings);

@@ -1,7 +1,3 @@
-const { 
-    cloudflare_validate
-} = require('../utils/cloudflare-communications');
-
 function isNodeNameValid(nodeName) {
     return (nodeName != null && nodeName.length >= 0 && nodeName.length <= 100);
 }
@@ -106,9 +102,6 @@ function isStorageConfigValid(storageConfig) {
         const validStorageModes = ['filesystem', 's3provider'];
 
         if (!storageConfig.storageMode || !validStorageModes.includes(storageConfig.storageMode)) {
-            isValid = false;
-        }
-        else if (!storageConfig.externalVideosBaseUrl || typeof storageConfig.externalVideosBaseUrl !== "string") {
             isValid = false;
         }
         else {
@@ -263,6 +256,12 @@ function isPasswordValid(password) {
     return password != null && password.length > 0 && password.length <= 100 && regex.test(password)
 }
 
+function isIpv4Address(value) {
+    const ipv4Regex = /^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$/;
+
+    return ipv4Regex.test(value);
+}
+
 function isNetworkAddressValid(networkAddress) {
     return networkAddress != null && networkAddress.length > 0 && networkAddress.length <= 100;
 }
@@ -345,6 +344,8 @@ function isTagsValid(tags) {
 
 function isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
     return new Promise(function(resolve, reject) {
+        const { cloudflare_validate } = require('../utils/cloudflare-communications');
+
         cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
         .then(function(result) {
             if(result.isError) {
@@ -413,5 +414,6 @@ module.exports = {
     isSortValid,
     isLimitValid,
     isDatabaseConfigValid,
-    isStorageConfigValid
+    isStorageConfigValid,
+    isIpv4Address
 }

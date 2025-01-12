@@ -2,8 +2,8 @@ const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { getNodeSettings, setNodeSettings, getJwtSecret } = require('../utils/helpers');
-const { isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isBooleanValid } = require('../utils/validators');
+const { getNodeSettings, setNodeSettings, getJwtSecret, getIsDeveloperMode } = require('../utils/helpers');
+const { isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isBooleanValid, isIpv4Address } = require('../utils/validators');
 
 function signIn_POST(username, password, moarTubeNodeHttpProtocol, moarTubeNodeIp, moarTubeNodePort, rememberMe) {
     if(!isUsernameValid(username)) {
@@ -28,8 +28,10 @@ function signIn_POST(username, password, moarTubeNodeHttpProtocol, moarTubeNodeI
         let options = {};
         
         if(!rememberMe) {
-            options.expiresIn = '1d'; // 1 day
+            options.expiresIn = '1d'; // 1 day login session
         }
+
+        const token = jwt.sign({ username }, getJwtSecret(), options);
         
         const nodeSettings = getNodeSettings();
         
@@ -42,15 +44,33 @@ function signIn_POST(username, password, moarTubeNodeHttpProtocol, moarTubeNodeI
         if(isUsernameValid && isPasswordValid) {
             logDebugMessageToConsole('user logged in: ' + username, null, null);
 
+            // if these are empty, then this is the user's first time logging in. The storageMode is therefore assumed to be fileSystem.
             if(nodeSettings.publicNodeProtocol === "" && nodeSettings.publicNodeAddress === "" && nodeSettings.publicNodePort === "") {
                 nodeSettings.publicNodeProtocol = moarTubeNodeHttpProtocol;
                 nodeSettings.publicNodeAddress = moarTubeNodeIp;
                 nodeSettings.publicNodePort = moarTubeNodePort;
 
+                if(moarTubeNodeHttpProtocol === 'http') {
+                    moarTubeNodePort = moarTubeNodePort == 80 ? '' : ':' + moarTubeNodePort;
+                } 
+                else if(moarTubeNodeHttpProtocol === 'https') {
+                    moarTubeNodePort = moarTubeNodePort == 443 ? '' : ':' + moarTubeNodePort;
+                }
+                
+                if(isIpv4Address(moarTubeNodeIp)) {
+                    nodeSettings.externalVideosBaseUrl = `${moarTubeNodeHttpProtocol}://${moarTubeNodeIp}${moarTubeNodePort}`;
+                }
+                else {
+                    if(getIsDeveloperMode()) {
+                        nodeSettings.externalVideosBaseUrl = `${moarTubeNodeHttpProtocol}://testingexternalvideos.${moarTubeNodeIp}${moarTubeNodePort}`;
+                    }
+                    else {
+                        nodeSettings.externalVideosBaseUrl = `${moarTubeNodeHttpProtocol}://externalvideos.${moarTubeNodeIp}${moarTubeNodePort}`;
+                    }
+                }
+
                 setNodeSettings(nodeSettings);
             }
-
-            const token = jwt.sign({ username }, getJwtSecret(), options);
             
             return {isError: false, isAuthenticated: true, token: token};
         }

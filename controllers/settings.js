@@ -9,13 +9,12 @@ const { getImagesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath, ge
 const { getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast
 } = require('../utils/helpers');
 const { 
-    isNodeNameValid, isNodeAboutValid, isNodeIdValid, isUsernameValid, isPasswordValid, 
-    isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isCloudflareCredentialsValid, isBooleanValid, isDatabaseConfigValid,
-    isStorageConfigValid
+    isNodeNameValid, isNodeAboutValid, isNodeIdValid, isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNodeAddressValid, 
+    isPortValid, isCloudflareCredentialsValid, isBooleanValid, isDatabaseConfigValid, isStorageConfigValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
 const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
-    cloudflare_purgeWatchPages } = require('../utils/cloudflare-communications');
+    cloudflare_purgeWatchPages, cloudflare_addS3BucketCnameDnsRecord } = require('../utils/cloudflare-communications');
 const { submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
 
 function root_GET() {
@@ -458,10 +457,24 @@ function databaseConfigToggle_POST(databaseConfig) {
     });
 }
 
-function storageConfigToggle_POST(storageConfig) {
+function storageConfigToggle_POST(storageConfig, dnsConfig) {
     return new Promise(async function(resolve, reject) {
         if(isStorageConfigValid(storageConfig)) {
             try {
+                if(storageConfig.storageMode === 's3provider') {
+                    const bucketName = storageConfig.s3Config.bucketName;
+                    const region = storageConfig.s3Config.s3ProviderClientConfig.region;
+
+                    const cloudflareCredentials = dnsConfig.cloudflareCredentials;
+
+                    const cnameRecordName = bucketName;
+                    const cnameRecordContent = `${bucketName}.s3.${region}.amazonaws.com`;
+                    
+                    await cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecordContent, cloudflareCredentials);
+
+                    storageConfig.s3Config.isCnameConfigured = true;
+                }
+
                 const nodeSettings = getNodeSettings();
 
                 nodeSettings.storageConfig = storageConfig;

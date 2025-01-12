@@ -609,7 +609,7 @@
 					$('#mtp-video-link').attr('href', '/watch?v=' + VIDEO_ID);
 					$('#watch-on-moartube-mtp-overlay-child').attr('href', '/watch?v=' + VIDEO_ID);
 
-					$('#video-poster').attr('src', externalVideosBaseUrl + '/external/videos/' + VIDEO_ID + '/poster');
+					$('#video-poster').attr('src', externalVideosBaseUrl + '/external/videos/' + VIDEO_ID + '/images/poster.jpg');
 
 					$("#video-player").attr("controls", true);
 

@@ -586,8 +586,9 @@ router.post('/storageConfig/toggle', (req, res) => {
         if(isAuthenticated) {
             try {
                 const storageConfig = req.body.storageConfig;
+                const dnsConfig = req.body.dnsConfig;
 
-                const data = await storageConfigToggle_POST(storageConfig);
+                const data = await storageConfigToggle_POST(storageConfig, dnsConfig);
 
                 res.send(data);
             }

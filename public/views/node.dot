@@ -583,7 +583,7 @@ body {
 
 				videos.forEach(function(row) {
 					const videoId = row.video_id;
-					const preview = externalVideosBaseUrl + '/external/videos/' + videoId + '/images/preview';
+					const preview = externalVideosBaseUrl + '/external/videos/' + videoId + '/images/preview.jpg';
 					const title = row.title;
 					const tags = row.tags;
 					const lengthTimestamp = row.length_timestamp;
