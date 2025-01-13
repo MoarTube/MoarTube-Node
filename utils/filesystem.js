@@ -70,23 +70,21 @@ function updateHlsVideoMasterManifestFile(videoId) {
         
         let manifestFileString = '#EXTM3U\n#EXT-X-VERSION:3\n';
 
-        performDatabaseReadJob_GET('SELECT is_streaming, meta FROM videos WHERE video_id = ?', [videoId])
+        performDatabaseReadJob_GET('SELECT is_streaming, outputs FROM videos WHERE video_id = ?', [videoId])
         .then(videoData => {
             if(videoData != null) {
-                const is_streaming = videoData.is_streaming;
-
                 let manifestType;
 
-                if(is_streaming) {
+                if(videoData.is_streaming) {
                     manifestType = 'dynamic';
                 }
                 else {
                     manifestType = 'static';
                 }
 
-                const meta = JSON.parse(videoData.meta);
+                const outputs = JSON.parse(videoData.outputs);
 
-                const outputsM3u8 = meta.outputs.m3u8;
+                const outputsM3u8 = outputs.m3u8;
 
                 for(const resolution of outputsM3u8) {
                     if(resolution === '240p') {

@@ -143,6 +143,10 @@ const Video = sequelize.define('Video', {
         type: DataTypes.BOOLEAN,
         allowNull: false
     },
+    outputs: {
+        type: DataTypes.TEXT,
+        allowNull: false
+    },
     meta: {
         type: DataTypes.TEXT,
         allowNull: false

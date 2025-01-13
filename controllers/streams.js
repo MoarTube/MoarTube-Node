@@ -89,9 +89,9 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                 performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
                 .then(video => {
                     if(video != null) {
-                        let meta = JSON.parse(video.meta);
+                        const outputs = JSON.stringify({'m3u8': [resolution], 'mp4': [], 'webm': [], 'ogv': []});
 
-                        meta.outputs = {'m3u8': [resolution], 'mp4': [], 'webm': [], 'ogv': []};
+                        let meta = JSON.parse(video.meta);
 
                         meta.rtmpPort = rtmpPort;
                         meta.networkAddress = networkAddress;
@@ -101,8 +101,8 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
 
                         meta = JSON.stringify(meta);
 
-                        query = 'UPDATE videos SET title = ?, description = ?, tags = ?, length_seconds = ?, length_timestamp = ?, views = ?, comments = ?, likes = ?, dislikes = ?, bandwidth = ?, is_publishing = ?, is_published = ?, is_streaming = ?, is_streamed = ?, is_stream_recorded_remotely = ?, is_stream_recorded_locally = ?, is_error = ?, meta = ?, creation_timestamp = ? WHERE video_id = ?';
-                        parameters = [title, description, tags, 0, '', 0, 0, 0, 0, 0, false, false, true, false, isRecordingStreamRemotely, isRecordingStreamLocally, false, meta, Date.now(), videoId];
+                        query = 'UPDATE videos SET title = ?, description = ?, tags = ?, length_seconds = ?, length_timestamp = ?, views = ?, comments = ?, likes = ?, dislikes = ?, bandwidth = ?, is_publishing = ?, is_published = ?, is_streaming = ?, is_streamed = ?, is_stream_recorded_remotely = ?, is_stream_recorded_locally = ?, is_error = ?, outputs = ?, meta = ?, creation_timestamp = ? WHERE video_id = ?';
+                        parameters = [title, description, tags, 0, '', 0, 0, 0, 0, 0, false, false, true, false, isRecordingStreamRemotely, isRecordingStreamLocally, false, outputs, meta, Date.now(), videoId];
 
                         performDatabaseWriteJob();
                     }
@@ -115,7 +115,7 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                 });
             }
             else {
-                const creationTimestamp = Date.now();
+                const outputs = JSON.stringify({'m3u8': [resolution], 'mp4': [], 'webm': [], 'ogv': []});
 
                 const meta = JSON.stringify(
                     {
@@ -123,7 +123,6 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                             isChatHistoryEnabled: true, 
                             chatHistoryLimit: 0
                         },
-                        outputs: {'m3u8': [resolution], 'mp4': [], 'webm': [], 'ogv': []},
                         rtmpPort: rtmpPort,
                         uuid: uuid,
                         networkAddress: networkAddress,
@@ -133,18 +132,20 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                     }
                 );
 
-                query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-                parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, false, false, false, false, true, false, isRecordingStreamRemotely, isRecordingStreamLocally, true, false, false, false, false, false, false, false, '', true, true, true, true, true, meta, creationTimestamp];
+                query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, outputs, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+                parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, false, false, false, false, true, false, isRecordingStreamRemotely, isRecordingStreamLocally, true, false, false, false, false, false, false, false, '', true, true, true, true, true, outputs, meta, Date.now()];
 
                 performDatabaseWriteJob();
             }
 
             function performDatabaseWriteJob() {
-                submitDatabaseWriteJob(query, parameters, function(isError) {
+                submitDatabaseWriteJob(query, parameters, async function(isError) {
                     if(isError) {
                         resolve({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
+                        await updateHlsVideoMasterManifestFile(videoId);
+
                         performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
                         .then(async videos => {
                             const videoIds = videos.map(video => video.video_id);

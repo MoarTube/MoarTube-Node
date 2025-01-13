@@ -461,7 +461,7 @@ function storageConfigToggle_POST(storageConfig, dnsConfig) {
     return new Promise(async function(resolve, reject) {
         if(isStorageConfigValid(storageConfig)) {
             try {
-                if(storageConfig.storageMode === 's3provider') {
+                if(storageConfig.storageMode === 's3provider' && dnsConfig.isConfiguringDnsCname) {
                     const bucketName = storageConfig.s3Config.bucketName;
                     const region = storageConfig.s3Config.s3ProviderClientConfig.region;
 
@@ -483,8 +483,10 @@ function storageConfigToggle_POST(storageConfig, dnsConfig) {
 
                 resolve({isError: false});
             }
-            catch(e) {
-                resolve({isError: true, message: 'database connect error'});
+            catch(error) {
+                logDebugMessageToConsole('storage config save error', error, null);
+
+                resolve({isError: true, message: 'failed to save the storage configuration'});
             }
         }
         else {

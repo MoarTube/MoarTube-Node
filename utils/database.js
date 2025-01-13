@@ -42,11 +42,11 @@ function provisionDatabase() {
 
                 logDebugMessageToConsole(`performed ${sequelize.getDialect()} database vacuum`, null, null);
 
-                logDebugMessageToConsole(`enabling ${sequelize.getDialect()} WAL mode`, null, null);
+                //logDebugMessageToConsole(`enabling ${sequelize.getDialect()} WAL mode`, null, null);
 
-                await sequelize.query('PRAGMA journal_mode=WAL');
+                //await sequelize.query('PRAGMA journal_mode=WAL');
 
-                logDebugMessageToConsole(`enabled ${sequelize.getDialect()} WAL mode`, null, null);
+                //logDebugMessageToConsole(`enabled ${sequelize.getDialect()} WAL mode`, null, null);
 
             }
             catch (error) {

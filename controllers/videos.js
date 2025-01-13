@@ -39,7 +39,9 @@ function import_POST(title, description, tags) {
             const videoId = await generateVideoId();
             const creationTimestamp = Date.now();
             
-            const meta = JSON.stringify({outputs: {'m3u8': [], 'mp4': [], 'webm': [], 'ogv': []}});
+            const outputs = JSON.stringify({'m3u8': [], 'mp4': [], 'webm': [], 'ogv': []});
+
+            const meta = JSON.stringify({});
 
             logDebugMessageToConsole('importing video with id <' + videoId + '>', null, null);
             
@@ -49,8 +51,8 @@ function import_POST(title, description, tags) {
             fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/adaptive'), { recursive: true });
             fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/progressive'), { recursive: true });
             
-            const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-            const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, '', true, true, true, true, true, meta, creationTimestamp];
+            const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, outputs, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+            const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, '', true, true, true, true, true, outputs, meta, creationTimestamp];
             
             submitDatabaseWriteJob(query, parameters, function(isError) {
                 if(isError) {
@@ -176,16 +178,16 @@ function published_POST(videoId) {
 function formatResolutionPublished_POST(videoId, format, resolution) {
     return new Promise(function(resolve, reject) {
         if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
-            performDatabaseReadJob_GET('SELECT meta FROM videos WHERE video_id = ?', [videoId])
+            performDatabaseReadJob_GET('SELECT outputs FROM videos WHERE video_id = ?', [videoId])
             .then(video => {
                 if(video != null) {
-                    const meta = JSON.parse(video.meta);
+                    const outputs = JSON.parse(video.outputs);
 
-                    if (!meta.outputs[format].includes(resolution)) {
-                        meta.outputs[format].push(resolution);
+                    if (!outputs[format].includes(resolution)) {
+                        outputs[format].push(resolution);
                     }
                     
-                    submitDatabaseWriteJob('UPDATE videos SET meta = ? WHERE video_id = ?', [JSON.stringify(meta), videoId], async function(isError) {
+                    submitDatabaseWriteJob('UPDATE videos SET outputs = ? WHERE video_id = ?', [JSON.stringify(outputs), videoId], async function(isError) {
                         if(format === 'm3u8') {
                             try {
                                 await updateHlsVideoMasterManifestFile(videoId);
@@ -376,10 +378,10 @@ function videoIdSourceFileExtension_GET(videoId) {
 function videoIdPublishes_GET(videoId) {
     return new Promise(async function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
-            performDatabaseReadJob_GET('SELECT is_published, meta FROM videos WHERE video_id = ?', [videoId])
+            performDatabaseReadJob_GET('SELECT is_published, outputs FROM videos WHERE video_id = ?', [videoId])
             .then(video => {
                 if(video != null) {
-                    const meta = JSON.parse(video.meta);
+                    const outputs = JSON.parse(video.outputs);
 
                     const publishes = [
                         { format: 'm3u8', resolution: '2160p', isPublished: false },
@@ -416,8 +418,6 @@ function videoIdPublishes_GET(videoId) {
                     ];
 
                     if(video.is_published) {
-                        const outputs = meta.outputs;
-
                         for(const publish of publishes) {
                             const resolutions = outputs[publish.format];
 
@@ -487,14 +487,14 @@ function videoIdUnpublish_POST(videoId, format, resolution) {
                 videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution);
             }
 
-            performDatabaseReadJob_GET('SELECT meta FROM videos WHERE video_id = ?', [videoId])
+            performDatabaseReadJob_GET('SELECT outputs FROM videos WHERE video_id = ?', [videoId])
             .then(video => {
                 if(video != null) {
-                    const meta = JSON.parse(video.meta);
+                    const outputs = JSON.parse(video.outputs);
 
-                    meta.outputs[format] = meta.outputs[format].filter(item => item !== resolution);
+                    outputs[format] = outputs[format].filter(item => item !== resolution);
 
-                    submitDatabaseWriteJob('UPDATE videos SET meta = ? WHERE video_id = ?', [JSON.stringify(meta), videoId], async function(isError) {
+                    submitDatabaseWriteJob('UPDATE videos SET outputs = ? WHERE video_id = ?', [JSON.stringify(outputs), videoId], async function(isError) {
                         await deleteDirectoryRecursive(videoDirectoryPath);
                         await deleteFile(manifestFilePath);
                         
@@ -946,7 +946,9 @@ function videoIdData_GET(videoId) {
                     const isLive = video.is_live;
                     const isStreaming = video.is_streaming;
                     const isFinalized = video.is_finalized;
+                    const isStreamRecordedRemotely = video.is_stream_recorded_remotely;
                     const timestamp = video.creation_timestamp;
+                    const outputs = JSON.parse(video.outputs);
                     const meta = JSON.parse(video.meta);
 
                     let videoAliasUrl = 'MoarTube Aliaser link unavailable';
@@ -972,8 +974,10 @@ function videoIdData_GET(videoId) {
                         isLive: isLive,
                         isStreaming: isStreaming,
                         isFinalized: isFinalized,
+                        isStreamRecordedRemotely: isStreamRecordedRemotely,
                         timestamp: timestamp,
                         videoAliasUrl: videoAliasUrl,
+                        outputs: outputs,
                         meta: meta
                     };
                 
@@ -1701,7 +1705,7 @@ function videoIdWatch_GET(videoId) {
                             }
                         });
                     });
-                    
+
                     resolve({isError: false, video: {
                         videoId: videoId,
                         title: video.title,
