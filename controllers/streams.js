@@ -3,7 +3,7 @@ const path = require('path');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath, getPublicDirectoryPath } = require('../utils/paths');
-const { generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, deleteDirectoryRecursive } = require('../utils/helpers');
+const { generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, deleteDirectoryRecursive, getNodeSettings } = require('../utils/helpers');
 const { 
     isTitleValid, isDescriptionValid, isTagsValid, isPortValid, isVideoIdValid, isAdaptiveFormatValid, isResolutionValid, isSegmentNameValid, isBooleanValid, 
     isNetworkAddressValid, isChatHistoryLimitValid 
@@ -91,6 +91,8 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                     if(video != null) {
                         let meta = JSON.parse(video.meta);
 
+                        meta.outputs = {'m3u8': [resolution], 'mp4': [], 'webm': [], 'ogv': []};
+
                         meta.rtmpPort = rtmpPort;
                         meta.networkAddress = networkAddress;
                         meta.resolution = resolution;
@@ -120,7 +122,8 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                         chatSettings: {
                             isChatHistoryEnabled: true, 
                             chatHistoryLimit: 0
-                        }, 
+                        },
+                        outputs: {'m3u8': [resolution], 'mp4': [], 'webm': [], 'ogv': []},
                         rtmpPort: rtmpPort,
                         uuid: uuid,
                         networkAddress: networkAddress,
@@ -204,9 +207,14 @@ function videoIdStop_POST(videoId) {
                     resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
                 else {
+                    const nodeSettings = getNodeSettings();
+
+                    const storageMode = nodeSettings.storageConfig.storageMode;
+
                     try {
-                        await endStreamedHlsManifestFiles();
-                        await updateHlsVideoMasterManifestFile(videoId);
+                        if(storageMode === 'filesystem') {
+                            await endStreamedHlsManifestFiles();
+                        }
                     }
                     catch(error) {
                         logDebugMessageToConsole(null, error, new Error().stack);
@@ -238,9 +246,11 @@ function videoIdStop_POST(videoId) {
                                 });
                             }
                             else {
-                                const m3u8DirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
-                                
-                                await deleteDirectoryRecursive(m3u8DirectoryPath);
+                                if(storageMode === 'filesystem') {
+                                    const m3u8DirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
+                                    
+                                    await deleteDirectoryRecursive(m3u8DirectoryPath);
+                                }
                             }
                         }
 

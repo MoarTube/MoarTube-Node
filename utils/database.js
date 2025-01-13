@@ -25,7 +25,6 @@ function provisionDatabase() {
         const liveChatMessage = require('../database/models/live-chat-messages.js');
         const cryptoWalletAddresses = require('../database/models/crypto-wallet-addresses.js');
         const link = require('../database/models/link.js');
-        const published = require('../database/models/published.js');
 
         const didLinksTableExist = await sequelize.getQueryInterface().tableExists('links');
 

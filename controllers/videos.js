@@ -39,7 +39,7 @@ function import_POST(title, description, tags) {
             const videoId = await generateVideoId();
             const creationTimestamp = Date.now();
             
-            const meta = JSON.stringify({});
+            const meta = JSON.stringify({outputs: {'m3u8': [], 'mp4': [], 'webm': [], 'ogv': []}});
 
             logDebugMessageToConsole('importing video with id <' + videoId + '>', null, null);
             
@@ -176,24 +176,34 @@ function published_POST(videoId) {
 function formatResolutionPublished_POST(videoId, format, resolution) {
     return new Promise(function(resolve, reject) {
         if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
-            const timestamp = Date.now();
+            performDatabaseReadJob_GET('SELECT meta FROM videos WHERE video_id = ?', [videoId])
+            .then(video => {
+                if(video != null) {
+                    const meta = JSON.parse(video.meta);
 
-            submitDatabaseWriteJob('INSERT INTO published(video_id, format, resolution, timestamp) VALUES (?, ?, ?, ?) ON CONFLICT (video_id, format, resolution) DO UPDATE SET timestamp = excluded.timestamp', [videoId, format, resolution, timestamp], function(isError) {
-                if(isError) {
-                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+                    if (!meta.outputs[format].includes(resolution)) {
+                        meta.outputs[format].push(resolution);
+                    }
+                    
+                    submitDatabaseWriteJob('UPDATE videos SET meta = ? WHERE video_id = ?', [JSON.stringify(meta), videoId], async function(isError) {
+                        if(format === 'm3u8') {
+                            try {
+                                await updateHlsVideoMasterManifestFile(videoId);
+                            }
+                            catch(error) {
+                                logDebugMessageToConsole(null, error, new Error().stack);
+                            }
+                        }
+    
+                        resolve({isError: false});
+                    });
                 }
                 else {
-                    if(format === 'm3u8') {
-                        try {
-                            updateHlsVideoMasterManifestFile(videoId);
-                        }
-                        catch(error) {
-                            logDebugMessageToConsole(null, error, new Error().stack);
-                        }
-                    }
-
-                    resolve({isError: false});
+                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
+            })
+            .catch(error => {
+                reject(error);
             });
         }
         else {
@@ -261,9 +271,6 @@ function videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, 
         if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
             if(format === 'm3u8') {
                 try {
-                    const hlsVideoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
-                    const masterManifestFilePath = path.join(hlsVideoDirectoryPath, '/manifest-master.m3u8');
-                    
                     const nodeSettings = getNodeSettings();
 
                     if(nodeSettings.isCloudflareIntegrationEnabled) {
@@ -282,10 +289,6 @@ function videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, 
                             else {
                                 fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
                             }
-
-                            if(!fs.existsSync(masterManifestFilePath)) {
-                                updateHlsVideoMasterManifestFile(videoId);
-                            }
                         })
                         .catch(error => {
                             logDebugMessageToConsole(null, error, new Error().stack);
@@ -293,10 +296,6 @@ function videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, 
                     }
                     else {
                         fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new);
-
-                        if(!fs.existsSync(masterManifestFilePath)) {
-                            updateHlsVideoMasterManifestFile(videoId);
-                        }
                     }
                 }
                 catch(error) {
@@ -377,9 +376,11 @@ function videoIdSourceFileExtension_GET(videoId) {
 function videoIdPublishes_GET(videoId) {
     return new Promise(async function(resolve, reject) {
         if(isVideoIdValid(videoId, false)) {
-            performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
+            performDatabaseReadJob_GET('SELECT is_published, meta FROM videos WHERE video_id = ?', [videoId])
             .then(video => {
                 if(video != null) {
+                    const meta = JSON.parse(video.meta);
+
                     const publishes = [
                         { format: 'm3u8', resolution: '2160p', isPublished: false },
                         { format: 'm3u8', resolution: '1440p', isPublished: false },
@@ -415,31 +416,21 @@ function videoIdPublishes_GET(videoId) {
                     ];
 
                     if(video.is_published) {
-                        performDatabaseReadJob_ALL('SELECT * FROM published WHERE video_id = ?', [videoId])
-			            .then(videos => {
-                            for(const video of videos) {
-                                const format = video.format;
-                                const resolution = video.resolution;
+                        const outputs = meta.outputs;
 
-                                for(const publish of publishes) {
-                                    if(publish.format === format && publish.resolution === resolution) {
-                                        publish.isPublished = true;
-                                        break;
-                                    }
+                        for(const publish of publishes) {
+                            const resolutions = outputs[publish.format];
+
+                            for(const resolution of resolutions) {
+                                if(publish.resolution === resolution) {
+                                    publish.isPublished = true;
+                                    break;
                                 }
                             }
-
-                            resolve({isError: false, publishes: publishes});
-                        })
-                        .catch(error => {
-                            logDebugMessageToConsole(null, error, new Error().stack);
-
-                            resolve({isError: true, message: 'error communicating with the MoarTube node'});
-                        });
+                        }
                     }
-                    else {
-                        resolve({isError: false, publishes: publishes});
-                    }
+
+                    resolve({isError: false, publishes: publishes});
                 }
                 else {
                     resolve({isError: true, message: 'that video does not exist'});
@@ -496,25 +487,35 @@ function videoIdUnpublish_POST(videoId, format, resolution) {
                 videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution);
             }
 
-            submitDatabaseWriteJob('DELETE FROM published WHERE video_id = ? AND format = ? AND resolution = ?', [videoId, format, resolution], async function(isError) {
-                if(isError) {
-                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
+            performDatabaseReadJob_GET('SELECT meta FROM videos WHERE video_id = ?', [videoId])
+            .then(video => {
+                if(video != null) {
+                    const meta = JSON.parse(video.meta);
+
+                    meta.outputs[format] = meta.outputs[format].filter(item => item !== resolution);
+
+                    submitDatabaseWriteJob('UPDATE videos SET meta = ? WHERE video_id = ?', [JSON.stringify(meta), videoId], async function(isError) {
+                        await deleteDirectoryRecursive(videoDirectoryPath);
+                        await deleteFile(manifestFilePath);
+                        
+                        if(format === 'm3u8') {
+                            try {
+                                await updateHlsVideoMasterManifestFile(videoId);
+                            }
+                            catch(error) {
+                                logDebugMessageToConsole(null, error, new Error().stack);
+                            }
+                        }
+                        
+                        resolve({isError: false});
+                    });
                 }
                 else {
-                    await deleteDirectoryRecursive(videoDirectoryPath);
-                    await deleteFile(manifestFilePath);
-                    
-                    if(format === 'm3u8') {
-                        try {
-                            await updateHlsVideoMasterManifestFile(videoId);
-                        }
-                        catch(error) {
-                            logDebugMessageToConsole(null, error, new Error().stack);
-                        }
-                    }
-                    
-                    resolve({isError: false});
+                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
                 }
+            })
+            .catch(error => {
+                reject(error);
             });
         }
         else {
@@ -1611,8 +1612,6 @@ function videoIdWatch_GET(videoId) {
             performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
             .then(video => {
                 if(video != null) {
-                    const externalVideosBaseUrl = getExternalVideosBaseUrl();
-
                     let manifestType;
 
                     if(video.is_streaming) {
@@ -1621,6 +1620,8 @@ function videoIdWatch_GET(videoId) {
                     else {
                         manifestType = 'static';
                     }
+
+                    const externalVideosBaseUrl = getExternalVideosBaseUrl();
                     
                     const adaptiveVideosDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive');
                     const progressiveVideosDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive');

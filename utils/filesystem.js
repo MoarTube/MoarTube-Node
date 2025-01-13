@@ -70,7 +70,7 @@ function updateHlsVideoMasterManifestFile(videoId) {
         
         let manifestFileString = '#EXTM3U\n#EXT-X-VERSION:3\n';
 
-        performDatabaseReadJob_GET('SELECT is_streaming FROM videos WHERE video_id = ?', [videoId])
+        performDatabaseReadJob_GET('SELECT is_streaming, meta FROM videos WHERE video_id = ?', [videoId])
         .then(videoData => {
             if(videoData != null) {
                 const is_streaming = videoData.is_streaming;
@@ -84,50 +84,44 @@ function updateHlsVideoMasterManifestFile(videoId) {
                     manifestType = 'static';
                 }
 
-                performDatabaseReadJob_ALL('SELECT * FROM published WHERE video_id = ? AND format = ?', [videoId, 'm3u8'])
-                .then(videos => {
-                    for(const video of videos) {
-                        const resolution = video.resolution;
+                const meta = JSON.parse(videoData.meta);
 
-                        if(resolution === '240p') {
-                            manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=250000,RESOLUTION=426x240\n';
-                            manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-240p.m3u8\n';
-                        }
-                        else if(resolution === '360p') {
-                            manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=500000,RESOLUTION=640x360\n';
-                            manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-360p.m3u8\n';
-                        }
-                        else if(resolution === '480p') {
-                            manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=854x480\n';
-                            manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-480p.m3u8\n';
-                        }
-                        else if(resolution === '720p') {
-                            manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=3000000,RESOLUTION=1280x720\n';
-                            manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-720p.m3u8\n';
-                        }
-                        else if(resolution === '1080p') {
-                            manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=6000000,RESOLUTION=1920x1080\n';
-                            manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-1080p.m3u8\n';
-                        }
-                        else if(resolution === '1440p') {
-                            manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION=2560x1440\n';
-                            manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-1440p.m3u8\n';
-                        }
-                        else if(resolution === '2160p') {
-                            manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=16000000,RESOLUTION=3840x2160\n'
-                            manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-2160p.m3u8\n';
-                        }
+                const outputsM3u8 = meta.outputs.m3u8;
+
+                for(const resolution of outputsM3u8) {
+                    if(resolution === '240p') {
+                        manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=250000,RESOLUTION=426x240\n';
+                        manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-240p.m3u8\n';
                     }
+                    else if(resolution === '360p') {
+                        manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=500000,RESOLUTION=640x360\n';
+                        manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-360p.m3u8\n';
+                    }
+                    else if(resolution === '480p') {
+                        manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=1000000,RESOLUTION=854x480\n';
+                        manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-480p.m3u8\n';
+                    }
+                    else if(resolution === '720p') {
+                        manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=3000000,RESOLUTION=1280x720\n';
+                        manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-720p.m3u8\n';
+                    }
+                    else if(resolution === '1080p') {
+                        manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=6000000,RESOLUTION=1920x1080\n';
+                        manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-1080p.m3u8\n';
+                    }
+                    else if(resolution === '1440p') {
+                        manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=8000000,RESOLUTION=2560x1440\n';
+                        manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-1440p.m3u8\n';
+                    }
+                    else if(resolution === '2160p') {
+                        manifestFileString += '#EXT-X-STREAM-INF:BANDWIDTH=16000000,RESOLUTION=3840x2160\n'
+                        manifestFileString += externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/m3u8/manifests/manifest-2160p.m3u8\n';
+                    }
+                }
 
-                    fs.writeFileSync(masterManifestFilePath, manifestFileString);
+                fs.writeFileSync(masterManifestFilePath, manifestFileString);
 
-                    resolve();
-                })
-                .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack);
-
-                    reject('updateHlsVideoMasterManifestFile failed: videoData is null for videoId: ' + videoId + '.');
-                });
+                resolve();
             }
             else {
                 reject('updateHlsVideoMasterManifestFile failed: videoData is null for videoId: ' + videoId + '.');
