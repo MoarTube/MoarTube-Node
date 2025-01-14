@@ -1875,7 +1875,7 @@ body {
 											const progressiveSourceResolution = segments[segments.length - 1];
 											const progressiveSourceFormat = segments[segments.length - 2];
 
-											if(CURRENT_VIDEO_RESOLUTION === progressiveSourceResolution && CURRENT_VIDEO_FORMAT === progressiveSourceFormat) {
+											if(CURRENT_VIDEO_RESOLUTION === progressiveSourceResolution.split('.')[0] && CURRENT_VIDEO_FORMAT === progressiveSourceFormat) {
 												source = { src: progressiveSource.src, type: progressiveSource.type };
 											}
 										}

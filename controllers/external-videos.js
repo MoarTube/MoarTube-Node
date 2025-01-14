@@ -5,7 +5,8 @@ const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath } = require('../utils/paths');
 const { submitDatabaseWriteJob } = require('../utils/database');
 const { 
-    isManifestNameValid, isSegmentNameValid, isVideoIdValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid, isManifestTypeValid
+    isManifestNameValid, isSegmentNameValid, isVideoIdValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid, isManifestTypeValid,
+    isProgressiveFilenameValid
 } = require('../utils/validators');
 const { getExternalVideosBaseUrl } = require('../utils/helpers');
 
@@ -134,9 +135,9 @@ function videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET(videoId, format,
 
 let progressiveBandwidthCounter = 0;
 let progressiveBandwidthIncrementTimer;
-function videoIdProgressiveFormatResolution_GET(videoId, format, resolution, range) {
-    if(isVideoIdValid(videoId, false) && isProgressiveFormatValid(format) && isResolutionValid(resolution)) {
-        const filePath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format);
+function videoIdProgressiveFormatResolution_GET(videoId, format, progressiveFilename, range) {
+    if(isVideoIdValid(videoId, false) && isProgressiveFormatValid(format) && isProgressiveFilenameValid(progressiveFilename)) {
+        const filePath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + progressiveFilename);
         
         if(fs.existsSync(filePath)) {
             const stat = fs.statSync(filePath);
@@ -200,23 +201,6 @@ function videoIdProgressiveFormatResolution_GET(videoId, format, resolution, ran
     }
 }
 
-function videoIdProgressiveFormatResolutionDownload_GET(videoId, format, resolution) {
-    if(isVideoIdValid(videoId, false) && isProgressiveFormatValid(format) && isResolutionValid(resolution)) {
-        const filePath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution + '/' + resolution + '.' + format);
-        const fileName = videoId + '-' + resolution + '.' + format;
-        
-        if(fs.existsSync(filePath)) {
-            return {filePath: filePath, fileName: fileName};
-        }
-        else {
-            return null;
-        }
-    }
-    else {
-        return null;
-    }
-}
-
 module.exports = {
     externalVideosBaseUrl_GET,
     videoIdThumbnail_GET,
@@ -224,6 +208,5 @@ module.exports = {
     videoIdPoster_GET,
     videoIdAdaptiveFormatTypeManifestsManifestName_GET,
     videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET,
-    videoIdProgressiveFormatResolution_GET,
-    videoIdProgressiveFormatResolutionDownload_GET
+    videoIdProgressiveFormatResolution_GET
 };

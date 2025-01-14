@@ -135,21 +135,28 @@ function cloudflare_purgeVideo(videoId, format, resolution) {
 
             const adaptiveVideoDirectory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
 
-            const items = fs.readdirSync(adaptiveVideoDirectory);
+            if(fs.existsSync(adaptiveVideoDirectory)) {
+                const items = fs.readdirSync(adaptiveVideoDirectory);
 
-            files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${resolution}/segments/segment-${resolution}-${i}.ts`));
+                files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${resolution}/segments/segment-${resolution}-${i}.ts`));
+            }
         }
         else if(format === 'mp4' || format === 'webm' || format === 'ogv') {
-            files.push(`${nodeBaseUrl}/external/videos/${videoId}/progressive/${format}/${resolution}`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/progressive/${resolution}.${format}`);
         }
 
-        cloudflare_purgeCache(files, 'cloudflare_purgeVideo')
-        .then(() => {
+        if(files.length > 0) {
+            cloudflare_purgeCache(files, 'cloudflare_purgeVideo')
+            .then(() => {
+                resolve();
+            })
+            .catch(error => {
+                reject(error);
+            });
+        }
+        else {
             resolve();
-        })
-        .catch(error => {
-            reject(error);
-        });
+        }
     });
 }
 
@@ -212,7 +219,7 @@ function cloudflare_purgeProgressiveVideos(videoIds) {
 
                     for (const item of items) {
                         if (fs.statSync(entryPath).isDirectory()) {
-                            files.push(`${nodeBaseUrl}/external/videos/${videoId}/progressive/${entry}/${item}`);
+                            files.push(`${nodeBaseUrl}/external/videos/${videoId}/progressive/${item}.${entry}`);
                         }
                     }
                 }

@@ -292,6 +292,12 @@ function isResolutionValid(resolution) {
     return resolution != null && (resolution === '2160p' || resolution === '1440p' || resolution === '1080p' || resolution === '720p' || resolution === '480p' || resolution === '360p' || resolution === '240p');
 }
 
+function isProgressiveFilenameValid(progressiveFilename) {
+    const regex = /^(240p|360p|480p|720p|1080p|1440p|2160p)\.(mp4|webm|ogv)$/;
+
+    return regex.test(progressiveFilename);
+}
+
 function isTitleValid(title) {
     return (title != null && title.length > 0 && title.length <= 100);
 }
@@ -415,5 +421,6 @@ module.exports = {
     isLimitValid,
     isDatabaseConfigValid,
     isStorageConfigValid,
-    isIpv4Address
+    isIpv4Address,
+    isProgressiveFilenameValid
 }

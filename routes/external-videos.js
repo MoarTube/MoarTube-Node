@@ -2,7 +2,7 @@ const express = require('express');
 
 const {
     videoIdThumbnail_GET, videoIdPreview_GET, videoIdPoster_GET, videoIdAdaptiveFormatTypeManifestsManifestName_GET, 
-    videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET, videoIdProgressiveFormatResolution_GET, videoIdProgressiveFormatResolutionDownload_GET,
+    videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET, videoIdProgressiveFormatResolution_GET,
     externalVideosBaseUrl_GET
 } = require('../controllers/external-videos');
 const { logDebugMessageToConsole } = require('../utils/logger');
@@ -154,49 +154,20 @@ router.get('/:videoId/adaptive/:format/:resolution/segments/:segmentName', (req,
     }
 });
 
-router.get('/:videoId/progressive/:format/:resolution', (req, res) => {
+router.get('/:videoId/progressive/:format/:progressiveFilename', (req, res) => {
     try {
         const videoId = req.params.videoId;
         const format = req.params.format;
-        const resolution = req.params.resolution;
+        const progressiveFilename = req.params.progressiveFilename;
 
         const range = req.headers.range;
 
-        const data = videoIdProgressiveFormatResolution_GET(videoId, format, resolution, range);
+        const data = videoIdProgressiveFormatResolution_GET(videoId, format, progressiveFilename, range);
 
         if(data != null) {
             res.writeHead(data.status, data.responseHeaders);
 
             data.fileStream.pipe(res);
-        }
-        else {
-            res.status(404).send('video not found');
-        }
-    }
-    catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack);
-
-        res.status(404).send('video not found');
-    }
-});
-
-router.get('/:videoId/progressive/:format/:resolution/download', (req, res) => {
-    try {
-        const videoId = req.params.videoId;
-        const format = req.params.format;
-        const resolution = req.params.resolution;
-
-        const data = videoIdProgressiveFormatResolutionDownload_GET(videoId, format, resolution);
-
-        if(data != null) {
-            const filePath = data.filePath;
-            const fileName = data.fileName;
-
-            res.download(filePath, fileName, (error) => {
-                if (error) {
-                    res.status(404).send('video not found');
-                }
-            });
         }
         else {
             res.status(404).send('video not found');

@@ -26,7 +26,9 @@ function endStreamedHlsManifestFiles() {
                         if (fs.existsSync(manifestFilePath)) {
                             const manifestFileText = fs.readFileSync(manifestFilePath, 'utf8')
                             if(!manifestFileText.includes(HLS_END_LIST_TAG)) {
-                                const manifestFileTextModified = manifestFileText.trim() + '\n' + HLS_END_LIST_TAG + '\n';
+                                let manifestFileTextModified = manifestFileText.replace('#EXT-X-PLAYLIST-TYPE:EVENT', '#EXT-X-PLAYLIST-TYPE:VOD');
+                                manifestFileTextModified = manifestFileTextModified.trim() + '\n' + HLS_END_LIST_TAG + '\n';
+
                                 fs.writeFileSync(manifestFilePath, manifestFileTextModified);
                             }
                         }

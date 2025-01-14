@@ -298,13 +298,13 @@ router.post('/:videoId/upload', (req, res) => {
                                 }
                             }
                             else if(format === 'mp4') {
-                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/mp4/' + resolution);
+                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/mp4');
                             }
                             else if(format === 'webm') {
-                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/webm/' + resolution);
+                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/webm');
                             }
                             else if(format === 'ogv') {
-                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/ogv/' + resolution);
+                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/ogv');
                             }
                             
                             if(directoryPath !== '') {
@@ -1118,9 +1118,9 @@ router.post('/delete', (req, res) => {
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
             try {
-                const videoIdsJson = req.body.videoIdsJson;
+                const videoIds = req.body.videoIds;
 
-                const data = await delete_POST(videoIdsJson);
+                const data = await delete_POST(videoIds);
 
                 res.send(data);
             }
@@ -1148,9 +1148,9 @@ router.post('/finalize', (req, res) => {
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
             try {
-                const videoIdsJson = req.body.videoIdsJson;
+                const videoIds = req.body.videoIds;
 
-                const data = await finalize_POST(videoIdsJson);
+                const data = await finalize_POST(videoIds);
 
                 res.send(data);
             }
@@ -1391,50 +1391,16 @@ router.post('/:videoId/adaptive/m3u8/:type/manifests/masterManifest', (req, res)
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             const type = req.params.type;
+            const masterManifest = req.body.masterManifest;
 
+            // TODO: validate the manifest
+            
             if(isVideoIdValid(videoId, false) && isManifestTypeValid(type)) {
-                const masterManifestFileName = 'manifest-master.m3u8';
+                const masterManifestPath = path.join(getVideosDirectoryPath(), videoId, 'adaptive', 'm3u8', 'manifest-master.m3u8');
 
-                multer(
-                {
-                    fileFilter: function (req, file, cb) {
-                        const mimeType = file.mimetype;
-                        
-                        if(mimeType === 'application/vnd.apple.mpegurl') {
-                            cb(null, true);
-                        }
-                        else {
-                            cb(new Error('only application/vnd.apple.mpegurl files are supported'));
-                        }
-                    },
-                    storage: multer.diskStorage({
-                        destination: function (req, file, cb) {
-                            const directoryPath = path.join(getVideosDirectoryPath(), videoId, 'adaptive', 'm3u8');
+                fs.writeFileSync(masterManifestPath, masterManifest, 'utf-8');
 
-                            fs.mkdirSync(directoryPath, { recursive: true });
-                            
-                            cb(null, directoryPath);
-                        },
-                        filename: function (req, file, cb) {
-                            cb(null, masterManifestFileName);
-                        }
-                    })
-                }).single('masterManifest')
-                (req, res, async function(error) {
-                    if(error) {
-                        submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId], function(isError) {
-                            if(isError) {
-                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                            }
-                            else {
-                                res.send({isError: true, message: 'video upload error'});
-                            }
-                        });
-                    }
-                    else {
-                        res.send({isError: false});
-                    }
-                });
+                res.send({isError: false});
             }
             else {
                 submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId], function(isError) {

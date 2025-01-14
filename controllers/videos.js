@@ -460,23 +460,6 @@ function videoIdUnpublish_POST(videoId, format, resolution) {
                 logDebugMessageToConsole(null, error, new Error().stack);
             }
 
-            let videoDirectoryPath = '';
-            let manifestFilePath = '';
-            
-            if(format === 'm3u8') {
-                manifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/manifest-' + resolution + '.m3u8');
-                videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution);
-            }
-            else if(format === 'mp4') {
-                videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution);
-            }
-            else if(format === 'webm') {
-                videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution);
-            }
-            else if(format === 'ogv') {
-                videoDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution);
-            }
-
             performDatabaseReadJob_GET('SELECT outputs FROM videos WHERE video_id = ?', [videoId])
             .then(video => {
                 if(video != null) {
@@ -485,9 +468,34 @@ function videoIdUnpublish_POST(videoId, format, resolution) {
                     outputs[format] = outputs[format].filter(item => item !== resolution);
 
                     submitDatabaseWriteJob('UPDATE videos SET outputs = ? WHERE video_id = ?', [JSON.stringify(outputs), videoId], async function(isError) {
-                        await deleteDirectoryRecursive(videoDirectoryPath);
-                        await deleteFile(manifestFilePath);
-                        
+                        const nodeSettings = getNodeSettings();
+
+                        if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+                            let manifestFilePath;
+                            let segmentsDirectoryPath;
+                            let videoFilePath;
+                            
+                            if(format === 'm3u8') {
+                                manifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/manifest-' + resolution + '.m3u8');
+                                segmentsDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution);
+                            }
+                            else {
+                                videoFilePath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution + '.' + format);
+                            }
+                            
+                            if(manifestFilePath != null) {
+                                await deleteFile(manifestFilePath);
+                            }
+
+                            if(segmentsDirectoryPath != null) {
+                                await deleteDirectoryRecursive(segmentsDirectoryPath);
+                            }
+
+                            if(videoFilePath != null) {
+                                await deleteFile(videoFilePath);
+                            }
+                        }
+
                         resolve({isError: false});
                     });
                 }
@@ -978,25 +986,23 @@ function videoIdData_GET(videoId) {
     });
 }
 
-function delete_POST(videoIdsJson) {
+function delete_POST(videoIds) {
     return new Promise(function(resolve, reject) {
-        const submittedVideoids = JSON.parse(videoIdsJson);
-
-        if(isVideoIdsValid(submittedVideoids)) {
+        if(isVideoIdsValid(videoIds)) {
             performDatabaseReadJob_ALL('SELECT * FROM videos', [])
             .then(async allVideos => {
                 const allVideoIds = allVideos.map(video => video.video_id);
                 const allTags = Array.from(new Set(allVideos.map(video => video.tags.split(',')).flat()));
 
-                submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids, function(isError) {
+                submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds, function(isError) {
                     if(isError) {
                         resolve({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
-                        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true) AND video_id IN (' + submittedVideoids.map(() => '?').join(',') + ')', submittedVideoids)
+                        performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds)
                         .then(async nonDeletedVideos => {
                             const nonDeletedVideoIds = nonDeletedVideos.map(video => video.video_id);
-                            const deletedVideoIds = submittedVideoids.filter(videoId => !nonDeletedVideoIds.includes(videoId));
+                            const deletedVideoIds = videoIds.filter(videoId => !nonDeletedVideoIds.includes(videoId));
 
                             try {
                                 cloudflare_purgeNodePage(allTags);
@@ -1009,11 +1015,15 @@ function delete_POST(videoIdsJson) {
                                 logDebugMessageToConsole(null, error, new Error().stack);
                             }
 
-                            deletedVideoIds.forEach(async function(deletedVideoId) {
-                                const videoDirectoryPath = path.join(getVideosDirectoryPath(), deletedVideoId);
-            
-                                await deleteDirectoryRecursive(videoDirectoryPath);
-                            });
+                            const nodeSettings = getNodeSettings();
+
+                            if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+                                deletedVideoIds.forEach(async function(deletedVideoId) {
+                                    const videoDirectoryPath = path.join(getVideosDirectoryPath(), deletedVideoId);
+                
+                                    await deleteDirectoryRecursive(videoDirectoryPath);
+                                });
+                            }
 
                             submitDatabaseWriteJob('DELETE FROM comments WHERE video_id IN (' + deletedVideoIds.map(() => '?').join(',') + ')', deletedVideoIds, function(isError) {
                                 if(isError) {
@@ -1040,10 +1050,8 @@ function delete_POST(videoIdsJson) {
     });
 }
 
-function finalize_POST(videoIdsJson) {
+function finalize_POST(videoIds) {
     return new Promise(function(resolve, reject) {
-        const videoIds = JSON.parse(videoIdsJson);
-
         if(isVideoIdsValid(videoIds)) {
             submitDatabaseWriteJob('UPDATE videos SET is_finalized = 1 WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds, function(isError) {
                 if(isError) {
@@ -1632,7 +1640,7 @@ function videoIdWatch_GET(videoId) {
                                     adaptiveSources.push(source);
                                 }
                                 else {
-                                    const src = externalVideosBaseUrl + '/external/videos/' + videoId + '/progressive/' + format + '/' + resolution;
+                                    const src = externalVideosBaseUrl + '/external/videos/' + videoId + '/progressive/' + format + '/' + resolution + '.' + format;
                                     
                                     let source;
 
