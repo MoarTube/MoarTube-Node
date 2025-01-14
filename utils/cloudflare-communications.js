@@ -127,11 +127,11 @@ function cloudflare_purgeVideo(videoId, format, resolution) {
         let files = [];
 
         if(format === 'm3u8') {
-            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-master.m3u8`);
-            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-${resolution}.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-master.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-${resolution}.m3u8`);
 
-            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-master.m3u8`);
-            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-${resolution}.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-master.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-${resolution}.m3u8`);
 
             const adaptiveVideoDirectory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
 
@@ -160,8 +160,8 @@ function cloudflare_purgeAdaptiveVideos(videoIds) {
         let files = [];
 
         for(const videoId of videoIds) {
-            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-master.m3u8`);
-            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-master.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-master.m3u8`);
+            files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-master.m3u8`);
 
             const adaptiveM3u8Directory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
 
@@ -172,8 +172,8 @@ function cloudflare_purgeAdaptiveVideos(videoIds) {
                     const entryPath = path.join(adaptiveM3u8Directory, entry);
 
                     if (fs.statSync(entryPath).isDirectory()) {
-                        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/static/m3u8/manifests/manifest-${entry}.m3u8`);
-                        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/dynamic/m3u8/manifests/manifest-${entry}.m3u8`);
+                        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-${entry}.m3u8`);
+                        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-${entry}.m3u8`);
 
                         const items = fs.readdirSync(entryPath);
 
@@ -512,7 +512,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
                         "description": "Node External - Cache Bypass for Live (dynamic) HLS stream manifests",
                         "action": "set_cache_settings",
                         "enabled": true,
-                        "expression": "(http.request.uri.path contains \"/adaptive/dynamic/\")",
+                        "expression": "(http.request.uri.path contains \"/adaptive/m3u8/dynamic/\") and (http.request.method == \"GET\")",
                         "action_parameters": {
                             "cache": false
                         }

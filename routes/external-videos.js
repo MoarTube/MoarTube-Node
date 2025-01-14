@@ -1,7 +1,7 @@
 const express = require('express');
 
 const {
-    videoIdThumbnail_GET, videoIdPreview_GET, videoIdPoster_GET, videoIdAdaptiveTypeFormatManifestsManifestName_GET, 
+    videoIdThumbnail_GET, videoIdPreview_GET, videoIdPoster_GET, videoIdAdaptiveFormatTypeManifestsManifestName_GET, 
     videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET, videoIdProgressiveFormatResolution_GET, videoIdProgressiveFormatResolutionDownload_GET,
     externalVideosBaseUrl_GET
 } = require('../controllers/external-videos');
@@ -104,14 +104,14 @@ router.get('/:videoId/images/poster.jpg', (req, res) => {
     }
 });
 
-router.get('/:videoId/adaptive/:type/:format/manifests/:manifestName', (req, res) => {
+router.get('/:videoId/adaptive/:format/:type/manifests/:manifestName', (req, res) => {
     try {
         const videoId = req.params.videoId;
-        const type = req.params.type;
         const format = req.params.format;
+        const type = req.params.type;
         const manifestName = req.params.manifestName;
 
-        const fileStream = videoIdAdaptiveTypeFormatManifestsManifestName_GET(videoId, type, format, manifestName);
+        const fileStream = videoIdAdaptiveFormatTypeManifestsManifestName_GET(videoId, format, type, manifestName);
 
         if(fileStream != null) {
             res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');

@@ -2,11 +2,21 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
-const { logDebugMessageToConsole } = require('./logger');
-const { getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath, getVideosDirectoryPath, getLastCheckedContentTrackerPath } = require('./paths');
-const { performDatabaseReadJob_GET } = require('./database');
-const { indexer_getNodeIdentification, indexer_doNodeIdentificationRefresh } = require('./indexer-communications');
-const { isIpv4Address } = require('../utils/validators');
+const { 
+	logDebugMessageToConsole 
+} = require('./logger');
+const { 
+	getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath, getVideosDirectoryPath, getLastCheckedContentTrackerPath 
+} = require('./paths');
+const { 
+	performDatabaseReadJob_GET 
+} = require('./database');
+const { 
+	indexer_getNodeIdentification, indexer_doNodeIdentificationRefresh 
+} = require('./indexer-communications');
+const {
+    isIpv4Address
+} = require('../utils/validators');
 
 let isDeveloperMode;
 let jwtSecret;

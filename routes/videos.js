@@ -14,7 +14,7 @@ const { logDebugMessageToConsole } = require('../utils/logger');
 const { getAuthenticationStatus, websocketNodeBroadcast } = require('../utils/helpers');
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
 const { getVideosDirectoryPath } = require('../utils/paths');
-const { isSegmentNameValid, isVideoIdValid, isFormatValid, isResolutionValid } = require('../utils/validators');
+const { isSegmentNameValid, isVideoIdValid, isFormatValid, isResolutionValid, isManifestTypeValid } = require('../utils/validators');
 
 const { submitDatabaseWriteJob } = require('../utils/database');
 
@@ -172,12 +172,12 @@ router.post('/published', (req, res) => {
     });
 });
 
-router.post('/:format/:resolution/published', (req, res) => {
+router.post('/:videoId/:format/:resolution/published', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
     .then(async (isAuthenticated) => {
         if(isAuthenticated) {
             try {
-                const videoId = req.body.videoId;
+                const videoId = req.params.videoId;
                 const format = req.params.format;
                 const resolution = req.params.resolution;
 
@@ -640,7 +640,6 @@ router.post('/:videoId/unpublish', (req, res) => {
         
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });
-
 });
 
 router.post('/:videoId/data', (req, res) => {
@@ -1384,6 +1383,79 @@ router.get('/:videoId/watch', async (req, res) => {
 
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
     }
+});
+
+router.post('/:videoId/adaptive/m3u8/:type/manifests/masterManifest', (req, res) => {
+    getAuthenticationStatus(req.headers.authorization)
+    .then((isAuthenticated) => {
+        if(isAuthenticated) {
+            const videoId = req.params.videoId;
+            const type = req.params.type;
+
+            if(isVideoIdValid(videoId, false) && isManifestTypeValid(type)) {
+                const masterManifestFileName = 'manifest-master.m3u8';
+
+                multer(
+                {
+                    fileFilter: function (req, file, cb) {
+                        const mimeType = file.mimetype;
+                        
+                        if(mimeType === 'application/vnd.apple.mpegurl') {
+                            cb(null, true);
+                        }
+                        else {
+                            cb(new Error('only application/vnd.apple.mpegurl files are supported'));
+                        }
+                    },
+                    storage: multer.diskStorage({
+                        destination: function (req, file, cb) {
+                            const directoryPath = path.join(getVideosDirectoryPath(), videoId, 'adaptive', 'm3u8');
+
+                            fs.mkdirSync(directoryPath, { recursive: true });
+                            
+                            cb(null, directoryPath);
+                        },
+                        filename: function (req, file, cb) {
+                            cb(null, masterManifestFileName);
+                        }
+                    })
+                }).single('masterManifest')
+                (req, res, async function(error) {
+                    if(error) {
+                        submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId], function(isError) {
+                            if(isError) {
+                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                            }
+                            else {
+                                res.send({isError: true, message: 'video upload error'});
+                            }
+                        });
+                    }
+                    else {
+                        res.send({isError: false});
+                    }
+                });
+            }
+            else {
+                submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId], function(isError) {
+                    if(isError) {
+                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    }
+                    else {
+                        res.send({isError: true, message: 'invalid parameters'});
+                    }
+                });
+            }
+        }
+        else {
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
 });
 
 module.exports = router;

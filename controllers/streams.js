@@ -10,7 +10,7 @@ const {
 } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 
-const { endStreamedHlsManifestFiles, updateHlsVideoMasterManifestFile } = require('../utils/filesystem');
+const { endStreamedHlsManifestFiles } = require('../utils/filesystem');
 const { 
     cloudflare_purgeWatchPages, cloudflare_purgeNodePage
 } = require('../utils/cloudflare-communications');
@@ -144,8 +144,6 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
                         resolve({isError: true, message: 'error communicating with the MoarTube node'});
                     }
                     else {
-                        await updateHlsVideoMasterManifestFile(videoId);
-
                         performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
                         .then(async videos => {
                             const videoIds = videos.map(video => video.video_id);

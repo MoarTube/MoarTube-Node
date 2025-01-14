@@ -69,8 +69,8 @@ function videoIdPoster_GET(videoId) {
     }
 }
 
-function videoIdAdaptiveTypeFormatManifestsManifestName_GET(videoId, type, format, manifestName) {
-    if(isVideoIdValid(videoId, false) && isManifestTypeValid(type) && isAdaptiveFormatValid(format) && isManifestNameValid(manifestName)) {
+function videoIdAdaptiveFormatTypeManifestsManifestName_GET(videoId, format, type, manifestName) {
+    if(isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isManifestTypeValid(type) && isManifestNameValid(manifestName)) {
         const manifestPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + manifestName);
 
         if(fs.existsSync(manifestPath)) {
@@ -222,7 +222,7 @@ module.exports = {
     videoIdThumbnail_GET,
     videoIdPreview_GET,
     videoIdPoster_GET,
-    videoIdAdaptiveTypeFormatManifestsManifestName_GET,
+    videoIdAdaptiveFormatTypeManifestsManifestName_GET,
     videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET,
     videoIdProgressiveFormatResolution_GET,
     videoIdProgressiveFormatResolutionDownload_GET

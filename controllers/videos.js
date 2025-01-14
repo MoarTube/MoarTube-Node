@@ -4,7 +4,6 @@ const sanitizeHtml = require('sanitize-html');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath } = require('../utils/paths');
-const { updateHlsVideoMasterManifestFile } = require('../utils/filesystem');
 const { 
     getNodeSettings, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, performNodeIdentification, getNodeIdentification, 
     sanitizeTagsSpaces, deleteDirectoryRecursive, deleteFile, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64, 
@@ -188,15 +187,6 @@ function formatResolutionPublished_POST(videoId, format, resolution) {
                     }
                     
                     submitDatabaseWriteJob('UPDATE videos SET outputs = ? WHERE video_id = ?', [JSON.stringify(outputs), videoId], async function(isError) {
-                        if(format === 'm3u8') {
-                            try {
-                                await updateHlsVideoMasterManifestFile(videoId);
-                            }
-                            catch(error) {
-                                logDebugMessageToConsole(null, error, new Error().stack);
-                            }
-                        }
-    
                         resolve({isError: false});
                     });
                 }
@@ -497,15 +487,6 @@ function videoIdUnpublish_POST(videoId, format, resolution) {
                     submitDatabaseWriteJob('UPDATE videos SET outputs = ? WHERE video_id = ?', [JSON.stringify(outputs), videoId], async function(isError) {
                         await deleteDirectoryRecursive(videoDirectoryPath);
                         await deleteFile(manifestFilePath);
-                        
-                        if(format === 'm3u8') {
-                            try {
-                                await updateHlsVideoMasterManifestFile(videoId);
-                            }
-                            catch(error) {
-                                logDebugMessageToConsole(null, error, new Error().stack);
-                            }
-                        }
                         
                         resolve({isError: false});
                     });
@@ -1616,6 +1597,8 @@ function videoIdWatch_GET(videoId) {
             performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
             .then(video => {
                 if(video != null) {
+                    const outputs = JSON.parse(video.outputs);
+
                     let manifestType;
 
                     if(video.is_streaming) {
@@ -1626,85 +1609,60 @@ function videoIdWatch_GET(videoId) {
                     }
 
                     const externalVideosBaseUrl = getExternalVideosBaseUrl();
-                    
-                    const adaptiveVideosDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive');
-                    const progressiveVideosDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive');
-                    
-                    const adaptiveFormats = [{format: 'm3u8', type: 'application/vnd.apple.mpegurl'}];
-                    const progressiveFormats = [{format: 'mp4', type: 'video/mp4'}, {format: 'webm', type: 'video/webm'}, {format: 'ogv', type: 'video/ogg'}];
-                    const resolutions = ['2160p', '1440p', '1080p', '720p', '480p', '360p', '240p'];
-                    
+
                     const adaptiveSources = [];
                     const progressiveSources = [];
                     const sourcesFormatsAndResolutions = {m3u8: [], mp4: [], webm: [], ogv: []};
-                    
-                    let isHlsAvailable = false;
-                    let isMp4Available = false;
-                    let isWebmAvailable = false;
-                    let isOgvAvailable = false;
-                    
-                    adaptiveFormats.forEach(function(adaptiveFormat) {
-                        const format = adaptiveFormat.format;
-                        const type = adaptiveFormat.type;
 
-                        const adaptiveVideoFormatPath = path.join(adaptiveVideosDirectoryPath, format);
-                        const adaptiveVideoMasterManifestPath = path.join(adaptiveVideoFormatPath, 'manifest-master.' + format);
-                        
-                        if(fs.existsSync(adaptiveVideoMasterManifestPath)) {
-                            if(format === 'm3u8') {
-                                isHlsAvailable = true;
+                    const isHlsAvailable = outputs.m3u8.length > 0;
+                    const isMp4Available = outputs.mp4.length > 0;
+                    const isWebmAvailable = outputs.webm.length > 0;
+                    const isOgvAvailable = outputs.ogv.length > 0;
+
+                    for (const format in outputs) {
+                        if (outputs.hasOwnProperty(format)) {
+                            const resolutions = outputs[format];
+
+                            for (const resolution of resolutions) {
+                                if(format === 'm3u8') {
+                                    const src = externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/m3u8/' + manifestType + '/manifests/manifest-' + resolution + '.m3u8';
+                                    
+                                    const source = {src: src, type: 'application/vnd.apple.mpegurl'};
+                                    
+                                    adaptiveSources.push(source);
+                                }
+                                else {
+                                    const src = externalVideosBaseUrl + '/external/videos/' + videoId + '/progressive/' + format + '/' + resolution;
+                                    
+                                    let source;
+
+                                    if(format === 'mp4') {
+                                        source = {src: src, type: 'video/mp4'};
+                                    }
+                                    else if(format === 'webm') {
+                                        source = {src: src, type: 'video/webm'};
+                                    }
+                                    else if(format === 'ogv') {
+                                        source = {src: src, type: 'video/ogg'};
+                                    }
+
+                                    if(source != null) {
+                                        progressiveSources.push(source);
+                                    }
+                                }
+
+                                sourcesFormatsAndResolutions[format].push(resolution);
                             }
-                            
-                            const src = getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-master.' + format;
-                            
-                            const source = {src: src, type: type};
-                            
-                            adaptiveSources.push(source);
                         }
+                    }
 
-                        resolutions.forEach(function(resolution) {
-                            const adaptiveVideoFilePath = path.join(adaptiveVideosDirectoryPath, format + '/manifest-' + resolution + '.' + format);
-                            
-                            if(fs.existsSync(adaptiveVideoFilePath)) {
-                                sourcesFormatsAndResolutions[format].push(resolution);
-                                
-                                const src = getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/adaptive/' + manifestType + '/' + format + '/manifests/manifest-' + resolution + '.' + format;
-                                
-                                const source = {src: src, type: type};
-                                
-                                adaptiveSources.push(source);
-                            }
-                        });
-                    });
-                    
-                    progressiveFormats.forEach(function(progressiveFormat) {
-                        const format = progressiveFormat.format;
-                        const type = progressiveFormat.type;
+                    if(adaptiveSources.length > 0) {
+                        const src = getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/adaptive/m3u8/' + manifestType + '/manifests/manifest-master.m3u8';
                         
-                        resolutions.forEach(function(resolution) {
-                            const progressiveVideoFilePath = path.join(progressiveVideosDirectoryPath, format + '/' + resolution + '/' + resolution + '.' + format);
-                            
-                            if(fs.existsSync(progressiveVideoFilePath)) {
-                                if(format === 'mp4') {
-                                    isMp4Available = true;
-                                }
-                                else if(format === 'webm') {
-                                    isWebmAvailable = true;
-                                }
-                                else if(format === 'ogv') {
-                                    isOgvAvailable = true;
-                                }
-
-                                sourcesFormatsAndResolutions[format].push(resolution);
-                                
-                                const src = externalVideosBaseUrl + '/external/videos/' + videoId + '/progressive/' + format + '/' + resolution;
-                                
-                                const source = {src: src, type: type};
-                                
-                                progressiveSources.push(source);
-                            }
-                        });
-                    });
+                        const source = {src: src, type: 'application/vnd.apple.mpegurl'};
+                        
+                        adaptiveSources.unshift(source);
+                    }
 
                     resolve({isError: false, video: {
                         videoId: videoId,
