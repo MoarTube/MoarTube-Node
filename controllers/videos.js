@@ -184,6 +184,10 @@ function formatResolutionPublished_POST(videoId, format, resolution) {
 
                     if (!outputs[format].includes(resolution)) {
                         outputs[format].push(resolution);
+
+                        outputs[format].sort((a, b) => {
+                            return parseInt(b.split('p')[0]) - parseInt(a.split('p')[0]);
+                        });
                     }
                     
                     submitDatabaseWriteJob('UPDATE videos SET outputs = ? WHERE video_id = ?', [JSON.stringify(outputs), videoId], async function(isError) {

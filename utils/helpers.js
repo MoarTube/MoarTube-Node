@@ -307,13 +307,29 @@ function getExternalVideosBaseUrl() {
 	}
 	else if(storageConfig.storageMode === 's3provider') {
 		const bucketName = storageConfig.s3Config.bucketName;
-		const region = storageConfig.s3Config.s3ProviderClientConfig.region
-		
-		if(storageConfig.s3Config.isCnameConfigured) {
-			externalVideosBaseUrl = `https://${bucketName}`;
+		const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
+
+		// if the endpoint is present, we assume the S3 provider is not AWS and default to using the provided URL endpoint
+		if(endpoint != null) {
+			if(storageConfig.s3Config.isCnameConfigured) {
+				const protocol = endpoint.split(':')[0];
+
+				externalVideosBaseUrl = `${protocol}://${bucketName}`;
+			}
+			else {
+				externalVideosBaseUrl = `${endpoint}/${bucketName}`;
+			}
 		}
 		else {
-			externalVideosBaseUrl = `http://${bucketName}.s3.${region}.amazonaws.com`;
+			// if the endpoint is not present, we assume the S3 provider is AWS and construct the URL endpoint
+			if(storageConfig.s3Config.isCnameConfigured) {
+				externalVideosBaseUrl = `https://${bucketName}`;
+			}
+			else {
+				const region = storageConfig.s3Config.s3ProviderClientConfig.region;
+
+				externalVideosBaseUrl = `http://${bucketName}.s3.${region}.amazonaws.com`;
+			}
 		}
 	}
 

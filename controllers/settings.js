@@ -463,13 +463,28 @@ function storageConfigToggle_POST(storageConfig, dnsConfig) {
             try {
                 if(storageConfig.storageMode === 's3provider' && dnsConfig.isConfiguringDnsCname) {
                     const bucketName = storageConfig.s3Config.bucketName;
-                    const region = storageConfig.s3Config.s3ProviderClientConfig.region;
+                    const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
+
+                    const cnameRecordName = bucketName;
+                    let cnameRecordContent;
+
+                    if(endpoint != null) {
+                        // assume non-AWS S3 provider
+                        
+                        const url = new URL(endpoint);
+                        const hostname = url.hostname;
+
+                        cnameRecordContent = `${bucketName}.${hostname}`;
+                    }
+                    else {
+                        // assume AWS S3
+                        const region = storageConfig.s3Config.s3ProviderClientConfig.region;
+
+                        cnameRecordContent = `${bucketName}.s3.${region}.amazonaws.com`;
+                    }
 
                     const cloudflareCredentials = dnsConfig.cloudflareCredentials;
 
-                    const cnameRecordName = bucketName;
-                    const cnameRecordContent = `${bucketName}.s3.${region}.amazonaws.com`;
-                    
                     await cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecordContent, cloudflareCredentials);
 
                     storageConfig.s3Config.isCnameConfigured = true;
