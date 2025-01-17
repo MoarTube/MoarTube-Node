@@ -8,7 +8,7 @@ const {
     videoIdSourceFileExtension_POST, videoIdSourceFileExtension_GET, videoIdPublishes_GET, videoIdUnpublish_POST, videoIdData_POST, videoIdIndexAdd_POST, videoIdIndexRemove_POST,
     videoIdAlias_GET, search_GET, videoIdThumbnail_POST, videoIdPreview_POST, videoIdPoster_POST, videoIdLengths_POST, videoIdData_GET, delete_POST, finalize_POST, 
     videoIdComments_GET, videoIdCommentsCommentId_GET, videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST, recommended_GET, 
-    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST
+    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST, dataAll
 } = require('../controllers/videos');
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getAuthenticationStatus, websocketNodeBroadcast } = require('../utils/helpers');
@@ -1414,6 +1414,34 @@ router.post('/:videoId/adaptive/m3u8/:type/manifests/masterManifest', (req, res)
             }
         }
         else {
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+});
+
+router.get('/data/all', (req, res) => {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            try {
+                const data = await dataAll();
+
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
+
             res.send({isError: true, message: 'you are not logged in'});
         }
     })

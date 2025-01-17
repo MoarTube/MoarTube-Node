@@ -114,6 +114,28 @@ function openDatabase() {
     });
 }
 
+function clearDatabase() {
+    return new Promise(async function(resolve, reject) {
+        const tables = [
+            'videos',
+            'comments',
+            'videoreports',
+            'commentreports',
+            'videoreportsarchives',
+            'commentreportsarchives',
+            'livechatmessages',
+            'cryptowalletaddresses',
+            'links'
+        ];
+
+        for (const table of tables) {
+            await sequelize.query(`DELETE FROM ${table}`);
+        }
+
+        resolve();
+    });
+}
+
 function submitDatabaseWriteJob(query, parameters, callback) {
     const databaseWriteJobId = uuidv1() + '-' + uuidv4();
     
@@ -208,5 +230,6 @@ module.exports = {
     performDatabaseReadJob_ALL,
     performDatabaseReadJob_GET,
     openDatabase,
+    clearDatabase,
     finishPendingDatabaseWriteJob
 };

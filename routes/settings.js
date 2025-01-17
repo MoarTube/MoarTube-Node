@@ -7,7 +7,8 @@ const { v4: uuidv4 } = require('uuid');
 const { 
     root_GET, avatar_GET, avatar_POST, banner_GET, banner_POST, personalizeNodeName_POST, personalizeNodeAbout_POST, personalizeNodeId_POST, secure_POST, account_POST, 
     networkInternal_POST, networkExternal_POST, cloudflareConfigure_POST, cloudflareClear_POST, cloudflareTurnstileConfigure_POST, cloudflareTurnstileConfigureClear_POST,
-    commentsToggle_POST, likesToggle_POST, dislikesToggle_POST, reportsToggle_POST, liveChatToggle_POST, databaseConfigToggle_POST, storageConfigToggle_POST
+    commentsToggle_POST, likesToggle_POST, dislikesToggle_POST, reportsToggle_POST, liveChatToggle_POST, databaseConfigToggle_POST, databaseConfigClear_POST, 
+    storageConfigToggle_POST, storageConfigClear_POST
 } = require('../controllers/settings');
 const { getImagesDirectoryPath, getCertificatesDirectoryPath
 } = require('../utils/paths');
@@ -555,9 +556,33 @@ router.post('/databaseConfig/toggle', (req, res) => {
 
                 const data = await databaseConfigToggle_POST(databaseConfig);
 
-                if(!data.isError) {
-                    process.send({ cmd: 'restart_database', databaseDialect: databaseConfig.databaseDialect });
-                }
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+});
+
+router.post('/databaseConfig/clear', (req, res) => {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            try {
+                const data = await databaseConfigClear_POST();
 
                 res.send(data);
             }
@@ -589,6 +614,34 @@ router.post('/storageConfig/toggle', (req, res) => {
                 const dnsConfig = req.body.dnsConfig;
 
                 const data = await storageConfigToggle_POST(storageConfig, dnsConfig);
+
+                res.send(data);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+
+                res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            }
+        }
+        else {
+            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
+
+            res.send({isError: true, message: 'you are not logged in'});
+        }
+    })
+    .catch(error => {
+        logDebugMessageToConsole(null, error, new Error().stack);
+        
+        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+    });
+});
+
+router.post('/storageConfig/toggle', (req, res) => {
+    getAuthenticationStatus(req.headers.authorization)
+    .then(async (isAuthenticated) => {
+        if(isAuthenticated) {
+            try {
+                const data = await storageConfigClear_POST();
 
                 res.send(data);
             }

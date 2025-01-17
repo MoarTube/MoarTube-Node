@@ -1714,6 +1714,18 @@ function videoIdWatch_GET(videoId) {
     });
 }
 
+function dataAll() {
+    return new Promise(async function(resolve, reject) {
+        performDatabaseReadJob_ALL('SELECT video_id, outputs FROM videos', [])
+        .then(videos => {
+            resolve(videos);
+        })
+        .catch(error => {
+            logDebugMessageToConsole(null, error, new Error().stack);
+        });
+    });
+}
+
 module.exports = {
     import_POST,
     imported_POST,
@@ -1752,5 +1764,6 @@ module.exports = {
     tagsAll_GET,
     videoIdViewsIncrement_GET,
     videoIdReport_POST,
-    videoIdWatch_GET
+    videoIdWatch_GET,
+    dataAll
 };

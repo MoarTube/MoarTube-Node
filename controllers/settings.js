@@ -1,12 +1,13 @@
 const fs = require('fs');
+const fss = require('fs').promises;
 const path = require('path');
 const bcryptjs = require('bcryptjs');
 const packageJson = require('../package.json');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { getImagesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath, getDatabaseFilePath
+const { getImagesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath, getDatabaseFilePath, getVideosDirectoryPath
 } = require('../utils/paths');
-const { getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast
+const { getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast, deleteDirectoryRecursive, getExternalVideosBaseUrl
 } = require('../utils/helpers');
 const { 
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNodeAddressValid, 
@@ -15,7 +16,7 @@ const {
 const { indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
 const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
     cloudflare_purgeWatchPages, cloudflare_addS3BucketCnameDnsRecord } = require('../utils/cloudflare-communications');
-const { submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
+const { submitDatabaseWriteJob, performDatabaseReadJob_ALL, clearDatabase } = require('../utils/database');
 
 function root_GET() {
     const nodeSettings = getNodeSettings();
@@ -417,7 +418,7 @@ function databaseConfigToggle_POST(databaseConfig) {
                         storage: getDatabaseFilePath(),
                         logging: false
                     });
-                } 
+                }
                 else if (databaseDialect === 'postgres') {
                     const postgresConfig = databaseConfig.postgresConfig;
                 
@@ -457,6 +458,14 @@ function databaseConfigToggle_POST(databaseConfig) {
     });
 }
 
+function databaseConfigClear_POST() {
+    return new Promise(async function(resolve, reject) {
+        await clearDatabase();
+
+        resolve({isError: false});
+    });
+}
+
 function storageConfigToggle_POST(storageConfig, dnsConfig) {
     return new Promise(async function(resolve, reject) {
         if(isStorageConfigValid(storageConfig)) {
@@ -470,7 +479,7 @@ function storageConfigToggle_POST(storageConfig, dnsConfig) {
 
                     if(endpoint != null) {
                         // assume non-AWS S3 provider
-                        
+
                         const url = new URL(endpoint);
                         const hostname = url.hostname;
 
@@ -489,7 +498,7 @@ function storageConfigToggle_POST(storageConfig, dnsConfig) {
 
                     storageConfig.s3Config.isCnameConfigured = true;
                 }
-
+                
                 const nodeSettings = getNodeSettings();
 
                 nodeSettings.storageConfig = storageConfig;
@@ -507,6 +516,14 @@ function storageConfigToggle_POST(storageConfig, dnsConfig) {
         else {
             resolve({isError: true, message: 'invalid parameters'});
         }
+    });
+}
+
+function storageConfigClear_POST() {
+    return new Promise(async function(resolve, reject) {
+        await deleteDirectoryRecursive(getVideosDirectoryPath());
+
+        resolve({isError: false});
     });
 }
 
@@ -611,66 +628,74 @@ function networkInternal_POST(listeningNodePort) {
     }
 }
 
-function networkExternal_POST(publicNodeProtocol, publicNodeAddress, publicNodePort) {
-    return new Promise(function(resolve, reject) {
-        if(isPublicNodeProtocolValid(publicNodeProtocol) && isPublicNodeAddressValid(publicNodeAddress) && isPortValid(publicNodePort)) {
-            const nodeSettings = getNodeSettings();
+async function networkExternal_POST(publicNodeProtocol, publicNodeAddress, publicNodePort) {
+    if(isPublicNodeProtocolValid(publicNodeProtocol) && isPublicNodeAddressValid(publicNodeAddress) && isPortValid(publicNodePort)) {
+        const nodeSettings = getNodeSettings();
 
-            nodeSettings.publicNodeProtocol = publicNodeProtocol;
-            nodeSettings.publicNodeAddress = publicNodeAddress;
-            nodeSettings.publicNodePort = publicNodePort;
+        nodeSettings.publicNodeProtocol = publicNodeProtocol;
+        nodeSettings.publicNodeAddress = publicNodeAddress;
+        nodeSettings.publicNodePort = publicNodePort;
 
-            performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = ?', [true])
-            .then(videos => {
-                if(videos.length > 0) {
-                    performNodeIdentification()
-                    .then(() => {
-                        const nodeIdentification = getNodeIdentification();
-                        
-                        const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-                        
-                        indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProtocol, publicNodeAddress, publicNodePort)
-                        .then(indexerResponseData => {
-                            if(indexerResponseData.isError) {
-                                resolve({isError: true, message: indexerResponseData.message});
-                            }
-                            else {
-                                // update HLS manifests here with the new external videos base url
+        const indexedVideos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = ?', [true]);
 
-                                setNodeSettings(nodeSettings);
-                                
-                                resolve({ isError: false });
-                            }
-                        })
-                        .catch(error => {
-                            logDebugMessageToConsole(null, error, new Error().stack);
-                            
-                            resolve({isError: true, message: 'your settings were not saved because they could not be sent to the MoarTube platform'});
-                        });
-                    })
-                    .catch(error => {
-                        logDebugMessageToConsole(null, error, new Error().stack);
-                        
-                        resolve({isError: true, message: 'your settings were not saved because they could not be sent to the MoarTube platform'});
-                    });
-                }
-                else {
-                    // update HLS manifests here with the new external videos base url
-                    
-                    setNodeSettings(nodeSettings);
-                    
-                    resolve({ isError: false });
-                }
-            })
-            .catch(error => {
-                logDebugMessageToConsole(null, error, new Error().stack);
-            });
+        if(indexedVideos.length > 0) {
+            await performNodeIdentification();
+
+            const nodeIdentification = getNodeIdentification();
+            const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+
+            const indexerResponseData = await indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProtocol, publicNodeAddress, publicNodePort);
+
+            if(indexerResponseData.isError) {
+                return {isError: true, message: indexerResponseData.message};
+            }
         }
-        else {
-            resolve({ isError: true, message: 'invalid parameters' });
+
+        setNodeSettings(nodeSettings);
+
+        if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+            const externalVideosBaseUrl = getExternalVideosBaseUrl();
+            const videosDirectoryPath = getVideosDirectoryPath();
+            
+            const videos = await performDatabaseReadJob_ALL('SELECT video_id, outputs FROM videos', []);
+
+            for(const video of videos) {
+                const videoId = video.video_id;
+                const outputs = JSON.parse(video.outputs);
+
+                if(outputs.m3u8.length > 0) {
+                    const masterManifestPath = path.join(videosDirectoryPath, videoId, 'adaptive', 'm3u8', 'manifest-master.m3u8');
+
+                    if(fs.existsSync(masterManifestPath)) {
+                        await performUpdate(masterManifestPath, externalVideosBaseUrl)
+                    }
+
+                    for(const resolution of outputs.m3u8) {
+                        const manifestPath = path.join(videosDirectoryPath, videoId, 'adaptive', 'm3u8', 'manifest-' + resolution + '.m3u8');
+
+                        if(fs.existsSync(manifestPath)) {
+                            await performUpdate(manifestPath, externalVideosBaseUrl)
+                        }
+                    }
+                }
+            }
         }
-    });
+
+        async function performUpdate(manifestPath, externalVideosBaseUrl) {
+            const manifestContent = await fss.readFile(manifestPath, "utf-8");
+
+            const updatedManifestContent = manifestContent.replace(/https?:\/\/[^/]+(?=\/external)/g, externalVideosBaseUrl);
+
+            await fss.writeFile(manifestPath, updatedManifestContent, "utf-8");
+        }
+
+        return { isError: false };
+    }
+    else {
+        return { isError: true, message: 'invalid parameters' };
+    }
 }
+
 
 module.exports = {
     root_GET,
@@ -695,5 +720,7 @@ module.exports = {
     networkInternal_POST,
     networkExternal_POST,
     databaseConfigToggle_POST,
-    storageConfigToggle_POST
+    databaseConfigClear_POST,
+    storageConfigToggle_POST,
+    storageConfigClear_POST
 };

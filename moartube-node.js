@@ -59,7 +59,7 @@ if(cluster.isMaster) {
 	});
 
 	logDebugMessageToConsole('starting MoarTube Node', null, null);
-	
+	logDebugMessageToConsole('WARNING: if running MoarTUbe Node via localhost, please add ', null, null);	
 	logDebugMessageToConsole('configured MoarTube Node to use data directory path: ' + getDataDirectoryPath(), null, null);
 
 	provisionDatabase()
@@ -146,7 +146,7 @@ if(cluster.isMaster) {
 
 					logDebugMessageToConsole('MoarTube Node changing database configuration to dialect: ' + databaseDialect, null, null);
 
-					openDatabase();
+					await openDatabase();
 
 					Object.values(cluster.workers).forEach((worker) => {
 						worker.send({ cmd: 'restart_database_response' });
