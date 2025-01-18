@@ -14,7 +14,7 @@ const {
     isPortValid, isCloudflareCredentialsValid, isBooleanValid, isDatabaseConfigValid, isStorageConfigValid
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
-const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetIntegration, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
+const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetCdn, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
     cloudflare_purgeWatchPages, cloudflare_addS3BucketCnameDnsRecord } = require('../utils/cloudflare-communications');
 const { submitDatabaseWriteJob, performDatabaseReadJob_ALL, clearDatabase } = require('../utils/database');
 
@@ -330,7 +330,7 @@ function cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId, clou
 function cloudflareClear_POST() {
     try {
         cloudflare_purgeEntireCache();
-        cloudflare_resetIntegration();
+        cloudflare_resetCdn();
 
         return { isError: false };
     }
@@ -470,33 +470,35 @@ function storageConfigToggle_POST(storageConfig, dnsConfig) {
     return new Promise(async function(resolve, reject) {
         if(isStorageConfigValid(storageConfig)) {
             try {
-                if(storageConfig.storageMode === 's3provider' && dnsConfig.isConfiguringDnsCname) {
-                    const bucketName = storageConfig.s3Config.bucketName;
-                    const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
-
-                    const cnameRecordName = bucketName;
-                    let cnameRecordContent;
-
-                    if(endpoint != null) {
-                        // assume non-AWS S3 provider
-
-                        const url = new URL(endpoint);
-                        const hostname = url.hostname;
-
-                        cnameRecordContent = `${bucketName}.${hostname}`;
+                if(dnsConfig.isConfiguringDnsCname) {
+                    if(storageConfig.storageMode === 's3provider') {
+                        const bucketName = storageConfig.s3Config.bucketName;
+                        const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
+    
+                        const cnameRecordName = bucketName;
+                        let cnameRecordContent;
+    
+                        if(endpoint != null) {
+                            // assume non-AWS S3 provider
+    
+                            const url = new URL(endpoint);
+                            const hostname = url.hostname;
+    
+                            cnameRecordContent = `${bucketName}.${hostname}`;
+                        }
+                        else {
+                            // assume AWS S3
+                            const region = storageConfig.s3Config.s3ProviderClientConfig.region;
+    
+                            cnameRecordContent = `${bucketName}.s3.${region}.amazonaws.com`;
+                        }
+    
+                        const cloudflareCredentials = dnsConfig.cloudflareCredentials;
+    
+                        await cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecordContent, cloudflareCredentials);
+    
+                        storageConfig.s3Config.isCnameConfigured = true;
                     }
-                    else {
-                        // assume AWS S3
-                        const region = storageConfig.s3Config.s3ProviderClientConfig.region;
-
-                        cnameRecordContent = `${bucketName}.s3.${region}.amazonaws.com`;
-                    }
-
-                    const cloudflareCredentials = dnsConfig.cloudflareCredentials;
-
-                    await cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecordContent, cloudflareCredentials);
-
-                    storageConfig.s3Config.isCnameConfigured = true;
                 }
                 
                 const nodeSettings = getNodeSettings();

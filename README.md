@@ -52,7 +52,7 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
  - Provide links to other platforms and websites, such as social media.
  - [Dual box compatible](https://www.moartube.com/guides/how-to-dual-box); broadcast an RTMP stream with software such as OBS from a primary system over a network (WAN or LAN) to a secondary system running the MoarTube Client, separating stream broadcasting from stream processing. This is achieved without any special plugins, such as NDI.
  - [Cloudflare Turnstile](https://www.moartube.com/guides/how-to-enable-cloudflare-turnstile); next-generation bot detection and human verification without the annoyance of captcha.
- - [Cloudflare one-click integration](https://www.moartube.com/guides/how-to-enable-cloudflare-integration); easily integrate your node into the [Cloudflare Network](https://www.cloudflare.com/network/), allowing for global media delivery capabilities of your videos and live streams that rivals major platforms, all from a single node. Features automated caching strategy configuration and automated cache management, and of course the best security from the world's leading CDN.
+ - [Cloudflare CDN](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn); easily integrate your node into the [Cloudflare Network](https://www.cloudflare.com/network/), allowing for global media delivery capabilities of your videos and live streams that rivals major platforms, all from a single node. Features automated caching strategy configuration and automated cache management, and of course the best security from the world's leading CDN.
 
 ![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/0d8ac95f-f68b-4e36-849e-28139b45ce50)
 
@@ -68,7 +68,7 @@ MoarTube Node has the smallest resource usage footprint out of any self-hosted v
 
 On Digital Ocean, an $8 VPS (1 vCPU, 1 GB RAM) provides a comfortable headroom to handle surprisingly moderate demand. Although this tier is likely adequate for most users, others will need to observe the resource usage monitor and adjust their instance accordingly. Or just simply forget all that and [host from your personal computer over home WiFi](https://www.moartube.com/guides/how-to-run-node-on-home-wifi).
 
-The node software uses about 100MB of RAM while sitting idle with fluctuations depending on visitor (and user) demand. Much of the demand can be alleviated by the [Cloudflare integration](https://www.moartube.com/guides/how-to-enable-cloudflare-integration) feature, leveraging the world's largest CDN to distribute your video and live stream data, giving your node capabilities that rival that of major platforms.
+The node software uses about 100MB of RAM while sitting idle with fluctuations depending on visitor (and user) demand. Much of the demand can be alleviated by the [Cloudflare CDN](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn) feature, leveraging the world's largest CDN to distribute your video and live stream data, giving your node capabilities that rival that of major platforms.
 
 To give you an idea of how tiny MoarTube Node really is, the software can run on a [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) on Raspberry Pi OS with approximately 100MB of system RAM remaining out of a total system availability of 512MB; the OS uses about 200MB RAM and reserves an additional 100MB for a swap file.
 
@@ -182,7 +182,7 @@ By default, MoarTube Node listens on port 80.
 
 ### Cloudflare
 
-At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://www.moartube.com/guides/how-to-enable-cloudflare-integration). With over 300 data centers worlwide, Cloudflare will distribute most of your node's videos and live streams.
+At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn). With over 300 data centers worlwide, Cloudflare will distribute most of your node's videos and live streams.
 
 ### Get MoarTube Client
 

@@ -31,7 +31,7 @@ function cloudflare_purgeEntireCache() {
     return new Promise(function(resolve, reject) {
         const nodeSettings = getNodeSettings();
 
-        if (nodeSettings.isCloudflareIntegrationEnabled) {
+        if (nodeSettings.isCloudflareCdnEnabled) {
             const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
             const cloudflareZoneId = nodeSettings.cloudflareZoneId;
             const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
@@ -77,7 +77,7 @@ function cloudflare_purgeCache(files, source) {
     else {
         const nodeSettings = getNodeSettings();
         
-        if (nodeSettings.isCloudflareIntegrationEnabled) {
+        if (nodeSettings.isCloudflareCdnEnabled) {
             const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
             const cloudflareZoneId = nodeSettings.cloudflareZoneId;
             const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
@@ -406,7 +406,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
             };
 
             try {
-                await cloudflare_resetIntegration();
+                await cloudflare_resetCdn();
             }
             catch(error) {
                 logDebugMessageToConsole(null, error, new Error().stack);
@@ -610,7 +610,7 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
 
             const nodeSettings = getNodeSettings();
             
-            nodeSettings.isCloudflareIntegrationEnabled = true;
+            nodeSettings.isCloudflareCdnEnabled = true;
             nodeSettings.cloudflareEmailAddress = cloudflareEmailAddress;
             nodeSettings.cloudflareZoneId = cloudflareZoneId;
             nodeSettings.cloudflareGlobalApiKey = cloudflareGlobalApiKey;
@@ -627,14 +627,14 @@ function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, c
     });
 }
 
-async function cloudflare_resetIntegration() {
+async function cloudflare_resetCdn() {
     return new Promise(async function(resolve, reject) {
         try {
             logDebugMessageToConsole('resetting Cloudflare configuration for MoarTube Node', null, null);
 
             const nodeSettings = getNodeSettings();
 
-            if (nodeSettings.isCloudflareIntegrationEnabled) {
+            if (nodeSettings.isCloudflareCdnEnabled) {
                 const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
                 const cloudflareZoneId = nodeSettings.cloudflareZoneId;
                 const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
@@ -715,7 +715,7 @@ async function cloudflare_resetIntegration() {
 
                 // step 5: save the configuration
                 
-                nodeSettings.isCloudflareIntegrationEnabled = false;
+                nodeSettings.isCloudflareCdnEnabled = false;
                 nodeSettings.cloudflareEmailAddress = '';
                 nodeSettings.cloudflareZoneId = '';
                 nodeSettings.cloudflareGlobalApiKey = '';
@@ -727,7 +727,7 @@ async function cloudflare_resetIntegration() {
                 resolve();
             }
             else {
-                reject('could not reset the Cloudflare integration; the node is currently not configured to use Cloudflare');
+                reject('could not reset the Cloudflare CDN; the node is currently not configured to use Cloudflare');
             }
         }
         catch (error) {
@@ -847,20 +847,6 @@ async function cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecord
     });
 }
 
-function cloudflare_cacheVideoSegment(segmentFileUrl) {
-    return new Promise(function(resolve, reject) {
-        axios.get(segmentFileUrl)
-        .then(response => {
-            const data = response.data;
-            
-            resolve(data);
-        })
-        .catch(error => {
-            resolve({isError: true, message: 'error'});
-        });
-    });
-}
-
 function getNodebaseUrl() {
     const nodeSettings = getNodeSettings();
 
@@ -901,8 +887,7 @@ module.exports = {
     cloudflare_purgeVideoPreviewImages,
     cloudflare_purgeVideoPosterImages,
     cloudflare_setConfiguration,
-    cloudflare_resetIntegration,
-    cloudflare_cacheVideoSegment,
+    cloudflare_resetCdn,
     cloudflare_validateTurnstileToken,
     cloudflare_addS3BucketCnameDnsRecord
 };

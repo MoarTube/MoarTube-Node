@@ -429,12 +429,7 @@ router.post('/:videoId/stream', (req, res) => {
                             }
                         },
                         filename: function (req, file, cb) {
-                            if(file.originalname === manifestFileName) {
-                                cb(null, file.originalname + '_temp');
-                            }
-                            else {
-                                cb(null, file.originalname);
-                            }
+                            cb(null, file.originalname);
                         }
                     })
                 }).fields([{ name: 'video_files' }])
@@ -451,11 +446,7 @@ router.post('/:videoId/stream', (req, res) => {
                     }
                     else {
                         try {
-                            const manifestFilePath_temp = req.files.video_files[0].path;
-                            const manifestFilePath_new = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + manifestFileName);
-                            const segmentFileName = req.files.video_files[1].originalname;
-                            
-                            const data = await videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, manifestFilePath_new, segmentFileName);
+                            const data = await videoIdStream_POST(videoId, format, resolution);
 
                             res.send(data);
                         }

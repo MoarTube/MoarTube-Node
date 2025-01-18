@@ -19,8 +19,7 @@ const {
 const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
 const { 
     cloudflare_purgeWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos, cloudflare_purgeVideoPreviewImages, cloudflare_purgeVideoPosterImages, 
-    cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, cloudflare_purgeNodePage, cloudflare_purgeVideoThumbnailImages, cloudflare_cacheVideoSegment,
-    cloudflare_validateTurnstileToken
+    cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, cloudflare_purgeNodePage, cloudflare_purgeVideoThumbnailImages, cloudflare_validateTurnstileToken
 } = require('../utils/cloudflare-communications');
 
 function import_POST(title, description, tags) {
@@ -262,43 +261,9 @@ function videoIdUpload_POST(videoId, format, resolution) {
     });
 }
 
-function videoIdStream_POST(videoId, format, resolution, manifestFilePath_temp, manifestFilePath_new, segmentFileName) {
+function videoIdStream_POST(videoId, format, resolution) {
     return new Promise(async function(resolve, reject) {
         if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
-            if(format === 'm3u8') {
-                try {
-                    const nodeSettings = getNodeSettings();
-
-                    if(nodeSettings.isCloudflareIntegrationEnabled) {
-                        const segmentFileUrl = getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/adaptive/' + format + '/' + resolution + '/segments/' + segmentFileName;
-
-                        cloudflare_cacheVideoSegment(segmentFileUrl)
-                        .then(() => {
-                            const data = fs.readFileSync(manifestFilePath_temp, 'utf-8');
-                            const lines = data.split(/\r?\n/);
-
-                            if(lines.length >= 10) {
-                                lines.splice(lines.length - 3, 3);
-                                const newContent = lines.join('\n');
-                                fs.writeFileSync(manifestFilePath_new, newContent, 'utf-8');
-                            }
-                            else {
-                                fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new); 
-                            }
-                        })
-                        .catch(error => {
-                            logDebugMessageToConsole(null, error, new Error().stack);
-                        });
-                    }
-                    else {
-                        fs.copyFileSync(manifestFilePath_temp, manifestFilePath_new);
-                    }
-                }
-                catch(error) {
-                    logDebugMessageToConsole(null, error, new Error().stack);
-                }
-            }
-            
             resolve({isError: false});
         }
         else {

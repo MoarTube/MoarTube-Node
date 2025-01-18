@@ -139,7 +139,7 @@ router.get('/:videoId/adaptive/:format/:resolution/segments/:segmentName', (req,
         const fileStream = videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET(videoId, format, resolution, segmentName);
 
         if(fileStream != null) {
-            res.setHeader('Content-Type', 'video/MP2T');
+            res.setHeader('Content-Type', 'video/mp2t');
 
             fileStream.pipe(res);
         }

@@ -432,6 +432,20 @@ function setLastCheckedContentTracker(lastCheckedContentTracker) {
 	fs.writeFileSync(getLastCheckedContentTrackerPath(), JSON.stringify(lastCheckedContentTracker));
 }
 
+function getHostsFilePath() {
+	const platform = require('os').platform();
+  
+	switch (platform) {
+	  case 'win32':
+		return path.join(process.env.SystemRoot, 'System32', 'drivers', 'etc', 'hosts');
+	  case 'darwin':
+	  case 'linux':
+		return '/etc/hosts';
+	  default:
+		throw new Error(`Unsupported platform: ${platform}`);
+	}
+  }
+
 module.exports = {
     logDebugMessageToConsole,
     websocketNodeBroadcast,
@@ -464,5 +478,6 @@ module.exports = {
     setExpressSessionName,
     setExpressSessionSecret,
     setNodeidentification,
-	getExternalVideosBaseUrl
+	getExternalVideosBaseUrl,
+	getHostsFilePath
 };

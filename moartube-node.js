@@ -15,7 +15,7 @@ const {logDebugMessageToConsole} = require('./utils/logger');
 const {
 	getNodeSettings, setNodeSettings, generateVideoId,
 	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, getIsDeveloperMode, setJwtSecret, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret, 
-	performNodeIdentification, getNodeIdentification, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64, getVideoPreviewJpgBase64, setLastCheckedContentTracker
+	performNodeIdentification, getNodeIdentification, getNodeIconPngBase64, getNodeAvatarPngBase64, getVideoPreviewJpgBase64, setLastCheckedContentTracker, getHostsFilePath
 } = require('./utils/helpers');
 const { setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort } = require('./utils/urls');
 const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, 
@@ -59,7 +59,10 @@ if(cluster.isMaster) {
 	});
 
 	logDebugMessageToConsole('starting MoarTube Node', null, null);
-	logDebugMessageToConsole('WARNING: if running MoarTUbe Node via localhost, please add ', null, null);	
+
+	const hostsFilePath = getHostsFilePath();
+	logDebugMessageToConsole('ATTENTION: if MoarTube Node is running under the localhost domain, the following hosts file entries are required...\n127.0.0.1 localhost\n127.0.0.1 testingexternalvideos.localhost\n127.0.0.1 testingexternalresources.localhost\nhosts file path: ' + hostsFilePath + '\n', null, null);
+
 	logDebugMessageToConsole('configured MoarTube Node to use data directory path: ' + getDataDirectoryPath(), null, null);
 
 	provisionDatabase()
@@ -491,7 +494,7 @@ function loadConfig() {
 			"password":"JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX",  // admin
 			"expressSessionName":crypto.randomBytes(64).toString('hex'),
 			"expressSessionSecret":crypto.randomBytes(64).toString('hex'),
-			"isCloudflareIntegrationEnabled":false,
+			"isCloudflareCdnEnabled":false,
 			"cloudflareEmailAddress":"",
 			"cloudflareZoneId":"",
 			"cloudflareGlobalApiKey":"",
