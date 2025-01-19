@@ -446,8 +446,9 @@ body {
 			let CURRENT_TAG_TERM_ID;
 
 			let TIMESTAMP_UPDATE_TRACKER = [];
-
 			let CRYPTO_WALLET_ADDRESSES = [];
+
+			let EXTERNAL_VIDEOS_BASE_URL;
 		
 			$(document).ready(function() {
 				const params = new URL(window.location.href).searchParams;
@@ -491,12 +492,14 @@ body {
 				CURRENT_TAG_TERM_ID = tagTerm.replace(/ /g, '-');
 				
 				$('#search-input').val(searchTerm);
+
+				EXTERNAL_VIDEOS_BASE_URL = INCOMING_PARAMETERS.externalVideosBaseUrl;
 				
 				loadInformation(INCOMING_PARAMETERS.informationData.information);
 				loadLinks(INCOMING_PARAMETERS.linksData.links);
 				loadCryptoWalletAddresses(INCOMING_PARAMETERS.cryptoWalletAddressesData.cryptoWalletAddresses);
 				loadTags(INCOMING_PARAMETERS.tagsData.tags);
-				loadVideos(INCOMING_PARAMETERS.searchResultsData.searchResults, INCOMING_PARAMETERS.externalVideosBaseUrl);
+				loadVideos(INCOMING_PARAMETERS.searchResultsData.searchResults);
 			});
 
 			function loadInformation(information) {
@@ -578,12 +581,12 @@ body {
 				});
 			}
 
-			function loadVideos(videos, externalVideosBaseUrl) {
+			function loadVideos(videos) {
 				clearTimestampUpdateTracker();
 
 				videos.forEach(function(row) {
 					const videoId = row.video_id;
-					const preview = externalVideosBaseUrl + '/external/videos/' + videoId + '/images/preview.jpg';
+					const preview = EXTERNAL_VIDEOS_BASE_URL + '/external/videos/' + videoId + '/images/preview.jpg';
 					const title = row.title;
 					const tags = row.tags;
 					const lengthTimestamp = row.length_timestamp;
