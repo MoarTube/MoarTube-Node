@@ -892,7 +892,6 @@ async function videoIdCommentsCommentId_GET(videoId, commentId) {
 
 async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp, cloudflareTurnstileToken, cloudflareConnectingIp) {
     if(isVideoIdValid(videoId, false) && isVideoCommentValid(commentPlainText) && isTimestampValid(timestamp) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-        let canProceed = true;
         let errorMessage;
 
         try {
@@ -900,14 +899,10 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
 
             if(!nodeSettings.isCommentsEnabled) {
                 errorMessage = 'commenting is currently disabled for this node';
-
-                canProceed = false;
             }
             else if(nodeSettings.isCloudflareTurnstileEnabled) {
                 if(cloudflareTurnstileToken.length === 0) {
                     errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
-
-                    canProceed = false;
                 }
                 else {
                     await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, cloudflareConnectingIp);
@@ -918,7 +913,7 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
             throw error;
         }
 
-        if(canProceed) {
+        if(errorMessage == null) {
             const commentPlainTextSanitized = sanitizeHtml(commentPlainText, {allowedTags: [], allowedAttributes: {}});
             const commentTimestamp = Date.now();
             
@@ -984,7 +979,6 @@ async function videoIdCommentsCommentIdDelete_DELETE(videoId, commentId, timesta
 
 async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareConnectingIp) {
     if(isVideoIdValid(videoId, false) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-        let canProceed = true;
         let errorMessage;
 
         try {
@@ -992,14 +986,10 @@ async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareCon
 
             if(!nodeSettings.isLikesEnabled) {
                 errorMessage = 'liking is currently disabled for this node';
-
-                canProceed = false;
             }
             else if(nodeSettings.isCloudflareTurnstileEnabled) {
                 if(cloudflareTurnstileToken.length === 0) {
                     errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
-
-                    canProceed = false;
                 }
                 else {
                     await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, cloudflareConnectingIp);
@@ -1010,7 +1000,7 @@ async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareCon
             throw error;
         }
 
-        if(canProceed) {
+        if(errorMessage == null) {
             await submitDatabaseWriteJob('UPDATE videos SET likes = likes + 1 WHERE video_id = ?', [videoId]);
 
             try {
@@ -1033,7 +1023,6 @@ async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareCon
 
 async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflareConnectingIp) {
     if(isVideoIdValid(videoId, false) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-        let canProceed = true;
         let errorMessage;
 
         try {
@@ -1041,14 +1030,10 @@ async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflare
             
             if(!nodeSettings.isDislikesEnabled) {
                 errorMessage = 'disliking is currently disabled for this node';
-
-                canProceed = false;
             }
             else if(nodeSettings.isCloudflareTurnstileEnabled) {
                 if(cloudflareTurnstileToken.length === 0) {
                     errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
-
-                    canProceed = false;
                 }
                 else {
                     await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, cloudflareConnectingIp);
@@ -1059,7 +1044,7 @@ async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflare
             throw error;
         }
 
-        if(canProceed) {
+        if(errorMessage == null) {
             await submitDatabaseWriteJob('UPDATE videos SET dislikes = dislikes + 1 WHERE video_id = ?', [videoId]);
             
             try {
@@ -1124,7 +1109,6 @@ async function tagsAll_GET() {
 
 async function videoIdReport_POST(videoId, email, reportType, message, cloudflareTurnstileToken, cloudflareConnectingIp) {
     if(isVideoIdValid(videoId, false) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-        let canProceed = true;
         let errorMessage;
 
         try {
@@ -1132,14 +1116,10 @@ async function videoIdReport_POST(videoId, email, reportType, message, cloudflar
 
             if(!nodeSettings.isReportsEnabled) {
                 errorMessage = 'reporting is currently disabled for this node';
-
-                canProceed = false;
             }
             else if(nodeSettings.isCloudflareTurnstileEnabled) {
                 if(cloudflareTurnstileToken.length === 0) {
                     errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
-
-                    canProceed = false;
                 }
                 else {
                     await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, cloudflareConnectingIp);
@@ -1150,7 +1130,7 @@ async function videoIdReport_POST(videoId, email, reportType, message, cloudflar
             throw error;
         }
 
-        if(canProceed) {
+        if(errorMessage == null) {
             email = sanitizeHtml(email, {allowedTags: [], allowedAttributes: {}});
             message = sanitizeHtml(message, {allowedTags: [], allowedAttributes: {}});
 

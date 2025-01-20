@@ -250,7 +250,6 @@ function initializeHttpServer(value) {
                                 const sentTimestamp = parsedMessage.sentTimestamp;
                                 
                                 if(isVideoIdValid(videoId, false) && isChatMessageContentValid(chatMessageContent) && isTimestampValid(sentTimestamp) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-                                    let canProceed = true;
                                     let errorMessage;
 
                                     try {
@@ -258,14 +257,10 @@ function initializeHttpServer(value) {
 
                                         if(!nodeSettings.isLiveChatEnabled) {
                                             errorMessage = 'live chat is currently disabled for this node';
-                                            
-                                            canProceed = false;
                                         }
                                         else if(nodeSettings.isCloudflareTurnstileEnabled) {
                                             if(cloudflareTurnstileToken.length === 0) {
                                                 errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
-
-                                                canProceed = false;
                                             }
                                             else {
                                                 await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip);
@@ -276,7 +271,7 @@ function initializeHttpServer(value) {
                                         throw error;
                                     }
 
-                                    if(canProceed) {
+                                    if(errorMessage == null) {
                                         const rateLimiter = ws.rateLimiter;
                                         
                                         const timestamp = Date.now();

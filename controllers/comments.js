@@ -56,7 +56,6 @@ async function search_GET(videoId, searchTerm, timestamp, limit) {
 
 async function commentIdReport_POST(commentId, email, reportType, message, cloudflareTurnstileToken, cloudflareConnectingIp) {
     if(isCommentIdValid(commentId) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
-        let canProceed = true;
         let errorMessage;
 
         try {
@@ -65,8 +64,6 @@ async function commentIdReport_POST(commentId, email, reportType, message, cloud
             if(nodeSettings.isCloudflareTurnstileEnabled) {
                 if(cloudflareTurnstileToken.length === 0) {
                     errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
-
-                    canProceed = false;
                 }
                 else {
                     await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, cloudflareConnectingIp);
@@ -77,7 +74,7 @@ async function commentIdReport_POST(commentId, email, reportType, message, cloud
             throw error;
         }
 
-        if(canProceed) {
+        if(errorMessage == null) {
             email = sanitizeHtml(email, {allowedTags: [], allowedAttributes: {}});
             message = sanitizeHtml(message, {allowedTags: [], allowedAttributes: {}});
 
