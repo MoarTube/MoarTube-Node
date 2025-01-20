@@ -107,96 +107,92 @@ function initializeHttpServer(value) {
                 if(jwtToken != null) {
                     // attempting a websocket message that expects authentication
                     
-                    getAuthenticationStatus(jwtToken)
-                    .then((isAuthenticated) => {
-                        if(isAuthenticated) {
-                            if(parsedMessage.eventName === 'ping') {
-                                //logDebugMessageToConsole('received ping from client', null, null);
+                    const isAuthenticated = await getAuthenticationStatus(jwtToken);
+                    
+                    if(isAuthenticated) {
+                        if(parsedMessage.eventName === 'ping') {
+                            //logDebugMessageToConsole('received ping from client', null, null);
 
-                                if(ws.socketType === 'moartube_client') {
-                                    //logDebugMessageToConsole('sending pong to client', null, null);
+                            if(ws.socketType === 'moartube_client') {
+                                //logDebugMessageToConsole('sending pong to client', null, null);
 
-                                    ws.send(JSON.stringify({eventName: 'pong'}));
-                                }
-                            }
-                            else if(parsedMessage.eventName === 'register') {
-                                const socketType = parsedMessage.socketType;
-                                
-                                if(socketType === 'moartube_client') {
-                                    ws.socketType = socketType;
-                                    
-                                    ws.send(JSON.stringify({eventName: 'registered'}));
-                                }
-                            }
-                            else if(parsedMessage.eventName === 'echo') {
-                                if(parsedMessage.data.eventName === 'video_status') {
-                                    const payload = parsedMessage.data.payload;
-                                    
-                                    const type = payload.type;
-                                    const videoId = payload.videoId;
-                                    
-                                    if(isVideoIdValid(videoId, false)) {
-                                        if(type === 'importing') {
-                                            const progress = payload.progress;
-                                            
-                                            websocketNodeBroadcast(parsedMessage);
-                                        }
-                                        else if(type === 'imported') {
-                                            const lengthTimestamp = payload.lengthTimestamp;
-                                            
-                                            websocketNodeBroadcast(parsedMessage);
-                                        }
-                                        else if(type === 'publishing') {
-                                            const format = payload.format;
-                                            const resolution = payload.resolution;
-                                            const progress = payload.progress;
-                                            
-                                            websocketNodeBroadcast(parsedMessage);
-                                        }
-                                        else if(type === 'published') {
-                                            const lengthTimestamp = payload.lengthTimestamp;
-                                            const lengthSeconds = payload.lengthSeconds;
-                                            
-                                            websocketNodeBroadcast(parsedMessage);
-                                        }
-                                        else if(type === 'streaming') {
-                                            const lengthTimestamp = payload.lengthTimestamp;
-                                            const bandwidth = payload.bandwidth;
-                                            
-                                            websocketNodeBroadcast(parsedMessage);
-                                        }
-                                        else if(type === 'importing_stopping') {
-                                            websocketNodeBroadcast(parsedMessage);
-                                        }
-                                        else if(type === 'importing_stopped') {
-                                            websocketNodeBroadcast(parsedMessage);
-                                        }
-                                        else if(type === 'publishing_stopping') {
-                                            stoppingPublishVideoUploading(videoId, parsedMessage);
-                                        }
-                                        else if(type === 'publishing_stopped') {
-                                            stoppedPublishVideoUploading(videoId, parsedMessage)
-                                        }
-                                        else if(type === 'streaming_stopping') {
-                                            websocketNodeBroadcast(parsedMessage);
-                                        }
-                                        else if(type === 'streaming_stopped') {
-                                            websocketNodeBroadcast(parsedMessage);
-                                        }
-                                        else if(type === 'finalized') {
-                                            websocketNodeBroadcast(parsedMessage);
-                                        }
-                                    }
-                                }
-                                else if(parsedMessage.data.eventName === 'video_data') {
-                                    websocketNodeBroadcast(parsedMessage);
-                                }
+                                ws.send(JSON.stringify({eventName: 'pong'}));
                             }
                         }
-                    })
-                    .catch(error => {
-                        logDebugMessageToConsole(null, error, new Error().stack);
-                    });
+                        else if(parsedMessage.eventName === 'register') {
+                            const socketType = parsedMessage.socketType;
+                            
+                            if(socketType === 'moartube_client') {
+                                ws.socketType = socketType;
+                                
+                                ws.send(JSON.stringify({eventName: 'registered'}));
+                            }
+                        }
+                        else if(parsedMessage.eventName === 'echo') {
+                            if(parsedMessage.data.eventName === 'video_status') {
+                                const payload = parsedMessage.data.payload;
+                                
+                                const type = payload.type;
+                                const videoId = payload.videoId;
+                                
+                                if(isVideoIdValid(videoId, false)) {
+                                    if(type === 'importing') {
+                                        const progress = payload.progress;
+                                        
+                                        websocketNodeBroadcast(parsedMessage);
+                                    }
+                                    else if(type === 'imported') {
+                                        const lengthTimestamp = payload.lengthTimestamp;
+                                        
+                                        websocketNodeBroadcast(parsedMessage);
+                                    }
+                                    else if(type === 'publishing') {
+                                        const format = payload.format;
+                                        const resolution = payload.resolution;
+                                        const progress = payload.progress;
+                                        
+                                        websocketNodeBroadcast(parsedMessage);
+                                    }
+                                    else if(type === 'published') {
+                                        const lengthTimestamp = payload.lengthTimestamp;
+                                        const lengthSeconds = payload.lengthSeconds;
+                                        
+                                        websocketNodeBroadcast(parsedMessage);
+                                    }
+                                    else if(type === 'streaming') {
+                                        const lengthTimestamp = payload.lengthTimestamp;
+                                        const bandwidth = payload.bandwidth;
+                                        
+                                        websocketNodeBroadcast(parsedMessage);
+                                    }
+                                    else if(type === 'importing_stopping') {
+                                        websocketNodeBroadcast(parsedMessage);
+                                    }
+                                    else if(type === 'importing_stopped') {
+                                        websocketNodeBroadcast(parsedMessage);
+                                    }
+                                    else if(type === 'publishing_stopping') {
+                                        stoppingPublishVideoUploading(videoId, parsedMessage);
+                                    }
+                                    else if(type === 'publishing_stopped') {
+                                        stoppedPublishVideoUploading(videoId, parsedMessage)
+                                    }
+                                    else if(type === 'streaming_stopping') {
+                                        websocketNodeBroadcast(parsedMessage);
+                                    }
+                                    else if(type === 'streaming_stopped') {
+                                        websocketNodeBroadcast(parsedMessage);
+                                    }
+                                    else if(type === 'finalized') {
+                                        websocketNodeBroadcast(parsedMessage);
+                                    }
+                                }
+                            }
+                            else if(parsedMessage.data.eventName === 'video_data') {
+                                websocketNodeBroadcast(parsedMessage);
+                            }
+                        }
+                    }
                 }
                 else {
                     if(parsedMessage.eventName === 'register') {

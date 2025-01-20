@@ -2,44 +2,29 @@ const express = require('express');
 
 const { search_GET, commentIdReport_POST } = require('../controllers/comments');
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { getAuthenticationStatus } = require('../utils/helpers');
+const { performAuthenticationCheck } = require('../middleware/authentication');
 
 const router = express.Router();
 
-router.get('/search', (req, res) => {
-    getAuthenticationStatus(req.headers.authorization)
-    .then(async (isAuthenticated) => {
-        if(isAuthenticated) {
-            try {
-                const videoId = req.query.videoId;
-                const searchTerm = req.query.searchTerm;
-                const timestamp = req.query.timestamp;
-                const limit = req.query.limit;
+router.get('/search', performAuthenticationCheck(true), async (req, res) => {
+    try {
+        const videoId = req.query.videoId;
+        const searchTerm = req.query.searchTerm;
+        const timestamp = req.query.timestamp;
+        const limit = req.query.limit;
 
-                const data = await search_GET(videoId, searchTerm, timestamp, limit);
+        const data = await search_GET(videoId, searchTerm, timestamp, limit);
 
-                res.send(data);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-        }
-        else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
-
-            res.send({isError: true, message: 'you are not logged in'});
-        }
-    })
-    .catch(error => {
+        res.send(data);
+    }
+    catch(error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-        
+
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
-    });
+    }
 });
 
-router.post('/:commentId/report', async (req, res) => {
+router.post('/:commentId/report', performAuthenticationCheck(false), async (req, res) => {
     try {
         const commentId = req.params.commentId;
         const email = req.body.email;

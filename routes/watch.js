@@ -2,10 +2,11 @@ const express = require('express');
 
 const { root_GET } = require('../controllers/watch');
 const { logDebugMessageToConsole } = require('../utils/logger');
+const { performAuthenticationCheck } = require('../middleware/authentication');
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', performAuthenticationCheck(false), async (req, res) => {
     try {
         const videoId = req.query.v;
 

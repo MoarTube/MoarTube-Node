@@ -3,7 +3,7 @@ const path = require('path');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath, getPublicDirectoryPath } = require('../utils/paths');
-const { generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, deleteDirectoryRecursive, getNodeSettings } = require('../utils/helpers');
+const { generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, deleteDirectoryRecursive, getNodeSettings, deleteFile } = require('../utils/helpers');
 const { 
     isTitleValid, isDescriptionValid, isTagsValid, isPortValid, isVideoIdValid, isAdaptiveFormatValid, isResolutionValid, isSegmentNameValid, isBooleanValid, 
     isNetworkAddressValid, isChatHistoryLimitValid 
@@ -229,14 +229,12 @@ async function videoIdStop_POST(videoId) {
     }
 }
 
-function videoIdAdaptiveFormatResolutionSegmentsRemove_POST(videoId, format, resolution, segmentName) {
+async function videoIdAdaptiveFormatResolutionSegmentsRemove_POST(videoId, format, resolution, segmentName) {
     if(isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
         const segmentPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
 
         try {
-            if(fs.existsSync(segmentPath)) {
-                fs.unlinkSync(segmentPath);
-            }
+            await deleteFile(segmentPath);
         }
         catch(error) {
             logDebugMessageToConsole(null, error, new Error().stack);

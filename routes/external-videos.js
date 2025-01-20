@@ -6,39 +6,24 @@ const {
     externalVideosBaseUrl_GET
 } = require('../controllers/external-videos');
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { getAuthenticationStatus } = require('../utils/helpers');
+const { performAuthenticationCheck } = require('../middleware/authentication');
 
 const router = express.Router();
 
-router.get('/baseUrl', (req, res) => {
-    getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
-        if(isAuthenticated) {
-            try {
-                const externalVideosBaseUrl = externalVideosBaseUrl_GET();
+router.get('/baseUrl', performAuthenticationCheck(true), (req, res) => {
+    try {
+        const externalVideosBaseUrl = externalVideosBaseUrl_GET();
 
-                res.send({isError: false, externalVideosBaseUrl: externalVideosBaseUrl});
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-            
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-        }
-        else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
-
-            res.send({isError: true, message: 'you are not logged in'});
-        }
-    })
-    .catch(error => {
+        res.send({isError: false, externalVideosBaseUrl: externalVideosBaseUrl});
+    }
+    catch(error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-
+    
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
-    });
+    }
 });
 
-router.get('/:videoId/images/thumbnail.jpg', (req, res) => {
+router.get('/:videoId/images/thumbnail.jpg', performAuthenticationCheck(false), (req, res) => {
     try {
         const videoId = req.params.videoId;
 
@@ -60,7 +45,7 @@ router.get('/:videoId/images/thumbnail.jpg', (req, res) => {
     }
 });
 
-router.get('/:videoId/images/preview.jpg', (req, res) => {
+router.get('/:videoId/images/preview.jpg', performAuthenticationCheck(false), (req, res) => {
     try {
         const videoId = req.params.videoId;
 
@@ -82,7 +67,7 @@ router.get('/:videoId/images/preview.jpg', (req, res) => {
     }
 });
 
-router.get('/:videoId/images/poster.jpg', (req, res) => {
+router.get('/:videoId/images/poster.jpg', performAuthenticationCheck(false), (req, res) => {
     try {
         const videoId = req.params.videoId;
 
@@ -104,7 +89,7 @@ router.get('/:videoId/images/poster.jpg', (req, res) => {
     }
 });
 
-router.get('/:videoId/adaptive/:format/:type/manifests/:manifestName', (req, res) => {
+router.get('/:videoId/adaptive/:format/:type/manifests/:manifestName', performAuthenticationCheck(false), (req, res) => {
     try {
         const videoId = req.params.videoId;
         const format = req.params.format;
@@ -129,7 +114,7 @@ router.get('/:videoId/adaptive/:format/:type/manifests/:manifestName', (req, res
     }
 });
 
-router.get('/:videoId/adaptive/:format/:resolution/segments/:segmentName', (req, res) => {
+router.get('/:videoId/adaptive/:format/:resolution/segments/:segmentName', performAuthenticationCheck(false), (req, res) => {
     try {
         const videoId = req.params.videoId;
         const format = req.params.format;
@@ -154,7 +139,7 @@ router.get('/:videoId/adaptive/:format/:resolution/segments/:segmentName', (req,
     }
 });
 
-router.get('/:videoId/progressive/:format/:progressiveFilename', (req, res) => {
+router.get('/:videoId/progressive/:format/:progressiveFilename', performAuthenticationCheck(false), (req, res) => {
     try {
         const videoId = req.params.videoId;
         const format = req.params.format;

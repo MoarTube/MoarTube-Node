@@ -337,7 +337,7 @@ else {
 			else if (msg.cmd === 'websocket_broadcast_response') {
 				const message = msg.message;
 				
-				getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+				getHttpServerWrapper()?.websocketServer?.clients?.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
 						client.send(JSON.stringify(message));
 					}
@@ -346,7 +346,7 @@ else {
 			else if (msg.cmd === 'websocket_broadcast_chat_response') {
 				const message = msg.message;
 				
-				getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+				getHttpServerWrapper()?.websocketServer?.clients?.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
 						if(client.socketType === 'node_peer' && (client.videoId === message.videoId || message.videoId === 'all')) {
 							client.send(JSON.stringify(message));
@@ -363,7 +363,7 @@ else {
 			else if (msg.cmd === 'live_stream_worker_stats_request') {
 				const liveStreamWatchingCounts = {};
 				
-				getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+				getHttpServerWrapper()?.websocketServer?.clients?.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
 						if(client.socketType === 'node_peer') {
 							const videoId = client.videoId;
@@ -395,7 +395,7 @@ else {
 					}
 				}
 				
-				getHttpServerWrapper().websocketServer.clients.forEach(function each(client) {
+				getHttpServerWrapper()?.websocketServer?.clients?.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
 						if(client.socketType === 'node_peer') {
 							const videoId = client.videoId;

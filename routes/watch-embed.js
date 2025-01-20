@@ -2,10 +2,11 @@ const express = require('express');
 
 const { videoVideoId_GET, chatVideoId_GET } = require('../controllers/watch-embed');
 const { logDebugMessageToConsole } = require('../utils/logger');
+const { performAuthenticationCheck } = require('../middleware/authentication');
 
 const router = express.Router();
 
-router.get('/video/:videoId', async (req, res) => {
+router.get('/video/:videoId', performAuthenticationCheck(false), async (req, res) => {
     try {
         const videoId = req.params.videoId;
 
@@ -25,7 +26,7 @@ router.get('/video/:videoId', async (req, res) => {
     }
 });
 
-router.get('/chat/:videoId', async (req, res) => {
+router.get('/chat/:videoId', performAuthenticationCheck(false), async (req, res) => {
     try {
         const videoId = req.params.videoId;
 

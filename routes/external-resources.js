@@ -2,13 +2,14 @@ const express = require('express');
 
 const { javascript_GET, css_GET, fonts_GET, images1_GET, images2_GET } = require('../controllers/external-resources');
 const { logDebugMessageToConsole } = require('../utils/logger');
+const { performAuthenticationCheck } = require('../middleware/authentication');
 
 const router = express.Router();
 
-router.use('/javascript', javascript_GET());
-router.use('/css', css_GET());
-router.use('/fonts', fonts_GET());
-router.use('/images', (req, res, next) => {
+router.use('/javascript', performAuthenticationCheck(false), javascript_GET());
+router.use('/css', performAuthenticationCheck(false), css_GET());
+router.use('/fonts', performAuthenticationCheck(false), fonts_GET());
+router.use('/images', performAuthenticationCheck(false), (req, res, next) => {
     try {
         const url = req.url;
 
@@ -29,6 +30,6 @@ router.use('/images', (req, res, next) => {
         next();
     }
 });
-router.use('/images', images2_GET());
+router.use('/images', performAuthenticationCheck(false), images2_GET());
 
 module.exports = router;

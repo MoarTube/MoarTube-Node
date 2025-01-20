@@ -304,7 +304,7 @@ async function deleteFile(filePath) {
 		await fss.rm(filePath, { force: true });
 	}
 	catch(error) {
-		logDebugMessageToConsole('failed to delete file path: ' + directoryPath, error, null);
+		logDebugMessageToConsole('failed to delete file path: ' + filePath, error, null);
 	}
 }
 

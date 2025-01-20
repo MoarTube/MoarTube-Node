@@ -2,11 +2,11 @@ const express = require('express');
 
 const { signIn_POST } = require('../controllers/account');
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { getAuthenticationStatus } = require('../utils/helpers');
+const { performAuthenticationCheck } = require('../middleware/authentication');
 
 const router = express.Router();
 
-router.post('/signin', (req, res) => {
+router.post('/signin', performAuthenticationCheck(false), (req, res) => {
     try {
         const username = req.body.username;
         const password = req.body.password;
@@ -26,42 +26,21 @@ router.post('/signin', (req, res) => {
     }
 });
 
-router.get('/signout', async (req, res) => {
-    getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
-        if(isAuthenticated) {
-            req.logout(function(error) {
-                if(error) {
-                    logDebugMessageToConsole(error, new Error().stack);
+router.get('/signout', performAuthenticationCheck(false), async (req, res) => {
+    req.logout(function(error) {
+        if(error) {
+            logDebugMessageToConsole(error, new Error().stack);
 
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                }
-                else {
-                    res.send({isError: false, wasAuthenticated: true});
-                }
-            });
+            res.send({isError: true, message: 'error communicating with the MoarTube node'});
         }
         else {
-            res.send({isError: false, wasAuthenticated: false});
+            res.send({isError: false, wasAuthenticated: true});
         }
-    })
-    .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
     });
 });
 
-router.get('/authenticated', async (req, res) => {
-    getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
-        res.send({isError: false, isAuthenticated: isAuthenticated});
-    })
-    .catch(error => {
-        logDebugMessageToConsole(null, error, new Error().stack);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-    });
+router.get('/authenticated', performAuthenticationCheck(true), async (req, res) => {
+    res.send({isError: false, isAuthenticated: req.isAuthenticated});
 });
 
 module.exports = router;

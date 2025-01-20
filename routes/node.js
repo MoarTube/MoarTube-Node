@@ -2,11 +2,11 @@ const express = require('express');
 
 const { root_GET, search_GET, newContentCounts_GET, contentChecked_POST } = require('../controllers/node');
 const { logDebugMessageToConsole } = require('../utils/logger');
-const { getAuthenticationStatus } = require('../utils/helpers');
+const { performAuthenticationCheck } = require('../middleware/authentication');
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', performAuthenticationCheck(false), async (req, res) => {
     try {
         const searchTerm = req.query.searchTerm;
         const sortTerm = req.query.sortTerm;
@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.get('/search', async (req, res) => {
+router.get('/search', performAuthenticationCheck(false), async (req, res) => {
     try {
         const searchTerm = req.query.searchTerm;
         const sortTerm = req.query.sortTerm;
@@ -40,62 +40,32 @@ router.get('/search', async (req, res) => {
     }
 });
 
-router.get('/newContentCounts', (req, res) => {
-    getAuthenticationStatus(req.headers.authorization)
-    .then(async (isAuthenticated) => {
-        if(isAuthenticated) {
-            try {
-                const data = await newContentCounts_GET();
+router.get('/newContentCounts', performAuthenticationCheck(true), async (req, res) => {
+    try {
+        const data = await newContentCounts_GET();
 
-                res.send(data);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-        }
-        else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
-
-            res.send({isError: true, message: 'you are not logged in'});
-        }
-    })
-    .catch(error => {
+        res.send(data);
+    }
+    catch(error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-        
+
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
-    });
+    }
 });
 
-router.post('/contentChecked', (req, res) => {
-    getAuthenticationStatus(req.headers.authorization)
-    .then(async (isAuthenticated) => {
-        if(isAuthenticated) {
-            try {
-                const contentType = req.body.contentType;
+router.post('/contentChecked', performAuthenticationCheck(true), (req, res) => {
+    try {
+        const contentType = req.body.contentType;
 
-                const data = contentChecked_POST(contentType);
+        const data = contentChecked_POST(contentType);
 
-                res.send(data);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-            
-                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-        }
-        else {
-            logDebugMessageToConsole('unauthenticated communication was rejected', null, new Error().stack);
-
-            res.send({isError: true, message: 'you are not logged in'});
-        }
-    })
-    .catch(error => {
+        res.send(data);
+    }
+    catch(error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-        
+    
         res.send({isError: true, message: 'error communicating with the MoarTube node'});
-    });
+    }
 });
 
 module.exports = router;

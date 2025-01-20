@@ -1,10 +1,11 @@
 const express = require('express');
 
 const { root_GET } = require('../controllers/base');
+const { performAuthenticationCheck } = require('../middleware/authentication');
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
+router.get('/', performAuthenticationCheck(false), (req, res) => {
     const originalUrl = req.originalUrl;
     const path = req.path;
     
