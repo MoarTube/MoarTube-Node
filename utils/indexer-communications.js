@@ -1,182 +1,87 @@
 const axios = require('axios').default;
 
-const { logDebugMessageToConsole } = require('./logger');
 const { getMoarTubeIndexerUrl } = require('./urls');
 
-function indexer_addVideoToIndex(data) {
-    return new Promise(function(resolve, reject) {
-        axios.post(getMoarTubeIndexerUrl() + '/index/video/add', data)
-        .then(response => {
-            const data = response.data;
-            
-            resolve(data);
-        })
-        .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack);
+async function indexer_addVideoToIndex(data) {
+    const response = await axios.post(getMoarTubeIndexerUrl() + '/index/video/add', data);
 
-            if(error.response.status === 413) {
-                const kilobytes = Math.ceil(error.request._contentLength / 1024);
-
-                resolve({isError: true, message: `your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>1mb</b>)<br>try using smaller node and video images`});
-            }
-            else {
-                resolve({isError: true, message: 'an error occurred while adding to the MoarTube Indexer'});
-            }
-        });
-    });
+    return response.data;
 }
 
-function indexer_removeVideoFromIndex(data) {
-    return new Promise(function(resolve, reject) {
-        axios.post(getMoarTubeIndexerUrl() + '/index/video/remove', data)
-        .then(response => {
-            const data = response.data;
-            
-            resolve(data);
-        })
-        .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack);
-
-            resolve({isError: true, message: 'an error occurred while removing from the MoarTube Indexer'});
-        });
-    });
+async function indexer_removeVideoFromIndex(data) {
+    const response = await axios.post(getMoarTubeIndexerUrl() + '/index/video/remove', data);
+    
+    return response.data;
 }
 
-function indexer_doIndexUpdate(data) {
-	return new Promise(function(resolve, reject) {
-		axios.post(getMoarTubeIndexerUrl() + '/index/video/update', data)
-		.then(response => {
-			const data = response.data;
-			
-			resolve(data);
-		})
-		.catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack);
+async function indexer_doIndexUpdate(data) {
+    const response = await axios.post(getMoarTubeIndexerUrl() + '/index/video/update', data);
 
-            if(error.response.status === 413) {
-                const kilobytes = Math.ceil(error.request._contentLength / 1024);
-
-                resolve({isError: true, message: `your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>1mb</b>)<br>try using smaller node and video images`});
-            }
-            else {
-                resolve({isError: true, message: 'an error occurred while updating the MoarTube Indexer'});
-            }
-		});
-	});
+    return response.data;
 }
 
-function indexer_doNodePersonalizeNodeNameUpdate(moarTubeTokenProof, nodeName) {
-    return new Promise(function(resolve, reject) {
-        axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeName', {
-            nodeName: nodeName,
+async function indexer_doNodePersonalizeNodeNameUpdate(moarTubeTokenProof, nodeName) {
+    const data = { 
+        nodeName: nodeName, 
+        moarTubeTokenProof: moarTubeTokenProof 
+    };
+
+    const response = await axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeName', data);
+
+    return response.data;
+}
+
+async function indexer_doNodePersonalizeNodeAboutUpdate(moarTubeTokenProof, nodeAbout) {
+    const data = { 
+        nodeAbout: nodeAbout, 
+        moarTubeTokenProof: moarTubeTokenProof 
+    };
+
+    const response = await axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeAbout', data);
+
+    return response.data;
+}
+
+async function indexer_doNodePersonalizeNodeIdUpdate(moarTubeTokenProof, nodeId) {
+    const data = { 
+        nodeId: nodeId, 
+        moarTubeTokenProof: moarTubeTokenProof 
+    };
+
+    const response = await axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeId', data);
+
+    return response.data;
+}
+
+async function indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProtocol, publicNodeAddress, publicNodePort) {
+    const data = {
+        publicNodeProtocol: publicNodeProtocol,
+        publicNodeAddress: publicNodeAddress,
+        publicNodePort: publicNodePort,
+        moarTubeTokenProof: moarTubeTokenProof
+    };
+
+    const response = await axios.post(getMoarTubeIndexerUrl() + '/index/node/network/update', data);
+
+    return response.data;
+}
+
+async function indexer_getNodeIdentification() {
+    const response = await axios.get(getMoarTubeIndexerUrl() + '/node/identification');
+
+	return response.data;
+}
+
+async function indexer_doNodeIdentificationRefresh(moarTubeTokenProof) {
+    const data = {
+        params: {
             moarTubeTokenProof: moarTubeTokenProof
-        })
-        .then(response => {
-            const data = response.data;
-            
-            resolve(data);
-        })
-        .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack);
+        }
+    };
 
-            resolve({isError: true, message: 'an error occurred while updating the personalize settings'});
-        });
-    });
-}
+    const response = await axios.get(getMoarTubeIndexerUrl() + '/node/identification/refresh', data);
 
-function indexer_doNodePersonalizeNodeAboutUpdate(moarTubeTokenProof, nodeAbout) {
-    return new Promise(function(resolve, reject) {
-        axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeAbout', {
-            nodeAbout: nodeAbout,
-            moarTubeTokenProof: moarTubeTokenProof
-        })
-        .then(response => {
-            const data = response.data;
-            
-            resolve(data);
-        })
-        .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack);
-
-            resolve({isError: true, message: 'an error occurred while updating the personalize settings'});
-        });
-    });
-}
-
-function indexer_doNodePersonalizeNodeIdUpdate(moarTubeTokenProof, nodeId) {
-    return new Promise(function(resolve, reject) {
-        axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeId', {
-            nodeId: nodeId,
-            moarTubeTokenProof: moarTubeTokenProof
-        })
-        .then(response => {
-            const data = response.data;
-            
-            resolve(data);
-        })
-        .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack);
-
-            resolve({isError: true, message: 'an error occurred while updating the personalize settings'});
-        });
-    });
-}
-
-function indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProtocol, publicNodeAddress, publicNodePort) {
-    return new Promise(function(resolve, reject) {
-        axios.post(getMoarTubeIndexerUrl() + '/index/node/network/update', {
-            publicNodeProtocol: publicNodeProtocol,
-            publicNodeAddress: publicNodeAddress,
-            publicNodePort: publicNodePort,
-            moarTubeTokenProof: moarTubeTokenProof
-        })
-        .then(response => {
-            const data = response.data;
-            
-            resolve(data);
-        })
-        .catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack);
-
-            resolve({isError: true, message: 'an error occurred while updating the network settings'});
-        });
-    });
-}
-
-function indexer_getNodeIdentification() {
-	return new Promise(function(resolve, reject) {
-		axios.get(getMoarTubeIndexerUrl() + '/node/identification')
-		.then(response => {
-			const data = response.data;
-			
-			resolve(data);
-		})
-		.catch(error => {
-			logDebugMessageToConsole(null, error, new Error().stack);
-
-            resolve({isError: true, message: 'an error occurred while identifying the node with the MoarTube Indexer'});
-		});
-	});
-}
-
-function indexer_doNodeIdentificationRefresh(moarTubeTokenProof) {
-	return new Promise(function(resolve, reject) {
-		axios.get(getMoarTubeIndexerUrl() + '/node/identification/refresh', {
-		  params: {
-            moarTubeTokenProof: moarTubeTokenProof
-		  }
-		})
-		.then(response => {
-			const data = response.data;
-			
-			resolve(data);
-		})
-		.catch(error => {
-            logDebugMessageToConsole(null, error, new Error().stack);
-
-			resolve({isError: true, message: 'an error occurred while refreshing the node with the MoarTube Indexer'});
-		});
-	});
+	return response.data;
 }
 
 module.exports = {

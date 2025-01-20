@@ -1177,6 +1177,13 @@ body {
 
 					refreshTextAreas();
 				}
+
+				if (window.ethereum != null) {
+					console.log('EIP-1193 compatible crypto wallet detected.');
+				}
+				else {
+					console.log('EIP-1193 compatible crypto wallet not detected!');
+				}
 			});
 
             function loadInformation(information) {
@@ -1471,22 +1478,24 @@ body {
 				$('#video-dislike-count').text(dislikes);
 				
 				$('#video-title').text(title);
-				
-				incrementViews()
-				.then(function(views) {
-					VIEW_COUNT = views;
 
-					const viewsFormatted = getViewsFormatted(views);
-					
-					if(!isStreaming) {
-						$('#video-information-views').text(viewsFormatted);
+				(async function() {
+					try {
+						const views = await incrementViews();
+
+						VIEW_COUNT = views;
+
+						const viewsFormatted = getViewsFormatted(views);
+
+						if (!isStreaming) {
+							$('#video-information-views').text(viewsFormatted);
+						}
+
+						$('#recommended-video-info-views-' + VIDEO_ID).text(viewsFormatted);
+					} catch (error) {
+						console.error(error.message);
 					}
-
-					$('#recommended-video-info-views-' + VIDEO_ID).text(viewsFormatted)
-				})
-				.catch(function(error) {
-					console.log(error);
-				});
+				})();
 
 				(function updateCreationTimestamp() {
 					const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
@@ -1541,25 +1550,21 @@ body {
 					$('#video-player-container').append('<div class="d-flex align-items-center justify-content-center">' + message + '</div>');
 				}
 
-				function incrementViews() {
-					return new Promise(function(resolve, reject) {
-						$.ajax({type: 'GET', url: '/videos/' + VIDEO_ID + '/views/increment'})
-						.done(function (data) {
-							if(data.isError) {
-								reject(data.message);
-							}
-							else {
-								const views = data.views;
+				async function incrementViews() {
+					try {
+						const data = await $.ajax({ type: 'GET', url: '/videos/' + VIDEO_ID + '/views/increment' });
 
-								resolve(views);
-							}
-						})
-						.fail(function() {
-							reject('unable to communicate with node');
-						});
-					});
+						if (data.isError) {
+							throw new Error(data.message);
+						}
+
+						return data.views;
+					}
+					catch (error) {
+						throw new Error('unable to communicate with node');
+					}
 				}
-				
+
 				function initializeVideoJsPlayer() {
 					window.videojs.log.level("off");
 					
@@ -2909,21 +2914,24 @@ body {
 					$(videoLikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
 					$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
 
-					performLike()
-					.then(() => {
-						const likeCount = $('#video-like-count').text();
-						let likeCountParsed = parseInt(likeCount);
-						likeCountParsed++;
-						$('#video-like-count').text(likeCountParsed);
-					})
-					.catch(error => {
-						$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
-						
-						showAlert(true, error);
-					})
-					.finally(() => {
-						enableLikeDislikeButtons();
-					});
+					(async function() {
+						try {
+							await performLike();
+
+							const likeCount = $('#video-like-count').text();
+							let likeCountParsed = parseInt(likeCount);
+							likeCountParsed++;
+							$('#video-like-count').text(likeCountParsed);
+						}
+						catch (error) {
+							$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+
+							showAlert(true, error.message || error);
+						}
+						finally {
+							enableLikeDislikeButtons();
+						}
+					})();
 				}
 			}
 			
@@ -2940,21 +2948,24 @@ body {
 					$(videoDislikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
 					$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
 
-					performDislike()
-					.then(() => {
-						const dislikeCount = $('#video-dislike-count').text();
-						let dislikeCountParsed = parseInt(dislikeCount);
-						dislikeCountParsed++;
-						$('#video-dislike-count').text(dislikeCountParsed);
-					})
-					.catch(error => {
-						$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
-						
-						showAlert(true, error);
-					})
-					.finally(() => {
-						enableLikeDislikeButtons();
-					});
+					(async function() {
+						try {
+							await performDislike();
+
+							const dislikeCount = $('#video-dislike-count').text();
+							let dislikeCountParsed = parseInt(dislikeCount);
+							dislikeCountParsed++;
+							$('#video-dislike-count').text(dislikeCountParsed);
+						}
+						catch (error) {
+							$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+
+							showAlert(true, error.message || error);
+						}
+						finally {
+							enableLikeDislikeButtons();
+						}
+					})();
 				}
 			}
 
@@ -2973,63 +2984,51 @@ body {
 				$(videoLikeButton).prop('disabled', false);
 				$(videoDislikeButton).prop('disabled', false);
 			}
-			
-			function performLike() {
-				return new Promise(function(resolve, reject) {
-					getCloudflareTurnstileToken()
-					.then(cloudflareTurnstileToken => {
-						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/like', data: JSON.stringify({ cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
-						.done(function (data, textStatus, xhr) {
-							if(data.isError) {
-								showAlert(true, data.message);
 
-								reject(data.message);
-							}
-							else {
-								Swal.close();
-								
-								resolve();
-							}
-						})
-						.fail(function() {
-							showAlert(true, '...something went wrong...');
+			async function performLike() {
+				try {
+					const cloudflareTurnstileToken = await getCloudflareTurnstileToken();
 
-							reject('...something went wrong...');
-						});
-					})
-					.catch(error => {
-						reject(error);
+					const data = await $.ajax({
+						type: 'POST',
+						url: '/videos/' + VIDEO_ID + '/like',
+						data: JSON.stringify({ cloudflareTurnstileToken }),
+						contentType: 'application/json; charset=utf-8',
 					});
-				});
+
+					if (data.isError) {
+						throw new Error(data.message);
+					} 
+					else {
+						Swal.close();
+					}
+				} 
+				catch (error) {
+					throw error;
+				}
 			}
-			
-			function performDislike() {
-				return new Promise(function(resolve, reject) {
-					getCloudflareTurnstileToken()
-					.then(cloudflareTurnstileToken => {
-						$.ajax({type: 'POST', url: '/videos/' + VIDEO_ID + '/dislike', data: JSON.stringify({ cloudflareTurnstileToken: cloudflareTurnstileToken }), contentType: 'application/json; charset=utf-8'})
-						.done(function (data, textStatus, xhr) {
-							if(data.isError) {
-								showAlert(true, data.message);
 
-								reject(data.message);
-							}
-							else {
-								Swal.close();
-								
-								resolve();
-							}
-						})
-						.fail(function() {
-							showAlert(true, '...something went wrong...');
+			async function performDislike() {
+				try {
+					const cloudflareTurnstileToken = await getCloudflareTurnstileToken();
 
-							reject('...something went wrong...');
-						});
-					})
-					.catch(error => {
-						reject(error);
+					const data = await $.ajax({
+						type: 'POST',
+						url: '/videos/' + VIDEO_ID + '/dislike',
+						data: JSON.stringify({ cloudflareTurnstileToken }),
+						contentType: 'application/json; charset=utf-8',
 					});
-				});
+
+					if (data.isError) {
+						throw new Error(data.message);
+					}
+					else {
+						Swal.close();
+					}
+				}
+				catch (error) {
+					throw error;
+				}
 			}
 			
 			function incrementLikeCount() {
@@ -3341,47 +3340,30 @@ body {
 				}
 			}
 
-			function getCloudflareTurnstileToken() {
-				return new Promise(function(resolve, reject) {
-					if(CLOUDFLARE_TURNSTILE_SITE_KEY === '') {
-						resolve('');
-					}
-					else {
-						turnstile.render('#captcha-container', {
-							'sitekey': CLOUDFLARE_TURNSTILE_SITE_KEY,
-							'callback': function(token) {
-								resolve(token);
-							},
-							'unsupported-callback': function() {
-								reject('unable to activate that feature');
-							},
-							'timeout-callback': function() {
-								reject('human verification was unsuccessful');
-							},
-							'error-callback': function() {
-								reject('human verification encountered an error');
-							},
-							'refresh-expired': 'never',
-							'retry': 'never'
-						});
-					}
+			async function getCloudflareTurnstileToken() {
+				if (CLOUDFLARE_TURNSTILE_SITE_KEY === '') {
+					return '';
+				}
+
+				return new Promise((resolve, reject) => {
+					turnstile.render('#captcha-container', {
+						sitekey: CLOUDFLARE_TURNSTILE_SITE_KEY,
+						callback: (token) => {
+							resolve(token);
+						},
+						'unsupported-callback': () => {
+							reject('Unable to activate that feature');
+						},
+						'timeout-callback': () => {
+							reject('Human verification was unsuccessful');
+						},
+						'error-callback': () => {
+							reject('Human verification encountered an error');
+						},
+						'refresh-expired': 'never',
+						retry: 'never',
+					});
 				});
-			}
-
-
-
-
-
-
-
-
-
-
-
-			if (window.ethereum != null) {
-				console.log('EIP-1193 compatible crypto wallet detected.');
-			} else {
-				console.log('EIP-1193 compatible crypto wallet not detected!');
 			}
 
 			async function openCryptoClient(walletAddress, chain, chainId, donationAmount) {

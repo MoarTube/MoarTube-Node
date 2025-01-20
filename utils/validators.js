@@ -348,28 +348,12 @@ function isTagsValid(tags) {
     return result;
 }
 
-function isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
-    return new Promise(function(resolve, reject) {
-        const { cloudflare_validate } = require('../utils/cloudflare-communications');
+async function isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
+    const { cloudflare_validate } = require('../utils/cloudflare-communications');
 
-        cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
-        .then(function(result) {
-            if(result.isError) {
-                resolve(false);
-            }
-            else {
-                if(result.success) {
-                    resolve(true);
-                }
-                else {
-                    resolve(false);
-                }
-            }
-        })
-        .catch(function(error) {
-            resolve(false);
-        });
-    });
+    const result = await cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
+
+    return result;
 }
 
 module.exports = {

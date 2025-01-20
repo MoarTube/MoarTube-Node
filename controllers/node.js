@@ -36,87 +36,81 @@ async function root_GET(searchTerm, sortTerm, tagTerm) {
     };
 }
 
-function search_GET(searchTerm, sortTerm, tagTerm) {
-    return new Promise(function(resolve, reject) {
-        if(isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true)) {
-            let query;
-            let params;
+async function search_GET(searchTerm, sortTerm, tagTerm) {
+    if(isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true)) {
+        let query;
+        let params;
 
-            if(searchTerm.length === 0) {
-                query = 'SELECT * FROM videos WHERE (is_published = ? OR is_live = ?)';
-                params = [true, true];
-            }
-            else {
-                query = 'SELECT * FROM videos WHERE (is_published = ? OR is_live = ?) AND title LIKE ?';
-                params = [true, true, '%' + searchTerm + '%'];
-            }
-
-            performDatabaseReadJob_ALL(query, params)
-            .then(rows => {
-                if(sortTerm === 'latest') {
-                    rows.sort(function compareByTimestampDescending(a, b) {
-                        return b.creation_timestamp - a.creation_timestamp;
-                    });
-                }
-                else if(sortTerm === 'popular') {
-                    rows.sort(function compareByTimestampDescending(a, b) {
-                        return b.views - a.views;
-                    });
-                }
-                else if(sortTerm === 'oldest') {
-                    rows.sort(function compareByTimestampDescending(a, b) {
-                        return a.creation_timestamp - b.creation_timestamp;
-                    });
-                }
-                
-                const tagLimitCounter = {};
-                let rowsToSend = [];
-                
-                if(tagTerm.length === 0) {
-                    const tagLimit = 4;
-
-                    rows.forEach(function(row) {
-                        const tagsArray = row.tags.split(',');
-                        
-                        let addRow = false;
-                        
-                        for (let tag of tagsArray) {
-                            if(!tagLimitCounter.hasOwnProperty(tag)) {
-                                tagLimitCounter[tag] = 0;
-                            }
-                            
-                            if(tagLimitCounter[tag] < tagLimit) {
-                                tagLimitCounter[tag]++;
-                                addRow = true;
-                                break;
-                            }
-                        }
-                        
-                        if(addRow) {
-                            rowsToSend.push(row);
-                        }
-                    });
-                }
-                else {
-                    rows.forEach(function(row) {
-                        const tagsArray = row.tags.split(',');
-
-                        if(tagsArray.includes(tagTerm) && !rowsToSend.includes(row)) {
-                            rowsToSend.push(row);
-                        }
-                    });
-                }
-                
-                resolve({isError: false, searchResults: rowsToSend});
-            })
-            .catch(error => {
-                reject(error);
-            });
+        if(searchTerm.length === 0) {
+            query = 'SELECT * FROM videos WHERE (is_published = ? OR is_live = ?)';
+            params = [true, true];
         }
         else {
-            resolve({isError: true, message: 'invalid parameters'});
+            query = 'SELECT * FROM videos WHERE (is_published = ? OR is_live = ?) AND title LIKE ?';
+            params = [true, true, '%' + searchTerm + '%'];
         }
-    });
+
+        const videos = await performDatabaseReadJob_ALL(query, params);
+
+        if(sortTerm === 'latest') {
+            videos.sort(function compareByTimestampDescending(a, b) {
+                return b.creation_timestamp - a.creation_timestamp;
+            });
+        }
+        else if(sortTerm === 'popular') {
+            videos.sort(function compareByTimestampDescending(a, b) {
+                return b.views - a.views;
+            });
+        }
+        else if(sortTerm === 'oldest') {
+            videos.sort(function compareByTimestampDescending(a, b) {
+                return a.creation_timestamp - b.creation_timestamp;
+            });
+        }
+        
+        const tagLimitCounter = {};
+        const searchResults = [];
+        
+        if(tagTerm.length === 0) {
+            const tagLimit = 4;
+
+            for(const video of videos) {
+                const tagsArray = video.tags.split(',');
+                
+                let addVideo = false;
+                
+                for (let tag of tagsArray) {
+                    if(!tagLimitCounter.hasOwnProperty(tag)) {
+                        tagLimitCounter[tag] = 0;
+                    }
+                    
+                    if(tagLimitCounter[tag] < tagLimit) {
+                        tagLimitCounter[tag]++;
+                        addVideo = true;
+                        break;
+                    }
+                }
+                
+                if(addVideo) {
+                    searchResults.push(video);
+                }
+            }
+        }
+        else {
+            for(const video of videos) {
+                const tagsArray = video.tags.split(',');
+
+                if(tagsArray.includes(tagTerm) && !searchResults.includes(video)) {
+                    searchResults.push(video);
+                }
+            }
+        }
+        
+        return {isError: false, searchResults: searchResults};
+    }
+    else {
+        throw new Error('invalid parameters');
+    }
 }
 
 async function newContentCounts_GET() {

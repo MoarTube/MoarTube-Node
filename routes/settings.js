@@ -1,6 +1,5 @@
 const express = require('express');
 const fs = require('fs');
-const path = require('path');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 
@@ -462,10 +461,10 @@ router.post('/cloudflare/configure', (req, res) => {
 
 router.post('/cloudflare/clear', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
+    .then(async (isAuthenticated) => {
         if(isAuthenticated) {
             try {
-                const data = cloudflareClear_POST();
+                const data = await cloudflareClear_POST();
 
                 res.send(data);
             }

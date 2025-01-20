@@ -15,53 +15,55 @@ const {
     cloudflare_purgeWatchPages, cloudflare_purgeNodePage
 } = require('../utils/cloudflare-communications');
 
-function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamRemotely, isRecordingStreamLocally, networkAddress, resolution, videoId) {
-    return new Promise(async function(resolve, reject) {
-        if(!isTitleValid(title)) {
-            resolve({isError: true, message: 'title is not valid'});
-        }
-        else if(!isDescriptionValid(description)) {
-            resolve({isError: true, message: 'description is not valid'});
-        }
-        else if(!isTagsValid(tags)) {
-            resolve({isError: true, message: 'tags are not valid'});
-        }
-        else if(!isPortValid(rtmpPort)) {
-            resolve({isError: true, message: 'rtmp port not valid'});
-        }
-        else if(uuid !== 'moartube') {
-            resolve({isError: true, message: 'uuid not valid'});
-        }
-        else if(!isBooleanValid(isRecordingStreamRemotely)) {
-            resolve({isError: true, message: 'isRecordingStreamRemotely not valid'});
-        }
-        else if(!isBooleanValid(isRecordingStreamLocally)) {
-            resolve({isError: true, message: 'isRecordingStreamLocally not valid'});
-        }
-        else if(!isNetworkAddressValid(networkAddress)) {
-            resolve({isError: true, message: 'networkAddress not valid'});
-        }
-        else if(!isResolutionValid(resolution)) {
-            resolve({isError: true, message: 'resolution not valid'});
-        }
-        else if(!isVideoIdValid(videoId, true)) {
-            resolve({isError: true, message: 'videoId not valid'});
-        }
-        else {
-            let isResumingStream = true;
+async function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamRemotely, isRecordingStreamLocally, networkAddress, resolution, videoId) {
+    if(!isTitleValid(title)) {
+        throw new Error('title is not valid');
+    }
+    else if(!isDescriptionValid(description)) {
+        throw new Error('description is not valid');
+    }
+    else if(!isTagsValid(tags)) {
+        throw new Error('tags are not valid');
+    }
+    else if(!isPortValid(rtmpPort)) {
+        throw new Error('rtmp port not valid');
+    }
+    else if(uuid !== 'moartube') {
+        throw new Error('uuid not valid');
+    }
+    else if(!isBooleanValid(isRecordingStreamRemotely)) {
+        throw new Error('isRecordingStreamRemotely not valid');
+    }
+    else if(!isBooleanValid(isRecordingStreamLocally)) {
+        throw new Error('isRecordingStreamLocally not valid');
+    }
+    else if(!isNetworkAddressValid(networkAddress)) {
+        throw new Error('networkAddress not valid');
+    }
+    else if(!isResolutionValid(resolution)) {
+        throw new Error('resolution not valid');
+    }
+    else if(!isVideoIdValid(videoId, true)) {
+        throw new Error('videoId not valid');
+    }
+    else {
+        let isResumingStream = true;
 
-            if(videoId === '') {
-                isResumingStream = false;
+        if(videoId === '') {
+            isResumingStream = false;
 
-                videoId = await generateVideoId();
-            }
+            videoId = await generateVideoId();
+        }
 
-            if(isResumingStream) {
-                await deleteDirectoryRecursive(path.join(getVideosDirectoryPath(), videoId));
-            }
+        if(isResumingStream) {
+            await deleteDirectoryRecursive(path.join(getVideosDirectoryPath(), videoId));
+        }
 
-            const tagsSanitized = sanitizeTagsSpaces(tags);
+        const tagsSanitized = sanitizeTagsSpaces(tags);
 
+        const nodeSettings = getNodeSettings();
+
+        if(nodeSettings.storageConfig.storageMode === 'filesystem') {
             const publicImagesDirectory = path.join(getPublicDirectoryPath(), '/images');
             const publicThumbnailImageFilePath = path.join(publicImagesDirectory, 'thumbnail.jpg');
             const publicPreviewImageFilePath = path.join(publicImagesDirectory, 'preview.jpg');
@@ -81,199 +83,150 @@ function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamR
             fs.copyFileSync(publicThumbnailImageFilePath, videoThumbnailImageFilePath);
             fs.copyFileSync(publicPreviewImageFilePath, videoPreviewImageFilePath);
             fs.copyFileSync(publicPosterImageFilePath, videoPosterImageFilePath);
+        }
 
-            let query;
-            let parameters;
+        let query;
+        let parameters;
 
-            if (isResumingStream) {
-                performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
-                .then(video => {
-                    if(video != null) {
-                        const outputs = JSON.stringify({'m3u8': [resolution], 'mp4': [], 'webm': [], 'ogv': []});
-
-                        let meta = JSON.parse(video.meta);
-
-                        meta.rtmpPort = rtmpPort;
-                        meta.networkAddress = networkAddress;
-                        meta.resolution = resolution;
-                        meta.isRecordingStreamRemotely = isRecordingStreamRemotely;
-                        meta.isRecordingStreamLocally = isRecordingStreamLocally;
-
-                        meta = JSON.stringify(meta);
-
-                        query = 'UPDATE videos SET title = ?, description = ?, tags = ?, length_seconds = ?, length_timestamp = ?, views = ?, comments = ?, likes = ?, dislikes = ?, bandwidth = ?, is_publishing = ?, is_published = ?, is_streaming = ?, is_streamed = ?, is_stream_recorded_remotely = ?, is_stream_recorded_locally = ?, is_error = ?, outputs = ?, meta = ?, creation_timestamp = ? WHERE video_id = ?';
-                        parameters = [title, description, tags, 0, '', 0, 0, 0, 0, 0, false, false, true, false, isRecordingStreamRemotely, isRecordingStreamLocally, false, outputs, meta, Date.now(), videoId];
-
-                        performDatabaseWriteJob();
-                    }
-                    else {
-                        resolve({isError: true, message: 'error communicating with the MoarTube node'});
-                    }
-                })
-                .catch(error => {
-                    reject(error);
-                });
-            }
-            else {
+        if (isResumingStream) {
+            const video = await performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId]);
+            
+            if(video != null) {
                 const outputs = JSON.stringify({'m3u8': [resolution], 'mp4': [], 'webm': [], 'ogv': []});
 
-                const meta = JSON.stringify(
-                    {
-                        chatSettings: {
-                            isChatHistoryEnabled: true, 
-                            chatHistoryLimit: 0
-                        },
-                        rtmpPort: rtmpPort,
-                        uuid: uuid,
-                        networkAddress: networkAddress,
-                        resolution: resolution,
-                        isRecordingStreamRemotely: isRecordingStreamRemotely,
-                        isRecordingStreamLocally: isRecordingStreamLocally
-                    }
-                );
+                let meta = JSON.parse(video.meta);
 
-                query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, outputs, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-                parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, false, false, false, false, true, false, isRecordingStreamRemotely, isRecordingStreamLocally, true, false, false, false, false, false, false, false, '', true, true, true, true, true, outputs, meta, Date.now()];
+                meta.rtmpPort = rtmpPort;
+                meta.networkAddress = networkAddress;
+                meta.resolution = resolution;
+                meta.isRecordingStreamRemotely = isRecordingStreamRemotely;
+                meta.isRecordingStreamLocally = isRecordingStreamLocally;
 
-                performDatabaseWriteJob();
+                meta = JSON.stringify(meta);
+
+                query = 'UPDATE videos SET title = ?, description = ?, tags = ?, length_seconds = ?, length_timestamp = ?, views = ?, comments = ?, likes = ?, dislikes = ?, bandwidth = ?, is_publishing = ?, is_published = ?, is_streaming = ?, is_streamed = ?, is_stream_recorded_remotely = ?, is_stream_recorded_locally = ?, is_error = ?, outputs = ?, meta = ?, creation_timestamp = ? WHERE video_id = ?';
+                parameters = [title, description, tags, 0, '', 0, 0, 0, 0, 0, false, false, true, false, isRecordingStreamRemotely, isRecordingStreamLocally, false, outputs, meta, Date.now(), videoId];
             }
-
-            function performDatabaseWriteJob() {
-                submitDatabaseWriteJob(query, parameters, async function(isError) {
-                    if(isError) {
-                        resolve({isError: true, message: 'error communicating with the MoarTube node'});
-                    }
-                    else {
-                        performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
-                        .then(async videos => {
-                            const videoIds = videos.map(video => video.video_id);
-                            const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
-
-                            cloudflare_purgeWatchPages(videoIds);
-                            cloudflare_purgeNodePage(tags);
-                        })
-                        .catch(error => {
-                            logDebugMessageToConsole(null, error, new Error().stack);
-                        });
-
-                        if (isResumingStream) {
-                            submitDatabaseWriteJob('DELETE FROM comments WHERE video_id = ?', [videoId], null);
-                        }
-
-                        websocketNodeBroadcast({eventName: 'echo', data: {eventName: 'video_data', payload: {
-                                videoId: videoId, 
-                                thumbnail: '', 
-                                title: title, 
-                                description: description, 
-                                tags: tagsSanitized, 
-                                lengthSeconds: 0, 
-                                lengthTimestamp: '', 
-                                views: 0, 
-                                comments: 0, 
-                                likes: 0, 
-                                dislikes: 0, 
-                                bandwidth: 0, 
-                                isImporting: 0, 
-                                isImported: 0,
-                                isPublishing: 0,
-                                isPublished: 0,
-                                isLive: 1,
-                                isStreaming: 1,
-                                isStreamed: 0,
-                                isStreamRecordedRemotely: isRecordingStreamRemotely,
-                                isStreamRecordedLocally: isRecordingStreamLocally,
-                                isIndexing: 0,
-                                isIndexed: 0,
-                                isIndexOutdated: 0,
-                                isError: 0,
-                                isFinalized: 0
-                            }
-                        }});
-
-                        resolve({isError: false, videoId: videoId});
-                    }
-                });
+            else {
+                throw new Error('video with id does not exist: ' + videoId);
             }
-        }
-    });
-}
-
-function videoIdStop_POST(videoId) {
-    return new Promise(function(resolve, reject) {
-        if(isVideoIdValid(videoId, false)) {
-            submitDatabaseWriteJob('UPDATE videos SET is_streaming = ?, is_streamed = ?, is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [false, true, true, true, videoId], async function(isError) {
-                if(isError) {
-                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
-                }
-                else {
-                    const nodeSettings = getNodeSettings();
-
-                    const storageMode = nodeSettings.storageConfig.storageMode;
-
-                    try {
-                        if(storageMode === 'filesystem') {
-                            await endStreamedHlsManifestFiles();
-                        }
-                    }
-                    catch(error) {
-                        logDebugMessageToConsole(null, error, new Error().stack);
-                    }
-
-                    performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
-                    .then(async videos => {
-                        const videoIds = videos.map(video => video.video_id);
-                        const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
-                        
-                        cloudflare_purgeWatchPages(videoIds);
-                        cloudflare_purgeNodePage(tags);
-                    })
-                    .catch(error => {
-                        logDebugMessageToConsole(null, error, new Error().stack);
-                    });
-
-                    performDatabaseReadJob_GET('SELECT is_stream_recorded_remotely FROM videos WHERE video_id = ?', [videoId])
-                    .then(async video => {
-                        if(video != null) {
-                            if(video.is_stream_recorded_remotely) {
-                                submitDatabaseWriteJob('UPDATE videos SET is_published = ? WHERE video_id = ?', [true, videoId], function(isError) {
-                                    if(isError) {
-                                        
-                                    }
-                                    else {
-                                        
-                                    }
-                                });
-                            }
-                            else {
-                                if(storageMode === 'filesystem') {
-                                    const m3u8DirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
-                                    
-                                    await deleteDirectoryRecursive(m3u8DirectoryPath);
-                                }
-                            }
-                        }
-
-                        submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE video_id = ?', [videoId], function(isError) {
-                            if(isError) {
-                                
-                            }
-                            else {
-                                
-                            }
-                        });
-                        
-                        resolve({isError: false});
-                    })
-                    .catch(error => {
-                        reject(error);
-                    });
-                }
-            });
         }
         else {
-            resolve({isError: true, message: 'invalid parameters'});
+            const outputs = JSON.stringify({'m3u8': [resolution], 'mp4': [], 'webm': [], 'ogv': []});
+
+            const meta = JSON.stringify(
+                {
+                    chatSettings: {
+                        isChatHistoryEnabled: true, 
+                        chatHistoryLimit: 0
+                    },
+                    rtmpPort: rtmpPort,
+                    uuid: uuid,
+                    networkAddress: networkAddress,
+                    resolution: resolution,
+                    isRecordingStreamRemotely: isRecordingStreamRemotely,
+                    isRecordingStreamLocally: isRecordingStreamLocally
+                }
+            );
+
+            query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, outputs, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+            parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, false, false, false, false, true, false, isRecordingStreamRemotely, isRecordingStreamLocally, true, false, false, false, false, false, false, false, '', true, true, true, true, true, outputs, meta, Date.now()];
         }
-    });
+
+        await submitDatabaseWriteJob(query, parameters);
+
+        try {
+            const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
+
+            cloudflare_purgeWatchPages(videos.map(video => video.video_id));
+            cloudflare_purgeNodePage(Array.from(new Set(videos.map(video => video.tags.split(',')).flat())));
+        }
+        catch(error) {
+            logDebugMessageToConsole(null, error, new Error().stack);
+        }
+        
+        if (isResumingStream) {
+            await submitDatabaseWriteJob('DELETE FROM comments WHERE video_id = ?', [videoId]);
+        }
+
+        websocketNodeBroadcast({eventName: 'echo', data: {eventName: 'video_data', payload: {
+                videoId: videoId, 
+                thumbnail: '', 
+                title: title, 
+                description: description, 
+                tags: tagsSanitized, 
+                lengthSeconds: 0, 
+                lengthTimestamp: '', 
+                views: 0, 
+                comments: 0, 
+                likes: 0, 
+                dislikes: 0, 
+                bandwidth: 0, 
+                isImporting: 0, 
+                isImported: 0,
+                isPublishing: 0,
+                isPublished: 0,
+                isLive: 1,
+                isStreaming: 1,
+                isStreamed: 0,
+                isStreamRecordedRemotely: isRecordingStreamRemotely,
+                isStreamRecordedLocally: isRecordingStreamLocally,
+                isIndexing: 0,
+                isIndexed: 0,
+                isIndexOutdated: 0,
+                isError: 0,
+                isFinalized: 0
+            }
+        }});
+
+        return {isError: false, videoId: videoId};
+    }
+}
+
+async function videoIdStop_POST(videoId) {
+    if(isVideoIdValid(videoId, false)) {
+        await submitDatabaseWriteJob('UPDATE videos SET is_streaming = ?, is_streamed = ?, is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [false, true, true, true, videoId]);
+        
+        const nodeSettings = getNodeSettings();
+
+        const storageMode = nodeSettings.storageConfig.storageMode;
+
+        if(storageMode === 'filesystem') {
+            await endStreamedHlsManifestFiles();
+        }
+
+        try {
+            const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
+            
+            cloudflare_purgeWatchPages(videos.map(video => video.video_id));
+            cloudflare_purgeNodePage(Array.from(new Set(videos.map(video => video.tags.split(',')).flat())));
+        }
+        catch(error) {
+            logDebugMessageToConsole(null, error, new Error().stack);
+        }
+
+        const video = await performDatabaseReadJob_GET('SELECT is_stream_recorded_remotely FROM videos WHERE video_id = ?', [videoId]);
+
+        if(video != null) {
+            if(video.is_stream_recorded_remotely) {
+                await submitDatabaseWriteJob('UPDATE videos SET is_published = ? WHERE video_id = ?', [true, videoId]);
+            }
+            else {
+                if(storageMode === 'filesystem') {
+                    const m3u8DirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
+                    
+                    await deleteDirectoryRecursive(m3u8DirectoryPath);
+                }
+            }
+        }
+
+        await submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE video_id = ?', [videoId]);
+        
+        return {isError: false};
+    }
+    else {
+        throw new Error('video id is not valid')
+    }
 }
 
 function videoIdAdaptiveFormatResolutionSegmentsRemove_POST(videoId, format, resolution, segmentName) {
@@ -296,100 +249,63 @@ function videoIdAdaptiveFormatResolutionSegmentsRemove_POST(videoId, format, res
     }
 }
 
-function videoIdBandwidth_GET(videoId) {
-    return new Promise(function(resolve, reject) {
-        if(isVideoIdValid(videoId, false)) {
-            performDatabaseReadJob_GET('SELECT bandwidth FROM videos WHERE video_id = ?', [videoId])
-            .then(video => {
-                if(video != null) {
-                    const bandwidth = video.bandwidth;
-                    
-                    resolve({isError: false, bandwidth: bandwidth});
-                }
-                else {
-                    resolve({isError: true, message: 'that video does not exist'});
-                }
-            })
-            .catch(error => {
-                reject(error);
-            });
+async function videoIdBandwidth_GET(videoId) {
+    if(isVideoIdValid(videoId, false)) {
+        const video = await performDatabaseReadJob_GET('SELECT bandwidth FROM videos WHERE video_id = ?', [videoId]);
+
+        if(video != null) {
+            const bandwidth = video.bandwidth;
+            
+            return {isError: false, bandwidth: bandwidth};
         }
         else {
-            resolve({isError: true, message: 'invalid parameters'});
+            throw new Error('that video does not exist');
         }
-    });
+    }
+    else {
+        throw new Error('invalid parameters');
+    }
 }
 
-function videoIdChatSettings_POST(videoId, isChatHistoryEnabled, chatHistoryLimit) {
-    return new Promise(function(resolve, reject) {
-        if(isVideoIdValid(videoId, false) && isBooleanValid(isChatHistoryEnabled) && isChatHistoryLimitValid(chatHistoryLimit)) {
-            performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
-            .then(video => {
-                if(video != null) {
-                    const meta = JSON.parse(video.meta);
-                    
-                    meta.chatSettings.isChatHistoryEnabled = isChatHistoryEnabled;
-                    meta.chatSettings.chatHistoryLimit = chatHistoryLimit;
-                    
-                    submitDatabaseWriteJob('UPDATE videos SET meta = ? WHERE video_id = ?', [JSON.stringify(meta), videoId], function(isError) {
-                        if(isError) {
-                            resolve({isError: true, message: 'error communicating with the MoarTube node'});
-                        }
-                        else {
-                            if(!isChatHistoryEnabled) {
-                                submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE video_id = ?', [videoId], function(isError) {
-                                    if(isError) {
-                                        
-                                    }
-                                    else {
-                                        
-                                    }
-                                });
-                            }
-                            else if(chatHistoryLimit !== 0) {
-                                submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM livechatmessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit], function(isError) {
-                                    if(isError) {
-                                        
-                                    }
-                                    else {
-                                        
-                                    }
-                                });
-                            }
-                            
-                            resolve({isError: false});
-                        }
-                    });
-                }
-                else {
-                    resolve({isError: true, message: 'that video does not exist'});
-                }
-            })
-            .catch(error => {
-                reject(error);
-            });
+async function videoIdChatSettings_POST(videoId, isChatHistoryEnabled, chatHistoryLimit) {
+    if(isVideoIdValid(videoId, false) && isBooleanValid(isChatHistoryEnabled) && isChatHistoryLimitValid(chatHistoryLimit)) {
+        const video = await performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId]);
+
+        if(video != null) {
+            const meta = JSON.parse(video.meta);
+            
+            meta.chatSettings.isChatHistoryEnabled = isChatHistoryEnabled;
+            meta.chatSettings.chatHistoryLimit = chatHistoryLimit;
+            
+            await submitDatabaseWriteJob('UPDATE videos SET meta = ? WHERE video_id = ?', [JSON.stringify(meta), videoId]);
+
+            if(!isChatHistoryEnabled) {
+                await submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE video_id = ?', [videoId]);
+            }
+            else if(chatHistoryLimit !== 0) {
+                await submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE chat_message_id NOT IN (SELECT chat_message_id FROM livechatmessages where video_id = ? ORDER BY chat_message_id DESC LIMIT ?)', [videoId, chatHistoryLimit]);
+            }
+            
+            return {isError: false};
         }
         else {
-            resolve({isError: true, message: 'invalid parameters'});
+            throw new Error('that video does not exist');
         }
-    });
+    }
+    else {
+        throw new Error('invalid parameters');
+    }
 }
 
-function videoIdChatHistory_GET(videoId) {
-    return new Promise(function(resolve, reject) {
-        if(isVideoIdValid(videoId, false)) {
-            performDatabaseReadJob_ALL('SELECT * FROM livechatmessages WHERE video_id = ?', [videoId])
-            .then(chatHistory => {
-                resolve({isError: false, chatHistory: chatHistory});
-            })
-            .catch(error => {
-                reject(error);
-            });
-        }
-        else {
-            resolve({isError: true, message: 'invalid parameters'});
-        }
-    });
+async function videoIdChatHistory_GET(videoId) {
+    if(isVideoIdValid(videoId, false)) {
+        const chatHistory = await performDatabaseReadJob_ALL('SELECT * FROM livechatmessages WHERE video_id = ?', [videoId]);
+
+        return {isError: false, chatHistory: chatHistory};
+    }
+    else {
+        throw new Error('invalid parameters');
+    }
 }
 
 module.exports = {

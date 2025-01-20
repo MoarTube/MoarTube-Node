@@ -18,9 +18,9 @@ router.get('/information', async (req, res) => {
     }
 });
 
-router.get('/heartbeat', async (req, res) => {
+router.get('/heartbeat', (req, res) => {
     try {
-        const data = await heartbeat_GET();
+        const data = heartbeat_GET();
 
         res.send(data);
     }

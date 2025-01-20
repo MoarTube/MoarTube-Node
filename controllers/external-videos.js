@@ -103,19 +103,12 @@ function videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET(videoId, format,
         
                     clearTimeout(segmentBandwidthIncrementTimer);
 
-                    segmentBandwidthIncrementTimer = setTimeout(function() {
+                    segmentBandwidthIncrementTimer = setTimeout(async function() {
                         const segmentBandwidthCounterTemp = segmentBandwidthCounter;
                         
                         segmentBandwidthCounter = 0;
 
-                        submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [segmentBandwidthCounterTemp, videoId], function(isError) {
-                            if(isError) {
-                                // do nothing
-                            }
-                            else {
-                                // do nothing
-                            }
-                        });
+                        await submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [segmentBandwidthCounterTemp, videoId]);
                     }, 100);
                 }
             });
@@ -157,19 +150,12 @@ function videoIdProgressiveFormatResolution_GET(videoId, format, progressiveFile
         
                 clearTimeout(progressiveBandwidthIncrementTimer);
 
-                progressiveBandwidthIncrementTimer = setTimeout(function() {
+                progressiveBandwidthIncrementTimer = setTimeout(async function() {
                     const progressiveBandwidthCounterTemp = progressiveBandwidthCounter;
                         
                     progressiveBandwidthCounter = 0;
 
-                    submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [progressiveBandwidthCounterTemp, videoId], function(isError) {
-                        if(isError) {
-                            // do nothing
-                        }
-                        else {
-                            // do nothing
-                        }
-                    });
+                    await submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [progressiveBandwidthCounterTemp, videoId]);
                 }, 100);
 
                 status = 206;

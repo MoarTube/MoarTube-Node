@@ -124,10 +124,10 @@ if(cluster.isMaster) {
 
 					performDatabaseWriteJob(query, parameters)
 					.then(() => {
-						worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, isError: false });
+						worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId });
 					})
-					.catch(() => {
-						worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, isError: true });
+					.catch((error) => {
+						worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, error: error });
 					})
 					.finally(() => {
 						release();
@@ -168,76 +168,77 @@ if(cluster.isMaster) {
 			attachWorkerListeners(newWorker);
 		});
 
-		setInterval(function() {
-			performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = ? AND is_index_outdated = ?', [true, true])
-			.then(rows => {
-				if(rows.length > 0) {
-					performNodeIdentification()
-					.then(() => {
-						const nodeIdentification = getNodeIdentification();
+		setInterval(async function() {
+			try {
+				const videos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = ? AND is_index_outdated = ?', [true, true]);
+
+				if(videos.length > 0) {
+					await performNodeIdentification();
+
+					const nodeIdentification = getNodeIdentification();
+					
+					const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+					
+					for(const video of videos) {
+						const videoId = video.video_id;
+						const title = video.title;
+						const tags = video.tags;
+						const views = video.views;
+						const isStreaming = video.is_streaming;
+						const lengthSeconds = video.length_seconds;
+
+						const nodeIconPngBase64 = getNodeIconPngBase64();
+						const nodeAvatarPngBase64 = getNodeAvatarPngBase64();
+
+						const videoPreviewJpgBase64 = getVideoPreviewJpgBase64(videoId);
+
+						const data = {
+							videoId: videoId,
+							title: title,
+							tags: tags,
+							views: views,
+							isStreaming: isStreaming,
+							lengthSeconds: lengthSeconds,
+							nodeIconPngBase64: nodeIconPngBase64,
+							nodeAvatarPngBase64: nodeAvatarPngBase64,
+							videoPreviewJpgBase64: videoPreviewJpgBase64,
+							moarTubeTokenProof: moarTubeTokenProof
+						};
 						
-						const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-						
-						rows.forEach(function(row) {
-							const videoId = row.video_id;
-							const title = row.title;
-							const tags = row.tags;
-							const views = row.views;
-							const isStreaming = row.is_streaming;
-							const lengthSeconds = row.length_seconds;
+						try {
+							const indexerResponseData = await indexer_doIndexUpdate(data);
 
-							const nodeIconPngBase64 = getNodeIconPngBase64();
-							const nodeAvatarPngBase64 = getNodeAvatarPngBase64();
+							if(indexerResponseData.isError) {
+								throw new Error(indexerResponseData.message);
+							}
+							else {
+								await submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = ? WHERE video_id = ?', [false, videoId]);
 
-							const videoPreviewJpgBase64 = getVideoPreviewJpgBase64(videoId);
+								logDebugMessageToConsole('updated video id with MoarTube Index successfully: ' + videoId, null, null);
+							}
+						}
+						catch(error) {
+							if(error.isAxiosError && error.response != null && error.response.status === 413) {
+								const kilobytes = Math.ceil(error.request._contentLength / 1024);
 
-							const data = {
-								videoId: videoId,
-								title: title,
-								tags: tags,
-								views: views,
-								isStreaming: isStreaming,
-								lengthSeconds: lengthSeconds,
-								nodeIconPngBase64: nodeIconPngBase64,
-								nodeAvatarPngBase64: nodeAvatarPngBase64,
-								videoPreviewJpgBase64: videoPreviewJpgBase64,
-								moarTubeTokenProof: moarTubeTokenProof
-							};
-							
-							indexer_doIndexUpdate(data)
-							.then(async indexerResponseData => {
-								if(indexerResponseData.isError) {
-									logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack);
-								}
-								else {
-									submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = ? WHERE video_id = ?', [false, videoId], function(isError) {
-										if(isError) {
-											logDebugMessageToConsole(null, null, new Error().stack);
-										}
-										else {
-											logDebugMessageToConsole('updated video id with index successfully: ' + videoId, null, null);
-										}
-									});
-								}
-							})
-							.catch(error => {
-								logDebugMessageToConsole(null, error, new Error().stack);
-							});
-						});
-					})
-					.catch(error => {
-						logDebugMessageToConsole('unable to communicate with the MoarTube platform', error, new Error().stack);
-					});
+								throw new Error(`your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>1mb</b>)<br>try using smaller node and video images`);
+							}
+							else {
+								throw new Error('an error occurred while adding to the MoarTube Indexer');
+							}
+						}
+					}
 				}
-			})
-			.catch(error => {
-				// do nothing
-			});
+			}
+			catch(error) {
+				logDebugMessageToConsole(null, error, null);
+			}
 		}, 3000);
 
-		setInterval(function() {
-			performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
-			.then(async videos => {
+		setInterval(async function() {
+			try {
+				const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
+
 				logDebugMessageToConsole('clearing Cloudflare cache for all node page configurations and watch pages', null, null);
 
 				const videoIds = videos.map(video => video.video_id);
@@ -245,10 +246,10 @@ if(cluster.isMaster) {
 				
 				cloudflare_purgeWatchPages(videoIds);
 				cloudflare_purgeNodePage(tags);
-			})
-			.catch(error => {
-				// do nothing
-			});
+			}
+			catch(error) {
+				logDebugMessageToConsole(null, error, null);
+			}
 		}, 60000 * 10);
 
 		// gets the live stream watching count for all workers
@@ -355,9 +356,9 @@ else {
 			}
 			else if (msg.cmd === 'database_write_job_result') {
 				const databaseWriteJobId = msg.databaseWriteJobId;
-				const isError = msg.isError;
+				const error = msg.error;
 
-				finishPendingDatabaseWriteJob(databaseWriteJobId, isError);
+				finishPendingDatabaseWriteJob(databaseWriteJobId, error);
 			}
 			else if (msg.cmd === 'live_stream_worker_stats_request') {
 				const liveStreamWatchingCounts = {};

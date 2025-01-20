@@ -49,33 +49,26 @@ function avatar_GET() {
     }
 }
 
-function avatar_POST(iconFile, avatarFile) {
-    return new Promise(function(resolve, reject) {
-        const iconSourceFilePath = path.join(getImagesDirectoryPath(), iconFile.filename);
-        const avatarSourceFilePath = path.join(getImagesDirectoryPath(), avatarFile.filename);
-        
-        const iconDestinationFilePath = path.join(getImagesDirectoryPath(), 'icon.png');
-        const avatarDestinationFilePath = path.join(getImagesDirectoryPath(), 'avatar.png');
-        
-        fs.renameSync(iconSourceFilePath, iconDestinationFilePath);
-        fs.renameSync(avatarSourceFilePath, avatarDestinationFilePath);
+async function avatar_POST(iconFile, avatarFile) {
+    const iconSourceFilePath = path.join(getImagesDirectoryPath(), iconFile.filename);
+    const avatarSourceFilePath = path.join(getImagesDirectoryPath(), avatarFile.filename);
+    
+    const iconDestinationFilePath = path.join(getImagesDirectoryPath(), 'icon.png');
+    const avatarDestinationFilePath = path.join(getImagesDirectoryPath(), 'avatar.png');
+    
+    fs.renameSync(iconSourceFilePath, iconDestinationFilePath);
+    fs.renameSync(avatarSourceFilePath, avatarDestinationFilePath);
 
-        try {
-            cloudflare_purgeNodeImages();
-        }
-        catch(error) {
-            logDebugMessageToConsole(null, error, new Error().stack);
-        }
+    try {
+        cloudflare_purgeNodeImages();
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, new Error().stack);
+    }
 
-        submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END', [true, true], function(isError) {
-            if(isError) {
-                resolve({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-            else {
-                resolve({isError: false});
-            }
-        });
-    });
+    await submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END', [true, true]);
+
+    return {isError: false};
 }
 
 function banner_GET(req, res) {
@@ -118,157 +111,109 @@ function banner_POST(bannerFile) {
     return {isError: false};
 }
 
-function personalizeNodeName_POST(nodeName) {
-    return new Promise(function(resolve, reject) {
-        if(isNodeNameValid(nodeName)) {
-            const nodeSettings = getNodeSettings();
+async function personalizeNodeName_POST(nodeName) {
+    if(isNodeNameValid(nodeName)) {
+        const nodeSettings = getNodeSettings();
 
-            nodeSettings.nodeName = nodeName;
+        nodeSettings.nodeName = nodeName;
 
-            setNodeSettings(nodeSettings);
-            
-            performNodeIdentification()
-            .then(() => {
-                const nodeIdentification = getNodeIdentification();
-                
-                const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-                
-                indexer_doNodePersonalizeNodeNameUpdate(moarTubeTokenProof, nodeName)
-                .then(indexerResponseData => {
-                    if(indexerResponseData.isError) {
-                        logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack);
-                        
-                        resolve({isError: true, message: indexerResponseData.message});
-                    }
-                    else {
-                        try {
-                            cloudflare_purgeNodePage([]);
-                        }
-                        catch(error) {
-                            logDebugMessageToConsole(null, error, new Error().stack);
-                        }
+        setNodeSettings(nodeSettings);
+        
+        await performNodeIdentification();
+        
+        const nodeIdentification = getNodeIdentification();
+        
+        const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+        
+        const indexerResponseData = await indexer_doNodePersonalizeNodeNameUpdate(moarTubeTokenProof, nodeName);
 
-                        resolve({ isError: false });
-                    }
-                })
-                .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack);
-
-                    resolve({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
-                });
-            })
-            .catch(error => {
-                logDebugMessageToConsole(null, error, new Error().stack);
-
-                resolve({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
-            });
+        if(indexerResponseData.isError) {
+            throw new Error(indexerResponseData.message);
         }
         else {
-            resolve({ isError: true, message: 'invalid parameters' });
+            try {
+                cloudflare_purgeNodePage([]);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+            }
+            
+            return {isError: false};
         }
-    });
+    }
+    else {
+        throw new Error('invalid parameters');
+    }
 }
 
-function personalizeNodeAbout_POST(nodeAbout) {
-    return new Promise(function(resolve, reject) {
-        if(isNodeAboutValid(nodeAbout)) {
-            const nodeSettings = getNodeSettings();
+async function personalizeNodeAbout_POST(nodeAbout) {
+    if(isNodeAboutValid(nodeAbout)) {
+        const nodeSettings = getNodeSettings();
 
-            nodeSettings.nodeAbout = nodeAbout;
+        nodeSettings.nodeAbout = nodeAbout;
 
-            setNodeSettings(nodeSettings);
-            
-            performNodeIdentification()
-            .then(() => {
-                const nodeIdentification = getNodeIdentification();
-                
-                const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-                
-                indexer_doNodePersonalizeNodeAboutUpdate(moarTubeTokenProof, nodeAbout)
-                .then(indexerResponseData => {
-                    if(indexerResponseData.isError) {
-                        logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack);
-                        
-                        resolve({isError: true, message: indexerResponseData.message});
-                    }
-                    else {
-                        try {
-                            cloudflare_purgeNodePage([]);
-                        }
-                        catch(error) {
-                            logDebugMessageToConsole(null, error, new Error().stack);
-                        }
+        setNodeSettings(nodeSettings);
+        
+        await performNodeIdentification();
+        
+        const nodeIdentification = getNodeIdentification();
+        
+        const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+        
+        const indexerResponseData = await indexer_doNodePersonalizeNodeAboutUpdate(moarTubeTokenProof, nodeAbout);
 
-                        resolve({ isError: false });
-                    }
-                })
-                .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack);
-
-                    resolve({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
-                });
-            })
-            .catch(error => {
-                logDebugMessageToConsole(null, error, new Error().stack);
-
-                resolve({isError: true, message: 'your settings were saved to your node, but they could not be saved to the MoarTube platform'});
-            });
+        if(indexerResponseData.isError) {
+            throw new Error(indexerResponseData.message);
         }
         else {
-            resolve({ isError: true, message: 'invalid parameters' });
+            try {
+                cloudflare_purgeNodePage([]);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+            }
+
+            return { isError: false };
         }
-    });
+    }
+    else {
+        throw new Error('invalid parameters');
+    }
 }
 
-function personalizeNodeId_POST(nodeId) {
-    return new Promise(function(resolve, reject) {
-        if(isNodeIdValid(nodeId)) {
-            performNodeIdentification()
-            .then(() => {
-                const nodeIdentification = getNodeIdentification();
-                
-                const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-                
-                indexer_doNodePersonalizeNodeIdUpdate(moarTubeTokenProof, nodeId)
-                .then(indexerResponseData => {
-                    if(indexerResponseData.isError) {
-                        logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack);
-                        
-                        resolve({isError: true, message: indexerResponseData.message});
-                    }
-                    else {
-                        try {
-                            cloudflare_purgeNodePage([]);
-                        }
-                        catch(error) {
-                            logDebugMessageToConsole(null, error, new Error().stack);
-                        }
+async function personalizeNodeId_POST(nodeId) {
+    if(isNodeIdValid(nodeId)) {
+        await performNodeIdentification();
 
-                        const nodeSettings = getNodeSettings();
+        const nodeIdentification = getNodeIdentification();
+        
+        const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+        
+        const indexerResponseData = await indexer_doNodePersonalizeNodeIdUpdate(moarTubeTokenProof, nodeId);
 
-                        nodeSettings.nodeId = nodeId;
-                        
-                        setNodeSettings(nodeSettings);
-
-                        resolve({ isError: false });
-                    }
-                })
-                .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack);
-
-                    resolve({isError: true, message: 'your node ID could not be saved to the MoarTube platform and was not saved to your node'});
-                });
-            })
-            .catch(error => {
-                logDebugMessageToConsole(null, error, new Error().stack);
-
-                resolve({isError: true, message: 'your node ID could not be saved to the MoarTube platform and was not saved to your node'});
-            });
+        if(indexerResponseData.isError) {
+            throw new Error(indexerResponseData.message);
         }
         else {
-            resolve({ isError: true, message: 'invalid parameters' });
+            try {
+                cloudflare_purgeNodePage([]);
+            }
+            catch(error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+            }
+
+            const nodeSettings = getNodeSettings();
+
+            nodeSettings.nodeId = nodeId;
+            
+            setNodeSettings(nodeSettings);
+
+            return { isError: false };
         }
-    });
+    }
+    else {
+        throw new Error('invalid parameters');
+    }
 }
 
 function secure_POST(isSecure, keyFile, certFile, caFiles) {
@@ -304,42 +249,27 @@ function secure_POST(isSecure, keyFile, certFile, caFiles) {
     }
 }
 
-function cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
-    return new Promise(function(resolve, reject) {
-        isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
-        .then(isValid => {
-            if(isValid) {
-                cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
-                .then(() => {
-                    resolve({ isError: false });
-                })
-                .catch(error => {
-                    reject(error);
-                });
-            }
-            else {
-                resolve({isError: true, message: 'could not validate the Cloudflare credentials'});
-            }
-        })
-        .catch(error => {
-            reject(error);
-        });
-    });
-}
+async function cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
+    const isValid = await isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
 
-function cloudflareClear_POST() {
-    try {
-        cloudflare_purgeEntireCache();
-        cloudflare_resetCdn();
-
+    if(isValid) {
+        await cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
+        
         return { isError: false };
     }
-    catch(error) {
-        throw error;
+    else {
+        throw new Error('could not validate the Cloudflare credentials');
     }
 }
 
-function cloudflareTurnstileConfigure_POST(cloudflareTurnstileSiteKey, cloudflareTurnstileSecretKey) {
+async function cloudflareClear_POST() {
+    await cloudflare_purgeEntireCache();
+    await cloudflare_resetCdn();
+
+    return { isError: false };
+}
+
+async function cloudflareTurnstileConfigure_POST(cloudflareTurnstileSiteKey, cloudflareTurnstileSecretKey) {
     const nodeSettings = getNodeSettings();
 
     nodeSettings.isCloudflareTurnstileEnabled = true;
@@ -350,20 +280,21 @@ function cloudflareTurnstileConfigure_POST(cloudflareTurnstileSiteKey, cloudflar
 
     websocketChatBroadcast({eventName: 'information', videoId: 'all', cloudflareTurnstileSiteKey: cloudflareTurnstileSiteKey});
 
-    performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
-    .then(async videos => {
+    try {
+        const videos = await performDatabaseReadJob_ALL('SELECT video_id FROM videos', []);
+
         const videoIds = videos.map(video => video.video_id);
 
         cloudflare_purgeWatchPages(videoIds);
-    })
-    .catch(error => {
+    }
+    catch(error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    });
+    }
 
     return {isError: false};
 }
 
-function cloudflareTurnstileConfigureClear_POST() {
+async function cloudflareTurnstileConfigureClear_POST() {
     const nodeSettings = getNodeSettings();
 
     nodeSettings.isCloudflareTurnstileEnabled = false;
@@ -374,15 +305,16 @@ function cloudflareTurnstileConfigureClear_POST() {
 
     websocketChatBroadcast({eventName: 'information', videoId: 'all', cloudflareTurnstileSiteKey: ''});
 
-    performDatabaseReadJob_ALL('SELECT video_id FROM videos', [])
-    .then(async videos => {
+    try {
+        const videos = await performDatabaseReadJob_ALL('SELECT video_id FROM videos', []);
+        
         const videoIds = videos.map(video => video.video_id);
 
         cloudflare_purgeWatchPages(videoIds);
-    })
-    .catch(error => {
+    }
+    catch(error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    });
+    }
 
     return {isError: false};
 }
@@ -402,131 +334,121 @@ function commentsToggle_POST(isCommentsEnabled) {
     }
 }
 
-function databaseConfigToggle_POST(databaseConfig) {
-    return new Promise(async function(resolve, reject) {
-        if(isDatabaseConfigValid(databaseConfig)) {
-            try {
-                const { Sequelize } = require('sequelize');
+async function databaseConfigToggle_POST(databaseConfig) {
+    if(isDatabaseConfigValid(databaseConfig)) {
+        try {
+            const { Sequelize } = require('sequelize');
 
-                const databaseDialect = databaseConfig.databaseDialect;
+            const databaseDialect = databaseConfig.databaseDialect;
 
-                let sequelize;
+            let sequelize;
 
-                if (databaseDialect === 'sqlite') {
-                    sequelize = new Sequelize({
-                        dialect: 'sqlite',
-                        storage: getDatabaseFilePath(),
-                        logging: false
-                    });
-                }
-                else if (databaseDialect === 'postgres') {
-                    const postgresConfig = databaseConfig.postgresConfig;
-                
-                    const databaseName = postgresConfig.databaseName;
-                    const username = postgresConfig.username;
-                    const password = postgresConfig.password;
-                    const host = postgresConfig.host;
-                    const port = postgresConfig.port;
-                
-                    sequelize = new Sequelize(databaseName, username, password, {
-                        dialect: 'postgres',
-                        host: host,
-                        port: port,
-                        logging: false
-                    });
-                }
-
-                await sequelize.authenticate();
-
-                await sequelize.close();
-
-                const nodeSettings = getNodeSettings();
-
-                nodeSettings.databaseConfig = databaseConfig;
-
-                setNodeSettings(nodeSettings);
-
-                resolve({isError: false});
+            if (databaseDialect === 'sqlite') {
+                sequelize = new Sequelize({
+                    dialect: 'sqlite',
+                    storage: getDatabaseFilePath(),
+                    logging: false
+                });
             }
-            catch(e) {
-                resolve({isError: true, message: 'database connect error'});
+            else if (databaseDialect === 'postgres') {
+                const postgresConfig = databaseConfig.postgresConfig;
+            
+                const databaseName = postgresConfig.databaseName;
+                const username = postgresConfig.username;
+                const password = postgresConfig.password;
+                const host = postgresConfig.host;
+                const port = postgresConfig.port;
+            
+                sequelize = new Sequelize(databaseName, username, password, {
+                    dialect: 'postgres',
+                    host: host,
+                    port: port,
+                    logging: false
+                });
             }
+
+            await sequelize.authenticate();
+
+            await sequelize.close();
+
+            const nodeSettings = getNodeSettings();
+
+            nodeSettings.databaseConfig = databaseConfig;
+
+            setNodeSettings(nodeSettings);
+
+            return {isError: false};
         }
-        else {
-            resolve({isError: true, message: 'invalid parameters'});
+        catch(error) {
+            throw error;
         }
-    });
+    }
+    else {
+        throw new Error('invalid parameters');
+    }
 }
 
-function databaseConfigClear_POST() {
-    return new Promise(async function(resolve, reject) {
-        await clearDatabase();
+async function databaseConfigClear_POST() {
+    await clearDatabase();
 
-        resolve({isError: false});
-    });
+    return {isError: false};
 }
 
-function storageConfigToggle_POST(storageConfig, dnsConfig) {
-    return new Promise(async function(resolve, reject) {
-        if(isStorageConfigValid(storageConfig)) {
-            try {
-                if(dnsConfig.isConfiguringDnsCname) {
-                    if(storageConfig.storageMode === 's3provider') {
-                        const bucketName = storageConfig.s3Config.bucketName;
-                        const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
-    
-                        const cnameRecordName = bucketName;
-                        let cnameRecordContent;
-    
-                        if(endpoint != null) {
-                            // assume non-AWS S3 provider
-    
-                            const url = new URL(endpoint);
-                            const hostname = url.hostname;
-    
-                            cnameRecordContent = `${bucketName}.${hostname}`;
-                        }
-                        else {
-                            // assume AWS S3
-                            const region = storageConfig.s3Config.s3ProviderClientConfig.region;
-    
-                            cnameRecordContent = `${bucketName}.s3.${region}.amazonaws.com`;
-                        }
-    
-                        const cloudflareCredentials = dnsConfig.cloudflareCredentials;
-    
-                        await cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecordContent, cloudflareCredentials);
-    
-                        storageConfig.s3Config.isCnameConfigured = true;
+async function storageConfigToggle_POST(storageConfig, dnsConfig) {
+    if(isStorageConfigValid(storageConfig)) {
+        try {
+            if(dnsConfig.isConfiguringDnsCname) {
+                if(storageConfig.storageMode === 's3provider') {
+                    const bucketName = storageConfig.s3Config.bucketName;
+                    const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
+
+                    const cnameRecordName = bucketName;
+                    let cnameRecordContent;
+
+                    if(endpoint != null) {
+                        // assume non-AWS S3 provider
+
+                        const url = new URL(endpoint);
+                        const hostname = url.hostname;
+
+                        cnameRecordContent = `${bucketName}.${hostname}`;
                     }
+                    else {
+                        // assume AWS S3
+                        const region = storageConfig.s3Config.s3ProviderClientConfig.region;
+
+                        cnameRecordContent = `${bucketName}.s3.${region}.amazonaws.com`;
+                    }
+
+                    const cloudflareCredentials = dnsConfig.cloudflareCredentials;
+
+                    await cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecordContent, cloudflareCredentials);
+
+                    storageConfig.s3Config.isCnameConfigured = true;
                 }
-                
-                const nodeSettings = getNodeSettings();
-
-                nodeSettings.storageConfig = storageConfig;
-
-                setNodeSettings(nodeSettings);
-
-                resolve({isError: false});
             }
-            catch(error) {
-                logDebugMessageToConsole('storage config save error', error, null);
+            
+            const nodeSettings = getNodeSettings();
 
-                resolve({isError: true, message: 'failed to save the storage configuration'});
-            }
+            nodeSettings.storageConfig = storageConfig;
+
+            setNodeSettings(nodeSettings);
+
+            return {isError: false};
         }
-        else {
-            resolve({isError: true, message: 'invalid parameters'});
+        catch(error) {
+            throw error;
         }
-    });
+    }
+    else {
+        throw new Error('invalid parameters');
+    }
 }
 
-function storageConfigClear_POST() {
-    return new Promise(async function(resolve, reject) {
-        await deleteDirectoryRecursive(getVideosDirectoryPath());
+async function storageConfigClear_POST() {
+    await deleteDirectoryRecursive(getVideosDirectoryPath());
 
-        resolve({isError: false});
-    });
+    return {isError: false};
 }
 
 function likesToggle_POST(isLikesEnabled) {
@@ -649,7 +571,7 @@ async function networkExternal_POST(publicNodeProtocol, publicNodeAddress, publi
             const indexerResponseData = await indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNodeProtocol, publicNodeAddress, publicNodePort);
 
             if(indexerResponseData.isError) {
-                return {isError: true, message: indexerResponseData.message};
+                throw new Error(indexerResponseData.message);
             }
         }
 

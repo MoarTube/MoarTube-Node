@@ -1,25 +1,15 @@
 const { performDatabaseReadJob_GET } = require('../utils/database');
 
-function reportsCount_GET() {
-    return new Promise(function(resolve, reject) {
-        performDatabaseReadJob_GET('SELECT COUNT(*) AS "reportCount" FROM videoreports', [])
-        .then(videoCountResult => {
-            performDatabaseReadJob_GET('SELECT COUNT(*) AS "reportCount" FROM commentreports', [])
-            .then(commentCountResult => {
-                const videoReportCount = videoCountResult.reportCount;
-                const commentReportCount = commentCountResult.reportCount;
-                const totalReportCount = videoReportCount + commentReportCount;
-                
-                resolve({isError: false, videoReportCount: videoReportCount, commentReportCount: commentReportCount, totalReportCount: totalReportCount});
-            })
-            .catch(error => {
-                reject(error);
-            });
-        })
-        .catch(error => {
-            reject(error);
-        });
-    });
+async function reportsCount_GET() {
+    const videoCountResult = await performDatabaseReadJob_GET('SELECT COUNT(*) AS "reportCount" FROM videoreports', []);
+    
+    const commentCountResult = await performDatabaseReadJob_GET('SELECT COUNT(*) AS "reportCount" FROM commentreports', []);
+
+    const videoReportCount = videoCountResult.reportCount;
+    const commentReportCount = commentCountResult.reportCount;
+    const totalReportCount = videoReportCount + commentReportCount;
+    
+    return {isError: false, videoReportCount: videoReportCount, commentReportCount: commentReportCount, totalReportCount: totalReportCount};
 }
 
 module.exports = {

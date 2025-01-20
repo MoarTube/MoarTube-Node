@@ -1,93 +1,62 @@
 const { cloudflare_purgeWatchPages, cloudflare_purgeNodePage } = require('../utils/cloudflare-communications');
-const { logDebugMessageToConsole, getAuthenticationStatus } = require('../utils/helpers');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
+const { logDebugMessageToConsole } = require('../utils/logger');
 
-function walletAddressAll_GET() {
-    return new Promise(function(resolve, reject) {
-        const query = 'SELECT * FROM cryptowalletaddresses';
-        const params = [];
+async function walletAddressAll_GET() {
+    const cryptoWalletAddresses = await performDatabaseReadJob_ALL('SELECT * FROM cryptowalletaddresses', []);
 
-        performDatabaseReadJob_ALL(query, params)
-        .then(cryptoWalletAddresses => {
-            resolve({isError: false, cryptoWalletAddresses: cryptoWalletAddresses});
-        })
-        .catch(error => {
-            reject(error);
-        });
-    });
+    return {isError: false, cryptoWalletAddresses: cryptoWalletAddresses};
 }
 
-function walletAddressAdd_POST(walletAddress, chain, currency) {
-    return new Promise(function(resolve, reject) {
-        let chainId = '';
+async function walletAddressAdd_POST(walletAddress, chain, currency) {
+    let chainId = '';
 
-        if (chain === 'ETH') {
-            chainId = '0x1';
-        }
-        else if (chain === 'BNB') {
-            chainId = '0x38';
-        }
+    if (chain === 'ETH') {
+        chainId = '0x1';
+    }
+    else if (chain === 'BNB') {
+        chainId = '0x38';
+    }
 
-        const timestamp = Date.now();
+    const timestamp = Date.now();
 
-        const query = 'INSERT INTO cryptowalletaddresses(wallet_address, chain, chain_id, currency, timestamp) VALUES (?, ?, ?, ?, ?)';
-        const params = [walletAddress, chain, chainId, currency, timestamp];
+    await submitDatabaseWriteJob('INSERT INTO cryptowalletaddresses(wallet_address, chain, chain_id, currency, timestamp) VALUES (?, ?, ?, ?, ?)', [walletAddress, chain, chainId, currency, timestamp]);
 
-        submitDatabaseWriteJob(query, params, function(isError) {
-            if(isError) {
-                resolve({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-            else {
-                performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
-                .then(async videos => {
-                    const videoIds = videos.map(video => video.video_id);
-                    const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
+    try {
+        const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
 
-                    cloudflare_purgeWatchPages(videoIds);
-                    cloudflare_purgeNodePage(tags);
-                })
-                .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack);
-                });
+        const videoIds = videos.map(video => video.video_id);
+        const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
 
-                performDatabaseReadJob_GET('SELECT * FROM cryptowalletaddresses WHERE timestamp = ?', [timestamp])
-                .then(cryptoWalletAddress => {
-                    resolve({isError: false, cryptoWalletAddress: cryptoWalletAddress});
-                })
-                .catch(error => {
-                    reject(error);
-                });
-            }
-        });
-    });
+        cloudflare_purgeWatchPages(videoIds);
+        cloudflare_purgeNodePage(tags);
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
+    }
+
+    const cryptoWalletAddress = await performDatabaseReadJob_GET('SELECT * FROM cryptowalletaddresses WHERE timestamp = ?', [timestamp]);
+    
+    return {isError: false, cryptoWalletAddress: cryptoWalletAddress};
 }
 
-function walletAddressDelete_POST(cryptoWalletAddressId) {
-    return new Promise(function(resolve, reject) {
-        const query = 'DELETE FROM cryptowalletaddresses WHERE wallet_address_id = ?';
-        const params = [cryptoWalletAddressId];
+async function walletAddressDelete_POST(cryptoWalletAddressId) {
+    await submitDatabaseWriteJob('DELETE FROM cryptowalletaddresses WHERE wallet_address_id = ?', [cryptoWalletAddressId]);
 
-        submitDatabaseWriteJob(query, params, function(isError) {
-            if(isError) {
-                resolve({isError: true, message: 'error communicating with the MoarTube node'});
-            }
-            else {
-                performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', [])
-                .then(async videos => {
-                    const videoIds = videos.map(video => video.video_id);
-                    const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
+    try {
+        const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
 
-                    cloudflare_purgeWatchPages(videoIds);
-                    cloudflare_purgeNodePage(tags);
-                })
-                .catch(error => {
-                    logDebugMessageToConsole(null, error, new Error().stack);
-                });
+        const videoIds = videos.map(video => video.video_id);
+        const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
 
-                resolve({isError: false});
-            }
-        });
-    });
+        cloudflare_purgeWatchPages(videoIds);
+        cloudflare_purgeNodePage(tags);
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
+    }
+
+    return {isError: false};
 }
 
 module.exports = {

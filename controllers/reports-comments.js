@@ -1,83 +1,50 @@
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { getAuthenticationStatus } = require('../utils/helpers');
 const { isReportIdValid } = require('../utils/validators');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
 
-function reportsComments_GET() {
-    return new Promise(function(resolve, reject) {
-        performDatabaseReadJob_ALL('SELECT * FROM commentreports', [])
-        .then(rows => {
-            resolve({isError: false, reports: rows});
-        })
-        .catch(error => {
-            reject(error);
-        });
-    });
+async function reportsComments_GET() {
+    const reports = await performDatabaseReadJob_ALL('SELECT * FROM commentreports', []);
+
+    return {isError: false, reports: reports};
 }
 
-function reportsCommentsArchive_POST(reportId) {
-    return new Promise(function(resolve, reject) {
-        if(isReportIdValid(reportId)) {
-            performDatabaseReadJob_GET('SELECT * FROM commentreports WHERE report_id = ?', [reportId])
-            .then(report => {
-                if(report != null) {
-                    const reportId = report.report_id;
-                    const timestamp = report.timestamp;
-                    const commentTimestamp = report.comment_timestamp;
-                    const videoId = report.video_id;
-                    const commentId = report.comment_id;
-                    const email = report.email;
-                    const type = report.type;
-                    const message = report.message;
-                    
-                    submitDatabaseWriteJob('INSERT INTO commentreportsarchives(report_id, timestamp, comment_timestamp, video_id, comment_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [reportId, timestamp, commentTimestamp, videoId, commentId, email, type, message], function(isError) {
-                        if(isError) {
-                            reject();
-                        }
-                        else {
-                            submitDatabaseWriteJob('DELETE FROM commentreports WHERE report_id = ?', [reportId], function(isError) {
-                                if(isError) {
-                                    reject();
-                                }
-                                else {
-                                    resolve({isError: false});
-                                }
-                            });
-                        }
-                    });
-                }
-                else {
-                    reject();
-                }
-            })
-            .catch(error => {
-                reject(error);
-            });
-        }
-        else {
-            reject(new Error('invalid report id: ' + reportId));
-        }
-    });
-}
+async function reportsCommentsArchive_POST(reportId) {
+    if(isReportIdValid(reportId)) {
+        const report = await performDatabaseReadJob_GET('SELECT * FROM commentreports WHERE report_id = ?', [reportId]);
 
-function reportsCommentsReportIdDelete_DELETE(reportId) {
-    return new Promise(function(resolve, reject) {
-        if(isReportIdValid(reportId)) {
-            submitDatabaseWriteJob('DELETE FROM commentreports WHERE report_id = ?', [reportId], function(isError) {
-                if(isError) {
-                    resolve({isError: true, message: 'error communicating with the MoarTube node'});
-                }
-                else {
-                    resolve({isError: false});
-                }
-            });
-        }
-        else {
-            logDebugMessageToConsole('invalid report id: ' + reportId, null, new Error().stack);
+        if(report != null) {
+            const reportId = report.report_id;
+            const timestamp = report.timestamp;
+            const commentTimestamp = report.comment_timestamp;
+            const videoId = report.video_id;
+            const commentId = report.comment_id;
+            const email = report.email;
+            const type = report.type;
+            const message = report.message;
             
-            resolve({isError: true, message: 'error communicating with the MoarTube node'});
+            await submitDatabaseWriteJob('INSERT INTO commentreportsarchives(report_id, timestamp, comment_timestamp, video_id, comment_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [reportId, timestamp, commentTimestamp, videoId, commentId, email, type, message]);
+
+            await submitDatabaseWriteJob('DELETE FROM commentreports WHERE report_id = ?', [reportId]);
+
+            return {isError: false};
         }
-    });
+        else {
+            throw new Error('report with id does not exist: ' + reportId);
+        }
+    }
+    else {
+        throw new Error('invalid report id: ' + reportId);
+    }
+}
+
+async function reportsCommentsReportIdDelete_DELETE(reportId) {
+    if(isReportIdValid(reportId)) {
+        await submitDatabaseWriteJob('DELETE FROM commentreports WHERE report_id = ?', [reportId]);
+
+        return {isError: false};
+    }
+    else {
+        throw new Error('invalid report id: ' + reportId);
+    }
 }
 
 module.exports = {

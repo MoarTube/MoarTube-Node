@@ -840,30 +840,29 @@
 				connectWebsocketClient();
 			}
 
-			function getCloudflareTurnstileToken() {
-				return new Promise(function(resolve, reject) {
-					if(CLOUDFLARE_TURNSTILE_SITE_KEY === '') {
-						resolve('');
-					}
-					else {
-						turnstile.render('#captcha-container', {
-							'sitekey': CLOUDFLARE_TURNSTILE_SITE_KEY,
-							'callback': function(token) {
-								resolve(token);
-							},
-							'unsupported-callback': function() {
-								reject('unable to activate that feature');
-							},
-							'timeout-callback': function() {
-								reject('human verification unsuccessful, please try again');
-							},
-							'error-callback': function() {
-								reject('human verification unsuccessful, please try again');
-							},
-							'refresh-expired': 'never',
-							'retry': 'never'
-						});
-					}
+			async function getCloudflareTurnstileToken() {
+				if (CLOUDFLARE_TURNSTILE_SITE_KEY === '') {
+					return '';
+				}
+
+				return new Promise((resolve, reject) => {
+					turnstile.render('#captcha-container', {
+						sitekey: CLOUDFLARE_TURNSTILE_SITE_KEY,
+						callback: (token) => {
+							resolve(token);
+						},
+						'unsupported-callback': () => {
+							reject('Unable to activate that feature');
+						},
+						'timeout-callback': () => {
+							reject('Human verification was unsuccessful');
+						},
+						'error-callback': () => {
+							reject('Human verification encountered an error');
+						},
+						'refresh-expired': 'never',
+						retry: 'never',
+					});
 				});
 			}
 		</script>

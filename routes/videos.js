@@ -334,14 +334,9 @@ router.post('/:videoId/upload', (req, res) => {
                     if(error) {
                         logDebugMessageToConsole(null, error, new Error().stack);
                         
-                        submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [false, true, videoId], function(isError) {
-                            if(isError) {
-                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                            }
-                            else {
-                                res.send({isError: true, message: 'video upload error'});
-                            }
-                        });
+                        await submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [false, true, videoId]);
+                        
+                        res.send({isError: true, message: 'video upload error'});
                     }
                     else {
                         try {
@@ -358,14 +353,9 @@ router.post('/:videoId/upload', (req, res) => {
                 });
             }
             else {
-                submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [false, true, videoId], function(isError) {
-                    if(isError) {
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                    }
-                    else {
-                        res.send({isError: true, message: 'invalid content-length'});
-                    }
-                });
+                await submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [false, true, videoId]);
+
+                res.send({isError: true, message: 'invalid content-length'});
             }
         }
         else {
@@ -381,7 +371,7 @@ router.post('/:videoId/upload', (req, res) => {
 
 router.post('/:videoId/stream', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
+    .then(async (isAuthenticated) => {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             const format = req.query.format;
@@ -435,14 +425,11 @@ router.post('/:videoId/stream', (req, res) => {
                 }).fields([{ name: 'video_files' }])
                 (req, res, async function(error) {
                     if(error) {
-                        submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId], function(isError) {
-                            if(isError) {
-                                res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                            }
-                            else {
-                                res.send({isError: true, message: 'video upload error'});
-                            }
-                        });
+                        logDebugMessageToConsole(null, error, new Error().stack);
+
+                        await submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId]);
+                        
+                        res.send({isError: true, message: 'video upload error'});
                     }
                     else {
                         try {
@@ -459,14 +446,9 @@ router.post('/:videoId/stream', (req, res) => {
                 });
             }
             else {
-                submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId], function(isError) {
-                    if(isError) {
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                    }
-                    else {
-                        res.send({isError: true, message: 'invalid parameters'});
-                    }
-                });
+                await submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId]);
+
+                res.send({isError: true, message: 'invalid parameters'});
             }
         }
         else {
@@ -1378,13 +1360,13 @@ router.get('/:videoId/watch', async (req, res) => {
 
 router.post('/:videoId/adaptive/m3u8/:type/manifests/masterManifest', (req, res) => {
     getAuthenticationStatus(req.headers.authorization)
-    .then((isAuthenticated) => {
+    .then(async (isAuthenticated) => {
         if(isAuthenticated) {
             const videoId = req.params.videoId;
             const type = req.params.type;
             const masterManifest = req.body.masterManifest;
 
-            // TODO: validate the manifest
+            // TODO: validate the manifest?
             
             if(isVideoIdValid(videoId, false) && isManifestTypeValid(type)) {
                 const masterManifestPath = path.join(getVideosDirectoryPath(), videoId, 'adaptive', 'm3u8', 'manifest-master.m3u8');
@@ -1394,14 +1376,9 @@ router.post('/:videoId/adaptive/m3u8/:type/manifests/masterManifest', (req, res)
                 res.send({isError: false});
             }
             else {
-                submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId], function(isError) {
-                    if(isError) {
-                        res.send({isError: true, message: 'error communicating with the MoarTube node'});
-                    }
-                    else {
-                        res.send({isError: true, message: 'invalid parameters'});
-                    }
-                });
+                await submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId]);
+
+                res.send({isError: true, message: 'invalid parameters'});
             }
         }
         else {

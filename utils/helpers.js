@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const fss = require('fs').promises;
 const jwt = require('jsonwebtoken');
 
 const { 
@@ -24,22 +25,22 @@ let expressSessionName;
 let expressSessionSecret;
 let isDockerEnvironment;
 
-function getAuthenticationStatus(token) {
-    return new Promise(function(resolve, reject) {
-        if(token == null || token === '') {
-            resolve(false);
-        }
-        else {
-            try {
-                const decoded = jwt.verify(token, jwtSecret);
-                    
-                resolve(true);
-            }
-            catch(error) {
-                resolve(false);
-            }
-        }
-    });
+async function getAuthenticationStatus(token) {
+	let isAuthenticated = true;
+
+	if(token == null || token === '') {
+		isAuthenticated = false;
+	}
+	else {
+		try {
+			const decoded = jwt.verify(token, jwtSecret);
+		}
+		catch(error) {
+			isAuthenticated = false;
+		}
+	}
+
+	return isAuthenticated;
 }
 
 function sanitizeTagsSpaces(tags) {
@@ -53,7 +54,7 @@ async function generateVideoId() {
     let videoId = '';
     let hyphenCount = 0;
     let underscoreCount = 0;
-    let isUnique = false;
+    let isVideoIdUnique = false;
 
     do {
         videoId = '';
@@ -81,93 +82,42 @@ async function generateVideoId() {
         }
 
         if (hyphenCount <= 1 && underscoreCount <= 1) {
-            await new Promise((resolve, reject) => {
-                performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
-                .then(video => {
-                    if (video == null) {
-                        resolve(true);
-                    } 
-                    else {
-                        resolve(false);
-                    }
-                })
-                .catch(error => {
-                    reject(error);
-                });
-            }).then(isIdUnique => {
-                isUnique = isIdUnique;
-            }).catch(error => {
-                throw error;
-            });
+			const video = await performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId]);
+
+			if (video == null) {
+				isVideoIdUnique = true;
+			}
         }
-    } while (!isUnique);
+    } while (!isVideoIdUnique);
 
     return videoId;
 }
 
-function performNodeIdentification() {
-	return new Promise(function(resolve, reject) {
-		logDebugMessageToConsole('validating node to MoarTube network', null, null);
-		
-		if (getNodeIdentification() == null) {
-			setNodeidentification({moarTubeTokenProof: ''});
-		}
-		
-		const nodeIdentification = getNodeIdentification();
+async function performNodeIdentification() {
+	logDebugMessageToConsole('validating node to MoarTube network', null, null);
 	
-		const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+	if (getNodeIdentification() == null) {
+		setNodeidentification({moarTubeTokenProof: ''});
+	}
+	
+	const nodeIdentification = getNodeIdentification();
+
+	const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
+	
+	if(moarTubeTokenProof === '') {
+		logDebugMessageToConsole('this node is unidentified, creating node identification', null, null);
 		
-		if(moarTubeTokenProof === '') {
-			logDebugMessageToConsole('this node is unidentified, creating node identification', null, null);
-			
-			indexer_getNodeIdentification()
-			.then(indexerResponseData => {
-				if(indexerResponseData.isError) {
-					logDebugMessageToConsole(indexerResponseData.message, null, new Error().stack);
-					
-					reject(indexerResponseData.message);
-				}
-				else {
-					nodeIdentification.moarTubeTokenProof = indexerResponseData.moarTubeTokenProof;
+		nodeIdentification.moarTubeTokenProof = (await indexer_getNodeIdentification()).moarTubeTokenProof;
+	}
+	else {
+		logDebugMessageToConsole('node identification found, validating node identification', null, null);
+		
+		nodeIdentification.moarTubeTokenProof = (await indexer_doNodeIdentificationRefresh(moarTubeTokenProof)).moarTubeTokenProof;
+	}
+	
+	setNodeidentification(nodeIdentification);
 
-					setNodeidentification(nodeIdentification);
-
-					logDebugMessageToConsole('node identification successful', null, null);
-					
-					resolve();
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack);
-
-				reject(error);
-			});
-		}
-		else {
-			logDebugMessageToConsole('node identification found, validating node identification', null, null);
-			
-			indexer_doNodeIdentificationRefresh(moarTubeTokenProof)
-			.then(indexerResponseData => {
-				if(indexerResponseData.isError) {
-					reject(indexerResponseData.message);
-				}
-				else {
-					logDebugMessageToConsole('node identification valid', null, null);
-					
-					nodeIdentification.moarTubeTokenProof = indexerResponseData.moarTubeTokenProof;
-
-					setNodeidentification(nodeIdentification);
-					
-					resolve();
-				}
-			})
-			.catch(error => {
-				logDebugMessageToConsole(null, error, new Error().stack);
-
-				reject(error);
-			});
-		}
-	});
+	logDebugMessageToConsole('node identification successful', null, null);
 }
 
 function getNodeIconPngBase64() {
@@ -340,24 +290,22 @@ function setNodeidentification(nodeIdentification) {
 	fs.writeFileSync(path.join(getDataDirectoryPath(), '_node_identification.json'), JSON.stringify(nodeIdentification));
 }
 
-function deleteDirectoryRecursive(directoryPath) {
-	return new Promise(function(resolve, reject) {
-        fs.rm(directoryPath, { recursive: true, force: true }, function(error) {
-            // do nothing, best effort
-
-            resolve();
-        });
-    });
+async function deleteDirectoryRecursive(directoryPath) {
+	try {
+		await fss.rm(directoryPath, { recursive: true, force: true });
+	}
+	catch(error) {
+		logDebugMessageToConsole('failed to delete directory path: ' + directoryPath, error, null);
+	}
 }
 
-function deleteFile(filePath) {
-	return new Promise(function(resolve, reject) {
-        fs.rm(filePath, { force: true }, function(error) {
-            // do nothing, best effort
-
-            resolve();
-        });
-    });
+async function deleteFile(filePath) {
+	try {
+		await fss.rm(filePath, { force: true });
+	}
+	catch(error) {
+		logDebugMessageToConsole('failed to delete file path: ' + directoryPath, error, null);
+	}
 }
 
 function websocketNodeBroadcast(message) {
