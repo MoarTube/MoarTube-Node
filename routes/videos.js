@@ -483,6 +483,17 @@ router.get('/search', performAuthenticationCheck(false), async (req, res) => {
         const tagLimit = req.query.tagLimit;
         const timestamp = req.query.timestamp;
 
+
+
+        const { s3_listObjectsWithPrefix } = require('../utils/s3-communications');
+        const { getNodeSettings } = require('../utils/helpers');
+        const nodeSettings = getNodeSettings();
+        const s3Config = nodeSettings.storageConfig.s3Config;
+        const prefix = 'external/videos/MbmDj_LLNAU/adaptive/m3u8/240p/segments/';
+        const keys = await s3_listObjectsWithPrefix(s3Config, prefix);
+
+
+
         const data = await search_GET(searchTerm, sortTerm, tagTerm, tagLimit, timestamp);
 
         res.send(data);

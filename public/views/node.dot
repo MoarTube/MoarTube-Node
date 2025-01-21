@@ -6,21 +6,21 @@
 		<meta name="twitter:site" content="@MoarTubes" />
 		<meta name="twitter:title" content="MoarTube" />
 		<meta name="twitter:description" content="A YouTube alternative that puts you in control." />
-		<meta name="twitter:image" content="[[= model.informationData.information.publicNodeProtocol]]://[[= model.informationData.information.publicNodeAddress]]:[[= model.informationData.information.publicNodePort]]/external/resources/images/avatar.png" />
+		<meta name="twitter:image" content="[[=model.externalResourcesBaseUrl]]/external/resources/images/avatar.png" />
 		
 		<meta property="og:site_name" content="MoarTube.com" />
 		<meta property="og:title" content="MoarTube" />
 		<meta property="og:description" content="A YouTube alternative that puts you in control." />
 		<meta property="og:type" content="desktopprofile" />
-		<meta property="og:image" content="[[= model.informationData.information.publicNodeProtocol]]://[[= model.informationData.information.publicNodeAddress]]:[[= model.informationData.information.publicNodePort]]/external/resources/images/avatar.png" />
+		<meta property="og:image" content="[[=model.externalResourcesBaseUrl]]/external/resources/images/avatar.png" />
 		
 		<title>MoarTube</title>
-		<link rel="icon" type="image/x-icon" href="/external/resources/images/favicon.ico">
-		<link href="/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" />
-		<link href="/external/resources/css/sweetalert2-11.0.11.min.css" rel="stylesheet" type="text/css" />
-		<script src="/external/resources/javascript/jquery-3.6.4.min.js"></script>
-		<script src="/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
-		<script src="/external/resources/javascript/clamp.js"></script>
+		<link rel="icon" type="image/x-icon" href="[[=model.externalResourcesBaseUrl]]/external/resources/images/favicon.ico">
+		<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" />
+		<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/sweetalert2-11.0.11.min.css" rel="stylesheet" type="text/css" />
+		<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/jquery-3.6.4.min.js"></script>
+		<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
+		<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/clamp.js"></script>
 		<style>
 			body {
 				background: #f9f9f9;
@@ -379,13 +379,13 @@ body {
 		<div class="container-fluid p-0 mt-2">
 			<div class="row m-0"> 
 				<div class="col-12 p-0">
-					<img class="img-fluid" src="/external/resources/images/banner.png"/>
+					<img class="img-fluid" src="[[=model.externalResourcesBaseUrl]]/external/resources/images/banner.png"/>
 				</div>
 			</div>
 			<div class="container">
 			<div class="row m-0 pt-3 align-items-center justify-content-center align-items-sm-start justify-content-sm-start"> 
 				<div class="col-auto p-0 text-end">
-					<img id="node-avatar" class="img-fluid" src="/external/resources/images/avatar.png"/>
+					<img id="node-avatar" class="img-fluid" src="[[=model.externalResourcesBaseUrl]]/external/resources/images/avatar.png"/>
 				</div>
 				<div id="node-information" class="col-auto p-0">
 					<div class="container-fluid mt-2 p-0">
@@ -435,7 +435,7 @@ body {
 			</div>
 		</div>
 		<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-		<script src="/external/resources/javascript/sweetalert-11.0.11.min.js"></script>
+		<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/sweetalert-11.0.11.min.js"></script>
 
 		<script>
 			const INCOMING_PARAMETERS = [[= JSON.stringify(model) ]];
@@ -449,7 +449,8 @@ body {
 			let CRYPTO_WALLET_ADDRESSES = [];
 
 			let EXTERNAL_VIDEOS_BASE_URL;
-		
+			let EXTERNAL_RESOURCES_BASE_URL;
+
 			$(document).ready(function() {
 				const params = new URL(window.location.href).searchParams;
 				
@@ -494,6 +495,7 @@ body {
 				$('#search-input').val(searchTerm);
 
 				EXTERNAL_VIDEOS_BASE_URL = INCOMING_PARAMETERS.externalVideosBaseUrl;
+				EXTERNAL_RESOURCES_BASE_URL = INCOMING_PARAMETERS.externalResourcesBaseUrl;
 				
 				loadInformation(INCOMING_PARAMETERS.informationData.information);
 				loadLinks(INCOMING_PARAMETERS.linksData.links);
@@ -788,7 +790,7 @@ body {
 					const html = $('\
 						<div id="donate-modal" class="multisteps-form__content">\
 							<div class="text-center">\
-								<image class="img-fluid" src="/external/resources/images/donate.jpg" style="max-width: 500px;"/>\
+								<image class="img-fluid" src="' + EXTERNAL_RESOURCES_BASE_URL + '/external/resources/images/donate.jpg" style="max-width: 500px;"/>\
 							</div>\
 							<div class="row mt-3">\
 								<div class="col-12">\

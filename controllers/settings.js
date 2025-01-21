@@ -15,7 +15,7 @@ const {
 } = require('../utils/validators');
 const { indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
 const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetCdn, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
-    cloudflare_purgeWatchPages, cloudflare_addS3BucketCnameDnsRecord } = require('../utils/cloudflare-communications');
+    cloudflare_purgeAllWatchPages, cloudflare_addS3BucketCnameDnsRecord } = require('../utils/cloudflare-communications');
 const { submitDatabaseWriteJob, performDatabaseReadJob_ALL, clearDatabase } = require('../utils/database');
 
 function root_GET() {
@@ -59,12 +59,7 @@ async function avatar_POST(iconFile, avatarFile) {
     fs.renameSync(iconSourceFilePath, iconDestinationFilePath);
     fs.renameSync(avatarSourceFilePath, avatarDestinationFilePath);
 
-    try {
-        cloudflare_purgeNodeImages();
-    }
-    catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack);
-    }
+    cloudflare_purgeNodeImages();
 
     await submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END', [true, true]);
 
@@ -101,12 +96,7 @@ function banner_POST(bannerFile) {
     
     fs.renameSync(bannerSourceFilePath, bannerDestinationFilePath);
 
-    try {
-        cloudflare_purgeNodeImages();
-    }
-    catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack);
-    }
+    cloudflare_purgeNodeImages();
     
     return {isError: false};
 }
@@ -131,12 +121,7 @@ async function personalizeNodeName_POST(nodeName) {
             throw new Error(indexerResponseData.message);
         }
         else {
-            try {
-                cloudflare_purgeNodePage([]);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-            }
+            cloudflare_purgeNodePage();
             
             return {isError: false};
         }
@@ -166,12 +151,7 @@ async function personalizeNodeAbout_POST(nodeAbout) {
             throw new Error(indexerResponseData.message);
         }
         else {
-            try {
-                cloudflare_purgeNodePage([]);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-            }
+            cloudflare_purgeNodePage();
 
             return { isError: false };
         }
@@ -195,12 +175,7 @@ async function personalizeNodeId_POST(nodeId) {
             throw new Error(indexerResponseData.message);
         }
         else {
-            try {
-                cloudflare_purgeNodePage([]);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-            }
+            cloudflare_purgeNodePage();
 
             const nodeSettings = getNodeSettings();
 
@@ -280,16 +255,7 @@ async function cloudflareTurnstileConfigure_POST(cloudflareTurnstileSiteKey, clo
 
     websocketChatBroadcast({eventName: 'information', videoId: 'all', cloudflareTurnstileSiteKey: cloudflareTurnstileSiteKey});
 
-    try {
-        const videos = await performDatabaseReadJob_ALL('SELECT video_id FROM videos', []);
-
-        const videoIds = videos.map(video => video.video_id);
-
-        cloudflare_purgeWatchPages(videoIds);
-    }
-    catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack);
-    }
+    cloudflare_purgeAllWatchPages();
 
     return {isError: false};
 }
@@ -305,16 +271,7 @@ async function cloudflareTurnstileConfigureClear_POST() {
 
     websocketChatBroadcast({eventName: 'information', videoId: 'all', cloudflareTurnstileSiteKey: ''});
 
-    try {
-        const videos = await performDatabaseReadJob_ALL('SELECT video_id FROM videos', []);
-        
-        const videoIds = videos.map(video => video.video_id);
-
-        cloudflare_purgeWatchPages(videoIds);
-    }
-    catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack);
-    }
+    cloudflare_purgeAllWatchPages();
 
     return {isError: false};
 }

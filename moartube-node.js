@@ -25,7 +25,7 @@ const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, se
 const { provisionDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL } = require('./utils/database');
 const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = require('./utils/httpserver');
 const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
-const { cloudflare_purgeWatchPages, cloudflare_purgeNodePage } = require('./utils/cloudflare-communications');
+const { cloudflare_purgeAllWatchPages, cloudflare_purgeNodePage } = require('./utils/cloudflare-communications');
 
 loadConfig();
 
@@ -60,8 +60,7 @@ if(cluster.isMaster) {
 
 	logDebugMessageToConsole('starting MoarTube Node', null, null);
 
-	const hostsFilePath = getHostsFilePath();
-	logDebugMessageToConsole('ATTENTION: if MoarTube Node is running under the localhost domain, the following hosts file entries are required...\n127.0.0.1 localhost\n127.0.0.1 testingexternalvideos.localhost\n127.0.0.1 testingexternalresources.localhost\nhosts file path: ' + hostsFilePath + '\n', null, null);
+	logDebugMessageToConsole('ATTENTION: if MoarTube Node is running under the localhost domain, the following hosts file entries are required...\n127.0.0.1 localhost\n127.0.0.1 testingexternalvideos.localhost\n127.0.0.1 testingexternalresources.localhost\nhosts file path: ' + getHostsFilePath() + '\n', null, null);
 
 	logDebugMessageToConsole('configured MoarTube Node to use data directory path: ' + getDataDirectoryPath(), null, null);
 
@@ -235,21 +234,9 @@ if(cluster.isMaster) {
 			}
 		}, 3000);
 
-		setInterval(async function() {
-			try {
-				const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
-
-				logDebugMessageToConsole('clearing Cloudflare cache for all node page configurations and watch pages', null, null);
-
-				const videoIds = videos.map(video => video.video_id);
-				const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
-				
-				cloudflare_purgeWatchPages(videoIds);
-				cloudflare_purgeNodePage(tags);
-			}
-			catch(error) {
-				logDebugMessageToConsole(null, error, null);
-			}
+		setInterval(function() {
+			cloudflare_purgeAllWatchPages();
+			cloudflare_purgeNodePage();
 		}, 60000 * 10);
 
 		// gets the live stream watching count for all workers

@@ -3,285 +3,324 @@ const path = require('path');
 const fs = require('fs');
 
 const { logDebugMessageToConsole } = require('./logger');
-const { getNodeSettings, setNodeSettings, getIsDeveloperMode } = require('../utils/helpers');
+const { getNodeSettings, setNodeSettings, getIsDeveloperMode, getNodebaseUrl, getExternalVideosBaseUrl, getExternalResourcesBaseUrl } = require('../utils/helpers');
 const { getVideosDirectoryPath } = require('../utils/paths');
+const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET } = require('../utils/database');
+const { s3_listObjectsWithPrefix } = require('../utils/s3-communications');
 
-async function cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
-    const response = await axios.get('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId, {
-        headers: {
-            'X-Auth-Email': cloudflareEmailAddress,
-            'X-Auth-Key': cloudflareGlobalApiKey
+async function cloudflare_purgeWatchPages(videoIds) {
+    try {
+        const nodeBaseUrl = getNodebaseUrl();
+
+        const files = [];
+        for(const videoId of videoIds) {
+            files.push(`${nodeBaseUrl}/watch?v=${videoId}`);
         }
-    });
 
-    return response.data;
+        await cloudflare_purgeCache(files, 'cloudflare_purgeWatchPages');
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
+    }
 }
 
-async function cloudflare_purgeEntireCache() {
-    const nodeSettings = getNodeSettings();
+async function cloudflare_purgeAllWatchPages() {
+    try {
+        const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
 
-    if (nodeSettings.isCloudflareCdnEnabled) {
-        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+        const videoIds = videos.map(video => video.video_id);
+
+        await cloudflare_purgeWatchPages(videoIds);
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
+    }
+}
+
+async function cloudflare_purgeNodePage() {
+    try {
+        const videos = await performDatabaseReadJob_ALL('SELECT tags FROM videos', []);
+
+        const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
         
-        const response = await axios.post('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId + '/purge_cache', {
-            purge_everything: true
-        }, {
-            headers: {
-                'X-Auth-Email': cloudflareEmailAddress,
-                'X-Auth-Key': cloudflareGlobalApiKey
-            }
-        });
+        const nodeBaseUrl = getNodebaseUrl();
 
-        return response.data;
+        const files = [];
+
+        files.push(`${nodeBaseUrl}/node`);
+
+        files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=latest&tagTerm=`);
+        files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=popular&tagTerm=`);
+        files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=oldest&tagTerm=`);
+
+        files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=latest&tagTerm=`);
+        files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=popular&tagTerm=`);
+        files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=oldest&tagTerm=`);
+
+        for(const tag of tags) {
+            files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=latest&tagTerm=${tag}`);
+            files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=popular&tagTerm=${tag}`);
+            files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=oldest&tagTerm=${tag}`);
+
+            files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=latest&tagTerm=${tag}`);
+            files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=popular&tagTerm=${tag}`);
+            files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=oldest&tagTerm=${tag}`);
+        }
+        
+        await cloudflare_purgeCache(files, 'cloudflare_purgeNodePage');
     }
-    else {
-        throw new Error('could not purge the Cloudflare cache; the node is currently not configured to use Cloudflare');
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
     }
 }
 
-async function cloudflare_purgeCache(files, source) {
-    if(files.length > 0) {
-        const filesofFiles = formatFilesParameter(files);
+async function cloudflare_purgeEmbedVideoPages(videoIds) {
+    try {
+        const nodeBaseUrl = getNodebaseUrl();
 
-        if(getIsDeveloperMode()) {
-            return Promise.resolve([]);
+        const files = [];
+        for(const videoId of videoIds) {
+            files.push(`${nodeBaseUrl}/watch/embed/video/${videoId}`);
+            files.push(`${nodeBaseUrl}/watch/embed/video/${videoId}?autostart=0`);
+            files.push(`${nodeBaseUrl}/watch/embed/video/${videoId}?autostart=1`);
         }
-        else {
-            const nodeSettings = getNodeSettings();
-            
-            if (nodeSettings.isCloudflareCdnEnabled) {
-                const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-                const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-                const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-                
-                const axiosPromises = filesofFiles.map(files => {
-                    const filesJson = JSON.stringify(files);
 
-                    return axios.post(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/purge_cache`, {
-                        files: files
-                    }, {
-                        headers: {
-                            'X-Auth-Email': cloudflareEmailAddress,
-                            'X-Auth-Key': cloudflareGlobalApiKey
-                        }
-                    })
-                    .then(response => {
-                        const data = response.data;
+        await cloudflare_purgeCache(files, 'cloudflare_purgeEmbedVideoPages');
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
+    }
+}
 
-                        if(data.success) {
-                            logDebugMessageToConsole(source + ' success: ' + filesJson, null, null);
-                        }
-                        else {
-                            logDebugMessageToConsole(source + ' failed: ' + filesJson, null, null);
-                        }
+async function cloudflare_purgeAllEmbedVideoPages() {
+    try {
+        const videos = await performDatabaseReadJob_ALL('SELECT video_id FROM videos', []);
 
-                        return { status: 'fulfilled' };
-                    })
-                    .catch(error => {
-                        logDebugMessageToConsole(source + ' error: ' + filesJson, error, new Error().stack);
+        const videoIds = videos.map(video => video.video_id);
+        
+        await cloudflare_purgeEmbedVideoPages(videoIds);
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
+    }
+}
 
-                        return { status: 'rejected' };
-                    });
-                });
+async function cloudflare_purgeNodeImages() {
+    try {
+        const externalResourcesbaseUrl = getExternalResourcesBaseUrl();
 
-                return Promise.allSettled(axiosPromises);
-            }
-            else {
-                return Promise.resolve([]);
-            }
+        const files = [];
+
+        files.push(`${externalResourcesbaseUrl}/external/resources/images/icon.png`);
+        files.push(`${externalResourcesbaseUrl}/external/resources/images/avatar.png`);
+        files.push(`${externalResourcesbaseUrl}/external/resources/images/banner.png`);
+
+        await cloudflare_purgeCache(files, 'cloudflare_purgeNodeImages');
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
+    }
+}
+
+async function cloudflare_purgeVideoThumbnailImages(videoIds) {
+    try {
+        const externalResourcesbaseUrl = getExternalResourcesBaseUrl();
+
+        const files = [];
+        for(const videoId of videoIds) {
+            files.push(`${externalResourcesbaseUrl}/external/videos/${videoId}/thumbnail`);
         }
+
+        await cloudflare_purgeCache(files, 'cloudflare_purgeVideoThumbnailImages');
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
+    }
+}
+
+async function cloudflare_purgeVideoPreviewImages(videoIds) {
+    try {
+        const externalResourcesbaseUrl = getExternalResourcesBaseUrl();
+
+        const files = [];
+        for(const videoId of videoIds) {
+            files.push(`${externalResourcesbaseUrl}/external/videos/${videoId}/images/preview`);
+        }
+
+        await cloudflare_purgeCache(files, 'cloudflare_purgeVideoPreviewImages');
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
+    }
+}
+
+async function cloudflare_purgeVideoPosterImages(videoIds) {
+    try {
+        const externalResourcesbaseUrl = getExternalResourcesBaseUrl();
+
+        const files = [];
+        for(const videoId of videoIds) {
+            files.push(`${externalResourcesbaseUrl}/external/videos/${videoId}/poster`);
+        }
+
+        await cloudflare_purgeCache(files, 'cloudflare_purgeVideoPosterImages');
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
     }
 }
 
 async function cloudflare_purgeVideo(videoId, format, resolution) {
-    const nodeBaseUrl = getNodebaseUrl();
+    try {
+        const nodeSettings = getNodeSettings();
+        const externalVideosBaseUrl = getExternalVideosBaseUrl();
 
-    let files = [];
+        const storageMode = nodeSettings.storageConfig.storageMode;
 
-    if(format === 'm3u8') {
-        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-master.m3u8`);
-        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-${resolution}.m3u8`);
+        const video = await performDatabaseReadJob_GET('SELECT outputs FROM videos WHERE video_id = ?', [videoId]);
 
-        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-master.m3u8`);
-        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-${resolution}.m3u8`);
+        let files = [];
 
-        const adaptiveVideoDirectory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
+        if(video != null) {
+            const outputs = JSON.parse(video.outputs);
+            const resolutions = outputs[format];
 
-        if(fs.existsSync(adaptiveVideoDirectory)) {
-            const items = fs.readdirSync(adaptiveVideoDirectory);
+            if(resolutions.includes(resolution)) {
+                if(format === 'm3u8') {
+                    files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-master.m3u8`);
+                    files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-${resolution}.m3u8`);
 
-            files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${resolution}/segments/segment-${resolution}-${i}.ts`));
-        }
-    }
-    else if(format === 'mp4' || format === 'webm' || format === 'ogv') {
-        files.push(`${nodeBaseUrl}/external/videos/${videoId}/progressive/${resolution}.${format}`);
-    }
-    
-    await cloudflare_purgeCache(files, 'cloudflare_purgeVideo')
-}
+                    files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-master.m3u8`);
+                    files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-${resolution}.m3u8`);
 
-async function cloudflare_purgeAdaptiveVideos(videoIds) {
-    const nodeBaseUrl = getNodebaseUrl();
+                    if(storageMode === 'filesystem') {
+                        const adaptiveM3u8ResolutionDirectory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
 
-    let files = [];
+                        if(fs.existsSync(adaptiveM3u8ResolutionDirectory)) {
+                            const segments = fs.readdirSync(adaptiveM3u8ResolutionDirectory);
 
-    for(const videoId of videoIds) {
-        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-master.m3u8`);
-        files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-master.m3u8`);
+                            files = files.concat(Array.from({ length: segments.length }, (_, i) => `${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${resolution}/segments/segment-${resolution}-${i}.ts`));
+                        }
+                    }
+                    else if(storageMode === 's3provider') {
+                        const s3Config = nodeSettings.storageConfig.s3Config;
+                        const prefix = 'external/videos/' + videoId + '/adaptive/m3u8/' + resolution + '/segments/';
+                        
+                        const keys = await s3_listObjectsWithPrefix(s3Config, prefix);
 
-        const adaptiveM3u8Directory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
-
-        if(fs.existsSync(adaptiveM3u8Directory)) {
-            const entries = fs.readdirSync(adaptiveM3u8Directory);
-
-            for (const entry of entries) {
-                const entryPath = path.join(adaptiveM3u8Directory, entry);
-
-                if (fs.statSync(entryPath).isDirectory()) {
-                    files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-${entry}.m3u8`);
-                    files.push(`${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-${entry}.m3u8`);
-
-                    const items = fs.readdirSync(entryPath);
-
-                    files = files.concat(Array.from({ length: items.length }, (_, i) => `${nodeBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${entry}/segments/segment-${entry}-${i}.ts`));
+                        for(const key of keys) {
+                            files.push(`${externalVideosBaseUrl}/${key}`);
+                        }
+                    }
+                }
+                else if(format === 'mp4' || format === 'webm' || format === 'ogv') {
+                    files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/progressive/${format}/${resolution}.${format}`);
                 }
             }
         }
+        
+        await cloudflare_purgeCache(files, 'cloudflare_purgeVideo');
     }
-
-    await cloudflare_purgeCache(files, 'cloudflare_purgeAdaptiveVideos');
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
+    }
 }
 
-async function cloudflare_purgeProgressiveVideos(videoIds) {
-    const nodeBaseUrl = getNodebaseUrl();
+async function cloudflare_purgeAdaptiveVideos(videoIds) {
+    try {
+        const nodeSettings = getNodeSettings();
+        const externalVideosBaseUrl = getExternalVideosBaseUrl();
 
-    let files = [];
+        const storageMode = nodeSettings.storageConfig.storageMode;
 
-    for(const videoId of videoIds) {
-        const progressiveVideosDirectory = path.join(getVideosDirectoryPath(), videoId + '/progressive');
+        const videos = await performDatabaseReadJob_ALL('SELECT video_id, outputs FROM videos WHERE video_id IN (:videoIds)', { videoIds });
 
-        if(fs.existsSync(progressiveVideosDirectory)) {
-            const entries = fs.readdirSync(progressiveVideosDirectory);
+        let files = [];
+        for(const video of videos) {
+            const videoId = video.video_id;
+            const resolutions = JSON.parse(video.outputs).m3u8;
 
-            for (const entry of entries) {
-                const entryPath = path.join(progressiveVideosDirectory, entry);
+            files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-master.m3u8`);
+            files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-master.m3u8`);
 
-                const items = fs.readdirSync(entryPath);
+            for(const resolution of resolutions) {
+                files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-${resolution}.m3u8`);
+                files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/dynamic/manifests/manifest-${resolution}.m3u8`);
 
-                for (const item of items) {
-                    if (fs.statSync(entryPath).isDirectory()) {
-                        files.push(`${nodeBaseUrl}/external/videos/${videoId}/progressive/${item}.${entry}`);
+                if(storageMode === 'filesystem') {
+                    const adaptiveM3u8ResolutionDirectory = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
+    
+                    if(fs.existsSync(adaptiveM3u8ResolutionDirectory)) {
+                        if (fs.statSync(adaptiveM3u8ResolutionDirectory).isDirectory()) {
+                            const segments = fs.readdirSync(adaptiveM3u8ResolutionDirectory);
+
+                            files = files.concat(Array.from({ length: segments.length }, (_, i) => `${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${resolution}/segments/segment-${resolution}-${i}.ts`));
+                        }
+                    }
+                }
+                else if(storageMode === 's3provider') {
+                    const s3Config = nodeSettings.storageConfig.s3Config;
+
+                    const prefix = 'external/videos/' + videoId + '/adaptive/m3u8/' + resolution + '/segments/';
+
+                    const keys = await s3_listObjectsWithPrefix(s3Config, prefix);
+
+                    for(const key of keys) {
+                        files.push(`${externalVideosBaseUrl}/${key}`);
                     }
                 }
             }
         }
-    }
 
-    await cloudflare_purgeCache(files, 'cloudflare_purgeProgressiveVideos');
+        await cloudflare_purgeCache(files, 'cloudflare_purgeAdaptiveVideos');
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
+    }
 }
 
-async function cloudflare_purgeWatchPages(videoIds) {
-    const nodeBaseUrl = getNodebaseUrl();
+async function cloudflare_purgeProgressiveVideos(videoIds) {
+    try {
+        const nodeSettings = getNodeSettings();
+        const externalVideosBaseUrl = getExternalVideosBaseUrl();
 
-    const files = [];
+        const storageMode = nodeSettings.storageConfig.storageMode;
 
-    for(const videoId of videoIds) {
-        files.push(`${nodeBaseUrl}/watch?v=${videoId}`);
-    }
+        const videos = await performDatabaseReadJob_ALL('SELECT video_id, outputs FROM videos WHERE video_id IN (:videoIds)', { videoIds });
 
-    await cloudflare_purgeCache(files, 'cloudflare_purgeWatchPages');
-}
+        let files = [];
+        for(const video of videos) {
+            const videoId = video.video_id;
+            const outputs = JSON.parse(video.outputs);
 
-async function cloudflare_purgeEmbedVideoPages(videoIds) {
-    const nodeBaseUrl = getNodebaseUrl();
+            for(const output in outputs) {
+                const resolutions = outputs[output];
 
-    const files = [];
-
-    for(const videoId of videoIds) {
-        files.push(`${nodeBaseUrl}/watch/embed/video/${videoId}`);
-        files.push(`${nodeBaseUrl}/watch/embed/video/${videoId}?autostart=0`);
-        files.push(`${nodeBaseUrl}/watch/embed/video/${videoId}?autostart=1`);
-    }
-
-    await cloudflare_purgeCache(files, 'cloudflare_purgeEmbedVideoPages');
-}
-
-async function cloudflare_purgeNodePage(tags) {
-    const nodeBaseUrl = getNodebaseUrl();
-
-    const files = [];
-
-    files.push(`${nodeBaseUrl}/node`);
-
-    files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=latest&tagTerm=`);
-    files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=popular&tagTerm=`);
-    files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=oldest&tagTerm=`);
-
-    files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=latest&tagTerm=`);
-    files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=popular&tagTerm=`);
-    files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=oldest&tagTerm=`);
-
-    for(const tag of tags) {
-        files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=latest&tagTerm=${tag}`);
-        files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=popular&tagTerm=${tag}`);
-        files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=oldest&tagTerm=${tag}`);
-
-        files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=latest&tagTerm=${tag}`);
-        files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=popular&tagTerm=${tag}`);
-        files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=oldest&tagTerm=${tag}`);
-    }
+                for(const resolution of resolutions) {
+                    if(storageMode === 'filesystem') {
+                        files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/progressive/${output}/${resolution}.${output}`);
+                    }
+                    else if(storageMode === 's3provider') {
+                        const s3Config = nodeSettings.storageConfig.s3Config;
     
-    await cloudflare_purgeCache(files, 'cloudflare_purgeNodePage');
-}
+                        const prefix = `external/videos/${videoId}/progressive/${output}`;
+    
+                        const keys = await s3_listObjectsWithPrefix(s3Config, prefix);
+    
+                        for(const key of keys) {
+                            files.push(`${externalVideosBaseUrl}/${key}`);
+                        }
+                    }
+                }
 
-async function cloudflare_purgeNodeImages() {
-    const nodeBaseUrl = getNodebaseUrl();
+            }
+        }
 
-    const files = [];
-
-    files.push(`${nodeBaseUrl}/external/resources/images/icon.png`);
-    files.push(`${nodeBaseUrl}/external/resources/images/avatar.png`);
-    files.push(`${nodeBaseUrl}/external/resources/images/banner.png`);
-
-    await cloudflare_purgeCache(files, 'cloudflare_purgeNodeImages');
-}
-
-async function cloudflare_purgeVideoThumbnailImages(videoIds) {
-    const nodeBaseUrl = getNodebaseUrl();
-
-    const files = [];
-
-    for(const videoId of videoIds) {
-        files.push(`${nodeBaseUrl}/external/videos/${videoId}/thumbnail`);
+        await cloudflare_purgeCache(files, 'cloudflare_purgeProgressiveVideos');
     }
-
-    await cloudflare_purgeCache(files, 'cloudflare_purgeVideoThumbnailImages');
-}
-
-async function cloudflare_purgeVideoPreviewImages(videoIds) {
-    const nodeBaseUrl = getNodebaseUrl();
-
-    const files = [];
-
-    for(const videoId of videoIds) {
-        files.push(`${nodeBaseUrl}/external/videos/${videoId}/images/preview`);
+    catch(error) {
+        logDebugMessageToConsole(null, error, null);
     }
-
-    await cloudflare_purgeCache(files, 'cloudflare_purgeVideoPreviewImages');
-}
-
-async function cloudflare_purgeVideoPosterImages(videoIds) {
-    const nodeBaseUrl = getNodebaseUrl();
-
-    const files = [];
-
-    for(const videoId of videoIds) {
-        files.push(`${nodeBaseUrl}/external/videos/${videoId}/poster`);
-    }
-
-    await cloudflare_purgeCache(files, 'cloudflare_purgeVideoPosterImages');
 }
 
 async function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
@@ -682,23 +721,98 @@ async function cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecord
     }
 }
 
-function getNodebaseUrl() {
+
+
+
+
+
+async function cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
+    const response = await axios.get('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId, {
+        headers: {
+            'X-Auth-Email': cloudflareEmailAddress,
+            'X-Auth-Key': cloudflareGlobalApiKey
+        }
+    });
+
+    return response.data;
+}
+
+async function cloudflare_purgeEntireCache() {
     const nodeSettings = getNodeSettings();
 
-    const publicNodeProtocol = nodeSettings.publicNodeProtocol;
-    const publicNodeAddress = nodeSettings.publicNodeAddress;
-    let publicNodePort = nodeSettings.publicNodePort;
+    if (nodeSettings.isCloudflareCdnEnabled) {
+        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+        
+        const response = await axios.post('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId + '/purge_cache', {
+            purge_everything: true
+        }, {
+            headers: {
+                'X-Auth-Email': cloudflareEmailAddress,
+                'X-Auth-Key': cloudflareGlobalApiKey
+            }
+        });
 
-    if(publicNodeProtocol === 'http') {
-        publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
-    } 
-    else if(publicNodeProtocol === 'https') {
-        publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+        return response.data;
     }
+    else {
+        throw new Error('could not purge the Cloudflare cache; the node is currently not configured to use Cloudflare');
+    }
+}
 
-    const nodeBaseUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort;
+async function cloudflare_purgeCache(files, source) {
+    if(files.length > 0) {
+        const filesofFiles = formatFilesParameter(files);
 
-    return nodeBaseUrl;
+        if(getIsDeveloperMode()) {
+            return Promise.resolve([]);
+        }
+        else {
+            const nodeSettings = getNodeSettings();
+            
+            if (nodeSettings.isCloudflareCdnEnabled) {
+                const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+                const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+                const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+                
+                const axiosPromises = filesofFiles.map(files => {
+                    const filesJson = JSON.stringify(files);
+
+                    return axios.post(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/purge_cache`, {
+                        files: files
+                    }, {
+                        headers: {
+                            'X-Auth-Email': cloudflareEmailAddress,
+                            'X-Auth-Key': cloudflareGlobalApiKey
+                        }
+                    })
+                    .then(response => {
+                        const data = response.data;
+
+                        if(data.success) {
+                            logDebugMessageToConsole(source + ' success: ' + filesJson, null, null);
+                        }
+                        else {
+                            logDebugMessageToConsole(source + ' failed: ' + filesJson, null, null);
+                        }
+
+                        return { status: 'fulfilled' };
+                    })
+                    .catch(error => {
+                        logDebugMessageToConsole(source + ' error: ' + filesJson, error, new Error().stack);
+
+                        return { status: 'rejected' };
+                    });
+                });
+
+                return Promise.allSettled(axiosPromises);
+            }
+            else {
+                return Promise.resolve([]);
+            }
+        }
+    }
 }
 
 function formatFilesParameter(files) {
@@ -724,5 +838,7 @@ module.exports = {
     cloudflare_setConfiguration,
     cloudflare_resetCdn,
     cloudflare_validateTurnstileToken,
-    cloudflare_addS3BucketCnameDnsRecord
+    cloudflare_addS3BucketCnameDnsRecord,
+    cloudflare_purgeAllWatchPages,
+    cloudflare_purgeAllEmbedVideoPages
 };

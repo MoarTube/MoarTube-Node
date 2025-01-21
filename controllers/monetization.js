@@ -1,6 +1,5 @@
-const { cloudflare_purgeWatchPages, cloudflare_purgeNodePage } = require('../utils/cloudflare-communications');
+const { cloudflare_purgeAllWatchPages, cloudflare_purgeNodePage } = require('../utils/cloudflare-communications');
 const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
-const { logDebugMessageToConsole } = require('../utils/logger');
 
 async function walletAddressAll_GET() {
     const cryptoWalletAddresses = await performDatabaseReadJob_ALL('SELECT * FROM cryptowalletaddresses', []);
@@ -22,18 +21,8 @@ async function walletAddressAdd_POST(walletAddress, chain, currency) {
 
     await submitDatabaseWriteJob('INSERT INTO cryptowalletaddresses(wallet_address, chain, chain_id, currency, timestamp) VALUES (?, ?, ?, ?, ?)', [walletAddress, chain, chainId, currency, timestamp]);
 
-    try {
-        const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
-
-        const videoIds = videos.map(video => video.video_id);
-        const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
-
-        cloudflare_purgeWatchPages(videoIds);
-        cloudflare_purgeNodePage(tags);
-    }
-    catch(error) {
-        logDebugMessageToConsole(null, error, null);
-    }
+    cloudflare_purgeAllWatchPages();
+    cloudflare_purgeNodePage();
 
     const cryptoWalletAddress = await performDatabaseReadJob_GET('SELECT * FROM cryptowalletaddresses WHERE timestamp = ?', [timestamp]);
     
@@ -43,18 +32,8 @@ async function walletAddressAdd_POST(walletAddress, chain, currency) {
 async function walletAddressDelete_POST(cryptoWalletAddressId) {
     await submitDatabaseWriteJob('DELETE FROM cryptowalletaddresses WHERE wallet_address_id = ?', [cryptoWalletAddressId]);
 
-    try {
-        const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
-
-        const videoIds = videos.map(video => video.video_id);
-        const tags = Array.from(new Set(videos.map(video => video.tags.split(',')).flat()));
-
-        cloudflare_purgeWatchPages(videoIds);
-        cloudflare_purgeNodePage(tags);
-    }
-    catch(error) {
-        logDebugMessageToConsole(null, error, null);
-    }
+    cloudflare_purgeAllWatchPages();
+    cloudflare_purgeNodePage();
 
     return {isError: false};
 }

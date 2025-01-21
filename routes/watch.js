@@ -18,6 +18,7 @@ router.get('/', performAuthenticationCheck(false), async (req, res) => {
         const isStreaming = data.videoData.video.isStreaming;
         const isStreamed = data.videoData.video.isStreamed;
         const externalVideosBaseUrl = data.externalVideosBaseUrl;
+        const externalResourcesBaseUrl = data.externalResourcesBaseUrl;
 
         if((adaptiveSources.length === 0 && progressiveSources.length === 0) || (!isPublished && !isStreaming)) {
             if(isStreamed) {
@@ -38,7 +39,8 @@ router.get('/', performAuthenticationCheck(false), async (req, res) => {
             videoData: data.videoData, 
             recommendedVideosData: data.recommendedVideosData, 
             commentsData: data.commentsData,
-            externalVideosBaseUrl: externalVideosBaseUrl
+            externalVideosBaseUrl: externalVideosBaseUrl,
+            externalResourcesBaseUrl: externalResourcesBaseUrl
         });
     }
     catch(error) {

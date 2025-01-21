@@ -61,7 +61,7 @@ async function generateVideoId() {
         hyphenCount = 0;
         underscoreCount = 0;
 
-        for (let i = 0; i < length; i++) {
+        for (let i = 0; i < length;) {
             const randomChar = characters.charAt(Math.floor(Math.random() * characters.length));
 
             if (randomChar === '-') {
@@ -70,15 +70,16 @@ async function generateVideoId() {
 					continue;
 				}
             }
-
-            if (randomChar === '_') {
+            else if (randomChar === '_') {
                 underscoreCount++;
                 if (underscoreCount > 1) {
 					continue;
 				}
             }
-
-            videoId += randomChar;
+            else {
+                videoId += randomChar;
+                i++;
+            }
         }
 
         if (hyphenCount <= 1 && underscoreCount <= 1) {
@@ -224,6 +225,25 @@ function getNodeIdentification() {
 	}
 }
 
+function getNodebaseUrl() {
+	const nodeSettings = getNodeSettings();
+
+	const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+	const publicNodeAddress = nodeSettings.publicNodeAddress;
+	let publicNodePort = nodeSettings.publicNodePort;
+
+	if(publicNodeProtocol === 'http') {
+		publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+	} 
+	else if(publicNodeProtocol === 'https') {
+		publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+	}
+
+	const nodeBaseUrl = publicNodeProtocol + '://' + publicNodeAddress + publicNodePort;
+
+	return nodeBaseUrl;
+}
+
 function getExternalVideosBaseUrl() {
 	const nodeSettings = getNodeSettings();
 
@@ -284,6 +304,37 @@ function getExternalVideosBaseUrl() {
 	}
 
 	return externalVideosBaseUrl;
+}
+
+function getExternalResourcesBaseUrl() {
+	const nodeSettings = getNodeSettings();
+	
+	let externalResourcesBaseUrl;
+
+	const publicNodeProtocol = nodeSettings.publicNodeProtocol;
+	const publicNodeAddress = nodeSettings.publicNodeAddress;
+	let publicNodePort = nodeSettings.publicNodePort;
+	
+	if(publicNodeProtocol === 'http') {
+		publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
+	} 
+	else if(publicNodeProtocol === 'https') {
+		publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
+	}
+	
+	if(isIpv4Address(publicNodeAddress)) {
+		externalResourcesBaseUrl = `${publicNodeProtocol}://${publicNodeAddress}${publicNodePort}`;
+	}
+	else {
+		if(getIsDeveloperMode()) {
+			externalResourcesBaseUrl = `${publicNodeProtocol}://testingexternalresources.${publicNodeAddress}${publicNodePort}`;
+		}
+		else {
+			externalResourcesBaseUrl = `${publicNodeProtocol}://externalresources.${publicNodeAddress}${publicNodePort}`;
+		}
+	}
+
+	return externalResourcesBaseUrl;
 }
 
 function setNodeidentification(nodeIdentification) {
@@ -427,5 +478,7 @@ module.exports = {
     setExpressSessionSecret,
     setNodeidentification,
 	getExternalVideosBaseUrl,
-	getHostsFilePath
+	getExternalResourcesBaseUrl,
+	getHostsFilePath,
+	getNodebaseUrl
 };

@@ -12,7 +12,7 @@ const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWr
 
 const { endStreamedHlsManifestFiles } = require('../utils/filesystem');
 const { 
-    cloudflare_purgeWatchPages, cloudflare_purgeNodePage
+    cloudflare_purgeAllWatchPages, cloudflare_purgeNodePage
 } = require('../utils/cloudflare-communications');
 
 async function start_POST(title, description, tags, rtmpPort, uuid, isRecordingStreamRemotely, isRecordingStreamLocally, networkAddress, resolution, videoId) {
@@ -134,20 +134,13 @@ async function start_POST(title, description, tags, rtmpPort, uuid, isRecordingS
         }
 
         await submitDatabaseWriteJob(query, parameters);
-
-        try {
-            const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
-
-            cloudflare_purgeWatchPages(videos.map(video => video.video_id));
-            cloudflare_purgeNodePage(Array.from(new Set(videos.map(video => video.tags.split(',')).flat())));
-        }
-        catch(error) {
-            logDebugMessageToConsole(null, error, new Error().stack);
-        }
         
         if (isResumingStream) {
             await submitDatabaseWriteJob('DELETE FROM comments WHERE video_id = ?', [videoId]);
         }
+
+        cloudflare_purgeAllWatchPages();
+        cloudflare_purgeNodePage();
 
         websocketNodeBroadcast({eventName: 'echo', data: {eventName: 'video_data', payload: {
                 videoId: videoId, 
@@ -212,15 +205,8 @@ async function videoIdStop_POST(videoId) {
 
         await submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE video_id = ?', [videoId]);
 
-        try {
-            const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
-            
-            cloudflare_purgeWatchPages(videos.map(video => video.video_id));
-            cloudflare_purgeNodePage(Array.from(new Set(videos.map(video => video.tags.split(',')).flat())));
-        }
-        catch(error) {
-            logDebugMessageToConsole(null, error, new Error().stack);
-        }
+        cloudflare_purgeAllWatchPages();
+        cloudflare_purgeNodePage();
         
         return {isError: false};
     }

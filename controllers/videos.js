@@ -18,8 +18,8 @@ const {
 } = require('../utils/validators');
 const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
 const { 
-    cloudflare_purgeWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos, cloudflare_purgeVideoPreviewImages, cloudflare_purgeVideoPosterImages, 
-    cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, cloudflare_purgeNodePage, cloudflare_purgeVideoThumbnailImages, cloudflare_validateTurnstileToken
+    cloudflare_purgeWatchPages, cloudflare_purgeAllWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos, cloudflare_purgeVideoPreviewImages, cloudflare_purgeVideoPosterImages, 
+    cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, cloudflare_purgeAllEmbedVideoPages, cloudflare_purgeNodePage, cloudflare_purgeVideoThumbnailImages, cloudflare_validateTurnstileToken
 } = require('../utils/cloudflare-communications');
 
 async function import_POST(title, description, tags) {
@@ -179,16 +179,9 @@ async function videoIdPublishingStop_POST(videoId) {
 
 async function videoIdUpload_POST(videoId, format, resolution) {
     if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
-        try {
-            const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
-
-            cloudflare_purgeNodePage(Array.from(new Set(videos.map(video => video.tags.split(',')).flat())));
-            cloudflare_purgeWatchPages(videos.map(video => video.video_id));
-            cloudflare_purgeVideo(videoId, format, resolution);
-        }
-        catch(error) {
-            logDebugMessageToConsole(null, error, null);
-        }
+        cloudflare_purgeNodePage();
+        cloudflare_purgeAllWatchPages();
+        cloudflare_purgeVideo(videoId, format, resolution);
 
         return {isError: false};
     }
@@ -319,19 +312,6 @@ async function videoIdUnpublish_POST(videoId, format, resolution) {
     if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
         logDebugMessageToConsole('unpublishing video with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '>', null, null);
 
-        try {
-            const videos = await performDatabaseReadJob_ALL('SELECT video_id FROM videos', []);
-
-            const videoIds = videos.map(video => video.video_id);
-
-            await cloudflare_purgeEmbedVideoPages(videoIds);
-            await cloudflare_purgeWatchPages(videoIds);
-            await cloudflare_purgeVideo(videoId, format, resolution);
-        }
-        catch(error) {
-            logDebugMessageToConsole(null, error, null);
-        }
-
         const video = await performDatabaseReadJob_GET('SELECT outputs FROM videos WHERE video_id = ?', [videoId]);
 
         if(video != null) {
@@ -369,6 +349,10 @@ async function videoIdUnpublish_POST(videoId, format, resolution) {
                 }
             }
 
+            cloudflare_purgeAllEmbedVideoPages();
+            cloudflare_purgeAllWatchPages();
+            cloudflare_purgeVideo(videoId, format, resolution);
+
             return {isError: false};
         }
         else {
@@ -397,17 +381,10 @@ async function videoIdData_POST(videoId, title, description, tags) {
         const tagsSanitized = sanitizeTagsSpaces(tags);
         
         await submitDatabaseWriteJob('UPDATE videos SET title = ?, description = ?, tags = ?, is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [title, description, tagsSanitized, true, true, videoId]);
-
-        try {
-            const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
-
-            cloudflare_purgeEmbedVideoPages([videoId]);
-            cloudflare_purgeWatchPages([videoId]);
-            cloudflare_purgeNodePage(Array.from(new Set(videos.map(video => video.tags.split(',')).flat())));
-        }
-        catch(error) {
-            logDebugMessageToConsole(null, error, null);
-        }
+        
+        cloudflare_purgeEmbedVideoPages([videoId]);
+        cloudflare_purgeWatchPages([videoId]);
+        cloudflare_purgeNodePage();
 
         return {isError: false, videoData: {title: title, tags: tags}};
     }
@@ -656,12 +633,7 @@ async function search_GET(searchTerm, sortTerm, tagTerm, tagLimit, timestamp) {
 
 function videoIdThumbnail_POST(videoId) {
     if(isVideoIdValid(videoId, false)) {
-        try {
-            cloudflare_purgeVideoThumbnailImages([videoId]);
-        }
-        catch(error) {
-            logDebugMessageToConsole(null, error, null);
-        }
+        cloudflare_purgeVideoThumbnailImages([videoId]);
         
         return {isError: false};
     }
@@ -672,12 +644,7 @@ function videoIdThumbnail_POST(videoId) {
 
 async function videoIdPreview_POST(videoId) {
     if(isVideoIdValid(videoId, false)) {
-        try {
-            cloudflare_purgeVideoPreviewImages([videoId]);
-        }
-        catch(error) {
-            logDebugMessageToConsole(null, error, null);
-        }
+        cloudflare_purgeVideoPreviewImages([videoId]);
 
         await submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [true, true, videoId]);
         
@@ -690,12 +657,7 @@ async function videoIdPreview_POST(videoId) {
 
 function videoIdPoster_POST(videoId) {
     if(isVideoIdValid(videoId, false)) {
-        try {
-            cloudflare_purgeVideoPosterImages([videoId]);
-        }
-        catch(error) {
-            logDebugMessageToConsole(null, error, new Error().stack);
-        }
+        cloudflare_purgeVideoPosterImages([videoId]);
         
         return {isError: false};
     }
@@ -796,21 +758,11 @@ async function delete_POST(videoIds) {
             }
         }
 
-        try {
-            const allVideos = await performDatabaseReadJob_ALL('SELECT * FROM videos', []);
-            
-            const allVideoIds = allVideos.map(video => video.video_id);
-            const allTags = Array.from(new Set(allVideos.map(video => video.tags.split(',')).flat()));
-
-            cloudflare_purgeNodePage(allTags);
-            cloudflare_purgeEmbedVideoPages(deletedVideoIds);
-            cloudflare_purgeAdaptiveVideos(deletedVideoIds);
-            cloudflare_purgeProgressiveVideos(deletedVideoIds);
-            cloudflare_purgeWatchPages(allVideoIds);
-        }
-        catch(error) {
-            logDebugMessageToConsole(null, error, null);
-        }
+        cloudflare_purgeNodePage();
+        cloudflare_purgeEmbedVideoPages(deletedVideoIds);
+        cloudflare_purgeAdaptiveVideos(deletedVideoIds);
+        cloudflare_purgeProgressiveVideos(deletedVideoIds);
+        cloudflare_purgeAllWatchPages();
 
         return {isError: false, deletedVideoIds: deletedVideoIds, nonDeletedVideoIds: nonDeletedVideoIds};
     }
@@ -921,13 +873,6 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
 
             await submitDatabaseWriteJob('UPDATE videos SET comments = comments + 1 WHERE video_id = ?', [videoId]);
 
-            try {
-                cloudflare_purgeWatchPages([videoId]);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, null);
-            }
-
             const comments = await performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp]);
 
             let commentId = 0;
@@ -938,6 +883,8 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
                     break;
                 }
             }
+
+            cloudflare_purgeWatchPages([videoId]);
             
             return {isError: false, commentId: commentId, comments: comments};
         }
@@ -959,12 +906,7 @@ async function videoIdCommentsCommentIdDelete_DELETE(videoId, commentId, timesta
 
             await submitDatabaseWriteJob('UPDATE videos SET comments = comments - 1 WHERE video_id = ? AND comments > 0', [videoId]);
 
-            try {
-                cloudflare_purgeWatchPages([videoId]);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, null);
-            }
+            cloudflare_purgeWatchPages([videoId]);
 
             return {isError: false};
         }
@@ -1003,12 +945,7 @@ async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareCon
         if(errorMessage == null) {
             await submitDatabaseWriteJob('UPDATE videos SET likes = likes + 1 WHERE video_id = ?', [videoId]);
 
-            try {
-                cloudflare_purgeWatchPages([videoId]);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, null);
-            }
+            cloudflare_purgeWatchPages([videoId]);
 
             return {isError: false};
         }
@@ -1047,12 +984,7 @@ async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflare
         if(errorMessage == null) {
             await submitDatabaseWriteJob('UPDATE videos SET dislikes = dislikes + 1 WHERE video_id = ?', [videoId]);
             
-            try {
-                cloudflare_purgeWatchPages([videoId]);
-            }
-            catch(error) {
-                logDebugMessageToConsole(null, error, null);
-            }
+            cloudflare_purgeWatchPages([videoId]);
 
             return {isError: false};
         }
@@ -1280,8 +1212,7 @@ async function videoIdWatch_GET(videoId) {
                 isOgvAvailable: isOgvAvailable,
                 adaptiveSources: adaptiveSources,
                 progressiveSources: progressiveSources,
-                sourcesFormatsAndResolutions: sourcesFormatsAndResolutions,
-                externalVideosBaseUrl: externalVideosBaseUrl
+                sourcesFormatsAndResolutions: sourcesFormatsAndResolutions
             }};
         }
         else {

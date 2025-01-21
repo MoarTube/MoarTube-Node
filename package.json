@@ -23,6 +23,7 @@
     "moartube"
   ],
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.731.1",
     "async-mutex": "^0.5.0",
     "axios": "^1.7.7",
     "bcryptjs": "^2.4.3",

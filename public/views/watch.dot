@@ -15,15 +15,15 @@
 		<meta property="og:image" content="[[=model.externalVideosBaseUrl]]/external/videos/[[= model.videoData.video.videoId]]/thumbnail" />
 		
 		<title>MoarTube</title>
-		<link rel="icon" type="image/x-icon" href="/external/resources/images/favicon.ico">
-		<link href="/external/resources/css/keen-slider-6.8.5.min.css" rel="stylesheet" type="text/css"/> <!--recommendations slider-->
-		<link href="/external/resources/css/videojs-8.6.1.css" rel="stylesheet" type="text/css"/>
-		<link href="/external/resources/css/videojs-theme.css" rel="stylesheet" type="text/css"/>
-		<link href="/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
-		<link href="/external/resources/css/sweetalert2-11.0.11.min.css" rel="stylesheet" type="text/css" />
-		<script src="/external/resources/javascript/jquery-3.6.4.min.js"></script>
-		<script src="/external/resources/javascript/popper-2.11.6.min.js"></script> <!--popup menus, such as report buttons-->
-		<script src="/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
+		<link rel="icon" type="image/x-icon" href="[[=model.externalResourcesBaseUrl]]/external/resources/images/favicon.ico">
+		<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/keen-slider-6.8.5.min.css" rel="stylesheet" type="text/css"/> <!--recommendations slider-->
+		<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/videojs-8.6.1.css" rel="stylesheet" type="text/css"/>
+		<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/videojs-theme.css" rel="stylesheet" type="text/css"/>
+		<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet" type="text/css"/>
+		<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/sweetalert2-11.0.11.min.css" rel="stylesheet" type="text/css" />
+		<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/jquery-3.6.4.min.js"></script>
+		<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/popper-2.11.6.min.js"></script> <!--popup menus, such as report buttons-->
+		<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
 		<style>
 			body {
 				background: #f9f9f9;
@@ -926,7 +926,7 @@ body {
 								<div id="stats-section" class="container-fluid w-100">
 									<div class="row align-items-center">
 										<div class="col-xl-6 col-md-12">
-											<a href="/"><img src="/external/resources/images/icon.png" style="border-radius: 50%;width: 40px;height: 40px;"></a>
+											<a href="/"><img src="[[=model.externalResourcesBaseUrl]]/external/resources/images/icon.png" style="border-radius: 50%;width: 40px;height: 40px;"></a>
 											<span id="node-name" class="text-break">........</span>
 										</div>
 										<div class="col-xl-6 col-md-12">
@@ -1087,10 +1087,10 @@ body {
 		<div id="captcha-container"></div>
 		<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
 		<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
-		<script src="/external/resources/javascript/videojs-8.6.1.js"></script>
-		<script src="/external/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
-		<script src="/external/resources/javascript/sweetalert-11.0.11.min.js"></script>
-		<script src="/external/resources/javascript/keen-slider-6.8.5.min.js"></script>
+		<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/videojs-8.6.1.js"></script>
+		<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
+		<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/sweetalert-11.0.11.min.js"></script>
+		<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/keen-slider-6.8.5.min.js"></script>
 		
 		<script>
             const INCOMING_PARAMETERS = [[= JSON.stringify(model) ]];
@@ -1126,6 +1126,7 @@ body {
 			let CRYPTO_WALLET_ADDRESSES = [];
 
 			let EXTERNAL_VIDEOS_BASE_URL;
+			let EXTERNAL_RESOURCES_BASE_URL;
 
             const COMMENT_INPUT_FORM_DYNAMIC = $('\
 			<form id="comment-input-form-dynamic" class="comment-input-form" role="form" method="POST" data-commentformtype="dynamic" style="background: #cb0c9f12;padding: 5px 5px 5px 5px;">\
@@ -1158,6 +1159,7 @@ body {
 					}
 
 					EXTERNAL_VIDEOS_BASE_URL = INCOMING_PARAMETERS.externalVideosBaseUrl;
+					EXTERNAL_RESOURCES_BASE_URL = INCOMING_PARAMETERS.externalResourcesBaseUrl;
 
                     loadInformation(INCOMING_PARAMETERS.informationData.information);
 					loadLinks(INCOMING_PARAMETERS.linksData.links);
@@ -2816,7 +2818,7 @@ body {
 					const html = $('\
 						<div id="donate-modal" class="multisteps-form__content">\
 							<div class="text-center">\
-								<image class="img-fluid" src="/external/resources/images/donate.jpg" style="max-width: 500px;"/>\
+								<image class="img-fluid" src="' + EXTERNAL_RESOURCES_BASE_URL + '/external/resources/images/donate.jpg" style="max-width: 500px;"/>\
 							</div>\
 							<div class="row mt-3">\
 								<div class="col-12">\
