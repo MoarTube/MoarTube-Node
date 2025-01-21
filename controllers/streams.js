@@ -55,15 +55,15 @@ async function start_POST(title, description, tags, rtmpPort, uuid, isRecordingS
             videoId = await generateVideoId();
         }
 
-        if(isResumingStream) {
-            await deleteDirectoryRecursive(path.join(getVideosDirectoryPath(), videoId));
-        }
-
         const tagsSanitized = sanitizeTagsSpaces(tags);
 
         const nodeSettings = getNodeSettings();
 
         if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+            if(isResumingStream) {
+                await deleteDirectoryRecursive(path.join(getVideosDirectoryPath(), videoId));
+            }
+            
             const publicImagesDirectory = path.join(getPublicDirectoryPath(), '/images');
             const publicThumbnailImageFilePath = path.join(publicImagesDirectory, 'thumbnail.jpg');
             const publicPreviewImageFilePath = path.join(publicImagesDirectory, 'preview.jpg');
@@ -195,16 +195,6 @@ async function videoIdStop_POST(videoId) {
             await endStreamedHlsManifestFiles();
         }
 
-        try {
-            const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
-            
-            cloudflare_purgeWatchPages(videos.map(video => video.video_id));
-            cloudflare_purgeNodePage(Array.from(new Set(videos.map(video => video.tags.split(',')).flat())));
-        }
-        catch(error) {
-            logDebugMessageToConsole(null, error, new Error().stack);
-        }
-
         const video = await performDatabaseReadJob_GET('SELECT is_stream_recorded_remotely FROM videos WHERE video_id = ?', [videoId]);
 
         if(video != null) {
@@ -221,6 +211,16 @@ async function videoIdStop_POST(videoId) {
         }
 
         await submitDatabaseWriteJob('DELETE FROM livechatmessages WHERE video_id = ?', [videoId]);
+
+        try {
+            const videos = await performDatabaseReadJob_ALL('SELECT video_id, tags FROM videos', []);
+            
+            cloudflare_purgeWatchPages(videos.map(video => video.video_id));
+            cloudflare_purgeNodePage(Array.from(new Set(videos.map(video => video.tags.split(',')).flat())));
+        }
+        catch(error) {
+            logDebugMessageToConsole(null, error, new Error().stack);
+        }
         
         return {isError: false};
     }

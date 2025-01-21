@@ -44,7 +44,7 @@ router.get('/', performAuthenticationCheck(false), async (req, res) => {
     catch(error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.status(500).send('watch video error');
+        res.status(500).send('that video could not be loaded');
     }
 });
 

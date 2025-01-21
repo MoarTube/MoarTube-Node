@@ -8,7 +8,7 @@ const {
     videoIdSourceFileExtension_POST, videoIdSourceFileExtension_GET, videoIdPublishes_GET, videoIdUnpublish_POST, videoIdData_POST, videoIdIndexAdd_POST, videoIdIndexRemove_POST,
     videoIdAlias_GET, search_GET, videoIdThumbnail_POST, videoIdPreview_POST, videoIdPoster_POST, videoIdLengths_POST, videoIdData_GET, delete_POST, finalize_POST, 
     videoIdComments_GET, videoIdCommentsCommentId_GET, videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST, recommended_GET, 
-    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST, dataAll
+    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST, dataOutputs
 } = require('../controllers/videos');
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
@@ -1022,9 +1022,9 @@ router.post('/:videoId/adaptive/m3u8/:type/manifests/masterManifest', performAut
     }
 });
 
-router.get('/data/all', performAuthenticationCheck(true), async (req, res) => {
+router.get('/data/outputs', performAuthenticationCheck(true), async (req, res) => {
     try {
-        const data = await dataAll();
+        const data = await dataOutputs();
 
         res.send(data);
     }

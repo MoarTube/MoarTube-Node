@@ -777,9 +777,9 @@ async function videoIdData_GET(videoId) {
 
 async function delete_POST(videoIds) {
     if(isVideoIdsValid(videoIds)) {
-        await submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds);
+        await submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (:videoIds)', { videoIds });
 
-        const nonDeletedVideos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds);
+        const nonDeletedVideos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true) AND video_id IN (:videoIds)', { videoIds });
         
         const nonDeletedVideoIds = nonDeletedVideos.map(video => video.video_id);
         const deletedVideoIds = videoIds.filter(videoId => !nonDeletedVideoIds.includes(videoId));
@@ -821,9 +821,9 @@ async function delete_POST(videoIds) {
 
 async function finalize_POST(videoIds) {
     if(isVideoIdsValid(videoIds)) {
-        await submitDatabaseWriteJob('UPDATE videos SET is_finalized = 1 WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds);
+        await submitDatabaseWriteJob('UPDATE videos SET is_finalized = 1 WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (:videoIds)', { videoIds });
 
-        const videos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true) AND video_id IN (' + videoIds.map(() => '?').join(',') + ')', videoIds)
+        const videos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true) AND video_id IN (:videoIds)', { videoIds });
 
         const finalizedVideoIds = [];
         const nonFinalizedVideoIds = [];
@@ -1293,10 +1293,18 @@ async function videoIdWatch_GET(videoId) {
     }
 }
 
-async function dataAll() {
+async function dataOutputs() {
     const videos = await performDatabaseReadJob_ALL('SELECT video_id, outputs FROM videos', []);
 
-    return videos;
+    const videosArray = [];
+    for(const video of videos) {
+        const videoId = video.video_id;
+        const outputs = JSON.parse(video.outputs);
+
+        videosArray.push({videoId: videoId, outputs: outputs});
+    }
+
+    return videosArray;
 }
 
 module.exports = {
@@ -1338,5 +1346,5 @@ module.exports = {
     videoIdViewsIncrement_GET,
     videoIdReport_POST,
     videoIdWatch_GET,
-    dataAll
+    dataOutputs
 };

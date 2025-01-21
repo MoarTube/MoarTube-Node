@@ -377,6 +377,8 @@ async function databaseConfigToggle_POST(databaseConfig) {
 
             setNodeSettings(nodeSettings);
 
+            process.send({ cmd: 'restart_database', databaseDialect: databaseDialect });
+
             return {isError: false};
         }
         catch(error) {

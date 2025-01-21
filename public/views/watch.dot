@@ -3123,22 +3123,22 @@ body {
 						try {
 							const cloudflareTurnstileToken = await getCloudflareTurnstileToken();
 
-							const response = await fetch(submitUrl, {
-								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json',
-								},
-								body: JSON.stringify({ message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken }),
+							const data = {message: message,	email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken};
+
+							$.ajax({type: 'POST', url: submitUrl, data: JSON.stringify(data), contentType: 'application/json; charset=utf-8'})
+							.done(function (data) {
+								if (data.isError) {
+									showAlert(true, data.message);
+								}
+								else {
+									Swal.close();
+								}
+							})
+							.fail(function (xhr, status, error) {
+								console.error('Error submitting the report:', status, error);
+
+								showAlert(true, 'An error occurred while submitting your report. Please try again.');
 							});
-
-							const data = await response.json();
-
-							if(data.isError) {
-								showAlert(true, data.message);
-							}
-							else {
-								Swal.close();
-							}
 						}
 						catch(error) {
 							showAlert(true, error);
