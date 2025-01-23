@@ -4,7 +4,7 @@ const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWr
 async function linksAll_GET() {
     const links = await performDatabaseReadJob_ALL('SELECT * FROM links', []);
 
-    return {isError: false, links: links};
+    return { isError: false, links: links };
 }
 
 async function linksAdd_POST(url, svgGraphic) {
@@ -17,7 +17,7 @@ async function linksAdd_POST(url, svgGraphic) {
 
     const link = await performDatabaseReadJob_GET('SELECT * FROM links WHERE timestamp = ?', [timestamp]);
 
-    return {isError: false, link: link};
+    return { isError: false, link: link };
 }
 
 async function linksDelete_POST(linkId) {
@@ -26,7 +26,7 @@ async function linksDelete_POST(linkId) {
     cloudflare_purgeAllWatchPages();
     cloudflare_purgeNodePage();
 
-    return {isError: false};
+    return { isError: false };
 }
 
 module.exports = {

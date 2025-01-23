@@ -3,10 +3,10 @@ const { getExternalVideosBaseUrl, getExternalResourcesBaseUrl } = require('../ut
 const { information_GET } = require('../controllers/status');
 const { linksAll_GET } = require('./links');
 const { walletAddressAll_GET } = require('../controllers/monetization');
-const { videoIdWatch_GET, recommended_GET, videoIdComments_GET} = require('../controllers/videos');
+const { videoIdWatch_GET, recommended_GET, videoIdComments_GET } = require('../controllers/videos');
 
 async function root_GET(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         const informationData = await information_GET();
         const linksData = await linksAll_GET();
         const cryptoWalletAddressesData = await walletAddressAll_GET();
@@ -16,31 +16,31 @@ async function root_GET(videoId) {
         const externalVideosBaseUrl = getExternalVideosBaseUrl();
         const externalResourcesBaseUrl = getExternalResourcesBaseUrl();
 
-        if(informationData.isError) {
+        if (informationData.isError) {
             throw new Error('error retrieving node information data');
         }
-        else if(linksData.isError) {
+        else if (linksData.isError) {
             throw new Error('error retrieving links data');
         }
-        else if(cryptoWalletAddressesData.isError) {
+        else if (cryptoWalletAddressesData.isError) {
             throw new Error('error retrieving crypto wallet address data');
         }
-        else if(videoData.isError) {
+        else if (videoData.isError) {
             throw new Error('error retrieving node video data');
         }
-        else if(recommendedVideosData.isError) {
+        else if (recommendedVideosData.isError) {
             throw new Error('error retrieving node recommended videos data');
         }
-        else if(commentsData.isError) {
+        else if (commentsData.isError) {
             throw new Error('error retrieving node comments data');
         }
         else {
             return {
                 informationData: informationData,
                 linksData: linksData,
-                cryptoWalletAddressesData: cryptoWalletAddressesData, 
-                videoData: videoData, 
-                recommendedVideosData: recommendedVideosData, 
+                cryptoWalletAddressesData: cryptoWalletAddressesData,
+                videoData: videoData,
+                recommendedVideosData: recommendedVideosData,
                 commentsData: commentsData,
                 externalVideosBaseUrl: externalVideosBaseUrl,
                 externalResourcesBaseUrl: externalResourcesBaseUrl

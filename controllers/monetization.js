@@ -4,7 +4,7 @@ const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWr
 async function walletAddressAll_GET() {
     const cryptoWalletAddresses = await performDatabaseReadJob_ALL('SELECT * FROM cryptowalletaddresses', []);
 
-    return {isError: false, cryptoWalletAddresses: cryptoWalletAddresses};
+    return { isError: false, cryptoWalletAddresses: cryptoWalletAddresses };
 }
 
 async function walletAddressAdd_POST(walletAddress, chain, currency) {
@@ -25,8 +25,8 @@ async function walletAddressAdd_POST(walletAddress, chain, currency) {
     cloudflare_purgeNodePage();
 
     const cryptoWalletAddress = await performDatabaseReadJob_GET('SELECT * FROM cryptowalletaddresses WHERE timestamp = ?', [timestamp]);
-    
-    return {isError: false, cryptoWalletAddress: cryptoWalletAddress};
+
+    return { isError: false, cryptoWalletAddress: cryptoWalletAddress };
 }
 
 async function walletAddressDelete_POST(cryptoWalletAddressId) {
@@ -35,7 +35,7 @@ async function walletAddressDelete_POST(cryptoWalletAddressId) {
     cloudflare_purgeAllWatchPages();
     cloudflare_purgeNodePage();
 
-    return {isError: false};
+    return { isError: false };
 }
 
 module.exports = {

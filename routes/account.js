@@ -22,25 +22,25 @@ router.post('/signin', performAuthenticationCheck(false), (req, res) => {
     catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
 router.get('/signout', performAuthenticationCheck(false), async (req, res) => {
-    req.logout(function(error) {
-        if(error) {
+    req.logout(function (error) {
+        if (error) {
             logDebugMessageToConsole(error, new Error().stack);
 
-            res.send({isError: true, message: 'error communicating with the MoarTube node'});
+            res.send({ isError: true, message: 'error communicating with the MoarTube node' });
         }
         else {
-            res.send({isError: false, wasAuthenticated: true});
+            res.send({ isError: false, wasAuthenticated: true });
         }
     });
 });
 
 router.get('/authenticated', performAuthenticationCheck(true), async (req, res) => {
-    res.send({isError: false, isAuthenticated: req.isAuthenticated});
+    res.send({ isError: false, isAuthenticated: req.isAuthenticated });
 });
 
 module.exports = router;

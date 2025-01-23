@@ -4,14 +4,14 @@ const { performDatabaseReadJob_ALL, submitDatabaseWriteJob } = require('../utils
 async function reportsArchiveVideos_GET() {
     const reports = await performDatabaseReadJob_ALL('SELECT * FROM videoreportsarchives ORDER BY archive_id DESC', []);
 
-    return {isError: false, reports: reports};
+    return { isError: false, reports: reports };
 }
 
 async function reportsArchiveVideosArchiveIdDelete_DELETE(archiveId) {
-    if(isArchiveIdValid(archiveId)) {
+    if (isArchiveIdValid(archiveId)) {
         await submitDatabaseWriteJob('DELETE FROM videoreportsarchives WHERE archive_id = ?', [archiveId]);
 
-        return {isError: false};
+        return { isError: false };
     }
     else {
         throw new Error('invalid archive id: ' + archiveId);

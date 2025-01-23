@@ -7,15 +7,15 @@ const { walletAddressAll_GET } = require('../controllers/monetization');
 const { tags_GET } = require('../controllers/videos');
 
 async function root_GET(searchTerm, sortTerm, tagTerm) {
-    if(!isSearchTermValid(searchTerm)) {
+    if (!isSearchTermValid(searchTerm)) {
         searchTerm = '';
     }
-    
-    if(!isSortTermValid(sortTerm)) {
+
+    if (!isSortTermValid(sortTerm)) {
         sortTerm = 'latest';
     }
-    
-    if(!isTagTermValid(tagTerm, true)) {
+
+    if (!isTagTermValid(tagTerm, true)) {
         tagTerm = '';
     }
 
@@ -28,10 +28,10 @@ async function root_GET(searchTerm, sortTerm, tagTerm) {
     const externalResourcesBaseUrl = getExternalResourcesBaseUrl();
 
     return {
-        informationData: informationData, 
-        linksData: linksData, 
-        cryptoWalletAddressesData: cryptoWalletAddressesData, 
-        tagsData: tagsData, 
+        informationData: informationData,
+        linksData: linksData,
+        cryptoWalletAddressesData: cryptoWalletAddressesData,
+        tagsData: tagsData,
         searchResultsData: searchResultsData,
         externalVideosBaseUrl: externalVideosBaseUrl,
         externalResourcesBaseUrl: externalResourcesBaseUrl
@@ -39,11 +39,11 @@ async function root_GET(searchTerm, sortTerm, tagTerm) {
 }
 
 async function search_GET(searchTerm, sortTerm, tagTerm) {
-    if(isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true)) {
+    if (isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true)) {
         let query;
         let params;
 
-        if(searchTerm.length === 0) {
+        if (searchTerm.length === 0) {
             query = 'SELECT * FROM videos WHERE (is_published = ? OR is_live = ?)';
             params = [true, true];
         }
@@ -54,61 +54,61 @@ async function search_GET(searchTerm, sortTerm, tagTerm) {
 
         const videos = await performDatabaseReadJob_ALL(query, params);
 
-        if(sortTerm === 'latest') {
+        if (sortTerm === 'latest') {
             videos.sort(function compareByTimestampDescending(a, b) {
                 return b.creation_timestamp - a.creation_timestamp;
             });
         }
-        else if(sortTerm === 'popular') {
+        else if (sortTerm === 'popular') {
             videos.sort(function compareByTimestampDescending(a, b) {
                 return b.views - a.views;
             });
         }
-        else if(sortTerm === 'oldest') {
+        else if (sortTerm === 'oldest') {
             videos.sort(function compareByTimestampDescending(a, b) {
                 return a.creation_timestamp - b.creation_timestamp;
             });
         }
-        
+
         const tagLimitCounter = {};
         const searchResults = [];
-        
-        if(tagTerm.length === 0) {
+
+        if (tagTerm.length === 0) {
             const tagLimit = 4;
 
-            for(const video of videos) {
+            for (const video of videos) {
                 const tagsArray = video.tags.split(',');
-                
+
                 let addVideo = false;
-                
+
                 for (let tag of tagsArray) {
-                    if(!tagLimitCounter.hasOwnProperty(tag)) {
+                    if (!tagLimitCounter.hasOwnProperty(tag)) {
                         tagLimitCounter[tag] = 0;
                     }
-                    
-                    if(tagLimitCounter[tag] < tagLimit) {
+
+                    if (tagLimitCounter[tag] < tagLimit) {
                         tagLimitCounter[tag]++;
                         addVideo = true;
                         break;
                     }
                 }
-                
-                if(addVideo) {
+
+                if (addVideo) {
                     searchResults.push(video);
                 }
             }
         }
         else {
-            for(const video of videos) {
+            for (const video of videos) {
                 const tagsArray = video.tags.split(',');
 
-                if(tagsArray.includes(tagTerm) && !searchResults.includes(video)) {
+                if (tagsArray.includes(tagTerm) && !searchResults.includes(video)) {
                     searchResults.push(video);
                 }
             }
         }
-        
-        return {isError: false, searchResults: searchResults};
+
+        return { isError: false, searchResults: searchResults };
     }
     else {
         throw new Error('invalid parameters');
@@ -127,9 +127,9 @@ async function newContentCounts_GET() {
         const newVideoReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS "newVideoReportsCount" FROM videoreports WHERE timestamp > ?', [lastCheckedVideoReportsTimestamp])).newVideoReportsCount;
         const newCommentReportsCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS "newCommentReportsCount" FROM commentreports WHERE timestamp > ?', [lastCheckedCommentReportsTimestamp])).newCommentReportsCount;
 
-        return {isError: false, newContentCounts: {newCommentsCount: newCommentsCount, newVideoReportsCount: newVideoReportsCount, newCommentReportsCount: newCommentReportsCount}};
+        return { isError: false, newContentCounts: { newCommentsCount: newCommentsCount, newVideoReportsCount: newVideoReportsCount, newCommentReportsCount: newCommentReportsCount } };
     }
-    catch(error) {
+    catch (error) {
         throw error;
     }
 }
@@ -139,19 +139,19 @@ function contentChecked_POST(contentType) {
 
     const timestamp = Date.now();
 
-    if(contentType === 'comments') {
+    if (contentType === 'comments') {
         lastCheckedContentTracker.lastCheckedCommentsTimestamp = timestamp;
     }
-    else if(contentType === 'videoReports') {
+    else if (contentType === 'videoReports') {
         lastCheckedContentTracker.lastCheckedVideoReportsTimestamp = timestamp;
     }
-    else if(contentType === 'commentReports') {
+    else if (contentType === 'commentReports') {
         lastCheckedContentTracker.lastCheckedCommentReportsTimestamp = timestamp;
     }
 
     setLastCheckedContentTracker(lastCheckedContentTracker);
 
-    return {isError: false};
+    return { isError: false };
 }
 
 module.exports = {

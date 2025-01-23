@@ -11,14 +11,14 @@ const cluster = require('cluster');
 const { Mutex } = require('async-mutex');
 const engine = require('express-dot-engine');
 
-const {logDebugMessageToConsole} = require('./utils/logger');
+const { logDebugMessageToConsole } = require('./utils/logger');
 const {
 	getNodeSettings, setNodeSettings, generateVideoId,
-	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, getIsDeveloperMode, setJwtSecret, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret, 
+	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, getIsDeveloperMode, setJwtSecret, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret,
 	performNodeIdentification, getNodeIdentification, getNodeIconPngBase64, getNodeAvatarPngBase64, getVideoPreviewJpgBase64, setLastCheckedContentTracker, getHostsFilePath
 } = require('./utils/helpers');
 const { setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort } = require('./utils/urls');
-const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath, 
+const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath,
 	setVideosDirectoryPath, setDatabaseDirectoryPath, setDatabaseFilePath, setCertificatesDirectoryPath, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
 	getCertificatesDirectoryPath, getNodeSettingsPath, setViewsDirectoryPath, getViewsDirectoryPath, setLastCheckedContentTrackerPath, getLastCheckedContentTrackerPath
 } = require('./utils/paths');
@@ -49,7 +49,7 @@ const videosRoutes = require('./routes/videos');
 const externalResourcesRoutes = require('./routes/external-resources');
 const externalVideosRoutes = require('./routes/external-videos');
 
-if(cluster.isMaster) {
+if (cluster.isMaster) {
 	process.on('uncaughtException', (error) => {
 		logDebugMessageToConsole(null, error, new Error().stack);
 	});
@@ -65,197 +65,197 @@ if(cluster.isMaster) {
 	logDebugMessageToConsole('configured MoarTube Node to use data directory path: ' + getDataDirectoryPath(), null, null);
 
 	provisionDatabase()
-	.then(async () => {
-		const mutex = new Mutex();
+		.then(async () => {
+			const mutex = new Mutex();
 
-		let liveStreamWatchingCountsTracker = {};
+			let liveStreamWatchingCountsTracker = {};
 
-		const nodeSettings = getNodeSettings();
+			const nodeSettings = getNodeSettings();
 
-		if(nodeSettings.nodeId === '') {
-			nodeSettings.nodeId = await generateVideoId();
+			if (nodeSettings.nodeId === '') {
+				nodeSettings.nodeId = await generateVideoId();
 
-			setNodeSettings(nodeSettings);
-		}
+				setNodeSettings(nodeSettings);
+			}
 
-		const jwtSecret = crypto.randomBytes(32).toString('hex');
+			const jwtSecret = crypto.randomBytes(32).toString('hex');
 
-		const numCPUs = require('os').cpus().length;
+			const numCPUs = require('os').cpus().length;
 
-		for (let i = 0; i < numCPUs; i++) {
-			const worker = cluster.fork();
+			for (let i = 0; i < numCPUs; i++) {
+				const worker = cluster.fork();
 
-			attachWorkerListeners(worker);
-		}
+				attachWorkerListeners(worker);
+			}
 
-		function attachWorkerListeners(worker) {
-			worker.on('message', async (msg) => {
-				if (msg.cmd && msg.cmd === 'get_jwt_secret') {
-					worker.send({ cmd: 'get_jwt_secret_response', jwtSecret: jwtSecret });
-				}
-				else if (msg.cmd && msg.cmd === 'update_node_name') {
-					const nodeName = msg.nodeName;
-					
-					Object.values(cluster.workers).forEach((worker) => {
-						worker.send({ cmd: 'update_node_name_response', nodeName: nodeName });
-					});
-				}
-				else if (msg.cmd && msg.cmd === 'websocket_broadcast') {
-					const message = msg.message;
-					
-					Object.values(cluster.workers).forEach((worker) => {
-						worker.send({ cmd: 'websocket_broadcast_response', message: message });
-					});
-				}
-				else if (msg.cmd && msg.cmd === 'websocket_broadcast_chat') {
-					const message = msg.message;
-					
-					Object.values(cluster.workers).forEach((worker) => {
-						worker.send({ cmd: 'websocket_broadcast_chat_response', message: message });
-					});
-				}
-				else if (msg.cmd && msg.cmd === 'database_write_job') {
-					const release = await mutex.acquire();
-					
-					const query = msg.query;
-					const parameters = msg.parameters;
-					const databaseWriteJobId = msg.databaseWriteJobId;
+			function attachWorkerListeners(worker) {
+				worker.on('message', async (msg) => {
+					if (msg.cmd && msg.cmd === 'get_jwt_secret') {
+						worker.send({ cmd: 'get_jwt_secret_response', jwtSecret: jwtSecret });
+					}
+					else if (msg.cmd && msg.cmd === 'update_node_name') {
+						const nodeName = msg.nodeName;
 
-					performDatabaseWriteJob(query, parameters)
-					.then(() => {
-						worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId });
-					})
-					.catch((error) => {
-						worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, error: error });
-					})
-					.finally(() => {
-						release();
-					});
-				}
-				else if (msg.cmd && msg.cmd === 'live_stream_worker_stats_response') {
-					const workerId = msg.workerId;
-					const liveStreamWatchingCounts = msg.liveStreamWatchingCounts;
+						Object.values(cluster.workers).forEach((worker) => {
+							worker.send({ cmd: 'update_node_name_response', nodeName: nodeName });
+						});
+					}
+					else if (msg.cmd && msg.cmd === 'websocket_broadcast') {
+						const message = msg.message;
 
-					liveStreamWatchingCountsTracker[workerId] = liveStreamWatchingCounts;
-				}
-				else if (msg.cmd && msg.cmd === 'restart_server') {
-					Object.values(cluster.workers).forEach((worker) => {
-						worker.send({ cmd: 'restart_server_response' });
-					});
-				}
-				else if (msg.cmd && msg.cmd === 'restart_database') {
-					const databaseDialect = msg.databaseDialect;
+						Object.values(cluster.workers).forEach((worker) => {
+							worker.send({ cmd: 'websocket_broadcast_response', message: message });
+						});
+					}
+					else if (msg.cmd && msg.cmd === 'websocket_broadcast_chat') {
+						const message = msg.message;
 
-					logDebugMessageToConsole('MoarTube Node changing database configuration to dialect: ' + databaseDialect, null, null);
+						Object.values(cluster.workers).forEach((worker) => {
+							worker.send({ cmd: 'websocket_broadcast_chat_response', message: message });
+						});
+					}
+					else if (msg.cmd && msg.cmd === 'database_write_job') {
+						const release = await mutex.acquire();
 
-					await openDatabase();
+						const query = msg.query;
+						const parameters = msg.parameters;
+						const databaseWriteJobId = msg.databaseWriteJobId;
 
-					Object.values(cluster.workers).forEach((worker) => {
-						worker.send({ cmd: 'restart_database_response' });
-					});
-				}
+						performDatabaseWriteJob(query, parameters)
+							.then(() => {
+								worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId });
+							})
+							.catch((error) => {
+								worker.send({ cmd: 'database_write_job_result', databaseWriteJobId: databaseWriteJobId, error: error });
+							})
+							.finally(() => {
+								release();
+							});
+					}
+					else if (msg.cmd && msg.cmd === 'live_stream_worker_stats_response') {
+						const workerId = msg.workerId;
+						const liveStreamWatchingCounts = msg.liveStreamWatchingCounts;
+
+						liveStreamWatchingCountsTracker[workerId] = liveStreamWatchingCounts;
+					}
+					else if (msg.cmd && msg.cmd === 'restart_server') {
+						Object.values(cluster.workers).forEach((worker) => {
+							worker.send({ cmd: 'restart_server_response' });
+						});
+					}
+					else if (msg.cmd && msg.cmd === 'restart_database') {
+						const databaseDialect = msg.databaseDialect;
+
+						logDebugMessageToConsole('MoarTube Node changing database configuration to dialect: ' + databaseDialect, null, null);
+
+						await openDatabase();
+
+						Object.values(cluster.workers).forEach((worker) => {
+							worker.send({ cmd: 'restart_database_response' });
+						});
+					}
+				});
+			}
+
+			cluster.on('exit', (worker, code, signal) => {
+				logDebugMessageToConsole('MoarTube Node worker exited with id <' + worker.id + '> code <' + code + '> signal <' + signal + '>', null, null);
+
+				delete liveStreamWatchingCountsTracker[worker.id];
+
+				const newWorker = cluster.fork();
+
+				attachWorkerListeners(newWorker);
 			});
-		}
 
-		cluster.on('exit', (worker, code, signal) => {
-			logDebugMessageToConsole('MoarTube Node worker exited with id <' + worker.id + '> code <' + code + '> signal <' + signal + '>', null, null);
+			setInterval(async function () {
+				try {
+					const videos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = ? AND is_index_outdated = ?', [true, true]);
 
-			delete liveStreamWatchingCountsTracker[worker.id];
+					if (videos.length > 0) {
+						await performNodeIdentification();
 
-			const newWorker = cluster.fork();
+						const nodeIdentification = getNodeIdentification();
 
-			attachWorkerListeners(newWorker);
-		});
+						const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
 
-		setInterval(async function() {
-			try {
-				const videos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE is_indexed = ? AND is_index_outdated = ?', [true, true]);
+						for (const video of videos) {
+							const videoId = video.video_id;
+							const title = video.title;
+							const tags = video.tags;
+							const views = video.views;
+							const isStreaming = video.is_streaming;
+							const lengthSeconds = video.length_seconds;
 
-				if(videos.length > 0) {
-					await performNodeIdentification();
+							const nodeIconPngBase64 = getNodeIconPngBase64();
+							const nodeAvatarPngBase64 = getNodeAvatarPngBase64();
 
-					const nodeIdentification = getNodeIdentification();
-					
-					const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-					
-					for(const video of videos) {
-						const videoId = video.video_id;
-						const title = video.title;
-						const tags = video.tags;
-						const views = video.views;
-						const isStreaming = video.is_streaming;
-						const lengthSeconds = video.length_seconds;
+							const videoPreviewJpgBase64 = getVideoPreviewJpgBase64(videoId);
 
-						const nodeIconPngBase64 = getNodeIconPngBase64();
-						const nodeAvatarPngBase64 = getNodeAvatarPngBase64();
+							const data = {
+								videoId: videoId,
+								title: title,
+								tags: tags,
+								views: views,
+								isStreaming: isStreaming,
+								lengthSeconds: lengthSeconds,
+								nodeIconPngBase64: nodeIconPngBase64,
+								nodeAvatarPngBase64: nodeAvatarPngBase64,
+								videoPreviewJpgBase64: videoPreviewJpgBase64,
+								moarTubeTokenProof: moarTubeTokenProof
+							};
 
-						const videoPreviewJpgBase64 = getVideoPreviewJpgBase64(videoId);
+							try {
+								const indexerResponseData = await indexer_doIndexUpdate(data);
 
-						const data = {
-							videoId: videoId,
-							title: title,
-							tags: tags,
-							views: views,
-							isStreaming: isStreaming,
-							lengthSeconds: lengthSeconds,
-							nodeIconPngBase64: nodeIconPngBase64,
-							nodeAvatarPngBase64: nodeAvatarPngBase64,
-							videoPreviewJpgBase64: videoPreviewJpgBase64,
-							moarTubeTokenProof: moarTubeTokenProof
-						};
-						
-						try {
-							const indexerResponseData = await indexer_doIndexUpdate(data);
+								if (indexerResponseData.isError) {
+									throw new Error(indexerResponseData.message);
+								}
+								else {
+									await submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = ? WHERE video_id = ?', [false, videoId]);
 
-							if(indexerResponseData.isError) {
-								throw new Error(indexerResponseData.message);
+									logDebugMessageToConsole('updated video id with MoarTube Index successfully: ' + videoId, null, null);
+								}
 							}
-							else {
-								await submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = ? WHERE video_id = ?', [false, videoId]);
+							catch (error) {
+								if (error.isAxiosError && error.response != null && error.response.status === 413) {
+									const kilobytes = Math.ceil(error.request._contentLength / 1024);
 
-								logDebugMessageToConsole('updated video id with MoarTube Index successfully: ' + videoId, null, null);
-							}
-						}
-						catch(error) {
-							if(error.isAxiosError && error.response != null && error.response.status === 413) {
-								const kilobytes = Math.ceil(error.request._contentLength / 1024);
-
-								throw new Error(`your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>1mb</b>)<br>try using smaller node and video images`);
-							}
-							else {
-								throw new Error('an error occurred while adding to the MoarTube Indexer');
+									throw new Error(`your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>1mb</b>)<br>try using smaller node and video images`);
+								}
+								else {
+									throw new Error('an error occurred while adding to the MoarTube Indexer');
+								}
 							}
 						}
 					}
 				}
-			}
-			catch(error) {
-				logDebugMessageToConsole(null, error, null);
-			}
-		}, 3000);
+				catch (error) {
+					logDebugMessageToConsole(null, error, null);
+				}
+			}, 3000);
 
-		setInterval(function() {
-			cloudflare_purgeAllWatchPages();
-			cloudflare_purgeNodePage();
-		}, 60000 * 10);
+			setInterval(function () {
+				cloudflare_purgeAllWatchPages();
+				cloudflare_purgeNodePage();
+			}, 60000 * 10);
 
-		// gets the live stream watching count for all workers
-		setInterval(function() {
-			Object.values(cluster.workers).forEach((worker) => {
-				worker.send({ cmd: 'live_stream_worker_stats_request' });
-			});
-		}, 1000);
-		
-		// broadcasts the live stream watching count to all viewers
-		setInterval(function() {
-			Object.values(cluster.workers).forEach((worker) => {
-				worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWatchingCountsTracker: liveStreamWatchingCountsTracker });
-			});
-		}, 1000);
-	})
-	.catch(error => {
-		logDebugMessageToConsole(null, error, new Error().stack);
-	});
+			// gets the live stream watching count for all workers
+			setInterval(function () {
+				Object.values(cluster.workers).forEach((worker) => {
+					worker.send({ cmd: 'live_stream_worker_stats_request' });
+				});
+			}, 1000);
+
+			// broadcasts the live stream watching count to all viewers
+			setInterval(function () {
+				Object.values(cluster.workers).forEach((worker) => {
+					worker.send({ cmd: 'live_stream_worker_stats_update', liveStreamWatchingCountsTracker: liveStreamWatchingCountsTracker });
+				});
+			}, 1000);
+		})
+		.catch(error => {
+			logDebugMessageToConsole(null, error, new Error().stack);
+		});
 }
 else {
 	startNode();
@@ -264,27 +264,27 @@ else {
 		await openDatabase();
 
 		const app = express();
-		
+
 		app.enable('trust proxy');
-		
+
 		app.use(expressSession({
 			name: getExpressSessionName(),
 			secret: getExpressSessionSecret(),
 			resave: false,
 			saveUninitialized: true
 		}));
-		
+
 		app.use(cors());
-		
+
 		app.use(bodyParser.urlencoded({ extended: false }));
 		app.use(bodyParser.json());
 
 		app.engine('dot', engine.__express);
-		
+
 		app.set('views', getViewsDirectoryPath());
 		app.set('view engine', 'dot');
 
-		if(getIsDeveloperMode()) {
+		if (getIsDeveloperMode()) {
 			app.use(expressSubdomain('testingexternalvideos', externalVideosRoutes));
 			app.use(expressSubdomain('testingexternalresources', externalResourcesRoutes));
 		}
@@ -312,9 +312,9 @@ else {
 		app.use('/videos', videosRoutes);
 		app.use('/external/videos', externalVideosRoutes);
 		app.use('/external/resources', externalResourcesRoutes);
-		
+
 		await initializeHttpServer(app);
-		
+
 		process.on('message', async (msg) => {
 			if (msg.cmd === 'get_jwt_secret_response') {
 				const jwtSecret = msg.jwtSecret;
@@ -323,7 +323,7 @@ else {
 			}
 			else if (msg.cmd === 'websocket_broadcast_response') {
 				const message = msg.message;
-				
+
 				getHttpServerWrapper()?.websocketServer?.clients?.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
 						client.send(JSON.stringify(message));
@@ -332,10 +332,10 @@ else {
 			}
 			else if (msg.cmd === 'websocket_broadcast_chat_response') {
 				const message = msg.message;
-				
+
 				getHttpServerWrapper()?.websocketServer?.clients?.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
-						if(client.socketType === 'node_peer' && (client.videoId === message.videoId || message.videoId === 'all')) {
+						if (client.socketType === 'node_peer' && (client.videoId === message.videoId || message.videoId === 'all')) {
 							client.send(JSON.stringify(message));
 						}
 					}
@@ -349,28 +349,28 @@ else {
 			}
 			else if (msg.cmd === 'live_stream_worker_stats_request') {
 				const liveStreamWatchingCounts = {};
-				
+
 				getHttpServerWrapper()?.websocketServer?.clients?.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
-						if(client.socketType === 'node_peer') {
+						if (client.socketType === 'node_peer') {
 							const videoId = client.videoId;
-							
-							if(!liveStreamWatchingCounts.hasOwnProperty(videoId)) {
+
+							if (!liveStreamWatchingCounts.hasOwnProperty(videoId)) {
 								liveStreamWatchingCounts[videoId] = 0;
 							}
-							
+
 							liveStreamWatchingCounts[videoId]++;
 						}
 					}
 				});
-				
+
 				process.send({ cmd: 'live_stream_worker_stats_response', workerId: cluster.worker.id, liveStreamWatchingCounts: liveStreamWatchingCounts });
 			}
 			else if (msg.cmd === 'live_stream_worker_stats_update') {
 				const liveStreamWatchingCountsTracker = msg.liveStreamWatchingCountsTracker;
-				
+
 				const liveStreamWatchingCounts = {};
-				
+
 				for (const worker in liveStreamWatchingCountsTracker) {
 					for (const videoId in liveStreamWatchingCountsTracker[worker]) {
 						if (liveStreamWatchingCounts.hasOwnProperty(videoId)) {
@@ -381,27 +381,27 @@ else {
 						}
 					}
 				}
-				
+
 				getHttpServerWrapper()?.websocketServer?.clients?.forEach(function each(client) {
 					if (client.readyState === webSocket.OPEN) {
-						if(client.socketType === 'node_peer') {
+						if (client.socketType === 'node_peer') {
 							const videoId = client.videoId;
-							
-							if(liveStreamWatchingCounts.hasOwnProperty(videoId)) {
-								client.send(JSON.stringify({eventName: 'live_stream_stats', watchingCount: liveStreamWatchingCounts[videoId]}));
+
+							if (liveStreamWatchingCounts.hasOwnProperty(videoId)) {
+								client.send(JSON.stringify({ eventName: 'live_stream_stats', watchingCount: liveStreamWatchingCounts[videoId] }));
 							}
 						}
 					}
 				});
 			}
-			else if(msg.cmd === 'restart_server_response') {
+			else if (msg.cmd === 'restart_server_response') {
 				restartHttpServer();
 			}
-			else if(msg.cmd === 'restart_database_response') {
+			else if (msg.cmd === 'restart_database_response') {
 				openDatabase();
 			}
 		});
-		
+
 		process.send({ cmd: 'get_jwt_secret' });
 	}
 }
@@ -409,7 +409,7 @@ else {
 function discoverDataDirectoryPath() {
 	let dataDirectoryPath;
 
-	if(getIsDockerEnvironment()) {
+	if (getIsDockerEnvironment()) {
 		dataDirectoryPath = '/data';
 	}
 	else {
@@ -441,11 +441,11 @@ function loadConfig() {
 	setPublicDirectoryPath(path.join(__dirname, 'public'));
 	setViewsDirectoryPath(path.join(getPublicDirectoryPath(), 'views'));
 
-	if(getIsDockerEnvironment()) {
+	if (getIsDockerEnvironment()) {
 		setDataDirectoryPath(discoverDataDirectoryPath());
 	}
 	else {
-		if(getIsDeveloperMode()) {
+		if (getIsDeveloperMode()) {
 			setDataDirectoryPath(path.join(__dirname, 'data'));
 		}
 		else {
@@ -467,54 +467,54 @@ function loadConfig() {
 	fs.mkdirSync(getVideosDirectoryPath(), { recursive: true });
 	fs.mkdirSync(getDatabaseDirectoryPath(), { recursive: true });
 	fs.mkdirSync(getCertificatesDirectoryPath(), { recursive: true });
-	
-	if(!fs.existsSync(getNodeSettingsPath())) {
+
+	if (!fs.existsSync(getNodeSettingsPath())) {
 		const nodeSettings = {
-			"nodeListeningPort":80,
-			"isSecure":false,
-			"publicNodeProtocol":"",
-			"publicNodeAddress":"",
-			"publicNodePort":"",
-			"nodeName":"moartube node",
-			"nodeAbout":"just a MoarTube node",
-			"nodeId":"",
-			"username":"JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL",  // admin
-			"password":"JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX",  // admin
-			"expressSessionName":crypto.randomBytes(64).toString('hex'),
-			"expressSessionSecret":crypto.randomBytes(64).toString('hex'),
-			"isCloudflareCdnEnabled":false,
-			"cloudflareEmailAddress":"",
-			"cloudflareZoneId":"",
-			"cloudflareGlobalApiKey":"",
-			"isCloudflareTurnstileEnabled":false,
-			"cloudflareTurnstileSiteKey":"",
-			"cloudflareTurnstileSecretKey":"",
-			"isCommentsEnabled":true,
-			"isLikesEnabled":true,
-			"isDislikesEnabled":true,
-			"isReportsEnabled":true,
-			"isLiveChatEnabled":true,
+			"nodeListeningPort": 80,
+			"isSecure": false,
+			"publicNodeProtocol": "",
+			"publicNodeAddress": "",
+			"publicNodePort": "",
+			"nodeName": "moartube node",
+			"nodeAbout": "just a MoarTube node",
+			"nodeId": "",
+			"username": "JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL",  // admin
+			"password": "JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX",  // admin
+			"expressSessionName": crypto.randomBytes(64).toString('hex'),
+			"expressSessionSecret": crypto.randomBytes(64).toString('hex'),
+			"isCloudflareCdnEnabled": false,
+			"cloudflareEmailAddress": "",
+			"cloudflareZoneId": "",
+			"cloudflareGlobalApiKey": "",
+			"isCloudflareTurnstileEnabled": false,
+			"cloudflareTurnstileSiteKey": "",
+			"cloudflareTurnstileSecretKey": "",
+			"isCommentsEnabled": true,
+			"isLikesEnabled": true,
+			"isDislikesEnabled": true,
+			"isReportsEnabled": true,
+			"isLiveChatEnabled": true,
 			"databaseConfig": {
-				"databaseDialect":"sqlite"
+				"databaseDialect": "sqlite"
 			},
 			"storageConfig": {
-				"storageMode":"filesystem"
+				"storageMode": "filesystem"
 			}
 		};
 
 		setNodeSettings(nodeSettings);
 	}
 
-	if(!fs.existsSync(getLastCheckedContentTrackerPath())) {
+	if (!fs.existsSync(getLastCheckedContentTrackerPath())) {
 		const lastCheckedContentTracker = {
-			"lastCheckedCommentsTimestamp":0,
-			"lastCheckedVideoReportsTimestamp":0,
-			"lastCheckedCommentReportsTimestamp":0,
+			"lastCheckedCommentsTimestamp": 0,
+			"lastCheckedVideoReportsTimestamp": 0,
+			"lastCheckedCommentReportsTimestamp": 0,
 		};
 
 		setLastCheckedContentTracker(lastCheckedContentTracker);
 	}
-	
+
 	const nodeSettings = getNodeSettings();
 
 	setExpressSessionName(nodeSettings.expressSessionName);

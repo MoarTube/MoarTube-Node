@@ -3,20 +3,20 @@ const fs = require('fs');
 const fss = require('fs').promises;
 const jwt = require('jsonwebtoken');
 
-const { 
-	logDebugMessageToConsole 
+const {
+	logDebugMessageToConsole
 } = require('./logger');
-const { 
-	getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath, getVideosDirectoryPath, getLastCheckedContentTrackerPath 
+const {
+	getDataDirectoryPath, getPublicDirectoryPath, getNodeSettingsPath, getVideosDirectoryPath, getLastCheckedContentTrackerPath
 } = require('./paths');
-const { 
-	performDatabaseReadJob_GET 
+const {
+	performDatabaseReadJob_GET
 } = require('./database');
-const { 
-	indexer_getNodeIdentification, indexer_doNodeIdentificationRefresh 
+const {
+	indexer_getNodeIdentification, indexer_doNodeIdentificationRefresh
 } = require('./indexer-communications');
 const {
-    isIpv4Address
+	isIpv4Address
 } = require('../utils/validators');
 
 let isDeveloperMode;
@@ -28,14 +28,14 @@ let isDockerEnvironment;
 async function getAuthenticationStatus(token) {
 	let isAuthenticated = true;
 
-	if(token == null || token === '') {
+	if (token == null || token === '') {
 		isAuthenticated = false;
 	}
 	else {
 		try {
 			const decoded = jwt.verify(token, jwtSecret);
 		}
-		catch(error) {
+		catch (error) {
 			isAuthenticated = false;
 		}
 	}
@@ -44,78 +44,78 @@ async function getAuthenticationStatus(token) {
 }
 
 function sanitizeTagsSpaces(tags) {
-    return tags.replace(/\s+/g, ' ');
+	return tags.replace(/\s+/g, ' ');
 }
 
 async function generateVideoId() {
-    const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-';
-    const length = 11;
+	const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-';
+	const length = 11;
 
-    let videoId = '';
-    let hyphenCount = 0;
-    let underscoreCount = 0;
-    let isVideoIdUnique = false;
+	let videoId = '';
+	let hyphenCount = 0;
+	let underscoreCount = 0;
+	let isVideoIdUnique = false;
 
-    do {
-        videoId = '';
-        hyphenCount = 0;
-        underscoreCount = 0;
+	do {
+		videoId = '';
+		hyphenCount = 0;
+		underscoreCount = 0;
 
-        for (let i = 0; i < length;) {
-            const randomChar = characters.charAt(Math.floor(Math.random() * characters.length));
+		for (let i = 0; i < length;) {
+			const randomChar = characters.charAt(Math.floor(Math.random() * characters.length));
 
-            if (randomChar === '-') {
-                hyphenCount++;
-                if (hyphenCount > 1) {
+			if (randomChar === '-') {
+				hyphenCount++;
+				if (hyphenCount > 1) {
 					continue;
 				}
-            }
-            else if (randomChar === '_') {
-                underscoreCount++;
-                if (underscoreCount > 1) {
+			}
+			else if (randomChar === '_') {
+				underscoreCount++;
+				if (underscoreCount > 1) {
 					continue;
 				}
-            }
-            else {
-                videoId += randomChar;
-                i++;
-            }
-        }
+			}
+			else {
+				videoId += randomChar;
+				i++;
+			}
+		}
 
-        if (hyphenCount <= 1 && underscoreCount <= 1) {
+		if (hyphenCount <= 1 && underscoreCount <= 1) {
 			const video = await performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId]);
 
 			if (video == null) {
 				isVideoIdUnique = true;
 			}
-        }
-    } while (!isVideoIdUnique);
+		}
+	} while (!isVideoIdUnique);
 
-    return videoId;
+	return videoId;
 }
 
 async function performNodeIdentification() {
 	logDebugMessageToConsole('validating node to MoarTube network', null, null);
-	
+
 	if (getNodeIdentification() == null) {
-		setNodeidentification({moarTubeTokenProof: ''});
+		setNodeidentification({ moarTubeTokenProof: '' });
 	}
-	
+
 	const nodeIdentification = getNodeIdentification();
 
 	const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-	
-	if(moarTubeTokenProof === '') {
+
+	if (moarTubeTokenProof === '') {
 		logDebugMessageToConsole('this node is unidentified, creating node identification', null, null);
-		
+
 		nodeIdentification.moarTubeTokenProof = (await indexer_getNodeIdentification()).moarTubeTokenProof;
 	}
 	else {
 		logDebugMessageToConsole('node identification found, validating node identification', null, null);
-		
+
 		nodeIdentification.moarTubeTokenProof = (await indexer_doNodeIdentificationRefresh(moarTubeTokenProof)).moarTubeTokenProof;
 	}
-	
+
 	setNodeidentification(nodeIdentification);
 
 	logDebugMessageToConsole('node identification successful', null, null);
@@ -127,7 +127,7 @@ function getNodeIconPngBase64() {
 	const customDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'icon.png');
 	const defaultDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'icon.png');
 
-	if(fs.existsSync(customDirectoryPath)) {
+	if (fs.existsSync(customDirectoryPath)) {
 		pngImageBase64 = fs.readFileSync(customDirectoryPath).toString('base64');
 	}
 	else {
@@ -143,7 +143,7 @@ function getNodeAvatarPngBase64() {
 	const customDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'avatar.png');
 	const defaultDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'avatar.png');
 
-	if(fs.existsSync(customDirectoryPath)) {
+	if (fs.existsSync(customDirectoryPath)) {
 		pngImageBase64 = fs.readFileSync(customDirectoryPath).toString('base64');
 	}
 	else {
@@ -159,7 +159,7 @@ function getNodeBannerPngBase64() {
 	const customDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), 'banner.png');
 	const defaultDirectoryPath = path.join(path.join(getPublicDirectoryPath(), 'images'), 'banner.png');
 
-	if(fs.existsSync(customDirectoryPath)) {
+	if (fs.existsSync(customDirectoryPath)) {
 		pngImageBase64 = fs.readFileSync(customDirectoryPath).toString('base64');
 	}
 	else {
@@ -174,11 +174,11 @@ function getVideoThumbnailJpgBase64(videoId) {
 
 	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/thumbnail.jpg');
 
-	if(fs.existsSync(directoryPath)) {
+	if (fs.existsSync(directoryPath)) {
 		jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
 	}
 	else {
-		
+
 	}
 
 	return jpgImageBase64;
@@ -189,11 +189,11 @@ function getVideoPreviewJpgBase64(videoId) {
 
 	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg');
 
-	if(fs.existsSync(directoryPath)) {
+	if (fs.existsSync(directoryPath)) {
 		jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
 	}
 	else {
-		
+
 	}
 
 	return jpgImageBase64;
@@ -204,11 +204,11 @@ function getVideoPosterJpgBase64(videoId) {
 
 	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/poster.jpg');
 
-	if(fs.existsSync(directoryPath)) {
+	if (fs.existsSync(directoryPath)) {
 		jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
 	}
 	else {
-		
+
 	}
 
 	return jpgImageBase64;
@@ -217,7 +217,7 @@ function getVideoPosterJpgBase64(videoId) {
 function getNodeIdentification() {
 	if (fs.existsSync(path.join(getDataDirectoryPath(), '_node_identification.json'))) {
 		const nodeIdentification = JSON.parse(fs.readFileSync(path.join(getDataDirectoryPath(), '_node_identification.json'), 'utf8'));
-		
+
 		return nodeIdentification;
 	}
 	else {
@@ -232,10 +232,10 @@ function getNodebaseUrl() {
 	const publicNodeAddress = nodeSettings.publicNodeAddress;
 	let publicNodePort = nodeSettings.publicNodePort;
 
-	if(publicNodeProtocol === 'http') {
+	if (publicNodeProtocol === 'http') {
 		publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
-	} 
-	else if(publicNodeProtocol === 'https') {
+	}
+	else if (publicNodeProtocol === 'https') {
 		publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
 	}
 
@@ -251,23 +251,23 @@ function getExternalVideosBaseUrl() {
 
 	let externalVideosBaseUrl;
 
-	if(storageConfig.storageMode === 'filesystem') {
+	if (storageConfig.storageMode === 'filesystem') {
 		const publicNodeProtocol = nodeSettings.publicNodeProtocol;
 		const publicNodeAddress = nodeSettings.publicNodeAddress;
 		let publicNodePort = nodeSettings.publicNodePort;
-		
-		if(publicNodeProtocol === 'http') {
+
+		if (publicNodeProtocol === 'http') {
 			publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
-		} 
-		else if(publicNodeProtocol === 'https') {
+		}
+		else if (publicNodeProtocol === 'https') {
 			publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
 		}
-		
-		if(isIpv4Address(publicNodeAddress)) {
+
+		if (isIpv4Address(publicNodeAddress)) {
 			externalVideosBaseUrl = `${publicNodeProtocol}://${publicNodeAddress}${publicNodePort}`;
 		}
 		else {
-			if(getIsDeveloperMode()) {
+			if (getIsDeveloperMode()) {
 				externalVideosBaseUrl = `${publicNodeProtocol}://testingexternalvideos.${publicNodeAddress}${publicNodePort}`;
 			}
 			else {
@@ -275,13 +275,13 @@ function getExternalVideosBaseUrl() {
 			}
 		}
 	}
-	else if(storageConfig.storageMode === 's3provider') {
+	else if (storageConfig.storageMode === 's3provider') {
 		const bucketName = storageConfig.s3Config.bucketName;
 		const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
 
 		// if the endpoint is present, we assume the S3 provider is not AWS and default to using the provided URL endpoint
-		if(endpoint != null) {
-			if(storageConfig.s3Config.isCnameConfigured) {
+		if (endpoint != null) {
+			if (storageConfig.s3Config.isCnameConfigured) {
 				const protocol = endpoint.split(':')[0];
 
 				externalVideosBaseUrl = `${protocol}://${bucketName}`;
@@ -292,7 +292,7 @@ function getExternalVideosBaseUrl() {
 		}
 		else {
 			// if the endpoint is not present, we assume the S3 provider is AWS and construct the URL endpoint
-			if(storageConfig.s3Config.isCnameConfigured) {
+			if (storageConfig.s3Config.isCnameConfigured) {
 				externalVideosBaseUrl = `https://${bucketName}`;
 			}
 			else {
@@ -308,25 +308,25 @@ function getExternalVideosBaseUrl() {
 
 function getExternalResourcesBaseUrl() {
 	const nodeSettings = getNodeSettings();
-	
+
 	let externalResourcesBaseUrl;
 
 	const publicNodeProtocol = nodeSettings.publicNodeProtocol;
 	const publicNodeAddress = nodeSettings.publicNodeAddress;
 	let publicNodePort = nodeSettings.publicNodePort;
-	
-	if(publicNodeProtocol === 'http') {
+
+	if (publicNodeProtocol === 'http') {
 		publicNodePort = publicNodePort == 80 ? '' : ':' + publicNodePort;
-	} 
-	else if(publicNodeProtocol === 'https') {
+	}
+	else if (publicNodeProtocol === 'https') {
 		publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
 	}
-	
-	if(isIpv4Address(publicNodeAddress)) {
+
+	if (isIpv4Address(publicNodeAddress)) {
 		externalResourcesBaseUrl = `${publicNodeProtocol}://${publicNodeAddress}${publicNodePort}`;
 	}
 	else {
-		if(getIsDeveloperMode()) {
+		if (getIsDeveloperMode()) {
 			externalResourcesBaseUrl = `${publicNodeProtocol}://testingexternalresources.${publicNodeAddress}${publicNodePort}`;
 		}
 		else {
@@ -345,7 +345,7 @@ async function deleteDirectoryRecursive(directoryPath) {
 	try {
 		await fss.rm(directoryPath, { recursive: true, force: true });
 	}
-	catch(error) {
+	catch (error) {
 		logDebugMessageToConsole('failed to delete directory path: ' + directoryPath, error, null);
 	}
 }
@@ -354,39 +354,39 @@ async function deleteFile(filePath) {
 	try {
 		await fss.rm(filePath, { force: true });
 	}
-	catch(error) {
+	catch (error) {
 		logDebugMessageToConsole('failed to delete file path: ' + filePath, error, null);
 	}
 }
 
 function websocketNodeBroadcast(message) {
-    process.send({ cmd: 'websocket_broadcast', message: message });
+	process.send({ cmd: 'websocket_broadcast', message: message });
 }
 
 function websocketChatBroadcast(message) {
-    process.send({ cmd: 'websocket_broadcast_chat', message: message });
+	process.send({ cmd: 'websocket_broadcast_chat', message: message });
 }
 
 /* getters */
 
 function getJwtSecret() {
-    return jwtSecret;
+	return jwtSecret;
 }
 
 function getIsDockerEnvironment() {
-    return isDockerEnvironment;
+	return isDockerEnvironment;
 }
 
 function getIsDeveloperMode() {
-    return isDeveloperMode;
+	return isDeveloperMode;
 }
 
 function getExpressSessionName() {
-    return expressSessionName;
+	return expressSessionName;
 }
 
 function getExpressSessionSecret() {
-    return expressSessionSecret;
+	return expressSessionSecret;
 }
 
 function getNodeSettings() {
@@ -404,23 +404,23 @@ function getLastCheckedContentTracker() {
 /* setters */
 
 function setJwtSecret(secret) {
-    jwtSecret = secret;
+	jwtSecret = secret;
 }
 
 function setIsDockerEnvironment(value) {
-    isDockerEnvironment = value;
+	isDockerEnvironment = value;
 }
 
 function setIsDeveloperMode(value) {
-    isDeveloperMode = value;
+	isDeveloperMode = value;
 }
 
 function setExpressSessionName(value) {
-    expressSessionName = value;
+	expressSessionName = value;
 }
 
 function setExpressSessionSecret(value) {
-    expressSessionSecret = value;
+	expressSessionSecret = value;
 }
 
 function setNodeSettings(nodeSettings) {
@@ -433,50 +433,50 @@ function setLastCheckedContentTracker(lastCheckedContentTracker) {
 
 function getHostsFilePath() {
 	const platform = require('os').platform();
-  
+
 	switch (platform) {
-	  case 'win32':
-		return path.join(process.env.SystemRoot, 'System32', 'drivers', 'etc', 'hosts');
-	  case 'darwin':
-	  case 'linux':
-		return '/etc/hosts';
-	  default:
-		throw new Error(`Unsupported platform: ${platform}`);
+		case 'win32':
+			return path.join(process.env.SystemRoot, 'System32', 'drivers', 'etc', 'hosts');
+		case 'darwin':
+		case 'linux':
+			return '/etc/hosts';
+		default:
+			throw new Error(`Unsupported platform: ${platform}`);
 	}
-  }
+}
 
 module.exports = {
-    logDebugMessageToConsole,
-    websocketNodeBroadcast,
-    websocketChatBroadcast,
-    sanitizeTagsSpaces,
-    deleteDirectoryRecursive,
+	logDebugMessageToConsole,
+	websocketNodeBroadcast,
+	websocketChatBroadcast,
+	sanitizeTagsSpaces,
+	deleteDirectoryRecursive,
 	deleteFile,
-    performNodeIdentification,
-    generateVideoId,
-    getJwtSecret,
-    getAuthenticationStatus,
-    getNodeSettings,
+	performNodeIdentification,
+	generateVideoId,
+	getJwtSecret,
+	getAuthenticationStatus,
+	getNodeSettings,
 	getLastCheckedContentTracker,
-    getIsDockerEnvironment,
-    getIsDeveloperMode,
-    getExpressSessionName,
-    getExpressSessionSecret,
-    getNodeIdentification,
-    getNodeIconPngBase64,
-    getNodeAvatarPngBase64,
-    getNodeBannerPngBase64,
-    getVideoThumbnailJpgBase64,
-    getVideoPreviewJpgBase64,
-    getVideoPosterJpgBase64,
-    setJwtSecret,
-    setNodeSettings,
+	getIsDockerEnvironment,
+	getIsDeveloperMode,
+	getExpressSessionName,
+	getExpressSessionSecret,
+	getNodeIdentification,
+	getNodeIconPngBase64,
+	getNodeAvatarPngBase64,
+	getNodeBannerPngBase64,
+	getVideoThumbnailJpgBase64,
+	getVideoPreviewJpgBase64,
+	getVideoPosterJpgBase64,
+	setJwtSecret,
+	setNodeSettings,
 	setLastCheckedContentTracker,
-    setIsDockerEnvironment,
-    setIsDeveloperMode,
-    setExpressSessionName,
-    setExpressSessionSecret,
-    setNodeidentification,
+	setIsDockerEnvironment,
+	setIsDeveloperMode,
+	setExpressSessionName,
+	setExpressSessionSecret,
+	setNodeidentification,
 	getExternalVideosBaseUrl,
 	getExternalResourcesBaseUrl,
 	getHostsFilePath,

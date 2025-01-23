@@ -12,10 +12,10 @@ router.get('/information', performAuthenticationCheck(false), async (req, res) =
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -25,10 +25,10 @@ router.get('/heartbeat', performAuthenticationCheck(false), (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 

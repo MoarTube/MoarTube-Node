@@ -16,7 +16,7 @@ router.get('/', performAuthenticationCheck(false), async (req, res) => {
 
         res.render('node', data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
         res.status(500).send('node page rendering error');
@@ -33,10 +33,10 @@ router.get('/search', performAuthenticationCheck(false), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -46,10 +46,10 @@ router.get('/newContentCounts', performAuthenticationCheck(true), async (req, re
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -61,10 +61,10 @@ router.post('/contentChecked', performAuthenticationCheck(true), (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 

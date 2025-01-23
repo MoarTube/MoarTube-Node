@@ -1,4 +1,4 @@
-const { 
+const {
     S3Client, ListObjectsV2Command
 } = require('@aws-sdk/client-s3');
 
@@ -14,9 +14,9 @@ async function s3_listObjectsWithPrefix(s3Config, prefix) {
 
         let keys = [];
         while (isTruncated) {
-            const listResponse = await s3Client.send(new ListObjectsV2Command({Bucket: bucketName, Prefix: prefix, ContinuationToken: continuationToken}));
+            const listResponse = await s3Client.send(new ListObjectsV2Command({ Bucket: bucketName, Prefix: prefix, ContinuationToken: continuationToken }));
 
-            if(listResponse.Contents != null) {
+            if (listResponse.Contents != null) {
                 keys = keys.concat(listResponse.Contents.map((object) => (object.Key)));
             }
 
@@ -26,7 +26,7 @@ async function s3_listObjectsWithPrefix(s3Config, prefix) {
 
         return keys;
     }
-    catch(error) {
+    catch (error) {
         throw error;
     }
 }

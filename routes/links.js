@@ -12,10 +12,10 @@ router.get('/all', performAuthenticationCheck(false), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -28,10 +28,10 @@ router.post('/add', performAuthenticationCheck(true), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -43,10 +43,10 @@ router.post('/delete', performAuthenticationCheck(true), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 

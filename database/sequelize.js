@@ -17,7 +17,7 @@ if (databaseDialect === 'sqlite') {
         storage: getDatabaseFilePath(),
         logging: false
     });
-} 
+}
 else if (databaseDialect === 'postgres') {
     const postgresConfig = nodeSettings.databaseConfig.postgresConfig;
 

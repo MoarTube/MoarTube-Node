@@ -4,73 +4,73 @@ const sanitizeHtml = require('sanitize-html');
 
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath } = require('../utils/paths');
-const { 
-    getNodeSettings, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, performNodeIdentification, getNodeIdentification, 
-    sanitizeTagsSpaces, deleteDirectoryRecursive, deleteFile, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64, 
+const {
+    getNodeSettings, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, performNodeIdentification, getNodeIdentification,
+    sanitizeTagsSpaces, deleteDirectoryRecursive, deleteFile, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64,
     getVideoPreviewJpgBase64, getExternalVideosBaseUrl
 } = require('../utils/helpers');
 const { getMoarTubeAliaserPort } = require('../utils/urls');
 const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
-const { 
-    isSearchTermValid, isSourceFileExtensionValid, isBooleanValid, isVideoCommentValid, isTimestampValid, isCommentsTypeValid, isCommentIdValid, 
-    isSortTermValid, isTagLimitValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isVideoIdValid, isVideoIdsValid, isFormatValid, isResolutionValid, 
+const {
+    isSearchTermValid, isSourceFileExtensionValid, isBooleanValid, isVideoCommentValid, isTimestampValid, isCommentsTypeValid, isCommentIdValid,
+    isSortTermValid, isTagLimitValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isVideoIdValid, isVideoIdsValid, isFormatValid, isResolutionValid,
     isTitleValid, isDescriptionValid, isTagTermValid, isTagsValid, isCloudflareTurnstileTokenValid, isSortValid
 } = require('../utils/validators');
 const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
-const { 
-    cloudflare_purgeWatchPages, cloudflare_purgeAllWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos, cloudflare_purgeVideoPreviewImages, cloudflare_purgeVideoPosterImages, 
+const {
+    cloudflare_purgeWatchPages, cloudflare_purgeAllWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos, cloudflare_purgeVideoPreviewImages, cloudflare_purgeVideoPosterImages,
     cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, cloudflare_purgeAllEmbedVideoPages, cloudflare_purgeNodePage, cloudflare_purgeVideoThumbnailImages, cloudflare_validateTurnstileToken
 } = require('../utils/cloudflare-communications');
 
 async function import_POST(title, description, tags) {
-    if(!isTitleValid(title)) {
+    if (!isTitleValid(title)) {
         throw new Error('title is not valid');
     }
-    else if(!isDescriptionValid(description)) {
+    else if (!isDescriptionValid(description)) {
         throw new Error('description is not valid');
     }
-    else if(!isTagsValid(tags)) {
+    else if (!isTagsValid(tags)) {
         throw new Error('tags are not valid');
     }
     else {
         const videoId = await generateVideoId();
         const creationTimestamp = Date.now();
-        
-        const outputs = JSON.stringify({'m3u8': [], 'mp4': [], 'webm': [], 'ogv': []});
+
+        const outputs = JSON.stringify({ 'm3u8': [], 'mp4': [], 'webm': [], 'ogv': [] });
 
         const meta = JSON.stringify({});
 
         logDebugMessageToConsole('importing video with id <' + videoId + '>', null, null);
-        
+
         const tagsSanitized = sanitizeTagsSpaces(tags);
-        
+
         fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/images'), { recursive: true });
         fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/adaptive'), { recursive: true });
         fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/progressive'), { recursive: true });
-        
+
         const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, outputs, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, '', true, true, true, true, true, outputs, meta, creationTimestamp];
-        
+
         await submitDatabaseWriteJob(query, parameters);
-        
+
         websocketNodeBroadcast({
-            eventName: 'echo', 
+            eventName: 'echo',
             data: {
-                eventName: 'video_data', 
+                eventName: 'video_data',
                 payload: {
-                    videoId: videoId, 
-                    thumbnail: '', 
-                    title: title, 
-                    description: description, 
-                    tags: tagsSanitized, 
-                    lengthSeconds: 0, 
-                    lengthTimestamp: '', 
-                    views: 0, 
-                    comments: 0, 
-                    likes: 0, 
-                    dislikes: 0, 
-                    bandwidth: 0, 
-                    isImporting: 1, 
+                    videoId: videoId,
+                    thumbnail: '',
+                    title: title,
+                    description: description,
+                    tags: tagsSanitized,
+                    lengthSeconds: 0,
+                    lengthTimestamp: '',
+                    views: 0,
+                    comments: 0,
+                    likes: 0,
+                    dislikes: 0,
+                    bandwidth: 0,
+                    isImporting: 1,
                     isImported: 0,
                     isPublishing: 0,
                     isPublished: 0,
@@ -89,16 +89,16 @@ async function import_POST(title, description, tags) {
                 }
             }
         });
-        
-        return {isError: false, videoId: videoId};
+
+        return { isError: false, videoId: videoId };
     }
 }
 
 async function imported_POST(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         await submitDatabaseWriteJob('UPDATE videos SET is_importing = ?, is_imported = ? WHERE video_id = ?', [false, true, videoId]);
-            
-        return {isError: false};
+
+        return { isError: false };
     }
     else {
         throw new Error('invalid parameters');
@@ -106,10 +106,10 @@ async function imported_POST(videoId) {
 }
 
 async function videoIdImportingStop_POST(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         await submitDatabaseWriteJob('UPDATE videos SET is_importing = ? WHERE video_id = ?', [false, videoId]);
 
-        return {isError: false};
+        return { isError: false };
     }
     else {
         throw new Error('invalid parameters');
@@ -117,10 +117,10 @@ async function videoIdImportingStop_POST(videoId) {
 }
 
 async function publishing_POST(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         await submitDatabaseWriteJob('UPDATE videos SET is_publishing = ? WHERE video_id = ?', [true, videoId]);
 
-        return {isError: false};
+        return { isError: false };
     }
     else {
         throw new Error('invalid parameters');
@@ -128,10 +128,10 @@ async function publishing_POST(videoId) {
 }
 
 async function published_POST(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         await submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_published = ? WHERE video_id = ?', [false, true, videoId]);
 
-        return {isError: false};
+        return { isError: false };
     }
     else {
         throw new Error('invalid parameters');
@@ -139,10 +139,10 @@ async function published_POST(videoId) {
 }
 
 async function formatResolutionPublished_POST(videoId, format, resolution) {
-    if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
+    if (isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
         const video = await performDatabaseReadJob_GET('SELECT outputs FROM videos WHERE video_id = ?', [videoId]);
 
-        if(video != null) {
+        if (video != null) {
             const outputs = JSON.parse(video.outputs);
 
             if (!outputs[format].includes(resolution)) {
@@ -152,10 +152,10 @@ async function formatResolutionPublished_POST(videoId, format, resolution) {
                     return parseInt(b.split('p')[0]) - parseInt(a.split('p')[0]);
                 });
             }
-            
+
             await submitDatabaseWriteJob('UPDATE videos SET outputs = ? WHERE video_id = ?', [JSON.stringify(outputs), videoId]);
-            
-            return {isError: false};
+
+            return { isError: false };
         }
         else {
             throw new Error('that video does not exist');
@@ -167,10 +167,10 @@ async function formatResolutionPublished_POST(videoId, format, resolution) {
 }
 
 async function videoIdPublishingStop_POST(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         await submitDatabaseWriteJob('UPDATE videos SET is_publishing = ? WHERE video_id = ?', [false, videoId]);
-        
-        return {isError: false};
+
+        return { isError: false };
     }
     else {
         throw new Error('invalid parameters');
@@ -178,23 +178,23 @@ async function videoIdPublishingStop_POST(videoId) {
 }
 
 async function videoIdUpload_POST(videoId, format, resolution) {
-    if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
+    if (isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
         cloudflare_purgeNodePage();
         cloudflare_purgeAllWatchPages();
         cloudflare_purgeVideo(videoId, format, resolution);
 
-        return {isError: false};
+        return { isError: false };
     }
     else {
         await submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [false, true, videoId]);
-            
+
         throw new Error('invalid parameters');
     }
 }
 
 async function videoIdStream_POST(videoId, format, resolution) {
-    if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
-        return {isError: false};
+    if (isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
+        return { isError: false };
     }
     else {
         await submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId]);
@@ -204,10 +204,10 @@ async function videoIdStream_POST(videoId, format, resolution) {
 }
 
 async function error_POST(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         await submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId]);
-        
-        return {isError: false};
+
+        return { isError: false };
     }
     else {
         throw new Error('invalid parameters');
@@ -215,10 +215,10 @@ async function error_POST(videoId) {
 }
 
 async function videoIdSourceFileExtension_POST(videoId, sourceFileExtension) {
-    if(isVideoIdValid(videoId, false) && isSourceFileExtensionValid(sourceFileExtension)) {
+    if (isVideoIdValid(videoId, false) && isSourceFileExtensionValid(sourceFileExtension)) {
         await submitDatabaseWriteJob('UPDATE videos SET source_file_extension = ? WHERE video_id = ?', [sourceFileExtension, videoId]);
-        
-        return {isError: false};
+
+        return { isError: false };
     }
     else {
         throw new Error('invalid parameters');
@@ -226,13 +226,13 @@ async function videoIdSourceFileExtension_POST(videoId, sourceFileExtension) {
 }
 
 async function videoIdSourceFileExtension_GET(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         const video = await performDatabaseReadJob_GET('SELECT source_file_extension FROM videos WHERE video_id = ?', [videoId]);
 
-        if(video != null) {
+        if (video != null) {
             const sourceFileExtension = video.source_file_extension;
-            
-            return {isError: false, sourceFileExtension: sourceFileExtension};
+
+            return { isError: false, sourceFileExtension: sourceFileExtension };
         }
         else {
             throw new Error('that video does not exist');
@@ -244,10 +244,10 @@ async function videoIdSourceFileExtension_GET(videoId) {
 }
 
 async function videoIdPublishes_GET(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         const video = await performDatabaseReadJob_GET('SELECT is_published, outputs FROM videos WHERE video_id = ?', [videoId]);
 
-        if(video != null) {
+        if (video != null) {
             const outputs = JSON.parse(video.outputs);
 
             const publishes = [
@@ -258,7 +258,7 @@ async function videoIdPublishes_GET(videoId) {
                 { format: 'm3u8', resolution: '480p', isPublished: false },
                 { format: 'm3u8', resolution: '360p', isPublished: false },
                 { format: 'm3u8', resolution: '240p', isPublished: false },
-                
+
                 { format: 'mp4', resolution: '2160p', isPublished: false },
                 { format: 'mp4', resolution: '1440p', isPublished: false },
                 { format: 'mp4', resolution: '1080p', isPublished: false },
@@ -266,7 +266,7 @@ async function videoIdPublishes_GET(videoId) {
                 { format: 'mp4', resolution: '480p', isPublished: false },
                 { format: 'mp4', resolution: '360p', isPublished: false },
                 { format: 'mp4', resolution: '240p', isPublished: false },
-                
+
                 { format: 'webm', resolution: '2160p', isPublished: false },
                 { format: 'webm', resolution: '1440p', isPublished: false },
                 { format: 'webm', resolution: '1080p', isPublished: false },
@@ -274,7 +274,7 @@ async function videoIdPublishes_GET(videoId) {
                 { format: 'webm', resolution: '480p', isPublished: false },
                 { format: 'webm', resolution: '360p', isPublished: false },
                 { format: 'webm', resolution: '240p', isPublished: false },
-                
+
                 { format: 'ogv', resolution: '2160p', isPublished: false },
                 { format: 'ogv', resolution: '1440p', isPublished: false },
                 { format: 'ogv', resolution: '1080p', isPublished: false },
@@ -284,12 +284,12 @@ async function videoIdPublishes_GET(videoId) {
                 { format: 'ogv', resolution: '240p', isPublished: false }
             ];
 
-            if(video.is_published) {
-                for(const publish of publishes) {
+            if (video.is_published) {
+                for (const publish of publishes) {
                     const resolutions = outputs[publish.format];
 
-                    for(const resolution of resolutions) {
-                        if(publish.resolution === resolution) {
+                    for (const resolution of resolutions) {
+                        if (publish.resolution === resolution) {
                             publish.isPublished = true;
                             break;
                         }
@@ -297,7 +297,7 @@ async function videoIdPublishes_GET(videoId) {
                 }
             }
 
-            return {isError: false, publishes: publishes};
+            return { isError: false, publishes: publishes };
         }
         else {
             throw new Error('that video does not exist');
@@ -309,42 +309,42 @@ async function videoIdPublishes_GET(videoId) {
 }
 
 async function videoIdUnpublish_POST(videoId, format, resolution) {
-    if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
+    if (isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
         logDebugMessageToConsole('unpublishing video with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '>', null, null);
 
         const video = await performDatabaseReadJob_GET('SELECT outputs FROM videos WHERE video_id = ?', [videoId]);
 
-        if(video != null) {
+        if (video != null) {
             const outputs = JSON.parse(video.outputs);
 
             outputs[format] = outputs[format].filter(item => item !== resolution);
 
             await submitDatabaseWriteJob('UPDATE videos SET outputs = ? WHERE video_id = ?', [JSON.stringify(outputs), videoId]);
-            
+
             const nodeSettings = getNodeSettings();
 
-            if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+            if (nodeSettings.storageConfig.storageMode === 'filesystem') {
                 let manifestFilePath;
                 let segmentsDirectoryPath;
                 let videoFilePath;
-                
-                if(format === 'm3u8') {
+
+                if (format === 'm3u8') {
                     manifestFilePath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/manifest-' + resolution + '.m3u8');
                     segmentsDirectoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution);
                 }
                 else {
                     videoFilePath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + resolution + '.' + format);
                 }
-                
-                if(manifestFilePath != null) {
+
+                if (manifestFilePath != null) {
                     await deleteFile(manifestFilePath);
                 }
 
-                if(segmentsDirectoryPath != null) {
+                if (segmentsDirectoryPath != null) {
                     await deleteDirectoryRecursive(segmentsDirectoryPath);
                 }
 
-                if(videoFilePath != null) {
+                if (videoFilePath != null) {
                     await deleteFile(videoFilePath);
                 }
             }
@@ -353,7 +353,7 @@ async function videoIdUnpublish_POST(videoId, format, resolution) {
             cloudflare_purgeAllWatchPages();
             cloudflare_purgeVideo(videoId, format, resolution);
 
-            return {isError: false};
+            return { isError: false };
         }
         else {
             throw new Error('that video does not exist');
@@ -365,34 +365,34 @@ async function videoIdUnpublish_POST(videoId, format, resolution) {
 }
 
 async function videoIdData_POST(videoId, title, description, tags) {
-    if(!isVideoIdValid(videoId, false)) {
+    if (!isVideoIdValid(videoId, false)) {
         throw new Error('video id is not valid');
     }
-    else if(!isTitleValid(title)) {
+    else if (!isTitleValid(title)) {
         throw new Error('title is not valid');
     }
-    else if(!isDescriptionValid(description)) {
+    else if (!isDescriptionValid(description)) {
         throw new Error('description is not valid');
     }
-    else if(!isTagsValid(tags)) {
+    else if (!isTagsValid(tags)) {
         throw new Error('tags are not valid');
     }
     else {
         const tagsSanitized = sanitizeTagsSpaces(tags);
-        
+
         await submitDatabaseWriteJob('UPDATE videos SET title = ?, description = ?, tags = ?, is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [title, description, tagsSanitized, true, true, videoId]);
-        
+
         cloudflare_purgeEmbedVideoPages([videoId]);
         cloudflare_purgeWatchPages([videoId]);
         cloudflare_purgeNodePage();
 
-        return {isError: false, videoData: {title: title, tags: tags}};
+        return { isError: false, videoData: { title: title, tags: tags } };
     }
 }
 
 async function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServiceAgreed, cloudflareTurnstileToken) {
-    if(isVideoIdValid(videoId, false) && isBooleanValid(containsAdultContent) && isBooleanValid(termsOfServiceAgreed) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, false)) {
-        if(termsOfServiceAgreed) {
+    if (isVideoIdValid(videoId, false) && isBooleanValid(containsAdultContent) && isBooleanValid(termsOfServiceAgreed) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, false)) {
+        if (termsOfServiceAgreed) {
             const nodeSettings = getNodeSettings();
 
             const nodeId = nodeSettings.nodeId;
@@ -404,14 +404,14 @@ async function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServic
 
             const video = await performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId]);
 
-            if(video != null) {
-                if(video.is_published || video.is_live) {
+            if (video != null) {
+                if (video.is_published || video.is_live) {
                     await performNodeIdentification();
 
                     const nodeIdentification = getNodeIdentification();
-                    
+
                     const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-                    
+
                     const title = video.title;
                     const tags = video.tags;
                     const views = video.views;
@@ -425,7 +425,7 @@ async function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServic
                     //const nodeBannerPngBase64 = getNodeBannerPngBase64();
 
                     const videoPreviewJpgBase64 = getVideoPreviewJpgBase64(videoId);
-                    
+
                     const data = {
                         videoId: videoId,
                         nodeId: nodeId,
@@ -448,27 +448,27 @@ async function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServic
                         moarTubeTokenProof: moarTubeTokenProof,
                         cloudflareTurnstileToken: cloudflareTurnstileToken
                     };
-                    
+
                     await submitDatabaseWriteJob('UPDATE videos SET is_indexing = ? WHERE video_id = ?', [true, videoId]);
 
                     try {
                         const indexerResponseData = await indexer_addVideoToIndex(data);
 
-                        if(indexerResponseData.isError) {
+                        if (indexerResponseData.isError) {
                             await submitDatabaseWriteJob('UPDATE videos SET is_indexing = ? WHERE video_id = ?', [false, videoId]);
 
                             throw new Error(indexerResponseData.message);
                         }
                         else {
                             await submitDatabaseWriteJob('UPDATE videos SET is_indexing = ?, is_indexed = ? WHERE video_id = ?', [false, true, videoId]);
-                            
-                            return {isError: false};
+
+                            return { isError: false };
                         }
                     }
-                    catch(error) {
+                    catch (error) {
                         await submitDatabaseWriteJob('UPDATE videos SET is_indexing = ? WHERE video_id = ?', [false, videoId]);
 
-                        if(error.isAxiosError && error.response != null && error.response.status === 413) {
+                        if (error.isAxiosError && error.response != null && error.response.status === 413) {
                             const kilobytes = Math.ceil(error.request._contentLength / 1024);
 
                             throw new Error(`your request size (<b>${kilobytes}kb</b>) exceeds the maximum allowed size (<b>1mb</b>)<br>try using smaller node and video images`);
@@ -496,31 +496,31 @@ async function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServic
 }
 
 async function videoIdIndexRemove_POST(videoId, cloudflareTurnstileToken) {
-    if(isVideoIdValid(videoId, false) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, false)) {
+    if (isVideoIdValid(videoId, false) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, false)) {
         const video = await performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId]);
 
-        if(video != null) {
+        if (video != null) {
             await performNodeIdentification();
 
             const nodeIdentification = getNodeIdentification();
-            
+
             const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
-            
+
             const data = {
                 videoId: videoId,
                 moarTubeTokenProof: moarTubeTokenProof,
                 cloudflareTurnstileToken: cloudflareTurnstileToken
             };
-            
+
             const indexerResponseData = await indexer_removeVideoFromIndex(data);
 
-            if(indexerResponseData.isError) {
+            if (indexerResponseData.isError) {
                 throw new Error(indexerResponseData.message);
             }
             else {
                 await submitDatabaseWriteJob('UPDATE videos SET is_indexed = ? WHERE video_id = ?', [false, videoId]);
 
-                return {isError: false};
+                return { isError: false };
             }
         }
         else {
@@ -533,25 +533,25 @@ async function videoIdIndexRemove_POST(videoId, cloudflareTurnstileToken) {
 }
 
 async function videoIdAlias_GET(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         const nodeSettings = getNodeSettings();
 
         const video = await performDatabaseReadJob_GET('SELECT is_indexed FROM videos WHERE video_id = ?', [videoId]);
-        
-        if(video != null) {
+
+        if (video != null) {
             const isIndexed = video.is_indexed;
 
-            if(isIndexed) {
+            if (isIndexed) {
                 let videoAliasUrl;
 
-                if(getIsDeveloperMode()) {
+                if (getIsDeveloperMode()) {
                     videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
                 }
                 else {
                     videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
                 }
 
-                return {isError: false, videoAliasUrl: videoAliasUrl};
+                return { isError: false, videoAliasUrl: videoAliasUrl };
             }
             else {
                 throw new Error('that video is not indexed');
@@ -567,13 +567,13 @@ async function videoIdAlias_GET(videoId) {
 }
 
 async function search_GET(searchTerm, sortTerm, tagTerm, tagLimit, timestamp) {
-    if(isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true) && isTagLimitValid(tagLimit) && isTimestampValid(timestamp)) {
+    if (isSearchTermValid(searchTerm) && isSortTermValid(sortTerm) && isTagTermValid(tagTerm, true) && isTagLimitValid(tagLimit) && isTimestampValid(timestamp)) {
         tagLimit = Number(tagLimit);
 
         let query;
         let params;
 
-        if(searchTerm.length === 0) {
+        if (searchTerm.length === 0) {
             query = 'SELECT * FROM videos WHERE creation_timestamp < ?';
             params = [timestamp];
         }
@@ -584,26 +584,26 @@ async function search_GET(searchTerm, sortTerm, tagTerm, tagLimit, timestamp) {
 
         const videos = await performDatabaseReadJob_ALL(query, params);
 
-        if(sortTerm === 'latest') {
+        if (sortTerm === 'latest') {
             videos.sort(function compareByTimestampDescending(a, b) {
                 return b.creation_timestamp - a.creation_timestamp;
             });
         }
-        else if(sortTerm === 'popular') {
+        else if (sortTerm === 'popular') {
             videos.sort(function compareByTimestampDescending(a, b) {
                 return b.views - a.views;
             });
         }
-        else if(sortTerm === 'oldest') {
+        else if (sortTerm === 'oldest') {
             videos.sort(function compareByTimestampDescending(a, b) {
                 return a.creation_timestamp - b.creation_timestamp;
             });
         }
 
         let searchResults = [];
-        
-        if(tagTerm.length === 0) {
-            if(tagLimit === 0) {
+
+        if (tagTerm.length === 0) {
+            if (tagLimit === 0) {
                 searchResults = videos;
             }
             else {
@@ -611,20 +611,20 @@ async function search_GET(searchTerm, sortTerm, tagTerm, tagLimit, timestamp) {
             }
         }
         else {
-            for(const video of videos) {
+            for (const video of videos) {
                 const tagsArray = video.tags.split(',');
 
                 if (tagsArray.includes(tagTerm) && !searchResults.includes(video)) {
                     searchResults.push(video);
                 }
 
-                if(tagLimit !== 0 && searchResults.length === tagLimit) {
+                if (tagLimit !== 0 && searchResults.length === tagLimit) {
                     break;
                 }
             }
         }
-        
-        return {isError: false, searchResults: searchResults};
+
+        return { isError: false, searchResults: searchResults };
     }
     else {
         throw new Error('invalid parameters');
@@ -632,10 +632,10 @@ async function search_GET(searchTerm, sortTerm, tagTerm, tagLimit, timestamp) {
 }
 
 function videoIdThumbnail_POST(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         cloudflare_purgeVideoThumbnailImages([videoId]);
-        
-        return {isError: false};
+
+        return { isError: false };
     }
     else {
         throw new Error('invalid parameters');
@@ -643,12 +643,12 @@ function videoIdThumbnail_POST(videoId) {
 }
 
 async function videoIdPreview_POST(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         cloudflare_purgeVideoPreviewImages([videoId]);
 
         await submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [true, true, videoId]);
-        
-        return {isError: false};
+
+        return { isError: false };
     }
     else {
         throw new Error('invalid parameters');
@@ -656,21 +656,21 @@ async function videoIdPreview_POST(videoId) {
 }
 
 function videoIdPoster_POST(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         cloudflare_purgeVideoPosterImages([videoId]);
-        
-        return {isError: false};
+
+        return { isError: false };
     }
     else {
-        return {isError: true, message: 'invalid parameters'};
+        return { isError: true, message: 'invalid parameters' };
     }
 }
 
 async function videoIdLengths_POST(videoId, lengthSeconds, lengthTimestamp) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         await submitDatabaseWriteJob('UPDATE videos SET length_seconds = ?, length_timestamp = ?, is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [lengthSeconds, lengthTimestamp, true, true, videoId]);
-        
-        return {isError: false};
+
+        return { isError: false };
     }
     else {
         throw new Error('invalid parameters');
@@ -678,16 +678,17 @@ async function videoIdLengths_POST(videoId, lengthSeconds, lengthTimestamp) {
 }
 
 async function videoIdData_GET(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         const video = await performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId]);
 
-        if(video != null) {
+        if (video != null) {
             const videoId = video.video_id;
             const title = video.title;
             const description = video.description;
             const tags = video.tags;
             const views = video.views;
             const isIndexed = video.is_indexed;
+            const isPublished = video.is_published;
             const isLive = video.is_live;
             const isStreaming = video.is_streaming;
             const isFinalized = video.is_finalized;
@@ -698,10 +699,10 @@ async function videoIdData_GET(videoId) {
 
             let videoAliasUrl = 'MoarTube Aliaser link unavailable';
 
-            if(video.is_indexed) {
+            if (video.is_indexed) {
                 const nodeSettings = getNodeSettings();
 
-                if(getIsDeveloperMode()) {
+                if (getIsDeveloperMode()) {
                     videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
                 }
                 else {
@@ -716,6 +717,7 @@ async function videoIdData_GET(videoId) {
                 tags: tags,
                 views: views,
                 isIndexed: isIndexed,
+                isPublished: isPublished,
                 isLive: isLive,
                 isStreaming: isStreaming,
                 isFinalized: isFinalized,
@@ -725,8 +727,8 @@ async function videoIdData_GET(videoId) {
                 outputs: outputs,
                 meta: meta
             };
-        
-            return {isError: false, videoData: videoData};
+
+            return { isError: false, videoData: videoData };
         }
         else {
             throw new Error('that video does not exist');
@@ -737,12 +739,70 @@ async function videoIdData_GET(videoId) {
     }
 }
 
+async function videoIdDataAll_GET(videoId) {
+    const videos = await performDatabaseReadJob_ALL('SELECT * FROM videos', []);
+
+    const videosData = [];
+
+    for (const video of videos) {
+        const videoId = video.video_id;
+        const title = video.title;
+        const description = video.description;
+        const tags = video.tags;
+        const views = video.views;
+        const isIndexed = video.is_indexed;
+        const isPublished = video.is_published;
+        const isLive = video.is_live;
+        const isStreaming = video.is_streaming;
+        const isFinalized = video.is_finalized;
+        const isStreamRecordedRemotely = video.is_stream_recorded_remotely;
+        const timestamp = video.creation_timestamp;
+        const outputs = JSON.parse(video.outputs);
+        const meta = JSON.parse(video.meta);
+
+        let videoAliasUrl = 'MoarTube Aliaser link unavailable';
+
+        if (video.is_indexed) {
+            const nodeSettings = getNodeSettings();
+
+            if (getIsDeveloperMode()) {
+                videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
+            }
+            else {
+                videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
+            }
+        }
+
+        const videoData = {
+            videoId: videoId,
+            title: title,
+            description: description,
+            tags: tags,
+            views: views,
+            isIndexed: isIndexed,
+            isPublished: isPublished,
+            isLive: isLive,
+            isStreaming: isStreaming,
+            isFinalized: isFinalized,
+            isStreamRecordedRemotely: isStreamRecordedRemotely,
+            timestamp: timestamp,
+            videoAliasUrl: videoAliasUrl,
+            outputs: outputs,
+            meta: meta
+        };
+
+        videosData.push(videoData);
+    }
+
+    return { isError: false, videosData: videosData };
+}
+
 async function delete_POST(videoIds) {
-    if(isVideoIdsValid(videoIds)) {
+    if (isVideoIdsValid(videoIds)) {
         await submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (:videoIds)', { videoIds });
 
         const nonDeletedVideos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true) AND video_id IN (:videoIds)', { videoIds });
-        
+
         const nonDeletedVideoIds = nonDeletedVideos.map(video => video.video_id);
         const deletedVideoIds = videoIds.filter(videoId => !nonDeletedVideoIds.includes(videoId));
 
@@ -750,8 +810,8 @@ async function delete_POST(videoIds) {
 
         const nodeSettings = getNodeSettings();
 
-        if(nodeSettings.storageConfig.storageMode === 'filesystem') {
-            for(const deletedVideoId of deletedVideoIds) {
+        if (nodeSettings.storageConfig.storageMode === 'filesystem') {
+            for (const deletedVideoId of deletedVideoIds) {
                 const videoDirectoryPath = path.join(getVideosDirectoryPath(), deletedVideoId);
 
                 await deleteDirectoryRecursive(videoDirectoryPath);
@@ -764,7 +824,7 @@ async function delete_POST(videoIds) {
         cloudflare_purgeProgressiveVideos(deletedVideoIds);
         cloudflare_purgeAllWatchPages();
 
-        return {isError: false, deletedVideoIds: deletedVideoIds, nonDeletedVideoIds: nonDeletedVideoIds};
+        return { isError: false, deletedVideoIds: deletedVideoIds, nonDeletedVideoIds: nonDeletedVideoIds };
     }
     else {
         throw new Error('invalid parameters');
@@ -772,7 +832,7 @@ async function delete_POST(videoIds) {
 }
 
 async function finalize_POST(videoIds) {
-    if(isVideoIdsValid(videoIds)) {
+    if (isVideoIdsValid(videoIds)) {
         await submitDatabaseWriteJob('UPDATE videos SET is_finalized = 1 WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (:videoIds)', { videoIds });
 
         const videos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true) AND video_id IN (:videoIds)', { videoIds });
@@ -780,19 +840,19 @@ async function finalize_POST(videoIds) {
         const finalizedVideoIds = [];
         const nonFinalizedVideoIds = [];
 
-        for(const video of videos) {
+        for (const video of videos) {
             const videoId = video.video_id;
-            
+
             nonFinalizedVideoIds.push(videoId);
         }
 
-        for(const videoId of videoIds) {
-            if(!nonFinalizedVideoIds.includes(videoId)) {
+        for (const videoId of videoIds) {
+            if (!nonFinalizedVideoIds.includes(videoId)) {
                 finalizedVideoIds.push(videoId);
             }
         }
-        
-        return {isError: false, finalizedVideoIds: finalizedVideoIds, nonFinalizedVideoIds: nonFinalizedVideoIds};
+
+        return { isError: false, finalizedVideoIds: finalizedVideoIds, nonFinalizedVideoIds: nonFinalizedVideoIds };
     }
     else {
         throw new Error('invalid parameters');
@@ -800,25 +860,25 @@ async function finalize_POST(videoIds) {
 }
 
 async function videoIdComments_GET(videoId, type, sort, timestamp) {
-    if(isVideoIdValid(videoId, false) && isCommentsTypeValid(type) && isSortValid(sort) && isTimestampValid(timestamp)) {
+    if (isVideoIdValid(videoId, false) && isCommentsTypeValid(type) && isSortValid(sort) && isTimestampValid(timestamp)) {
         let sortTerm;
 
-        if(sort === 'ascending') {
+        if (sort === 'ascending') {
             sortTerm = 'ASC';
         }
-        else if(sort === 'descending') {
+        else if (sort === 'descending') {
             sortTerm = 'DESC';
         }
 
-        if(type === 'after') {
+        if (type === 'after') {
             const comments = await performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ' + sortTerm, [videoId, timestamp]);
-            
-            return {isError: false, comments: comments};
+
+            return { isError: false, comments: comments };
         }
-        else if(type === 'before') {
+        else if (type === 'before') {
             const comments = await performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp < ? ORDER BY timestamp ' + sortTerm, [videoId, timestamp]);
-            
-            return {isError: false, comments: comments};
+
+            return { isError: false, comments: comments };
         }
     }
     else {
@@ -827,11 +887,11 @@ async function videoIdComments_GET(videoId, type, sort, timestamp) {
 }
 
 async function videoIdCommentsCommentId_GET(videoId, commentId) {
-    if(isVideoIdValid(videoId, false) && isCommentIdValid(commentId)) {
+    if (isVideoIdValid(videoId, false) && isCommentIdValid(commentId)) {
         const comment = await performDatabaseReadJob_GET('SELECT * FROM comments WHERE video_id = ? AND id = ?', [videoId, commentId]);
 
-        if(comment != null) {
-            return {isError: false, comment: comment};
+        if (comment != null) {
+            return { isError: false, comment: comment };
         }
         else {
             throw new Error('that comment does not exist');
@@ -843,17 +903,17 @@ async function videoIdCommentsCommentId_GET(videoId, commentId) {
 }
 
 async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp, cloudflareTurnstileToken, cloudflareConnectingIp) {
-    if(isVideoIdValid(videoId, false) && isVideoCommentValid(commentPlainText) && isTimestampValid(timestamp) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+    if (isVideoIdValid(videoId, false) && isVideoCommentValid(commentPlainText) && isTimestampValid(timestamp) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
         let errorMessage;
 
         try {
             const nodeSettings = getNodeSettings();
 
-            if(!nodeSettings.isCommentsEnabled) {
+            if (!nodeSettings.isCommentsEnabled) {
                 errorMessage = 'commenting is currently disabled for this node';
             }
-            else if(nodeSettings.isCloudflareTurnstileEnabled) {
-                if(cloudflareTurnstileToken.length === 0) {
+            else if (nodeSettings.isCloudflareTurnstileEnabled) {
+                if (cloudflareTurnstileToken.length === 0) {
                     errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
                 }
                 else {
@@ -861,14 +921,14 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
                 }
             }
         }
-        catch(error) {
+        catch (error) {
             throw error;
         }
 
-        if(errorMessage == null) {
-            const commentPlainTextSanitized = sanitizeHtml(commentPlainText, {allowedTags: [], allowedAttributes: {}});
+        if (errorMessage == null) {
+            const commentPlainTextSanitized = sanitizeHtml(commentPlainText, { allowedTags: [], allowedAttributes: {} });
             const commentTimestamp = Date.now();
-            
+
             await submitDatabaseWriteJob('INSERT INTO comments(video_id, comment_plain_text_sanitized, timestamp) VALUES (?, ?, ?)', [videoId, commentPlainTextSanitized, commentTimestamp]);
 
             await submitDatabaseWriteJob('UPDATE videos SET comments = comments + 1 WHERE video_id = ?', [videoId]);
@@ -876,17 +936,17 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
             const comments = await performDatabaseReadJob_ALL('SELECT * FROM comments WHERE video_id = ? AND timestamp > ? ORDER BY timestamp ASC', [videoId, timestamp]);
 
             let commentId = 0;
-                
+
             for (let i = comments.length - 1; i >= 0; i--) {
-                if(commentTimestamp === comments[i].timestamp) {
+                if (commentTimestamp === comments[i].timestamp) {
                     commentId = comments[i].id;
                     break;
                 }
             }
 
             cloudflare_purgeWatchPages([videoId]);
-            
-            return {isError: false, commentId: commentId, comments: comments};
+
+            return { isError: false, commentId: commentId, comments: comments };
         }
         else {
             throw new Error(errorMessage);
@@ -898,17 +958,17 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
 }
 
 async function videoIdCommentsCommentIdDelete_DELETE(videoId, commentId, timestamp) {
-    if(isVideoIdValid(videoId, false) && isCommentIdValid(commentId) && isTimestampValid(timestamp)) {
+    if (isVideoIdValid(videoId, false) && isCommentIdValid(commentId) && isTimestampValid(timestamp)) {
         const comment = await performDatabaseReadJob_GET('SELECT * FROM comments WHERE id = ? AND video_id = ? AND timestamp = ?', [commentId, videoId, timestamp])
 
-        if(comment != null) {
+        if (comment != null) {
             await submitDatabaseWriteJob('DELETE FROM comments WHERE id = ? AND video_id = ? AND timestamp = ?', [commentId, videoId, timestamp]);
 
             await submitDatabaseWriteJob('UPDATE videos SET comments = comments - 1 WHERE video_id = ? AND comments > 0', [videoId]);
 
             cloudflare_purgeWatchPages([videoId]);
 
-            return {isError: false};
+            return { isError: false };
         }
         else {
             throw new Error('that comment does not exist');
@@ -920,17 +980,17 @@ async function videoIdCommentsCommentIdDelete_DELETE(videoId, commentId, timesta
 }
 
 async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareConnectingIp) {
-    if(isVideoIdValid(videoId, false) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+    if (isVideoIdValid(videoId, false) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
         let errorMessage;
 
         try {
             const nodeSettings = getNodeSettings();
 
-            if(!nodeSettings.isLikesEnabled) {
+            if (!nodeSettings.isLikesEnabled) {
                 errorMessage = 'liking is currently disabled for this node';
             }
-            else if(nodeSettings.isCloudflareTurnstileEnabled) {
-                if(cloudflareTurnstileToken.length === 0) {
+            else if (nodeSettings.isCloudflareTurnstileEnabled) {
+                if (cloudflareTurnstileToken.length === 0) {
                     errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
                 }
                 else {
@@ -938,16 +998,16 @@ async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareCon
                 }
             }
         }
-        catch(error) {
+        catch (error) {
             throw error;
         }
 
-        if(errorMessage == null) {
+        if (errorMessage == null) {
             await submitDatabaseWriteJob('UPDATE videos SET likes = likes + 1 WHERE video_id = ?', [videoId]);
 
             cloudflare_purgeWatchPages([videoId]);
 
-            return {isError: false};
+            return { isError: false };
         }
         else {
             throw new Error(errorMessage);
@@ -959,17 +1019,17 @@ async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareCon
 }
 
 async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflareConnectingIp) {
-    if(isVideoIdValid(videoId, false) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+    if (isVideoIdValid(videoId, false) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
         let errorMessage;
 
         try {
             const nodeSettings = getNodeSettings();
-            
-            if(!nodeSettings.isDislikesEnabled) {
+
+            if (!nodeSettings.isDislikesEnabled) {
                 errorMessage = 'disliking is currently disabled for this node';
             }
-            else if(nodeSettings.isCloudflareTurnstileEnabled) {
-                if(cloudflareTurnstileToken.length === 0) {
+            else if (nodeSettings.isCloudflareTurnstileEnabled) {
+                if (cloudflareTurnstileToken.length === 0) {
                     errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
                 }
                 else {
@@ -977,16 +1037,16 @@ async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflare
                 }
             }
         }
-        catch(error) {
+        catch (error) {
             throw error;
         }
 
-        if(errorMessage == null) {
+        if (errorMessage == null) {
             await submitDatabaseWriteJob('UPDATE videos SET dislikes = dislikes + 1 WHERE video_id = ?', [videoId]);
-            
+
             cloudflare_purgeWatchPages([videoId]);
 
-            return {isError: false};
+            return { isError: false };
         }
         else {
             throw new Error(errorMessage);
@@ -999,8 +1059,8 @@ async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflare
 
 async function recommended_GET() {
     const recommendedVideos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_published = ? OR is_live = ?) ORDER BY creation_timestamp DESC', [true, true]);
-    
-    return {isError: false, recommendedVideos: recommendedVideos};
+
+    return { isError: false, recommendedVideos: recommendedVideos };
 }
 
 async function tags_GET() {
@@ -1008,17 +1068,17 @@ async function tags_GET() {
 
     const tagsArray = [];
 
-    for(const video of videos) {
+    for (const video of videos) {
         const tags = video.tags.split(',');
-        
-        for(const tag of tags) {
+
+        for (const tag of tags) {
             if (!tagsArray.includes(tag)) {
                 tagsArray.push(tag);
             }
         }
     }
 
-    return {isError: false, tags: tagsArray};
+    return { isError: false, tags: tagsArray };
 }
 
 async function tagsAll_GET() {
@@ -1026,31 +1086,31 @@ async function tagsAll_GET() {
 
     const tagsArray = [];
 
-    for(const video of videos) {
+    for (const video of videos) {
         const tags = video.tags.split(',');
 
-        for(const tag of tags) {
+        for (const tag of tags) {
             if (!tagsArray.includes(tag)) {
                 tagsArray.push(tag);
             }
         }
     }
-        
-    return {isError: false, tags: tagsArray};
+
+    return { isError: false, tags: tagsArray };
 }
 
 async function videoIdReport_POST(videoId, email, reportType, message, cloudflareTurnstileToken, cloudflareConnectingIp) {
-    if(isVideoIdValid(videoId, false) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+    if (isVideoIdValid(videoId, false) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
         let errorMessage;
 
         try {
             const nodeSettings = getNodeSettings();
 
-            if(!nodeSettings.isReportsEnabled) {
+            if (!nodeSettings.isReportsEnabled) {
                 errorMessage = 'reporting is currently disabled for this node';
             }
-            else if(nodeSettings.isCloudflareTurnstileEnabled) {
-                if(cloudflareTurnstileToken.length === 0) {
+            else if (nodeSettings.isCloudflareTurnstileEnabled) {
+                if (cloudflareTurnstileToken.length === 0) {
                     errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
                 }
                 else {
@@ -1058,22 +1118,22 @@ async function videoIdReport_POST(videoId, email, reportType, message, cloudflar
                 }
             }
         }
-        catch(error) {
+        catch (error) {
             throw error;
         }
 
-        if(errorMessage == null) {
-            email = sanitizeHtml(email, {allowedTags: [], allowedAttributes: {}});
-            message = sanitizeHtml(message, {allowedTags: [], allowedAttributes: {}});
+        if (errorMessage == null) {
+            email = sanitizeHtml(email, { allowedTags: [], allowedAttributes: {} });
+            message = sanitizeHtml(message, { allowedTags: [], allowedAttributes: {} });
 
             const video = await performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId])
 
-            if(video != null) {
+            if (video != null) {
                 const creationTimestamp = video.creation_timestamp;
-                
+
                 await submitDatabaseWriteJob('INSERT INTO videoreports(timestamp, video_timestamp, video_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?)', [Date.now(), creationTimestamp, videoId, email, reportType, message]);
-                
-                return {isError: false};
+
+                return { isError: false };
             }
             else {
                 throw new Error('that video does not exist');
@@ -1091,27 +1151,27 @@ async function videoIdReport_POST(videoId, email, reportType, message, cloudflar
 let viewCounter = 0;
 let viewCounterIncrementTimer;
 async function videoIdViewsIncrement_GET(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         viewCounter++;
-        
+
         clearTimeout(viewCounterIncrementTimer);
-        
-        viewCounterIncrementTimer = setTimeout(async function() {
+
+        viewCounterIncrementTimer = setTimeout(async function () {
             const viewCounterTemp = viewCounter;
-            
+
             viewCounter = 0;
-            
+
             await submitDatabaseWriteJob('UPDATE videos SET views = views + ?, is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [viewCounterTemp, true, true, videoId]);
         }, 500);
 
         const video = await performDatabaseReadJob_GET('SELECT views FROM videos WHERE video_id = ?', [videoId]);
 
-        if(video != null) {
+        if (video != null) {
             const views = video.views + viewCounter
 
-            return {isError: false, views: views};
+            return { isError: false, views: views };
         }
-        else{
+        else {
             throw new Error('that video does not exist');
         }
     }
@@ -1121,15 +1181,15 @@ async function videoIdViewsIncrement_GET(videoId) {
 }
 
 async function videoIdWatch_GET(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         const video = await performDatabaseReadJob_GET('SELECT * FROM videos WHERE video_id = ?', [videoId]);
-        
-        if(video != null) {
+
+        if (video != null) {
             const outputs = JSON.parse(video.outputs);
 
             let manifestType;
 
-            if(video.is_streaming) {
+            if (video.is_streaming) {
                 manifestType = 'dynamic';
             }
             else {
@@ -1140,7 +1200,7 @@ async function videoIdWatch_GET(videoId) {
 
             const adaptiveSources = [];
             const progressiveSources = [];
-            const sourcesFormatsAndResolutions = {m3u8: [], mp4: [], webm: [], ogv: []};
+            const sourcesFormatsAndResolutions = { m3u8: [], mp4: [], webm: [], ogv: [] };
 
             const isHlsAvailable = outputs.m3u8.length > 0;
             const isMp4Available = outputs.mp4.length > 0;
@@ -1152,29 +1212,29 @@ async function videoIdWatch_GET(videoId) {
                     const resolutions = outputs[format];
 
                     for (const resolution of resolutions) {
-                        if(format === 'm3u8') {
+                        if (format === 'm3u8') {
                             const src = externalVideosBaseUrl + '/external/videos/' + videoId + '/adaptive/m3u8/' + manifestType + '/manifests/manifest-' + resolution + '.m3u8';
-                            
-                            const source = {src: src, type: 'application/vnd.apple.mpegurl'};
-                            
+
+                            const source = { src: src, type: 'application/vnd.apple.mpegurl' };
+
                             adaptiveSources.push(source);
                         }
                         else {
                             const src = externalVideosBaseUrl + '/external/videos/' + videoId + '/progressive/' + format + '/' + resolution + '.' + format;
-                            
+
                             let source;
 
-                            if(format === 'mp4') {
-                                source = {src: src, type: 'video/mp4'};
+                            if (format === 'mp4') {
+                                source = { src: src, type: 'video/mp4' };
                             }
-                            else if(format === 'webm') {
-                                source = {src: src, type: 'video/webm'};
+                            else if (format === 'webm') {
+                                source = { src: src, type: 'video/webm' };
                             }
-                            else if(format === 'ogv') {
-                                source = {src: src, type: 'video/ogg'};
+                            else if (format === 'ogv') {
+                                source = { src: src, type: 'video/ogg' };
                             }
 
-                            if(source != null) {
+                            if (source != null) {
                                 progressiveSources.push(source);
                             }
                         }
@@ -1184,36 +1244,38 @@ async function videoIdWatch_GET(videoId) {
                 }
             }
 
-            if(adaptiveSources.length > 0) {
+            if (adaptiveSources.length > 0) {
                 const src = getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/adaptive/m3u8/' + manifestType + '/manifests/manifest-master.m3u8';
-                
-                const source = {src: src, type: 'application/vnd.apple.mpegurl'};
-                
+
+                const source = { src: src, type: 'application/vnd.apple.mpegurl' };
+
                 adaptiveSources.unshift(source);
             }
 
-            return {isError: false, video: {
-                videoId: videoId,
-                title: video.title,
-                description: video.description,
-                views: video.views,
-                likes: video.likes,
-                dislikes: video.dislikes,
-                isPublished: video.is_published,
-                isPublishing: video.is_publishing,
-                isLive: video.is_live,
-                isStreaming: video.is_streaming,
-                isStreamed: video.is_streamed,
-                comments: video.comments,
-                creationTimestamp: video.creation_timestamp,
-                isHlsAvailable: isHlsAvailable,
-                isMp4Available: isMp4Available,
-                isWebmAvailable: isWebmAvailable,
-                isOgvAvailable: isOgvAvailable,
-                adaptiveSources: adaptiveSources,
-                progressiveSources: progressiveSources,
-                sourcesFormatsAndResolutions: sourcesFormatsAndResolutions
-            }};
+            return {
+                isError: false, video: {
+                    videoId: videoId,
+                    title: video.title,
+                    description: video.description,
+                    views: video.views,
+                    likes: video.likes,
+                    dislikes: video.dislikes,
+                    isPublished: video.is_published,
+                    isPublishing: video.is_publishing,
+                    isLive: video.is_live,
+                    isStreaming: video.is_streaming,
+                    isStreamed: video.is_streamed,
+                    comments: video.comments,
+                    creationTimestamp: video.creation_timestamp,
+                    isHlsAvailable: isHlsAvailable,
+                    isMp4Available: isMp4Available,
+                    isWebmAvailable: isWebmAvailable,
+                    isOgvAvailable: isOgvAvailable,
+                    adaptiveSources: adaptiveSources,
+                    progressiveSources: progressiveSources,
+                    sourcesFormatsAndResolutions: sourcesFormatsAndResolutions
+                }
+            };
         }
         else {
             throw new Error('that video does not exist');
@@ -1222,20 +1284,6 @@ async function videoIdWatch_GET(videoId) {
     else {
         throw new Error('invalid parameters');
     }
-}
-
-async function dataOutputs() {
-    const videos = await performDatabaseReadJob_ALL('SELECT video_id, outputs FROM videos', []);
-
-    const videosArray = [];
-    for(const video of videos) {
-        const videoId = video.video_id;
-        const outputs = JSON.parse(video.outputs);
-
-        videosArray.push({videoId: videoId, outputs: outputs});
-    }
-
-    return videosArray;
 }
 
 module.exports = {
@@ -1277,5 +1325,5 @@ module.exports = {
     videoIdViewsIncrement_GET,
     videoIdReport_POST,
     videoIdWatch_GET,
-    dataOutputs
+    videoIdDataAll_GET
 };

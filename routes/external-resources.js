@@ -15,7 +15,7 @@ router.use('/images', performAuthenticationCheck(false), (req, res, next) => {
 
         const fileStream = images1_GET(url);
 
-        if(fileStream != null) {
+        if (fileStream != null) {
             res.setHeader('Content-Type', 'image/png');
 
             fileStream.pipe(res);
@@ -24,9 +24,9 @@ router.use('/images', performAuthenticationCheck(false), (req, res, next) => {
             next();
         }
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
+
         next();
     }
 });

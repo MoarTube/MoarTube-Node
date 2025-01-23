@@ -5,7 +5,7 @@ async function information_GET() {
     const nodeVideoCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS "videoCount" FROM videos WHERE (is_published = ? OR is_live = ?)', [true, true])).videoCount;
 
     const nodeSettings = getNodeSettings();
-    
+
     const nodeId = nodeSettings.nodeId;
     const nodeName = nodeSettings.nodeName;
     const nodeAbout = nodeSettings.nodeAbout;
@@ -16,20 +16,20 @@ async function information_GET() {
 
     const information = {
         nodeVideoCount: nodeVideoCount,
-        nodeId: nodeId, 
-        nodeName: nodeName, 
-        nodeAbout: nodeAbout, 
-        publicNodeProtocol: publicNodeProtocol, 
-        publicNodeAddress: publicNodeAddress, 
+        nodeId: nodeId,
+        nodeName: nodeName,
+        nodeAbout: nodeAbout,
+        publicNodeProtocol: publicNodeProtocol,
+        publicNodeAddress: publicNodeAddress,
         publicNodePort: publicNodePort,
         cloudflareTurnstileSiteKey: cloudflareTurnstileSiteKey
     };
-    
-    return {isError: false, information: information};
+
+    return { isError: false, information: information };
 }
 
 function heartbeat_GET() {
-    return {isError: false, timestamp: Date.now()};
+    return { isError: false, timestamp: Date.now() };
 }
 
 module.exports = {

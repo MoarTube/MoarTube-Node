@@ -20,18 +20,17 @@ function isManifestTypeValid(type) {
 
 function isManifestNameValid(manifestName) {
     const regex = /^manifest-(?:2160p|1440p|1080p|720p|480p|360p|240p|master).m3u8$/;
-    
+
     return manifestName != null && manifestName.length > 0 && manifestName.length <= 100 && regex.test(manifestName);
 }
 
 function isSegmentNameValid(segmentName) {
     const regex = /^segment-(?:2160p|1440p|1080p|720p|480p|360p|240p)-\d+\.ts$/;
-    
+
     return segmentName != null && segmentName.length > 0 && segmentName.length <= 100 && regex.test(segmentName);
 }
 
-function isStreamMimeTypeValid(mimeType)
-{
+function isStreamMimeTypeValid(mimeType) {
     return (mimeType === 'application/vnd.apple.mpegurl' || mimeType === 'video/mp2t');
 }
 
@@ -66,7 +65,7 @@ function isDatabaseConfigValid(databaseConfig) {
         else {
             if (databaseConfig.databaseDialect === 'postgres') {
                 const postgresConfig = databaseConfig.postgresConfig;
-    
+
                 if (!postgresConfig || typeof postgresConfig !== 'object') {
                     isValid = false;
                 }
@@ -80,7 +79,7 @@ function isDatabaseConfigValid(databaseConfig) {
                             break;
                         }
                     }
-    
+
                     if (postgresConfig.port <= 0 || postgresConfig.port > 65535) {
                         isValid = false;
                     }
@@ -129,7 +128,7 @@ function isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, canBeEmpty) {
     Cloudflare Turnstyle token length is subject to change and thus cannot be anticipated reliably.
     */
 
-    if(canBeEmpty) {
+    if (canBeEmpty) {
         return (cloudflareTurnstileToken != null && cloudflareTurnstileToken.length >= 0);
     }
     else {
@@ -147,7 +146,7 @@ function isVideoCommentValid(comment) {
 
 function isLimitValid(limit) {
     const limitParsed = parseInt(limit, 10);
-    
+
     return (Number.isInteger(limitParsed));
 }
 
@@ -167,19 +166,19 @@ function isSortValid(sort) {
 
 function isCommentIdValid(commentId) {
     const regex = /^\d+$/;
-    
+
     return (commentId != null && commentId.length <= 100 && regex.test(commentId));
 }
 
 function isReportIdValid(reportId) {
     const regex = /^\d+$/;
-    
+
     return (reportId != null && reportId.length <= 100 && regex.test(reportId));
 }
 
 function isArchiveIdValid(reportId) {
     const regex = /^\d+$/;
-    
+
     return (reportId != null && reportId.length <= 100 && regex.test(reportId));
 }
 
@@ -218,7 +217,7 @@ function isVideoMimeTypeValid(mimeType) {
 function isVideoIdValid(videoId, canBeEmpty) {
     const regex = /^(?=.*[a-zA-Z]|\d)?[a-zA-Z0-9_-]{0,11}$/;
 
-    if(canBeEmpty) {
+    if (canBeEmpty) {
         return videoId != null && (videoId.length === 0 || (videoId.length === 11 && regex.test(videoId)));
     }
     else {
@@ -228,10 +227,10 @@ function isVideoIdValid(videoId, canBeEmpty) {
 
 function isVideoIdsValid(videoIds) {
     let result = true;
-    
-    if(videoIds != null) {
-        videoIds.forEach(function(videoId) {
-            if(!isVideoIdValid(videoId, false)) {
+
+    if (videoIds != null) {
+        videoIds.forEach(function (videoId) {
+            if (!isVideoIdValid(videoId, false)) {
                 result = false;
                 return;
             }
@@ -240,19 +239,19 @@ function isVideoIdsValid(videoIds) {
     else {
         result = false
     }
-    
+
     return result;
 }
 
 function isUsernameValid(username) {
     const regex = /^[\w!@#$%^&*()-_=+]+$/;
-    
+
     return username != null && username.length > 0 && username.length <= 100 && regex.test(username)
 }
 
 function isPasswordValid(password) {
     const regex = /^[\w!@#$%^&*()-_=+]+$/;
-    
+
     return password != null && password.length > 0 && password.length <= 100 && regex.test(password)
 }
 
@@ -272,7 +271,7 @@ function isPublicNodeAddressValid(publicNodeAddress) {
 
 function isPortValid(port) {
     port = Number(port);
-    
+
     return port != null && !Number.isNaN(port) && (port > 0 && port <= 65535);
 }
 
@@ -312,10 +311,10 @@ function isTagTermValid(tagTerm, canBeEmpty) {
     can be mixed case
     can contain spaces
     */
-    
+
     let regex = /^[a-zA-Z0-9\s]*$/;
-    
-    if(canBeEmpty) {
+
+    if (canBeEmpty) {
         return (tagTerm != null && tagTerm.length <= 30 && regex.test(tagTerm));
     }
     else {
@@ -325,13 +324,13 @@ function isTagTermValid(tagTerm, canBeEmpty) {
 
 function isTagsValid(tags) {
     let result = true;
-    
-    if(tags != null && tags.length > 0 && tags.length <= 150) {
+
+    if (tags != null && tags.length > 0 && tags.length <= 150) {
         const tagsArray = tags.split(',');
-        
-        if(tagsArray.length > 0 && tagsArray.length <= 5) {
-            for(const tag of tagsArray) {
-                if(!(isTagTermValid(tag, false))) {
+
+        if (tagsArray.length > 0 && tagsArray.length <= 5) {
+            for (const tag of tagsArray) {
+                if (!(isTagTermValid(tag, false))) {
                     result = false;
                     break;
                 }
@@ -344,7 +343,7 @@ function isTagsValid(tags) {
     else {
         result = false;
     }
-    
+
     return result;
 }
 

@@ -3,12 +3,12 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 
-const { 
-    import_POST, imported_POST, videoIdImportingStop_POST, publishing_POST, published_POST, videoIdPublishingStop_POST, videoIdUpload_POST, videoIdStream_POST, error_POST, 
+const {
+    import_POST, imported_POST, videoIdImportingStop_POST, publishing_POST, published_POST, videoIdPublishingStop_POST, videoIdUpload_POST, videoIdStream_POST, error_POST,
     videoIdSourceFileExtension_POST, videoIdSourceFileExtension_GET, videoIdPublishes_GET, videoIdUnpublish_POST, videoIdData_POST, videoIdIndexAdd_POST, videoIdIndexRemove_POST,
-    videoIdAlias_GET, search_GET, videoIdThumbnail_POST, videoIdPreview_POST, videoIdPoster_POST, videoIdLengths_POST, videoIdData_GET, delete_POST, finalize_POST, 
-    videoIdComments_GET, videoIdCommentsCommentId_GET, videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST, recommended_GET, 
-    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST, dataOutputs
+    videoIdAlias_GET, search_GET, videoIdThumbnail_POST, videoIdPreview_POST, videoIdPoster_POST, videoIdLengths_POST, videoIdData_GET, delete_POST, finalize_POST,
+    videoIdComments_GET, videoIdCommentsCommentId_GET, videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST, recommended_GET,
+    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST, videoIdDataAll_GET
 } = require('../controllers/videos');
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
@@ -16,6 +16,7 @@ const { getVideosDirectoryPath } = require('../utils/paths');
 const { isSegmentNameValid, isVideoIdValid, isFormatValid, isResolutionValid, isManifestTypeValid } = require('../utils/validators');
 const { submitDatabaseWriteJob } = require('../utils/database');
 const { performAuthenticationCheck } = require('../middleware/authentication');
+const { websocketNodeBroadcast } = require('../utils/helpers');
 
 const router = express.Router();
 
@@ -29,10 +30,10 @@ router.post('/import', performAuthenticationCheck(true), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -44,10 +45,10 @@ router.post('/imported', performAuthenticationCheck(true), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -59,10 +60,10 @@ router.post('/:videoId/importing/stop', performAuthenticationCheck(true), async 
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -74,10 +75,10 @@ router.post('/publishing', performAuthenticationCheck(true), async (req, res) =>
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -89,10 +90,10 @@ router.post('/published', performAuthenticationCheck(true), async (req, res) => 
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -106,10 +107,10 @@ router.post('/:videoId/:format/:resolution/published', performAuthenticationChec
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -121,10 +122,10 @@ router.post('/:videoId/publishing/stop', performAuthenticationCheck(true), async
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -136,117 +137,117 @@ router.post('/:videoId/upload', performAuthenticationCheck(true), async (req, re
     logDebugMessageToConsole('uploading video with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '>', null, null);
 
     const totalFileSize = parseInt(req.headers['content-length']);
-    
-    if(totalFileSize > 0) {
+
+    if (totalFileSize > 0) {
         addToPublishVideoUploadingTracker(videoId);
 
         addToPublishVideoUploadingTrackerUploadRequests(videoId, req);
-        
+
         let lastPublishTimestamp = 0;
         let receivedFileSize = 0;
-        req.on('data', function(chunk) {
-            if(!isPublishVideoUploading(videoId)) {
-                
+        req.on('data', function (chunk) {
+            if (!isPublishVideoUploading(videoId)) {
+
                 receivedFileSize += chunk.length;
-                
+
                 const uploadProgress = Math.floor(((receivedFileSize / totalFileSize) * 100) / 2) + 50;
-                
+
                 // rate limit due to flooding
                 const currentPublishTimestamp = Date.now();
-                if((currentPublishTimestamp - lastPublishTimestamp > 1000) || uploadProgress === 100) {
+                if ((currentPublishTimestamp - lastPublishTimestamp > 1000) || uploadProgress === 100) {
                     lastPublishTimestamp = currentPublishTimestamp;
-                    
-                    websocketNodeBroadcast({eventName: 'echo', data: {eventName: 'video_status', payload: { type: 'publishing', videoId: videoId, format: format, resolution: resolution, progress: uploadProgress }}});
+
+                    websocketNodeBroadcast({ eventName: 'echo', data: { eventName: 'video_status', payload: { type: 'publishing', videoId: videoId, format: format, resolution: resolution, progress: uploadProgress } } });
                 }
             }
         });
-        
+
         multer(
-        {
-            fileFilter: function (req, file, cb) {
-                const mimeType = file.mimetype;
-                
-                if(mimeType === 'application/vnd.apple.mpegurl' || mimeType === 'video/mp2t' || mimeType === 'video/mp4' || mimeType === 'video/webm' || mimeType === 'video/ogg') {
-                    cb(null, true);
-                }
-                else {
-                    cb(new Error('unsupported upload file type'));
-                }
-            },
-            storage: multer.diskStorage({
-                destination: function (req, file, cb) {
-                    let directoryPath = '';
-                    
-                    if(format === 'm3u8') {
-                        const fileName = file.originalname;
-                        const manifestFileName = 'manifest-' + resolution + '.m3u8';
-                        
-                        if(fileName === manifestFileName) {
-                            directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
-                        }
-                        else if(isSegmentNameValid(fileName)) {
-                            directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
-                        }
-                    }
-                    else if(format === 'mp4') {
-                        directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/mp4');
-                    }
-                    else if(format === 'webm') {
-                        directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/webm');
-                    }
-                    else if(format === 'ogv') {
-                        directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/ogv');
-                    }
-                    
-                    if(directoryPath !== '') {
-                        logDebugMessageToConsole('storing video with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '> to directory <' + directoryPath + '>', null, null);
-                        
-                        fs.mkdirSync(directoryPath, { recursive: true });
-                        
-                        fs.access(directoryPath, fs.constants.F_OK, function(error) {
-                            if(error) {
-                                cb(new Error('directory creation error'), null);
-                            }
-                            else {
-                                cb(null, directoryPath);
-                            }
-                        });
+            {
+                fileFilter: function (req, file, cb) {
+                    const mimeType = file.mimetype;
+
+                    if (mimeType === 'application/vnd.apple.mpegurl' || mimeType === 'video/mp2t' || mimeType === 'video/mp4' || mimeType === 'video/webm' || mimeType === 'video/ogg') {
+                        cb(null, true);
                     }
                     else {
-                        cb(new Error('invalid directory path'), null);
+                        cb(new Error('unsupported upload file type'));
                     }
                 },
-                filename: function (req, file, cb) {
-                    cb(null, file.originalname);
-                }
-            })
-        }).fields([{ name: 'video_files' }])
-        (req, res, async function(error) {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-                
-                await submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [false, true, videoId]);
-                
-                res.send({isError: true, message: 'video upload error'});
-            }
-            else {
-                try {
-                    const data = await videoIdUpload_POST(videoId, format, resolution);
+                storage: multer.diskStorage({
+                    destination: function (req, file, cb) {
+                        let directoryPath = '';
 
-                    res.send(data);
-                }
-                catch(error) {
+                        if (format === 'm3u8') {
+                            const fileName = file.originalname;
+                            const manifestFileName = 'manifest-' + resolution + '.m3u8';
+
+                            if (fileName === manifestFileName) {
+                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
+                            }
+                            else if (isSegmentNameValid(fileName)) {
+                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
+                            }
+                        }
+                        else if (format === 'mp4') {
+                            directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/mp4');
+                        }
+                        else if (format === 'webm') {
+                            directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/webm');
+                        }
+                        else if (format === 'ogv') {
+                            directoryPath = path.join(getVideosDirectoryPath(), videoId + '/progressive/ogv');
+                        }
+
+                        if (directoryPath !== '') {
+                            logDebugMessageToConsole('storing video with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '> to directory <' + directoryPath + '>', null, null);
+
+                            fs.mkdirSync(directoryPath, { recursive: true });
+
+                            fs.access(directoryPath, fs.constants.F_OK, function (error) {
+                                if (error) {
+                                    cb(new Error('directory creation error'), null);
+                                }
+                                else {
+                                    cb(null, directoryPath);
+                                }
+                            });
+                        }
+                        else {
+                            cb(new Error('invalid directory path'), null);
+                        }
+                    },
+                    filename: function (req, file, cb) {
+                        cb(null, file.originalname);
+                    }
+                })
+            }).fields([{ name: 'video_files' }])
+            (req, res, async function (error) {
+                if (error) {
                     logDebugMessageToConsole(null, error, new Error().stack);
 
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    await submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [false, true, videoId]);
+
+                    res.send({ isError: true, message: 'video upload error' });
                 }
-            }
-        });
+                else {
+                    try {
+                        const data = await videoIdUpload_POST(videoId, format, resolution);
+
+                        res.send(data);
+                    }
+                    catch (error) {
+                        logDebugMessageToConsole(null, error, new Error().stack);
+
+                        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+                    }
+                }
+            });
     }
     else {
         await submitDatabaseWriteJob('UPDATE videos SET is_publishing = ?, is_error = ? WHERE video_id = ?', [false, true, videoId]);
 
-        res.send({isError: true, message: 'invalid content-length'});
+        res.send({ isError: true, message: 'invalid content-length' });
     }
 });
 
@@ -255,78 +256,78 @@ router.post('/:videoId/stream', performAuthenticationCheck(true), async (req, re
     const format = req.query.format;
     const resolution = req.query.resolution;
 
-    if(isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
+    if (isVideoIdValid(videoId, false) && isFormatValid(format) && isResolutionValid(resolution)) {
         const manifestFileName = 'manifest-' + resolution + '.m3u8';
 
         multer(
-        {
-            fileFilter: function (req, file, cb) {
-                const mimeType = file.mimetype;
-                
-                if(mimeType === 'application/vnd.apple.mpegurl' || mimeType === 'video/mp2t') {
-                    cb(null, true);
-                }
-                else {
-                    cb(new Error('only application/vnd.apple.mpegurl and video/mp2t files are supported'));
-                }
-            },
-            storage: multer.diskStorage({
-                destination: function (req, file, cb) {
-                    let directoryPath = '';
-                    
-                    if(format === 'm3u8') {
-                        const fileName = file.originalname;
+            {
+                fileFilter: function (req, file, cb) {
+                    const mimeType = file.mimetype;
 
-                        if(fileName === manifestFileName) {
-                            directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
-                        }
-                        else if(isSegmentNameValid(fileName)) {
-                            directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
-                        }
-                    }
-                    
-                    if(directoryPath !== '') {
-                        //logDebugMessageToConsole('storing stream with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '> to directory <' + directoryPath + '>', null, null);
-                        
-                        fs.mkdirSync(directoryPath, { recursive: true });
-                        
-                        cb(null, directoryPath);
+                    if (mimeType === 'application/vnd.apple.mpegurl' || mimeType === 'video/mp2t') {
+                        cb(null, true);
                     }
                     else {
-                        cb(new Error('invalid directory path'), null);
+                        cb(new Error('only application/vnd.apple.mpegurl and video/mp2t files are supported'));
                     }
                 },
-                filename: function (req, file, cb) {
-                    cb(null, file.originalname);
-                }
-            })
-        }).fields([{ name: 'video_files' }])
-        (req, res, async function(error) {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
+                storage: multer.diskStorage({
+                    destination: function (req, file, cb) {
+                        let directoryPath = '';
 
-                await submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId]);
-                
-                res.send({isError: true, message: 'video upload error'});
-            }
-            else {
-                try {
-                    const data = await videoIdStream_POST(videoId, format, resolution);
+                        if (format === 'm3u8') {
+                            const fileName = file.originalname;
 
-                    res.send(data);
-                }
-                catch(error) {
+                            if (fileName === manifestFileName) {
+                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8');
+                            }
+                            else if (isSegmentNameValid(fileName)) {
+                                directoryPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/m3u8/' + resolution);
+                            }
+                        }
+
+                        if (directoryPath !== '') {
+                            //logDebugMessageToConsole('storing stream with id <' + videoId + '> format <' + format + '> resolution <' + resolution + '> to directory <' + directoryPath + '>', null, null);
+
+                            fs.mkdirSync(directoryPath, { recursive: true });
+
+                            cb(null, directoryPath);
+                        }
+                        else {
+                            cb(new Error('invalid directory path'), null);
+                        }
+                    },
+                    filename: function (req, file, cb) {
+                        cb(null, file.originalname);
+                    }
+                })
+            }).fields([{ name: 'video_files' }])
+            (req, res, async function (error) {
+                if (error) {
                     logDebugMessageToConsole(null, error, new Error().stack);
 
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    await submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId]);
+
+                    res.send({ isError: true, message: 'video upload error' });
                 }
-            }
-        });
+                else {
+                    try {
+                        const data = await videoIdStream_POST(videoId, format, resolution);
+
+                        res.send(data);
+                    }
+                    catch (error) {
+                        logDebugMessageToConsole(null, error, new Error().stack);
+
+                        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+                    }
+                }
+            });
     }
     else {
         await submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId]);
 
-        res.send({isError: true, message: 'invalid parameters'});
+        res.send({ isError: true, message: 'invalid parameters' });
     }
 });
 
@@ -338,10 +339,10 @@ router.post('/error', performAuthenticationCheck(true), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -354,10 +355,10 @@ router.post('/:videoId/sourceFileExtension', performAuthenticationCheck(true), a
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -369,10 +370,10 @@ router.get('/:videoId/sourceFileExtension', performAuthenticationCheck(true), as
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -384,10 +385,10 @@ router.get('/:videoId/publishes', performAuthenticationCheck(true), async (req, 
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -401,10 +402,10 @@ router.post('/:videoId/unpublish', performAuthenticationCheck(true), async (req,
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -419,10 +420,10 @@ router.post('/:videoId/data', performAuthenticationCheck(true), async (req, res)
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -437,10 +438,10 @@ router.post('/:videoId/index/add', performAuthenticationCheck(true), async (req,
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -453,10 +454,10 @@ router.post('/:videoId/index/remove', performAuthenticationCheck(true), async (r
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -468,10 +469,10 @@ router.get('/:videoId/alias', performAuthenticationCheck(false), async (req, res
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -483,273 +484,244 @@ router.get('/search', performAuthenticationCheck(false), async (req, res) => {
         const tagLimit = req.query.tagLimit;
         const timestamp = req.query.timestamp;
 
-
-
-        const { s3_listObjectsWithPrefix } = require('../utils/s3-communications');
-        const { getNodeSettings } = require('../utils/helpers');
-        const nodeSettings = getNodeSettings();
-        const s3Config = nodeSettings.storageConfig.s3Config;
-        const prefix = 'external/videos/MbmDj_LLNAU/adaptive/m3u8/240p/segments/';
-        const keys = await s3_listObjectsWithPrefix(s3Config, prefix);
-
-
-
         const data = await search_GET(searchTerm, sortTerm, tagTerm, tagLimit, timestamp);
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
 router.post('/:videoId/images/thumbnail', performAuthenticationCheck(true), (req, res) => {
     const videoId = req.params.videoId;
-    
-    if(isVideoIdValid(videoId, false)) {
+
+    if (isVideoIdValid(videoId, false)) {
         //logDebugMessageToConsole('uploading thumbnail for video id: ' + videoId, null, null);
 
         multer(
-        {
-            fileFilter: function (req, file, cb) {
-                const mimeType = file.mimetype;
-                
-                if(mimeType === 'image/jpeg') {
-                    cb(null, true);
-                }
-                else {
-                    cb(new Error('unsupported upload file type'));
-                }
-            },
-            storage: multer.diskStorage({
-                destination: function (req, file, cb) {
-                    const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
-                    
-                    fs.access(filePath, fs.constants.F_OK, function(error) {
-                        if(error) {
-                            cb(new Error('file upload error'), null);
+            {
+                fileFilter: function (req, file, cb) {
+                    const mimeType = file.mimetype;
+
+                    if (mimeType === 'image/jpeg') {
+                        cb(null, true);
+                    }
+                    else {
+                        cb(new Error('unsupported upload file type'));
+                    }
+                },
+                storage: multer.diskStorage({
+                    destination: function (req, file, cb) {
+                        const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
+
+                        fs.access(filePath, fs.constants.F_OK, function (error) {
+                            if (error) {
+                                cb(new Error('file upload error'), null);
+                            }
+                            else {
+                                cb(null, filePath);
+                            }
+                        });
+                    },
+                    filename: function (req, file, cb) {
+                        const mimeType = file.mimetype;
+
+                        if (mimeType === 'image/jpeg') {
+                            let extension;
+
+                            if (mimeType === 'image/jpeg') {
+                                extension = '.jpg';
+                            }
+
+                            const fileName = 'thumbnail' + extension;
+
+                            cb(null, fileName);
                         }
                         else {
-                            cb(null, filePath);
+                            cb(new Error('Invalid Media Detected'), null);
                         }
-                    });
-                },
-                filename: function (req, file, cb) {
-                    const mimeType = file.mimetype;
-                    
-                    if(mimeType === 'image/jpeg')
-                    {
-                        let extension;
-                        
-                        if(mimeType === 'image/jpeg')
-                        {
-                            extension = '.jpg';
-                        }
-                        
-                        const fileName = 'thumbnail' + extension;
-                        
-                        cb(null, fileName);
                     }
-                    else
-                    {
-                        cb(new Error('Invalid Media Detected'), null);
-                    }
-                }
-            })
-        }).fields([{ name: 'thumbnailFile', maxCount: 1 }])
-        (req, res, async function(error)
-        {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-                
-                res.send({isError: true, message: error.message});
-            }
-            else {
-                try {
-                    //logDebugMessageToConsole('uploaded thumbnail for video id <' + videoId + '>', null, null);
-
-                    const data = videoIdThumbnail_POST(videoId);
-
-                    res.send(data);
-                }
-                catch(error) {
+                })
+            }).fields([{ name: 'thumbnailFile', maxCount: 1 }])
+            (req, res, async function (error) {
+                if (error) {
                     logDebugMessageToConsole(null, error, new Error().stack);
 
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    res.send({ isError: true, message: error.message });
                 }
-            }
-        });
+                else {
+                    try {
+                        //logDebugMessageToConsole('uploaded thumbnail for video id <' + videoId + '>', null, null);
+
+                        const data = videoIdThumbnail_POST(videoId);
+
+                        res.send(data);
+                    }
+                    catch (error) {
+                        logDebugMessageToConsole(null, error, new Error().stack);
+
+                        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+                    }
+                }
+            });
     }
     else {
-        res.send({isError: true, message: 'invalid parameters'});
+        res.send({ isError: true, message: 'invalid parameters' });
     }
 });
 
 router.post('/:videoId/images/preview', performAuthenticationCheck(true), (req, res) => {
     const videoId = req.params.videoId;
-    
-    if(isVideoIdValid(videoId, false)) {
+
+    if (isVideoIdValid(videoId, false)) {
         multer(
-        {
-            fileFilter: function (req, file, cb) {
-                const mimeType = file.mimetype;
-                
-                if(mimeType === 'image/jpeg') {
-                    cb(null, true);
-                }
-                else {
-                    cb(new Error('unsupported upload file type'));
-                }
-            },
-            storage: multer.diskStorage({
-                destination: function (req, file, cb) {
-                    const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
-                    
-                    fs.access(filePath, fs.constants.F_OK, function(error)
-                    {
-                        if(error)
-                        {
-                            cb(new Error('file upload error'), null);
-                        }
-                        else
-                        {
-                            cb(null, filePath);
-                        }
-                    });
-                },
-                filename: function (req, file, cb) {
+            {
+                fileFilter: function (req, file, cb) {
                     const mimeType = file.mimetype;
-                    
-                    if(mimeType === 'image/jpeg')
-                    {
-                        let extension;
-                        
-                        if(mimeType === 'image/jpeg')
-                        {
-                            extension = '.jpg';
+
+                    if (mimeType === 'image/jpeg') {
+                        cb(null, true);
+                    }
+                    else {
+                        cb(new Error('unsupported upload file type'));
+                    }
+                },
+                storage: multer.diskStorage({
+                    destination: function (req, file, cb) {
+                        const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
+
+                        fs.access(filePath, fs.constants.F_OK, function (error) {
+                            if (error) {
+                                cb(new Error('file upload error'), null);
+                            }
+                            else {
+                                cb(null, filePath);
+                            }
+                        });
+                    },
+                    filename: function (req, file, cb) {
+                        const mimeType = file.mimetype;
+
+                        if (mimeType === 'image/jpeg') {
+                            let extension;
+
+                            if (mimeType === 'image/jpeg') {
+                                extension = '.jpg';
+                            }
+
+                            const fileName = 'preview' + extension;
+
+                            cb(null, fileName);
                         }
-                        
-                        const fileName = 'preview' + extension;
-                        
-                        cb(null, fileName);
+                        else {
+                            cb(new Error('Invalid Media Detected'), null);
+                        }
                     }
-                    else
-                    {
-                        cb(new Error('Invalid Media Detected'), null);
-                    }
-                }
-            })
-        }).fields([{ name: 'previewFile', maxCount: 1 }])
-        (req, res, async function(error)
-        {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-                
-                res.send({isError: true, message: error.message});
-            }
-            else {
-                try {
-                    //logDebugMessageToConsole('uploaded preview for video id <' + videoId + '>', null, null);
-
-                    const data = await videoIdPreview_POST(videoId);
-
-                    res.send(data);
-                }
-                catch(error) {
+                })
+            }).fields([{ name: 'previewFile', maxCount: 1 }])
+            (req, res, async function (error) {
+                if (error) {
                     logDebugMessageToConsole(null, error, new Error().stack);
 
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    res.send({ isError: true, message: error.message });
                 }
-            }
-        });
+                else {
+                    try {
+                        //logDebugMessageToConsole('uploaded preview for video id <' + videoId + '>', null, null);
+
+                        const data = await videoIdPreview_POST(videoId);
+
+                        res.send(data);
+                    }
+                    catch (error) {
+                        logDebugMessageToConsole(null, error, new Error().stack);
+
+                        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+                    }
+                }
+            });
     }
     else {
-        res.send({isError: true, message: 'invalid parameters'});
+        res.send({ isError: true, message: 'invalid parameters' });
     }
 });
 
 router.post('/:videoId/images/poster', performAuthenticationCheck(true), (req, res) => {
     const videoId = req.params.videoId;
-    
-    if(isVideoIdValid(videoId, false)) {
+
+    if (isVideoIdValid(videoId, false)) {
         multer(
-        {
-            fileFilter: function (req, file, cb) {
-                const mimeType = file.mimetype;
-                
-                if(mimeType === 'image/jpeg') {
-                    cb(null, true);
-                }
-                else {
-                    cb(new Error('unsupported upload file type'));
-                }
-            },
-            storage: multer.diskStorage({
-                destination: function (req, file, cb) {
-                    const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
-                    
-                    fs.access(filePath, fs.constants.F_OK, function(error)
-                    {
-                        if(error)
-                        {
-                            cb(new Error('file upload error'), null);
-                        }
-                        else
-                        {
-                            cb(null, filePath);
-                        }
-                    });
-                },
-                filename: function (req, file, cb) {
+            {
+                fileFilter: function (req, file, cb) {
                     const mimeType = file.mimetype;
-                    
-                    if(mimeType === 'image/jpeg')
-                    {
-                        let extension;
-                        
-                        if(mimeType === 'image/jpeg')
-                        {
-                            extension = '.jpg';
+
+                    if (mimeType === 'image/jpeg') {
+                        cb(null, true);
+                    }
+                    else {
+                        cb(new Error('unsupported upload file type'));
+                    }
+                },
+                storage: multer.diskStorage({
+                    destination: function (req, file, cb) {
+                        const filePath = path.join(getVideosDirectoryPath(), videoId + '/images');
+
+                        fs.access(filePath, fs.constants.F_OK, function (error) {
+                            if (error) {
+                                cb(new Error('file upload error'), null);
+                            }
+                            else {
+                                cb(null, filePath);
+                            }
+                        });
+                    },
+                    filename: function (req, file, cb) {
+                        const mimeType = file.mimetype;
+
+                        if (mimeType === 'image/jpeg') {
+                            let extension;
+
+                            if (mimeType === 'image/jpeg') {
+                                extension = '.jpg';
+                            }
+
+                            const fileName = 'poster' + extension;
+
+                            cb(null, fileName);
                         }
-                        
-                        const fileName = 'poster' + extension;
-                        
-                        cb(null, fileName);
+                        else {
+                            cb(new Error('Invalid Media Detected'), null);
+                        }
                     }
-                    else
-                    {
-                        cb(new Error('Invalid Media Detected'), null);
-                    }
-                }
-            })
-        }).fields([{ name: 'posterFile', maxCount: 1 }])
-        (req, res, async function(error)
-        {
-            if(error) {
-                logDebugMessageToConsole(null, error, new Error().stack);
-                
-                res.send({isError: true, message: error.message});
-            }
-            else {
-                try {
-                    //logDebugMessageToConsole('uploaded poster for video id <' + videoId + '>', null, null);
-
-                    const data = videoIdPoster_POST(videoId);
-
-                    res.send(data);
-                }
-                catch(error) {
+                })
+            }).fields([{ name: 'posterFile', maxCount: 1 }])
+            (req, res, async function (error) {
+                if (error) {
                     logDebugMessageToConsole(null, error, new Error().stack);
 
-                    res.send({isError: true, message: 'error communicating with the MoarTube node'});
+                    res.send({ isError: true, message: error.message });
                 }
-            }
-        });
+                else {
+                    try {
+                        //logDebugMessageToConsole('uploaded poster for video id <' + videoId + '>', null, null);
+
+                        const data = videoIdPoster_POST(videoId);
+
+                        res.send(data);
+                    }
+                    catch (error) {
+                        logDebugMessageToConsole(null, error, new Error().stack);
+
+                        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+                    }
+                }
+            });
     }
     else {
-        res.send({isError: true, message: 'invalid parameters'});
+        res.send({ isError: true, message: 'invalid parameters' });
     }
 });
 
@@ -763,10 +735,10 @@ router.post('/:videoId/lengths', performAuthenticationCheck(true), async (req, r
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -778,10 +750,25 @@ router.get('/:videoId/data', performAuthenticationCheck(false), async (req, res)
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+    }
+});
+
+router.get('/:videoId/data/all', performAuthenticationCheck(false), async (req, res) => {
+    try {
+        const videoId = req.params.videoId;
+
+        const data = await videoIdDataAll_GET(videoId);
+
+        res.send(data);
+    }
+    catch (error) {
+        logDebugMessageToConsole(null, error, new Error().stack);
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -793,10 +780,10 @@ router.post('/delete', performAuthenticationCheck(true), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -808,10 +795,10 @@ router.post('/finalize', performAuthenticationCheck(true), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -826,10 +813,10 @@ router.get('/:videoId/comments', performAuthenticationCheck(false), async (req, 
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -842,10 +829,10 @@ router.get('/:videoId/comments/:commentId', performAuthenticationCheck(false), a
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -862,10 +849,10 @@ router.post('/:videoId/comments/comment', performAuthenticationCheck(false), asy
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -879,10 +866,10 @@ router.delete('/:videoId/comments/:commentId/delete', performAuthenticationCheck
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -897,10 +884,10 @@ router.post('/:videoId/like', performAuthenticationCheck(false), async (req, res
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -915,10 +902,10 @@ router.post('/:videoId/dislike', performAuthenticationCheck(false), async (req, 
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -928,10 +915,10 @@ router.get('/recommended', performAuthenticationCheck(false), async (req, res) =
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -941,10 +928,10 @@ router.get('/tags', performAuthenticationCheck(false), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -954,10 +941,10 @@ router.get('/tags/all', performAuthenticationCheck(false), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -975,10 +962,10 @@ router.post('/:videoId/report', performAuthenticationCheck(false), async (req, r
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -990,10 +977,10 @@ router.get('/:videoId/views/increment', performAuthenticationCheck(false), async
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-            res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -1005,10 +992,10 @@ router.get('/:videoId/watch', performAuthenticationCheck(false), async (req, res
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -1018,31 +1005,18 @@ router.post('/:videoId/adaptive/m3u8/:type/manifests/masterManifest', performAut
     const masterManifest = req.body.masterManifest;
 
     // TODO: validate the manifest?
-    
-    if(isVideoIdValid(videoId, false) && isManifestTypeValid(type)) {
+
+    if (isVideoIdValid(videoId, false) && isManifestTypeValid(type)) {
         const masterManifestPath = path.join(getVideosDirectoryPath(), videoId, 'adaptive', 'm3u8', 'manifest-master.m3u8');
 
         fs.writeFileSync(masterManifestPath, masterManifest, 'utf-8');
 
-        res.send({isError: false});
+        res.send({ isError: false });
     }
     else {
         await submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId]);
 
-        res.send({isError: true, message: 'invalid parameters'});
-    }
-});
-
-router.get('/data/outputs', performAuthenticationCheck(true), async (req, res) => {
-    try {
-        const data = await dataOutputs();
-
-        res.send(data);
-    }
-    catch(error) {
-        logDebugMessageToConsole(null, error, new Error().stack);
-
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'invalid parameters' });
     }
 });
 

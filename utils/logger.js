@@ -10,26 +10,26 @@ function logDebugMessageToConsole(message, error, stackTrace) {
     const minutes = ('0' + date.getMinutes()).slice(-2);
     const seconds = ('0' + date.getSeconds()).slice(-2);
     const humanReadableTimestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-    
+
     let errorMessage = '<message: ' + message + ', date: ' + humanReadableTimestamp + '>';
 
-    if(error != null) {
-        if(error.stack != null) {
+    if (error != null) {
+        if (error.stack != null) {
             errorMessage += '\n' + error.stack;
         }
-        else if(error.stackTrace != null) {
+        else if (error.stackTrace != null) {
             errorMessage += '\n' + error.stackTrace;
         }
     }
 
-    if(stackTrace != null) {
+    if (stackTrace != null) {
         errorMessage += '\n' + stackTrace;
     }
-    
+
     console.log(errorMessage);
 
     errorMessage += '\n';
-    
+
     /*
     if(isLoggingToFile) {
         const logFilePath = path.join(__dirname, '/_node_log.txt');

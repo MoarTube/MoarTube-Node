@@ -23,10 +23,10 @@ router.post('/start', performAuthenticationCheck(true), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -38,10 +38,10 @@ router.post('/:videoId/stop', performAuthenticationCheck(true), async (req, res)
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -56,10 +56,10 @@ router.post('/:videoId/adaptive/:format/:resolution/segments/remove', performAut
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -71,10 +71,10 @@ router.get('/:videoId/bandwidth', performAuthenticationCheck(true), async (req, 
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -85,13 +85,13 @@ router.post('/:videoId/chat/settings', performAuthenticationCheck(true), async (
         const chatHistoryLimit = req.body.chatHistoryLimit;
 
         const data = await videoIdChatSettings_POST(videoId, isChatHistoryEnabled, chatHistoryLimit);
-        
+
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -103,10 +103,10 @@ router.get('/:videoId/chat/history', performAuthenticationCheck(false), async (r
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 

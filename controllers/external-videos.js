@@ -4,7 +4,7 @@ const path = require('path');
 const { logDebugMessageToConsole } = require('../utils/logger');
 const { getVideosDirectoryPath } = require('../utils/paths');
 const { submitDatabaseWriteJob } = require('../utils/database');
-const { 
+const {
     isManifestNameValid, isSegmentNameValid, isVideoIdValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid, isManifestTypeValid,
     isProgressiveFilenameValid
 } = require('../utils/validators');
@@ -17,12 +17,12 @@ function externalVideosBaseUrl_GET() {
 }
 
 function videoIdThumbnail_GET(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         const thumbnailFilePath = path.join(path.join(getVideosDirectoryPath(), videoId + '/images'), 'thumbnail.jpg');
-        
+
         if (fs.existsSync(thumbnailFilePath)) {
             const fileStream = fs.createReadStream(thumbnailFilePath);
-            
+
             return fileStream;
         }
         else {
@@ -35,9 +35,9 @@ function videoIdThumbnail_GET(videoId) {
 }
 
 function videoIdPreview_GET(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         const previewFilePath = path.join(path.join(getVideosDirectoryPath(), videoId + '/images'), 'preview.jpg');
-        
+
         if (fs.existsSync(previewFilePath)) {
             const fileStream = fs.createReadStream(previewFilePath);
 
@@ -53,9 +53,9 @@ function videoIdPreview_GET(videoId) {
 }
 
 function videoIdPoster_GET(videoId) {
-    if(isVideoIdValid(videoId, false)) {
+    if (isVideoIdValid(videoId, false)) {
         const posterFilePath = path.join(path.join(getVideosDirectoryPath(), videoId + '/images'), 'poster.jpg');
-        
+
         if (fs.existsSync(posterFilePath)) {
             const fileStream = fs.createReadStream(posterFilePath);
 
@@ -71,10 +71,10 @@ function videoIdPoster_GET(videoId) {
 }
 
 function videoIdAdaptiveFormatTypeManifestsManifestName_GET(videoId, format, type, manifestName) {
-    if(isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isManifestTypeValid(type) && isManifestNameValid(manifestName)) {
+    if (isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isManifestTypeValid(type) && isManifestNameValid(manifestName)) {
         const manifestPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + manifestName);
 
-        if(fs.existsSync(manifestPath)) {
+        if (fs.existsSync(manifestPath)) {
             const fileStream = fs.createReadStream(manifestPath);
 
             return fileStream;
@@ -91,21 +91,21 @@ function videoIdAdaptiveFormatTypeManifestsManifestName_GET(videoId, format, typ
 let segmentBandwidthCounter = 0;
 let segmentBandwidthIncrementTimer;
 function videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET(videoId, format, resolution, segmentName) {
-    if(isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
+    if (isVideoIdValid(videoId, false) && isAdaptiveFormatValid(format) && isResolutionValid(resolution) && isSegmentNameValid(segmentName)) {
         const segmentPath = path.join(getVideosDirectoryPath(), videoId + '/adaptive/' + format + '/' + resolution + '/' + segmentName);
-        
-        if(fs.existsSync(segmentPath)) {
-            fs.stat(segmentPath, function(error, stats) {
+
+        if (fs.existsSync(segmentPath)) {
+            fs.stat(segmentPath, function (error, stats) {
                 if (error) {
                     logDebugMessageToConsole(null, error, new Error().stack);
                 } else {
                     segmentBandwidthCounter += stats.size;
-        
+
                     clearTimeout(segmentBandwidthIncrementTimer);
 
-                    segmentBandwidthIncrementTimer = setTimeout(async function() {
+                    segmentBandwidthIncrementTimer = setTimeout(async function () {
                         const segmentBandwidthCounterTemp = segmentBandwidthCounter;
-                        
+
                         segmentBandwidthCounter = 0;
 
                         await submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [segmentBandwidthCounterTemp, videoId]);
@@ -114,7 +114,7 @@ function videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET(videoId, format,
             });
 
             const fileStream = fs.createReadStream(segmentPath);
-            
+
             return fileStream;
         }
         else {
@@ -129,10 +129,10 @@ function videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET(videoId, format,
 let progressiveBandwidthCounter = 0;
 let progressiveBandwidthIncrementTimer;
 function videoIdProgressiveFormatResolution_GET(videoId, format, progressiveFilename, range) {
-    if(isVideoIdValid(videoId, false) && isProgressiveFormatValid(format) && isProgressiveFilenameValid(progressiveFilename)) {
+    if (isVideoIdValid(videoId, false) && isProgressiveFormatValid(format) && isProgressiveFilenameValid(progressiveFilename)) {
         const filePath = path.join(getVideosDirectoryPath(), videoId + '/progressive/' + format + '/' + progressiveFilename);
-        
-        if(fs.existsSync(filePath)) {
+
+        if (fs.existsSync(filePath)) {
             const stat = fs.statSync(filePath);
             const fileSize = stat.size;
 
@@ -145,14 +145,14 @@ function videoIdProgressiveFormatResolution_GET(videoId, format, progressiveFile
                 const start = parseInt(parts[0], 10);
                 const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
                 const chunkSize = (end - start) + 1;
-                
+
                 progressiveBandwidthCounter += chunkSize;
-        
+
                 clearTimeout(progressiveBandwidthIncrementTimer);
 
-                progressiveBandwidthIncrementTimer = setTimeout(async function() {
+                progressiveBandwidthIncrementTimer = setTimeout(async function () {
                     const progressiveBandwidthCounterTemp = progressiveBandwidthCounter;
-                        
+
                     progressiveBandwidthCounter = 0;
 
                     await submitDatabaseWriteJob('UPDATE videos SET bandwidth = bandwidth + ? WHERE video_id = ?', [progressiveBandwidthCounterTemp, videoId]);
@@ -176,7 +176,7 @@ function videoIdProgressiveFormatResolution_GET(videoId, format, progressiveFile
                 fileStream = fs.createReadStream(filePath);
             }
 
-            return {status: status, responseHeaders: responseHeaders, fileStream: fileStream};
+            return { status: status, responseHeaders: responseHeaders, fileStream: fileStream };
         }
         else {
             return null;

@@ -20,8 +20,8 @@ router.get('/', performAuthenticationCheck(false), async (req, res) => {
         const externalVideosBaseUrl = data.externalVideosBaseUrl;
         const externalResourcesBaseUrl = data.externalResourcesBaseUrl;
 
-        if((adaptiveSources.length === 0 && progressiveSources.length === 0) || (!isPublished && !isStreaming)) {
-            if(isStreamed) {
+        if ((adaptiveSources.length === 0 && progressiveSources.length === 0) || (!isPublished && !isStreaming)) {
+            if (isStreamed) {
                 res.set('Cache-Control', 'public, s-maxage=86400');
             }
             else {
@@ -35,15 +35,15 @@ router.get('/', performAuthenticationCheck(false), async (req, res) => {
         res.render('watch', {
             informationData: data.informationData,
             linksData: data.linksData,
-            cryptoWalletAddressesData: data.cryptoWalletAddressesData, 
-            videoData: data.videoData, 
-            recommendedVideosData: data.recommendedVideosData, 
+            cryptoWalletAddressesData: data.cryptoWalletAddressesData,
+            videoData: data.videoData,
+            recommendedVideosData: data.recommendedVideosData,
             commentsData: data.commentsData,
             externalVideosBaseUrl: externalVideosBaseUrl,
             externalResourcesBaseUrl: externalResourcesBaseUrl
         });
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
         res.status(500).send('that video could not be loaded');

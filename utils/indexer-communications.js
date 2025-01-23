@@ -10,7 +10,7 @@ async function indexer_addVideoToIndex(data) {
 
 async function indexer_removeVideoFromIndex(data) {
     const response = await axios.post(getMoarTubeIndexerUrl() + '/index/video/remove', data);
-    
+
     return response.data;
 }
 
@@ -21,9 +21,9 @@ async function indexer_doIndexUpdate(data) {
 }
 
 async function indexer_doNodePersonalizeNodeNameUpdate(moarTubeTokenProof, nodeName) {
-    const data = { 
-        nodeName: nodeName, 
-        moarTubeTokenProof: moarTubeTokenProof 
+    const data = {
+        nodeName: nodeName,
+        moarTubeTokenProof: moarTubeTokenProof
     };
 
     const response = await axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeName', data);
@@ -32,9 +32,9 @@ async function indexer_doNodePersonalizeNodeNameUpdate(moarTubeTokenProof, nodeN
 }
 
 async function indexer_doNodePersonalizeNodeAboutUpdate(moarTubeTokenProof, nodeAbout) {
-    const data = { 
-        nodeAbout: nodeAbout, 
-        moarTubeTokenProof: moarTubeTokenProof 
+    const data = {
+        nodeAbout: nodeAbout,
+        moarTubeTokenProof: moarTubeTokenProof
     };
 
     const response = await axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeAbout', data);
@@ -43,9 +43,9 @@ async function indexer_doNodePersonalizeNodeAboutUpdate(moarTubeTokenProof, node
 }
 
 async function indexer_doNodePersonalizeNodeIdUpdate(moarTubeTokenProof, nodeId) {
-    const data = { 
-        nodeId: nodeId, 
-        moarTubeTokenProof: moarTubeTokenProof 
+    const data = {
+        nodeId: nodeId,
+        moarTubeTokenProof: moarTubeTokenProof
     };
 
     const response = await axios.post(getMoarTubeIndexerUrl() + '/index/node/personalize/nodeId', data);
@@ -69,7 +69,7 @@ async function indexer_doNodeExternalNetworkUpdate(moarTubeTokenProof, publicNod
 async function indexer_getNodeIdentification() {
     const response = await axios.get(getMoarTubeIndexerUrl() + '/node/identification');
 
-	return response.data;
+    return response.data;
 }
 
 async function indexer_doNodeIdentificationRefresh(moarTubeTokenProof) {
@@ -81,7 +81,7 @@ async function indexer_doNodeIdentificationRefresh(moarTubeTokenProof) {
 
     const response = await axios.get(getMoarTubeIndexerUrl() + '/node/identification/refresh', data);
 
-	return response.data;
+    return response.data;
 }
 
 module.exports = {

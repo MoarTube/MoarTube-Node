@@ -19,10 +19,10 @@ function fonts_GET() {
 function images1_GET(url) {
     const imageName = path.basename(url).replace('/', '');
 
-    if(imageName === 'icon.png' || imageName === 'avatar.png' || imageName === 'banner.png') {
+    if (imageName === 'icon.png' || imageName === 'avatar.png' || imageName === 'banner.png') {
         const customImageDirectoryPath = path.join(path.join(getDataDirectoryPath(), 'images'), imageName);
 
-        if(fs.existsSync(customImageDirectoryPath)) {
+        if (fs.existsSync(customImageDirectoryPath)) {
             const fileStream = fs.createReadStream(customImageDirectoryPath);
 
             return fileStream;

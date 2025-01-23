@@ -12,16 +12,16 @@ router.get('/video/:videoId', performAuthenticationCheck(false), async (req, res
 
         const data = await videoVideoId_GET(videoId);
 
-        if(data.videoData != null) {
+        if (data.videoData != null) {
             res.render('embed-video', data);
         }
         else {
             res.status(404).send('embed video not found');
         }
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
+
         res.status(500).send('embed video error');
     }
 });
@@ -32,16 +32,16 @@ router.get('/chat/:videoId', performAuthenticationCheck(false), async (req, res)
 
         const data = chatVideoId_GET(videoId);
 
-        if(data != null) {
+        if (data != null) {
             res.render('embed-chat', data);
         }
         else {
             res.status(404).send('embed chat not found');
         }
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-    
+
         res.status(500).send('embed chat error');
     }
 });

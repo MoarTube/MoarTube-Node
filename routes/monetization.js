@@ -9,13 +9,13 @@ const router = express.Router();
 router.get('/all', performAuthenticationCheck(false), async (req, res) => {
     try {
         const data = await walletAddressAll_GET();
-        
+
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -26,13 +26,13 @@ router.post('/add', performAuthenticationCheck(true), async (req, res) => {
         const currency = req.body.currency;
 
         const data = await walletAddressAdd_POST(walletAddress, chain, currency);
-        
+
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
@@ -44,10 +44,10 @@ router.post('/delete', performAuthenticationCheck(true), async (req, res) => {
 
         res.send(data);
     }
-    catch(error) {
+    catch (error) {
         logDebugMessageToConsole(null, error, new Error().stack);
-        
-        res.send({isError: true, message: 'error communicating with the MoarTube node'});
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 
