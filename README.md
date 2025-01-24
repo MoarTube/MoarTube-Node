@@ -121,7 +121,6 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
 ## 🏆 Why Choose MoarTube?
 MoarTube empowers you to take control of your media hosting with privacy, decentralization, and robust features designed to rival major platforms—all while remaining lightweight, accessible, and cost-effective, all from a single node.
 
-
 ![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/0d8ac95f-f68b-4e36-849e-28139b45ce50)
 
 ![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/918aa074-b6e2-49f1-8d14-5c2ed1bcd582)
