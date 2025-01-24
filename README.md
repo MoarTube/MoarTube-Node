@@ -1,12 +1,16 @@
 <img src="https://github.com/MoarTube/MoarTube-Node/assets/26640616/2dacfc1c-dbd0-4c71-b9a5-b11ac67d290f" alt="logo" width="200"/>
 
-# MoarTube-Node
-A repository containing the MoarTube Node software, a cross-platform terminal-based Node.js Express application, managed by the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client). Share your node's videos with [MoarTube](https://www.moartube.com) or do your own thing and run your node privately. MoarTube makes video and live streaming so easy you'll be amazed beyond belief.
+# 🎥 MoarTube-Node
+Welcome to **MoarTube Node**, the server-side software for hosting your own videos and live streams! This cross-platform, terminal-based Node.js Express application is managed by the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client). Whether you want to share your node’s videos with [MoarTube](https://www.moartube.com) or run your node privately, MoarTube gives you the freedom to do it your way.
 
-[TL;DR: quickstart video](https://www.moartube.com/guides/moartube-quick-start)
+MoarTube makes video and live streaming so simple you'll be amazed beyond belief.
 
-# How to Get Started
-Welcome to the MoarTube Node setup guide! This document will guide you through the different setup methods to get your MoarTube Node up and running. Don't worry! MoarTube is so easy to set up and use, you'll be done in minutes. When ready, head over to [MoarTube Client](https://github.com/MoarTube/MoarTube-Client) if you haven't yet.
+[TL;DR: Watch the Quickstart Video](https://www.moartube.com/guides/moartube-quick-start)
+
+# 🚀 How to Get Started
+Welcome to the **MoarTube Node setup guide**! Follow these simple steps to get your MoarTube Node up and running. Don’t worry—MoarTube is designed to be so easy to set up and use, you’ll be done in minutes.
+
+When you’re ready, make sure to check out the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client) client-side software if you haven’t already.
 
 # Table of Contents
 - [Features](#features)
@@ -121,7 +125,8 @@ MoarTube is designed to be lightweight and accessible, making it the most resour
 - MoarTube Node is **multi-threaded**, utilizing the full potential of its system's CPU to ensure optimal operation.
 
 ## 🌍 **Decentralize your Deployment**
-- Store everything on your node, or designate external providers such as **Postgres** and **S3** to store and distribute your content for greater scalability.
+- Designate external providers such as **Postgres** and **S3** to store and distribute your content for greater scalability.
+- Your node becomes completely disposable. Content and metadata are stored externally (e.g., S3, Postgres), allowing you to rebuild or redeploy your node at any time without data loss. Just tell your new node where its data is and you're back online.
 
 ## ☁️ **Cloudflare Integration for Offloading Demand**
 - [Cloudflare](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn) eliminates much of the strain on your storage distribution by leveraging the world’s largest CDN, giving your node the same global delivery power as major platforms.
@@ -131,7 +136,7 @@ MoarTube is designed to be lightweight and accessible, making it the most resour
 - Can run on a **Raspberry Pi Zero 2 W** with just **512MB of RAM**.
 
 ## 🌍 Run Your Node Anywhere
-Whether on a cloud VPS, personal computer, or compact device like a Raspberry Pi, MoarTube Node gives you full control while keeping system requirements low. MoarTube’s efficiency and flexibility make it the ideal solution for hosting media **anywhere**, on virtually **any hardware**.
+Whether on a cloud VPS, personal computer, or compact device like a Raspberry Pi, MoarTube gives you full control. MoarTube’s efficiency and flexibility make it the ideal solution for hosting media **anywhere**, on virtually **any hardware**, for audiences of **any size**.
 
 
 # Prerequisites
