@@ -105,8 +105,8 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
     - cheap and affordable
   - Compatible with any S3 provider that conforms to the AWS S3 specification.
 - [**Dual Box Compatibility**](https://www.moartube.com/guides/how-to-dual-box):
-  - Use your system to broadcast an RTMP stream from OBS to another system running the MoarTube Client for processing.
-  - Can broadcast from a primary system to a secondary system over LAN or WAN.
+  - Broadcast an OBS RTMP stream to a dedicated processing system running the MoarTube Client.
+  - Can broadcast to a dedicated processing system over LAN or WAN.
   - No plugins like NDI required.
 - [**GPU Acceleration**](https://www.moartube.com/guides/how-to-enable-gpu-acceleration):
   - Supports **Nvidia** and **AMD** GPUs for accelerated encoding/decoding (Windows only).
