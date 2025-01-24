@@ -82,7 +82,7 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
 ## 💵 Monetization & Promotion
 - Monetization via cryptocurrency:
   - Accept **ETH** and **BNB** via MetaMask
-  - Provide wallet addresses to your viewers for donations
+  - Provide **wallet addresses** to your viewers for donations
 - Promote your node by providing links to:
   - **Social media platforms**
   - **Websites**
