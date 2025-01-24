@@ -245,7 +245,7 @@ By default, MoarTube Node listens on port 80.
 
 ## Cloudflare
 
-At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://www.moartube.com/guides/how-to-enable-cloudflare-integration). With over 300 data centers worlwide, Cloudflare will distribute most of your node's videos and live streams.
+At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://www.moartube.com/guides/how-to-enable-cloudflare-integration). With its global network, Cloudflare will distribute most of your node's videos and live streams.
 
 ## Get MoarTube Client
 
