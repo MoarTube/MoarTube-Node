@@ -62,7 +62,12 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
 - **Anonymous Comments & Live Stream Chat**:
   - Foster engagement while maintaining user privacy
 
-## 💾 Data Processing & Storage
+## 💾 Data Processing, Storage, Distribution
+- Processing
+  - CPU
+  - GPU
+    - Windows Only
+    - Nvidia, AMD
 - Database 
   - Use a local **SQLite database**
   - Decentralize your node with a remote **Postgres database**
@@ -70,6 +75,8 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
   - **File system** to store your videos and live streams on your node
   - **S3-compatible provider** to store your videos and live streams in the cloud
     - Amazon Web Services, DigitalOcean Spaces, Minio, etc...
+- Cloud
+  - Leverage Cloudflare's CDN for your content's distribution
 
 ## ⚙️ Admin & Moderation
 - **Admin Panel**
@@ -98,7 +105,7 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
   - Available to a free-tier Cloudflare account.
 - [**Postgres**]()
   - Remote database storage for video and live stream metadata and information.
-  - Host your database anywhere.
+  - Host your database **anywhere**.
 - [**S3 Providers**]()
   - Remote storage for video and live stream content.
   - Seemingly **unlimited** storage size and can meet **high demand**.
