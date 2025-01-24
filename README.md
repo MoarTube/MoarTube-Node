@@ -92,10 +92,10 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
 - [**Cloudflare CDN**](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn):
   - Cloudflare's **global network** facilitates mass data propagation for audiences of any size, anywhere.
   - Data is transmitted throughout Cloudflare's **global network** within milliseconds of beng requested.
-  - Available to a free-tier account.
+  - Available to a free-tier Cloudflare account.
 - [**Cloudflare Turnstile**](https://www.moartube.com/guides/how-to-enable-cloudflare-turnstile):
   - Next-generation **bot detection** and **human verification** without intrusive captchas.
-  - Available to a free-tier account.
+  - Available to a free-tier Cloudflare account.
 - [**Postgres**]()
   - Remote database storage for video and live stream metadata and information.
   - Host your database anywhere.
