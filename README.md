@@ -8,7 +8,7 @@ A repository containing the MoarTube Node software, a cross-platform terminal-ba
 # How to Get Started
 Welcome to the MoarTube Node setup guide! This document will guide you through the different setup methods to get your MoarTube Node up and running. Don't worry! MoarTube is so easy to set up and use, you'll be done in minutes. When ready, head over to [MoarTube Client](https://github.com/MoarTube/MoarTube-Client) if you haven't yet.
 
-## Table of Contents
+# Table of Contents
 - [Features](#features)
 - [System Requirements](#system-requirements)
 - [Prerequisites](#prerequisites)
@@ -29,30 +29,78 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
   - [Ubuntu Linux Node.js install Guide](#ubuntu-linux-nodejs-install-guide)
   - [Ubuntu Linux Autostart Guide](#ubuntu-linux-autostart-guide)
 
-## Features
- - Cross platform support for Windows/macOS/Linux
- - Video on demand (VoD) and HLS live streaming
- - Admin panel for managing videos and live streams
- - **HLS** *(H.264, AAC)*, **MP4** *(H.264, AAC)*, **WEBM** *(VP9, Opus)*, **OGV** *(VP8, Opus)* container formats
- - Transcode static MP4/WEBM video to HLS/MP4/WEBM/OGV
- - Transcode RTMP stream ([such as from OBS](https://www.moartube.com/guides/how-to-live-stream-obs)) to HLS live stream
- - Video output resolutions: 2160p, 1440p, 1080p, 720p, 480p, 360p, 240p
- - No server-side encoding; client-side only
- - [HTTPS/WSS](https://www.moartube.com/guides/how-to-secure-https) capabilities
- - [GPU acceleration](https://www.moartube.com/guides/how-to-gpu-acceleration) for Nvidia and AMD (Windows only)
- - Different video player modes: streamer, theater, fullscreen
- - Dark mode option and browser appearance configuration recognition
- - Anonymous video comments section and live stream chat
- - Reports section for comments and videos
- - Comment monitoring overview with moderation functionality
- - Run your node in the cloud or on your home WiFi
- - Can run on a [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/)
- - Publicize your node's content on [MoarTube](http://www.moartube.com) or run your node privately
- - Monetization capabilities via crypto (ETH, BNB)
- - Provide links to other platforms and websites, such as social media.
- - [Dual box compatible](https://www.moartube.com/guides/how-to-dual-box); broadcast an RTMP stream with software such as OBS from a primary system over a network (WAN or LAN) to a secondary system running the MoarTube Client, separating stream broadcasting from stream processing. This is achieved without any special plugins, such as NDI.
- - [Cloudflare Turnstile](https://www.moartube.com/guides/how-to-enable-cloudflare-turnstile); next-generation bot detection and human verification without the annoyance of captcha.
- - [Cloudflare CDN](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn); easily integrate your node into the [Cloudflare Network](https://www.cloudflare.com/network/), allowing for global media delivery capabilities of your videos and live streams that rivals major platforms, all from a single node. Features automated caching strategy configuration and automated cache management, and of course the best security from the world's leading CDN.
+# Features
+## 🖥️ Platform Support
+- Cross-platform compatibility: **Windows**, **macOS**, and **Linux**
+- Capable of running on a **[Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/)**
+- Run your node **Privately** or **publicize** your videos and streams on [MoarTube](http://www.moartube.com)
+- MoarTube Client performs video and stream processing on your local machine
+- MoarTube Node handles storage and distribution of your content
+- Host your node:
+  - **On the cloud**
+  - **On your home WiFi**
+
+## 📹 Video & Streaming Features
+- **Video on Demand (VoD)** and **HLS Live Streaming**
+- Supported formats:
+  - **HLS** *(H.264, AAC)*
+  - **MP4** *(H.264, AAC)*
+  - **WEBM** *(VP9, Opus)*
+  - **OGV** *(VP8, Opus)*
+- Transcoding capabilities:
+  - Convert **MP4/WEBM** videos to **HLS/MP4/WEBM/OGV**
+  - Transcode **RTMP streams** ([e.g., from OBS](https://www.moartube.com/guides/how-to-live-stream-obs)) into **HLS live streams**
+- Video resolutions: **2160p**, **1440p**, **1080p**, **720p**, **480p**, **360p**, **240p**
+- Video player modes:
+  - **Streamer Mode**
+  - **Theater Mode**
+  - **Fullscreen Mode**
+- **Anonymous Comments & Live Stream Chat**:
+  - Foster engagement while maintaining user privacy
+
+## 💾 Data Processing & Storage
+- Database 
+  - Use a local **SQLite database**
+  - Decentralize your node with a remote **Postgres database**
+- Storage
+  - **File system** to store your videos and live streams on your node
+  - **S3-compatible provider** to store your videos and live streams in the cloud
+
+## ⚙️ Admin & Moderation
+- **Admin Panel**
+  - Managing videos and live streams
+- **Reports Section**:
+  - Track and moderate comments and videos
+- **Comment Monitoring Overview**:
+  - Includes moderation tools
+
+## 💵 Monetization & Promotion
+- Monetization via cryptocurrency:
+  - Accept **ETH** and **BNB** via MetaMask
+- Promote your node by providing links to:
+  - **Social media platforms**
+  - **Websites**
+  - **External platforms**
+
+## 🛠️ Advanced Features
+- [**Cloudflare CDN**](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn):
+  - Cloudflare's **global** network facilitates data propagation for audiences of any size, anywhere
+- [**Cloudflare Turnstile**](https://www.moartube.com/guides/how-to-enable-cloudflare-turnstile):
+  - Next-generation bot detection and human verification without intrusive captchas
+- [**HTTPS/WSS support**](https://www.moartube.com/guides/how-to-secure-https)
+  - secure communications
+- [**Dual Box Compatibility**](https://www.moartube.com/guides/how-to-dual-box):
+  - Use your system to broadcast an RTMP stream from OBS to another system for processing running MoarTube Client (no plugins like NDI required)
+- [**GPU Acceleration**](https://www.moartube.com/guides/how-to-enable-gpu-acceleration):
+  - Supports **Nvidia** and **AMD** GPUs for accelerated encoding/decoding (Windows only)
+- **database config**
+- **storage config**
+
+
+
+## 🏆 Why Choose MoarTube?
+MoarTube empowers you to take control of your media hosting with privacy, decentralization, and robust features designed to rival major platforms—all while remaining lightweight, accessible, and cost-effective, all from a single node.
+
 
 ![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/0d8ac95f-f68b-4e36-849e-28139b45ce50)
 
@@ -68,7 +116,7 @@ MoarTube Node has the smallest resource usage footprint out of any self-hosted v
 
 On Digital Ocean, an $8 VPS (1 vCPU, 1 GB RAM) provides a comfortable headroom to handle surprisingly moderate demand. Although this tier is likely adequate for most users, others will need to observe the resource usage monitor and adjust their instance accordingly. Or just simply forget all that and [host from your personal computer over home WiFi](https://www.moartube.com/guides/how-to-run-node-on-home-wifi).
 
-The node software uses about 100MB of RAM while sitting idle with fluctuations depending on visitor (and user) demand. Much of the demand can be alleviated by the [Cloudflare CDN](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn) feature, leveraging the world's largest CDN to distribute your video and live stream data, giving your node capabilities that rival that of major platforms.
+The node software uses about 100MB of RAM while sitting idle with fluctuations depending on visitor (and user) demand. Much of the demand can be alleviated by the [Cloudflare integration](https://www.moartube.com/guides/how-to-enable-cloudflare-integration) feature, leveraging the world's largest CDN to distribute your video and live stream data, giving your node capabilities that rival that of major platforms.
 
 To give you an idea of how tiny MoarTube Node really is, the software can run on a [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) on Raspberry Pi OS with approximately 100MB of system RAM remaining out of a total system availability of 512MB; the OS uses about 200MB RAM and reserves an additional 100MB for a swap file.
 
@@ -182,7 +230,7 @@ By default, MoarTube Node listens on port 80.
 
 ### Cloudflare
 
-At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn). With over 300 data centers worlwide, Cloudflare will distribute most of your node's videos and live streams.
+At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://www.moartube.com/guides/how-to-enable-cloudflare-integration). With over 300 data centers worlwide, Cloudflare will distribute most of your node's videos and live streams.
 
 ### Get MoarTube Client
 
