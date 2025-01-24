@@ -1,9 +1,16 @@
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { getNodeSettings, setNodeSettings, getJwtSecret, getIsDeveloperMode } = require('../utils/helpers');
-const { isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, isBooleanValid, isIpv4Address } = require('../utils/validators');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    getNodeSettings, setNodeSettings, getJwtSecret, getIsDeveloperMode 
+} = require('../utils/helpers');
+const { 
+    isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, 
+    isBooleanValid, isIpv4Address 
+} = require('../utils/validators');
 
 function signIn_POST(username, password, moarTubeNodeHttpProtocol, moarTubeNodeIp, moarTubeNodePort, rememberMe) {
     if (!isUsernameValid(username)) {

@@ -1,6 +1,12 @@
-const { isVideoIdValid } = require('../utils/validators');
-const { videoIdWatch_GET } = require('../controllers/videos');
-const { getExternalVideosBaseUrl, getExternalResourcesBaseUrl } = require('../utils/helpers');
+const { 
+    isVideoIdValid 
+} = require('../utils/validators');
+const { 
+    videoIdWatch_GET 
+} = require('../controllers/videos');
+const { 
+    getExternalVideosBaseUrl, getExternalResourcesBaseUrl 
+} = require('../utils/helpers');
 
 async function videoVideoId_GET(videoId) {
     if (isVideoIdValid(videoId, false)) {

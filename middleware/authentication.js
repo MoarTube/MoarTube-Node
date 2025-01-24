@@ -1,4 +1,6 @@
-const { getAuthenticationStatus } = require('../utils/helpers');
+const { 
+    getAuthenticationStatus 
+} = require('../utils/helpers');
 
 const performAuthenticationCheck = (isRequired) => {
     return async (req, res, next) => {

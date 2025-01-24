@@ -1,5 +1,9 @@
-const { isArchiveIdValid } = require('../utils/validators');
-const { performDatabaseReadJob_ALL, submitDatabaseWriteJob } = require('../utils/database');
+const { 
+    isArchiveIdValid 
+} = require('../utils/validators');
+const { 
+    performDatabaseReadJob_ALL, submitDatabaseWriteJob 
+} = require('../utils/database');
 
 async function reportsArchiveComments_GET() {
     const reports = await performDatabaseReadJob_ALL('SELECT * FROM commentreportsarchives ORDER BY archive_id DESC', []);

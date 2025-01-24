@@ -1,8 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const { getVideosDirectoryPath } = require('./paths');
-const { performDatabaseReadJob_ALL } = require('./database');
+const { 
+    getVideosDirectoryPath 
+} = require('./paths');
+const { 
+    performDatabaseReadJob_ALL 
+} = require('./database');
 
 async function endStreamedHlsManifestFiles() {
     const videos = await performDatabaseReadJob_ALL('SELECT video_id, is_stream_recorded_remotely, outputs FROM videos WHERE is_streamed = ?', [true]);

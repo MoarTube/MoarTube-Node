@@ -1,4 +1,6 @@
-const { performDatabaseReadJob_GET } = require('../utils/database');
+const { 
+    performDatabaseReadJob_GET 
+} = require('../utils/database');
 
 async function reportsCount_GET() {
     const videoCountResult = await performDatabaseReadJob_GET('SELECT COUNT(*) AS "reportCount" FROM videoreports', []);

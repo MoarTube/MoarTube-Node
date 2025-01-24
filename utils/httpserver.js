@@ -7,13 +7,27 @@ const httpTerminator = require('http-terminator');
 const sanitizeHtml = require('sanitize-html');
 const cluster = require('cluster');
 
-const { logDebugMessageToConsole } = require('./logger');
-const { getCertificatesDirectoryPath } = require("./paths");
-const { getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, websocketChatBroadcast } = require("./helpers");
-const { stoppedPublishVideoUploading, stoppingPublishVideoUploading } = require("./trackers/publish-video-uploading-tracker");
-const { isVideoIdValid, isChatMessageContentValid, isCloudflareTurnstileTokenValid, isTimestampValid } = require('./validators');
-const { performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('./database');
-const { cloudflare_validateTurnstileToken } = require('../utils/cloudflare-communications');
+const { 
+    logDebugMessageToConsole 
+} = require('./logger');
+const { 
+    getCertificatesDirectoryPath 
+} = require("./paths");
+const { 
+    getNodeSettings, getAuthenticationStatus, websocketNodeBroadcast, websocketChatBroadcast 
+} = require("./helpers");
+const { 
+    stoppedPublishVideoUploading, stoppingPublishVideoUploading 
+} = require("./trackers/publish-video-uploading-tracker");
+const { 
+    isVideoIdValid, isChatMessageContentValid, isCloudflareTurnstileTokenValid, isTimestampValid 
+} = require('./validators');
+const { 
+    performDatabaseReadJob_GET, submitDatabaseWriteJob 
+} = require('./database');
+const { 
+    cloudflare_validateTurnstileToken 
+} = require('../utils/cloudflare-communications');
 
 let httpServerWrapper;
 let app;
@@ -100,7 +114,7 @@ function initializeHttpServer(value) {
             });
 
             ws.on('message', async (message) => {
-                const parsedMessage = JSON.parse(message);
+                const parsedMessage = JSON.parse(message.toString());
 
                 const jwtToken = parsedMessage.jwtToken;
 

@@ -11,21 +11,37 @@ const cluster = require('cluster');
 const { Mutex } = require('async-mutex');
 const engine = require('express-dot-engine');
 
-const { logDebugMessageToConsole } = require('./utils/logger');
+const { 
+	logDebugMessageToConsole 
+} = require('./utils/logger');
 const {
 	getNodeSettings, setNodeSettings, generateVideoId,
-	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, getIsDeveloperMode, setJwtSecret, getExpressSessionName, getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret,
-	performNodeIdentification, getNodeIdentification, getNodeIconPngBase64, getNodeAvatarPngBase64, getVideoPreviewJpgBase64, setLastCheckedContentTracker, getHostsFilePath
+	setIsDockerEnvironment, getIsDockerEnvironment, setIsDeveloperMode, getIsDeveloperMode, setJwtSecret, getExpressSessionName, 
+	getExpressSessionSecret, setExpressSessionName, setExpressSessionSecret, performNodeIdentification, getNodeIdentification, 
+	getNodeIconPngBase64, getNodeAvatarPngBase64, getVideoPreviewJpgBase64, setLastCheckedContentTracker, getHostsFilePath
 } = require('./utils/helpers');
-const { setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, setMoarTubeAliaserIp, setMoarTubeAliaserPort } = require('./utils/urls');
-const { getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath,
-	setVideosDirectoryPath, setDatabaseDirectoryPath, setDatabaseFilePath, setCertificatesDirectoryPath, getDatabaseDirectoryPath, getImagesDirectoryPath, getVideosDirectoryPath,
-	getCertificatesDirectoryPath, getNodeSettingsPath, setViewsDirectoryPath, getViewsDirectoryPath, setLastCheckedContentTrackerPath, getLastCheckedContentTrackerPath
+const { 
+	setMoarTubeIndexerHttpProtocol, setMoarTubeIndexerIp, setMoarTubeIndexerPort, setMoarTubeAliaserHttpProtocol, 
+	setMoarTubeAliaserIp, setMoarTubeAliaserPort 
+} = require('./utils/urls');
+const { 
+	getPublicDirectoryPath, getDataDirectoryPath, setPublicDirectoryPath, setDataDirectoryPath, setNodeSettingsPath, setImagesDirectoryPath,
+	setVideosDirectoryPath, setDatabaseDirectoryPath, setDatabaseFilePath, setCertificatesDirectoryPath, getDatabaseDirectoryPath, 
+	getImagesDirectoryPath, getVideosDirectoryPath, getCertificatesDirectoryPath, getNodeSettingsPath, setViewsDirectoryPath, 
+	getViewsDirectoryPath, setLastCheckedContentTrackerPath, getLastCheckedContentTrackerPath
 } = require('./utils/paths');
-const { provisionDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL } = require('./utils/database');
-const { initializeHttpServer, restartHttpServer, getHttpServerWrapper } = require('./utils/httpserver');
-const { indexer_doIndexUpdate } = require('./utils/indexer-communications');
-const { cloudflare_purgeAllWatchPages, cloudflare_purgeNodePage } = require('./utils/cloudflare-communications');
+const { 
+	provisionDatabase, openDatabase, finishPendingDatabaseWriteJob, submitDatabaseWriteJob, performDatabaseWriteJob, performDatabaseReadJob_ALL 
+} = require('./utils/database');
+const { 
+	initializeHttpServer, restartHttpServer, getHttpServerWrapper 
+} = require('./utils/httpserver');
+const { 
+	indexer_doIndexUpdate 
+} = require('./utils/indexer-communications');
+const { 
+	cloudflare_purgeAllWatchPages, cloudflare_purgeNodePage 
+} = require('./utils/cloudflare-communications');
 
 loadConfig();
 
@@ -90,31 +106,31 @@ if (cluster.isMaster) {
 
 			function attachWorkerListeners(worker) {
 				worker.on('message', async (msg) => {
-					if (msg.cmd && msg.cmd === 'get_jwt_secret') {
+					if (msg.cmd === 'get_jwt_secret') {
 						worker.send({ cmd: 'get_jwt_secret_response', jwtSecret: jwtSecret });
 					}
-					else if (msg.cmd && msg.cmd === 'update_node_name') {
+					else if (msg.cmd === 'update_node_name') {
 						const nodeName = msg.nodeName;
 
 						Object.values(cluster.workers).forEach((worker) => {
 							worker.send({ cmd: 'update_node_name_response', nodeName: nodeName });
 						});
 					}
-					else if (msg.cmd && msg.cmd === 'websocket_broadcast') {
+					else if (msg.cmd === 'websocket_broadcast') {
 						const message = msg.message;
 
 						Object.values(cluster.workers).forEach((worker) => {
 							worker.send({ cmd: 'websocket_broadcast_response', message: message });
 						});
 					}
-					else if (msg.cmd && msg.cmd === 'websocket_broadcast_chat') {
+					else if (msg.cmd === 'websocket_broadcast_chat') {
 						const message = msg.message;
 
 						Object.values(cluster.workers).forEach((worker) => {
 							worker.send({ cmd: 'websocket_broadcast_chat_response', message: message });
 						});
 					}
-					else if (msg.cmd && msg.cmd === 'database_write_job') {
+					else if (msg.cmd === 'database_write_job') {
 						const release = await mutex.acquire();
 
 						const query = msg.query;
@@ -132,18 +148,18 @@ if (cluster.isMaster) {
 								release();
 							});
 					}
-					else if (msg.cmd && msg.cmd === 'live_stream_worker_stats_response') {
+					else if (msg.cmd === 'live_stream_worker_stats_response') {
 						const workerId = msg.workerId;
 						const liveStreamWatchingCounts = msg.liveStreamWatchingCounts;
 
 						liveStreamWatchingCountsTracker[workerId] = liveStreamWatchingCounts;
 					}
-					else if (msg.cmd && msg.cmd === 'restart_server') {
+					else if (msg.cmd === 'restart_server') {
 						Object.values(cluster.workers).forEach((worker) => {
 							worker.send({ cmd: 'restart_server_response' });
 						});
 					}
-					else if (msg.cmd && msg.cmd === 'restart_database') {
+					else if (msg.cmd === 'restart_database') {
 						const databaseDialect = msg.databaseDialect;
 
 						logDebugMessageToConsole('MoarTube Node changing database configuration to dialect: ' + databaseDialect, null, null);

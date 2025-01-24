@@ -9,10 +9,15 @@ const {
     commentsToggle_POST, likesToggle_POST, dislikesToggle_POST, reportsToggle_POST, liveChatToggle_POST, databaseConfigToggle_POST, databaseConfigClear_POST,
     storageConfigToggle_POST, storageConfigClear_POST
 } = require('../controllers/settings');
-const { getImagesDirectoryPath, getCertificatesDirectoryPath
+const { 
+    getImagesDirectoryPath, getCertificatesDirectoryPath
 } = require('../utils/paths');
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { performAuthenticationCheck } = require('../middleware/authentication');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    performAuthenticationCheck 
+} = require('../middleware/authentication');
 
 const router = express.Router();
 

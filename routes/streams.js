@@ -1,8 +1,15 @@
 const express = require('express');
 
-const { start_POST, videoIdStop_POST, videoIdAdaptiveFormatResolutionSegmentsRemove_POST, videoIdBandwidth_GET, videoIdChatSettings_POST, videoIdChatHistory_GET } = require('../controllers/streams');
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { performAuthenticationCheck } = require('../middleware/authentication');
+const { 
+    start_POST, videoIdStop_POST, videoIdAdaptiveFormatResolutionSegmentsRemove_POST, videoIdBandwidth_GET, 
+    videoIdChatSettings_POST, videoIdChatHistory_GET 
+} = require('../controllers/streams');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    performAuthenticationCheck 
+} = require('../middleware/authentication');
 
 const router = express.Router();
 

@@ -1,8 +1,14 @@
 const express = require('express');
 
-const { information_GET, heartbeat_GET } = require('../controllers/status');
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { performAuthenticationCheck } = require('../middleware/authentication');
+const { 
+    information_GET, heartbeat_GET 
+} = require('../controllers/status');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    performAuthenticationCheck 
+} = require('../middleware/authentication');
 
 const router = express.Router();
 

@@ -1,16 +1,25 @@
 const fs = require('fs');
 const path = require('path');
 
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { getVideosDirectoryPath, getPublicDirectoryPath } = require('../utils/paths');
-const { generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, deleteDirectoryRecursive, getNodeSettings, deleteFile } = require('../utils/helpers');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    getVideosDirectoryPath, getPublicDirectoryPath 
+} = require('../utils/paths');
+const { 
+    generateVideoId, sanitizeTagsSpaces, websocketNodeBroadcast, deleteDirectoryRecursive, getNodeSettings, deleteFile 
+} = require('../utils/helpers');
 const {
     isTitleValid, isDescriptionValid, isTagsValid, isPortValid, isVideoIdValid, isAdaptiveFormatValid, isResolutionValid, isSegmentNameValid, isBooleanValid,
     isNetworkAddressValid, isChatHistoryLimitValid
 } = require('../utils/validators');
-const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
-
-const { endStreamedHlsManifestFiles } = require('../utils/filesystem');
+const { 
+    performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob 
+} = require('../utils/database');
+const { 
+    endStreamedHlsManifestFiles 
+} = require('../utils/filesystem');
 const {
     cloudflare_purgeAllWatchPages, cloudflare_purgeNodePage
 } = require('../utils/cloudflare-communications');

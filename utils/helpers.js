@@ -1,6 +1,5 @@
 const path = require('path');
 const fs = require('fs');
-const fss = require('fs').promises;
 const jwt = require('jsonwebtoken');
 
 const {
@@ -343,7 +342,7 @@ function setNodeidentification(nodeIdentification) {
 
 async function deleteDirectoryRecursive(directoryPath) {
 	try {
-		await fss.rm(directoryPath, { recursive: true, force: true });
+		fs.rmSync(directoryPath, { recursive: true, force: true });
 	}
 	catch (error) {
 		logDebugMessageToConsole('failed to delete directory path: ' + directoryPath, error, null);
@@ -352,7 +351,7 @@ async function deleteDirectoryRecursive(directoryPath) {
 
 async function deleteFile(filePath) {
 	try {
-		await fss.rm(filePath, { force: true });
+		fs.rmSync(filePath, { force: true });
 	}
 	catch (error) {
 		logDebugMessageToConsole('failed to delete file path: ' + filePath, error, null);

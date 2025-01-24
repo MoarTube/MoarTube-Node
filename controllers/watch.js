@@ -1,9 +1,21 @@
-const { isVideoIdValid } = require('../utils/validators');
-const { getExternalVideosBaseUrl, getExternalResourcesBaseUrl } = require('../utils/helpers');
-const { information_GET } = require('../controllers/status');
-const { linksAll_GET } = require('./links');
-const { walletAddressAll_GET } = require('../controllers/monetization');
-const { videoIdWatch_GET, recommended_GET, videoIdComments_GET } = require('../controllers/videos');
+const { 
+    isVideoIdValid 
+} = require('../utils/validators');
+const { 
+    getExternalVideosBaseUrl, getExternalResourcesBaseUrl 
+} = require('../utils/helpers');
+const { 
+    information_GET 
+} = require('../controllers/status');
+const { 
+    linksAll_GET 
+} = require('./links');
+const { 
+    walletAddressAll_GET 
+} = require('../controllers/monetization');
+const { 
+    videoIdWatch_GET, recommended_GET, videoIdComments_GET 
+} = require('../controllers/videos');
 
 async function root_GET(videoId) {
     if (isVideoIdValid(videoId, false)) {

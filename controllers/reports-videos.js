@@ -1,5 +1,9 @@
-const { isReportIdValid } = require('../utils/validators');
-const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
+const { 
+    isReportIdValid 
+} = require('../utils/validators');
+const { 
+    performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob 
+} = require('../utils/database');
 
 async function reportsVideos_GET() {
     const reports = await performDatabaseReadJob_ALL('SELECT * FROM videoreports', [])

@@ -1,8 +1,14 @@
 const express = require('express');
 
-const { videoVideoId_GET, chatVideoId_GET } = require('../controllers/watch-embed');
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { performAuthenticationCheck } = require('../middleware/authentication');
+const { 
+    videoVideoId_GET, chatVideoId_GET 
+} = require('../controllers/watch-embed');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    performAuthenticationCheck 
+} = require('../middleware/authentication');
 
 const router = express.Router();
 

@@ -1,14 +1,22 @@
 const fs = require('fs');
 const path = require('path');
 
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { getVideosDirectoryPath } = require('../utils/paths');
-const { submitDatabaseWriteJob } = require('../utils/database');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    getVideosDirectoryPath 
+} = require('../utils/paths');
+const { 
+    submitDatabaseWriteJob 
+} = require('../utils/database');
 const {
     isManifestNameValid, isSegmentNameValid, isVideoIdValid, isAdaptiveFormatValid, isProgressiveFormatValid, isResolutionValid, isManifestTypeValid,
     isProgressiveFilenameValid
 } = require('../utils/validators');
-const { getExternalVideosBaseUrl } = require('../utils/helpers');
+const { 
+    getExternalVideosBaseUrl 
+} = require('../utils/helpers');
 
 function externalVideosBaseUrl_GET() {
     const externalVideosBaseUrl = getExternalVideosBaseUrl();

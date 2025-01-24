@@ -1,8 +1,14 @@
 const express = require('express');
 
-const { reportsCount_GET } = require('../controllers/reports');
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { performAuthenticationCheck } = require('../middleware/authentication');
+const { 
+    reportsCount_GET 
+} = require('../controllers/reports');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    performAuthenticationCheck 
+} = require('../middleware/authentication');
 
 const router = express.Router();
 

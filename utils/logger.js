@@ -1,6 +1,3 @@
-const path = require('path');
-const fs = require('fs');
-
 function logDebugMessageToConsole(message, error, stackTrace) {
     const date = new Date(Date.now());
     const year = date.getFullYear();

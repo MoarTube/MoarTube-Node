@@ -1,5 +1,9 @@
-const { getNodeSettings } = require('../utils/helpers');
-const { performDatabaseReadJob_GET } = require('../utils/database');
+const { 
+    getNodeSettings 
+} = require('../utils/helpers');
+const { 
+    performDatabaseReadJob_GET 
+} = require('../utils/database');
 
 async function information_GET() {
     const nodeVideoCount = (await performDatabaseReadJob_GET('SELECT COUNT(*) AS "videoCount" FROM videos WHERE (is_published = ? OR is_live = ?)', [true, true])).videoCount;

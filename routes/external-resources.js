@@ -1,8 +1,14 @@
 const express = require('express');
 
-const { javascript_GET, css_GET, fonts_GET, images1_GET, images2_GET } = require('../controllers/external-resources');
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { performAuthenticationCheck } = require('../middleware/authentication');
+const { 
+    javascript_GET, css_GET, fonts_GET, images1_GET, images2_GET 
+} = require('../controllers/external-resources');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    performAuthenticationCheck 
+} = require('../middleware/authentication');
 
 const router = express.Router();
 

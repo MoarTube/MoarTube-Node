@@ -1,8 +1,14 @@
 const express = require('express');
 
-const { reportsArchiveVideos_GET, reportsArchiveVideosArchiveIdDelete_DELETE } = require('../controllers/reports-archive-videos');
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { performAuthenticationCheck } = require('../middleware/authentication');
+const { 
+    reportsArchiveVideos_GET, reportsArchiveVideosArchiveIdDelete_DELETE 
+} = require('../controllers/reports-archive-videos');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    performAuthenticationCheck 
+} = require('../middleware/authentication');
 
 const router = express.Router();
 

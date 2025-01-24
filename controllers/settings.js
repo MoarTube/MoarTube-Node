@@ -1,22 +1,32 @@
 const fs = require('fs');
-const fss = require('fs').promises;
 const path = require('path');
 const bcryptjs = require('bcryptjs');
 const packageJson = require('../package.json');
 
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { getImagesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath, getDatabaseFilePath, getVideosDirectoryPath
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    getImagesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath, getDatabaseFilePath, getVideosDirectoryPath
 } = require('../utils/paths');
-const { getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast, deleteDirectoryRecursive, getExternalVideosBaseUrl
+const { 
+    getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast, deleteDirectoryRecursive, getExternalVideosBaseUrl
 } = require('../utils/helpers');
 const {
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNodeAddressValid,
     isPortValid, isCloudflareCredentialsValid, isBooleanValid, isDatabaseConfigValid, isStorageConfigValid
 } = require('../utils/validators');
-const { indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate, indexer_doNodeExternalNetworkUpdate } = require('../utils/indexer-communications');
-const { cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetCdn, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
-    cloudflare_purgeAllWatchPages, cloudflare_addS3BucketCnameDnsRecord } = require('../utils/cloudflare-communications');
-const { submitDatabaseWriteJob, performDatabaseReadJob_ALL, clearDatabase } = require('../utils/database');
+const { 
+    indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate, 
+    indexer_doNodeExternalNetworkUpdate 
+} = require('../utils/indexer-communications');
+const { 
+    cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetCdn, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
+    cloudflare_purgeAllWatchPages, cloudflare_addS3BucketCnameDnsRecord 
+} = require('../utils/cloudflare-communications');
+const { 
+    submitDatabaseWriteJob, performDatabaseReadJob_ALL, clearDatabase 
+} = require('../utils/database');
 
 function root_GET() {
     const nodeSettings = getNodeSettings();
@@ -571,11 +581,11 @@ async function networkExternal_POST(publicNodeProtocol, publicNodeAddress, publi
         }
 
         async function performUpdate(manifestPath, externalVideosBaseUrl) {
-            const manifestContent = await fss.readFile(manifestPath, "utf-8");
+            const manifestContent = fs.readFileSync(manifestPath, "utf-8");
 
             const updatedManifestContent = manifestContent.replace(/https?:\/\/[^/]+(?=\/external)/g, externalVideosBaseUrl);
 
-            await fss.writeFile(manifestPath, updatedManifestContent, "utf-8");
+            fs.writeFileSync(manifestPath, updatedManifestContent, "utf-8");
         }
 
         nodeSettings.publicNodeProtocol = publicNodeProtocol;

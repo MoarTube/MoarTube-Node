@@ -2,11 +2,21 @@ const axios = require('axios').default;
 const path = require('path');
 const fs = require('fs');
 
-const { logDebugMessageToConsole } = require('./logger');
-const { getNodeSettings, setNodeSettings, getIsDeveloperMode, getNodebaseUrl, getExternalVideosBaseUrl, getExternalResourcesBaseUrl } = require('../utils/helpers');
-const { getVideosDirectoryPath } = require('../utils/paths');
-const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET } = require('../utils/database');
-const { s3_listObjectsWithPrefix } = require('../utils/s3-communications');
+const { 
+    logDebugMessageToConsole 
+} = require('./logger');
+const { 
+    getNodeSettings, setNodeSettings, getIsDeveloperMode, getNodebaseUrl, getExternalVideosBaseUrl, getExternalResourcesBaseUrl 
+} = require('../utils/helpers');
+const { 
+    getVideosDirectoryPath 
+} = require('../utils/paths');
+const { 
+    performDatabaseReadJob_ALL, performDatabaseReadJob_GET 
+} = require('../utils/database');
+const { 
+    s3_listObjectsWithPrefix 
+} = require('../utils/s3-communications');
 
 async function cloudflare_purgeWatchPages(videoIds) {
     try {

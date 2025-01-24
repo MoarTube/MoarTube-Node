@@ -1,4 +1,7 @@
-const { DataTypes } = require('sequelize');
+const { 
+    DataTypes 
+} = require('sequelize');
+
 const sequelize = require('../sequelize');
 
 const CryptoWalletAddresses = sequelize.define('CryptoWalletAddress', {

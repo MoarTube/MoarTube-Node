@@ -1,7 +1,11 @@
 const express = require('express');
 
-const { root_GET } = require('../controllers/base');
-const { performAuthenticationCheck } = require('../middleware/authentication');
+const { 
+    root_GET 
+} = require('../controllers/base');
+const { 
+    performAuthenticationCheck 
+} = require('../middleware/authentication');
 
 const router = express.Router();
 

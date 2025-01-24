@@ -10,13 +10,27 @@ const {
     videoIdComments_GET, videoIdCommentsCommentId_GET, videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST, recommended_GET,
     tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST, videoIdDataAll_GET
 } = require('../controllers/videos');
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading } = require("../utils/trackers/publish-video-uploading-tracker");
-const { getVideosDirectoryPath } = require('../utils/paths');
-const { isSegmentNameValid, isVideoIdValid, isFormatValid, isResolutionValid, isManifestTypeValid } = require('../utils/validators');
-const { submitDatabaseWriteJob } = require('../utils/database');
-const { performAuthenticationCheck } = require('../middleware/authentication');
-const { websocketNodeBroadcast } = require('../utils/helpers');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    addToPublishVideoUploadingTracker, addToPublishVideoUploadingTrackerUploadRequests, isPublishVideoUploading 
+} = require("../utils/trackers/publish-video-uploading-tracker");
+const { 
+    getVideosDirectoryPath 
+} = require('../utils/paths');
+const { 
+    isSegmentNameValid, isVideoIdValid, isFormatValid, isResolutionValid, isManifestTypeValid 
+} = require('../utils/validators');
+const { 
+    submitDatabaseWriteJob 
+} = require('../utils/database');
+const { 
+    performAuthenticationCheck 
+} = require('../middleware/authentication');
+const { 
+    websocketNodeBroadcast 
+} = require('../utils/helpers');
 
 const router = express.Router();
 

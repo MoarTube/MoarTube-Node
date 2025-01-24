@@ -1,6 +1,8 @@
 const axios = require('axios').default;
 
-const { getMoarTubeIndexerUrl } = require('./urls');
+const { 
+    getMoarTubeIndexerUrl 
+} = require('./urls');
 
 async function indexer_addVideoToIndex(data) {
     const response = await axios.post(getMoarTubeIndexerUrl() + '/index/video/add', data);

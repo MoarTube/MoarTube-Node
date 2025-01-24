@@ -1,10 +1,18 @@
 const sanitizeHtml = require('sanitize-html');
 
-const { getNodeSettings } = require('../utils/helpers');
-const { isCommentIdValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isCloudflareTurnstileTokenValid, isTimestampValid,
-    isLimitValid, isSearchTermValid, isVideoIdValid } = require('../utils/validators');
-const { performDatabaseReadJob_GET, performDatabaseReadJob_ALL, submitDatabaseWriteJob } = require('../utils/database');
-const { cloudflare_validateTurnstileToken } = require('../utils/cloudflare-communications');
+const { 
+    getNodeSettings 
+} = require('../utils/helpers');
+const { 
+    isCommentIdValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isCloudflareTurnstileTokenValid, isTimestampValid,
+    isLimitValid, isSearchTermValid, isVideoIdValid 
+} = require('../utils/validators');
+const { 
+    performDatabaseReadJob_GET, performDatabaseReadJob_ALL, submitDatabaseWriteJob 
+} = require('../utils/database');
+const { 
+    cloudflare_validateTurnstileToken 
+} = require('../utils/cloudflare-communications');
 
 async function search_GET(videoId, searchTerm, timestamp, limit) {
     if (isVideoIdValid(videoId, true) && isSearchTermValid(searchTerm) && isTimestampValid(timestamp) && isLimitValid(limit)) {

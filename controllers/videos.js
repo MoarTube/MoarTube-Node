@@ -2,24 +2,35 @@ const fs = require('fs');
 const path = require('path');
 const sanitizeHtml = require('sanitize-html');
 
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { getVideosDirectoryPath } = require('../utils/paths');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    getVideosDirectoryPath 
+} = require('../utils/paths');
 const {
     getNodeSettings, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, performNodeIdentification, getNodeIdentification,
     sanitizeTagsSpaces, deleteDirectoryRecursive, deleteFile, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64,
     getVideoPreviewJpgBase64, getExternalVideosBaseUrl
 } = require('../utils/helpers');
-const { getMoarTubeAliaserPort } = require('../utils/urls');
-const { performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL } = require('../utils/database');
+const { 
+    getMoarTubeAliaserPort 
+} = require('../utils/urls');
+const { 
+    performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL 
+} = require('../utils/database');
 const {
     isSearchTermValid, isSourceFileExtensionValid, isBooleanValid, isVideoCommentValid, isTimestampValid, isCommentsTypeValid, isCommentIdValid,
     isSortTermValid, isTagLimitValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isVideoIdValid, isVideoIdsValid, isFormatValid, isResolutionValid,
     isTitleValid, isDescriptionValid, isTagTermValid, isTagsValid, isCloudflareTurnstileTokenValid, isSortValid
 } = require('../utils/validators');
-const { indexer_addVideoToIndex, indexer_removeVideoFromIndex } = require('../utils/indexer-communications');
+const { 
+    indexer_addVideoToIndex, indexer_removeVideoFromIndex 
+} = require('../utils/indexer-communications');
 const {
-    cloudflare_purgeWatchPages, cloudflare_purgeAllWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos, cloudflare_purgeVideoPreviewImages, cloudflare_purgeVideoPosterImages,
-    cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, cloudflare_purgeAllEmbedVideoPages, cloudflare_purgeNodePage, cloudflare_purgeVideoThumbnailImages, cloudflare_validateTurnstileToken
+    cloudflare_purgeWatchPages, cloudflare_purgeAllWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos, 
+    cloudflare_purgeVideoPreviewImages, cloudflare_purgeVideoPosterImages, cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, 
+    cloudflare_purgeAllEmbedVideoPages, cloudflare_purgeNodePage, cloudflare_purgeVideoThumbnailImages, cloudflare_validateTurnstileToken
 } = require('../utils/cloudflare-communications');
 
 async function import_POST(title, description, tags) {
@@ -44,9 +55,13 @@ async function import_POST(title, description, tags) {
 
         const tagsSanitized = sanitizeTagsSpaces(tags);
 
-        fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/images'), { recursive: true });
-        fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/adaptive'), { recursive: true });
-        fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/progressive'), { recursive: true });
+        const nodeSettings = getNodeSettings();
+
+        if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+            fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/images'), { recursive: true });
+            fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/adaptive'), { recursive: true });
+            fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/progressive'), { recursive: true });
+        }
 
         const query = 'INSERT INTO videos(video_id, source_file_extension, title, description, tags, length_seconds, length_timestamp, views, comments, likes, dislikes, bandwidth, is_importing, is_imported, is_publishing, is_published, is_streaming, is_streamed, is_stream_recorded_remotely, is_stream_recorded_locally, is_live, is_indexing, is_indexed, is_index_outdated, is_error, is_finalized, is_hidden, is_passworded, password, is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled, outputs, meta, creation_timestamp) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         const parameters = [videoId, '', title, description, tags, 0, '', 0, 0, 0, 0, 0, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, '', true, true, true, true, true, outputs, meta, creationTimestamp];

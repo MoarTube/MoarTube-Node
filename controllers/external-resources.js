@@ -2,7 +2,9 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 
-const { getPublicDirectoryPath, getDataDirectoryPath } = require('../utils/paths');
+const { 
+    getPublicDirectoryPath, getDataDirectoryPath 
+} = require('../utils/paths');
 
 function javascript_GET() {
     return express.static(path.join(getPublicDirectoryPath(), 'javascript'));

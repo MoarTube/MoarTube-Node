@@ -1,7 +1,11 @@
-const { v1: uuidv1, v4: uuidv4 } = require('uuid');
+const { 
+    v1: uuidv1, v4: uuidv4 
+} = require('uuid');
 const cluster = require('cluster');
 
-const { logDebugMessageToConsole } = require('./logger');
+const { 
+    logDebugMessageToConsole 
+} = require('./logger');
 
 let sequelize;
 

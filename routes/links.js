@@ -1,8 +1,14 @@
 const express = require('express');
 
-const { linksAll_GET, linksAdd_POST, linksDelete_POST } = require('../controllers/links.js');
-const { logDebugMessageToConsole } = require('../utils/logger.js');
-const { performAuthenticationCheck } = require('../middleware/authentication');
+const { 
+    linksAll_GET, linksAdd_POST, linksDelete_POST 
+} = require('../controllers/links.js');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger.js');
+const { 
+    performAuthenticationCheck 
+} = require('../middleware/authentication');
 
 const router = express.Router();
 

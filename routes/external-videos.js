@@ -5,8 +5,12 @@ const {
     videoIdAdaptiveFormatResolutionSegmentsSegmentName_GET, videoIdProgressiveFormatResolution_GET,
     externalVideosBaseUrl_GET
 } = require('../controllers/external-videos');
-const { logDebugMessageToConsole } = require('../utils/logger');
-const { performAuthenticationCheck } = require('../middleware/authentication');
+const { 
+    logDebugMessageToConsole 
+} = require('../utils/logger');
+const { 
+    performAuthenticationCheck 
+} = require('../middleware/authentication');
 
 const router = express.Router();
 

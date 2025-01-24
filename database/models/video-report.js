@@ -1,4 +1,7 @@
-const { DataTypes } = require('sequelize');
+const { 
+    DataTypes 
+} = require('sequelize');
+
 const sequelize = require('../sequelize.js');
 
 const VideoReport = sequelize.define('VideoReport', {

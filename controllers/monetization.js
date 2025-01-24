@@ -1,5 +1,9 @@
-const { cloudflare_purgeAllWatchPages, cloudflare_purgeNodePage } = require('../utils/cloudflare-communications');
-const { performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob } = require('../utils/database');
+const { 
+    cloudflare_purgeAllWatchPages, cloudflare_purgeNodePage 
+} = require('../utils/cloudflare-communications');
+const { 
+    performDatabaseReadJob_ALL, performDatabaseReadJob_GET, submitDatabaseWriteJob 
+} = require('../utils/database');
 
 async function walletAddressAll_GET() {
     const cryptoWalletAddresses = await performDatabaseReadJob_ALL('SELECT * FROM cryptowalletaddresses', []);

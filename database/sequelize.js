@@ -1,9 +1,15 @@
 require('pg').types.setTypeParser(20, (val) => Number(val));
 
-const { Sequelize } = require('sequelize');
+const { 
+    Sequelize 
+} = require('sequelize');
 
-const { getDatabaseFilePath } = require("../utils/paths.js");
-const { getNodeSettings } = require("../utils/helpers.js");
+const { 
+    getDatabaseFilePath 
+} = require("../utils/paths.js");
+const { 
+    getNodeSettings 
+} = require("../utils/helpers.js");
 
 const nodeSettings = getNodeSettings();
 
