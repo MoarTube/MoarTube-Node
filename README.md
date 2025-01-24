@@ -41,7 +41,7 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
 - MoarTube Client performs video and stream processing on your local machine
 - MoarTube Node handles storage and distribution of your content
 - Host your node:
-  - **On the cloud**
+  - **In the cloud**
   - **On your home WiFi**
 
 ## 📹 Video & Streaming Features
@@ -81,6 +81,7 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
 ## 💵 Monetization & Promotion
 - Monetization via cryptocurrency:
   - Accept **ETH** and **BNB** via MetaMask
+  - Provide wallet addresses to your viewers for donations
 - Promote your node by providing links to:
   - **Social media platforms**
   - **Websites**
@@ -88,19 +89,27 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
 
 ## 🛠️ Advanced Features
 - [**Cloudflare CDN**](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn):
-  - Cloudflare's **global** network facilitates data propagation for audiences of any size, anywhere
+  - Cloudflare's **global network** facilitates mass data propagation for audiences of any size, anywhere
+  - Data is transmitted throughout Cloudflare's **global network** within milliseconds of beng requested
+  - Available to a free-tier account.
 - [**Cloudflare Turnstile**](https://www.moartube.com/guides/how-to-enable-cloudflare-turnstile):
-  - Next-generation bot detection and human verification without intrusive captchas
+  - Next-generation **bot detection** and **human verification** without intrusive captchas
+  - Available to a free-tier account.
+- [**Postgres**]()
+  - Remote database storage for video and live stream metadata and information.
+  - Host your database anywhere.
+- [**S3 Providers**]()
+  - Remote storage for video and live stream content.
+  - Seemingly **unlimited** storage size and can meet **high demand**.
+    - cheap and affordable
+  - Compatible with any S3 provider; AWS, DigitalOcean Spaces, Minio, etc...
 - [**HTTPS/WSS support**](https://www.moartube.com/guides/how-to-secure-https)
   - secure communications
 - [**Dual Box Compatibility**](https://www.moartube.com/guides/how-to-dual-box):
-  - Use your system to broadcast an RTMP stream from OBS to another system for processing running MoarTube Client (no plugins like NDI required)
+  - Use your system to broadcast an RTMP stream from OBS to another system for processing running MoarTube Client
+  - no plugins like NDI required
 - [**GPU Acceleration**](https://www.moartube.com/guides/how-to-enable-gpu-acceleration):
   - Supports **Nvidia** and **AMD** GPUs for accelerated encoding/decoding (Windows only)
-- **database config**
-- **storage config**
-
-
 
 ## 🏆 Why Choose MoarTube?
 MoarTube empowers you to take control of your media hosting with privacy, decentralization, and robust features designed to rival major platforms—all while remaining lightweight, accessible, and cost-effective, all from a single node.
@@ -121,12 +130,12 @@ MoarTube is designed to be lightweight and accessible, making it the most resour
 
 ## ⚙️ **Resource Efficiency**
 - **MoarTube Node's** footprint is remarkably small because most computationally heavy tasks, like encoding and memory-intensive operations, are performed on your local machine by the **MoarTube Client**.
-- The node's primary responsibilities are **storage** and **distribution**, keeping its resource demands low.
+- The node's primary responsibilities are **storage** and **distribution**, keeping its resource demands low so that it run on just about anything.
 - MoarTube Node is **multi-threaded**, utilizing the full potential of its system's CPU to ensure optimal operation.
 
 ## 🌍 **Decentralize your Deployment**
 - Designate external providers such as **Postgres** and **S3** to store and distribute your content for greater scalability.
-- Your node becomes completely disposable. Content and metadata are stored externally (e.g., S3, Postgres), allowing you to rebuild or redeploy your node at any time without data loss. Just tell your new node where its data is and you're back online.
+- Your node becomes completely disposable. Content and metadata are stored externally (e.g., S3, Postgres), allowing you to re-deploy your node at any time without data loss. Just tell your new node where its data is and you're back online.
 
 ## ☁️ **Cloudflare Integration for Offloading Demand**
 - [Cloudflare](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn) eliminates much of the strain on your storage distribution by leveraging the world’s largest CDN, giving your node the same global delivery power as major platforms.
@@ -137,7 +146,6 @@ MoarTube is designed to be lightweight and accessible, making it the most resour
 
 ## 🌍 Run Your Node Anywhere
 Whether on a cloud VPS, personal computer, or compact device like a Raspberry Pi, MoarTube gives you full control. MoarTube’s efficiency and flexibility make it the ideal solution for hosting media **anywhere**, on virtually **any hardware**, for audiences of **any size**.
-
 
 # Prerequisites
 
