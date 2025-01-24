@@ -10,7 +10,7 @@ Welcome to the MoarTube Node setup guide! This document will guide you through t
 
 # Table of Contents
 - [Features](#features)
-- [System Requirements](#system-requirements)
+- [System Requirements](#system-requirements-lightweight-flexible-and-powerful)
 - [Prerequisites](#prerequisites)
   - [Docker](#docker)
   - [npm](#npm)
@@ -108,68 +108,78 @@ MoarTube empowers you to take control of your media hosting with privacy, decent
 
 ![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/068ec86b-a3d8-4285-9b64-4b71f64cce41)
 
-## System Requirements
+# System Requirements: Lightweight, Flexible, and Powerful
+MoarTube is designed to be lightweight and accessible, making it the most resource-efficient self-hosted video and live streaming solution available today.
 
-Node.js is the only requirement to run a MoarTube Node, and all major operating systems support it.
+## 📋 **Minimal Requirements**
+- **Node.js** is the only requirement to run a MoarTube Node, and it's supported on all major operating systems.
+- Compatible with **Node.js v20 and later**.
 
-MoarTube Node has the smallest resource usage footprint out of any self-hosted video and live streaming solution available today; most of the heavy computational responsibilities and memory-intensive operations are handled by MoarTube Client; MoarTube Node is only responsible for storage and distribution. MoarTube Node is also multi-threaded, utilizing the full potential of the CPU of whatever system it is installed on.
+## ⚙️ **Resource Efficiency**
+- **MoarTube Node's** footprint is remarkably small because most computationally heavy tasks, like encoding and memory-intensive operations, are performed on your local machine by the **MoarTube Client**.
+- The node's primary responsibilities are **storage** and **distribution**, keeping its resource demands low.
+- MoarTube Node is **multi-threaded**, utilizing the full potential of its system's CPU to ensure optimal operation.
 
-On Digital Ocean, an $8 VPS (1 vCPU, 1 GB RAM) provides a comfortable headroom to handle surprisingly moderate demand. Although this tier is likely adequate for most users, others will need to observe the resource usage monitor and adjust their instance accordingly. Or just simply forget all that and [host from your personal computer over home WiFi](https://www.moartube.com/guides/how-to-run-node-on-home-wifi).
+## 🌍 **Decentralize your Deployment**
+- Store everything on your node, or designate external providers such as **Postgres** and **S3** to store and distribute your content for greater scalability.
 
-The node software uses about 100MB of RAM while sitting idle with fluctuations depending on visitor (and user) demand. Much of the demand can be alleviated by the [Cloudflare integration](https://www.moartube.com/guides/how-to-enable-cloudflare-integration) feature, leveraging the world's largest CDN to distribute your video and live stream data, giving your node capabilities that rival that of major platforms.
+## ☁️ **Cloudflare Integration for Offloading Demand**
+- [Cloudflare](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn) eliminates much of the strain on your storage distribution by leveraging the world’s largest CDN, giving your node the same global delivery power as major platforms.
 
-To give you an idea of how tiny MoarTube Node really is, the software can run on a [Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) on Raspberry Pi OS with approximately 100MB of system RAM remaining out of a total system availability of 512MB; the OS uses about 200MB RAM and reserves an additional 100MB for a swap file.
+## 🐦 **Tiny Memory Footprint**
+- Efficiently operates on even the most resource-constrained systems.
+- Can run on a **Raspberry Pi Zero 2 W** with just **512MB of RAM**.
 
-As you can see, MoarTube Node is quite capable and can run on just about anything, anywhere.
+## 🌍 Run Your Node Anywhere
+Whether on a cloud VPS, personal computer, or compact device like a Raspberry Pi, MoarTube Node gives you full control while keeping system requirements low. MoarTube’s efficiency and flexibility make it the ideal solution for hosting media **anywhere**, on virtually **any hardware**.
 
-Node.js v20 and later required.
 
-## Prerequisites
+# Prerequisites
 
 Observe the corresponding prerequisite for your installation method.
 
-### Docker
+## Docker
 If you're using Docker, make sure that it is installed on your machine.
 
-### npm
+## npm
 If you're using npm to install the software, make sure that [Node.js and npm](https://nodejs.org/en) are installed on your machine.
 
-### git
+## git
 You can clone the repo, but make sure that [Node.js and npm](https://nodejs.org/en) are installed on your machine.
 
-### script (Ubuntu Linux)
+## script (Ubuntu Linux)
 
 A script to automate your entire setup. Installs Node.js using Snap, clones the git repo using git, installs dependencies using npm, and sets the node to autostart on system boot using systemctl
 
-## Installation Methods
+# Installation Methods
 
 Choose any of the following installation methods.
 
-### [DockerHub](https://hub.docker.com/r/moartube/moartube-node/tags)
+## [DockerHub](https://hub.docker.com/r/moartube/moartube-node/tags)
 
 MoarTube Node is available on DockerHub and can be easily set up using Docker Desktop or via the command line for a more manual approach.
 
-#### Using [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+### Using [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 You can manage MoarTube Node using Docker Desktop by searching for `moartube/moartube-node` on DockerHub within the Docker Desktop interface.
 
-#### Manual Docker Setup
+### Manual Docker Setup
 
 To set up MoarTube Node manually using Docker, execute the following command in your terminal. This command pulls the latest MoarTube Node image, creates a container named `moartube-node-1`, assigns it port 8181, and configures it to auto-restart unless manually stopped.
 
-##### For x86-64 architecture: 
+#### For x86-64 architecture: 
 ```bash
 docker run --platform linux/amd64 -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartube/moartube-node:latest
 ```
 
-##### For ARM64 architecture: 
+#### For ARM64 architecture: 
 ```bash
 docker run --platform linux/arm64 -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartube/moartube-node:latest
 ```
 
 *note: the Docker container uses [**/data**](https://github.com/MoarTube/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
 
-### [npm](https://www.npmjs.com/package/@moartube/moartube-node)
+## [npm](https://www.npmjs.com/package/@moartube/moartube-node)
 You can install MoarTube Node globally:
 
 ```bash
@@ -196,7 +206,7 @@ And run from the command-line locally:
 node node_modules/@moartube/moartube-node/moartube-node.js
 ```
 
-### [git](https://github.com/MoarTube/MoarTube-Node)
+## [git](https://github.com/MoarTube/MoarTube-Node)
 
 ```bash
 git clone https://github.com/MoarTube/MoarTube-Node
@@ -212,15 +222,15 @@ npm install
 node moartube-node.js
 ```
 
-### [script (Ubuntu Linux)](https://www.moartube.com/bash/install/node)
+## [script (Ubuntu Linux)](https://www.moartube.com/bash/install/node)
 
 ```bash
 bash <(wget -O - https://www.moartube.com/bash/install/node)
 ```
 
-## Next Steps
+# Next Steps
 
-### Default Login Credentials
+## Default Login Credentials
 
 The default login credentials for your node are below. Be sure to change these upon logging in.
 
@@ -228,17 +238,17 @@ By default, MoarTube Node listens on port 80.
 
 **username**: admin<br/>**password**: admin
 
-### Cloudflare
+## Cloudflare
 
 At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://www.moartube.com/guides/how-to-enable-cloudflare-integration). With over 300 data centers worlwide, Cloudflare will distribute most of your node's videos and live streams.
 
-### Get MoarTube Client
+## Get MoarTube Client
 
 If you haven't already, it's time to get the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client).
 
-## Guides
+# Guides
 
-### Ubuntu Linux Node.js Install Guide
+## Ubuntu Linux Node.js Install Guide
 
 Ubuntu Linux comes pre-installed with the Snap package manager. It's the easiest way to install Node.js.
 
@@ -247,7 +257,7 @@ Run the command:
 sudo snap install node --classic --channel=21
 ```
 
-### Ubuntu Linux Autostart Guide
+## Ubuntu Linux Autostart Guide
 
 This guide will configure your node to autostart on system boot.
 
@@ -302,7 +312,7 @@ sudo systemctl status moartube-node
 ```
 
 
-#### some commands of interest
+### some commands of interest
 
 Stop the moartube-node service.
 
