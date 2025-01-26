@@ -62,19 +62,17 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
 
 ## 💾 Data Processing, Storage, Distribution
 - Processing
-  - CPU
-  - GPU
+  - **CPU** and **GPU** support
+  - Nvidia, AMD
     - Windows Only
-    - Nvidia, AMD
-- Database 
-  - Use a local **SQLite database**
-  - Decentralize your node with a remote **Postgres database**
 - Storage
-  - **File system** to store your videos and live streams on your node
+  - Local database storage using **SQLite**
+  - Decentralize your node with a remote **Postgres** database
+  - **File system** to store your videos and live streams locally on your node
   - **S3-compatible provider** to store your videos and live streams in the cloud
-    - Amazon Web Services, DigitalOcean Spaces, Minio, etc...
-- Cloud
-  - Leverage Cloudflare's CDN for your content's distribution
+    - Amazon Web Services (AWS), DigitalOcean Spaces, Minio, etc...
+- Distribution
+  - Leverage Cloudflare's CDN for global content distribution
 
 ## ⚙️ Admin & Moderation
 - **Admin Panel**
