@@ -1,16 +1,14 @@
 <img src="https://github.com/MoarTube/MoarTube-Node/assets/26640616/2dacfc1c-dbd0-4c71-b9a5-b11ac67d290f" alt="logo" width="200"/>
 
-# 🎥 MoarTube-Node
+# MoarTube-Node
 Welcome to **MoarTube Node**, the server-side software for hosting your own videos and live streams! This cross-platform, terminal-based Node.js Express application is managed by the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client). Whether you want to share your node’s videos with [MoarTube](https://www.moartube.com) or run your node privately, MoarTube gives you the freedom to do it your way.
-
-MoarTube makes video and live streaming so simple you'll be amazed beyond belief.
 
 [TL;DR: Watch the Quickstart Video](https://www.moartube.com/guides/moartube-quick-start)
 
 # 🚀 How to Get Started
 Welcome to the **MoarTube Node setup guide**! Follow these simple steps to get your MoarTube Node up and running. Don’t worry—MoarTube is designed to be so easy to set up and use, you’ll be done in minutes.
 
-When you’re ready, make sure to check out the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client) client-side software if you haven’t already.
+When you’re ready, make sure to check out the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client) if you haven’t already.
 
 # Table of Contents
 - [Features](#features)
