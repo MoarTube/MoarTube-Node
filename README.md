@@ -135,7 +135,7 @@ MoarTube is designed to be lightweight and accessible, making it the most resour
 - The node's responsibilities are **storage and distribution**, keeping its resource demands low so that it can run on just about anything.
 - MoarTube Node is **multi-threaded**, utilizing the full potential of its system's CPU to ensure optimal operation.
 
-## 🌍 **Decentralize your Deployment**
+## 🌐 **Decentralize your Deployment**
 - Designate external providers such as **Postgres** and **S3** to store and distribute your content for greater scalability.
 - Your node becomes completely disposable. Content and metadata are stored externally (e.g., S3, Postgres), allowing you to re-deploy your node at any time without data loss. Just tell your new node where its data is and you're back online.
 - [Cloudflare](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn) eliminates much of the strain on your storage distribution by leveraging the world’s largest CDN, giving your node the same global delivery reach as major platforms.
