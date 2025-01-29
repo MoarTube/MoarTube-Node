@@ -100,10 +100,10 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
 - [**Cloudflare Turnstile**](https://www.moartube.com/guides/how-to-enable-cloudflare-turnstile):
   - Next-generation **bot detection** and **human verification** without intrusive captchas.
   - Available to a free-tier Cloudflare account.
-- [**Postgres**]()
+- [**Postgres**](https://www.moartube.com/guides/how-to-configure-database)
   - Remote database storage for video and live stream metadata and information.
   - Host your database **anywhere**.
-- [**S3 Providers**]()
+- [**S3 Providers**](https://www.moartube.com/guides/how-to-configure-storage)
   - Remote storage for video and live stream content.
   - Seemingly **unlimited** storage size and can meet **high demand**.
     - cheap and affordable
