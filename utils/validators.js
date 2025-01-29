@@ -66,14 +66,14 @@ function isDatabaseConfigValid(databaseConfig) {
             if (databaseConfig.databaseDialect === 'postgres') {
                 const postgresConfig = databaseConfig.postgresConfig;
 
-                if (!postgresConfig || typeof postgresConfig !== 'object') {
+                if (typeof postgresConfig !== 'object') {
                     isValid = false;
                 }
                 else {
                     const requiredFields = ['databaseName', 'username', 'password', 'host', 'port'];
 
                     for (const field of requiredFields) {
-                        if (!postgresConfig[field] || typeof postgresConfig[field] !== (field === 'port' ? 'number' : 'string')) {
+                        if (typeof postgresConfig[field] !== (field === 'port' ? 'number' : 'string')) {
                             isValid = false;
 
                             break;
@@ -94,7 +94,7 @@ function isDatabaseConfigValid(databaseConfig) {
 function isStorageConfigValid(storageConfig) {
     let isValid = true;
 
-    if (!storageConfig || typeof storageConfig !== 'object') {
+    if (typeof storageConfig !== 'object') {
         isValid = false;
     }
     else {
@@ -105,13 +105,16 @@ function isStorageConfigValid(storageConfig) {
         }
         else {
             if (storageConfig.storageMode === 's3provider') {
-                if (!storageConfig.s3Config || typeof storageConfig.s3Config !== "object") {
+                if (typeof storageConfig.s3Config !== "object") {
                     isValid = false;
                 }
-                else if (!storageConfig.s3Config.bucketName || typeof storageConfig.s3Config.bucketName !== "string") {
+                else if (typeof storageConfig.s3Config.bucketName !== "string") {
                     isValid = false;
                 }
-                else if (!storageConfig.s3Config.s3ProviderClientConfig || typeof storageConfig.s3Config.s3ProviderClientConfig !== "object") {
+                else if (typeof storageConfig.s3Config.s3ProviderClientConfig !== "object") {
+                    isValid = false;
+                }
+                else if (typeof storageConfig.s3Config.s3ProviderClientConfig.forcePathStyle !== "boolean") {
                     isValid = false;
                 }
             }
