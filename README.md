@@ -129,21 +129,20 @@ MoarTube is designed to be lightweight and accessible, making it the most resour
 
 ## 📋 **Minimal Requirements**
 - **Node.js** is the only requirement to run a MoarTube Node, and it's supported on all major operating systems.
+- MoarTube Node **efficiently** operates on even the most resource-constrained systems.
+  - Runs comfortably on a VPS with 1GB RAM and 1 vCPU.
+  - Can run on a [**Raspberry Pi Zero 2 W**](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/).
 - Compatible with **Node.js v20 and later**.
 
 ## ⚙️ **Resource Efficiency**
 - **MoarTube Node's** footprint is remarkably small because most computationally heavy tasks, like encoding and memory-intensive operations, are performed on your local machine by the **MoarTube Client**.
-- The node's responsibilities are **storage and distribution**, keeping its resource demands low so that it can run on just about anything.
+- Your node's responsibilities are **storage and distribution**, keeping its resource demands low so that it can run on just about anything.
 - MoarTube Node is **multi-threaded**, utilizing the full potential of its system's CPU to ensure optimal operation.
 
 ## 🌐 **Decentralize your Deployment**
 - Designate external providers such as **Postgres** and **S3** to store and distribute your content for greater scalability.
 - Your node becomes completely disposable. Content and metadata are stored **externally** (e.g., S3, Postgres), allowing you to re-deploy your node at any time without data loss. Just tell your new node where its data is and you're back **online**.
 - [Cloudflare](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn) eliminates much of the strain on your storage distribution by leveraging the **world’s largest CDN**, giving your node the same global delivery reach as **major platforms**.
-
-## 🐦 **Tiny Memory Footprint**
-- MoarTube Node **efficiently** operates on even the most resource-constrained systems.
-  - Can run on a **Raspberry Pi Zero 2 W** with just **512MB of RAM**.
 
 ## 🌍 Run Your Node Anywhere
 Whether on a cloud VPS, personal computer, or compact device like a Raspberry Pi, MoarTube gives you full control. MoarTube’s efficiency and flexibility make it the ideal solution for hosting media **anywhere**, on virtually **any hardware**, for audiences of **any size**.
