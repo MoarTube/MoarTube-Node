@@ -685,42 +685,51 @@ async function cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecord
     );
 
     if (dnsRecordGetResponse.data.success) {
-        logDebugMessageToConsole('successfully queried CNAME DNS records, verifying...', null, null);
-
+        logDebugMessageToConsole('successfully queried CNAME DNS records', null, null);
+        
         const dnsRecords = dnsRecordGetResponse.data.result;
 
-        const recordExists = dnsRecords.some((record) => record.name === cnameRecordName && record.content === cnameRecordContent);
+        for(const dnsRecord of dnsRecords) {
+            if(dnsRecord.name === cnameRecordName) {
+                logDebugMessageToConsole(`removing existing CNAME record with name: ${dnsRecord.name}`, null, null);
 
-        if (recordExists) {
-            logDebugMessageToConsole('successfully verified required CNAME DNS record', null, null);
+                await axios.delete(
+                    `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records/${dnsRecord.id}`,
+                    {
+                        headers: {
+                            'X-Auth-Email': cloudflareEmailAddress,
+                            'X-Auth-Key': cloudflareGlobalApiKey
+                        }
+                    }
+                );
+            }
+        }
+
+        logDebugMessageToConsole('adding CNAME record...', null, null);
+
+        const dnsRecordPostResponse = await axios.post(
+            `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
+            {
+                type: 'CNAME',
+                name: cnameRecordName,
+                content: cnameRecordContent,
+                ttl: 1,
+                proxied: true,
+            },
+            {
+                headers:
+                {
+                    'X-Auth-Email': cloudflareEmailAddress,
+                    'X-Auth-Key': cloudflareGlobalApiKey
+                }
+            }
+        );
+
+        if (dnsRecordPostResponse.data.success) {
+            logDebugMessageToConsole('successfully added CNAME DNS record', null, null);
         }
         else {
-            logDebugMessageToConsole('required CNAME DNS record does not exist, adding...', null, null);
-
-            const dnsRecordPostResponse = await axios.post(
-                `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
-                {
-                    type: 'CNAME',
-                    name: cnameRecordName,
-                    content: cnameRecordContent,
-                    ttl: 1,
-                    proxied: true,
-                },
-                {
-                    headers:
-                    {
-                        'X-Auth-Email': cloudflareEmailAddress,
-                        'X-Auth-Key': cloudflareGlobalApiKey
-                    }
-                }
-            );
-
-            if (dnsRecordPostResponse.data.success) {
-                logDebugMessageToConsole('successfully added CNAME DNS record', null, null);
-            }
-            else {
-                throw new Error('failed to add CNAME DNS record');
-            }
+            throw new Error('failed to add CNAME DNS record');
         }
     }
     else {

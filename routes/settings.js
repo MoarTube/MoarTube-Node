@@ -428,7 +428,7 @@ router.post('/storageConfig/toggle', performAuthenticationCheck(true), async (re
     }
 });
 
-router.post('/storageConfig/toggle', performAuthenticationCheck(true), async (req, res) => {
+router.post('/storageConfig/clear', performAuthenticationCheck(true), async (req, res) => {
     try {
         const data = await storageConfigClear_POST();
 
