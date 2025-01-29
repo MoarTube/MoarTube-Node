@@ -369,12 +369,6 @@ async function databaseConfigToggle_POST(databaseConfig) {
     }
 }
 
-async function databaseConfigClear_POST() {
-    await clearDatabase();
-
-    return { isError: false };
-}
-
 async function storageConfigToggle_POST(storageConfig, dnsConfig) {
     if (isStorageConfigValid(storageConfig)) {
         try {
@@ -424,12 +418,6 @@ async function storageConfigToggle_POST(storageConfig, dnsConfig) {
     else {
         throw new Error('invalid parameters');
     }
-}
-
-async function storageConfigClear_POST() {
-    await deleteDirectoryRecursive(getVideosDirectoryPath());
-
-    return { isError: false };
 }
 
 function likesToggle_POST(isLikesEnabled) {
@@ -625,7 +613,5 @@ module.exports = {
     networkInternal_POST,
     networkExternal_POST,
     databaseConfigToggle_POST,
-    databaseConfigClear_POST,
-    storageConfigToggle_POST,
-    storageConfigClear_POST
+    storageConfigToggle_POST
 };
