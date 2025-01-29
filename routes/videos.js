@@ -8,7 +8,7 @@ const {
     videoIdSourceFileExtension_POST, videoIdSourceFileExtension_GET, videoIdPublishes_GET, videoIdUnpublish_POST, videoIdData_POST, videoIdIndexAdd_POST, videoIdIndexRemove_POST,
     videoIdAlias_GET, search_GET, videoIdThumbnail_POST, videoIdPreview_POST, videoIdPoster_POST, videoIdLengths_POST, videoIdData_GET, delete_POST, finalize_POST,
     videoIdComments_GET, videoIdCommentsCommentId_GET, videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST, recommended_GET,
-    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST, videoIdDataAll_GET
+    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST, videoIdDataAll_GET, videoIdIndexOudated_POST
 } = require('../controllers/videos');
 const { 
     logDebugMessageToConsole 
@@ -465,6 +465,21 @@ router.post('/:videoId/index/remove', performAuthenticationCheck(true), async (r
         const cloudflareTurnstileToken = req.body.cloudflareTurnstileToken;
 
         const data = await videoIdIndexRemove_POST(videoId, cloudflareTurnstileToken);
+
+        res.send(data);
+    }
+    catch (error) {
+        logDebugMessageToConsole(null, error, new Error().stack);
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+    }
+});
+
+router.post('/:videoId/index/outdated', performAuthenticationCheck(true), async (req, res) => {
+    try {
+        const videoId = req.params.videoId;
+
+        const data = await videoIdIndexOudated_POST(videoId);
 
         res.send(data);
     }

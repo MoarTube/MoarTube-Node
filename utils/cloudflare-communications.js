@@ -641,9 +641,6 @@ async function cloudflare_resetCdn() {
 
         logDebugMessageToConsole('successfully reset Cloudflare configuration for MoarTube Node', null, null);
     }
-    else {
-        throw new Error('could not disable Cloudflare CDN; Cloudflare CDN is currently disabled');
-    }
 }
 
 async function cloudflare_validateTurnstileToken(token, cloudflareConnectingIp) {

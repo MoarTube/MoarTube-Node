@@ -190,6 +190,7 @@ if (cluster.isMaster) {
 					if (videos.length > 0) {
 						await performNodeIdentification();
 
+						const nodeSettings = getNodeSettings();
 						const nodeIdentification = getNodeIdentification();
 
 						const moarTubeTokenProof = nodeIdentification.moarTubeTokenProof;
@@ -205,14 +206,14 @@ if (cluster.isMaster) {
 							const nodeIconPngBase64 = getNodeIconPngBase64();
 							const nodeAvatarPngBase64 = getNodeAvatarPngBase64();
 
-							const videoPreviewJpgBase64 = getVideoPreviewJpgBase64(videoId);
+							const videoPreviewJpgBase64 = await getVideoPreviewJpgBase64(nodeSettings, videoId);
 
 							const data = {
 								videoId: videoId,
 								title: title,
 								tags: tags,
 								views: views,
-								isStreaming: isStreaming,
+								isStreaming: isStreaming === 1,
 								lengthSeconds: lengthSeconds,
 								nodeIconPngBase64: nodeIconPngBase64,
 								nodeAvatarPngBase64: nodeAvatarPngBase64,

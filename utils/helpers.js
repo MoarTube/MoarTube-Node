@@ -15,6 +15,9 @@ const {
 	indexer_getNodeIdentification, indexer_doNodeIdentificationRefresh
 } = require('./indexer-communications');
 const {
+	s3_getObjectBuffer
+} = require('./s3-communications');
+const {
 	isIpv4Address
 } = require('../utils/validators');
 
@@ -168,46 +171,76 @@ function getNodeBannerPngBase64() {
 	return pngImageBase64;
 }
 
-function getVideoThumbnailJpgBase64(videoId) {
+async function getVideoThumbnailJpgBase64(nodeSettings, videoId) {
 	let jpgImageBase64;
 
-	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/thumbnail.jpg');
+	if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+		const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/thumbnail.jpg');
 
-	if (fs.existsSync(directoryPath)) {
-		jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
+		if (fs.existsSync(directoryPath)) {
+			jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
+		}
+		else {
+			throw new Error('video thumbnail image not found');
+		}
 	}
-	else {
+	else if(nodeSettings.storageConfig.storageMode === 's3provider') {
+		const s3Config = nodeSettings.storageConfig.s3Config;
+		const key = `external/videos/${videoId}/images/thumbnail.jpg`;
 
+		const objectBuffer = await s3_getObjectBuffer(s3Config, key);
+
+		jpgImageBase64 = objectBuffer.toString("base64");
 	}
 
 	return jpgImageBase64;
 }
 
-function getVideoPreviewJpgBase64(videoId) {
+async function getVideoPreviewJpgBase64(nodeSettings, videoId) {
 	let jpgImageBase64;
 
-	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg');
+	if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+		const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg');
 
-	if (fs.existsSync(directoryPath)) {
-		jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
+		if (fs.existsSync(directoryPath)) {
+			jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
+		}
+		else {
+			throw new Error('video preview image not found');
+		}
 	}
-	else {
+	else if(nodeSettings.storageConfig.storageMode === 's3provider') {
+		const s3Config = nodeSettings.storageConfig.s3Config;
+		const key = `external/videos/${videoId}/images/preview.jpg`;
 
+		const objectBuffer = await s3_getObjectBuffer(s3Config, key);
+
+		jpgImageBase64 = objectBuffer.toString("base64");
 	}
 
 	return jpgImageBase64;
 }
 
-function getVideoPosterJpgBase64(videoId) {
+async function getVideoPosterJpgBase64(nodeSettings, videoId) {
 	let jpgImageBase64;
 
-	const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/poster.jpg');
+	if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+		const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/poster.jpg');
 
-	if (fs.existsSync(directoryPath)) {
-		jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
+		if (fs.existsSync(directoryPath)) {
+			jpgImageBase64 = fs.readFileSync(directoryPath).toString('base64');
+		}
+		else {
+			throw new Error('video poster image not found');
+		}
 	}
-	else {
+	else if(nodeSettings.storageConfig.storageMode === 's3provider') {
+		const s3Config = nodeSettings.storageConfig.s3Config;
+		const key = `external/videos/${videoId}/images/poster.jpg`;
 
+		const objectBuffer = await s3_getObjectBuffer(s3Config, key);
+
+		jpgImageBase64 = objectBuffer.toString("base64");
 	}
 
 	return jpgImageBase64;

@@ -430,8 +430,8 @@ async function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServic
                     const title = video.title;
                     const tags = video.tags;
                     const views = video.views;
-                    const isLive = video.is_live;
-                    const isStreaming = video.is_streaming;
+                    const isLive = video.is_live === 1;
+                    const isStreaming = video.is_streaming === 1;
                     const lengthSeconds = video.length_seconds;
                     const creationTimestamp = video.creation_timestamp;
 
@@ -439,7 +439,7 @@ async function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServic
                     const nodeAvatarPngBase64 = getNodeAvatarPngBase64();
                     //const nodeBannerPngBase64 = getNodeBannerPngBase64();
 
-                    const videoPreviewJpgBase64 = getVideoPreviewJpgBase64(videoId);
+                    const videoPreviewJpgBase64 = await getVideoPreviewJpgBase64(nodeSettings, videoId);
 
                     const data = {
                         videoId: videoId,
@@ -541,6 +541,17 @@ async function videoIdIndexRemove_POST(videoId, cloudflareTurnstileToken) {
         else {
             throw new Error('video does not exist');
         }
+    }
+    else {
+        throw new Error('invalid parameters');
+    }
+}
+
+async function videoIdIndexOudated_POST(videoId) {
+    if (isVideoIdValid(videoId, false)) {
+        await submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [true, true, videoId]);
+
+        return { isError: false };
     }
     else {
         throw new Error('invalid parameters');
@@ -1340,5 +1351,6 @@ module.exports = {
     videoIdViewsIncrement_GET,
     videoIdReport_POST,
     videoIdWatch_GET,
-    videoIdDataAll_GET
+    videoIdDataAll_GET,
+    videoIdIndexOudated_POST
 };
