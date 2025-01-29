@@ -549,8 +549,12 @@ async function videoIdIndexRemove_POST(videoId, cloudflareTurnstileToken) {
 
 async function videoIdIndexOudated_POST(videoId) {
     if (isVideoIdValid(videoId, false)) {
-        await submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [true, true, videoId]);
+        cloudflare_purgeVideoThumbnailImages([videoId]);
+        cloudflare_purgeVideoPreviewImages([videoId]);
+        cloudflare_purgeVideoPosterImages([videoId]);
 
+        await submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [true, true, videoId]);
+        
         return { isError: false };
     }
     else {

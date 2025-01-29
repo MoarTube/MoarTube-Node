@@ -134,11 +134,11 @@ async function cloudflare_purgeNodeImages() {
 
 async function cloudflare_purgeVideoThumbnailImages(videoIds) {
     try {
-        const externalResourcesbaseUrl = getExternalResourcesBaseUrl();
+        const externalVideosBaseUrl = getExternalVideosBaseUrl();
 
         const files = [];
         for (const videoId of videoIds) {
-            files.push(`${externalResourcesbaseUrl}/external/videos/${videoId}/thumbnail`);
+            files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/images/thumbnail.jpg`);
         }
 
         await cloudflare_purgeCache(files, 'cloudflare_purgeVideoThumbnailImages');
@@ -150,11 +150,11 @@ async function cloudflare_purgeVideoThumbnailImages(videoIds) {
 
 async function cloudflare_purgeVideoPreviewImages(videoIds) {
     try {
-        const externalResourcesbaseUrl = getExternalResourcesBaseUrl();
+        const externalVideosBaseUrl = getExternalVideosBaseUrl();
 
         const files = [];
         for (const videoId of videoIds) {
-            files.push(`${externalResourcesbaseUrl}/external/videos/${videoId}/images/preview`);
+            files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/images/preview.jpg`);
         }
 
         await cloudflare_purgeCache(files, 'cloudflare_purgeVideoPreviewImages');
@@ -166,11 +166,11 @@ async function cloudflare_purgeVideoPreviewImages(videoIds) {
 
 async function cloudflare_purgeVideoPosterImages(videoIds) {
     try {
-        const externalResourcesbaseUrl = getExternalResourcesBaseUrl();
+        const externalVideosBaseUrl = getExternalVideosBaseUrl();
 
         const files = [];
         for (const videoId of videoIds) {
-            files.push(`${externalResourcesbaseUrl}/external/videos/${videoId}/poster`);
+            files.push(`${externalVideosBaseUrl}/external/videos/${videoId}/images/poster.jpg`);
         }
 
         await cloudflare_purgeCache(files, 'cloudflare_purgeVideoPosterImages');
