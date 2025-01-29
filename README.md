@@ -71,6 +71,7 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
   - **File system** to store your videos and live streams locally on your node
   - **S3-compatible provider** to store your videos and live streams in the cloud
     - Amazon Web Services (AWS), DigitalOcean Spaces, Minio, etc...
+    - **path-style** and **vhost-style** URL compatibility
 - Distribution
   - Leverage Cloudflare's CDN for global content distribution
 
