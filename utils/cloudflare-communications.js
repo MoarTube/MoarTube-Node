@@ -2,20 +2,20 @@ const axios = require('axios').default;
 const path = require('path');
 const fs = require('fs');
 
-const { 
-    logDebugMessageToConsole 
+const {
+    logDebugMessageToConsole
 } = require('./logger');
-const { 
-    getNodeSettings, setNodeSettings, getIsDeveloperMode, getNodebaseUrl, getExternalVideosBaseUrl, getExternalResourcesBaseUrl 
+const {
+    getNodeSettings, getIsDeveloperMode, getNodebaseUrl, getExternalVideosBaseUrl, getExternalResourcesBaseUrl
 } = require('../utils/helpers');
-const { 
-    getVideosDirectoryPath 
+const {
+    getVideosDirectoryPath
 } = require('../utils/paths');
-const { 
-    performDatabaseReadJob_ALL, performDatabaseReadJob_GET 
+const {
+    performDatabaseReadJob_ALL, performDatabaseReadJob_GET
 } = require('../utils/database');
-const { 
-    s3_listObjectsWithPrefix 
+const {
+    s3_listObjectsWithPrefix
 } = require('../utils/s3-communications');
 
 async function cloudflare_purgeWatchPages(videoIds) {
@@ -333,7 +333,7 @@ async function cloudflare_purgeProgressiveVideos(videoIds) {
     }
 }
 
-async function cloudflare_setCdnConfiguration(moartubeNodeIp, cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
+async function cloudflare_setCdnConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
     logDebugMessageToConsole('setting Cloudflare CDN configuration for MoarTube Node', null, null);
 
     const headers = {
@@ -341,8 +341,6 @@ async function cloudflare_setCdnConfiguration(moartubeNodeIp, cloudflareEmailAdd
         'X-Auth-Key': cloudflareGlobalApiKey
     };
 
-    await cloudflare_resetCdn(moartubeNodeIp);
-    
     // step 1: create new http_request_cache_settings phase rule set in the zone and initialize it with rules
 
     logDebugMessageToConsole('creating zone http_request_cache_settings phase rule set', null, null);
@@ -531,117 +529,247 @@ async function cloudflare_setCdnConfiguration(moartubeNodeIp, cloudflareEmailAdd
 
     logDebugMessageToConsole('enabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null);
 
-    // step 6: save the configuration
-
-    const nodeSettings = getNodeSettings();
-
-    nodeSettings.isCloudflareCdnEnabled = true;
-    nodeSettings.cloudflareEmailAddress = cloudflareEmailAddress;
-    nodeSettings.cloudflareZoneId = cloudflareZoneId;
-    nodeSettings.cloudflareGlobalApiKey = cloudflareGlobalApiKey;
-
-    setNodeSettings(nodeSettings);
-
     logDebugMessageToConsole('successfully set Cloudflare configuration for MoarTube Node', null, null);
-
-    await cloudflare_addCdnDnsRecord(moartubeNodeIp, nodeSettings.storageConfig);
-
-    await cloudflare_purgeEntireCache();
 }
 
-async function cloudflare_resetCdn(moartubeNodeIp) {
-    logDebugMessageToConsole('resetting Cloudflare configuration for MoarTube Node', null, null);
+async function cloudflare_resetCdn(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
+    const headers = {
+        'X-Auth-Email': cloudflareEmailAddress,
+        'X-Auth-Key': cloudflareGlobalApiKey
+    };
 
-    const nodeSettings = getNodeSettings();
+    // step 1: get all rule sets in the zone
 
-    if (nodeSettings.isCloudflareCdnEnabled) {
-        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+    logDebugMessageToConsole('retrieving zone rule sets', null, null);
 
-        const headers = {
-            'X-Auth-Email': cloudflareEmailAddress,
-            'X-Auth-Key': cloudflareGlobalApiKey
-        };
+    const response_ruleSets = await axios.get(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets`, { headers });
 
-        // step 1: get all rule sets in the zone
+    if (!response_ruleSets.data.success) {
+        throw new Error('failed to retrieve zone rule sets');
+    }
 
-        logDebugMessageToConsole('retrieving zone rule sets', null, null);
+    const response_ruleSets_result = response_ruleSets.data.result;
 
-        const response_ruleSets = await axios.get(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets`, { headers });
+    logDebugMessageToConsole('discovered zone rule sets: ' + JSON.stringify(response_ruleSets.data), null, null);
 
-        if (!response_ruleSets.data.success) {
-            throw new Error('failed to retrieve zone rule sets');
+    // step 2: delete all http_request_cache_settings phase rule sets in the zone
+
+    logDebugMessageToConsole('deleting zone http_request_cache_settings phase rule set if discovered', null, null);
+
+    for (const ruleSet of response_ruleSets_result) {
+        if (ruleSet.phase === 'http_request_cache_settings') {
+            logDebugMessageToConsole('deleting discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null);
+
+            const response_deleteRuleSet = await axios.delete(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets/${ruleSet.id}`, { headers });
+
+            if (response_deleteRuleSet.status === 204) {
+                logDebugMessageToConsole('deleted discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null);
+            }
+            else {
+                throw new Error('failed to delete zone http_request_cache_settings phase rule set');
+            }
         }
+    }
 
-        const response_ruleSets_result = response_ruleSets.data.result;
+    // step 3: disable Argo Tiered Caching
 
-        logDebugMessageToConsole('discovered zone rule sets: ' + JSON.stringify(response_ruleSets.data), null, null);
+    logDebugMessageToConsole('disabling Argo Tiered Caching', null, null);
 
-        // step 2: delete all http_request_cache_settings phase rule sets in the zone
+    const tieredCachingData = {
+        value: 'off'
+    };
 
-        logDebugMessageToConsole('deleting zone http_request_cache_settings phase rule set if discovered', null, null);
+    const response_tieredCache = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/argo/tiered_caching`, tieredCachingData, { headers });
 
-        for (const ruleSet of response_ruleSets_result) {
-            if (ruleSet.phase === 'http_request_cache_settings') {
-                logDebugMessageToConsole('deleting discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null);
+    if (!response_tieredCache.data.success) {
+        throw new Error('failed to disable Argo Tiered Caching');
+    }
 
-                const response_deleteRuleSet = await axios.delete(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets/${ruleSet.id}`, { headers });
+    logDebugMessageToConsole('disabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null);
 
-                if (response_deleteRuleSet.status === 204) {
-                    logDebugMessageToConsole('deleted discovered zone http_request_cache_settings phase rule set: ' + ruleSet.id, null, null);
+    // step 4: disable Tiered Cache Smart Topology
+
+    logDebugMessageToConsole('disabling Tiered Cache Smart Topology', null, null);
+
+    const tieredCacheSmartTopologyData = {
+        value: 'off'
+    };
+
+    const response_tieredCacheSmartTopology = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/cache/tiered_cache_smart_topology_enable`, tieredCacheSmartTopologyData, { headers });
+
+    if (!response_tieredCacheSmartTopology.data.success) {
+        throw new Error('failed to disable Tiered Cache Smart Topology');
+    }
+
+    logDebugMessageToConsole('disabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null);
+
+    // step 6: remove CDN related DNS records
+
+    const dnsRecordGetResponse = await axios.get(
+        `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
+        {
+            headers:
+            {
+                'X-Auth-Email': cloudflareEmailAddress,
+                'X-Auth-Key': cloudflareGlobalApiKey
+            }
+        }
+    );
+
+    if (dnsRecordGetResponse.data.success) {
+        logDebugMessageToConsole('successfully queried DNS records', null, null);
+
+        const dnsRecords = dnsRecordGetResponse.data.result;
+
+        for (const dnsRecord of dnsRecords) {
+            if (dnsRecord.name.includes('externalvideos') || dnsRecord.name.includes('testingexternalvideos')) {
+                logDebugMessageToConsole(`removing existing DNS record with name: ${dnsRecord.name}`, null, null);
+
+                await axios.delete(
+                    `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records/${dnsRecord.id}`,
+                    {
+                        headers: {
+                            'X-Auth-Email': cloudflareEmailAddress,
+                            'X-Auth-Key': cloudflareGlobalApiKey
+                        }
+                    }
+                );
+            }
+        }
+    }
+
+    logDebugMessageToConsole('successfully reset Cloudflare configuration for MoarTube Node', null, null);
+}
+
+async function cloudflare_addCdnDnsRecord(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey, storageConfig) {
+    if (storageConfig.storageMode === 'filesystem') {
+        const dnsRecordGetResponse = await axios.get(
+            `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
+            {
+                headers:
+                {
+                    'X-Auth-Email': cloudflareEmailAddress,
+                    'X-Auth-Key': cloudflareGlobalApiKey
                 }
-                else {
-                    throw new Error('failed to delete zone http_request_cache_settings phase rule set');
+            }
+        );
+
+        if (dnsRecordGetResponse.data.success) {
+            logDebugMessageToConsole('successfully queried DNS records', null, null);
+
+            const dnsRecords = dnsRecordGetResponse.data.result;
+
+            for (const dnsRecord of dnsRecords) {
+                if (dnsRecord.name.includes('externalvideos') || dnsRecord.name.includes('testingexternalvideos')) {
+                    logDebugMessageToConsole(`removing existing DNS record with name: ${dnsRecord.name}`, null, null);
+
+                    await axios.delete(
+                        `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records/${dnsRecord.id}`,
+                        {
+                            headers: {
+                                'X-Auth-Email': cloudflareEmailAddress,
+                                'X-Auth-Key': cloudflareGlobalApiKey
+                            }
+                        }
+                    );
                 }
             }
         }
+        else {
+            throw new Error('failed to query DNS records from Cloudflare');
+        }
+    }
+    else if (storageConfig.storageMode === 's3provider') {
+        let recordName;
+        let recordContent;
 
-        // step 3: disable Argo Tiered Caching
+        const bucketName = storageConfig.s3Config.bucketName;
 
-        logDebugMessageToConsole('disabling Argo Tiered Caching', null, null);
+        recordName = bucketName;
 
-        const tieredCachingData = {
-            value: 'off'
-        };
+        const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
 
-        const response_tieredCache = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/argo/tiered_caching`, tieredCachingData, { headers });
+        if (endpoint != null) {
+            // assume non-AWS S3 provider
 
-        if (!response_tieredCache.data.success) {
-            throw new Error('failed to disable Argo Tiered Caching');
+            const url = new URL(endpoint);
+            const hostname = url.hostname;
+
+            recordContent = `${bucketName}.${hostname}`;
+        }
+        else {
+            // assume AWS S3
+            const region = storageConfig.s3Config.s3ProviderClientConfig.region;
+
+            recordContent = `${bucketName}.s3.${region}.amazonaws.com`;
         }
 
-        logDebugMessageToConsole('disabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null);
+        logDebugMessageToConsole('verifying required DNS record name: ' + recordName + ' Content: ' + recordContent, null, null);
 
-        // step 4: disable Tiered Cache Smart Topology
+        logDebugMessageToConsole('querying DNS records...', null, null);
 
-        logDebugMessageToConsole('disabling Tiered Cache Smart Topology', null, null);
+        const dnsRecordGetResponse = await axios.get(
+            `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
+            {
+                headers:
+                {
+                    'X-Auth-Email': cloudflareEmailAddress,
+                    'X-Auth-Key': cloudflareGlobalApiKey
+                }
+            }
+        );
 
-        const tieredCacheSmartTopologyData = {
-            value: 'off'
-        };
+        if (dnsRecordGetResponse.data.success) {
+            logDebugMessageToConsole('successfully queried DNS records', null, null);
 
-        const response_tieredCacheSmartTopology = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/cache/tiered_cache_smart_topology_enable`, tieredCacheSmartTopologyData, { headers });
+            const dnsRecords = dnsRecordGetResponse.data.result;
 
-        if (!response_tieredCacheSmartTopology.data.success) {
-            throw new Error('failed to disable Tiered Cache Smart Topology');
+            for (const dnsRecord of dnsRecords) {
+                if (dnsRecord.name.includes('externalvideos') || dnsRecord.name.includes('testingexternalvideos')) {
+                    logDebugMessageToConsole(`removing existing DNS record with name: ${dnsRecord.name}`, null, null);
+
+                    await axios.delete(
+                        `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records/${dnsRecord.id}`,
+                        {
+                            headers: {
+                                'X-Auth-Email': cloudflareEmailAddress,
+                                'X-Auth-Key': cloudflareGlobalApiKey
+                            }
+                        }
+                    );
+                }
+            }
+
+            logDebugMessageToConsole('adding DNS record...', null, null);
+
+            let dnsRecordPostResponse = await axios.post(
+                `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
+                {
+                    type: 'CNAME',
+                    name: recordName,
+                    content: recordContent,
+                    ttl: 1,
+                    proxied: true,
+                },
+                {
+                    headers:
+                    {
+                        'X-Auth-Email': cloudflareEmailAddress,
+                        'X-Auth-Key': cloudflareGlobalApiKey
+                    }
+                }
+            );
+
+            if (dnsRecordPostResponse.data.success) {
+                logDebugMessageToConsole('successfully added DNS record', null, null);
+            }
+            else {
+                throw new Error('failed to add DNS record');
+            }
         }
-
-        logDebugMessageToConsole('disabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null);
-
-        // step 5: save the configuration
-
-        await cloudflare_resetDnsRecords(moartubeNodeIp);
-        await cloudflare_purgeEntireCache();
-
-        nodeSettings.isCloudflareCdnEnabled = false;
-        nodeSettings.cloudflareEmailAddress = '';
-        nodeSettings.cloudflareZoneId = '';
-        nodeSettings.cloudflareGlobalApiKey = '';
-
-        setNodeSettings(nodeSettings);
-
-        logDebugMessageToConsole('successfully reset Cloudflare configuration for MoarTube Node', null, null);
+        else {
+            throw new Error('failed to query DNS records from Cloudflare');
+        }
     }
 }
 
@@ -666,231 +794,6 @@ async function cloudflare_validateTurnstileToken(token, cloudflareConnectingIp) 
     }
 }
 
-async function cloudflare_addCdnDnsRecord(moartubeNodeIp, storageConfig) {
-    const nodeSettings = getNodeSettings();
-
-    const isCloudflareCdnEnabled = nodeSettings.isCloudflareCdnEnabled;
-
-    if(isCloudflareCdnEnabled) {
-        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
-        let recordName;
-        let recordContent;
-
-        if (storageConfig.storageMode === 'filesystem') {
-            const nodeSettings = getNodeSettings();
-
-            if (getIsDeveloperMode()) {
-                recordName = `testingexternalvideos.${nodeSettings.publicNodeAddress}`;
-            }
-            else {
-                recordName = `externalvideos.${nodeSettings.publicNodeAddress}`;
-            }
-            
-            recordContent = moartubeNodeIp;
-        }
-        else if (storageConfig.storageMode === 's3provider') {
-            const bucketName = storageConfig.s3Config.bucketName;
-            
-            recordName = bucketName;
-
-            const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
-            
-            if (endpoint != null) {
-                // assume non-AWS S3 provider
-
-                const url = new URL(endpoint);
-                const hostname = url.hostname;
-
-                recordContent = `${bucketName}.${hostname}`;
-            }
-            else {
-                // assume AWS S3
-                const region = storageConfig.s3Config.s3ProviderClientConfig.region;
-
-                recordContent = `${bucketName}.s3.${region}.amazonaws.com`;
-            }
-        }
-
-        logDebugMessageToConsole('verifying required DNS record name: ' + recordName + ' Content: ' + recordContent, null, null);
-
-        logDebugMessageToConsole('querying DNS records...', null, null);
-
-        const dnsRecordGetResponse = await axios.get(
-            `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records?name=${recordName}`,
-            {
-                headers:
-                {
-                    'X-Auth-Email': cloudflareEmailAddress,
-                    'X-Auth-Key': cloudflareGlobalApiKey
-                }
-            }
-        );
-
-        if (dnsRecordGetResponse.data.success) {
-            logDebugMessageToConsole('successfully queried DNS records', null, null);
-
-            const dnsRecords = dnsRecordGetResponse.data.result;
-
-            for(const dnsRecord of dnsRecords) {
-                if(dnsRecord.name === recordName) {
-                    logDebugMessageToConsole(`removing existing DNS record with name: ${dnsRecord.name}`, null, null);
-
-                    await axios.delete(
-                        `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records/${dnsRecord.id}`,
-                        {
-                            headers: {
-                                'X-Auth-Email': cloudflareEmailAddress,
-                                'X-Auth-Key': cloudflareGlobalApiKey
-                            }
-                        }
-                    );
-                }
-            }
-
-            logDebugMessageToConsole('adding DNS record...', null, null);
-
-            let dnsRecordPostResponse;
-
-            if(storageConfig.storageMode === 'filesystem') {
-                dnsRecordPostResponse = await axios.post(
-                    `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
-                    {
-                        type: 'A',
-                        name: recordName,
-                        content: recordContent,
-                        ttl: 1,
-                        proxied: true,
-                    },
-                    {
-                        headers:
-                        {
-                            'X-Auth-Email': cloudflareEmailAddress,
-                            'X-Auth-Key': cloudflareGlobalApiKey
-                        }
-                    }
-                );
-            }
-            else if(storageConfig.storageMode === 's3provider') {
-                dnsRecordPostResponse = await axios.post(
-                    `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
-                    {
-                        type: 'CNAME',
-                        name: recordName,
-                        content: recordContent,
-                        ttl: 1,
-                        proxied: true,
-                    },
-                    {
-                        headers:
-                        {
-                            'X-Auth-Email': cloudflareEmailAddress,
-                            'X-Auth-Key': cloudflareGlobalApiKey
-                        }
-                    }
-                );
-            }
-            else {
-                throw new Error('invalid storageMode');
-            }
-
-            if (dnsRecordPostResponse.data.success) {
-                logDebugMessageToConsole('successfully added DNS record', null, null);
-            }
-            else {
-                throw new Error('failed to add DNS record');
-            }
-        }
-        else {
-            throw new Error('failed to query DNS records from Cloudflare');
-        }
-    }
-}
-
-async function cloudflare_resetDnsRecords(moartubeNodeIp) {
-    const nodeSettings = getNodeSettings();
-    const storageConfig = nodeSettings.storageConfig;
-
-    const isCloudflareCdnEnabled = nodeSettings.isCloudflareCdnEnabled;
-
-    if(isCloudflareCdnEnabled) {
-        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
-        const dnsRecordGetResponse = await axios.get(
-            `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
-            {
-                headers:
-                {
-                    'X-Auth-Email': cloudflareEmailAddress,
-                    'X-Auth-Key': cloudflareGlobalApiKey
-                }
-            }
-        );
-    
-        if (dnsRecordGetResponse.data.success) {
-            logDebugMessageToConsole('successfully queried DNS records', null, null);
-    
-            const dnsRecords = dnsRecordGetResponse.data.result;
-    
-            for(const dnsRecord of dnsRecords) {
-                if(dnsRecord.name.contains('externalvideos') || dnsRecord.name.contains('testingexternalvideos')) {
-                    logDebugMessageToConsole(`removing existing DNS record with name: ${dnsRecord.name}`, null, null);
-    
-                    await axios.delete(
-                        `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records/${dnsRecord.id}`,
-                        {
-                            headers: {
-                                'X-Auth-Email': cloudflareEmailAddress,
-                                'X-Auth-Key': cloudflareGlobalApiKey
-                            }
-                        }
-                    );
-                }
-            }
-
-            if(storageConfig.storageMode === 'filesystem') {
-                let recordName;
-
-                if (getIsDeveloperMode()) {
-                    recordName = `testingexternalvideos.${nodeSettings.publicNodeAddress}`;
-                }
-                else {
-                    recordName = `externalvideos.${nodeSettings.publicNodeAddress}`;
-                }
-
-                const dnsRecordPostResponse = await axios.post(
-                    `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
-                    {
-                        type: 'A',
-                        name: recordName,
-                        content: moartubeNodeIp,
-                        ttl: 1,
-                        proxied: true
-                    },
-                    {
-                        headers:
-                        {
-                            'X-Auth-Email': cloudflareEmailAddress,
-                            'X-Auth-Key': cloudflareGlobalApiKey
-                        }
-                    }
-                );
-
-                if (dnsRecordPostResponse.data.success) {
-                    logDebugMessageToConsole('successfully added DNS record', null, null);
-                }
-                else {
-                    throw new Error('failed to add DNS record');
-                }
-            }
-        }
-    }
-}
-
 
 
 
@@ -905,28 +808,17 @@ async function cloudflare_validate(cloudflareEmailAddress, cloudflareZoneId, clo
     return response.data;
 }
 
-async function cloudflare_purgeEntireCache() {
-    const nodeSettings = getNodeSettings();
+async function cloudflare_purgeEntireCache(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
+    const response = await axios.post('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId + '/purge_cache', {
+        purge_everything: true
+    }, {
+        headers: {
+            'X-Auth-Email': cloudflareEmailAddress,
+            'X-Auth-Key': cloudflareGlobalApiKey
+        }
+    });
 
-    if (nodeSettings.isCloudflareCdnEnabled) {
-        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
-        const response = await axios.post('https://api.cloudflare.com/client/v4/zones/' + cloudflareZoneId + '/purge_cache', {
-            purge_everything: true
-        }, {
-            headers: {
-                'X-Auth-Email': cloudflareEmailAddress,
-                'X-Auth-Key': cloudflareGlobalApiKey
-            }
-        });
-
-        return response.data;
-    }
-    else {
-        throw new Error('could not purge the Cloudflare cache; the node is currently not configured to use Cloudflare');
-    }
+    return response.data;
 }
 
 async function cloudflare_purgeCache(files, source) {
@@ -1007,7 +899,6 @@ module.exports = {
     cloudflare_resetCdn,
     cloudflare_validateTurnstileToken,
     cloudflare_addCdnDnsRecord,
-    cloudflare_resetDnsRecords,
     cloudflare_purgeAllWatchPages,
     cloudflare_purgeAllEmbedVideoPages
 };

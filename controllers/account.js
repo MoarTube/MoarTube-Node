@@ -1,15 +1,15 @@
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-const { 
-    logDebugMessageToConsole 
+const {
+    logDebugMessageToConsole
 } = require('../utils/logger');
-const { 
-    getNodeSettings, setNodeSettings, getJwtSecret, getIsDeveloperMode 
+const {
+    getNodeSettings, setNodeSettings, getJwtSecret, getIsDeveloperMode
 } = require('../utils/helpers');
-const { 
-    isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid, 
-    isBooleanValid, isIpv4Address 
+const {
+    isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNodeAddressValid, isPortValid,
+    isBooleanValid
 } = require('../utils/validators');
 
 function signIn_POST(username, password, moarTubeNodeHttpProtocol, moarTubeNodeIp, moarTubeNodePort, rememberMe) {
@@ -51,30 +51,11 @@ function signIn_POST(username, password, moarTubeNodeHttpProtocol, moarTubeNodeI
         if (isUsernameValid && isPasswordValid) {
             logDebugMessageToConsole('user logged in: ' + username, null, null);
 
-            // if these are empty, then this is the user's first time logging in. The storageMode is therefore assumed to be fileSystem.
+            // if these are empty, then this is the user's first time logging in. The storageMode is therefore assumed to be filesystem.
             if (nodeSettings.publicNodeProtocol === "" && nodeSettings.publicNodeAddress === "" && nodeSettings.publicNodePort === "") {
                 nodeSettings.publicNodeProtocol = moarTubeNodeHttpProtocol;
                 nodeSettings.publicNodeAddress = moarTubeNodeIp;
                 nodeSettings.publicNodePort = moarTubeNodePort;
-
-                if (moarTubeNodeHttpProtocol === 'http') {
-                    moarTubeNodePort = moarTubeNodePort == 80 ? '' : ':' + moarTubeNodePort;
-                }
-                else if (moarTubeNodeHttpProtocol === 'https') {
-                    moarTubeNodePort = moarTubeNodePort == 443 ? '' : ':' + moarTubeNodePort;
-                }
-
-                if (isIpv4Address(moarTubeNodeIp)) {
-                    nodeSettings.externalVideosBaseUrl = `${moarTubeNodeHttpProtocol}://${moarTubeNodeIp}${moarTubeNodePort}`;
-                }
-                else {
-                    if (getIsDeveloperMode()) {
-                        nodeSettings.externalVideosBaseUrl = `${moarTubeNodeHttpProtocol}://testingexternalvideos.${moarTubeNodeIp}${moarTubeNodePort}`;
-                    }
-                    else {
-                        nodeSettings.externalVideosBaseUrl = `${moarTubeNodeHttpProtocol}://externalvideos.${moarTubeNodeIp}${moarTubeNodePort}`;
-                    }
-                }
 
                 setNodeSettings(nodeSettings);
             }

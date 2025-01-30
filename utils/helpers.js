@@ -174,7 +174,7 @@ function getNodeBannerPngBase64() {
 async function getVideoThumbnailJpgBase64(nodeSettings, videoId) {
 	let jpgImageBase64;
 
-	if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+	if (nodeSettings.storageConfig.storageMode === 'filesystem') {
 		const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/thumbnail.jpg');
 
 		if (fs.existsSync(directoryPath)) {
@@ -184,7 +184,7 @@ async function getVideoThumbnailJpgBase64(nodeSettings, videoId) {
 			throw new Error('video thumbnail image not found');
 		}
 	}
-	else if(nodeSettings.storageConfig.storageMode === 's3provider') {
+	else if (nodeSettings.storageConfig.storageMode === 's3provider') {
 		const s3Config = nodeSettings.storageConfig.s3Config;
 		const key = `external/videos/${videoId}/images/thumbnail.jpg`;
 
@@ -199,7 +199,7 @@ async function getVideoThumbnailJpgBase64(nodeSettings, videoId) {
 async function getVideoPreviewJpgBase64(nodeSettings, videoId) {
 	let jpgImageBase64;
 
-	if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+	if (nodeSettings.storageConfig.storageMode === 'filesystem') {
 		const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/preview.jpg');
 
 		if (fs.existsSync(directoryPath)) {
@@ -209,7 +209,7 @@ async function getVideoPreviewJpgBase64(nodeSettings, videoId) {
 			throw new Error('video preview image not found');
 		}
 	}
-	else if(nodeSettings.storageConfig.storageMode === 's3provider') {
+	else if (nodeSettings.storageConfig.storageMode === 's3provider') {
 		const s3Config = nodeSettings.storageConfig.s3Config;
 		const key = `external/videos/${videoId}/images/preview.jpg`;
 
@@ -224,7 +224,7 @@ async function getVideoPreviewJpgBase64(nodeSettings, videoId) {
 async function getVideoPosterJpgBase64(nodeSettings, videoId) {
 	let jpgImageBase64;
 
-	if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+	if (nodeSettings.storageConfig.storageMode === 'filesystem') {
 		const directoryPath = path.join(getVideosDirectoryPath(), videoId + '/images/poster.jpg');
 
 		if (fs.existsSync(directoryPath)) {
@@ -234,7 +234,7 @@ async function getVideoPosterJpgBase64(nodeSettings, videoId) {
 			throw new Error('video poster image not found');
 		}
 	}
-	else if(nodeSettings.storageConfig.storageMode === 's3provider') {
+	else if (nodeSettings.storageConfig.storageMode === 's3provider') {
 		const s3Config = nodeSettings.storageConfig.s3Config;
 		const key = `external/videos/${videoId}/images/poster.jpg`;
 
@@ -277,11 +277,12 @@ function getNodebaseUrl() {
 }
 
 function getExternalVideosBaseUrl() {
+	let externalVideosBaseUrl;
+
 	const nodeSettings = getNodeSettings();
 
+	const isCloudflareCdnEnabled = nodeSettings.isCloudflareCdnEnabled;
 	const storageConfig = nodeSettings.storageConfig;
-
-	let externalVideosBaseUrl;
 
 	if (storageConfig.storageMode === 'filesystem') {
 		const publicNodeProtocol = nodeSettings.publicNodeProtocol;
@@ -295,17 +296,7 @@ function getExternalVideosBaseUrl() {
 			publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
 		}
 
-		if (isIpv4Address(publicNodeAddress)) {
-			externalVideosBaseUrl = `${publicNodeProtocol}://${publicNodeAddress}${publicNodePort}`;
-		}
-		else {
-			if (getIsDeveloperMode()) {
-				externalVideosBaseUrl = `${publicNodeProtocol}://testingexternalvideos.${publicNodeAddress}${publicNodePort}`;
-			}
-			else {
-				externalVideosBaseUrl = `${publicNodeProtocol}://externalvideos.${publicNodeAddress}${publicNodePort}`;
-			}
-		}
+		externalVideosBaseUrl = `${publicNodeProtocol}://${publicNodeAddress}${publicNodePort}`;
 	}
 	else if (storageConfig.storageMode === 's3provider') {
 		const bucketName = storageConfig.s3Config.bucketName;
@@ -313,7 +304,7 @@ function getExternalVideosBaseUrl() {
 
 		// if the endpoint is present, we assume the S3 provider is not AWS and default to using the provided URL endpoint
 		if (endpoint != null) {
-			if (nodeSettings.isCloudflareCdnEnabled) {
+			if (isCloudflareCdnEnabled) {
 				externalVideosBaseUrl = `https://${bucketName}`;
 			}
 			else {
@@ -339,7 +330,7 @@ function getExternalVideosBaseUrl() {
 		}
 		else {
 			// if the endpoint is not present, we assume the S3 provider is AWS and construct the URL endpoint
-			if (nodeSettings.isCloudflareCdnEnabled) {
+			if (isCloudflareCdnEnabled) {
 				externalVideosBaseUrl = `https://${bucketName}`;
 			}
 			else {
@@ -347,7 +338,7 @@ function getExternalVideosBaseUrl() {
 
 				if (storageConfig.s3Config.s3ProviderClientConfig.forcePathStyle) {
 					// path-style AWS URL
-					externalVideosBaseUrl = `http://s3.${region}.amazonaws.com/${bucketName}`;
+					externalVideosBaseUrl = `https://s3.${region}.amazonaws.com/${bucketName}`;
 				} else {
 					// vhost-style AWS URL
 					externalVideosBaseUrl = `http://${bucketName}.s3.${region}.amazonaws.com`;
@@ -360,9 +351,9 @@ function getExternalVideosBaseUrl() {
 }
 
 function getExternalResourcesBaseUrl() {
-	const nodeSettings = getNodeSettings();
-
 	let externalResourcesBaseUrl;
+
+	const nodeSettings = getNodeSettings();
 
 	const publicNodeProtocol = nodeSettings.publicNodeProtocol;
 	const publicNodeAddress = nodeSettings.publicNodeAddress;
@@ -375,17 +366,7 @@ function getExternalResourcesBaseUrl() {
 		publicNodePort = publicNodePort == 443 ? '' : ':' + publicNodePort;
 	}
 
-	if (isIpv4Address(publicNodeAddress)) {
-		externalResourcesBaseUrl = `${publicNodeProtocol}://${publicNodeAddress}${publicNodePort}`;
-	}
-	else {
-		if (getIsDeveloperMode()) {
-			externalResourcesBaseUrl = `${publicNodeProtocol}://testingexternalresources.${publicNodeAddress}${publicNodePort}`;
-		}
-		else {
-			externalResourcesBaseUrl = `${publicNodeProtocol}://externalresources.${publicNodeAddress}${publicNodePort}`;
-		}
-	}
+	externalResourcesBaseUrl = `${publicNodeProtocol}://${publicNodeAddress}${publicNodePort}`;
 
 	return externalResourcesBaseUrl;
 }

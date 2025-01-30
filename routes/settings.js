@@ -8,14 +8,14 @@ const {
     networkInternal_POST, networkExternal_POST, cloudflareConfigure_POST, cloudflareClear_POST, cloudflareTurnstileConfigure_POST, cloudflareTurnstileConfigureClear_POST,
     commentsToggle_POST, likesToggle_POST, dislikesToggle_POST, reportsToggle_POST, liveChatToggle_POST, databaseConfigToggle_POST, storageConfigToggle_POST
 } = require('../controllers/settings');
-const { 
+const {
     getImagesDirectoryPath, getCertificatesDirectoryPath
 } = require('../utils/paths');
-const { 
-    logDebugMessageToConsole 
+const {
+    logDebugMessageToConsole
 } = require('../utils/logger');
-const { 
-    performAuthenticationCheck 
+const {
+    performAuthenticationCheck
 } = require('../middleware/authentication');
 
 const router = express.Router();
@@ -329,9 +329,8 @@ router.post('/cloudflare/configure', performAuthenticationCheck(true), async (re
         const cloudflareEmailAddress = req.body.cloudflareEmailAddress;
         const cloudflareZoneId = req.body.cloudflareZoneId;
         const cloudflareGlobalApiKey = req.body.cloudflareGlobalApiKey;
-        const moartubeNodeIp = req.body.moartubeNodeIp;
 
-        const data = await cloudflareConfigure_POST(moartubeNodeIp, cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
+        const data = await cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
 
         res.send(data);
     }
@@ -344,9 +343,7 @@ router.post('/cloudflare/configure', performAuthenticationCheck(true), async (re
 
 router.post('/cloudflare/clear', performAuthenticationCheck(true), async (req, res) => {
     try {
-        const moartubeNodeIp = req.body.moartubeNodeIp;
-
-        const data = await cloudflareClear_POST(moartubeNodeIp);
+        const data = await cloudflareClear_POST();
 
         res.send(data);
     }
@@ -404,9 +401,8 @@ router.post('/databaseConfig/toggle', performAuthenticationCheck(true), async (r
 router.post('/storageConfig/toggle', performAuthenticationCheck(true), async (req, res) => {
     try {
         const storageConfig = req.body.storageConfig;
-        const moartubeNodeIp = req.body.moartubeNodeIp;
 
-        const data = await storageConfigToggle_POST(moartubeNodeIp, storageConfig);
+        const data = await storageConfigToggle_POST(storageConfig);
 
         res.send(data);
     }

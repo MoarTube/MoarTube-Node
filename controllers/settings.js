@@ -3,29 +3,29 @@ const path = require('path');
 const bcryptjs = require('bcryptjs');
 const packageJson = require('../package.json');
 
-const { 
-    logDebugMessageToConsole 
+const {
+    logDebugMessageToConsole
 } = require('../utils/logger');
-const { 
+const {
     getImagesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath, getDatabaseFilePath, getVideosDirectoryPath
 } = require('../utils/paths');
-const { 
+const {
     getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast, getExternalVideosBaseUrl
 } = require('../utils/helpers');
 const {
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNodeAddressValid,
     isPortValid, isCloudflareCredentialsValid, isBooleanValid, isDatabaseConfigValid, isStorageConfigValid
 } = require('../utils/validators');
-const { 
-    indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate, 
-    indexer_doNodeExternalNetworkUpdate 
+const {
+    indexer_doNodePersonalizeNodeNameUpdate, indexer_doNodePersonalizeNodeAboutUpdate, indexer_doNodePersonalizeNodeIdUpdate,
+    indexer_doNodeExternalNetworkUpdate
 } = require('../utils/indexer-communications');
-const { 
+const {
     cloudflare_setCdnConfiguration, cloudflare_resetCdn, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
-    cloudflare_purgeAllWatchPages, cloudflare_addCdnDnsRecord
+    cloudflare_purgeAllWatchPages, cloudflare_addCdnDnsRecord, cloudflare_purgeEntireCache
 } = require('../utils/cloudflare-communications');
-const { 
-    submitDatabaseWriteJob, performDatabaseReadJob_ALL, clearDatabase 
+const {
+    submitDatabaseWriteJob, performDatabaseReadJob_ALL, clearDatabase
 } = require('../utils/database');
 
 function root_GET() {
@@ -246,11 +246,25 @@ function secure_POST(isSecure, keyFile, certFile, caFiles) {
     }
 }
 
-async function cloudflareConfigure_POST(moartubeNodeIp, cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
+async function cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
     const isValid = await isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
 
     if (isValid) {
-        await cloudflare_setCdnConfiguration(moartubeNodeIp, cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
+        const nodeSettings = getNodeSettings();
+
+        const storageConfig = nodeSettings.storageConfig;
+
+        await cloudflare_resetCdn(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
+        await cloudflare_setCdnConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
+        await cloudflare_addCdnDnsRecord(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey, storageConfig);
+        await cloudflare_purgeEntireCache(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
+
+        nodeSettings.isCloudflareCdnEnabled = true;
+        nodeSettings.cloudflareEmailAddress = cloudflareEmailAddress;
+        nodeSettings.cloudflareZoneId = cloudflareZoneId;
+        nodeSettings.cloudflareGlobalApiKey = cloudflareGlobalApiKey;
+
+        setNodeSettings(nodeSettings);
 
         return { isError: false };
     }
@@ -259,8 +273,24 @@ async function cloudflareConfigure_POST(moartubeNodeIp, cloudflareEmailAddress, 
     }
 }
 
-async function cloudflareClear_POST(moartubeNodeIp) {
-    await cloudflare_resetCdn(moartubeNodeIp);
+async function cloudflareClear_POST() {
+    const nodeSettings = getNodeSettings();
+
+    if (nodeSettings.isCloudflareCdnEnabled) {
+        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+
+        await cloudflare_resetCdn(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
+        await cloudflare_purgeEntireCache(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
+
+        nodeSettings.isCloudflareCdnEnabled = false;
+        nodeSettings.cloudflareEmailAddress = '';
+        nodeSettings.cloudflareZoneId = '';
+        nodeSettings.cloudflareGlobalApiKey = '';
+
+        setNodeSettings(nodeSettings);
+    }
 
     return { isError: false };
 }
@@ -368,12 +398,19 @@ async function databaseConfigToggle_POST(databaseConfig) {
     }
 }
 
-async function storageConfigToggle_POST(moartubeNodeIp, storageConfig) {
+async function storageConfigToggle_POST(storageConfig) {
     if (isStorageConfigValid(storageConfig)) {
         try {
-            await cloudflare_addCdnDnsRecord(moartubeNodeIp, storageConfig);
-
             const nodeSettings = getNodeSettings();
+
+            if (nodeSettings.isCloudflareCdnEnabled) {
+                const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+                const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+                const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+
+                await cloudflare_addCdnDnsRecord(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey, storageConfig);
+                await cloudflare_purgeEntireCache(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
+            }
 
             nodeSettings.storageConfig = storageConfig;
 
