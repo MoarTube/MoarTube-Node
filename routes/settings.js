@@ -329,8 +329,9 @@ router.post('/cloudflare/configure', performAuthenticationCheck(true), async (re
         const cloudflareEmailAddress = req.body.cloudflareEmailAddress;
         const cloudflareZoneId = req.body.cloudflareZoneId;
         const cloudflareGlobalApiKey = req.body.cloudflareGlobalApiKey;
+        const moartubeNodeIp = req.body.moartubeNodeIp;
 
-        const data = await cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
+        const data = await cloudflareConfigure_POST(moartubeNodeIp, cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
 
         res.send(data);
     }
@@ -343,7 +344,9 @@ router.post('/cloudflare/configure', performAuthenticationCheck(true), async (re
 
 router.post('/cloudflare/clear', performAuthenticationCheck(true), async (req, res) => {
     try {
-        const data = await cloudflareClear_POST();
+        const moartubeNodeIp = req.body.moartubeNodeIp;
+
+        const data = await cloudflareClear_POST(moartubeNodeIp);
 
         res.send(data);
     }
@@ -401,9 +404,9 @@ router.post('/databaseConfig/toggle', performAuthenticationCheck(true), async (r
 router.post('/storageConfig/toggle', performAuthenticationCheck(true), async (req, res) => {
     try {
         const storageConfig = req.body.storageConfig;
-        const dnsConfig = req.body.dnsConfig;
+        const moartubeNodeIp = req.body.moartubeNodeIp;
 
-        const data = await storageConfigToggle_POST(storageConfig, dnsConfig);
+        const data = await storageConfigToggle_POST(moartubeNodeIp, storageConfig);
 
         res.send(data);
     }

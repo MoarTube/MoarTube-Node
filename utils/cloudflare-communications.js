@@ -333,224 +333,223 @@ async function cloudflare_purgeProgressiveVideos(videoIds) {
     }
 }
 
-async function cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
-    logDebugMessageToConsole('setting Cloudflare configuration for MoarTube Node', null, null);
+async function cloudflare_setCdnConfiguration(moartubeNodeIp, cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
+    logDebugMessageToConsole('setting Cloudflare CDN configuration for MoarTube Node', null, null);
+
+    const headers = {
+        'X-Auth-Email': cloudflareEmailAddress,
+        'X-Auth-Key': cloudflareGlobalApiKey
+    };
+
+    await cloudflare_resetCdn(moartubeNodeIp);
+    
+    // step 1: create new http_request_cache_settings phase rule set in the zone and initialize it with rules
+
+    logDebugMessageToConsole('creating zone http_request_cache_settings phase rule set', null, null);
+
+    const newZoneRuleSet = {
+        "rules": [
+            {
+                "description": "Node External - Video",
+                "action": "set_cache_settings",
+                "enabled": true,
+                "expression": "(starts_with(http.request.uri, \"/external/videos\"))",
+                "action_parameters": {
+                    "cache": true,
+                    "edge_ttl": {
+                        "mode": "override_origin",
+                        "default": 31536000
+                    },
+                    "browser_ttl": {
+                        "mode": "bypass"
+                    }
+                }
+            },
+            {
+                "description": "Node External - JavaScript, CSS",
+                "action": "set_cache_settings",
+                "enabled": true,
+                "expression": "(starts_with(http.request.uri, \"/external/resources/javascript\")) or (starts_with(http.request.uri, \"/external/resources/css\"))",
+                "action_parameters": {
+                    "cache": true,
+                    "edge_ttl": {
+                        "mode": "override_origin",
+                        "default": 86400
+                    },
+                    "browser_ttl": {
+                        "mode": "override_origin",
+                        "default": 28800
+                    }
+                }
+            },
+            {
+                "description": "Node External - Images",
+                "action": "set_cache_settings",
+                "enabled": true,
+                "expression": "(starts_with(http.request.uri, \"/external/resources/images\"))",
+                "action_parameters": {
+                    "cache": true,
+                    "edge_ttl": {
+                        "mode": "override_origin",
+                        "default": 86400
+                    },
+                    "browser_ttl": {
+                        "mode": "bypass"
+                    }
+                }
+            },
+            {
+                "description": "Node Watch - Watch Page for Displaying a Video",
+                "action": "set_cache_settings",
+                "enabled": true,
+                "expression": "(starts_with(http.request.uri, \"/watch\"))",
+                "action_parameters": {
+                    "cache": true,
+                    "edge_ttl": {
+                        "mode": "respect_origin"
+                    },
+                    "browser_ttl": {
+                        "mode": "bypass"
+                    }
+                }
+            },
+            {
+                "description": "Node Search - Cache Searches on the Node Page, but bypass if searchTerm is specified",
+                "action": "set_cache_settings",
+                "enabled": true,
+                "expression": "(starts_with(http.request.uri, \"/node/search?searchTerm=&sortTerm\"))",
+                "action_parameters": {
+                    "cache": true,
+                    "edge_ttl": {
+                        "mode": "override_origin",
+                        "default": 86400
+                    },
+                    "browser_ttl": {
+                        "mode": "bypass"
+                    }
+                }
+            },
+            {
+                "description": "Node Page - Cache for Different Variations of the Node Page, but bypass if searchTerm is specified",
+                "action": "set_cache_settings",
+                "enabled": true,
+                "expression": "(starts_with(http.request.uri, \"/node\")) or (starts_with(http.request.uri, \"/node?searchTerm=&sortTerm\"))",
+                "action_parameters": {
+                    "cache": true,
+                    "edge_ttl": {
+                        "mode": "override_origin",
+                        "default": 86400
+                    },
+                    "browser_ttl": {
+                        "mode": "bypass"
+                    }
+                }
+            },
+            {
+                "description": "Node External - Cache Bypass for Live (dynamic) HLS stream manifests",
+                "action": "set_cache_settings",
+                "enabled": true,
+                "expression": "(http.request.uri.path contains \"/adaptive/m3u8/dynamic/\") and (http.request.method == \"GET\")",
+                "action_parameters": {
+                    "cache": false
+                }
+            },
+        ]
+    }
+
+    const response_newZoneRuleSet = await axios.put(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets/phases/http_request_cache_settings/entrypoint`, newZoneRuleSet, { headers });
+
+    if (!response_newZoneRuleSet.data.success) {
+        throw new Error('failed to create zone http_request_cache_settings phase rule set');
+    }
+
+    const response_newZoneRuleSet_result = response_newZoneRuleSet.data.result;
+
+    logDebugMessageToConsole('created zone http_request_cache_settings phase rule set: ' + JSON.stringify(response_newZoneRuleSet_result), null, null);
+
+    // step 2: set Browser Cache TTL to "Respect Existing Headers"
+
+    logDebugMessageToConsole('setting Browser Cache TTL to Respect Existing Headers', null, null);
+
+    const browserCacheTtlData = {
+        value: 0
+    };
+
+    const response_BrowserCacheTtl = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/settings/browser_cache_ttl`, browserCacheTtlData, { headers });
+
+    if (!response_BrowserCacheTtl.data.success) {
+        throw new Error('failed to set Browser Cache TTL');
+    }
+
+    logDebugMessageToConsole('set Browser Cache TTL to Respect Existing Headers: ' + JSON.stringify(response_BrowserCacheTtl.data), null, null);
+
+    // step 3: enable Always Use HTTPS
+
+    logDebugMessageToConsole('enabling Always Use HTTPS', null, null);
+
+    const alwaysUseHttpsData = {
+        value: 'on'
+    };
+
+    const response_AlwaysUseHttps = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/settings/always_use_https`, alwaysUseHttpsData, { headers });
+
+    if (!response_AlwaysUseHttps.data.success) {
+        throw new Error('failed to enable Always Use HTTPS');
+    }
+
+    logDebugMessageToConsole('enabled Always Use HTTPS: ' + JSON.stringify(alwaysUseHttpsData.data), null, null);
+
+    // step 4: enable Argo Tiered Caching
+
+    logDebugMessageToConsole('enabling Argo Tiered Caching', null, null);
+
+    const tieredCachingData = {
+        value: 'on'
+    };
+
+    const response_tieredCache = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/argo/tiered_caching`, tieredCachingData, { headers });
+
+    if (!response_tieredCache.data.success) {
+        throw new Error('failed to enable Argo Tiered Caching');
+    }
+
+    logDebugMessageToConsole('enabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null);
+
+    // step 5: enable Tiered Cache Smart Topology
+
+    logDebugMessageToConsole('enabling Tiered Cache Smart Topology', null, null);
+
+    const tieredCacheSmartTopologyData = {
+        value: 'on'
+    };
+
+    const response_tieredCacheSmartTopology = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/cache/tiered_cache_smart_topology_enable`, tieredCacheSmartTopologyData, { headers });
+
+    if (!response_tieredCacheSmartTopology.data.success) {
+        throw new Error('failed to enable Tiered Cache Smart Topology');
+    }
+
+    logDebugMessageToConsole('enabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null);
+
+    // step 6: save the configuration
 
     const nodeSettings = getNodeSettings();
 
-    if (!nodeSettings.isCloudflareCdnEnabled) {
-        const headers = {
-            'X-Auth-Email': cloudflareEmailAddress,
-            'X-Auth-Key': cloudflareGlobalApiKey
-        };
+    nodeSettings.isCloudflareCdnEnabled = true;
+    nodeSettings.cloudflareEmailAddress = cloudflareEmailAddress;
+    nodeSettings.cloudflareZoneId = cloudflareZoneId;
+    nodeSettings.cloudflareGlobalApiKey = cloudflareGlobalApiKey;
 
-        await cloudflare_resetCdn();
+    setNodeSettings(nodeSettings);
 
-        // step 1: create new http_request_cache_settings phase rule set in the zone and initialize it with rules
+    logDebugMessageToConsole('successfully set Cloudflare configuration for MoarTube Node', null, null);
 
-        logDebugMessageToConsole('creating zone http_request_cache_settings phase rule set', null, null);
+    await cloudflare_addCdnDnsRecord(moartubeNodeIp, nodeSettings.storageConfig);
 
-        const newZoneRuleSet = {
-            "rules": [
-                {
-                    "description": "Node External - Video",
-                    "action": "set_cache_settings",
-                    "enabled": true,
-                    "expression": "(starts_with(http.request.uri, \"/external/videos\"))",
-                    "action_parameters": {
-                        "cache": true,
-                        "edge_ttl": {
-                            "mode": "override_origin",
-                            "default": 31536000
-                        },
-                        "browser_ttl": {
-                            "mode": "bypass"
-                        }
-                    }
-                },
-                {
-                    "description": "Node External - JavaScript, CSS",
-                    "action": "set_cache_settings",
-                    "enabled": true,
-                    "expression": "(starts_with(http.request.uri, \"/external/resources/javascript\")) or (starts_with(http.request.uri, \"/external/resources/css\"))",
-                    "action_parameters": {
-                        "cache": true,
-                        "edge_ttl": {
-                            "mode": "override_origin",
-                            "default": 86400
-                        },
-                        "browser_ttl": {
-                            "mode": "override_origin",
-                            "default": 28800
-                        }
-                    }
-                },
-                {
-                    "description": "Node External - Images",
-                    "action": "set_cache_settings",
-                    "enabled": true,
-                    "expression": "(starts_with(http.request.uri, \"/external/resources/images\"))",
-                    "action_parameters": {
-                        "cache": true,
-                        "edge_ttl": {
-                            "mode": "override_origin",
-                            "default": 86400
-                        },
-                        "browser_ttl": {
-                            "mode": "bypass"
-                        }
-                    }
-                },
-                {
-                    "description": "Node Watch - Watch Page for Displaying a Video",
-                    "action": "set_cache_settings",
-                    "enabled": true,
-                    "expression": "(starts_with(http.request.uri, \"/watch\"))",
-                    "action_parameters": {
-                        "cache": true,
-                        "edge_ttl": {
-                            "mode": "respect_origin"
-                        },
-                        "browser_ttl": {
-                            "mode": "bypass"
-                        }
-                    }
-                },
-                {
-                    "description": "Node Search - Cache Searches on the Node Page, but bypass if searchTerm is specified",
-                    "action": "set_cache_settings",
-                    "enabled": true,
-                    "expression": "(starts_with(http.request.uri, \"/node/search?searchTerm=&sortTerm\"))",
-                    "action_parameters": {
-                        "cache": true,
-                        "edge_ttl": {
-                            "mode": "override_origin",
-                            "default": 86400
-                        },
-                        "browser_ttl": {
-                            "mode": "bypass"
-                        }
-                    }
-                },
-                {
-                    "description": "Node Page - Cache for Different Variations of the Node Page, but bypass if searchTerm is specified",
-                    "action": "set_cache_settings",
-                    "enabled": true,
-                    "expression": "(starts_with(http.request.uri, \"/node\")) or (starts_with(http.request.uri, \"/node?searchTerm=&sortTerm\"))",
-                    "action_parameters": {
-                        "cache": true,
-                        "edge_ttl": {
-                            "mode": "override_origin",
-                            "default": 86400
-                        },
-                        "browser_ttl": {
-                            "mode": "bypass"
-                        }
-                    }
-                },
-                {
-                    "description": "Node External - Cache Bypass for Live (dynamic) HLS stream manifests",
-                    "action": "set_cache_settings",
-                    "enabled": true,
-                    "expression": "(http.request.uri.path contains \"/adaptive/m3u8/dynamic/\") and (http.request.method == \"GET\")",
-                    "action_parameters": {
-                        "cache": false
-                    }
-                },
-            ]
-        }
-
-        const response_newZoneRuleSet = await axios.put(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/rulesets/phases/http_request_cache_settings/entrypoint`, newZoneRuleSet, { headers });
-
-        if (!response_newZoneRuleSet.data.success) {
-            throw new Error('failed to create zone http_request_cache_settings phase rule set');
-        }
-
-        const response_newZoneRuleSet_result = response_newZoneRuleSet.data.result;
-
-        logDebugMessageToConsole('created zone http_request_cache_settings phase rule set: ' + JSON.stringify(response_newZoneRuleSet_result), null, null);
-
-        // step 2: set Browser Cache TTL to "Respect Existing Headers"
-
-        logDebugMessageToConsole('setting Browser Cache TTL to Respect Existing Headers', null, null);
-
-        const browserCacheTtlData = {
-            value: 0
-        };
-
-        const response_BrowserCacheTtl = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/settings/browser_cache_ttl`, browserCacheTtlData, { headers });
-
-        if (!response_BrowserCacheTtl.data.success) {
-            throw new Error('failed to set Browser Cache TTL');
-        }
-
-        logDebugMessageToConsole('set Browser Cache TTL to Respect Existing Headers: ' + JSON.stringify(response_BrowserCacheTtl.data), null, null);
-
-        // step 3: enable Always Use HTTPS
-
-        logDebugMessageToConsole('enabling Always Use HTTPS', null, null);
-
-        const alwaysUseHttpsData = {
-            value: 'on'
-        };
-
-        const response_AlwaysUseHttps = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/settings/always_use_https`, alwaysUseHttpsData, { headers });
-
-        if (!response_AlwaysUseHttps.data.success) {
-            throw new Error('failed to enable Always Use HTTPS');
-        }
-
-        logDebugMessageToConsole('enabled Always Use HTTPS: ' + JSON.stringify(alwaysUseHttpsData.data), null, null);
-
-        // step 4: enable Argo Tiered Caching
-
-        logDebugMessageToConsole('enabling Argo Tiered Caching', null, null);
-
-        const tieredCachingData = {
-            value: 'on'
-        };
-
-        const response_tieredCache = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/argo/tiered_caching`, tieredCachingData, { headers });
-
-        if (!response_tieredCache.data.success) {
-            throw new Error('failed to enable Argo Tiered Caching');
-        }
-
-        logDebugMessageToConsole('enabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null);
-
-        // step 5: enable Tiered Cache Smart Topology
-
-        logDebugMessageToConsole('enabling Tiered Cache Smart Topology', null, null);
-
-        const tieredCacheSmartTopologyData = {
-            value: 'on'
-        };
-
-        const response_tieredCacheSmartTopology = await axios.patch(`https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/cache/tiered_cache_smart_topology_enable`, tieredCacheSmartTopologyData, { headers });
-
-        if (!response_tieredCacheSmartTopology.data.success) {
-            throw new Error('failed to enable Tiered Cache Smart Topology');
-        }
-
-        logDebugMessageToConsole('enabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null);
-
-        // step 6: save the configuration
-
-        nodeSettings.isCloudflareCdnEnabled = true;
-        nodeSettings.cloudflareEmailAddress = cloudflareEmailAddress;
-        nodeSettings.cloudflareZoneId = cloudflareZoneId;
-        nodeSettings.cloudflareGlobalApiKey = cloudflareGlobalApiKey;
-
-        setNodeSettings(nodeSettings);
-
-        logDebugMessageToConsole('successfully set Cloudflare configuration for MoarTube Node', null, null);
-    }
-    else {
-        throw new Error('could not enable Cloudflare CDN; Cloudflare CDN is currently enabled');
-    }
+    await cloudflare_purgeEntireCache();
 }
 
-async function cloudflare_resetCdn() {
+async function cloudflare_resetCdn(moartubeNodeIp) {
     logDebugMessageToConsole('resetting Cloudflare configuration for MoarTube Node', null, null);
 
     const nodeSettings = getNodeSettings();
@@ -632,6 +631,9 @@ async function cloudflare_resetCdn() {
 
         // step 5: save the configuration
 
+        await cloudflare_resetDnsRecords(moartubeNodeIp);
+        await cloudflare_purgeEntireCache();
+
         nodeSettings.isCloudflareCdnEnabled = false;
         nodeSettings.cloudflareEmailAddress = '';
         nodeSettings.cloudflareZoneId = '';
@@ -664,58 +666,60 @@ async function cloudflare_validateTurnstileToken(token, cloudflareConnectingIp) 
     }
 }
 
-async function cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecordContent, cloudflareCredentials) {
-    const cloudflareEmailAddress = cloudflareCredentials.cloudflareEmailAddress;
-    const cloudflareZoneId = cloudflareCredentials.cloudflareZoneId;
-    const cloudflareGlobalApiKey = cloudflareCredentials.cloudflareGlobalApiKey;
+async function cloudflare_addCdnDnsRecord(moartubeNodeIp, storageConfig) {
+    const nodeSettings = getNodeSettings();
 
-    logDebugMessageToConsole('verifying required CNAME DNS record: Name: ' + cnameRecordName + ' Content: ' + cnameRecordContent, null, null);
+    const isCloudflareCdnEnabled = nodeSettings.isCloudflareCdnEnabled;
 
-    logDebugMessageToConsole('querying CNAME DNS records...', null, null);
+    if(isCloudflareCdnEnabled) {
+        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
 
-    const dnsRecordGetResponse = await axios.get(
-        `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records?type=CNAME&name=${cnameRecordName}`,
-        {
-            headers:
-            {
-                'X-Auth-Email': cloudflareEmailAddress,
-                'X-Auth-Key': cloudflareGlobalApiKey
+        let recordName;
+        let recordContent;
+
+        if (storageConfig.storageMode === 'filesystem') {
+            const nodeSettings = getNodeSettings();
+
+            if (getIsDeveloperMode()) {
+                recordName = `testingexternalvideos.${nodeSettings.publicNodeAddress}`;
+            }
+            else {
+                recordName = `externalvideos.${nodeSettings.publicNodeAddress}`;
+            }
+            
+            recordContent = moartubeNodeIp;
+        }
+        else if (storageConfig.storageMode === 's3provider') {
+            const bucketName = storageConfig.s3Config.bucketName;
+            
+            recordName = bucketName;
+
+            const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
+            
+            if (endpoint != null) {
+                // assume non-AWS S3 provider
+
+                const url = new URL(endpoint);
+                const hostname = url.hostname;
+
+                recordContent = `${bucketName}.${hostname}`;
+            }
+            else {
+                // assume AWS S3
+                const region = storageConfig.s3Config.s3ProviderClientConfig.region;
+
+                recordContent = `${bucketName}.s3.${region}.amazonaws.com`;
             }
         }
-    );
 
-    if (dnsRecordGetResponse.data.success) {
-        logDebugMessageToConsole('successfully queried CNAME DNS records', null, null);
-        
-        const dnsRecords = dnsRecordGetResponse.data.result;
+        logDebugMessageToConsole('verifying required DNS record name: ' + recordName + ' Content: ' + recordContent, null, null);
 
-        for(const dnsRecord of dnsRecords) {
-            if(dnsRecord.name === cnameRecordName) {
-                logDebugMessageToConsole(`removing existing CNAME record with name: ${dnsRecord.name}`, null, null);
+        logDebugMessageToConsole('querying DNS records...', null, null);
 
-                await axios.delete(
-                    `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records/${dnsRecord.id}`,
-                    {
-                        headers: {
-                            'X-Auth-Email': cloudflareEmailAddress,
-                            'X-Auth-Key': cloudflareGlobalApiKey
-                        }
-                    }
-                );
-            }
-        }
-
-        logDebugMessageToConsole('adding CNAME record...', null, null);
-
-        const dnsRecordPostResponse = await axios.post(
-            `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
-            {
-                type: 'CNAME',
-                name: cnameRecordName,
-                content: cnameRecordContent,
-                ttl: 1,
-                proxied: true,
-            },
+        const dnsRecordGetResponse = await axios.get(
+            `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records?name=${recordName}`,
             {
                 headers:
                 {
@@ -725,19 +729,167 @@ async function cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecord
             }
         );
 
-        if (dnsRecordPostResponse.data.success) {
-            logDebugMessageToConsole('successfully added CNAME DNS record', null, null);
+        if (dnsRecordGetResponse.data.success) {
+            logDebugMessageToConsole('successfully queried DNS records', null, null);
+
+            const dnsRecords = dnsRecordGetResponse.data.result;
+
+            for(const dnsRecord of dnsRecords) {
+                if(dnsRecord.name === recordName) {
+                    logDebugMessageToConsole(`removing existing DNS record with name: ${dnsRecord.name}`, null, null);
+
+                    await axios.delete(
+                        `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records/${dnsRecord.id}`,
+                        {
+                            headers: {
+                                'X-Auth-Email': cloudflareEmailAddress,
+                                'X-Auth-Key': cloudflareGlobalApiKey
+                            }
+                        }
+                    );
+                }
+            }
+
+            logDebugMessageToConsole('adding DNS record...', null, null);
+
+            let dnsRecordPostResponse;
+
+            if(storageConfig.storageMode === 'filesystem') {
+                dnsRecordPostResponse = await axios.post(
+                    `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
+                    {
+                        type: 'A',
+                        name: recordName,
+                        content: recordContent,
+                        ttl: 1,
+                        proxied: true,
+                    },
+                    {
+                        headers:
+                        {
+                            'X-Auth-Email': cloudflareEmailAddress,
+                            'X-Auth-Key': cloudflareGlobalApiKey
+                        }
+                    }
+                );
+            }
+            else if(storageConfig.storageMode === 's3provider') {
+                dnsRecordPostResponse = await axios.post(
+                    `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
+                    {
+                        type: 'CNAME',
+                        name: recordName,
+                        content: recordContent,
+                        ttl: 1,
+                        proxied: true,
+                    },
+                    {
+                        headers:
+                        {
+                            'X-Auth-Email': cloudflareEmailAddress,
+                            'X-Auth-Key': cloudflareGlobalApiKey
+                        }
+                    }
+                );
+            }
+            else {
+                throw new Error('invalid storageMode');
+            }
+
+            if (dnsRecordPostResponse.data.success) {
+                logDebugMessageToConsole('successfully added DNS record', null, null);
+            }
+            else {
+                throw new Error('failed to add DNS record');
+            }
         }
         else {
-            throw new Error('failed to add CNAME DNS record');
+            throw new Error('failed to query DNS records from Cloudflare');
         }
-    }
-    else {
-        throw new Error('failed to query DNS records from Cloudflare');
     }
 }
 
+async function cloudflare_resetDnsRecords(moartubeNodeIp) {
+    const nodeSettings = getNodeSettings();
+    const storageConfig = nodeSettings.storageConfig;
 
+    const isCloudflareCdnEnabled = nodeSettings.isCloudflareCdnEnabled;
+
+    if(isCloudflareCdnEnabled) {
+        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+
+        const dnsRecordGetResponse = await axios.get(
+            `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
+            {
+                headers:
+                {
+                    'X-Auth-Email': cloudflareEmailAddress,
+                    'X-Auth-Key': cloudflareGlobalApiKey
+                }
+            }
+        );
+    
+        if (dnsRecordGetResponse.data.success) {
+            logDebugMessageToConsole('successfully queried DNS records', null, null);
+    
+            const dnsRecords = dnsRecordGetResponse.data.result;
+    
+            for(const dnsRecord of dnsRecords) {
+                if(dnsRecord.name.contains('externalvideos') || dnsRecord.name.contains('testingexternalvideos')) {
+                    logDebugMessageToConsole(`removing existing DNS record with name: ${dnsRecord.name}`, null, null);
+    
+                    await axios.delete(
+                        `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records/${dnsRecord.id}`,
+                        {
+                            headers: {
+                                'X-Auth-Email': cloudflareEmailAddress,
+                                'X-Auth-Key': cloudflareGlobalApiKey
+                            }
+                        }
+                    );
+                }
+            }
+
+            if(storageConfig.storageMode === 'filesystem') {
+                let recordName;
+
+                if (getIsDeveloperMode()) {
+                    recordName = `testingexternalvideos.${nodeSettings.publicNodeAddress}`;
+                }
+                else {
+                    recordName = `externalvideos.${nodeSettings.publicNodeAddress}`;
+                }
+
+                const dnsRecordPostResponse = await axios.post(
+                    `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
+                    {
+                        type: 'A',
+                        name: recordName,
+                        content: moartubeNodeIp,
+                        ttl: 1,
+                        proxied: true
+                    },
+                    {
+                        headers:
+                        {
+                            'X-Auth-Email': cloudflareEmailAddress,
+                            'X-Auth-Key': cloudflareGlobalApiKey
+                        }
+                    }
+                );
+
+                if (dnsRecordPostResponse.data.success) {
+                    logDebugMessageToConsole('successfully added DNS record', null, null);
+                }
+                else {
+                    throw new Error('failed to add DNS record');
+                }
+            }
+        }
+    }
+}
 
 
 
@@ -851,10 +1003,11 @@ module.exports = {
     cloudflare_purgeVideoThumbnailImages,
     cloudflare_purgeVideoPreviewImages,
     cloudflare_purgeVideoPosterImages,
-    cloudflare_setConfiguration,
+    cloudflare_setCdnConfiguration,
     cloudflare_resetCdn,
     cloudflare_validateTurnstileToken,
-    cloudflare_addS3BucketCnameDnsRecord,
+    cloudflare_addCdnDnsRecord,
+    cloudflare_resetDnsRecords,
     cloudflare_purgeAllWatchPages,
     cloudflare_purgeAllEmbedVideoPages
 };

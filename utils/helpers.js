@@ -313,7 +313,7 @@ function getExternalVideosBaseUrl() {
 
 		// if the endpoint is present, we assume the S3 provider is not AWS and default to using the provided URL endpoint
 		if (endpoint != null) {
-			if (storageConfig.s3Config.isCnameConfigured) {
+			if (nodeSettings.isCloudflareCdnEnabled) {
 				externalVideosBaseUrl = `https://${bucketName}`;
 			}
 			else {
@@ -339,7 +339,7 @@ function getExternalVideosBaseUrl() {
 		}
 		else {
 			// if the endpoint is not present, we assume the S3 provider is AWS and construct the URL endpoint
-			if (storageConfig.s3Config.isCnameConfigured) {
+			if (nodeSettings.isCloudflareCdnEnabled) {
 				externalVideosBaseUrl = `https://${bucketName}`;
 			}
 			else {

@@ -10,7 +10,7 @@ const {
     getImagesDirectoryPath, getDataDirectoryPath, getPublicDirectoryPath, getDatabaseFilePath, getVideosDirectoryPath
 } = require('../utils/paths');
 const { 
-    getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast, deleteDirectoryRecursive, getExternalVideosBaseUrl
+    getNodeSettings, setNodeSettings, getNodeIdentification, performNodeIdentification, getIsDockerEnvironment, websocketChatBroadcast, getExternalVideosBaseUrl
 } = require('../utils/helpers');
 const {
     isNodeNameValid, isNodeAboutValid, isNodeIdValid, isUsernameValid, isPasswordValid, isPublicNodeProtocolValid, isPublicNodeAddressValid,
@@ -21,8 +21,8 @@ const {
     indexer_doNodeExternalNetworkUpdate 
 } = require('../utils/indexer-communications');
 const { 
-    cloudflare_setConfiguration, cloudflare_purgeEntireCache, cloudflare_resetCdn, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
-    cloudflare_purgeAllWatchPages, cloudflare_addS3BucketCnameDnsRecord 
+    cloudflare_setCdnConfiguration, cloudflare_resetCdn, cloudflare_purgeNodeImages, cloudflare_purgeNodePage,
+    cloudflare_purgeAllWatchPages, cloudflare_addCdnDnsRecord
 } = require('../utils/cloudflare-communications');
 const { 
     submitDatabaseWriteJob, performDatabaseReadJob_ALL, clearDatabase 
@@ -246,11 +246,11 @@ function secure_POST(isSecure, keyFile, certFile, caFiles) {
     }
 }
 
-async function cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
+async function cloudflareConfigure_POST(moartubeNodeIp, cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey) {
     const isValid = await isCloudflareCredentialsValid(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey);
 
     if (isValid) {
-        await cloudflare_setConfiguration(cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
+        await cloudflare_setCdnConfiguration(moartubeNodeIp, cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey)
 
         return { isError: false };
     }
@@ -259,9 +259,8 @@ async function cloudflareConfigure_POST(cloudflareEmailAddress, cloudflareZoneId
     }
 }
 
-async function cloudflareClear_POST() {
-    await cloudflare_purgeEntireCache();
-    await cloudflare_resetCdn();
+async function cloudflareClear_POST(moartubeNodeIp) {
+    await cloudflare_resetCdn(moartubeNodeIp);
 
     return { isError: false };
 }
@@ -369,39 +368,10 @@ async function databaseConfigToggle_POST(databaseConfig) {
     }
 }
 
-async function storageConfigToggle_POST(storageConfig, dnsConfig) {
+async function storageConfigToggle_POST(moartubeNodeIp, storageConfig) {
     if (isStorageConfigValid(storageConfig)) {
         try {
-            if (dnsConfig.isConfiguringDnsCname) {
-                if (storageConfig.storageMode === 's3provider') {
-                    const bucketName = storageConfig.s3Config.bucketName;
-                    const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
-
-                    const cnameRecordName = bucketName;
-                    let cnameRecordContent;
-
-                    if (endpoint != null) {
-                        // assume non-AWS S3 provider
-
-                        const url = new URL(endpoint);
-                        const hostname = url.hostname;
-
-                        cnameRecordContent = `${bucketName}.${hostname}`;
-                    }
-                    else {
-                        // assume AWS S3
-                        const region = storageConfig.s3Config.s3ProviderClientConfig.region;
-
-                        cnameRecordContent = `${bucketName}.s3.${region}.amazonaws.com`;
-                    }
-
-                    const cloudflareCredentials = dnsConfig.cloudflareCredentials;
-
-                    await cloudflare_addS3BucketCnameDnsRecord(cnameRecordName, cnameRecordContent, cloudflareCredentials);
-
-                    storageConfig.s3Config.isCnameConfigured = true;
-                }
-            }
+            await cloudflare_addCdnDnsRecord(moartubeNodeIp, storageConfig);
 
             const nodeSettings = getNodeSettings();
 
