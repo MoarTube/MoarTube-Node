@@ -76,8 +76,6 @@ if (cluster.isMaster) {
 
 	logDebugMessageToConsole('starting MoarTube Node', null, null);
 
-	logDebugMessageToConsole('ATTENTION: if MoarTube Node is running under the localhost domain, the following hosts file entries are required...\n127.0.0.1 localhost\n127.0.0.1 testingexternalvideos.localhost\n127.0.0.1 testingexternalresources.localhost\nhosts file path: ' + getHostsFilePath() + '\n', null, null);
-
 	logDebugMessageToConsole('configured MoarTube Node to use data directory path: ' + getDataDirectoryPath(), null, null);
 
 	provisionDatabase()
@@ -303,11 +301,9 @@ else {
 
 		if (getIsDeveloperMode()) {
 			app.use(expressSubdomain('testingexternalvideos', externalVideosRoutes));
-			app.use(expressSubdomain('testingexternalresources', externalResourcesRoutes));
 		}
 		else {
 			app.use(expressSubdomain('externalvideos', externalVideosRoutes));
-			app.use(expressSubdomain('externalresources', externalResourcesRoutes));
 		}
 
 		app.use('/', baseRoutes);
