@@ -341,7 +341,7 @@ async function cloudflare_setCdnConfiguration(cloudflareEmailAddress, cloudflare
         'X-Auth-Key': cloudflareGlobalApiKey
     };
 
-    // step 1: create new http_request_cache_settings phase rule set in the zone and initialize it with rules
+    // create new http_request_cache_settings phase rule set in the zone and initialize it with rules
 
     logDebugMessageToConsole('creating zone http_request_cache_settings phase rule set', null, null);
 
@@ -465,7 +465,7 @@ async function cloudflare_setCdnConfiguration(cloudflareEmailAddress, cloudflare
 
     logDebugMessageToConsole('created zone http_request_cache_settings phase rule set: ' + JSON.stringify(response_newZoneRuleSet_result), null, null);
 
-    // step 2: set Browser Cache TTL to "Respect Existing Headers"
+    // set Browser Cache TTL to "Respect Existing Headers"
 
     logDebugMessageToConsole('setting Browser Cache TTL to Respect Existing Headers', null, null);
 
@@ -481,7 +481,7 @@ async function cloudflare_setCdnConfiguration(cloudflareEmailAddress, cloudflare
 
     logDebugMessageToConsole('set Browser Cache TTL to Respect Existing Headers: ' + JSON.stringify(response_BrowserCacheTtl.data), null, null);
 
-    // step 3: enable Always Use HTTPS
+    // enable Always Use HTTPS
 
     logDebugMessageToConsole('enabling Always Use HTTPS', null, null);
 
@@ -497,7 +497,7 @@ async function cloudflare_setCdnConfiguration(cloudflareEmailAddress, cloudflare
 
     logDebugMessageToConsole('enabled Always Use HTTPS: ' + JSON.stringify(alwaysUseHttpsData.data), null, null);
 
-    // step 4: enable Argo Tiered Caching
+    // enable Argo Tiered Caching
 
     logDebugMessageToConsole('enabling Argo Tiered Caching', null, null);
 
@@ -513,7 +513,7 @@ async function cloudflare_setCdnConfiguration(cloudflareEmailAddress, cloudflare
 
     logDebugMessageToConsole('enabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null);
 
-    // step 5: enable Tiered Cache Smart Topology
+    // enable Tiered Cache Smart Topology
 
     logDebugMessageToConsole('enabling Tiered Cache Smart Topology', null, null);
 
@@ -538,7 +538,7 @@ async function cloudflare_resetCdn(cloudflareEmailAddress, cloudflareZoneId, clo
         'X-Auth-Key': cloudflareGlobalApiKey
     };
 
-    // step 1: get all rule sets in the zone
+    // get all rule sets in the zone
 
     logDebugMessageToConsole('retrieving zone rule sets', null, null);
 
@@ -552,7 +552,7 @@ async function cloudflare_resetCdn(cloudflareEmailAddress, cloudflareZoneId, clo
 
     logDebugMessageToConsole('discovered zone rule sets: ' + JSON.stringify(response_ruleSets.data), null, null);
 
-    // step 2: delete all http_request_cache_settings phase rule sets in the zone
+    // delete all http_request_cache_settings phase rule sets in the zone
 
     logDebugMessageToConsole('deleting zone http_request_cache_settings phase rule set if discovered', null, null);
 
@@ -571,7 +571,7 @@ async function cloudflare_resetCdn(cloudflareEmailAddress, cloudflareZoneId, clo
         }
     }
 
-    // step 3: disable Argo Tiered Caching
+    // disable Argo Tiered Caching
 
     logDebugMessageToConsole('disabling Argo Tiered Caching', null, null);
 
@@ -587,7 +587,7 @@ async function cloudflare_resetCdn(cloudflareEmailAddress, cloudflareZoneId, clo
 
     logDebugMessageToConsole('disabled Argo Tiered Caching: ' + JSON.stringify(response_tieredCache.data), null, null);
 
-    // step 4: disable Tiered Cache Smart Topology
+    // disable Tiered Cache Smart Topology
 
     logDebugMessageToConsole('disabling Tiered Cache Smart Topology', null, null);
 
@@ -603,7 +603,7 @@ async function cloudflare_resetCdn(cloudflareEmailAddress, cloudflareZoneId, clo
 
     logDebugMessageToConsole('disabled Tiered Cache Smart Topology: ' + JSON.stringify(response_tieredCacheSmartTopology.data), null, null);
 
-    // step 6: remove CDN related DNS records
+    // remove CDN related DNS records
 
     const dnsRecordGetResponse = await axios.get(
         `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}/dns_records`,
@@ -851,10 +851,10 @@ async function cloudflare_purgeCache(files, source) {
                             const data = response.data;
 
                             if (data.success) {
-                                logDebugMessageToConsole(source + ' success: ' + filesJson, null, null);
+                                logDebugMessageToConsole(source + ' success', null, null);
                             }
                             else {
-                                logDebugMessageToConsole(source + ' failed: ' + filesJson, null, null);
+                                logDebugMessageToConsole(source + ' failed', null, null);
                             }
 
                             return { status: 'fulfilled' };
