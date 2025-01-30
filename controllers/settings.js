@@ -576,11 +576,11 @@ async function networkExternal_POST(publicNodeProtocol, publicNodeAddress, publi
         }
 
         async function performUpdate(manifestPath, externalVideosBaseUrl) {
-            const manifestContent = fs.readFileSync(manifestPath, "utf-8");
+            const oldManifest = fs.readFileSync(manifestPath, "utf-8");
 
-            const updatedManifestContent = manifestContent.replace(/https?:\/\/[^/]+(?=\/external)/g, externalVideosBaseUrl);
+            const newManifest = oldManifest.replace(/(https?:\/\/).*?(\/external\/)/g, externalVideosBaseUrl + "$2");
 
-            fs.writeFileSync(manifestPath, updatedManifestContent, "utf-8");
+            fs.writeFileSync(manifestPath, newManifest, "utf-8");
         }
 
         nodeSettings.publicNodeProtocol = publicNodeProtocol;
