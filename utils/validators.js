@@ -50,6 +50,10 @@ function isBooleanValid(value) {
     return (value != null && (typeof value === 'boolean'));
 }
 
+function isVideoPermissionTypeValid(permissionType) {
+    return (permissionType != null && (permissionType === 'comments' || permissionType === 'likes' || permissionType === 'dislikes' || permissionType === 'reports' || permissionType === 'livechat'));
+}
+
 function isDatabaseConfigValid(databaseConfig) {
     let isValid = true;
 
@@ -408,5 +412,6 @@ module.exports = {
     isDatabaseConfigValid,
     isStorageConfigValid,
     isIpv4Address,
-    isProgressiveFilenameValid
+    isProgressiveFilenameValid,
+    isVideoPermissionTypeValid
 }

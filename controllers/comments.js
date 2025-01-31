@@ -62,19 +62,44 @@ async function search_GET(videoId, searchTerm, timestamp, limit) {
     }
 }
 
-async function commentIdReport_POST(commentId, email, reportType, message, cloudflareTurnstileToken, cloudflareConnectingIp) {
-    if (isCommentIdValid(commentId) && isReportEmailValid(email) && isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
+async function commentIdReport_POST(videoId, commentId, timestamp, email, reportType, message, cloudflareTurnstileToken, cloudflareConnectingIp) {
+    if (isVideoIdValid(videoId, false) && isCommentIdValid(commentId) && isTimestampValid(timestamp) && isReportEmailValid(email) && 
+    isReportTypeValid(reportType) && isReportMessageValid(message) && isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)) {
         let errorMessage;
 
         try {
             const nodeSettings = getNodeSettings();
 
-            if (nodeSettings.isCloudflareTurnstileEnabled) {
+            if (!nodeSettings.isReportsEnabled) {
+                errorMessage = 'reporting is currently disabled';
+            }
+            else if (nodeSettings.isCloudflareTurnstileEnabled) {
                 if (cloudflareTurnstileToken.length === 0) {
                     errorMessage = 'human verification was enabled on this MoarTube Node, please refresh your browser';
                 }
                 else {
                     await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, cloudflareConnectingIp);
+                }
+            }
+            else {
+                const comment = await performDatabaseReadJob_GET('SELECT * FROM comments WHERE id = ? AND video_id = ? AND timestamp = ?', [commentId, videoId, timestamp])
+                
+                if(comment != null) {
+                    const video = await performDatabaseReadJob_GET('SELECT is_reports_enabled FROM videos WHERE video_id = ?', [videoId]);
+
+                    if(video != null) {
+                        const isReportsEnabled = video.is_reports_enabled === 1;
+    
+                        if(!isReportsEnabled) {
+                            errorMessage = 'reporting is currently disabled';
+                        }
+                    }
+                    else {
+                        errorMessage = 'this video no longer exists';
+                    }
+                }
+                else {
+                    errorMessage = 'this comment no longer exists';
                 }
             }
         }
@@ -86,11 +111,11 @@ async function commentIdReport_POST(commentId, email, reportType, message, cloud
             email = sanitizeHtml(email, { allowedTags: [], allowedAttributes: {} });
             message = sanitizeHtml(message, { allowedTags: [], allowedAttributes: {} });
 
-            const video = await performDatabaseReadJob_GET('SELECT * FROM comments WHERE id = ?', [commentId])
-
-            if (video != null) {
-                const videoId = video.video_id;
-                const commentTimestamp = video.timestamp;
+            const comment = await performDatabaseReadJob_GET('SELECT * FROM comments WHERE id = ?', [commentId])
+            
+            if (comment != null) {
+                const videoId = comment.video_id;
+                const commentTimestamp = comment.timestamp;
 
                 await submitDatabaseWriteJob('INSERT INTO commentreports(timestamp, comment_timestamp, video_id, comment_id, email, type, message) VALUES (?, ?, ?, ?, ?, ?, ?)', [Date.now(), commentTimestamp, videoId, commentId, email, reportType, message]);
 

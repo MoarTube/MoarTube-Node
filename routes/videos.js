@@ -8,7 +8,8 @@ const {
     videoIdSourceFileExtension_POST, videoIdSourceFileExtension_GET, videoIdPublishes_GET, videoIdUnpublish_POST, videoIdData_POST, videoIdIndexAdd_POST, videoIdIndexRemove_POST,
     videoIdAlias_GET, search_GET, videoIdThumbnail_POST, videoIdPreview_POST, videoIdPoster_POST, videoIdLengths_POST, videoIdData_GET, delete_POST, finalize_POST,
     videoIdComments_GET, videoIdCommentsCommentId_GET, videoIdCommentsComment_POST, videoIdCommentsCommentIdDelete_DELETE, videoIdLike_POST, videoIdDislike_POST, recommended_GET,
-    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST, videoIdDataAll_GET, videoIdIndexOudated_POST
+    tags_GET, tagsAll_GET, videoIdWatch_GET, videoIdReport_POST, videoIdViewsIncrement_GET, formatResolutionPublished_POST, videoIdDataAll_GET, videoIdIndexOudated_POST,
+    videoIdPermissions_GET, videoIdPermissions_POST, videoIdAdaptiveM3u8ManifestsMasterManifest_POST
 } = require('../controllers/videos');
 const { 
     logDebugMessageToConsole 
@@ -20,7 +21,7 @@ const {
     getVideosDirectoryPath 
 } = require('../utils/paths');
 const { 
-    isSegmentNameValid, isVideoIdValid, isFormatValid, isResolutionValid, isManifestTypeValid 
+    isSegmentNameValid, isVideoIdValid, isFormatValid, isResolutionValid
 } = require('../utils/validators');
 const { 
     submitDatabaseWriteJob 
@@ -1029,23 +1030,51 @@ router.get('/:videoId/watch', performAuthenticationCheck(false), async (req, res
 });
 
 router.post('/:videoId/adaptive/m3u8/:type/manifests/masterManifest', performAuthenticationCheck(true), async (req, res) => {
-    const videoId = req.params.videoId;
-    const type = req.params.type;
-    const masterManifest = req.body.masterManifest;
+    try {
+        const videoId = req.params.videoId;
+        const type = req.params.type;
+        const masterManifest = req.body.masterManifest;
 
-    // TODO: validate the manifest?
+        const data = await videoIdAdaptiveM3u8ManifestsMasterManifest_POST(videoId, type, masterManifest);
 
-    if (isVideoIdValid(videoId, false) && isManifestTypeValid(type)) {
-        const masterManifestPath = path.join(getVideosDirectoryPath(), videoId, 'adaptive', 'm3u8', 'manifest-master.m3u8');
-
-        fs.writeFileSync(masterManifestPath, masterManifest, 'utf-8');
-
-        res.send({ isError: false });
+        res.send(data);
     }
-    else {
-        await submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId]);
+    catch(error) {
+        logDebugMessageToConsole(null, error, new Error().stack);
 
-        res.send({ isError: true, message: 'invalid parameters' });
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+    }
+});
+
+router.get('/:videoId/permissions', performAuthenticationCheck(false), async (req, res) => {
+    try {
+        const videoId = req.params.videoId;
+
+        const data = await videoIdPermissions_GET(videoId);
+
+        res.send(data);
+    }
+    catch (error) {
+        logDebugMessageToConsole(null, error, new Error().stack);
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+    }
+});
+
+router.post('/:videoId/permissions', performAuthenticationCheck(true), async (req, res) => {
+    try {
+        const videoId = req.params.videoId;
+        const type = req.body.type;
+        const isEnabled = req.body.isEnabled;
+
+        const data = await videoIdPermissions_POST(videoId, type, isEnabled);
+
+        res.send(data);
+    }
+    catch(error) {
+        logDebugMessageToConsole(null, error, new Error().stack);
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
     }
 });
 

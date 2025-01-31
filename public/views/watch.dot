@@ -1040,7 +1040,7 @@ body {
 												</li>
 												<li>
 													<a class="dropdown-item" role="button"
-														onclick="reportVideo()">Report</a>
+														onclick="showVideoReportModal()">Report</a>
 												</li>
 											</ul>
 										</div>
@@ -2501,7 +2501,7 @@ body {
 					const commentTextHtml = convertCommentToHTML(commentPlainTextSanitized);
 					const replyToCommentIds = extractReplyToCommentIds(commentPlainTextSanitized);
 
-					const commentElement = generateCommentElement(commentId, formattedDate, commentTextHtml, highlight);
+					const commentElement = generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, highlight);
 
 					// cache comments in memory for efficient access
 					COMMENT_ELEMENT_CACHE[commentId] = commentElement;
@@ -2521,7 +2521,7 @@ body {
 				});
 			}
 
-			function generateCommentElement(commentId, formattedDate, commentTextHtml, highlight) {
+			function generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, highlight) {
 				const commentElement = $('\
 					<div class="postContainer replyContainer" id="pc' + commentId + '">\
 					  <div id="p' + commentId + '" class="post reply">\
@@ -2545,7 +2545,7 @@ body {
 							<a href="javascript:quote(\'' + commentId + '\');" title="Reply to this post">' + commentId + '</a>\
 						  </span>\
 						  <a class="postMenuBtn" title="Post menu" role="button" data-cmd="post-menu" data-bs-toggle="dropdown" aria-expanded="false" id="comment-' + commentId + '-dropdown-button">&#x25B6;</a>\
-						  <ul class="dropdown-menu" aria-labelledby="comment-' + commentId + '-dropdown-button"><li><a class="dropdown-item" role="button" onclick="reportComment(\'' + commentId + '\');">Report</a></li></ul>\
+						  <ul class="dropdown-menu" aria-labelledby="comment-' + commentId + '-dropdown-button"><li><a class="dropdown-item" role="button" onclick="showCommentReportModal(\'' + commentId + '\', ' + timestamp + ');">Report</a></li></ul>\
 						  <div id="bl_' + commentId + '" class="backlink"></div>\
 						</div>\
 						<blockquote class="postMessage text-break" id="m' + commentId + '">' + commentTextHtml + '</blockquote>\
@@ -2643,7 +2643,7 @@ body {
 										const formattedDate = getCreationTimestampFormatted(timestamp);
 										const commentTextHtml = convertCommentToHTML(commentPlainTextSanitized);
 
-										const commentElement = generateCommentElement(commentId, formattedDate, commentTextHtml, false)[0];
+										const commentElement = generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, false)[0];
 
 										showQuotePreview(commentElement, quotelink);
 									}
@@ -3169,27 +3169,7 @@ body {
 			$('#video-dislike-count').text(dislikeCountParsed);
 		}
 
-		function reportVideo() {
-			showReportModal(VIDEO_ID, 'video');
-		}
-
-		function reportComment(commentId) {
-			showReportModal(commentId, 'comment');
-		}
-
-		function showReportModal(targetId, type) {
-			let modalTitle = '';
-			let submitUrl = '';
-
-			if (type === 'video') {
-				modalTitle = 'report video';
-				submitUrl = '/videos/' + targetId + '/report';
-			}
-			else if (type === 'comment') {
-				modalTitle = 'report comment';
-				submitUrl = '/comments/' + targetId + '/report';
-			}
-
+		function showVideoReportModal() {
 			const html = '\
 					<div class="input-group mb-3"><textarea id="report-message-textarea" class="swal2-textarea" placeholder="Type your report here..." maxlength="1000"></textarea></div>\
 					<div class="input-group mb-3"><input id="report-email-input" class="swal2-input" placeholder="email (optional)" maxlength="100"></div>\
@@ -3211,7 +3191,7 @@ body {
 					</div>';
 
 			Swal.fire({
-				title: modalTitle,
+				title: 'report video',
 				html: html,
 				showCloseButton: true,
 				confirmButtonText: 'submit',
@@ -3235,7 +3215,75 @@ body {
 
 						const data = { message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken };
 
-						$.ajax({ type: 'POST', url: submitUrl, data: JSON.stringify(data), contentType: 'application/json; charset=utf-8' })
+						$.ajax({ type: 'POST', url: '/videos/' + VIDEO_ID + '/report', data: JSON.stringify(data), contentType: 'application/json; charset=utf-8' })
+							.done(function (data) {
+								if (data.isError) {
+									showAlert(true, data.message);
+								}
+								else {
+									Swal.close();
+								}
+							})
+							.fail(function (xhr, status, error) {
+								console.error('Error submitting the report:', status, error);
+
+								showAlert(true, 'An error occurred while submitting your report. Please try again.');
+							});
+					}
+					catch (error) {
+						showAlert(true, error);
+					}
+				}
+			});
+		}
+
+		function showCommentReportModal(commentId, timestamp) {
+			const html = '\
+					<div class="input-group mb-3"><textarea id="report-message-textarea" class="swal2-textarea" placeholder="Type your report here..." maxlength="1000"></textarea></div>\
+					<div class="input-group mb-3"><input id="report-email-input" class="swal2-input" placeholder="email (optional)" maxlength="100"></div>\
+					<div class="input-group mb-3"> \
+						<div class="input-group justify-content-center">\
+							<div class="form-check"> \
+							  <label class="custom-control-label" for="report-complaint">complaint&nbsp&nbsp&nbsp</label>\
+							  <input id="report-complaint" class="form-check-input" type="radio" name="reportTypeRadioButton" value="complaint">\
+							</div>\
+							<div class="form-check">\
+							  <label class="custom-control-label" for="report-copyright">copyright&nbsp&nbsp&nbsp</label>\
+							  <input id="report-copyright" class="form-check-input" type="radio" name="reportTypeRadioButton" value="copyright">\
+							</div>\
+							<div class="form-check">\
+							  <label class="custom-control-label" for="report-other">other&nbsp&nbsp&nbsp</label>\
+							  <input id="report-other" class="form-check-input" type="radio" name="reportTypeRadioButton" value="other">\
+							</div>\
+						</div>\
+					</div>';
+
+			Swal.fire({
+				title: 'report comment',
+				html: html,
+				showCloseButton: true,
+				confirmButtonText: 'submit',
+				focusConfirm: false,
+				preConfirm: async () => {
+					Swal.showLoading();
+
+					const message = Swal.getHtmlContainer().querySelector('#report-message-textarea').value;
+					const email = Swal.getHtmlContainer().querySelector('#report-email-input').value;
+
+					let reportType = '';
+					const reportTypeRadioButtons = Swal.getHtmlContainer().querySelectorAll('input[name="reportTypeRadioButton"]');
+					reportTypeRadioButtons.forEach(reportTypeButton => {
+						if (reportTypeButton.checked) {
+							reportType = reportTypeButton.value;
+						}
+					});
+
+					try {
+						const cloudflareTurnstileToken = await getCloudflareTurnstileToken();
+
+						const data = { message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken, videoId: VIDEO_ID, timestamp: timestamp };
+
+						$.ajax({ type: 'POST', url: '/comments/' + commentId + '/report', data: JSON.stringify(data), contentType: 'application/json; charset=utf-8' })
 							.done(function (data) {
 								if (data.isError) {
 									showAlert(true, data.message);

@@ -270,7 +270,7 @@ function initializeHttpServer(value) {
                                         const nodeSettings = getNodeSettings();
 
                                         if (!nodeSettings.isLiveChatEnabled) {
-                                            errorMessage = 'live chat is currently disabled for this node';
+                                            errorMessage = 'live chat is currently disabled';
                                         }
                                         else if (nodeSettings.isCloudflareTurnstileEnabled) {
                                             if (cloudflareTurnstileToken.length === 0) {
@@ -278,6 +278,20 @@ function initializeHttpServer(value) {
                                             }
                                             else {
                                                 await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, ip);
+                                            }
+                                        }
+                                        else {
+                                            const video = await performDatabaseReadJob_GET('SELECT is_live_chat_enabled FROM videos WHERE video_id = ?', [videoId]);
+                            
+                                            if(video != null) {
+                                                const isLiveChatEnabled = video.is_live_chat_enabled === 1;
+                            
+                                                if(!isLiveChatEnabled) {
+                                                    errorMessage = 'live chat is currently disabled';
+                                                }
+                                            }
+                                            else {
+                                                errorMessage = 'this video no longer exists';
                                             }
                                         }
                                     }

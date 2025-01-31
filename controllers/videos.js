@@ -2,34 +2,35 @@ const fs = require('fs');
 const path = require('path');
 const sanitizeHtml = require('sanitize-html');
 
-const { 
-    logDebugMessageToConsole 
+const {
+    logDebugMessageToConsole
 } = require('../utils/logger');
-const { 
-    getVideosDirectoryPath 
+const {
+    getVideosDirectoryPath
 } = require('../utils/paths');
 const {
     getNodeSettings, websocketNodeBroadcast, getIsDeveloperMode, generateVideoId, performNodeIdentification, getNodeIdentification,
     sanitizeTagsSpaces, deleteDirectoryRecursive, deleteFile, getNodeIconPngBase64, getNodeAvatarPngBase64, getNodeBannerPngBase64,
     getVideoPreviewJpgBase64, getExternalVideosBaseUrl
 } = require('../utils/helpers');
-const { 
-    getMoarTubeAliaserPort 
+const {
+    getMoarTubeAliaserPort
 } = require('../utils/urls');
-const { 
-    performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL 
+const {
+    performDatabaseReadJob_GET, submitDatabaseWriteJob, performDatabaseReadJob_ALL
 } = require('../utils/database');
 const {
     isSearchTermValid, isSourceFileExtensionValid, isBooleanValid, isVideoCommentValid, isTimestampValid, isCommentsTypeValid, isCommentIdValid,
     isSortTermValid, isTagLimitValid, isReportEmailValid, isReportTypeValid, isReportMessageValid, isVideoIdValid, isVideoIdsValid, isFormatValid, isResolutionValid,
-    isTitleValid, isDescriptionValid, isTagTermValid, isTagsValid, isCloudflareTurnstileTokenValid, isSortValid
+    isTitleValid, isDescriptionValid, isTagTermValid, isTagsValid, isCloudflareTurnstileTokenValid, isSortValid, isVideoPermissionTypeValid,
+    isManifestTypeValid
 } = require('../utils/validators');
-const { 
-    indexer_addVideoToIndex, indexer_removeVideoFromIndex 
+const {
+    indexer_addVideoToIndex, indexer_removeVideoFromIndex
 } = require('../utils/indexer-communications');
 const {
-    cloudflare_purgeWatchPages, cloudflare_purgeAllWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos, 
-    cloudflare_purgeVideoPreviewImages, cloudflare_purgeVideoPosterImages, cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages, 
+    cloudflare_purgeWatchPages, cloudflare_purgeAllWatchPages, cloudflare_purgeAdaptiveVideos, cloudflare_purgeProgressiveVideos,
+    cloudflare_purgeVideoPreviewImages, cloudflare_purgeVideoPosterImages, cloudflare_purgeVideo, cloudflare_purgeEmbedVideoPages,
     cloudflare_purgeAllEmbedVideoPages, cloudflare_purgeNodePage, cloudflare_purgeVideoThumbnailImages, cloudflare_validateTurnstileToken
 } = require('../utils/cloudflare-communications');
 
@@ -57,7 +58,7 @@ async function import_POST(title, description, tags) {
 
         const nodeSettings = getNodeSettings();
 
-        if(nodeSettings.storageConfig.storageMode === 'filesystem') {
+        if (nodeSettings.storageConfig.storageMode === 'filesystem') {
             fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/images'), { recursive: true });
             fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/adaptive'), { recursive: true });
             fs.mkdirSync(path.join(getVideosDirectoryPath(), videoId + '/progressive'), { recursive: true });
@@ -554,7 +555,7 @@ async function videoIdIndexOudated_POST(videoId) {
         cloudflare_purgeVideoPosterImages([videoId]);
 
         await submitDatabaseWriteJob('UPDATE videos SET is_index_outdated = CASE WHEN is_indexed = ? THEN ? ELSE is_index_outdated END WHERE video_id = ?', [true, true, videoId]);
-        
+
         return { isError: false };
     }
     else {
@@ -940,7 +941,7 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
             const nodeSettings = getNodeSettings();
 
             if (!nodeSettings.isCommentsEnabled) {
-                errorMessage = 'commenting is currently disabled for this node';
+                errorMessage = 'commenting is currently disabled';
             }
             else if (nodeSettings.isCloudflareTurnstileEnabled) {
                 if (cloudflareTurnstileToken.length === 0) {
@@ -948,6 +949,20 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
                 }
                 else {
                     await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, cloudflareConnectingIp);
+                }
+            }
+            else {
+                const video = await performDatabaseReadJob_GET('SELECT is_comments_enabled FROM videos WHERE video_id = ?', [videoId]);
+
+                if (video != null) {
+                    const isCommentsEnabled = video.is_comments_enabled === 1;
+
+                    if (!isCommentsEnabled) {
+                        errorMessage = 'commenting is currently disabled';
+                    }
+                }
+                else {
+                    errorMessage = 'this video no longer exists';
                 }
             }
         }
@@ -989,7 +1004,7 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
 
 async function videoIdCommentsCommentIdDelete_DELETE(videoId, commentId, timestamp) {
     if (isVideoIdValid(videoId, false) && isCommentIdValid(commentId) && isTimestampValid(timestamp)) {
-        const comment = await performDatabaseReadJob_GET('SELECT * FROM comments WHERE id = ? AND video_id = ? AND timestamp = ?', [commentId, videoId, timestamp])
+        const comment = await performDatabaseReadJob_GET('SELECT * FROM comments WHERE id = ? AND video_id = ? AND timestamp = ?', [commentId, videoId, timestamp]);
 
         if (comment != null) {
             await submitDatabaseWriteJob('DELETE FROM comments WHERE id = ? AND video_id = ? AND timestamp = ?', [commentId, videoId, timestamp]);
@@ -1017,7 +1032,7 @@ async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareCon
             const nodeSettings = getNodeSettings();
 
             if (!nodeSettings.isLikesEnabled) {
-                errorMessage = 'liking is currently disabled for this node';
+                errorMessage = 'liking is currently disabled';
             }
             else if (nodeSettings.isCloudflareTurnstileEnabled) {
                 if (cloudflareTurnstileToken.length === 0) {
@@ -1025,6 +1040,20 @@ async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareCon
                 }
                 else {
                     await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, cloudflareConnectingIp);
+                }
+            }
+            else {
+                const video = await performDatabaseReadJob_GET('SELECT is_likes_enabled FROM videos WHERE video_id = ?', [videoId]);
+
+                if (video != null) {
+                    const isLikesEnabled = video.is_likes_enabled === 1;
+
+                    if (!isLikesEnabled) {
+                        errorMessage = 'likes are currently disabled';
+                    }
+                }
+                else {
+                    errorMessage = 'this video no longer exists';
                 }
             }
         }
@@ -1056,7 +1085,7 @@ async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflare
             const nodeSettings = getNodeSettings();
 
             if (!nodeSettings.isDislikesEnabled) {
-                errorMessage = 'disliking is currently disabled for this node';
+                errorMessage = 'disliking is currently disabled';
             }
             else if (nodeSettings.isCloudflareTurnstileEnabled) {
                 if (cloudflareTurnstileToken.length === 0) {
@@ -1064,6 +1093,20 @@ async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflare
                 }
                 else {
                     await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, cloudflareConnectingIp);
+                }
+            }
+            else {
+                const video = await performDatabaseReadJob_GET('SELECT is_dislikes_enabled FROM videos WHERE video_id = ?', [videoId]);
+
+                if (video != null) {
+                    const isDislikesEnabled = video.is_dislikes_enabled === 1;
+
+                    if (!isDislikesEnabled) {
+                        errorMessage = 'dislikes are currently disabled';
+                    }
+                }
+                else {
+                    errorMessage = 'this video no longer exists';
                 }
             }
         }
@@ -1137,7 +1180,7 @@ async function videoIdReport_POST(videoId, email, reportType, message, cloudflar
             const nodeSettings = getNodeSettings();
 
             if (!nodeSettings.isReportsEnabled) {
-                errorMessage = 'reporting is currently disabled for this node';
+                errorMessage = 'reporting is currently disabled';
             }
             else if (nodeSettings.isCloudflareTurnstileEnabled) {
                 if (cloudflareTurnstileToken.length === 0) {
@@ -1145,6 +1188,20 @@ async function videoIdReport_POST(videoId, email, reportType, message, cloudflar
                 }
                 else {
                     await cloudflare_validateTurnstileToken(cloudflareTurnstileToken, cloudflareConnectingIp);
+                }
+            }
+            else {
+                const video = await performDatabaseReadJob_GET('SELECT is_reports_enabled FROM videos WHERE video_id = ?', [videoId]);
+
+                if (video != null) {
+                    const isReportsEnabled = video.is_reports_enabled === 1;
+
+                    if (!isReportsEnabled) {
+                        errorMessage = 'reporting is currently disabled';
+                    }
+                }
+                else {
+                    errorMessage = 'this video no longer exists';
                 }
             }
         }
@@ -1316,6 +1373,71 @@ async function videoIdWatch_GET(videoId) {
     }
 }
 
+async function videoIdPermissions_GET(videoId) {
+    const video = await performDatabaseReadJob_GET('SELECT is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled FROM videos WHERE video_id = ?', [videoId]);
+
+    const isCommentsEnabled = video.is_comments_enabled === 1;
+    const isLikesEnabled = video.is_likes_enabled === 1;
+    const isDislikesEnabled = video.is_dislikes_enabled === 1;
+    const isReportsEnabled = video.is_reports_enabled === 1;
+    const isLiveChatEnabled = video.is_live_chat_enabled === 1;
+
+    let result = {
+        isError: false,
+        isCommentsEnabled: isCommentsEnabled,
+        isLikesEnabled: isLikesEnabled,
+        isDislikesEnabled: isDislikesEnabled,
+        isReportsEnabled: isReportsEnabled,
+        isLiveChatEnabled: isLiveChatEnabled
+    };
+
+    return result;
+}
+
+async function videoIdAdaptiveM3u8ManifestsMasterManifest_POST(videoId, type, masterManifest) {
+    if (isVideoIdValid(videoId, false) && isManifestTypeValid(type)) {
+        const masterManifestPath = path.join(getVideosDirectoryPath(), videoId, 'adaptive', 'm3u8', 'manifest-master.m3u8');
+
+        fs.writeFileSync(masterManifestPath, masterManifest, 'utf-8');
+
+        return { isError: false };
+    }
+    else {
+        await submitDatabaseWriteJob('UPDATE videos SET is_error = ? WHERE video_id = ?', [true, videoId]);
+
+        throw new Error('invalid parameters');
+    }
+}
+
+async function videoIdPermissions_POST(videoId, type, isEnabled) {
+    if (isVideoIdValid(videoId, false) && isVideoPermissionTypeValid(type) && isBooleanValid(isEnabled)) {
+        let query;
+
+        if (type === 'comments') {
+            query = 'UPDATE videos SET is_comments_enabled = ? WHERE video_id = ?';
+        }
+        else if (type === 'likes') {
+            query = 'UPDATE videos SET is_likes_enabled = ? WHERE video_id = ?';
+        }
+        else if (type === 'dislikes') {
+            query = 'UPDATE videos SET is_dislikes_enabled = ? WHERE video_id = ?';
+        }
+        else if (type === 'reports') {
+            query = 'UPDATE videos SET is_reports_enabled = ? WHERE video_id = ?';
+        }
+        else if (type === 'livechat') {
+            query = 'UPDATE videos SET is_live_chat_enabled = ? WHERE video_id = ?';
+        }
+
+        await submitDatabaseWriteJob(query, [isEnabled, videoId]);
+
+        return { isError: false };
+    }
+    else {
+        throw new Error('invalid parameters');
+    }
+}
+
 module.exports = {
     import_POST,
     imported_POST,
@@ -1356,5 +1478,8 @@ module.exports = {
     videoIdReport_POST,
     videoIdWatch_GET,
     videoIdDataAll_GET,
-    videoIdIndexOudated_POST
+    videoIdIndexOudated_POST,
+    videoIdPermissions_GET,
+    videoIdPermissions_POST,
+    videoIdAdaptiveM3u8ManifestsMasterManifest_POST
 };

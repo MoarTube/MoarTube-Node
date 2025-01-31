@@ -33,6 +33,8 @@ router.get('/search', performAuthenticationCheck(true), async (req, res) => {
 router.post('/:commentId/report', performAuthenticationCheck(false), async (req, res) => {
     try {
         const commentId = req.params.commentId;
+        const videoId = req.body.videoId;
+        const timestamp = req.body.timestamp;
         const email = req.body.email;
         const reportType = req.body.reportType;
         const message = req.body.message;
@@ -40,7 +42,7 @@ router.post('/:commentId/report', performAuthenticationCheck(false), async (req,
 
         const cloudflareConnectingIp = req.header('CF-Connecting-IP');
 
-        const data = await commentIdReport_POST(commentId, email, reportType, message, cloudflareTurnstileToken, cloudflareConnectingIp);
+        const data = await commentIdReport_POST(videoId, commentId, timestamp, email, reportType, message, cloudflareTurnstileToken, cloudflareConnectingIp);
 
         res.send(data);
     }
