@@ -116,7 +116,7 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
   - Supports **Nvidia** and **AMD** GPUs for accelerated encoding/decoding (Windows only).
 
 ## 🏆 Why Choose MoarTube?
-MoarTube empowers you to take control of your media hosting with privacy, decentralization, and features designed to rival major platforms—all while remaining lightweight, accessible, and cost-effective, all from a single node.
+MoarTube empowers you to take control of your media hosting with privacy, decentralization, and features designed to rival major platforms while remaining lightweight, accessible, and cost-effective, all from a single node.
 
 ![image](https://github.com/MoarTube/MoarTube-Client/assets/26640616/0d8ac95f-f68b-4e36-849e-28139b45ce50)
 
