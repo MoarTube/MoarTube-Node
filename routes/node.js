@@ -1,7 +1,7 @@
 const express = require('express');
 
 const { 
-    root_GET, search_GET, newContentCounts_GET, contentChecked_POST 
+    root_GET, search_GET, newContentCounts_GET, contentChecked_POST
 } = require('../controllers/node');
 const { 
     logDebugMessageToConsole 

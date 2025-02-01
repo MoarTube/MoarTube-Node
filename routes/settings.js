@@ -6,7 +6,8 @@ const { v4: uuidv4 } = require('uuid');
 const {
     root_GET, avatar_GET, avatar_POST, banner_GET, banner_POST, personalizeNodeName_POST, personalizeNodeAbout_POST, personalizeNodeId_POST, secure_POST, account_POST,
     networkInternal_POST, networkExternal_POST, cloudflareConfigure_POST, cloudflareClear_POST, cloudflareTurnstileConfigure_POST, cloudflareTurnstileConfigureClear_POST,
-    commentsToggle_POST, likesToggle_POST, dislikesToggle_POST, reportsToggle_POST, liveChatToggle_POST, databaseConfigToggle_POST, storageConfigToggle_POST
+    commentsToggle_POST, likesToggle_POST, dislikesToggle_POST, reportsToggle_POST, liveChatToggle_POST, databaseConfigToggle_POST, storageConfigToggle_POST,
+    exportDatabase_GET, importDatabase_POST
 } = require('../controllers/settings');
 const {
     getImagesDirectoryPath, getCertificatesDirectoryPath
@@ -528,6 +529,53 @@ router.post('/network/external', performAuthenticationCheck(true), async (req, r
         const publicNodePort = req.body.publicNodePort;
 
         const data = await networkExternal_POST(publicNodeProtocol, publicNodeAddress, publicNodePort);
+
+        res.send(data);
+    }
+    catch (error) {
+        logDebugMessageToConsole(null, error, new Error().stack);
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+    }
+});
+
+router.post('/import/database', performAuthenticationCheck(false), async (req, res) => {
+    try {
+        multer({
+            storage: multer.memoryStorage(),
+        }).fields([{ name: 'database_file', maxCount: 1 }])
+        (req, res, async function (error) {
+            if (error) {
+                logDebugMessageToConsole(null, error, new Error().stack);
+
+                res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+            }
+            else {
+                try {
+                    const databaseFile = req.files['database_file'];
+                    
+                    const data = await importDatabase_POST(databaseFile);
+
+                    res.send(data);
+                }
+                catch (error) {
+                    logDebugMessageToConsole(null, error, new Error().stack);
+
+                    res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+                }
+            }
+        });
+    }
+    catch (error) {
+        logDebugMessageToConsole(null, error, new Error().stack);
+
+        res.send({ isError: true, message: 'error communicating with the MoarTube node' });
+    }
+});
+
+router.get('/export/database', performAuthenticationCheck(false), async (req, res) => {
+    try {
+        const data = await exportDatabase_GET();
 
         res.send(data);
     }

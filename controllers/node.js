@@ -1,23 +1,23 @@
-const { 
-    getLastCheckedContentTracker, setLastCheckedContentTracker, getExternalVideosBaseUrl, getExternalResourcesBaseUrl 
+const {
+    getLastCheckedContentTracker, setLastCheckedContentTracker, getExternalVideosBaseUrl, getExternalResourcesBaseUrl
 } = require('../utils/helpers');
-const { 
-    isSearchTermValid, isSortTermValid, isTagTermValid 
+const {
+    isSearchTermValid, isSortTermValid, isTagTermValid
 } = require('../utils/validators');
-const { 
-    performDatabaseReadJob_ALL, performDatabaseReadJob_GET 
+const {
+    performDatabaseReadJob_ALL, performDatabaseReadJob_GET
 } = require('../utils/database');
-const { 
-    information_GET 
+const {
+    information_GET
 } = require('../controllers/status');
-const { 
-    linksAll_GET 
+const {
+    linksAll_GET
 } = require('./links');
-const { 
-    walletAddressAll_GET 
+const {
+    walletAddressAll_GET
 } = require('../controllers/monetization');
-const { 
-    tags_GET 
+const {
+    tags_GET
 } = require('../controllers/videos');
 
 async function root_GET(searchTerm, sortTerm, tagTerm) {
