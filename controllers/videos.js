@@ -830,9 +830,9 @@ async function videoIdDataAll_GET(videoId) {
 
 async function delete_POST(videoIds) {
     if (isVideoIdsValid(videoIds)) {
-        await submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = false AND is_publishing = false AND is_streaming = false) AND video_id IN (:videoIds)', { videoIds });
+        await submitDatabaseWriteJob('DELETE FROM videos WHERE (is_importing = false AND is_publishing = false AND is_streaming = false AND is_indexing = false AND is_indexed = false) AND video_id IN (:videoIds)', { videoIds });
 
-        const nonDeletedVideos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true) AND video_id IN (:videoIds)', { videoIds });
+        const nonDeletedVideos = await performDatabaseReadJob_ALL('SELECT * FROM videos WHERE (is_importing = true OR is_publishing = true OR is_streaming = true OR is_indexing = true OR is_indexed = true) AND video_id IN (:videoIds)', { videoIds });
 
         const nonDeletedVideoIds = nonDeletedVideos.map(video => video.video_id);
         const deletedVideoIds = videoIds.filter(videoId => !nonDeletedVideoIds.includes(videoId));
