@@ -198,7 +198,7 @@ if (cluster.isMaster) {
 							const title = video.title;
 							const tags = video.tags;
 							const views = video.views;
-							const isStreaming = video.is_streaming;
+							const isStreaming = video.is_streaming ? true : false;
 							const lengthSeconds = video.length_seconds;
 
 							const nodeIconPngBase64 = getNodeIconPngBase64();
@@ -211,7 +211,7 @@ if (cluster.isMaster) {
 								title: title,
 								tags: tags,
 								views: views,
-								isStreaming: isStreaming === 1,
+								isStreaming: isStreaming,
 								lengthSeconds: lengthSeconds,
 								nodeIconPngBase64: nodeIconPngBase64,
 								nodeAvatarPngBase64: nodeAvatarPngBase64,

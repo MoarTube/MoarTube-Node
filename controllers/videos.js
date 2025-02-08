@@ -431,8 +431,8 @@ async function videoIdIndexAdd_POST(videoId, containsAdultContent, termsOfServic
                     const title = video.title;
                     const tags = video.tags;
                     const views = video.views;
-                    const isLive = video.is_live === 1;
-                    const isStreaming = video.is_streaming === 1;
+                    const isLive = video.is_live ? true : false;
+                    const isStreaming = video.is_streaming ? true : false;
                     const lengthSeconds = video.length_seconds;
                     const creationTimestamp = video.creation_timestamp;
 
@@ -570,7 +570,7 @@ async function videoIdAlias_GET(videoId) {
         const video = await performDatabaseReadJob_GET('SELECT is_indexed FROM videos WHERE video_id = ?', [videoId]);
 
         if (video != null) {
-            const isIndexed = video.is_indexed;
+            const isIndexed = video.is_indexed ? true : false;
 
             if (isIndexed) {
                 let videoAliasUrl;
@@ -718,26 +718,26 @@ async function videoIdData_GET(videoId) {
             const description = video.description;
             const tags = video.tags;
             const views = video.views;
-            const isIndexed = video.is_indexed;
-            const isPublished = video.is_published;
-            const isLive = video.is_live;
-            const isStreaming = video.is_streaming;
-            const isFinalized = video.is_finalized;
-            const isStreamRecordedRemotely = video.is_stream_recorded_remotely;
+            const isIndexed = video.is_indexed ? true : false;
+            const isPublished = video.is_published ? true : false;
+            const isLive = video.is_live ? true : false;
+            const isStreaming = video.is_streaming ? true : false;
+            const isFinalized = video.is_finalized ? true : false;
+            const isStreamRecordedRemotely = video.is_stream_recorded_remotely ? true : false;
             const timestamp = video.creation_timestamp;
             const outputs = JSON.parse(video.outputs);
             const meta = JSON.parse(video.meta);
 
             let videoAliasUrl = 'MoarTube Aliaser link unavailable';
 
-            if (video.is_indexed) {
+            if (isIndexed) {
                 const nodeSettings = getNodeSettings();
 
                 if (getIsDeveloperMode()) {
-                    videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
+                    videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
                 }
                 else {
-                    videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
+                    videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
                 }
             }
 
@@ -781,26 +781,26 @@ async function videoIdDataAll_GET(videoId) {
         const description = video.description;
         const tags = video.tags;
         const views = video.views;
-        const isIndexed = video.is_indexed;
-        const isPublished = video.is_published;
-        const isLive = video.is_live;
-        const isStreaming = video.is_streaming;
-        const isFinalized = video.is_finalized;
-        const isStreamRecordedRemotely = video.is_stream_recorded_remotely;
+        const isIndexed = video.is_indexed ? true : false;
+        const isPublished = video.is_published ? true : false;
+        const isLive = video.is_live ? true : false;
+        const isStreaming = video.is_streaming ? true : false;
+        const isFinalized = video.is_finalized ? true : false;
+        const isStreamRecordedRemotely = video.is_stream_recorded_remotely ? true : false;
         const timestamp = video.creation_timestamp;
         const outputs = JSON.parse(video.outputs);
         const meta = JSON.parse(video.meta);
 
         let videoAliasUrl = 'MoarTube Aliaser link unavailable';
 
-        if (video.is_indexed) {
+        if (isIndexed) {
             const nodeSettings = getNodeSettings();
 
             if (getIsDeveloperMode()) {
-                videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
+                videoAliasUrl = 'http://localhost:' + getMoarTubeAliaserPort() + '/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
             }
             else {
-                videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + video.video_id;
+                videoAliasUrl = 'https://moartu.be/nodes/' + nodeSettings.nodeId + '/videos/' + videoId;
             }
         }
 
@@ -955,7 +955,7 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
                 const video = await performDatabaseReadJob_GET('SELECT is_comments_enabled FROM videos WHERE video_id = ?', [videoId]);
 
                 if (video != null) {
-                    const isCommentsEnabled = video.is_comments_enabled === 1;
+                    const isCommentsEnabled = video.is_comments_enabled ? true : false;
 
                     if (!isCommentsEnabled) {
                         errorMessage = 'commenting is currently disabled';
@@ -1046,7 +1046,7 @@ async function videoIdLike_POST(videoId, cloudflareTurnstileToken, cloudflareCon
                 const video = await performDatabaseReadJob_GET('SELECT is_likes_enabled FROM videos WHERE video_id = ?', [videoId]);
 
                 if (video != null) {
-                    const isLikesEnabled = video.is_likes_enabled === 1;
+                    const isLikesEnabled = video.is_likes_enabled ? true : false;
 
                     if (!isLikesEnabled) {
                         errorMessage = 'likes are currently disabled';
@@ -1099,7 +1099,7 @@ async function videoIdDislike_POST(videoId, cloudflareTurnstileToken, cloudflare
                 const video = await performDatabaseReadJob_GET('SELECT is_dislikes_enabled FROM videos WHERE video_id = ?', [videoId]);
 
                 if (video != null) {
-                    const isDislikesEnabled = video.is_dislikes_enabled === 1;
+                    const isDislikesEnabled = video.is_dislikes_enabled ? true : false;
 
                     if (!isDislikesEnabled) {
                         errorMessage = 'dislikes are currently disabled';
@@ -1194,7 +1194,7 @@ async function videoIdReport_POST(videoId, email, reportType, message, cloudflar
                 const video = await performDatabaseReadJob_GET('SELECT is_reports_enabled FROM videos WHERE video_id = ?', [videoId]);
 
                 if (video != null) {
-                    const isReportsEnabled = video.is_reports_enabled === 1;
+                    const isReportsEnabled = video.is_reports_enabled ? true : false;
 
                     if (!isReportsEnabled) {
                         errorMessage = 'reporting is currently disabled';
@@ -1347,11 +1347,11 @@ async function videoIdWatch_GET(videoId) {
                     views: video.views,
                     likes: video.likes,
                     dislikes: video.dislikes,
-                    isPublished: video.is_published,
-                    isPublishing: video.is_publishing,
-                    isLive: video.is_live,
-                    isStreaming: video.is_streaming,
-                    isStreamed: video.is_streamed,
+                    isPublished: video.is_published ? true : false,
+                    isPublishing: video.is_publishing ? true : false,
+                    isLive: video.is_live ? true : false,
+                    isStreaming: video.is_streaming ? true : false,
+                    isStreamed: video.is_streamed ? true : false,
                     comments: video.comments,
                     creationTimestamp: video.creation_timestamp,
                     isHlsAvailable: isHlsAvailable,
@@ -1376,11 +1376,11 @@ async function videoIdWatch_GET(videoId) {
 async function videoIdPermissions_GET(videoId) {
     const video = await performDatabaseReadJob_GET('SELECT is_comments_enabled, is_likes_enabled, is_dislikes_enabled, is_reports_enabled, is_live_chat_enabled FROM videos WHERE video_id = ?', [videoId]);
 
-    const isCommentsEnabled = video.is_comments_enabled === 1;
-    const isLikesEnabled = video.is_likes_enabled === 1;
-    const isDislikesEnabled = video.is_dislikes_enabled === 1;
-    const isReportsEnabled = video.is_reports_enabled === 1;
-    const isLiveChatEnabled = video.is_live_chat_enabled === 1;
+    const isCommentsEnabled = video.is_comments_enabled ? true : false;
+    const isLikesEnabled = video.is_likes_enabled ? true : false;
+    const isDislikesEnabled = video.is_dislikes_enabled ? true : false;
+    const isReportsEnabled = video.is_reports_enabled ? true : false;
+    const isLiveChatEnabled = video.is_live_chat_enabled ? true : false;
 
     let result = {
         isError: false,

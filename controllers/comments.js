@@ -88,7 +88,7 @@ async function commentIdReport_POST(videoId, commentId, timestamp, email, report
                     const video = await performDatabaseReadJob_GET('SELECT is_reports_enabled FROM videos WHERE video_id = ?', [videoId]);
 
                     if(video != null) {
-                        const isReportsEnabled = video.is_reports_enabled === 1;
+                        const isReportsEnabled = video.is_reports_enabled ? true : false;
     
                         if(!isReportsEnabled) {
                             errorMessage = 'reporting is currently disabled';

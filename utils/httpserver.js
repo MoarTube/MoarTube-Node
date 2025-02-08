@@ -284,7 +284,7 @@ function initializeHttpServer(value) {
                                             const video = await performDatabaseReadJob_GET('SELECT is_live_chat_enabled FROM videos WHERE video_id = ?', [videoId]);
                             
                                             if(video != null) {
-                                                const isLiveChatEnabled = video.is_live_chat_enabled === 1;
+                                                const isLiveChatEnabled = video.is_live_chat_enabled ? true : false;
                             
                                                 if(!isLiveChatEnabled) {
                                                     errorMessage = 'live chat is currently disabled';

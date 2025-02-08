@@ -568,7 +568,7 @@
 				if (VIDEO_ID != null) {
 					const params = new URL(window.location.href).searchParams;
 
-					AUTO_START = Number(params.get('autostart')) === 1 ? true : false;
+					AUTO_START = Number(params.get('autostart')) ? true : false;
 
 					EXTERNAL_VIDEOS_BASE_URL = INCOMING_PARAMETERS.externalVideosBaseUrl;
 
