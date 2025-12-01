@@ -1,6 +1,61 @@
 /**
- * Database layer (Drizzle ORM)
- * Will be implemented in Phase 3
+ * Database module barrel export
+ *
+ * This file exports all database-related modules for convenient importing.
  */
 
-export {};
+// Connection management
+export {
+  createDatabase,
+  getDatabase,
+  isDatabaseInitialized,
+  getCurrentDialect,
+  closeDatabase,
+  getRawSqliteDb,
+  getRawPostgresClient,
+  isSqliteDb,
+  isPostgresDb,
+  type DatabaseConfig,
+  type DatabaseClient,
+} from './connection';
+
+// Cluster wrapper
+export {
+  ClusterDatabaseWrapper,
+  getClusterDatabaseWrapper,
+  createClusterDatabaseWrapper,
+  resetClusterDatabaseWrapper,
+} from './cluster-wrapper';
+
+// Write queue
+export {
+  WriteQueue,
+  getWriteQueue,
+  resetWriteQueue,
+  type DatabaseWriteJobMessage,
+  type DatabaseWriteJobResultMessage,
+} from './write-queue';
+
+// Schema exports
+export * from './schema';
+
+// Repository exports
+export * from './repositories';
+
+// Legacy bridge exports (deprecated)
+export {
+  initializeDatabase,
+  getVideoRepository,
+  getCommentRepository,
+  getVideoReportRepository,
+  getCommentReportRepository,
+  getVideoReportsArchiveRepository,
+  getCommentReportsArchiveRepository,
+  getLiveChatMessageRepository,
+  getCryptoWalletAddressRepository,
+  getLinkRepository,
+  submitDatabaseWriteJob,
+  isDatabaseReady,
+  shutdownDatabase,
+  type DatabaseWriteJob,
+} from './legacy-bridge';
