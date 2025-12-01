@@ -1,6 +1,8 @@
 /**
- * Cluster worker logic
- * Will be implemented in Phase 6
+ * Workers Module
+ *
+ * Re-exports cluster worker functionality.
+ * The actual implementation is in src/core/cluster.
  */
 
-export {};
+export { ClusterWorker, type ClusterWorkerConfig } from '../core/cluster';

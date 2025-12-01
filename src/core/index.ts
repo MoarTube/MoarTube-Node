@@ -1,6 +1,38 @@
 /**
- * Core application bootstrap
- * Will be implemented in Phase 5-6
+ * Core Module
+ *
+ * Barrel export for core application functionality including
+ * DI container, cluster management, and shutdown handling.
  */
 
-export {};
+// Dependency Injection Container
+export {
+  createAppContainer,
+  getContainer,
+  isContainerInitialized,
+  resolve,
+  disposeContainer,
+  createScope,
+  type Container,
+  type ContainerCradle,
+} from './container';
+
+// Cluster management
+export {
+  IPCChannel,
+  getIPCChannel,
+  ClusterMaster,
+  ClusterWorker,
+  type IPCHandler,
+  type IPCLogger,
+  type ClusterMasterConfig,
+  type ClusterWorkerConfig,
+} from './cluster';
+
+// Graceful shutdown
+export {
+  GracefulShutdown,
+  createGracefulShutdown,
+  type GracefulShutdownConfig,
+  type ShutdownLogger,
+} from './shutdown';
