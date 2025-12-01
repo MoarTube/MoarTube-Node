@@ -582,7 +582,7 @@ export class ClusterDatabaseWrapper {
 }
 ```
 
-### 3.4 Write Queue (IPC-based)
+### 3.6 Write Queue (IPC-based)
 ```typescript
 // src/database/write-queue.ts
 class WriteQueue {
@@ -611,7 +611,7 @@ class WriteQueue {
 }
 ```
 
-### 3.6 Schema Definitions
+### 3.7 Schema Definitions
 - [ ] `videos.ts` - Video table schema
 - [ ] `comments.ts` - Comment table schema
 - [ ] `video-reports.ts` - Video reports schema
@@ -623,7 +623,7 @@ class WriteQueue {
 - [ ] `links.ts` - Social links
 - [ ] `index.ts` - Schema barrel export
 
-### 3.7 Repository Implementations
+### 3.8 Repository Implementations
 - [ ] VideoRepository
 - [ ] CommentRepository
 - [ ] VideoReportRepository
@@ -634,7 +634,7 @@ class WriteQueue {
 - [ ] CryptoWalletAddressRepository
 - [ ] LinkRepository
 
-### 3.8 Migration Strategy
+### 3.9 Migration Strategy
 1. Define Drizzle schemas matching existing Sequelize models
 2. Use `drizzle-kit generate` to create migration files
 3. Create repository classes with Drizzle queries
@@ -643,7 +643,7 @@ class WriteQueue {
 6. Run `drizzle-kit migrate` to apply schema changes
 7. Remove Sequelize and legacy adapters
 
-### 3.9 Deliverables
+### 3.10 Deliverables
 - All 9 Drizzle schema definitions
 - All 9 repository classes implemented
 - Drizzle config for SQLite and PostgreSQL
