@@ -278,8 +278,8 @@ export type NewLink = Omit<Link, 'link_id'>;
  * Generic pagination options for database queries
  */
 export interface PaginationOptions {
-  limit: number;
-  offset: number;
+  limit?: number;
+  offset?: number;
 }
 
 /**
@@ -295,4 +295,22 @@ export interface SortOptions {
  */
 export interface QueryOptions extends PaginationOptions {
   sort?: SortOptions;
+}
+
+/**
+ * Paginated result wrapper for list queries
+ */
+export interface PaginatedResult<T> {
+  /** Array of result items */
+  data: T[];
+  /** Total count of matching items (before pagination) */
+  total: number;
+  /** Number of items in current page */
+  count: number;
+  /** Current offset */
+  offset: number;
+  /** Current limit */
+  limit: number;
+  /** Whether there are more results */
+  hasMore: boolean;
 }
