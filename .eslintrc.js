@@ -27,7 +27,13 @@ module.exports = {
     '@typescript-eslint/strict-boolean-expressions': 'warn',
     '@typescript-eslint/no-floating-promises': 'error',
     '@typescript-eslint/await-thenable': 'error',
-    '@typescript-eslint/no-misused-promises': 'error',
+    '@typescript-eslint/no-misused-promises': ['error', {
+      // Allow async functions where void return is expected (common in Fastify handlers)
+      checksVoidReturn: {
+        attributes: false,
+        properties: false,
+      },
+    }],
     '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
     '@typescript-eslint/consistent-type-definitions': ['error', 'interface'],
 
