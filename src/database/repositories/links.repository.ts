@@ -1,5 +1,5 @@
 /**
- * Link Repository
+ * Links Repository
  *
  * Provides data access methods for social link records using Drizzle ORM.
  */
@@ -10,9 +10,9 @@ import { BaseRepository } from './base.repository';
 import type { PaginationOptions } from '../../types/models';
 
 /**
- * LinkRepository class for link CRUD operations
+ * LinksRepository class for link CRUD operations
  */
-export class LinkRepository extends BaseRepository {
+export class LinksRepository extends BaseRepository {
   /**
    * Finds a link by its link_id
    *

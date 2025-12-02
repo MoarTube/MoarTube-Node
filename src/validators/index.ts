@@ -11,4 +11,4 @@ export * from './common.schemas';
 export * from './account.validators';
 
 // Video validators
-export * from './video.validators';
+export * from './videos.validators';

@@ -5,9 +5,9 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base.controller';
-import type { VideoRepository } from '../database/repositories/video.repository';
-import type { LinkRepository } from '../database/repositories/link.repository';
-import type { CryptoWalletAddressRepository } from '../database/repositories/crypto-wallet-address.repository';
+import type { VideosRepository } from '../database/repositories/videos.repository';
+import type { LinksRepository } from '../database/repositories/links.repository';
+import type { MonetizationRepository } from '../database/repositories/monetization.repository';
 import { getConfig } from '../config';
 
 /**
@@ -41,9 +41,9 @@ interface FastifyReplyWithView extends FastifyReply {
  */
 export class WatchEmbedController extends BaseController {
   constructor(
-    private readonly videoRepository: VideoRepository,
-    private readonly linkRepository: LinkRepository,
-    private readonly cryptoWalletAddressRepository: CryptoWalletAddressRepository
+    private readonly videoRepository: VideosRepository,
+    private readonly linkRepository: LinksRepository,
+    private readonly monetizationRepository: MonetizationRepository
   ) {
     super('WatchEmbedController');
   }
@@ -144,7 +144,7 @@ export class WatchEmbedController extends BaseController {
 
       // Get links and wallet addresses for monetization display
       const links = await this.linkRepository.findAll();
-      const cryptoWalletAddresses = await this.cryptoWalletAddressRepository.findAll();
+      const cryptoWalletAddresses = await this.monetizationRepository.findAll();
 
       const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
 

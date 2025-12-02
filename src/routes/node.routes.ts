@@ -20,7 +20,7 @@ export function nodeRoutes(fastify: FastifyInstance, container: Container): void
   const videoReportRepository = container.resolve('videoReportRepository');
   const commentReportRepository = container.resolve('commentReportRepository');
   const linkRepository = container.resolve('linkRepository');
-  const cryptoWalletAddressRepository = container.resolve('cryptoWalletAddressRepository');
+  const monetizationRepository = container.resolve('monetizationRepository');
 
   const controller = new NodeController(
     videoRepository,
@@ -28,7 +28,7 @@ export function nodeRoutes(fastify: FastifyInstance, container: Container): void
     videoReportRepository,
     commentReportRepository,
     linkRepository,
-    cryptoWalletAddressRepository
+    monetizationRepository
   );
 
   // Node page - public (no auth required)

@@ -5,7 +5,7 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base.controller';
-import type { LinkRepository } from '../database/repositories/link.repository';
+import type { LinksRepository } from '../database/repositories/links.repository';
 import type { CloudflareService } from '../services/cloudflare.service';
 import { getCurrentUnixTimestamp } from '../utils';
 
@@ -34,7 +34,7 @@ export interface DeleteLinkBody {
  */
 export class LinksController extends BaseController {
   constructor(
-    private readonly linkRepository: LinkRepository,
+    private readonly linkRepository: LinksRepository,
     private readonly cloudflareService: CloudflareService
   ) {
     super('LinksController');

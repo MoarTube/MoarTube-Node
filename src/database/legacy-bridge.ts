@@ -18,29 +18,29 @@ import {
 } from './connection';
 import { getWriteQueue } from './write-queue';
 import {
-  VideoRepository,
-  CommentRepository,
-  VideoReportRepository,
-  CommentReportRepository,
-  VideoReportsArchiveRepository,
-  CommentReportsArchiveRepository,
+  VideosRepository,
+  CommentsRepository,
+  ReportsVideosRepository,
+  ReportsCommentsRepository,
+  ReportsArchiveVideosRepository,
+  ReportsArchiveCommentsRepository,
   LiveChatMessageRepository,
-  CryptoWalletAddressRepository,
-  LinkRepository,
+  MonetizationRepository,
+  LinksRepository,
 } from './repositories';
 
 /**
  * Repository instances cache
  */
-let videoRepo: VideoRepository | null = null;
-let commentRepo: CommentRepository | null = null;
-let videoReportRepo: VideoReportRepository | null = null;
-let commentReportRepo: CommentReportRepository | null = null;
-let videoReportsArchiveRepo: VideoReportsArchiveRepository | null = null;
-let commentReportsArchiveRepo: CommentReportsArchiveRepository | null = null;
+let videoRepo: VideosRepository | null = null;
+let commentRepo: CommentsRepository | null = null;
+let videoReportRepo: ReportsVideosRepository | null = null;
+let commentReportRepo: ReportsCommentsRepository | null = null;
+let videoReportsArchiveRepo: ReportsArchiveVideosRepository | null = null;
+let commentReportsArchiveRepo: ReportsArchiveCommentsRepository | null = null;
 let liveChatMessageRepo: LiveChatMessageRepository | null = null;
-let cryptoWalletAddressRepo: CryptoWalletAddressRepository | null = null;
-let linkRepo: LinkRepository | null = null;
+let monetizationRepo: MonetizationRepository | null = null;
+let linkRepo: LinksRepository | null = null;
 
 /**
  * Initializes the database connection and repositories
@@ -52,28 +52,28 @@ export function initializeDatabase(config: DatabaseConfig): void {
   const db = createDatabase(config);
 
   // Initialize all repository instances
-  videoRepo = new VideoRepository(db);
-  commentRepo = new CommentRepository(db);
-  videoReportRepo = new VideoReportRepository(db);
-  commentReportRepo = new CommentReportRepository(db);
-  videoReportsArchiveRepo = new VideoReportsArchiveRepository(db);
-  commentReportsArchiveRepo = new CommentReportsArchiveRepository(db);
+  videoRepo = new VideosRepository(db);
+  commentRepo = new CommentsRepository(db);
+  videoReportRepo = new ReportsVideosRepository(db);
+  commentReportRepo = new ReportsCommentsRepository(db);
+  videoReportsArchiveRepo = new ReportsArchiveVideosRepository(db);
+  commentReportsArchiveRepo = new ReportsArchiveCommentsRepository(db);
   liveChatMessageRepo = new LiveChatMessageRepository(db);
-  cryptoWalletAddressRepo = new CryptoWalletAddressRepository(db);
-  linkRepo = new LinkRepository(db);
+  monetizationRepo = new MonetizationRepository(db);
+  linkRepo = new LinksRepository(db);
 }
 
 /**
  * Gets the video repository instance
  *
- * @returns VideoRepository instance
+ * @returns VideosRepository instance
  * @throws Error if database is not initialized
- * @deprecated Use new VideoRepository(getDatabase()) directly
+ * @deprecated Use new VideosRepository(getDatabase()) directly
  */
-export function getVideoRepository(): VideoRepository {
+export function getVideoRepository(): VideosRepository {
   if (!videoRepo) {
     const db = getDatabase();
-    videoRepo = new VideoRepository(db);
+    videoRepo = new VideosRepository(db);
   }
   return videoRepo;
 }
@@ -81,14 +81,14 @@ export function getVideoRepository(): VideoRepository {
 /**
  * Gets the comment repository instance
  *
- * @returns CommentRepository instance
+ * @returns CommentsRepository instance
  * @throws Error if database is not initialized
- * @deprecated Use new CommentRepository(getDatabase()) directly
+ * @deprecated Use new CommentsRepository(getDatabase()) directly
  */
-export function getCommentRepository(): CommentRepository {
+export function getCommentRepository(): CommentsRepository {
   if (!commentRepo) {
     const db = getDatabase();
-    commentRepo = new CommentRepository(db);
+    commentRepo = new CommentsRepository(db);
   }
   return commentRepo;
 }
@@ -96,14 +96,14 @@ export function getCommentRepository(): CommentRepository {
 /**
  * Gets the video report repository instance
  *
- * @returns VideoReportRepository instance
+ * @returns ReportsVideosRepository instance
  * @throws Error if database is not initialized
- * @deprecated Use new VideoReportRepository(getDatabase()) directly
+ * @deprecated Use new ReportsVideosRepository(getDatabase()) directly
  */
-export function getVideoReportRepository(): VideoReportRepository {
+export function getVideoReportRepository(): ReportsVideosRepository {
   if (!videoReportRepo) {
     const db = getDatabase();
-    videoReportRepo = new VideoReportRepository(db);
+    videoReportRepo = new ReportsVideosRepository(db);
   }
   return videoReportRepo;
 }
@@ -111,14 +111,14 @@ export function getVideoReportRepository(): VideoReportRepository {
 /**
  * Gets the comment report repository instance
  *
- * @returns CommentReportRepository instance
+ * @returns ReportsCommentsRepository instance
  * @throws Error if database is not initialized
- * @deprecated Use new CommentReportRepository(getDatabase()) directly
+ * @deprecated Use new ReportsCommentsRepository(getDatabase()) directly
  */
-export function getCommentReportRepository(): CommentReportRepository {
+export function getCommentReportRepository(): ReportsCommentsRepository {
   if (!commentReportRepo) {
     const db = getDatabase();
-    commentReportRepo = new CommentReportRepository(db);
+    commentReportRepo = new ReportsCommentsRepository(db);
   }
   return commentReportRepo;
 }
@@ -126,14 +126,14 @@ export function getCommentReportRepository(): CommentReportRepository {
 /**
  * Gets the video reports archive repository instance
  *
- * @returns VideoReportsArchiveRepository instance
+ * @returns ReportsArchiveVideosRepository instance
  * @throws Error if database is not initialized
- * @deprecated Use new VideoReportsArchiveRepository(getDatabase()) directly
+ * @deprecated Use new ReportsArchiveVideosRepository(getDatabase()) directly
  */
-export function getVideoReportsArchiveRepository(): VideoReportsArchiveRepository {
+export function getVideoReportsArchiveRepository(): ReportsArchiveVideosRepository {
   if (!videoReportsArchiveRepo) {
     const db = getDatabase();
-    videoReportsArchiveRepo = new VideoReportsArchiveRepository(db);
+    videoReportsArchiveRepo = new ReportsArchiveVideosRepository(db);
   }
   return videoReportsArchiveRepo;
 }
@@ -141,14 +141,14 @@ export function getVideoReportsArchiveRepository(): VideoReportsArchiveRepositor
 /**
  * Gets the comment reports archive repository instance
  *
- * @returns CommentReportsArchiveRepository instance
+ * @returns ReportsArchiveCommentsRepository instance
  * @throws Error if database is not initialized
- * @deprecated Use new CommentReportsArchiveRepository(getDatabase()) directly
+ * @deprecated Use new ReportsArchiveCommentsRepository(getDatabase()) directly
  */
-export function getCommentReportsArchiveRepository(): CommentReportsArchiveRepository {
+export function getCommentReportsArchiveRepository(): ReportsArchiveCommentsRepository {
   if (!commentReportsArchiveRepo) {
     const db = getDatabase();
-    commentReportsArchiveRepo = new CommentReportsArchiveRepository(db);
+    commentReportsArchiveRepo = new ReportsArchiveCommentsRepository(db);
   }
   return commentReportsArchiveRepo;
 }
@@ -169,31 +169,31 @@ export function getLiveChatMessageRepository(): LiveChatMessageRepository {
 }
 
 /**
- * Gets the crypto wallet address repository instance
+ * Gets the monetization repository instance
  *
- * @returns CryptoWalletAddressRepository instance
+ * @returns MonetizationRepository instance
  * @throws Error if database is not initialized
- * @deprecated Use new CryptoWalletAddressRepository(getDatabase()) directly
+ * @deprecated Use new MonetizationRepository(getDatabase()) directly
  */
-export function getCryptoWalletAddressRepository(): CryptoWalletAddressRepository {
-  if (!cryptoWalletAddressRepo) {
+export function getMonetizationRepository(): MonetizationRepository {
+  if (!monetizationRepo) {
     const db = getDatabase();
-    cryptoWalletAddressRepo = new CryptoWalletAddressRepository(db);
+    monetizationRepo = new MonetizationRepository(db);
   }
-  return cryptoWalletAddressRepo;
+  return monetizationRepo;
 }
 
 /**
  * Gets the link repository instance
  *
- * @returns LinkRepository instance
+ * @returns LinksRepository instance
  * @throws Error if database is not initialized
- * @deprecated Use new LinkRepository(getDatabase()) directly
+ * @deprecated Use new LinksRepository(getDatabase()) directly
  */
-export function getLinkRepository(): LinkRepository {
+export function getLinkRepository(): LinksRepository {
   if (!linkRepo) {
     const db = getDatabase();
-    linkRepo = new LinkRepository(db);
+    linkRepo = new LinksRepository(db);
   }
   return linkRepo;
 }
@@ -262,6 +262,6 @@ export function shutdownDatabase(): void {
   videoReportsArchiveRepo = null;
   commentReportsArchiveRepo = null;
   liveChatMessageRepo = null;
-  cryptoWalletAddressRepo = null;
+  monetizationRepo = null;
   linkRepo = null;
 }

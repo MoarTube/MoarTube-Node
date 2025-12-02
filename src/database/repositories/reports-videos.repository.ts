@@ -1,5 +1,5 @@
 /**
- * Video Report Repository
+ * Reports Videos Repository
  *
  * Provides data access methods for video report records using Drizzle ORM.
  */
@@ -10,9 +10,9 @@ import { BaseRepository } from './base.repository';
 import type { PaginationOptions } from '../../types/models';
 
 /**
- * VideoReportRepository class for video report CRUD operations
+ * ReportsVideosRepository class for video report CRUD operations
  */
-export class VideoReportRepository extends BaseRepository {
+export class ReportsVideosRepository extends BaseRepository {
   /**
    * Finds a video report by its report_id
    *

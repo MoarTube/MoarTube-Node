@@ -6,8 +6,8 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.controller';
-import type { CommentReportRepository } from '../database/repositories/comment-report.repository';
-import type { CommentReportsArchiveRepository } from '../database/repositories/comment-reports-archive.repository';
+import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.repository';
+import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.repository';
 import { isReportIdValid } from '../utils';
 
 /**
@@ -34,8 +34,8 @@ export interface CommentReportIdParams {
  */
 export class ReportsCommentsController extends BaseController {
   constructor(
-    private readonly commentReportRepository: CommentReportRepository,
-    private readonly commentReportsArchiveRepository: CommentReportsArchiveRepository
+    private readonly commentReportRepository: ReportsCommentsRepository,
+    private readonly commentReportsArchiveRepository: ReportsArchiveCommentsRepository
   ) {
     super('ReportsCommentsController');
   }

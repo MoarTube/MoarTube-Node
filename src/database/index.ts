@@ -52,7 +52,7 @@ export {
   getVideoReportsArchiveRepository,
   getCommentReportsArchiveRepository,
   getLiveChatMessageRepository,
-  getCryptoWalletAddressRepository,
+  getMonetizationRepository,
   getLinkRepository,
   submitDatabaseWriteJob,
   isDatabaseReady,

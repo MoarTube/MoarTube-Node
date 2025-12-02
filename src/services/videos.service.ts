@@ -1,5 +1,5 @@
 /**
- * Video Service
+ * Videos Service
  *
  * Service layer for video-related business logic including CRUD operations,
  * publishing workflows, and metadata management.
@@ -16,24 +16,24 @@ import type {
   IStorageService,
   IWebSocketService,
 } from './interfaces';
-import type { VideoRepository } from '../database/repositories/video.repository';
-import type { CommentRepository } from '../database/repositories/comment.repository';
+import type { VideosRepository } from '../database/repositories/videos.repository';
+import type { CommentsRepository } from '../database/repositories/comments.repository';
 import type { DrizzleVideo, DrizzleNewVideo } from '../database/schema';
 import type { PaginatedResult } from '../types/models';
 import { getConfig } from '../config';
 
 /**
- * Video service dependencies
+ * Videos service dependencies
  */
-export interface VideoServiceDependencies {
-  videoRepository: VideoRepository;
-  commentRepository?: CommentRepository;
+export interface VideosServiceDependencies {
+  videoRepository: VideosRepository;
+  commentRepository?: CommentsRepository;
   storageService?: IStorageService;
   websocketService?: IWebSocketService;
 }
 
 /**
- * VideoService class
+ * VideosService class
  *
  * Handles all video-related business logic including:
  * - Video CRUD operations
@@ -42,14 +42,14 @@ export interface VideoServiceDependencies {
  * - View/like/dislike tracking
  * - Index management
  */
-export class VideoService extends BaseService implements IVideoService {
-  private readonly videoRepository: VideoRepository;
-  private readonly commentRepository: CommentRepository | undefined;
+export class VideosService extends BaseService implements IVideoService {
+  private readonly videoRepository: VideosRepository;
+  private readonly commentRepository: CommentsRepository | undefined;
   private readonly storageService: IStorageService | undefined;
   private readonly websocketService: IWebSocketService | undefined;
 
-  constructor(dependencies: VideoServiceDependencies, options?: ServiceOptions) {
-    super('VideoService', options);
+  constructor(dependencies: VideosServiceDependencies, options?: ServiceOptions) {
+    super('VideosService', options);
     this.videoRepository = dependencies.videoRepository;
     this.commentRepository = dependencies.commentRepository;
     this.storageService = dependencies.storageService;
@@ -580,6 +580,204 @@ export class VideoService extends BaseService implements IVideoService {
    */
   async updateBandwidth(videoId: string, bandwidth: number): Promise<void> {
     await this.videoRepository.updateBandwidth(videoId, bandwidth);
+  }
+
+  /**
+   * Mark specific format/resolution as published
+   */
+  async markFormatResolutionPublished(
+    videoId: string,
+    format: string,
+    resolution: string
+  ): Promise<void> {
+    return this.withErrorLogging('markFormatResolutionPublished', async () => {
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        throw new Error(`Video not found: ${videoId}`);
+      }
+
+      // Parse existing outputs
+      const outputs: Record<string, string[]> =
+        typeof video.outputs === 'string'
+          ? (JSON.parse(video.outputs) as Record<string, string[]>)
+          : ((video.outputs as Record<string, string[]>) ?? {});
+
+      // Add resolution to format if not already present
+      if (!outputs[format]?.includes(resolution)) {
+        if (!outputs[format]) {
+          outputs[format] = [];
+        }
+        outputs[format].push(resolution);
+        // Sort by resolution (descending)
+        outputs[format].sort((a: string, b: string) => {
+          const aRes = parseInt(a.split('p')[0] ?? '0');
+          const bRes = parseInt(b.split('p')[0] ?? '0');
+          return bRes - aRes;
+        });
+      }
+
+      await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
+      this.logger.debug('Format/resolution published', { videoId, format, resolution });
+    });
+  }
+
+  /**
+   * Notify upload complete for a format/resolution
+   */
+  async notifyUploadComplete(videoId: string, format: string, resolution: string): Promise<void> {
+    return this.withErrorLogging('notifyUploadComplete', () => {
+      this.logger.debug('Upload complete notification', { videoId, format, resolution });
+      // Trigger any necessary cache purging or notifications
+      // The actual implementation depends on Cloudflare integration
+      return Promise.resolve();
+    });
+  }
+
+  /**
+   * Notify stream complete for a format/resolution
+   */
+  async notifyStreamComplete(videoId: string, format: string, resolution: string): Promise<void> {
+    return this.withErrorLogging('notifyStreamComplete', () => {
+      this.logger.debug('Stream complete notification', { videoId, format, resolution });
+      // The actual implementation depends on stream handling logic
+      return Promise.resolve();
+    });
+  }
+
+  /**
+   * Get source file extension
+   */
+  async getSourceFileExtension(videoId: string): Promise<string | null> {
+    const video = await this.videoRepository.findById(videoId);
+    return video?.sourceFileExtension ?? null;
+  }
+
+  /**
+   * Get all publish statuses for video formats/resolutions
+   */
+  async getPublishes(
+    videoId: string
+  ): Promise<Array<{ format: string; resolution: string; isPublished: boolean }> | null> {
+    return this.withErrorLogging('getPublishes', async () => {
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        return null;
+      }
+
+      // Parse existing outputs
+      const outputs: Record<string, string[]> =
+        typeof video.outputs === 'string'
+          ? (JSON.parse(video.outputs) as Record<string, string[]>)
+          : ((video.outputs as Record<string, string[]>) ?? {});
+
+      // Build complete publish status list
+      const formats = ['m3u8', 'mp4', 'webm', 'ogv'];
+      const resolutions = ['2160p', '1440p', '1080p', '720p', '480p', '360p', '240p'];
+
+      const publishes: Array<{ format: string; resolution: string; isPublished: boolean }> = [];
+
+      for (const format of formats) {
+        for (const resolution of resolutions) {
+          publishes.push({
+            format,
+            resolution,
+            isPublished:
+              video.isPublished === true && (outputs[format]?.includes(resolution) ?? false),
+          });
+        }
+      }
+
+      return publishes;
+    });
+  }
+
+  /**
+   * Unpublish a specific format/resolution
+   */
+  async unpublishFormatResolution(
+    videoId: string,
+    format: string,
+    resolution: string
+  ): Promise<void> {
+    return this.withErrorLogging('unpublishFormatResolution', async () => {
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        throw new Error(`Video not found: ${videoId}`);
+      }
+
+      // Parse existing outputs
+      const outputs: Record<string, string[]> =
+        typeof video.outputs === 'string'
+          ? (JSON.parse(video.outputs) as Record<string, string[]>)
+          : ((video.outputs as Record<string, string[]>) ?? {});
+
+      // Remove resolution from format
+      if (outputs[format]) {
+        outputs[format] = outputs[format].filter((item: string) => item !== resolution);
+      }
+
+      await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
+
+      // Delete the files from storage
+      this.deleteFormatResolutionFiles(videoId, format, resolution);
+
+      this.logger.info('Format/resolution unpublished', { videoId, format, resolution });
+    });
+  }
+
+  /**
+   * Delete format/resolution files from storage
+   */
+  private deleteFormatResolutionFiles(videoId: string, format: string, resolution: string): void {
+    try {
+      const config = getConfig();
+      const storageMode = config.nodeSettings.storageConfig.storageMode;
+
+      if (storageMode === 'filesystem') {
+        const videosDir = config.paths.videosDirectoryPath;
+
+        if (format === 'm3u8') {
+          // Delete manifest and segments
+          const manifestPath = path.join(
+            videosDir,
+            videoId,
+            'adaptive',
+            format,
+            `manifest-${resolution}.m3u8`
+          );
+          const segmentsDir = path.join(videosDir, videoId, 'adaptive', format, resolution);
+
+          if (fs.existsSync(manifestPath)) {
+            fs.unlinkSync(manifestPath);
+          }
+          if (fs.existsSync(segmentsDir)) {
+            fs.rmSync(segmentsDir, { recursive: true, force: true });
+          }
+        } else {
+          // Delete progressive video file
+          const videoPath = path.join(
+            videosDir,
+            videoId,
+            'progressive',
+            format,
+            `${resolution}.${format}`
+          );
+          if (fs.existsSync(videoPath)) {
+            fs.unlinkSync(videoPath);
+          }
+        }
+
+        this.logger.debug('Deleted format/resolution files', { videoId, format, resolution });
+      }
+      // For S3, use storage service
+    } catch (error) {
+      this.logger.error('Failed to delete format/resolution files', error as Error, {
+        videoId,
+        format,
+        resolution,
+      });
+      // Don't throw - record update should still succeed
+    }
   }
 
   // ============================================================================

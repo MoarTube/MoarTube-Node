@@ -8,7 +8,7 @@ import path from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.controller';
-import type { VideoRepository } from '../database/repositories/video.repository';
+import type { VideosRepository } from '../database/repositories/videos.repository';
 import type { LiveChatMessageRepository } from '../database/repositories/live-chat-message.repository';
 import type { StreamService } from '../services/stream.service';
 import { getConfig } from '../config';
@@ -85,7 +85,7 @@ export interface ChatSettingsBody {
  */
 export class StreamsController extends BaseController {
   constructor(
-    private readonly videoRepository: VideoRepository,
+    private readonly videoRepository: VideosRepository,
     private readonly liveChatMessageRepository: LiveChatMessageRepository,
     private readonly streamService: StreamService
   ) {

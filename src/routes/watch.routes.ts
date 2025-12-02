@@ -18,13 +18,13 @@ export function watchRoutes(fastify: FastifyInstance, container: Container): voi
   const videoRepository = container.resolve('videoRepository');
   const commentRepository = container.resolve('commentRepository');
   const linkRepository = container.resolve('linkRepository');
-  const cryptoWalletAddressRepository = container.resolve('cryptoWalletAddressRepository');
+  const monetizationRepository = container.resolve('monetizationRepository');
 
   const controller = new WatchController(
     videoRepository,
     commentRepository,
     linkRepository,
-    cryptoWalletAddressRepository
+    monetizationRepository
   );
 
   // Watch page - public (no auth required)

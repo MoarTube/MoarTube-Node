@@ -1,5 +1,5 @@
 /**
- * Video Repository
+ * Videos Repository
  *
  * Provides data access methods for video records using Drizzle ORM.
  */
@@ -28,9 +28,9 @@ export interface VideoQueryOptions extends PaginationOptions {
 }
 
 /**
- * VideoRepository class for video CRUD operations
+ * VideosRepository class for video CRUD operations
  */
-export class VideoRepository extends BaseRepository {
+export class VideosRepository extends BaseRepository {
   /**
    * Finds a video by its unique video_id
    *

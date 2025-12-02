@@ -1,5 +1,5 @@
 /**
- * Comment Report Repository
+ * Reports Comments Repository
  *
  * Provides data access methods for comment report records using Drizzle ORM.
  */
@@ -10,9 +10,9 @@ import { BaseRepository } from './base.repository';
 import type { PaginationOptions } from '../../types/models';
 
 /**
- * CommentReportRepository class for comment report CRUD operations
+ * ReportsCommentsRepository class for comment report CRUD operations
  */
-export class CommentReportRepository extends BaseRepository {
+export class ReportsCommentsRepository extends BaseRepository {
   /**
    * Finds a comment report by its report_id
    *

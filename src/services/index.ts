@@ -40,7 +40,7 @@ export type {
 } from './interfaces';
 
 // Service implementations
-export { VideoService, type VideoServiceDependencies } from './video.service';
+export { VideosService, type VideosServiceDependencies } from './videos.service';
 export { CommentService, type CommentServiceDependencies } from './comment.service';
 export {
   StreamService,

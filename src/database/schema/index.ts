@@ -12,28 +12,32 @@ export { videos, type DrizzleVideo, type DrizzleNewVideo } from './videos';
 export { comments, type DrizzleComment, type DrizzleNewComment } from './comments';
 
 // Video reports schema
-export { videoReports, type DrizzleVideoReport, type DrizzleNewVideoReport } from './video-reports';
+export {
+  videoReports,
+  type DrizzleVideoReport,
+  type DrizzleNewVideoReport,
+} from './reports-videos';
 
 // Comment reports schema
 export {
   commentReports,
   type DrizzleCommentReport,
   type DrizzleNewCommentReport,
-} from './comment-reports';
+} from './reports-comments';
 
 // Video reports archive schema
 export {
   videoReportsArchive,
   type DrizzleVideoReportArchive,
   type DrizzleNewVideoReportArchive,
-} from './video-reports-archive';
+} from './reports-archive-videos';
 
 // Comment reports archive schema
 export {
   commentReportsArchive,
   type DrizzleCommentReportArchive,
   type DrizzleNewCommentReportArchive,
-} from './comment-reports-archive';
+} from './reports-archive-comments';
 
 // Live chat messages schema
 export {
@@ -42,12 +46,12 @@ export {
   type DrizzleNewLiveChatMessage,
 } from './live-chat-messages';
 
-// Crypto wallet addresses schema
+// Monetization schema (crypto wallet addresses)
 export {
   cryptoWalletAddresses,
   type DrizzleCryptoWalletAddress,
   type DrizzleNewCryptoWalletAddress,
-} from './crypto-wallet-addresses';
+} from './monetization';
 
 // Links schema
 export { links, type DrizzleLink, type DrizzleNewLink } from './links';

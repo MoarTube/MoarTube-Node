@@ -1,5 +1,5 @@
 /**
- * Comment Repository
+ * Comments Repository
  *
  * Provides data access methods for comment records using Drizzle ORM.
  */
@@ -21,9 +21,9 @@ export interface CommentSearchOptions extends PaginationOptions {
 }
 
 /**
- * CommentRepository class for comment CRUD operations
+ * CommentsRepository class for comment CRUD operations
  */
-export class CommentRepository extends BaseRepository {
+export class CommentsRepository extends BaseRepository {
   /**
    * Finds a comment by its database id
    *

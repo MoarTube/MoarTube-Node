@@ -8,18 +8,18 @@ import { createContainer, asClass, asValue, InjectionMode, type AwilixContainer 
 
 // Database layer
 import type { DatabaseClient } from '../database/connection';
-import { VideoRepository } from '../database/repositories/video.repository';
-import { CommentRepository } from '../database/repositories/comment.repository';
-import { VideoReportRepository } from '../database/repositories/video-report.repository';
-import { CommentReportRepository } from '../database/repositories/comment-report.repository';
-import { VideoReportsArchiveRepository } from '../database/repositories/video-reports-archive.repository';
-import { CommentReportsArchiveRepository } from '../database/repositories/comment-reports-archive.repository';
+import { VideosRepository } from '../database/repositories/videos.repository';
+import { CommentsRepository } from '../database/repositories/comments.repository';
+import { ReportsVideosRepository } from '../database/repositories/reports-videos.repository';
+import { ReportsCommentsRepository } from '../database/repositories/reports-comments.repository';
+import { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.repository';
+import { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.repository';
 import { LiveChatMessageRepository } from '../database/repositories/live-chat-message.repository';
-import { CryptoWalletAddressRepository } from '../database/repositories/crypto-wallet-address.repository';
-import { LinkRepository } from '../database/repositories/link.repository';
+import { MonetizationRepository } from '../database/repositories/monetization.repository';
+import { LinksRepository } from '../database/repositories/links.repository';
 
 // Services
-import { VideoService } from '../services/video.service';
+import { VideosService } from '../services/videos.service';
 import { CommentService } from '../services/comment.service';
 import { StreamService } from '../services/stream.service';
 import { AuthService } from '../services/auth.service';
@@ -38,18 +38,18 @@ export interface ContainerCradle {
   db: DatabaseClient;
 
   // Repositories
-  videoRepository: VideoRepository;
-  commentRepository: CommentRepository;
-  videoReportRepository: VideoReportRepository;
-  commentReportRepository: CommentReportRepository;
-  videoReportsArchiveRepository: VideoReportsArchiveRepository;
-  commentReportsArchiveRepository: CommentReportsArchiveRepository;
+  videoRepository: VideosRepository;
+  commentRepository: CommentsRepository;
+  videoReportRepository: ReportsVideosRepository;
+  commentReportRepository: ReportsCommentsRepository;
+  videoReportsArchiveRepository: ReportsArchiveVideosRepository;
+  commentReportsArchiveRepository: ReportsArchiveCommentsRepository;
   liveChatMessageRepository: LiveChatMessageRepository;
-  cryptoWalletAddressRepository: CryptoWalletAddressRepository;
-  linkRepository: LinkRepository;
+  monetizationRepository: MonetizationRepository;
+  linkRepository: LinksRepository;
 
   // Services
-  videoService: VideoService;
+  videoService: VideosService;
   commentService: CommentService;
   streamService: StreamService;
   authService: AuthService;
@@ -90,15 +90,15 @@ export function createAppContainer(db: DatabaseClient): Container {
 
   // Register repositories (they need db in constructor)
   appContainer.register({
-    videoRepository: asClass(VideoRepository).singleton(),
-    commentRepository: asClass(CommentRepository).singleton(),
-    videoReportRepository: asClass(VideoReportRepository).singleton(),
-    commentReportRepository: asClass(CommentReportRepository).singleton(),
-    videoReportsArchiveRepository: asClass(VideoReportsArchiveRepository).singleton(),
-    commentReportsArchiveRepository: asClass(CommentReportsArchiveRepository).singleton(),
+    videoRepository: asClass(VideosRepository).singleton(),
+    commentRepository: asClass(CommentsRepository).singleton(),
+    videoReportRepository: asClass(ReportsVideosRepository).singleton(),
+    commentReportRepository: asClass(ReportsCommentsRepository).singleton(),
+    videoReportsArchiveRepository: asClass(ReportsArchiveVideosRepository).singleton(),
+    commentReportsArchiveRepository: asClass(ReportsArchiveCommentsRepository).singleton(),
     liveChatMessageRepository: asClass(LiveChatMessageRepository).singleton(),
-    cryptoWalletAddressRepository: asClass(CryptoWalletAddressRepository).singleton(),
-    linkRepository: asClass(LinkRepository).singleton(),
+    monetizationRepository: asClass(MonetizationRepository).singleton(),
+    linkRepository: asClass(LinksRepository).singleton(),
   });
 
   // Register services (singletons for shared state)
@@ -108,7 +108,7 @@ export function createAppContainer(db: DatabaseClient): Container {
     indexerService: asClass(IndexerService).singleton(),
     websocketService: asClass(WebSocketService).singleton(),
     cloudflareService: asClass(CloudflareService).singleton(),
-    videoService: asClass(VideoService).singleton(),
+    videoService: asClass(VideosService).singleton(),
     commentService: asClass(CommentService).singleton(),
     streamService: asClass(StreamService).singleton(),
     reportService: asClass(ReportService).singleton(),

@@ -132,6 +132,29 @@ export interface IVideoService {
 
   /** Mark video index as outdated */
   setIndexOutdated(videoId: string): Promise<void>;
+
+  /** Mark specific format/resolution as published */
+  markFormatResolutionPublished(videoId: string, format: string, resolution: string): Promise<void>;
+
+  /** Notify upload complete for a format/resolution */
+  notifyUploadComplete(videoId: string, format: string, resolution: string): Promise<void>;
+
+  /** Notify stream complete for a format/resolution */
+  notifyStreamComplete(videoId: string, format: string, resolution: string): Promise<void>;
+
+  /** Set source file extension */
+  setSourceFileExtension(videoId: string, extension: string): Promise<void>;
+
+  /** Get source file extension */
+  getSourceFileExtension(videoId: string): Promise<string | null>;
+
+  /** Get all publish statuses for video formats/resolutions */
+  getPublishes(
+    videoId: string
+  ): Promise<Array<{ format: string; resolution: string; isPublished: boolean }> | null>;
+
+  /** Unpublish a specific format/resolution */
+  unpublishFormatResolution(videoId: string, format: string, resolution: string): Promise<void>;
 }
 
 // ============================================================================

@@ -16,12 +16,12 @@ import type { Container } from '../core/container';
 export function watchEmbedRoutes(fastify: FastifyInstance, container: Container): void {
   const videoRepository = container.resolve('videoRepository');
   const linkRepository = container.resolve('linkRepository');
-  const cryptoWalletAddressRepository = container.resolve('cryptoWalletAddressRepository');
+  const monetizationRepository = container.resolve('monetizationRepository');
 
   const controller = new WatchEmbedController(
     videoRepository,
     linkRepository,
-    cryptoWalletAddressRepository
+    monetizationRepository
   );
 
   // Embedded video player - public (optional auth for password-protected videos)

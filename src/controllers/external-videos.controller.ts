@@ -7,7 +7,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
 import { BaseController } from './base.controller';
-import type { VideoRepository } from '../database/repositories/video.repository';
+import type { VideosRepository } from '../database/repositories/videos.repository';
 import { getConfig } from '../config';
 import {
   isVideoIdValid,
@@ -75,7 +75,7 @@ export class ExternalVideosController extends BaseController {
   private progressiveBandwidthCounter = 0;
   private progressiveBandwidthTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private readonly videoRepository: VideoRepository) {
+  constructor(private readonly videoRepository: VideosRepository) {
     super('ExternalVideosController');
   }
 

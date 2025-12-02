@@ -6,7 +6,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.controller';
-import type { VideoReportsArchiveRepository } from '../database/repositories/video-reports-archive.repository';
+import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.repository';
 import { isArchiveIdValid } from '../utils';
 
 /**
@@ -24,7 +24,7 @@ export interface ArchiveIdParams {
  * - Delete an archived video report
  */
 export class ReportsArchiveVideosController extends BaseController {
-  constructor(private readonly videoReportsArchiveRepository: VideoReportsArchiveRepository) {
+  constructor(private readonly videoReportsArchiveRepository: ReportsArchiveVideosRepository) {
     super('ReportsArchiveVideosController');
   }
 

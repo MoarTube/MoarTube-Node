@@ -9,7 +9,7 @@ import type { Container } from '../core/container';
 // Route definitions
 export { statusRoutes, healthRoutes } from './status.routes';
 export { accountRoutes } from './account.routes';
-export { videoRoutes } from './video.routes';
+export { videosRoutes } from './videos.routes';
 export { baseRoutes } from './base.routes';
 export { linksRoutes } from './links.routes';
 export { monetizationRoutes } from './monetization.routes';
@@ -30,7 +30,7 @@ export { streamsRoutes } from './streams.routes';
 // Import for registration
 import { statusRoutes, healthRoutes } from './status.routes';
 import { accountRoutes } from './account.routes';
-import { videoRoutes } from './video.routes';
+import { videosRoutes } from './videos.routes';
 import { baseRoutes } from './base.routes';
 import { linksRoutes } from './links.routes';
 import { monetizationRoutes } from './monetization.routes';
@@ -82,10 +82,10 @@ export async function registerRoutes(
     { prefix: '/account' }
   );
 
-  // Video routes (/videos/*)
+  // Videos routes (/videos/*)
   await fastify.register(
     (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      videoRoutes(instance);
+      videosRoutes(instance);
       done();
     },
     { prefix: '/videos' }

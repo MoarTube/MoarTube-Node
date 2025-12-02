@@ -12,8 +12,8 @@ import type {
   CreateCommentInput,
   IWebSocketService,
 } from './interfaces';
-import type { CommentRepository } from '../database/repositories/comment.repository';
-import type { VideoRepository } from '../database/repositories/video.repository';
+import type { CommentsRepository } from '../database/repositories/comments.repository';
+import type { VideosRepository } from '../database/repositories/videos.repository';
 import type { DrizzleComment, DrizzleNewComment } from '../database/schema';
 import type { PaginationOptions } from '../types/models';
 
@@ -21,8 +21,8 @@ import type { PaginationOptions } from '../types/models';
  * Comment service dependencies
  */
 export interface CommentServiceDependencies {
-  commentRepository: CommentRepository;
-  videoRepository?: VideoRepository;
+  commentRepository: CommentsRepository;
+  videoRepository?: VideosRepository;
   websocketService?: IWebSocketService;
 }
 
@@ -35,8 +35,8 @@ export interface CommentServiceDependencies {
  * - Comment search functionality
  */
 export class CommentService extends BaseService implements ICommentService {
-  private readonly commentRepository: CommentRepository;
-  private readonly videoRepository: VideoRepository | undefined;
+  private readonly commentRepository: CommentsRepository;
+  private readonly videoRepository: VideosRepository | undefined;
   private readonly websocketService: IWebSocketService | undefined;
 
   constructor(dependencies: CommentServiceDependencies, options?: ServiceOptions) {

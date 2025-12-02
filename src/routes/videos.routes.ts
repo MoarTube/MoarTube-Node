@@ -1,19 +1,19 @@
 /**
- * Video Routes
+ * Videos Routes
  *
  * Routes for video-related endpoints.
  * Minimal implementation for Phase 5 - will be expanded incrementally.
  */
 import type { FastifyInstance } from 'fastify';
-import { VideoController } from '../controllers';
+import { VideosController } from '../controllers';
 
 /**
- * Register video routes
+ * Register videos routes
  *
  * @param fastify - Fastify instance
  */
-export function videoRoutes(fastify: FastifyInstance): void {
-  const controller = new VideoController();
+export function videosRoutes(fastify: FastifyInstance): void {
+  const controller = new VideosController();
 
   // ============================================================================
   // Public Endpoints

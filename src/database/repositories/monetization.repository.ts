@@ -1,5 +1,5 @@
 /**
- * Crypto Wallet Address Repository
+ * Monetization Repository
  *
  * Provides data access methods for crypto wallet address records using Drizzle ORM.
  */
@@ -10,9 +10,9 @@ import { BaseRepository } from './base.repository';
 import type { PaginationOptions } from '../../types/models';
 
 /**
- * CryptoWalletAddressRepository class for crypto wallet CRUD operations
+ * MonetizationRepository class for crypto wallet CRUD operations
  */
-export class CryptoWalletAddressRepository extends BaseRepository {
+export class MonetizationRepository extends BaseRepository {
   /**
    * Finds a wallet address by its wallet_address_id
    *

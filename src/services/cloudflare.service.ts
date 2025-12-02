@@ -8,7 +8,7 @@ import axios, { type AxiosInstance } from 'axios';
 
 import { BaseService, type ServiceOptions } from './base.service';
 import type { ICloudflareService } from './interfaces';
-import type { VideoRepository } from '../database/repositories/video.repository';
+import type { VideosRepository } from '../database/repositories/videos.repository';
 import { getConfig } from '../config';
 
 /**
@@ -21,7 +21,7 @@ const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/sit
  * Cloudflare service dependencies
  */
 export interface CloudflareServiceDependencies {
-  videoRepository?: VideoRepository;
+  videoRepository?: VideosRepository;
 }
 
 /**
@@ -33,7 +33,7 @@ export interface CloudflareServiceDependencies {
  * - CDN configuration management
  */
 export class CloudflareService extends BaseService implements ICloudflareService {
-  private readonly videoRepository: VideoRepository | undefined;
+  private readonly videoRepository: VideosRepository | undefined;
   private httpClient: AxiosInstance | null = null;
 
   constructor(dependencies?: CloudflareServiceDependencies, options?: ServiceOptions) {

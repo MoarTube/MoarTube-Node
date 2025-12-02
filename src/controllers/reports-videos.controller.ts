@@ -6,8 +6,8 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.controller';
-import type { VideoReportRepository } from '../database/repositories/video-report.repository';
-import type { VideoReportsArchiveRepository } from '../database/repositories/video-reports-archive.repository';
+import type { ReportsVideosRepository } from '../database/repositories/reports-videos.repository';
+import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.repository';
 import { isReportIdValid } from '../utils';
 
 /**
@@ -34,8 +34,8 @@ export interface ReportIdParams {
  */
 export class ReportsVideosController extends BaseController {
   constructor(
-    private readonly videoReportRepository: VideoReportRepository,
-    private readonly videoReportsArchiveRepository: VideoReportsArchiveRepository
+    private readonly videoReportRepository: ReportsVideosRepository,
+    private readonly videoReportsArchiveRepository: ReportsArchiveVideosRepository
   ) {
     super('ReportsVideosController');
   }

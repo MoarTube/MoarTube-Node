@@ -6,10 +6,10 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.controller';
-import type { VideoRepository } from '../database/repositories/video.repository';
-import type { CommentRepository } from '../database/repositories/comment.repository';
-import type { LinkRepository } from '../database/repositories/link.repository';
-import type { CryptoWalletAddressRepository } from '../database/repositories/crypto-wallet-address.repository';
+import type { VideosRepository } from '../database/repositories/videos.repository';
+import type { CommentsRepository } from '../database/repositories/comments.repository';
+import type { LinksRepository } from '../database/repositories/links.repository';
+import type { MonetizationRepository } from '../database/repositories/monetization.repository';
 import { getConfig } from '../config';
 import { isVideoIdValid } from '../utils';
 
@@ -35,10 +35,10 @@ export interface WatchQuery {
  */
 export class WatchController extends BaseController {
   constructor(
-    private readonly videoRepository: VideoRepository,
-    private readonly commentRepository: CommentRepository,
-    private readonly linkRepository: LinkRepository,
-    private readonly cryptoWalletAddressRepository: CryptoWalletAddressRepository
+    private readonly videoRepository: VideosRepository,
+    private readonly commentRepository: CommentsRepository,
+    private readonly linkRepository: LinksRepository,
+    private readonly monetizationRepository: MonetizationRepository
   ) {
     super('WatchController');
   }
@@ -81,7 +81,7 @@ export class WatchController extends BaseController {
       const linksData = { isError: false, links };
 
       // Get crypto wallet addresses
-      const walletAddresses = await this.cryptoWalletAddressRepository.findAll();
+      const walletAddresses = await this.monetizationRepository.findAll();
       const cryptoWalletAddressesData = { isError: false, cryptoWalletAddresses: walletAddresses };
 
       // Get video data

@@ -6,7 +6,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.controller';
-import type { CommentReportsArchiveRepository } from '../database/repositories/comment-reports-archive.repository';
+import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.repository';
 import { isArchiveIdValid } from '../utils';
 
 /**
@@ -24,7 +24,7 @@ export interface CommentArchiveIdParams {
  * - Delete an archived comment report
  */
 export class ReportsArchiveCommentsController extends BaseController {
-  constructor(private readonly commentReportsArchiveRepository: CommentReportsArchiveRepository) {
+  constructor(private readonly commentReportsArchiveRepository: ReportsArchiveCommentsRepository) {
     super('ReportsArchiveCommentsController');
   }
 

@@ -15,7 +15,7 @@ export {
 // Individual controllers
 export { StatusController } from './status.controller';
 export { AccountController } from './account.controller';
-export { VideoController } from './video.controller';
+export { VideosController } from './videos.controller';
 export { LinksController, type AddLinkBody, type DeleteLinkBody } from './links.controller';
 export {
   MonetizationController,

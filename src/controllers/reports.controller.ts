@@ -6,8 +6,8 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.controller';
-import type { VideoReportRepository } from '../database/repositories/video-report.repository';
-import type { CommentReportRepository } from '../database/repositories/comment-report.repository';
+import type { ReportsVideosRepository } from '../database/repositories/reports-videos.repository';
+import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.repository';
 
 /**
  * ReportsController class
@@ -17,8 +17,8 @@ import type { CommentReportRepository } from '../database/repositories/comment-r
  */
 export class ReportsController extends BaseController {
   constructor(
-    private readonly videoReportRepository: VideoReportRepository,
-    private readonly commentReportRepository: CommentReportRepository
+    private readonly videoReportRepository: ReportsVideosRepository,
+    private readonly commentReportRepository: ReportsCommentsRepository
   ) {
     super('ReportsController');
   }

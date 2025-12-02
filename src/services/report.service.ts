@@ -10,10 +10,10 @@ import type {
   CreateVideoReportInput,
   CreateCommentReportInput,
 } from './interfaces';
-import type { VideoReportRepository } from '../database/repositories/video-report.repository';
-import type { CommentReportRepository } from '../database/repositories/comment-report.repository';
-import type { VideoReportsArchiveRepository } from '../database/repositories/video-reports-archive.repository';
-import type { CommentReportsArchiveRepository } from '../database/repositories/comment-reports-archive.repository';
+import type { ReportsVideosRepository } from '../database/repositories/reports-videos.repository';
+import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.repository';
+import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.repository';
+import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.repository';
 import type {
   DrizzleVideoReport,
   DrizzleCommentReport,
@@ -30,10 +30,10 @@ import type { PaginationOptions } from '../types/models';
  * Report service dependencies
  */
 export interface ReportServiceDependencies {
-  videoReportRepository: VideoReportRepository;
-  commentReportRepository: CommentReportRepository;
-  videoReportsArchiveRepository: VideoReportsArchiveRepository;
-  commentReportsArchiveRepository: CommentReportsArchiveRepository;
+  videoReportRepository: ReportsVideosRepository;
+  commentReportRepository: ReportsCommentsRepository;
+  videoReportsArchiveRepository: ReportsArchiveVideosRepository;
+  commentReportsArchiveRepository: ReportsArchiveCommentsRepository;
 }
 
 /**
@@ -46,10 +46,10 @@ export interface ReportServiceDependencies {
  * - Report statistics
  */
 export class ReportService extends BaseService implements IReportService {
-  private readonly videoReportRepository: VideoReportRepository;
-  private readonly commentReportRepository: CommentReportRepository;
-  private readonly videoReportsArchiveRepository: VideoReportsArchiveRepository;
-  private readonly commentReportsArchiveRepository: CommentReportsArchiveRepository;
+  private readonly videoReportRepository: ReportsVideosRepository;
+  private readonly commentReportRepository: ReportsCommentsRepository;
+  private readonly videoReportsArchiveRepository: ReportsArchiveVideosRepository;
+  private readonly commentReportsArchiveRepository: ReportsArchiveCommentsRepository;
 
   constructor(dependencies: ReportServiceDependencies, options?: ServiceOptions) {
     super('ReportService', options);

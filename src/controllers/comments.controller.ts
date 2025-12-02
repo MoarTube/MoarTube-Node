@@ -7,9 +7,9 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import sanitizeHtml from 'sanitize-html';
 
 import { BaseController } from './base.controller';
-import type { CommentRepository } from '../database/repositories/comment.repository';
-import type { CommentReportRepository } from '../database/repositories/comment-report.repository';
-import type { VideoRepository } from '../database/repositories/video.repository';
+import type { CommentsRepository } from '../database/repositories/comments.repository';
+import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.repository';
+import type { VideosRepository } from '../database/repositories/videos.repository';
 import type { CloudflareService } from '../services/cloudflare.service';
 import { getConfig } from '../config';
 import {
@@ -62,9 +62,9 @@ export interface CommentReportBody {
  */
 export class CommentsController extends BaseController {
   constructor(
-    private readonly commentRepository: CommentRepository,
-    private readonly commentReportRepository: CommentReportRepository,
-    private readonly videoRepository: VideoRepository,
+    private readonly commentRepository: CommentsRepository,
+    private readonly commentReportRepository: ReportsCommentsRepository,
+    private readonly videoRepository: VideosRepository,
     private readonly cloudflareService: CloudflareService
   ) {
     super('CommentsController');

@@ -1,5 +1,5 @@
 /**
- * Comment Reports Archive Repository
+ * Reports Archive Comments Repository
  *
  * Provides data access methods for archived comment report records using Drizzle ORM.
  */
@@ -10,9 +10,9 @@ import { BaseRepository } from './base.repository';
 import type { PaginationOptions } from '../../types/models';
 
 /**
- * CommentReportsArchiveRepository class for archived comment report CRUD operations
+ * ReportsArchiveCommentsRepository class for archived comment report CRUD operations
  */
-export class CommentReportsArchiveRepository extends BaseRepository {
+export class ReportsArchiveCommentsRepository extends BaseRepository {
   /**
    * Finds an archived comment report by its archive_id
    *

@@ -6,12 +6,12 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.controller';
-import type { VideoRepository } from '../database/repositories/video.repository';
-import type { CommentRepository } from '../database/repositories/comment.repository';
-import type { VideoReportRepository } from '../database/repositories/video-report.repository';
-import type { CommentReportRepository } from '../database/repositories/comment-report.repository';
-import type { LinkRepository } from '../database/repositories/link.repository';
-import type { CryptoWalletAddressRepository } from '../database/repositories/crypto-wallet-address.repository';
+import type { VideosRepository } from '../database/repositories/videos.repository';
+import type { CommentsRepository } from '../database/repositories/comments.repository';
+import type { ReportsVideosRepository } from '../database/repositories/reports-videos.repository';
+import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.repository';
+import type { LinksRepository } from '../database/repositories/links.repository';
+import type { MonetizationRepository } from '../database/repositories/monetization.repository';
 import type { DrizzleVideo } from '../database/schema';
 import { getConfig } from '../config';
 import { isSearchTermValid, isSortTermValid, isTagTermValid } from '../utils';
@@ -50,12 +50,12 @@ export interface ContentCheckedBody {
  */
 export class NodeController extends BaseController {
   constructor(
-    private readonly videoRepository: VideoRepository,
-    private readonly commentRepository: CommentRepository,
-    private readonly videoReportRepository: VideoReportRepository,
-    private readonly commentReportRepository: CommentReportRepository,
-    private readonly linkRepository: LinkRepository,
-    private readonly cryptoWalletAddressRepository: CryptoWalletAddressRepository
+    private readonly videoRepository: VideosRepository,
+    private readonly commentRepository: CommentsRepository,
+    private readonly videoReportRepository: ReportsVideosRepository,
+    private readonly commentReportRepository: ReportsCommentsRepository,
+    private readonly linkRepository: LinksRepository,
+    private readonly monetizationRepository: MonetizationRepository
   ) {
     super('NodeController');
   }
@@ -106,7 +106,7 @@ export class NodeController extends BaseController {
       const linksData = { isError: false, links };
 
       // Get crypto wallet addresses
-      const walletAddresses = await this.cryptoWalletAddressRepository.findAll();
+      const walletAddresses = await this.monetizationRepository.findAll();
       const cryptoWalletAddressesData = { isError: false, cryptoWalletAddresses: walletAddresses };
 
       // Get all unique tags

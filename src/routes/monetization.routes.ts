@@ -14,9 +14,9 @@ import type { Container } from '../core/container';
  * @param container - DI container
  */
 export function monetizationRoutes(fastify: FastifyInstance, container: Container): void {
-  const cryptoWalletAddressRepository = container.resolve('cryptoWalletAddressRepository');
+  const monetizationRepository = container.resolve('monetizationRepository');
   const cloudflareService = container.resolve('cloudflareService');
-  const controller = new MonetizationController(cryptoWalletAddressRepository, cloudflareService);
+  const controller = new MonetizationController(monetizationRepository, cloudflareService);
 
   // Get all wallet addresses - public (no auth required)
   fastify.get(

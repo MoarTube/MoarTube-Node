@@ -9,7 +9,7 @@ import path from 'node:path';
 
 import { BaseService, type ServiceOptions } from './base.service';
 import type { IStreamService, StreamConfig, IWebSocketService } from './interfaces';
-import type { VideoRepository } from '../database/repositories/video.repository';
+import type { VideosRepository } from '../database/repositories/videos.repository';
 import type { LiveChatMessageRepository } from '../database/repositories/live-chat-message.repository';
 import type { DrizzleVideo, DrizzleNewVideo } from '../database/schema';
 import { getConfig } from '../config';
@@ -18,7 +18,7 @@ import { getConfig } from '../config';
  * Stream service dependencies
  */
 export interface StreamServiceDependencies {
-  videoRepository: VideoRepository;
+  videoRepository: VideosRepository;
   liveChatMessageRepository?: LiveChatMessageRepository;
   websocketService?: IWebSocketService;
 }
@@ -65,7 +65,7 @@ export interface StartStreamOptions {
  * - Integration with video records
  */
 export class StreamService extends BaseService implements IStreamService {
-  private readonly videoRepository: VideoRepository;
+  private readonly videoRepository: VideosRepository;
   private readonly liveChatMessageRepository: LiveChatMessageRepository | undefined;
   private readonly websocketService: IWebSocketService | undefined;
 
