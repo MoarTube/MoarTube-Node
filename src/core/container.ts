@@ -42,8 +42,8 @@ export interface ContainerCradle {
   commentRepository: CommentRepository;
   videoReportRepository: VideoReportRepository;
   commentReportRepository: CommentReportRepository;
-  videoReportArchiveRepository: VideoReportsArchiveRepository;
-  commentReportArchiveRepository: CommentReportsArchiveRepository;
+  videoReportsArchiveRepository: VideoReportsArchiveRepository;
+  commentReportsArchiveRepository: CommentReportsArchiveRepository;
   liveChatMessageRepository: LiveChatMessageRepository;
   cryptoWalletAddressRepository: CryptoWalletAddressRepository;
   linkRepository: LinkRepository;
@@ -94,8 +94,8 @@ export function createAppContainer(db: DatabaseClient): Container {
     commentRepository: asClass(CommentRepository).singleton(),
     videoReportRepository: asClass(VideoReportRepository).singleton(),
     commentReportRepository: asClass(CommentReportRepository).singleton(),
-    videoReportArchiveRepository: asClass(VideoReportsArchiveRepository).singleton(),
-    commentReportArchiveRepository: asClass(CommentReportsArchiveRepository).singleton(),
+    videoReportsArchiveRepository: asClass(VideoReportsArchiveRepository).singleton(),
+    commentReportsArchiveRepository: asClass(CommentReportsArchiveRepository).singleton(),
     liveChatMessageRepository: asClass(LiveChatMessageRepository).singleton(),
     cryptoWalletAddressRepository: asClass(CryptoWalletAddressRepository).singleton(),
     linkRepository: asClass(LinkRepository).singleton(),

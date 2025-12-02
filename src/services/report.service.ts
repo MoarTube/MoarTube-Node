@@ -32,8 +32,8 @@ import type { PaginationOptions } from '../types/models';
 export interface ReportServiceDependencies {
   videoReportRepository: VideoReportRepository;
   commentReportRepository: CommentReportRepository;
-  videoReportArchiveRepository: VideoReportsArchiveRepository;
-  commentReportArchiveRepository: CommentReportsArchiveRepository;
+  videoReportsArchiveRepository: VideoReportsArchiveRepository;
+  commentReportsArchiveRepository: CommentReportsArchiveRepository;
 }
 
 /**
@@ -48,15 +48,15 @@ export interface ReportServiceDependencies {
 export class ReportService extends BaseService implements IReportService {
   private readonly videoReportRepository: VideoReportRepository;
   private readonly commentReportRepository: CommentReportRepository;
-  private readonly videoReportArchiveRepository: VideoReportsArchiveRepository;
-  private readonly commentReportArchiveRepository: CommentReportsArchiveRepository;
+  private readonly videoReportsArchiveRepository: VideoReportsArchiveRepository;
+  private readonly commentReportsArchiveRepository: CommentReportsArchiveRepository;
 
   constructor(dependencies: ReportServiceDependencies, options?: ServiceOptions) {
     super('ReportService', options);
     this.videoReportRepository = dependencies.videoReportRepository;
     this.commentReportRepository = dependencies.commentReportRepository;
-    this.videoReportArchiveRepository = dependencies.videoReportArchiveRepository;
-    this.commentReportArchiveRepository = dependencies.commentReportArchiveRepository;
+    this.videoReportsArchiveRepository = dependencies.videoReportsArchiveRepository;
+    this.commentReportsArchiveRepository = dependencies.commentReportsArchiveRepository;
   }
 
   /**
@@ -160,7 +160,7 @@ export class ReportService extends BaseService implements IReportService {
         message: report.message,
       };
 
-      const archived = await this.videoReportArchiveRepository.create(archiveData);
+      const archived = await this.videoReportsArchiveRepository.create(archiveData);
 
       // Delete original report
       await this.videoReportRepository.delete(reportId);
@@ -193,7 +193,7 @@ export class ReportService extends BaseService implements IReportService {
         message: report.message,
       };
 
-      const archived = await this.commentReportArchiveRepository.create(archiveData);
+      const archived = await this.commentReportsArchiveRepository.create(archiveData);
 
       // Delete original report
       await this.commentReportRepository.delete(reportId);
@@ -226,7 +226,7 @@ export class ReportService extends BaseService implements IReportService {
    * Get archived video reports
    */
   async getArchivedVideoReports(options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]> {
-    return this.videoReportArchiveRepository.findAll(options);
+    return this.videoReportsArchiveRepository.findAll(options);
   }
 
   /**
@@ -235,21 +235,21 @@ export class ReportService extends BaseService implements IReportService {
   async getArchivedCommentReports(
     options?: PaginationOptions
   ): Promise<DrizzleCommentReportArchive[]> {
-    return this.commentReportArchiveRepository.findAll(options);
+    return this.commentReportsArchiveRepository.findAll(options);
   }
 
   /**
    * Delete archived video report
    */
   async deleteArchivedVideoReport(archiveId: number): Promise<boolean> {
-    return this.videoReportArchiveRepository.delete(archiveId);
+    return this.videoReportsArchiveRepository.delete(archiveId);
   }
 
   /**
    * Delete archived comment report
    */
   async deleteArchivedCommentReport(archiveId: number): Promise<boolean> {
-    return this.commentReportArchiveRepository.delete(archiveId);
+    return this.commentReportsArchiveRepository.delete(archiveId);
   }
 
   /**
@@ -279,8 +279,8 @@ export class ReportService extends BaseService implements IReportService {
       await Promise.all([
         this.countVideoReports(),
         this.countCommentReports(),
-        this.videoReportArchiveRepository.count(),
-        this.commentReportArchiveRepository.count(),
+        this.videoReportsArchiveRepository.count(),
+        this.commentReportsArchiveRepository.count(),
       ]);
 
     return {

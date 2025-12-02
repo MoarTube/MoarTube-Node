@@ -1,0 +1,68 @@
+/**
+ * Reports Archive Comments Controller
+ *
+ * Handles archived comment report management endpoints.
+ */
+import type { FastifyRequest, FastifyReply } from 'fastify';
+
+import { BaseController } from './base.controller';
+import type { CommentReportsArchiveRepository } from '../database/repositories/comment-reports-archive.repository';
+import { isArchiveIdValid } from '../utils';
+
+/**
+ * Request params for archive operations
+ */
+export interface CommentArchiveIdParams {
+  archiveId: string;
+}
+
+/**
+ * ReportsArchiveCommentsController class
+ *
+ * Handles:
+ * - Get all archived comment reports
+ * - Delete an archived comment report
+ */
+export class ReportsArchiveCommentsController extends BaseController {
+  constructor(private readonly commentReportsArchiveRepository: CommentReportsArchiveRepository) {
+    super('ReportsArchiveCommentsController');
+  }
+
+  /**
+   * GET /reports/archive/comments
+   *
+   * Get all archived comment reports
+   */
+  getAllArchives = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    try {
+      const reports = await this.commentReportsArchiveRepository.findAll();
+
+      this.sendSuccess(reply, { reports });
+    } catch (error) {
+      this.sendError(reply, 'error communicating with the MoarTube node');
+    }
+  };
+
+  /**
+   * DELETE /reports/archive/comments/:archiveId/delete
+   *
+   * Delete an archived comment report
+   */
+  deleteArchive = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+    try {
+      const { archiveId } = request.params as CommentArchiveIdParams;
+
+      if (!isArchiveIdValid(archiveId)) {
+        this.sendError(reply, 'invalid archive id');
+        return;
+      }
+
+      const archiveIdNum = parseInt(archiveId, 10);
+      await this.commentReportsArchiveRepository.delete(archiveIdNum);
+
+      this.sendOk(reply);
+    } catch (error) {
+      this.sendError(reply, 'error communicating with the MoarTube node');
+    }
+  };
+}

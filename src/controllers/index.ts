@@ -33,3 +33,22 @@ export {
 } from './comments.controller';
 export { WatchController, type WatchQuery } from './watch.controller';
 export { NodeController, type NodeQuery, type ContentCheckedBody } from './node.controller';
+export { ReportsController } from './reports.controller';
+export {
+  ReportsVideosController,
+  type ArchiveReportBody,
+  type ReportIdParams,
+} from './reports-videos.controller';
+export {
+  ReportsCommentsController,
+  type ArchiveCommentReportBody,
+  type CommentReportIdParams,
+} from './reports-comments.controller';
+export {
+  ReportsArchiveVideosController,
+  type ArchiveIdParams,
+} from './reports-archive-videos.controller';
+export {
+  ReportsArchiveCommentsController,
+  type CommentArchiveIdParams,
+} from './reports-archive-comments.controller';

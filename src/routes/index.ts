@@ -19,6 +19,11 @@ export { externalVideosRoutes } from './external-videos.routes';
 export { commentsRoutes } from './comments.routes';
 export { watchRoutes } from './watch.routes';
 export { nodeRoutes } from './node.routes';
+export { reportsRoutes } from './reports.routes';
+export { reportsVideosRoutes } from './reports-videos.routes';
+export { reportsCommentsRoutes } from './reports-comments.routes';
+export { reportsArchiveVideosRoutes } from './reports-archive-videos.routes';
+export { reportsArchiveCommentsRoutes } from './reports-archive-comments.routes';
 
 // Import for registration
 import { statusRoutes, healthRoutes } from './status.routes';
@@ -33,6 +38,11 @@ import { externalVideosRoutes } from './external-videos.routes';
 import { commentsRoutes } from './comments.routes';
 import { watchRoutes } from './watch.routes';
 import { nodeRoutes } from './node.routes';
+import { reportsRoutes } from './reports.routes';
+import { reportsVideosRoutes } from './reports-videos.routes';
+import { reportsCommentsRoutes } from './reports-comments.routes';
+import { reportsArchiveVideosRoutes } from './reports-archive-videos.routes';
+import { reportsArchiveCommentsRoutes } from './reports-archive-comments.routes';
 
 /**
  * Register all application routes
@@ -147,5 +157,50 @@ export async function registerRoutes(
       done();
     },
     { prefix: '/node' }
+  );
+
+  // Reports routes (/reports/*)
+  await fastify.register(
+    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
+      reportsRoutes(instance, container);
+      done();
+    },
+    { prefix: '/reports' }
+  );
+
+  // Reports videos routes (/reports/videos/*)
+  await fastify.register(
+    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
+      reportsVideosRoutes(instance, container);
+      done();
+    },
+    { prefix: '/reports/videos' }
+  );
+
+  // Reports comments routes (/reports/comments/*)
+  await fastify.register(
+    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
+      reportsCommentsRoutes(instance, container);
+      done();
+    },
+    { prefix: '/reports/comments' }
+  );
+
+  // Reports archive videos routes (/reports/archive/videos/*)
+  await fastify.register(
+    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
+      reportsArchiveVideosRoutes(instance, container);
+      done();
+    },
+    { prefix: '/reports/archive/videos' }
+  );
+
+  // Reports archive comments routes (/reports/archive/comments/*)
+  await fastify.register(
+    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
+      reportsArchiveCommentsRoutes(instance, container);
+      done();
+    },
+    { prefix: '/reports/archive/comments' }
   );
 }
