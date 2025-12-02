@@ -178,7 +178,6 @@ export const portSchema = z.coerce.number().int().min(1).max(65535);
  * Report email schema
  */
 export const reportEmailSchema = z
-  .string()
   .email('Invalid email format')
   .max(320, 'Email must be less than 320 characters');
 

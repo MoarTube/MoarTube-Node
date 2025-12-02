@@ -83,7 +83,7 @@ export type NetworkExternalBody = z.infer<typeof networkExternalBodySchema>;
  * Cloudflare configuration request body schema
  */
 export const cloudflareConfigureBodySchema = z.object({
-  cloudflareEmailAddress: z.string().email(),
+  cloudflareEmailAddress: z.email(),
   cloudflareZoneId: z.string().min(1),
   cloudflareGlobalApiKey: z.string().min(1),
 });
@@ -130,7 +130,7 @@ export type DatabaseConfigToggleBody = z.infer<typeof databaseConfigToggleBodySc
  */
 export const storageConfigToggleBodySchema = z.object({
   storageMode: z.enum(['filesystem', 's3']),
-  s3Endpoint: z.string().url().optional(),
+  s3Endpoint: z.url().optional(),
   s3Region: z.string().optional(),
   s3Bucket: z.string().optional(),
   s3AccessKeyId: z.string().optional(),

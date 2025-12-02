@@ -51,6 +51,7 @@ export class ReportsCommentsController extends BaseController {
 
       this.sendSuccess(reply, { reports });
     } catch (error) {
+      this.logger.error('Failed to get all comment reports', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -69,7 +70,7 @@ export class ReportsCommentsController extends BaseController {
         return;
       }
 
-      const reportIdNum = parseInt(reportId, 10);
+      const reportIdNum = Number.parseInt(reportId, 10);
       const report = await this.commentReportRepository.findById(reportIdNum);
 
       if (!report) {
@@ -94,6 +95,7 @@ export class ReportsCommentsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Failed to archive comment report', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -112,11 +114,12 @@ export class ReportsCommentsController extends BaseController {
         return;
       }
 
-      const reportIdNum = parseInt(reportId, 10);
+      const reportIdNum = Number.parseInt(reportId, 10);
       await this.commentReportRepository.delete(reportIdNum);
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Failed to delete comment report', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

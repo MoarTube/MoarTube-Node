@@ -10,7 +10,7 @@ import type {
 } from './websocket';
 
 // Re-export for convenience
-export type { LiveStreamWatchingCounts, LiveStreamWatchingCountsTracker };
+export type { LiveStreamWatchingCounts, LiveStreamWatchingCountsTracker } from './websocket';
 
 // ============================================
 // IPC Command Types (Worker -> Master)

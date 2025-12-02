@@ -40,6 +40,7 @@ export class ReportsController extends BaseController {
         totalReportCount,
       });
     } catch (error) {
+      this.logger.error('Get reports count failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

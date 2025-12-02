@@ -26,7 +26,7 @@ export function monetizationRoutes(
   fastify.get(
     '/all',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.getAllWalletAddresses.bind(controller)
   );
@@ -35,7 +35,7 @@ export function monetizationRoutes(
   fastify.post(
     '/add',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: addWalletAddressBodySchema,
       },
@@ -47,7 +47,7 @@ export function monetizationRoutes(
   fastify.post(
     '/delete',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: deleteWalletAddressBodySchema,
       },

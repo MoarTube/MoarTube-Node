@@ -48,7 +48,7 @@ export class VideoStatusHandler extends WebSocketHandler {
     message: IncomingWebSocketMessage,
     context: HandlerContext
   ): void {
-    const videoId = message.videoId as string | undefined;
+    const { videoId } = message;
 
     if (videoId === undefined || videoId === '') {
       context.log.warn('Video status event without videoId', {
@@ -91,7 +91,7 @@ export class VideoStatusHandler extends WebSocketHandler {
         videoId,
       });
 
-      this.broadcastToAdmins(message as unknown as WebSocketMessage, context);
+      this.broadcastToAdmins(message as WebSocketMessage, context);
     }
   }
 

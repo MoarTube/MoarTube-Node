@@ -96,7 +96,7 @@ function errorHandlerPlugin(fastify: FastifyInstance): void {
               params?: { missingProperty?: string };
               message?: string;
             }) => {
-              const path = (v.instancePath ?? '').replace(/^\//, '').replace(/\//g, '.');
+              const path = (v.instancePath ?? '').replace(/^\//, '').replaceAll('/', '.');
               const field = path.length > 0 ? path : (v.params?.missingProperty ?? 'unknown');
               return {
                 field,

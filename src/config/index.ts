@@ -9,17 +9,14 @@ import crypto from 'node:crypto';
 
 import type { NodeSettings, NodeIdentification, LastCheckedContentTracker } from '../types';
 
-import type { Env } from './env';
-import { getEnv } from './env';
-import type { Paths } from './paths';
-import { initializePaths, getPaths, type PathConfig } from './paths';
-import type { Urls } from './urls';
+import { getEnv, type Env } from './env';
+import { initializePaths, type Paths, type PathConfig } from './paths';
 import {
   initializeUrls,
-  getUrls,
   buildNodeBaseUrl,
   buildExternalVideosBaseUrl,
   buildExternalResourcesBaseUrl,
+  type Urls,
   type UrlConfig,
 } from './urls';
 import {
@@ -49,14 +46,14 @@ export interface RuntimeConfig {
 class Config {
   private static instance: Config;
 
-  private _env: Env;
-  private _paths: Paths;
-  private _urls: Urls;
-  private _appConfig: AppConfigValidated;
+  private readonly _env: Env;
+  private readonly _paths: Paths;
+  private readonly _urls: Urls;
+  private readonly _appConfig: AppConfigValidated;
   private _nodeSettings: NodeSettingsValidated;
   private _nodeIdentification: NodeIdentification | null = null;
   private _lastCheckedContentTracker: LastCheckedContentTracker;
-  private _runtime: RuntimeConfig;
+  private readonly _runtime: RuntimeConfig;
 
   private constructor(baseDir: string) {
     // Initialize environment first
@@ -94,9 +91,7 @@ class Config {
    * Initialize the configuration system
    */
   static initialize(baseDir: string): Config {
-    if (!Config.instance) {
-      Config.instance = new Config(baseDir);
-    }
+    Config.instance ??= new Config(baseDir);
     return Config.instance;
   }
 
@@ -104,7 +99,7 @@ class Config {
    * Get the singleton instance
    */
   static getInstance(): Config {
-    if (!Config.instance) {
+    if (Config.instance === undefined) {
       throw new Error('Config not initialized. Call Config.initialize(baseDir) first.');
     }
     return Config.instance;
@@ -177,10 +172,10 @@ class Config {
     this.persistNodeSettings();
 
     // Update runtime config if session credentials changed
-    if (updates.expressSessionName) {
+    if (updates.expressSessionName !== undefined && updates.expressSessionName !== '') {
       this._runtime.expressSessionName = this._nodeSettings.expressSessionName;
     }
-    if (updates.expressSessionSecret) {
+    if (updates.expressSessionSecret !== undefined && updates.expressSessionSecret !== '') {
       this._runtime.expressSessionSecret = this._nodeSettings.expressSessionSecret;
     }
   }
@@ -401,5 +396,6 @@ export function getConfig(): Config {
 export { Config };
 
 // Re-export subsystem exports for convenience
-export { getEnv, getPaths, getUrls };
-export type { PathConfig, UrlConfig };
+export { getEnv } from './env';
+export { getPaths, type PathConfig } from './paths';
+export { getUrls, type UrlConfig } from './urls';

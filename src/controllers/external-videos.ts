@@ -91,6 +91,7 @@ export class ExternalVideosController extends BaseController {
 
       this.sendSuccess(reply, { externalVideosBaseUrl });
     } catch (error) {
+      this.logger.error('Get base URL failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -125,6 +126,7 @@ export class ExternalVideosController extends BaseController {
       const fileStream = fs.createReadStream(thumbnailPath);
       void reply.header('Content-Type', 'image/jpeg').send(fileStream);
     } catch (error) {
+      this.logger.error('Get thumbnail failed', error instanceof Error ? error : null);
       void reply.status(404).send('thumbnail not found');
     }
   };
@@ -159,6 +161,7 @@ export class ExternalVideosController extends BaseController {
       const fileStream = fs.createReadStream(previewPath);
       void reply.header('Content-Type', 'image/jpeg').send(fileStream);
     } catch (error) {
+      this.logger.error('Get preview failed', error instanceof Error ? error : null);
       void reply.status(404).send('preview not found');
     }
   };
@@ -193,6 +196,7 @@ export class ExternalVideosController extends BaseController {
       const fileStream = fs.createReadStream(posterPath);
       void reply.header('Content-Type', 'image/jpeg').send(fileStream);
     } catch (error) {
+      this.logger.error('Get poster failed', error instanceof Error ? error : null);
       void reply.status(404).send('poster not found');
     }
   };
@@ -233,6 +237,7 @@ export class ExternalVideosController extends BaseController {
       const fileStream = fs.createReadStream(manifestPath);
       void reply.header('Content-Type', 'application/vnd.apple.mpegurl').send(fileStream);
     } catch (error) {
+      this.logger.error('Get adaptive manifest failed', error instanceof Error ? error : null);
       void reply.status(404).send('video not found');
     }
   };
@@ -277,6 +282,7 @@ export class ExternalVideosController extends BaseController {
       const fileStream = fs.createReadStream(segmentPath);
       void reply.header('Content-Type', 'video/mp2t').send(fileStream);
     } catch (error) {
+      this.logger.error('Get adaptive segment failed', error instanceof Error ? error : null);
       void reply.status(404).send('video not found');
     }
   };
@@ -322,8 +328,10 @@ export class ExternalVideosController extends BaseController {
         const parts = range.replace(/bytes=/, '').split('-');
         const startPart = parts[0];
         const endPart = parts[1];
-        const start = startPart !== undefined && startPart !== '' ? parseInt(startPart, 10) : 0;
-        const end = endPart !== undefined && endPart !== '' ? parseInt(endPart, 10) : fileSize - 1;
+        const start =
+          startPart !== undefined && startPart !== '' ? Number.parseInt(startPart, 10) : 0;
+        const end =
+          endPart !== undefined && endPart !== '' ? Number.parseInt(endPart, 10) : fileSize - 1;
         const chunkSize = end - start + 1;
 
         // Track bandwidth
@@ -348,6 +356,7 @@ export class ExternalVideosController extends BaseController {
           .send(fileStream);
       }
     } catch (error) {
+      this.logger.error('Get progressive video failed', error instanceof Error ? error : null);
       void reply.status(404).send('video not found');
     }
   };

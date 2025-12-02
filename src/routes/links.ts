@@ -26,7 +26,7 @@ export function linksRoutes(
   fastify.get(
     '/all',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.getAllLinks.bind(controller)
   );
@@ -35,7 +35,7 @@ export function linksRoutes(
   fastify.post(
     '/add',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: addLinkBodySchema,
       },
@@ -47,7 +47,7 @@ export function linksRoutes(
   fastify.post(
     '/delete',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: deleteLinkBodySchema,
       },

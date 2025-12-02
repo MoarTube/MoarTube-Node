@@ -112,16 +112,17 @@ export class CommentsController extends BaseController {
         searchOptions.searchTerm = searchTerm;
       }
       if (timestamp.length > 0) {
-        searchOptions.beforeTimestamp = parseInt(timestamp, 10);
+        searchOptions.beforeTimestamp = Number.parseInt(timestamp, 10);
       }
       if (limit.length > 0) {
-        searchOptions.limit = parseInt(limit, 10);
+        searchOptions.limit = Number.parseInt(limit, 10);
       }
 
       const comments = await this.commentRepository.search(searchOptions);
 
       this.sendSuccess(reply, { comments });
     } catch (error) {
+      this.logger.error('Comment search failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -189,7 +190,7 @@ export class CommentsController extends BaseController {
       }
 
       // Verify comment exists
-      const commentIdNum = parseInt(commentId, 10);
+      const commentIdNum = Number.parseInt(commentId, 10);
       const comment = await this.commentRepository.findById(commentIdNum);
 
       if (!comment) {
@@ -198,7 +199,7 @@ export class CommentsController extends BaseController {
       }
 
       // Verify the comment matches the video and timestamp
-      if (comment.videoId !== videoId || comment.timestamp !== parseInt(timestamp, 10)) {
+      if (comment.videoId !== videoId || comment.timestamp !== Number.parseInt(timestamp, 10)) {
         this.sendError(reply, 'this comment no longer exists');
         return;
       }
@@ -233,6 +234,7 @@ export class CommentsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Comment report failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

@@ -4,10 +4,10 @@
  * General-purpose utility functions used throughout the application.
  */
 
-import * as crypto from 'crypto';
+import * as crypto from 'node:crypto';
 import * as jwt from 'jsonwebtoken';
-import * as os from 'os';
-import * as path from 'path';
+import * as os from 'node:os';
+import * as path from 'node:path';
 
 /**
  * JWT verification result
@@ -58,7 +58,7 @@ export function generateJwtToken(payload: object, secret: string, expiresIn?: st
  * @param tags - Tags string to sanitize
  */
 export function sanitizeTagsSpaces(tags: string): string {
-  return tags.replace(/\s+/g, ' ').trim();
+  return tags.replaceAll(/\s+/g, ' ').trim();
 }
 
 /**
@@ -150,7 +150,7 @@ export function getHostsFilePath(): string {
   switch (platform) {
     case 'win32':
       return path.join(
-        process.env['SystemRoot'] ?? 'C:\\Windows',
+        process.env['SystemRoot'] ?? String.raw`C:\Windows`,
         'System32',
         'drivers',
         'etc',
@@ -175,13 +175,13 @@ export function formatBytes(bytes: number, decimals = 2): string {
   }
 
   const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
+  const dm = Math.max(0, decimals);
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
 
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   const sizeLabel = sizes[i] ?? 'Bytes';
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizeLabel;
+  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizeLabel;
 }
 
 /**
@@ -207,7 +207,7 @@ export function formatDuration(seconds: number): string {
  * @param duration - Duration string
  */
 export function parseDuration(duration: string): number {
-  const parts = duration.split(':').map((p) => parseInt(p, 10));
+  const parts = duration.split(':').map((p) => Number.parseInt(p, 10));
 
   if (parts.length === 3) {
     const hours = parts[0] ?? 0;
@@ -220,7 +220,7 @@ export function parseDuration(duration: string): number {
     return minutes * 60 + seconds;
   }
 
-  return parseInt(duration, 10) || 0;
+  return Number.parseInt(duration, 10) || 0;
 }
 
 /**
@@ -280,7 +280,7 @@ export function chunkArray<T>(array: T[], size: number): T[][] {
  * @param obj - Object to clone
  */
 export function deepClone<T>(obj: T): T {
-  return JSON.parse(JSON.stringify(obj)) as T;
+  return structuredClone(obj);
 }
 
 /**
@@ -383,7 +383,7 @@ export function escapeHtml(str: string): string {
     "'": '&#39;',
   };
 
-  return str.replace(/[&<>"']/g, (char) => htmlEntities[char] ?? char);
+  return str.replaceAll(/[&<>"']/g, (char) => htmlEntities[char] ?? char);
 }
 
 /**
@@ -399,7 +399,10 @@ export function unescapeHtml(str: string): string {
     '&#39;': "'",
   };
 
-  return str.replace(/&amp;|&lt;|&gt;|&quot;|&#39;/g, (entity) => htmlEntities[entity] ?? entity);
+  return str.replaceAll(
+    /&amp;|&lt;|&gt;|&quot;|&#39;/g,
+    (entity) => htmlEntities[entity] ?? entity
+  );
 }
 
 /**
@@ -430,7 +433,10 @@ export function capitalize(str: string): string {
  * Convert a string to title case
  */
 export function toTitleCase(str: string): string {
-  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+  return str.replaceAll(
+    /\w\S*/g,
+    (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase()
+  );
 }
 
 /**
@@ -440,7 +446,7 @@ export function isDockerEnvironment(): boolean {
   try {
     // Use dynamic import-style check to avoid bundling issues
     // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
-    const fsModule = require('fs') as { existsSync: (path: string) => boolean };
+    const fsModule = require('node:fs') as { existsSync: (path: string) => boolean };
     return fsModule.existsSync('/.dockerenv');
   } catch {
     return false;
@@ -486,14 +492,9 @@ export function buildUrl(
   port: number | string,
   pathPart = ''
 ): string {
-  const portNum = typeof port === 'string' ? parseInt(port, 10) : port;
-  let portString = '';
-
-  if (protocol === 'http' && portNum !== 80) {
-    portString = `:${portNum}`;
-  } else if (protocol === 'https' && portNum !== 443) {
-    portString = `:${portNum}`;
-  }
+  const portNum = typeof port === 'string' ? Number.parseInt(port, 10) : port;
+  const defaultPort = protocol === 'http' ? 80 : 443;
+  const portString = portNum !== defaultPort ? `:${portNum}` : '';
 
   return `${protocol}://${address}${portString}${pathPart}`;
 }

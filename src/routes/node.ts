@@ -39,7 +39,7 @@ export function nodeRoutes(
   fastify.get(
     '/',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.getNodePage.bind(controller)
   );
@@ -48,7 +48,7 @@ export function nodeRoutes(
   fastify.get(
     '/search',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         querystring: nodeSearchQuerySchema,
       },
@@ -60,7 +60,7 @@ export function nodeRoutes(
   fastify.get(
     '/newContentCounts',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
     },
     controller.getNewContentCounts.bind(controller)
   );
@@ -69,7 +69,7 @@ export function nodeRoutes(
   fastify.post(
     '/contentChecked',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: contentCheckedBodySchema,
       },

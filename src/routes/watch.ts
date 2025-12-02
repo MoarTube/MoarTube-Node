@@ -35,7 +35,7 @@ export function watchRoutes(
   fastify.get(
     '/',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         querystring: watchQuerySchema,
       },

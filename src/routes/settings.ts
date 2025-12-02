@@ -61,7 +61,7 @@ export async function settingsRoutes(
   fastify.get(
     '/',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
     },
     controller.getSettings.bind(controller)
   );
@@ -74,7 +74,7 @@ export async function settingsRoutes(
   fastify.get(
     '/avatar',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.getAvatar.bind(controller)
   );
@@ -83,7 +83,7 @@ export async function settingsRoutes(
   fastify.post(
     '/avatar',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
     },
     controller.uploadAvatar.bind(controller)
   );
@@ -92,7 +92,7 @@ export async function settingsRoutes(
   fastify.get(
     '/banner',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.getBanner.bind(controller)
   );
@@ -101,7 +101,7 @@ export async function settingsRoutes(
   fastify.post(
     '/banner',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
     },
     controller.uploadBanner.bind(controller)
   );
@@ -114,7 +114,7 @@ export async function settingsRoutes(
   fastify.post(
     '/personalize/nodeName',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: personalizeNodeNameBodySchema,
       },
@@ -126,7 +126,7 @@ export async function settingsRoutes(
   fastify.post(
     '/personalize/nodeAbout',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: personalizeNodeAboutBodySchema,
       },
@@ -138,7 +138,7 @@ export async function settingsRoutes(
   fastify.post(
     '/personalize/nodeId',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: personalizeNodeIdBodySchema,
       },
@@ -154,7 +154,7 @@ export async function settingsRoutes(
   fastify.post(
     '/secure',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: configureSecureBodySchema,
       },
@@ -166,7 +166,7 @@ export async function settingsRoutes(
   fastify.post(
     '/account',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: updateAccountBodySchema,
       },
@@ -182,7 +182,7 @@ export async function settingsRoutes(
   fastify.post(
     '/network/internal',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: networkInternalBodySchema,
       },
@@ -194,7 +194,7 @@ export async function settingsRoutes(
   fastify.post(
     '/network/external',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: networkExternalBodySchema,
       },
@@ -210,7 +210,7 @@ export async function settingsRoutes(
   fastify.post(
     '/cloudflare/configure',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: cloudflareConfigureBodySchema,
       },
@@ -222,7 +222,7 @@ export async function settingsRoutes(
   fastify.post(
     '/cloudflare/clear',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
     },
     controller.cloudflareClear.bind(controller)
   );
@@ -231,7 +231,7 @@ export async function settingsRoutes(
   fastify.post(
     '/cloudflare/turnstile/configure',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: cloudflareTurnstileConfigureBodySchema,
       },
@@ -243,7 +243,7 @@ export async function settingsRoutes(
   fastify.post(
     '/cloudflare/turnstile/clear',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
     },
     controller.cloudflareTurnstileClear.bind(controller)
   );
@@ -256,7 +256,7 @@ export async function settingsRoutes(
   fastify.post(
     '/comments/toggle',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: featureToggleBodySchema,
       },
@@ -268,7 +268,7 @@ export async function settingsRoutes(
   fastify.post(
     '/likes/toggle',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: featureToggleBodySchema,
       },
@@ -280,7 +280,7 @@ export async function settingsRoutes(
   fastify.post(
     '/dislikes/toggle',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: featureToggleBodySchema,
       },
@@ -292,7 +292,7 @@ export async function settingsRoutes(
   fastify.post(
     '/reports/toggle',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: featureToggleBodySchema,
       },
@@ -304,7 +304,7 @@ export async function settingsRoutes(
   fastify.post(
     '/liveChat/toggle',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: featureToggleBodySchema,
       },
@@ -320,7 +320,7 @@ export async function settingsRoutes(
   fastify.post(
     '/databaseConfig/toggle',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: databaseConfigToggleBodySchema,
       },
@@ -332,7 +332,7 @@ export async function settingsRoutes(
   fastify.post(
     '/storageConfig/toggle',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: storageConfigToggleBodySchema,
       },
@@ -348,7 +348,7 @@ export async function settingsRoutes(
   fastify.get(
     '/export/database',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.exportDatabase.bind(controller)
   );
@@ -358,7 +358,7 @@ export async function settingsRoutes(
   fastify.post(
     '/import/database',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.importDatabase.bind(controller)
   );

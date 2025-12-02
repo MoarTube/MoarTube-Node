@@ -19,16 +19,12 @@ import { ChatMessageHandler } from './handlers/chat';
 import { LiveStreamHandler } from './handlers/stream';
 import { VideoStatusHandler } from './handlers/video-status';
 import { EchoHandler } from './handlers/echo';
+import { Logger, type ILogger } from '../utils/logger';
 
 /**
  * Logger interface for the WebSocket manager
  */
-export interface WebSocketLogger {
-  debug: (message: string, context?: Record<string, unknown>) => void;
-  info: (message: string, context?: Record<string, unknown>) => void;
-  warn: (message: string, context?: Record<string, unknown>) => void;
-  error: (message: string, error?: Error, context?: Record<string, unknown>) => void;
-}
+export type WebSocketLogger = ILogger;
 
 /**
  * Configuration options for WebSocket Manager
@@ -43,24 +39,9 @@ export interface WebSocketManagerOptions {
 }
 
 /**
- * Default logger that uses console
+ * Default logger using Logger class with WebSocket prefix
  */
-const defaultLogger: WebSocketLogger = {
-  debug: (message, context) => {
-    if (process.env['NODE_ENV'] === 'development') {
-      console.debug(`[WS] ${message}`, context ?? '');
-    }
-  },
-  info: (message, context) => {
-    console.info(`[WS] ${message}`, context ?? '');
-  },
-  warn: (message, context) => {
-    console.warn(`[WS] ${message}`, context ?? '');
-  },
-  error: (message, error, context) => {
-    console.error(`[WS] ${message}`, error ?? '', context ?? '');
-  },
-};
+const defaultLogger: WebSocketLogger = new Logger({ prefix: 'WS' });
 
 /**
  * WebSocket connection manager
@@ -69,8 +50,8 @@ const defaultLogger: WebSocketLogger = {
  * and provides broadcast functionality.
  */
 export class WebSocketManager {
-  private handlers: WebSocketHandler[] = [];
-  private clients: Set<ExtendedWebSocket> = new Set();
+  private readonly handlers: WebSocketHandler[] = [];
+  private readonly clients: Set<ExtendedWebSocket> = new Set();
   private readonly logger: WebSocketLogger;
   private readonly heartbeatInterval: number;
   private readonly clientTimeout: number;
@@ -260,38 +241,49 @@ export class WebSocketManager {
   }
 
   /**
+   * Check if client should receive the broadcast based on filter options
+   */
+  private shouldReceiveBroadcast(client: ExtendedWebSocket, options?: BroadcastOptions): boolean {
+    // Skip if not open
+    if (client.readyState !== 1) {
+      return false;
+    }
+
+    if (options === undefined) {
+      return true;
+    }
+
+    // Video ID filter
+    if (options.videoId !== undefined && client.videoId !== options.videoId) {
+      return false;
+    }
+
+    // Client type filter
+    if (options.clientTypes !== undefined && !options.clientTypes.includes(client.socketType)) {
+      return false;
+    }
+
+    // Exclude specific clients
+    if (
+      options.excludeClients !== undefined &&
+      client.clientId !== undefined &&
+      options.excludeClients.includes(client.clientId)
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
    * Broadcast message to clients
    */
   broadcast(message: WebSocketMessage, options?: BroadcastOptions): void {
     const messageStr = JSON.stringify(message);
 
     for (const client of this.clients) {
-      // Skip if not open
-      if (client.readyState !== 1) {
-        // WebSocket.OPEN = 1
+      if (!this.shouldReceiveBroadcast(client, options)) {
         continue;
-      }
-
-      // Apply filters
-      if (options !== undefined) {
-        // Video ID filter
-        if (options.videoId !== undefined && client.videoId !== options.videoId) {
-          continue;
-        }
-
-        // Client type filter
-        if (options.clientTypes !== undefined && !options.clientTypes.includes(client.socketType)) {
-          continue;
-        }
-
-        // Exclude specific clients
-        if (
-          options.excludeClients !== undefined &&
-          client.clientId !== undefined &&
-          options.excludeClients.includes(client.clientId)
-        ) {
-          continue;
-        }
       }
 
       try {

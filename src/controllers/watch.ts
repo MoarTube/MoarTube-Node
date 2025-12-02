@@ -10,6 +10,7 @@ import type { VideosRepository } from '../database/repositories/videos';
 import type { CommentsRepository } from '../database/repositories/comments';
 import type { LinksRepository } from '../database/repositories/links';
 import type { MonetizationRepository } from '../database/repositories/monetization';
+import type { DrizzleVideo } from '../database/schema';
 import { getConfig } from '../config';
 import { isVideoIdValid } from '../utils';
 
@@ -25,6 +26,84 @@ interface FastifyReplyWithView extends FastifyReply {
  */
 export interface WatchQuery {
   v?: string;
+}
+
+/**
+ * Video source info
+ */
+interface VideoSource {
+  format: string;
+  resolution: string;
+  url: string;
+}
+
+/**
+ * Node information data
+ */
+interface NodeInformationData {
+  isError: false;
+  information: {
+    nodeVideoCount: number;
+    nodeId: string;
+    nodeName: string;
+    nodeAbout: string;
+    publicNodeProtocol: string;
+    publicNodeAddress: string;
+    publicNodePort: string;
+    cloudflareTurnstileSiteKey: string;
+  };
+}
+
+/**
+ * Video data for watch page
+ */
+interface VideoData {
+  isError: false;
+  video: {
+    videoId: string;
+    title: string;
+    description: string | null;
+    tags: string | null;
+    views: number;
+    likes: number;
+    dislikes: number;
+    isPublished: boolean;
+    isStreaming: boolean;
+    isStreamed: boolean;
+    isCommentsEnabled: boolean;
+    isReportsEnabled: boolean;
+    creationTimestamp: number;
+    adaptiveSources: VideoSource[];
+    progressiveSources: VideoSource[];
+  };
+}
+
+/**
+ * Page data for watch page
+ */
+interface WatchPageData {
+  informationData: NodeInformationData;
+  linksData: { isError: false; links: unknown[] };
+  cryptoWalletAddressesData: { isError: false; cryptoWalletAddresses: unknown[] };
+  videoData: VideoData;
+  recommendedVideosData: {
+    isError: false;
+    recommendedVideos: Array<{
+      videoId: string;
+      title: string;
+      tags: string | null;
+      views: number;
+      creationTimestamp: number;
+    }>;
+  };
+  commentsData: {
+    isError: false;
+    comments: Array<{ commentId: number; timestamp: number; commentPlainTextSanitized: string }>;
+  };
+  externalVideosBaseUrl: string;
+  externalResourcesBaseUrl: string;
+  adaptiveSources: VideoSource[];
+  progressiveSources: VideoSource[];
 }
 
 /**
@@ -58,111 +137,63 @@ export class WatchController extends BaseController {
       }
 
       const config = getConfig();
-      const nodeSettings = config.nodeSettings;
-
-      // Get node information
-      const videoCount = await this.videoRepository.count({ isPublished: true });
-      const informationData = {
-        isError: false,
-        information: {
-          nodeVideoCount: videoCount,
-          nodeId: String(nodeSettings.nodeId ?? ''),
-          nodeName: String(nodeSettings.nodeName ?? ''),
-          nodeAbout: String(nodeSettings.nodeAbout ?? ''),
-          publicNodeProtocol: String(nodeSettings.publicNodeProtocol ?? ''),
-          publicNodeAddress: String(nodeSettings.publicNodeAddress ?? ''),
-          publicNodePort: String(nodeSettings.publicNodePort ?? ''),
-          cloudflareTurnstileSiteKey: String(nodeSettings.cloudflareTurnstileSiteKey ?? ''),
-        },
-      };
-
-      // Get links
-      const links = await this.linkRepository.findAll();
-      const linksData = { isError: false, links };
-
-      // Get crypto wallet addresses
-      const walletAddresses = await this.monetizationRepository.findAll();
-      const cryptoWalletAddressesData = { isError: false, cryptoWalletAddresses: walletAddresses };
-
-      // Get video data
       const video = await this.videoRepository.findById(videoId);
+
       if (!video) {
         void reply.status(404).send('that video could not be loaded');
         return;
       }
 
-      // Build video data response
-      const adaptiveSources: { format: string; resolution: string; url: string }[] = [];
-      const progressiveSources: { format: string; resolution: string; url: string }[] = [];
+      const pageData = await this.buildPageData(video, videoId, config);
+      this.setCacheHeaders(reply, video, pageData.adaptiveSources, pageData.progressiveSources);
+      this.renderPage(reply, pageData);
+    } catch (error) {
+      this.logger.error('Watch page rendering failed', error instanceof Error ? error : null);
+      void reply.status(500).send('that video could not be loaded');
+    }
+  };
 
-      // Parse available formats from video
-      const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
+  /**
+   * Build all data needed for the watch page
+   */
+  private async buildPageData(
+    video: DrizzleVideo,
+    videoId: string,
+    config: ReturnType<typeof getConfig>
+  ): Promise<WatchPageData> {
+    const nodeSettings = config.nodeSettings;
+    const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
+    const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
 
-      // Build sources based on video's format availability
-      if (video.isPublished || video.isLive) {
-        // Check available formats from video metadata
-        let formats: Record<string, unknown> = {};
-        if (video.meta !== undefined && video.meta !== null && video.meta !== '') {
-          try {
-            formats = JSON.parse(String(video.meta)) as Record<string, unknown>;
-          } catch {
-            // Invalid JSON, use empty object
-          }
-        }
-
-        // Add adaptive sources if available
-        if (formats['m3u8'] === true) {
-          adaptiveSources.push({
-            format: 'hls',
-            resolution: 'auto',
-            url: `${externalVideosBaseUrl}/${videoId}/adaptive/dynamic/manifest-master.m3u8`,
-          });
-        }
-
-        // Add progressive sources based on available resolutions
-        const resolutions = ['2160p', '1440p', '1080p', '720p', '480p', '360p', '240p'];
-        for (const resolution of resolutions) {
-          if (formats[`mp4_${resolution}`] === true) {
-            progressiveSources.push({
-              format: 'mp4',
-              resolution,
-              url: `${externalVideosBaseUrl}/${videoId}/progressive/${resolution}.mp4`,
-            });
-          }
-        }
-      }
-
-      const videoData = {
-        isError: false,
-        video: {
-          videoId: video.videoId,
-          title: video.title,
-          description: video.description,
-          tags: video.tags,
-          views: video.views,
-          likes: video.likes,
-          dislikes: video.dislikes,
-          isPublished: video.isPublished,
-          isStreaming: video.isLive,
-          isStreamed: video.isStreamed,
-          isCommentsEnabled: video.isCommentsEnabled,
-          isReportsEnabled: video.isReportsEnabled,
-          creationTimestamp: video.creationTimestamp,
-          adaptiveSources,
-          progressiveSources,
-        },
-      };
-
-      // Get recommended videos
-      const recommendedVideos = await this.videoRepository.findAll({
+    // Fetch all data in parallel
+    const [videoCount, links, walletAddresses, recommendedVideos, comments] = await Promise.all([
+      this.videoRepository.count({ isPublished: true }),
+      this.linkRepository.findAll(),
+      this.monetizationRepository.findAll(),
+      this.videoRepository.findAll({
         isPublished: true,
         limit: 10,
         sortBy: 'creation_timestamp',
         sortDirection: 'desc',
-      });
+      }),
+      this.commentRepository.findByVideoId(videoId, { limit: 50 }),
+    ]);
 
-      const recommendedVideosData = {
-        isError: false,
+    const { adaptiveSources, progressiveSources } = this.buildVideoSources(
+      video,
+      externalVideosBaseUrl
+    );
+
+    return {
+      informationData: this.buildNodeInformation(nodeSettings, videoCount),
+      linksData: { isError: false as const, links },
+      cryptoWalletAddressesData: {
+        isError: false as const,
+        cryptoWalletAddresses: walletAddresses,
+      },
+      videoData: this.buildVideoData(video, adaptiveSources, progressiveSources),
+      recommendedVideosData: {
+        isError: false as const,
         recommendedVideos: recommendedVideos.map((v) => ({
           videoId: v.videoId,
           title: v.title,
@@ -170,66 +201,167 @@ export class WatchController extends BaseController {
           views: v.views,
           creationTimestamp: v.creationTimestamp,
         })),
-      };
-
-      // Get comments
-      const comments = await this.commentRepository.findByVideoId(videoId, {
-        limit: 50,
-      });
-
-      const commentsData = {
-        isError: false,
+      },
+      commentsData: {
+        isError: false as const,
         comments: comments.map((c) => ({
           commentId: c.id,
           timestamp: c.timestamp,
           commentPlainTextSanitized: c.commentPlainTextSanitized,
         })),
-      };
+      },
+      externalVideosBaseUrl,
+      externalResourcesBaseUrl,
+      adaptiveSources,
+      progressiveSources,
+    };
+  }
 
-      const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
+  /**
+   * Build node information data
+   */
+  private buildNodeInformation(
+    nodeSettings: ReturnType<typeof getConfig>['nodeSettings'],
+    videoCount: number
+  ): NodeInformationData {
+    return {
+      isError: false as const,
+      information: {
+        nodeVideoCount: videoCount,
+        nodeId: String(nodeSettings.nodeId ?? ''),
+        nodeName: String(nodeSettings.nodeName ?? ''),
+        nodeAbout: String(nodeSettings.nodeAbout ?? ''),
+        publicNodeProtocol: String(nodeSettings.publicNodeProtocol ?? ''),
+        publicNodeAddress: String(nodeSettings.publicNodeAddress ?? ''),
+        publicNodePort: String(nodeSettings.publicNodePort ?? ''),
+        cloudflareTurnstileSiteKey: String(nodeSettings.cloudflareTurnstileSiteKey ?? ''),
+      },
+    };
+  }
 
-      // Set cache control headers
-      if (
-        (adaptiveSources.length === 0 && progressiveSources.length === 0) ||
-        (!video.isPublished && !video.isLive)
-      ) {
-        if (video.isStreamed) {
-          void reply.header('Cache-Control', 'public, s-maxage=86400');
-        } else {
-          void reply.header('Cache-Control', 'no-store');
-        }
-      } else {
-        void reply.header('Cache-Control', 'public, s-maxage=86400');
-      }
+  /**
+   * Build video sources from metadata
+   */
+  private buildVideoSources(
+    video: DrizzleVideo,
+    externalVideosBaseUrl: string
+  ): { adaptiveSources: VideoSource[]; progressiveSources: VideoSource[] } {
+    const adaptiveSources: VideoSource[] = [];
+    const progressiveSources: VideoSource[] = [];
 
-      // Render the watch page
-      const replyWithView = reply as FastifyReplyWithView;
-      if (replyWithView.view) {
-        void replyWithView.view('watch', {
-          informationData,
-          linksData,
-          cryptoWalletAddressesData,
-          videoData,
-          recommendedVideosData,
-          commentsData,
-          externalVideosBaseUrl,
-          externalResourcesBaseUrl,
-        });
-      } else {
-        // Fallback to JSON response if view engine not available
-        void reply.send({
-          informationData,
-          linksData,
-          cryptoWalletAddressesData,
-          videoData,
-          recommendedVideosData,
-          commentsData,
-          externalVideosBaseUrl,
-          externalResourcesBaseUrl,
-        });
-      }
-    } catch (error) {
-      void reply.status(500).send('that video could not be loaded');
+    if (!video.isPublished && !video.isLive) {
+      return { adaptiveSources, progressiveSources };
     }
-  };
+
+    const formats = this.parseVideoFormats(video);
+
+    if (formats['m3u8'] === true) {
+      adaptiveSources.push({
+        format: 'hls',
+        resolution: 'auto',
+        url: `${externalVideosBaseUrl}/${video.videoId}/adaptive/dynamic/manifest-master.m3u8`,
+      });
+    }
+
+    const resolutions = ['2160p', '1440p', '1080p', '720p', '480p', '360p', '240p'];
+    for (const resolution of resolutions) {
+      if (formats[`mp4_${resolution}`] === true) {
+        progressiveSources.push({
+          format: 'mp4',
+          resolution,
+          url: `${externalVideosBaseUrl}/${video.videoId}/progressive/${resolution}.mp4`,
+        });
+      }
+    }
+
+    return { adaptiveSources, progressiveSources };
+  }
+
+  /**
+   * Parse video format metadata
+   */
+  private parseVideoFormats(video: DrizzleVideo): Record<string, unknown> {
+    if (video.meta === undefined || video.meta === null || video.meta === '') {
+      return {};
+    }
+    try {
+      return JSON.parse(String(video.meta)) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Build video data response
+   */
+  private buildVideoData(
+    video: DrizzleVideo,
+    adaptiveSources: VideoSource[],
+    progressiveSources: VideoSource[]
+  ): VideoData {
+    return {
+      isError: false as const,
+      video: {
+        videoId: video.videoId,
+        title: video.title,
+        description: video.description,
+        tags: video.tags,
+        views: video.views,
+        likes: video.likes,
+        dislikes: video.dislikes,
+        isPublished: video.isPublished,
+        isStreaming: video.isLive,
+        isStreamed: video.isStreamed,
+        isCommentsEnabled: video.isCommentsEnabled,
+        isReportsEnabled: video.isReportsEnabled,
+        creationTimestamp: video.creationTimestamp,
+        adaptiveSources,
+        progressiveSources,
+      },
+    };
+  }
+
+  /**
+   * Set appropriate cache headers
+   */
+  private setCacheHeaders(
+    reply: FastifyReply,
+    video: DrizzleVideo,
+    adaptiveSources: VideoSource[],
+    progressiveSources: VideoSource[]
+  ): void {
+    const hasSources = adaptiveSources.length > 0 || progressiveSources.length > 0;
+    const isAvailable = video.isPublished || video.isLive;
+
+    if (!hasSources || !isAvailable) {
+      const cacheValue = video.isStreamed ? 'public, s-maxage=86400' : 'no-store';
+      void reply.header('Cache-Control', cacheValue);
+    } else {
+      void reply.header('Cache-Control', 'public, s-maxage=86400');
+    }
+  }
+
+  /**
+   * Render the watch page or return JSON
+   */
+  private renderPage(reply: FastifyReply, data: WatchPageData): void {
+    const replyWithView = reply as FastifyReplyWithView;
+
+    const viewData = {
+      informationData: data.informationData,
+      linksData: data.linksData,
+      cryptoWalletAddressesData: data.cryptoWalletAddressesData,
+      videoData: data.videoData,
+      recommendedVideosData: data.recommendedVideosData,
+      commentsData: data.commentsData,
+      externalVideosBaseUrl: data.externalVideosBaseUrl,
+      externalResourcesBaseUrl: data.externalResourcesBaseUrl,
+    };
+
+    if (replyWithView.view) {
+      void replyWithView.view('watch', viewData);
+    } else {
+      void reply.send(viewData);
+    }
+  }
 }

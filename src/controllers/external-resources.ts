@@ -56,6 +56,7 @@ export class ExternalResourcesController extends BaseController {
 
       this.serveStaticFile(filePath, 'application/javascript', reply);
     } catch (error) {
+      this.logger.error('Error serving JavaScript file', error instanceof Error ? error : null);
       this.sendError(reply, 'error serving JavaScript file', 500);
     }
   };
@@ -73,6 +74,7 @@ export class ExternalResourcesController extends BaseController {
 
       this.serveStaticFile(filePath, 'text/css', reply);
     } catch (error) {
+      this.logger.error('Error serving CSS file', error instanceof Error ? error : null);
       this.sendError(reply, 'error serving CSS file', 500);
     }
   };
@@ -106,6 +108,7 @@ export class ExternalResourcesController extends BaseController {
 
       this.serveStaticFile(filePath, contentType, reply);
     } catch (error) {
+      this.logger.error('Error serving font file', error instanceof Error ? error : null);
       this.sendError(reply, 'error serving font file', 500);
     }
   };
@@ -154,6 +157,7 @@ export class ExternalResourcesController extends BaseController {
 
       this.serveStaticFile(filePath, contentType, reply);
     } catch (error) {
+      this.logger.error('Error serving image file', error instanceof Error ? error : null);
       this.sendError(reply, 'error serving image file', 500);
     }
   };

@@ -23,7 +23,7 @@ export function statusRoutes(
   fastify.get(
     '/information',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.information.bind(controller)
   );
@@ -31,7 +31,7 @@ export function statusRoutes(
   fastify.get(
     '/heartbeat',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.heartbeat.bind(controller)
   );

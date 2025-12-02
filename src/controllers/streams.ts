@@ -168,7 +168,7 @@ export class StreamsController extends BaseController {
         title,
         description,
         tags,
-        rtmpPort: parseInt(rtmpPort, 10),
+        rtmpPort: Number.parseInt(rtmpPort, 10),
         isRecordingStreamRemotely,
         isRecordingStreamLocally,
         networkAddress,
@@ -183,6 +183,7 @@ export class StreamsController extends BaseController {
 
       this.sendSuccess(reply, { videoId: result.videoId });
     } catch (error) {
+      this.logger.error('Start stream failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -205,6 +206,7 @@ export class StreamsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Stop stream failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -250,6 +252,7 @@ export class StreamsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Remove segment failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -277,6 +280,7 @@ export class StreamsController extends BaseController {
 
       this.sendSuccess(reply, { bandwidth: video.bandwidth });
     } catch (error) {
+      this.logger.error('Get bandwidth failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -333,6 +337,7 @@ export class StreamsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Update chat settings failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -355,6 +360,7 @@ export class StreamsController extends BaseController {
 
       this.sendSuccess(reply, { chatHistory });
     } catch (error) {
+      this.logger.error('Get chat history failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

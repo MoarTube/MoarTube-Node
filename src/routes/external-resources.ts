@@ -23,7 +23,7 @@ export function externalResourcesRoutes(
   fastify.get(
     '/javascript/:filename',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: filenameParamsSchema,
       },
@@ -35,7 +35,7 @@ export function externalResourcesRoutes(
   fastify.get(
     '/css/:filename',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: filenameParamsSchema,
       },
@@ -47,7 +47,7 @@ export function externalResourcesRoutes(
   fastify.get(
     '/fonts/:filename',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: filenameParamsSchema,
       },
@@ -59,7 +59,7 @@ export function externalResourcesRoutes(
   fastify.get(
     '/images/:imageName',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: imageNameParamsSchema,
       },

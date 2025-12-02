@@ -39,6 +39,10 @@ export class ReportsArchiveVideosController extends BaseController {
 
       this.sendSuccess(reply, { reports });
     } catch (error) {
+      this.logger.error(
+        'Failed to get all archived video reports',
+        error instanceof Error ? error : null
+      );
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -57,11 +61,15 @@ export class ReportsArchiveVideosController extends BaseController {
         return;
       }
 
-      const archiveIdNum = parseInt(archiveId, 10);
+      const archiveIdNum = Number.parseInt(archiveId, 10);
       await this.videoReportsArchiveRepository.delete(archiveIdNum);
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error(
+        'Failed to delete archived video report',
+        error instanceof Error ? error : null
+      );
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

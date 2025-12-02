@@ -27,7 +27,7 @@ export function reportsRoutes(
   fastify.get(
     '/count',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
     },
     controller.getReportsCount.bind(controller)
   );

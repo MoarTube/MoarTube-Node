@@ -5,8 +5,8 @@
  * Migrated from Express to Fastify with proper TypeScript types.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base';
 import type {
@@ -499,9 +499,7 @@ export class VideosController extends BaseController {
 
     if (sortTerm === 'popular') {
       sortBy = 'views';
-      sortDirection = 'desc';
     } else if (sortTerm === 'oldest') {
-      sortBy = 'creation_timestamp';
       sortDirection = 'asc';
     }
 
@@ -860,8 +858,8 @@ export class VideosController extends BaseController {
     const cloudflareService = this.getCloudflareService();
     const { videoId, commentId } = request.params as VideoIdParams & { commentId: string };
 
-    const commentIdNum = parseInt(commentId, 10);
-    if (isNaN(commentIdNum)) {
+    const commentIdNum = Number.parseInt(commentId, 10);
+    if (Number.isNaN(commentIdNum)) {
       throw new BadRequestError('Invalid comment ID');
     }
 
@@ -1006,8 +1004,8 @@ export class VideosController extends BaseController {
     const commentService = this.getCommentService();
     const { videoId, commentId } = request.params as VideoIdParams & { commentId: string };
 
-    const commentIdNum = parseInt(commentId, 10);
-    if (isNaN(commentIdNum)) {
+    const commentIdNum = Number.parseInt(commentId, 10);
+    if (Number.isNaN(commentIdNum)) {
       throw new BadRequestError('Invalid comment ID');
     }
 
@@ -1253,7 +1251,7 @@ export class VideosController extends BaseController {
 
       this.sendSuccess(reply, result);
     } catch (error) {
-      await uploadService.handleUploadError(videoId, error as Error);
+      uploadService.handleUploadError(videoId, error as Error);
       await videoService.setError(videoId, true);
       throw error;
     }
@@ -1312,7 +1310,7 @@ export class VideosController extends BaseController {
       }
 
       // Handle stream upload completion
-      const result = await uploadService.handleStreamUploadComplete({
+      const result = uploadService.handleStreamUploadComplete({
         videoId,
         format,
         resolution,
@@ -1352,7 +1350,7 @@ export class VideosController extends BaseController {
   /**
    * Handle image upload (shared logic for thumbnail, preview, poster)
    */
-  private handleImageUpload = async (
+  private readonly handleImageUpload = async (
     request: FastifyRequest,
     reply: FastifyReply,
     imageType: ImageType,

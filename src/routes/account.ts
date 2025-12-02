@@ -25,7 +25,7 @@ export function accountRoutes(
   fastify.post(
     '/signin',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         body: signInBodySchema,
       },
@@ -37,7 +37,7 @@ export function accountRoutes(
   fastify.get(
     '/signout',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.signOut.bind(controller)
   );
@@ -46,7 +46,7 @@ export function accountRoutes(
   fastify.get(
     '/authenticated',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
     },
     controller.authenticated.bind(controller)
   );

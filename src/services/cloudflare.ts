@@ -60,7 +60,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
           },
         });
       }
-    } catch (error) {
+    } catch {
       this.logger.debug('Cloudflare client not configured');
     }
   }
@@ -154,9 +154,11 @@ export class CloudflareService extends BaseService implements ICloudflareService
 
       const files: string[] = [];
       for (const id of ids) {
-        files.push(`${nodeBaseUrl}/watch/embed/video/${id}`);
-        files.push(`${nodeBaseUrl}/watch/embed/video/${id}?autostart=0`);
-        files.push(`${nodeBaseUrl}/watch/embed/video/${id}?autostart=1`);
+        files.push(
+          `${nodeBaseUrl}/watch/embed/video/${id}`,
+          `${nodeBaseUrl}/watch/embed/video/${id}?autostart=0`,
+          `${nodeBaseUrl}/watch/embed/video/${id}?autostart=1`
+        );
       }
 
       await this.purgeCache(files, 'purgeEmbedVideoPages');

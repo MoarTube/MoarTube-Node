@@ -65,6 +65,7 @@ export class MonetizationController extends BaseController {
       const cryptoWalletAddresses = await this.monetizationRepository.findAll();
       this.sendSuccess(reply, { cryptoWalletAddresses });
     } catch (error) {
+      this.logger.error('Get all wallet addresses failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -95,6 +96,7 @@ export class MonetizationController extends BaseController {
 
       this.sendSuccess(reply, { cryptoWalletAddress });
     } catch (error) {
+      this.logger.error('Add wallet address failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -121,6 +123,7 @@ export class MonetizationController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Delete wallet address failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

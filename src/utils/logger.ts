@@ -99,9 +99,7 @@ export class Logger implements ILogger {
    * Get or create the singleton logger instance
    */
   static getInstance(config?: LoggerConfig): Logger {
-    if (Logger.instance === null) {
-      Logger.instance = new Logger(config);
-    }
+    Logger.instance ??= new Logger(config);
     return Logger.instance;
   }
 

@@ -50,6 +50,7 @@ export class LinksController extends BaseController {
       const links = await this.linkRepository.findAll();
       this.sendSuccess(reply, { links });
     } catch (error) {
+      this.logger.error('Get all links failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -77,6 +78,7 @@ export class LinksController extends BaseController {
 
       this.sendSuccess(reply, { link });
     } catch (error) {
+      this.logger.error('Add link failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -103,6 +105,7 @@ export class LinksController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Delete link failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

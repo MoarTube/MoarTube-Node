@@ -53,7 +53,7 @@ export async function videosRoutes(
   fastify.get(
     '/search',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         querystring: videoSearchQuerySchema,
       },
@@ -65,7 +65,7 @@ export async function videosRoutes(
   fastify.get(
     '/recommended',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.getRecommended.bind(controller)
   );
@@ -74,7 +74,7 @@ export async function videosRoutes(
   fastify.get(
     '/tags',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.getTags.bind(controller)
   );
@@ -83,7 +83,7 @@ export async function videosRoutes(
   fastify.get(
     '/tags/all',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
     },
     controller.getAllTags.bind(controller)
   );
@@ -92,7 +92,7 @@ export async function videosRoutes(
   fastify.get(
     '/:videoId/comments',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoIdParamsSchema,
         querystring: videoCommentsQuerySchema,
@@ -105,7 +105,7 @@ export async function videosRoutes(
   fastify.get(
     '/:videoId/comments/:commentId',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoCommentIdParamsSchema,
       },
@@ -117,7 +117,7 @@ export async function videosRoutes(
   fastify.get(
     '/:videoId/alias',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -129,7 +129,7 @@ export async function videosRoutes(
   fastify.get(
     '/:videoId/watch',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -141,7 +141,7 @@ export async function videosRoutes(
   fastify.get(
     '/:videoId/permissions',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -153,7 +153,7 @@ export async function videosRoutes(
   fastify.get(
     '/:videoId/data',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -165,7 +165,7 @@ export async function videosRoutes(
   fastify.get(
     '/:videoId/data/all',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -177,7 +177,7 @@ export async function videosRoutes(
   fastify.get(
     '/:videoId/views/increment',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -189,7 +189,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/like',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoIdParamsSchema,
         body: videoLikeDislikeBodySchema,
@@ -202,7 +202,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/dislike',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoIdParamsSchema,
         body: videoLikeDislikeBodySchema,
@@ -215,7 +215,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/comments/comment',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoIdParamsSchema,
         body: videoCommentBodySchema,
@@ -228,7 +228,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/report',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoIdParamsSchema,
         body: videoReportBodySchema,
@@ -245,7 +245,7 @@ export async function videosRoutes(
   fastify.post(
     '/delete',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: videoDeleteBodySchema,
       },
@@ -257,7 +257,7 @@ export async function videosRoutes(
   fastify.post(
     '/finalize',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: videoFinalizeBodySchema,
       },
@@ -269,7 +269,7 @@ export async function videosRoutes(
   fastify.post(
     '/import',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: videoImportBodySchema,
       },
@@ -281,7 +281,7 @@ export async function videosRoutes(
   fastify.post(
     '/imported',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: videoIdBodySchema,
       },
@@ -293,7 +293,7 @@ export async function videosRoutes(
   fastify.post(
     '/publishing',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: videoIdBodySchema,
       },
@@ -305,7 +305,7 @@ export async function videosRoutes(
   fastify.post(
     '/published',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: videoIdBodySchema,
       },
@@ -317,7 +317,7 @@ export async function videosRoutes(
   fastify.post(
     '/error',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: videoIdBodySchema,
       },
@@ -329,7 +329,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/data',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
         body: videoDataBodySchema,
@@ -342,7 +342,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/lengths',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
         body: videoLengthsBodySchema,
@@ -355,7 +355,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/index/outdated',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -367,7 +367,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/adaptive/m3u8/:manifestType/manifests/masterManifest',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoAdaptiveManifestParamsSchema,
         body: videoMasterManifestBodySchema,
@@ -380,7 +380,7 @@ export async function videosRoutes(
   fastify.delete(
     '/:videoId/comments/:commentId/delete',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoCommentIdParamsSchema,
         querystring: videoCommentDeleteQuerySchema,
@@ -393,7 +393,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/permissions',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
         body: videoPermissionsBodySchema,
@@ -406,7 +406,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/upload',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
         querystring: videoUploadQuerySchema,
@@ -419,7 +419,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/stream',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -431,7 +431,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/images/thumbnail',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -443,7 +443,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/images/preview',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -455,7 +455,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/images/poster',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -467,7 +467,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/publishing/stop',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -479,7 +479,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/importing/stop',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -491,7 +491,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/sourceFileExtension',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
         body: videoSourceFileExtensionBodySchema,
@@ -504,7 +504,7 @@ export async function videosRoutes(
   fastify.get(
     '/:videoId/sourceFileExtension',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -516,7 +516,7 @@ export async function videosRoutes(
   fastify.get(
     '/:videoId/publishes',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
       },
@@ -528,7 +528,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/unpublish',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
         body: videoUnpublishBodySchema,
@@ -541,7 +541,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/:format/:resolution/published',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoFormatResolutionParamsSchema,
       },
@@ -553,7 +553,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/index/add',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
         body: videoIndexAddBodySchema,
@@ -566,7 +566,7 @@ export async function videosRoutes(
   fastify.post(
     '/:videoId/index/remove',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: videoIdParamsSchema,
         body: videoIndexRemoveBodySchema,

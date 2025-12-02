@@ -39,6 +39,10 @@ export class ReportsArchiveCommentsController extends BaseController {
 
       this.sendSuccess(reply, { reports });
     } catch (error) {
+      this.logger.error(
+        'Get all archived comment reports failed',
+        error instanceof Error ? error : null
+      );
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -57,11 +61,15 @@ export class ReportsArchiveCommentsController extends BaseController {
         return;
       }
 
-      const archiveIdNum = parseInt(archiveId, 10);
+      const archiveIdNum = Number.parseInt(archiveId, 10);
       await this.commentReportsArchiveRepository.delete(archiveIdNum);
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error(
+        'Delete archived comment report failed',
+        error instanceof Error ? error : null
+      );
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

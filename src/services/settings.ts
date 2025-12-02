@@ -135,7 +135,7 @@ export class SettingsService extends BaseService implements ISettingsService {
         await this.indexerService.updateNodeName(name);
 
         // Purge node page from Cloudflare cache
-        if (this.cloudflareService !== undefined && this.cloudflareService.isEnabled()) {
+        if (this.cloudflareService?.isEnabled() === true) {
           await this.cloudflareService.purgeNodePage();
         }
       } catch (error) {
@@ -165,7 +165,7 @@ export class SettingsService extends BaseService implements ISettingsService {
         await this.indexerService.updateNodeAbout(about);
 
         // Purge node page from Cloudflare cache
-        if (this.cloudflareService !== undefined && this.cloudflareService.isEnabled()) {
+        if (this.cloudflareService?.isEnabled() === true) {
           await this.cloudflareService.purgeNodePage();
         }
       } catch (error) {
@@ -192,7 +192,7 @@ export class SettingsService extends BaseService implements ISettingsService {
         await this.indexerService.updateNodeId(nodeId);
 
         // Purge node page from Cloudflare cache
-        if (this.cloudflareService !== undefined && this.cloudflareService.isEnabled()) {
+        if (this.cloudflareService?.isEnabled() === true) {
           await this.cloudflareService.purgeNodePage();
         }
       } catch (error) {
@@ -435,7 +435,7 @@ export class SettingsService extends BaseService implements ISettingsService {
       }
 
       // Purge cache if Cloudflare enabled
-      if (this.cloudflareService !== undefined && this.cloudflareService.isEnabled()) {
+      if (this.cloudflareService?.isEnabled() === true) {
         await this.cloudflareService.purgeNodeImages();
       }
 
@@ -484,7 +484,7 @@ export class SettingsService extends BaseService implements ISettingsService {
       }
 
       // Purge cache if Cloudflare enabled
-      if (this.cloudflareService !== undefined && this.cloudflareService.isEnabled()) {
+      if (this.cloudflareService?.isEnabled() === true) {
         await this.cloudflareService.purgeNodeImages();
       }
 

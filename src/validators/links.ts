@@ -13,7 +13,7 @@ import { z } from 'zod';
  * Add link request body schema
  */
 export const addLinkBodySchema = z.object({
-  url: z.string().url('Invalid URL format').max(2048),
+  url: z.url().max(2048),
   svgGraphic: z.string().max(50000).optional().default(''),
 });
 

@@ -230,11 +230,6 @@ export type NewLiveChatMessage = Omit<LiveChatMessage, 'chat_message_id'>;
 // ============================================
 
 /**
- * Supported blockchain chains (extensible)
- */
-export type BlockchainChain = string;
-
-/**
  * Complete crypto wallet address record from the cryptowalletaddresses table
  */
 export interface CryptoWalletAddress {

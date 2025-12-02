@@ -9,7 +9,8 @@ import type {
   ExtendedWebSocket,
   IncomingWebSocketMessage,
   LiveStreamStatsMessage,
-  WebSocketMessage,
+  LiveStreamStartedMessage,
+  LiveStreamStoppedMessage,
 } from '../../types/websocket';
 import { type HandlerContext, WebSocketHandler } from './base';
 
@@ -71,7 +72,7 @@ export class LiveStreamHandler extends WebSocketHandler {
     message: IncomingWebSocketMessage,
     context: HandlerContext
   ): void {
-    const videoId = message.videoId as string | undefined;
+    const { videoId } = message;
 
     if (videoId === undefined || videoId === '') {
       context.log.warn('Join stream without videoId', { clientId: client.clientId });
@@ -121,7 +122,7 @@ export class LiveStreamHandler extends WebSocketHandler {
     message: IncomingWebSocketMessage,
     context: HandlerContext
   ): void {
-    const videoId = message.videoId as string | undefined;
+    const { videoId } = message;
 
     if (videoId === undefined || videoId === '') {
       return;
@@ -130,13 +131,11 @@ export class LiveStreamHandler extends WebSocketHandler {
     context.log.info('Live stream started', { videoId });
 
     // Broadcast to all clients
-    context.broadcast(
-      {
-        eventName: 'live_stream_started',
-        videoId,
-      } as unknown as WebSocketMessage,
-      videoId
-    );
+    const broadcastMessage: LiveStreamStartedMessage = {
+      eventName: 'live_stream_started',
+      videoId,
+    };
+    context.broadcast(broadcastMessage, videoId);
   }
 
   /**
@@ -147,7 +146,7 @@ export class LiveStreamHandler extends WebSocketHandler {
     message: IncomingWebSocketMessage,
     context: HandlerContext
   ): void {
-    const videoId = message.videoId as string | undefined;
+    const { videoId } = message;
 
     if (videoId === undefined || videoId === '') {
       return;
@@ -156,13 +155,11 @@ export class LiveStreamHandler extends WebSocketHandler {
     context.log.info('Live stream stopped', { videoId });
 
     // Broadcast to all clients
-    context.broadcast(
-      {
-        eventName: 'live_stream_stopped',
-        videoId,
-      } as unknown as WebSocketMessage,
-      videoId
-    );
+    const broadcastMessage: LiveStreamStoppedMessage = {
+      eventName: 'live_stream_stopped',
+      videoId,
+    };
+    context.broadcast(broadcastMessage, videoId);
   }
 
   /**

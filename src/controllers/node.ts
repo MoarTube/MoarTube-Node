@@ -67,20 +67,18 @@ export class NodeController extends BaseController {
    */
   getNodePage = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
-      let { searchTerm = '', sortTerm = 'latest', tagTerm = '' } = request.query as NodeQuery;
+      const queryParams = request.query as NodeQuery;
 
       // Validate and sanitize query parameters
-      if (!isSearchTermValid(searchTerm)) {
-        searchTerm = '';
-      }
-
-      if (!isSortTermValid(sortTerm)) {
-        sortTerm = 'latest';
-      }
-
-      if (!isTagTermValid(tagTerm, true)) {
-        tagTerm = '';
-      }
+      const searchTerm = isSearchTermValid(queryParams.searchTerm ?? '')
+        ? (queryParams.searchTerm ?? '')
+        : '';
+      const sortTerm = isSortTermValid(queryParams.sortTerm ?? '')
+        ? (queryParams.sortTerm ?? 'latest')
+        : 'latest';
+      const tagTerm = isTagTermValid(queryParams.tagTerm ?? '', true)
+        ? (queryParams.tagTerm ?? '')
+        : '';
 
       const config = getConfig();
       const nodeSettings = config.nodeSettings;
@@ -156,6 +154,7 @@ export class NodeController extends BaseController {
         });
       }
     } catch (error) {
+      this.logger.error('Node page rendering failed', error instanceof Error ? error : null);
       void reply.status(500).send('node page rendering error');
     }
   };
@@ -167,24 +166,23 @@ export class NodeController extends BaseController {
    */
   search = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
-      let { searchTerm = '', sortTerm = 'latest', tagTerm = '' } = request.query as NodeQuery;
+      const queryParams = request.query as NodeQuery;
 
       // Validate parameters
-      if (!isSearchTermValid(searchTerm)) {
-        searchTerm = '';
-      }
-
-      if (!isSortTermValid(sortTerm)) {
-        sortTerm = 'latest';
-      }
-
-      if (!isTagTermValid(tagTerm, true)) {
-        tagTerm = '';
-      }
+      const searchTerm = isSearchTermValid(queryParams.searchTerm ?? '')
+        ? (queryParams.searchTerm ?? '')
+        : '';
+      const sortTerm = isSortTermValid(queryParams.sortTerm ?? '')
+        ? (queryParams.sortTerm ?? 'latest')
+        : 'latest';
+      const tagTerm = isTagTermValid(queryParams.tagTerm ?? '', true)
+        ? (queryParams.tagTerm ?? '')
+        : '';
 
       const data = await this.performSearch(searchTerm, sortTerm, tagTerm);
       this.sendSuccess(reply, { searchResults: data.searchResults });
     } catch (error) {
+      this.logger.error('Search failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -224,6 +222,7 @@ export class NodeController extends BaseController {
         },
       });
     } catch (error) {
+      this.logger.error('Get new content counts failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -250,6 +249,7 @@ export class NodeController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Content checked failed', error instanceof Error ? error : null);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -262,7 +262,17 @@ export class NodeController extends BaseController {
     sortTerm: string,
     tagTerm: string
   ): Promise<{ isError: false; searchResults: DrizzleVideo[] }> {
-    // Build query options
+    const videos = await this.fetchAndMergeVideos(searchTerm);
+    const sortedVideos = this.sortVideos(videos, sortTerm);
+    const searchResults = this.filterByTag(sortedVideos, tagTerm);
+
+    return { isError: false, searchResults };
+  }
+
+  /**
+   * Fetch published and live videos, merge and deduplicate
+   */
+  private async fetchAndMergeVideos(searchTerm: string): Promise<DrizzleVideo[]> {
     const queryOptions: { isPublished: boolean; search?: string } = {
       isPublished: true,
     };
@@ -271,13 +281,9 @@ export class NodeController extends BaseController {
       queryOptions.search = searchTerm;
     }
 
-    // Get videos (published or live)
-    let videos = await this.videoRepository.findAll(queryOptions);
-
-    // Also include live videos
+    const videos = await this.videoRepository.findAll(queryOptions);
     const liveVideos = await this.videoRepository.findStreaming();
 
-    // Merge and deduplicate
     const videoMap = new Map<string, DrizzleVideo>();
     for (const video of videos) {
       videoMap.set(video.videoId, video);
@@ -287,60 +293,97 @@ export class NodeController extends BaseController {
         videoMap.set(video.videoId, video);
       }
     }
-    videos = Array.from(videoMap.values());
 
-    // Sort videos
+    return Array.from(videoMap.values());
+  }
+
+  /**
+   * Sort videos by the given sort term
+   */
+  private sortVideos(videos: DrizzleVideo[], sortTerm: string): DrizzleVideo[] {
+    const sorted = [...videos];
+
     if (sortTerm === 'latest') {
-      videos.sort((a: DrizzleVideo, b: DrizzleVideo) => b.creationTimestamp - a.creationTimestamp);
+      sorted.sort((a, b) => b.creationTimestamp - a.creationTimestamp);
     } else if (sortTerm === 'popular') {
-      videos.sort((a: DrizzleVideo, b: DrizzleVideo) => b.views - a.views);
+      sorted.sort((a, b) => b.views - a.views);
     } else if (sortTerm === 'oldest') {
-      videos.sort((a: DrizzleVideo, b: DrizzleVideo) => a.creationTimestamp - b.creationTimestamp);
+      sorted.sort((a, b) => a.creationTimestamp - b.creationTimestamp);
     }
 
-    // Filter by tag and apply tag limit
+    return sorted;
+  }
+
+  /**
+   * Filter videos by tag with optional tag limit
+   */
+  private filterByTag(videos: DrizzleVideo[], tagTerm: string): DrizzleVideo[] {
+    if (tagTerm.length > 0) {
+      return this.filterBySpecificTag(videos, tagTerm);
+    }
+    return this.filterWithTagLimit(videos);
+  }
+
+  /**
+   * Filter videos that have a specific tag
+   */
+  private filterBySpecificTag(videos: DrizzleVideo[], tagTerm: string): DrizzleVideo[] {
+    const results: DrizzleVideo[] = [];
+
+    for (const video of videos) {
+      const tagsArray = video.tags?.split(',').map((t: string) => t.trim()) ?? [];
+      if (tagsArray.includes(tagTerm) && !results.includes(video)) {
+        results.push(video);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Filter videos with a limit per tag
+   */
+  private filterWithTagLimit(videos: DrizzleVideo[]): DrizzleVideo[] {
+    const tagLimit = 4;
     const tagLimitCounter: Record<string, number> = {};
-    const searchResults: DrizzleVideo[] = [];
+    const results: DrizzleVideo[] = [];
 
-    if (tagTerm.length === 0) {
-      const tagLimit = 4;
-
-      for (const video of videos) {
-        const tagsArray = video.tags?.split(',') ?? [];
-        let addVideo = false;
-
-        for (const tag of tagsArray) {
-          const trimmedTag = tag.trim();
-          if (trimmedTag === '') {
-            continue;
-          }
-
-          if (!(trimmedTag in tagLimitCounter)) {
-            tagLimitCounter[trimmedTag] = 0;
-          }
-
-          const currentCount = tagLimitCounter[trimmedTag] ?? 0;
-          if (currentCount < tagLimit) {
-            tagLimitCounter[trimmedTag] = currentCount + 1;
-            addVideo = true;
-            break;
-          }
-        }
-
-        if (addVideo) {
-          searchResults.push(video);
-        }
-      }
-    } else {
-      for (const video of videos) {
-        const tagsArray = video.tags?.split(',').map((t: string) => t.trim()) ?? [];
-
-        if (tagsArray.includes(tagTerm) && !searchResults.includes(video)) {
-          searchResults.push(video);
-        }
+    for (const video of videos) {
+      if (this.shouldAddVideoByTagLimit(video, tagLimitCounter, tagLimit)) {
+        results.push(video);
       }
     }
 
-    return { isError: false, searchResults };
+    return results;
+  }
+
+  /**
+   * Check if video should be added based on tag limit
+   */
+  private shouldAddVideoByTagLimit(
+    video: DrizzleVideo,
+    tagLimitCounter: Record<string, number>,
+    tagLimit: number
+  ): boolean {
+    const tagsArray = video.tags?.split(',') ?? [];
+
+    for (const tag of tagsArray) {
+      const trimmedTag = tag.trim();
+      if (trimmedTag === '') {
+        continue;
+      }
+
+      if (!(trimmedTag in tagLimitCounter)) {
+        tagLimitCounter[trimmedTag] = 0;
+      }
+
+      const currentCount = tagLimitCounter[trimmedTag] ?? 0;
+      if (currentCount < tagLimit) {
+        tagLimitCounter[trimmedTag] = currentCount + 1;
+        return true;
+      }
+    }
+
+    return false;
   }
 }

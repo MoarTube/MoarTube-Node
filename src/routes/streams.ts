@@ -44,7 +44,7 @@ export function streamsRoutes(
   fastify.post(
     '/start',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         body: streamStartBodySchema,
       },
@@ -56,7 +56,7 @@ export function streamsRoutes(
   fastify.post(
     '/:videoId/stop',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: streamVideoIdParamsSchema,
       },
@@ -72,7 +72,7 @@ export function streamsRoutes(
   fastify.post(
     '/:videoId/adaptive/:format/:resolution/segments/remove',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: streamSegmentParamsSchema,
         body: removeSegmentBodySchema,
@@ -89,7 +89,7 @@ export function streamsRoutes(
   fastify.get(
     '/:videoId/bandwidth',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: streamVideoIdParamsSchema,
       },
@@ -105,7 +105,7 @@ export function streamsRoutes(
   fastify.post(
     '/:videoId/chat/settings',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: streamVideoIdParamsSchema,
         body: chatSettingsBodySchema,
@@ -118,7 +118,7 @@ export function streamsRoutes(
   fastify.get(
     '/:videoId/chat/history',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: streamVideoIdParamsSchema,
         querystring: chatHistoryQuerySchema,

@@ -32,7 +32,7 @@ export function externalVideosRoutes(
   fastify.get(
     '/baseUrl',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
     },
     controller.getBaseUrl.bind(controller)
   );
@@ -41,7 +41,7 @@ export function externalVideosRoutes(
   fastify.get(
     '/:videoId/images/thumbnail.jpg',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: externalVideoIdParamsSchema,
       },
@@ -53,7 +53,7 @@ export function externalVideosRoutes(
   fastify.get(
     '/:videoId/images/preview.jpg',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: externalVideoIdParamsSchema,
       },
@@ -65,7 +65,7 @@ export function externalVideosRoutes(
   fastify.get(
     '/:videoId/images/poster.jpg',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: externalVideoIdParamsSchema,
       },
@@ -77,7 +77,7 @@ export function externalVideosRoutes(
   fastify.get(
     '/:videoId/adaptive/:format/:type/manifests/:manifestName',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: adaptiveManifestParamsSchema,
       },
@@ -89,7 +89,7 @@ export function externalVideosRoutes(
   fastify.get(
     '/:videoId/adaptive/:format/:resolution/segments/:segmentName',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: adaptiveSegmentParamsSchema,
       },
@@ -101,7 +101,7 @@ export function externalVideosRoutes(
   fastify.get(
     '/:videoId/progressive/:format/:progressiveFilename',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: progressiveVideoParamsSchema,
       },

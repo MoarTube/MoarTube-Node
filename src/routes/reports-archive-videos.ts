@@ -27,7 +27,7 @@ export function reportsArchiveVideosRoutes(
   fastify.get(
     '/',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         querystring: reportsQuerySchema,
       },
@@ -39,7 +39,7 @@ export function reportsArchiveVideosRoutes(
   fastify.delete(
     '/:archiveId/delete',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: archiveIdParamsSchema,
       },

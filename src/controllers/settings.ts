@@ -37,7 +37,6 @@ import {
   isStorageConfigValid,
   isCloudflareCredentialsValid,
 } from '../utils';
-import { logDebugMessageToConsole } from '../utils/logger';
 
 /**
  * Request body interfaces
@@ -172,6 +171,7 @@ export class SettingsController extends BaseController {
         },
       });
     } catch (error) {
+      this.logger.error('Error getting settings', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -192,6 +192,7 @@ export class SettingsController extends BaseController {
         void reply.status(404).send('avatar not found');
       }
     } catch (error) {
+      this.logger.error('Error retrieving avatar', error as Error);
       void reply.status(500).send('node avatar retrieval error');
     }
   };
@@ -212,6 +213,7 @@ export class SettingsController extends BaseController {
         void reply.status(404).send('banner not found');
       }
     } catch (error) {
+      this.logger.error('Error retrieving banner', error as Error);
       void reply.status(500).send('node banner retrieval error');
     }
   };
@@ -263,11 +265,7 @@ export class SettingsController extends BaseController {
         try {
           await this.cloudflareService.purgeNodeImages();
         } catch (purgeError) {
-          logDebugMessageToConsole(
-            'Failed to purge node images from Cloudflare',
-            purgeError as Error,
-            new Error().stack
-          );
+          this.logger.error('Failed to purge node images from Cloudflare', purgeError as Error);
         }
       }
 
@@ -278,7 +276,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
-      logDebugMessageToConsole('Avatar upload error', error as Error, new Error().stack);
+      this.logger.error('Avatar upload error', error as Error);
       this.sendError(reply, 'error uploading avatar');
     }
   };
@@ -322,17 +320,13 @@ export class SettingsController extends BaseController {
         try {
           await this.cloudflareService.purgeNodeImages();
         } catch (purgeError) {
-          logDebugMessageToConsole(
-            'Failed to purge node images from Cloudflare',
-            purgeError as Error,
-            new Error().stack
-          );
+          this.logger.error('Failed to purge node images from Cloudflare', purgeError as Error);
         }
       }
 
       this.sendOk(reply);
     } catch (error) {
-      logDebugMessageToConsole('Banner upload error', error as Error, new Error().stack);
+      this.logger.error('Banner upload error', error as Error);
       this.sendError(reply, 'error uploading banner');
     }
   };
@@ -346,82 +340,99 @@ export class SettingsController extends BaseController {
    */
   configureSecure = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
-      const config = getConfig();
-      const certsDir = config.paths.certificatesDirectoryPath;
-
-      // Check content type to determine if this is multipart or JSON
       const contentType = request.headers['content-type'] ?? '';
 
       if (contentType.includes('multipart/form-data')) {
-        // HTTPS mode - expect certificate files
-        // Ensure certificates directory exists
-        if (!fs.existsSync(certsDir)) {
-          fs.mkdirSync(certsDir, { recursive: true });
-        }
-
-        // Parse multipart data
-        const parts = request.parts();
-        let keyFile: MultipartFile | undefined;
-        let certFile: MultipartFile | undefined;
-        const caFiles: MultipartFile[] = [];
-
-        for await (const part of parts) {
-          if (part.type === 'file') {
-            if (part.fieldname === 'keyFile') {
-              keyFile = part;
-              const keyPath = path.join(certsDir, 'private_key.pem');
-              await pipeline(part.file, fs.createWriteStream(keyPath));
-            } else if (part.fieldname === 'certFile') {
-              certFile = part;
-              const certPath = path.join(certsDir, 'certificate.pem');
-              await pipeline(part.file, fs.createWriteStream(certPath));
-            } else if (part.fieldname === 'caFiles') {
-              caFiles.push(part);
-              // Save CA files with index
-              const caPath = path.join(certsDir, `ca_${caFiles.length}.pem`);
-              await pipeline(part.file, fs.createWriteStream(caPath));
-            }
-          }
-        }
-
-        if (keyFile === undefined) {
-          this.sendError(reply, 'private key file is missing');
-          return;
-        }
-
-        if (certFile === undefined) {
-          this.sendError(reply, 'cert file is missing');
-          return;
-        }
-
-        logDebugMessageToConsole('switching node to HTTPS mode', null, null);
-
-        config.updateNodeSettings({ isSecure: true });
-
-        this.sendOk(reply);
+        await this.enableHttpsMode(request, reply);
       } else {
-        // JSON body - disable HTTPS
-        const body = request.body as SecureBody;
-
-        if (body.isSecure === false) {
-          logDebugMessageToConsole('switching node to HTTP mode', null, null);
-
-          config.updateNodeSettings({ isSecure: false });
-
-          this.sendOk(reply);
-        } else {
-          this.sendError(reply, 'invalid parameters - use multipart for enabling HTTPS');
-        }
+        this.disableHttpsMode(request, reply);
       }
     } catch (error) {
-      logDebugMessageToConsole(
-        'Secure mode configuration error',
-        error as Error,
-        new Error().stack
-      );
+      this.logger.error('Secure mode configuration error', error as Error);
       this.sendError(reply, 'error configuring secure mode');
     }
   };
+
+  /**
+   * Enable HTTPS mode by processing certificate files
+   */
+  private async enableHttpsMode(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const config = getConfig();
+    const certsDir = config.paths.certificatesDirectoryPath;
+
+    // Ensure certificates directory exists
+    if (!fs.existsSync(certsDir)) {
+      fs.mkdirSync(certsDir, { recursive: true });
+    }
+
+    // Parse multipart data and save certificate files
+    const { hasKeyFile, hasCertFile } = await this.saveCertificateFiles(request, certsDir);
+
+    if (!hasKeyFile) {
+      this.sendError(reply, 'private key file is missing');
+      return;
+    }
+
+    if (!hasCertFile) {
+      this.sendError(reply, 'cert file is missing');
+      return;
+    }
+
+    this.logger.info('switching node to HTTPS mode');
+    config.updateNodeSettings({ isSecure: true });
+    this.sendOk(reply);
+  }
+
+  /**
+   * Save certificate files from multipart request
+   */
+  private async saveCertificateFiles(
+    request: FastifyRequest,
+    certsDir: string
+  ): Promise<{ hasKeyFile: boolean; hasCertFile: boolean }> {
+    const parts = request.parts();
+    let hasKeyFile = false;
+    let hasCertFile = false;
+    let caFileCount = 0;
+
+    for await (const part of parts) {
+      if (part.type !== 'file') {
+        continue;
+      }
+
+      if (part.fieldname === 'keyFile') {
+        hasKeyFile = true;
+        const keyPath = path.join(certsDir, 'private_key.pem');
+        await pipeline(part.file, fs.createWriteStream(keyPath));
+      } else if (part.fieldname === 'certFile') {
+        hasCertFile = true;
+        const certPath = path.join(certsDir, 'certificate.pem');
+        await pipeline(part.file, fs.createWriteStream(certPath));
+      } else if (part.fieldname === 'caFiles') {
+        caFileCount++;
+        const caPath = path.join(certsDir, `ca_${caFileCount}.pem`);
+        await pipeline(part.file, fs.createWriteStream(caPath));
+      }
+    }
+
+    return { hasKeyFile, hasCertFile };
+  }
+
+  /**
+   * Disable HTTPS mode
+   */
+  private disableHttpsMode(request: FastifyRequest, reply: FastifyReply): void {
+    const body = request.body as SecureBody;
+
+    if (body.isSecure === false) {
+      this.logger.info('switching node to HTTP mode');
+      const config = getConfig();
+      config.updateNodeSettings({ isSecure: false });
+      this.sendOk(reply);
+    } else {
+      this.sendError(reply, 'invalid parameters - use multipart for enabling HTTPS');
+    }
+  }
 
   /**
    * POST /settings/personalize/nodeName
@@ -446,6 +457,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error updating node name', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -473,6 +485,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error updating node about', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -500,6 +513,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error updating node ID', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -522,6 +536,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error updating account', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -549,10 +564,11 @@ export class SettingsController extends BaseController {
       }
 
       const config = getConfig();
-      config.updateNodeSettings({ nodeListeningPort: parseInt(listeningNodePort, 10) });
+      config.updateNodeSettings({ nodeListeningPort: Number.parseInt(listeningNodePort, 10) });
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error updating internal network settings', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -578,11 +594,7 @@ export class SettingsController extends BaseController {
       }
 
       // Check if there are indexed videos (required for indexer update)
-      let hasIndexedVideos = false;
-      if (this.videoRepository !== undefined) {
-        const indexedVideos = await this.videoRepository.findIndexed();
-        hasIndexedVideos = indexedVideos.length > 0;
-      }
+      const hasIndexedVideos = await this.checkHasIndexedVideos();
 
       // Update network settings (this also updates indexer if there are indexed videos)
       await this.settingsService.updateNetworkSettings(
@@ -593,68 +605,100 @@ export class SettingsController extends BaseController {
       );
 
       // Rewrite HLS manifest URLs if using filesystem storage
-      const config = getConfig();
-      const nodeSettings = config.nodeSettings;
-
-      if (
-        nodeSettings.storageConfig?.storageMode === 'filesystem' &&
-        this.videoRepository !== undefined
-      ) {
-        const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
-        const videosDirectoryPath = config.paths.videosDirectoryPath;
-
-        // Get all videos with their outputs
-        const videos = await this.videoRepository.findAll({});
-
-        for (const video of videos) {
-          const videoId = video.videoId;
-          let outputs: { m3u8?: string[] } = {};
-
-          // Parse outputs JSON
-          if (video.outputs !== undefined && video.outputs !== null && video.outputs !== '') {
-            try {
-              outputs = JSON.parse(String(video.outputs)) as { m3u8?: string[] };
-            } catch {
-              continue; // Skip if outputs is invalid JSON
-            }
-          }
-
-          // Rewrite manifests if m3u8 outputs exist
-          if (outputs.m3u8 !== undefined && outputs.m3u8.length > 0) {
-            // Update master manifest
-            const masterManifestPath = path.join(
-              videosDirectoryPath,
-              videoId,
-              'adaptive',
-              'm3u8',
-              'manifest-master.m3u8'
-            );
-            if (fs.existsSync(masterManifestPath)) {
-              this.rewriteManifestUrls(masterManifestPath, externalVideosBaseUrl);
-            }
-
-            // Update resolution-specific manifests
-            for (const resolution of outputs.m3u8) {
-              const manifestPath = path.join(
-                videosDirectoryPath,
-                videoId,
-                'adaptive',
-                'm3u8',
-                `manifest-${resolution}.m3u8`
-              );
-              if (fs.existsSync(manifestPath)) {
-                this.rewriteManifestUrls(manifestPath, externalVideosBaseUrl);
-              }
-            }
-          }
-        }
-      }
+      await this.rewriteAllManifestUrls();
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error updating external network settings', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
+
+  /**
+   * Check if there are any indexed videos
+   */
+  private async checkHasIndexedVideos(): Promise<boolean> {
+    if (this.videoRepository === undefined) {
+      return false;
+    }
+    const indexedVideos = await this.videoRepository.findIndexed();
+    return indexedVideos.length > 0;
+  }
+
+  /**
+   * Rewrite all HLS manifest URLs if using filesystem storage
+   */
+  private async rewriteAllManifestUrls(): Promise<void> {
+    const config = getConfig();
+    const nodeSettings = config.nodeSettings;
+
+    if (
+      nodeSettings.storageConfig?.storageMode !== 'filesystem' ||
+      this.videoRepository === undefined
+    ) {
+      return;
+    }
+
+    const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
+    const videosDirectoryPath = config.paths.videosDirectoryPath;
+    const videos = await this.videoRepository.findAll({});
+
+    for (const video of videos) {
+      this.rewriteVideoManifests(video, videosDirectoryPath, externalVideosBaseUrl);
+    }
+  }
+
+  /**
+   * Rewrite manifest URLs for a single video
+   */
+  private rewriteVideoManifests(
+    video: { videoId: string; outputs?: string | null },
+    videosDirectoryPath: string,
+    externalVideosBaseUrl: string
+  ): void {
+    const { videoId, outputs: outputsJson } = video;
+
+    if (outputsJson === undefined || outputsJson === null || outputsJson === '') {
+      return;
+    }
+
+    let outputs: { m3u8?: string[] };
+    try {
+      outputs = JSON.parse(String(outputsJson)) as { m3u8?: string[] };
+    } catch {
+      return; // Skip if outputs is invalid JSON
+    }
+
+    if (outputs.m3u8 === undefined || outputs.m3u8.length === 0) {
+      return;
+    }
+
+    // Update master manifest
+    const masterManifestPath = path.join(
+      videosDirectoryPath,
+      videoId,
+      'adaptive',
+      'm3u8',
+      'manifest-master.m3u8'
+    );
+    if (fs.existsSync(masterManifestPath)) {
+      this.rewriteManifestUrls(masterManifestPath, externalVideosBaseUrl);
+    }
+
+    // Update resolution-specific manifests
+    for (const resolution of outputs.m3u8) {
+      const manifestPath = path.join(
+        videosDirectoryPath,
+        videoId,
+        'adaptive',
+        'm3u8',
+        `manifest-${resolution}.m3u8`
+      );
+      if (fs.existsSync(manifestPath)) {
+        this.rewriteManifestUrls(manifestPath, externalVideosBaseUrl);
+      }
+    }
+  }
 
   /**
    * Rewrites URLs in an HLS manifest file to use the new external base URL
@@ -663,17 +707,13 @@ export class SettingsController extends BaseController {
     try {
       const oldManifest = fs.readFileSync(manifestPath, 'utf-8');
       // Replace protocol://anything/external/ with newBaseUrl/external/
-      const newManifest = oldManifest.replace(
+      const newManifest = oldManifest.replaceAll(
         /(https?:\/\/).*?(\/external\/)/g,
         externalVideosBaseUrl + '$2'
       );
       fs.writeFileSync(manifestPath, newManifest, 'utf-8');
     } catch (error) {
-      logDebugMessageToConsole(
-        `Failed to rewrite manifest: ${manifestPath}`,
-        error as Error,
-        new Error().stack
-      );
+      this.logger.error(`Failed to rewrite manifest: ${manifestPath}`, error as Error);
     }
   }
 
@@ -747,7 +787,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
-      logDebugMessageToConsole('Cloudflare configure error', error as Error, new Error().stack);
+      this.logger.error('Cloudflare configure error', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -788,7 +828,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
-      logDebugMessageToConsole('Cloudflare clear error', error as Error, new Error().stack);
+      this.logger.error('Cloudflare clear error', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -830,6 +870,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error configuring Cloudflare Turnstile', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -868,6 +909,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error clearing Cloudflare Turnstile', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -891,6 +933,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error toggling comments', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -914,6 +957,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error toggling likes', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -937,6 +981,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error toggling dislikes', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -960,6 +1005,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error toggling reports', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -983,6 +1029,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
+      this.logger.error('Error toggling live chat', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -1076,11 +1123,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
-      logDebugMessageToConsole(
-        'Database connection test failed',
-        error as Error,
-        new Error().stack
-      );
+      this.logger.error('Database connection test failed', error as Error);
       this.sendError(reply, 'could not connect to database with provided configuration');
     }
   };
@@ -1151,7 +1194,7 @@ export class SettingsController extends BaseController {
 
       this.sendOk(reply);
     } catch (error) {
-      logDebugMessageToConsole('Storage config toggle error', error as Error, new Error().stack);
+      this.logger.error('Storage config toggle error', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -1224,7 +1267,7 @@ export class SettingsController extends BaseController {
        *    otherwise a cast exception will throw when importing an SQLite database export into a Postgres database.
        */
       for (const table of database) {
-        table.rows.forEach((row) => {
+        for (const row of table.rows) {
           delete row.id;
 
           for (const column in row) {
@@ -1232,12 +1275,12 @@ export class SettingsController extends BaseController {
               row[column] = Boolean(row[column]);
             }
           }
-        });
+        }
       }
 
       this.sendSuccess(reply, { database });
     } catch (error) {
-      logDebugMessageToConsole('Database export error', error as Error, new Error().stack);
+      this.logger.error('Database export error', error as Error);
       this.sendError(reply, 'error exporting database');
     }
   };
@@ -1294,7 +1337,7 @@ export class SettingsController extends BaseController {
       // Helper to convert snake_case to camelCase
       // This allows importing database exports from the original JS version
       const snakeToCamel = (str: string): string =>
-        str.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+        str.replaceAll(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
 
       // Transform all rows: convert snake_case keys to camelCase for Drizzle compatibility
       for (const table of database) {
@@ -1375,15 +1418,15 @@ export class SettingsController extends BaseController {
             );
             break;
           default:
-            logDebugMessageToConsole(`Unknown table name during import: ${tableName}`, null, null);
+            this.logger.warn(`Unknown table name during import: ${tableName}`);
         }
       }
 
-      logDebugMessageToConsole('database imported successfully', null, null);
+      this.logger.info('database imported successfully');
 
       this.sendOk(reply);
     } catch (error) {
-      logDebugMessageToConsole('Database import error', error as Error, new Error().stack);
+      this.logger.error('Database import error', error as Error);
       this.sendError(reply, 'error importing database');
     }
   };

@@ -5,6 +5,7 @@
  * Includes standardized response methods and error handling.
  */
 import type { FastifyReply } from 'fastify';
+import { Logger, type ILogger } from '../utils/logger';
 
 /**
  * Standard API success response
@@ -50,8 +51,14 @@ export abstract class BaseController {
    */
   protected readonly controllerName: string;
 
+  /**
+   * Logger instance for the controller
+   */
+  protected readonly logger: ILogger;
+
   constructor(name: string) {
     this.controllerName = name;
+    this.logger = new Logger({ prefix: name });
   }
 
   /**

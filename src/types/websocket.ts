@@ -151,6 +151,22 @@ export interface NodeNameUpdateMessage extends WebSocketMessageBase {
 }
 
 /**
+ * Live stream started message
+ */
+export interface LiveStreamStartedMessage extends WebSocketMessageBase {
+  eventName: 'live_stream_started';
+  videoId: string;
+}
+
+/**
+ * Live stream stopped message
+ */
+export interface LiveStreamStoppedMessage extends WebSocketMessageBase {
+  eventName: 'live_stream_stopped';
+  videoId: string;
+}
+
+/**
  * Union type of all WebSocket messages
  */
 export type WebSocketMessage =
@@ -161,6 +177,8 @@ export type WebSocketMessage =
   | VideoDataMessage
   | EchoMessage
   | NodeNameUpdateMessage
+  | LiveStreamStartedMessage
+  | LiveStreamStoppedMessage
   | WebSocketMessageBase;
 
 // ============================================

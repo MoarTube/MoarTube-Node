@@ -32,7 +32,7 @@ export function watchEmbedRoutes(
   fastify.get(
     '/video/:videoId',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: watchEmbedVideoIdParamsSchema,
       },
@@ -44,7 +44,7 @@ export function watchEmbedRoutes(
   fastify.get(
     '/chat/:videoId',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: watchEmbedVideoIdParamsSchema,
       },

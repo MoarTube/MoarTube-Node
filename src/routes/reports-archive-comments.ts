@@ -27,7 +27,7 @@ export function reportsArchiveCommentsRoutes(
   fastify.get(
     '/',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         querystring: reportsQuerySchema,
       },
@@ -39,7 +39,7 @@ export function reportsArchiveCommentsRoutes(
   fastify.delete(
     '/:archiveId/delete',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         params: archiveIdParamsSchema,
       },

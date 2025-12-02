@@ -61,7 +61,7 @@ declare module 'fastify' {
 function extractToken(request: FastifyRequest): string | null {
   // Check Authorization header
   const authHeader = request.headers.authorization;
-  if (authHeader !== undefined && authHeader.startsWith('Bearer ')) {
+  if (authHeader?.startsWith('Bearer ') === true) {
     return authHeader.slice(7);
   }
 
@@ -77,11 +77,8 @@ function extractToken(request: FastifyRequest): string | null {
 
   // Check session (for Express compatibility)
   const session = (request as unknown as { session?: { token?: string } }).session;
-  if (session !== undefined) {
-    const sessionToken = session['token'];
-    if (sessionToken !== undefined) {
-      return sessionToken;
-    }
+  if (session?.token !== undefined) {
+    return session.token;
   }
 
   // Check query parameter (for legacy support)

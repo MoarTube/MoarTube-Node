@@ -39,7 +39,7 @@ export function commentsRoutes(
   fastify.get(
     '/search',
     {
-      preHandler: fastify.authenticate,
+      preHandler: [fastify.authenticate],
       schema: {
         querystring: commentSearchQuerySchema,
       },
@@ -51,7 +51,7 @@ export function commentsRoutes(
   fastify.post(
     '/:commentId/report',
     {
-      preHandler: fastify.optionalAuthenticate,
+      preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: commentIdParamsSchema,
         body: commentReportBodySchema,

@@ -41,7 +41,7 @@ export const streamStartBodySchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(5000).optional().default(''),
   tags: z.string().max(500).optional().default(''),
-  rtmpUrl: z.string().url().optional(),
+  rtmpUrl: z.url().optional(),
   isRecordingEnabled: z.boolean().optional().default(false),
   isLiveChatEnabled: z.boolean().optional().default(true),
 });
