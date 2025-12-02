@@ -6,7 +6,7 @@
  */
 
 // Base service
-export { BaseService, type ServiceOptions, type ServiceLogger } from './base.service';
+export { BaseService, type ServiceOptions, type ServiceLogger } from './base';
 
 // Service interfaces
 export type {
@@ -40,18 +40,18 @@ export type {
 } from './interfaces';
 
 // Service implementations
-export { VideosService, type VideosServiceDependencies } from './videos.service';
-export { CommentService, type CommentServiceDependencies } from './comment.service';
+export { VideosService, type VideosServiceDependencies } from './videos';
+export { CommentService, type CommentServiceDependencies } from './comment';
 export {
   StreamService,
   type StreamServiceDependencies,
   type StreamMeta,
   type StartStreamOptions,
-} from './stream.service';
-export { AuthService, type JwtPayload } from './auth.service';
-export { StorageService, type S3Config } from './storage.service';
-export { IndexerService, type VideoIndexData } from './indexer.service';
-export { CloudflareService, type CloudflareServiceDependencies } from './cloudflare.service';
-export { WebSocketService, type WebSocketClient } from './websocket.service';
-export { ReportService, type ReportServiceDependencies } from './report.service';
-export { SettingsService, type SettingsServiceDependencies } from './settings.service';
+} from './stream';
+export { AuthService, type JwtPayload } from './auth';
+export { StorageService, type S3Config } from './storage';
+export { IndexerService, type VideoIndexData } from './indexer';
+export { CloudflareService, type CloudflareServiceDependencies } from './cloudflare';
+export { WebSocketService, type WebSocketClient } from './websocket';
+export { ReportService, type ReportServiceDependencies } from './report';
+export { SettingsService, type SettingsServiceDependencies } from './settings';

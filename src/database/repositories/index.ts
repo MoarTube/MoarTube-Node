@@ -5,23 +5,23 @@
  */
 
 // Base repository
-export { BaseRepository } from './base.repository';
+export { BaseRepository } from './base';
 
 // Videos repository
-export { VideosRepository, type VideoQueryOptions } from './videos.repository';
+export { VideosRepository, type VideoQueryOptions } from './videos';
 
 // Comments repository
-export { CommentsRepository, type CommentSearchOptions } from './comments.repository';
+export { CommentsRepository, type CommentSearchOptions } from './comments';
 
 // Report repositories
-export { ReportsVideosRepository } from './reports-videos.repository';
-export { ReportsCommentsRepository } from './reports-comments.repository';
+export { ReportsVideosRepository } from './reports-videos';
+export { ReportsCommentsRepository } from './reports-comments';
 
 // Archive repositories
-export { ReportsArchiveVideosRepository } from './reports-archive-videos.repository';
-export { ReportsArchiveCommentsRepository } from './reports-archive-comments.repository';
+export { ReportsArchiveVideosRepository } from './reports-archive-videos';
+export { ReportsArchiveCommentsRepository } from './reports-archive-comments';
 
 // Other repositories
-export { LiveChatMessageRepository } from './live-chat-message.repository';
-export { MonetizationRepository } from './monetization.repository';
-export { LinksRepository } from './links.repository';
+export { LiveChatMessageRepository } from './live-chat-message';
+export { MonetizationRepository } from './monetization';
+export { LinksRepository } from './links';

@@ -8,7 +8,7 @@
 export * from './common.schemas';
 
 // Account validators
-export * from './account.validators';
+export * from './account';
 
 // Video validators
-export * from './videos.validators';
+export * from './videos';

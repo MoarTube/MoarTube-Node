@@ -8,27 +8,27 @@ import { createContainer, asClass, asValue, InjectionMode, type AwilixContainer 
 
 // Database layer
 import type { DatabaseClient } from '../database/connection';
-import { VideosRepository } from '../database/repositories/videos.repository';
-import { CommentsRepository } from '../database/repositories/comments.repository';
-import { ReportsVideosRepository } from '../database/repositories/reports-videos.repository';
-import { ReportsCommentsRepository } from '../database/repositories/reports-comments.repository';
-import { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.repository';
-import { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.repository';
-import { LiveChatMessageRepository } from '../database/repositories/live-chat-message.repository';
-import { MonetizationRepository } from '../database/repositories/monetization.repository';
-import { LinksRepository } from '../database/repositories/links.repository';
+import { VideosRepository } from '../database/repositories/videos';
+import { CommentsRepository } from '../database/repositories/comments';
+import { ReportsVideosRepository } from '../database/repositories/reports-videos';
+import { ReportsCommentsRepository } from '../database/repositories/reports-comments';
+import { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos';
+import { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments';
+import { LiveChatMessageRepository } from '../database/repositories/live-chat-message';
+import { MonetizationRepository } from '../database/repositories/monetization';
+import { LinksRepository } from '../database/repositories/links';
 
 // Services
-import { VideosService } from '../services/videos.service';
-import { CommentService } from '../services/comment.service';
-import { StreamService } from '../services/stream.service';
-import { AuthService } from '../services/auth.service';
-import { StorageService } from '../services/storage.service';
-import { IndexerService } from '../services/indexer.service';
-import { CloudflareService } from '../services/cloudflare.service';
-import { WebSocketService } from '../services/websocket.service';
-import { ReportService } from '../services/report.service';
-import { SettingsService } from '../services/settings.service';
+import { VideosService } from '../services/videos';
+import { CommentService } from '../services/comment';
+import { StreamService } from '../services/stream';
+import { AuthService } from '../services/auth';
+import { StorageService } from '../services/storage';
+import { IndexerService } from '../services/indexer';
+import { CloudflareService } from '../services/cloudflare';
+import { WebSocketService } from '../services/websocket';
+import { ReportService } from '../services/report';
+import { SettingsService } from '../services/settings';
 
 /**
  * Container cradle type - defines all registered dependencies

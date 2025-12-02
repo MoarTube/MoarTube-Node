@@ -14,11 +14,11 @@ import type {
   BroadcastOptions,
   LiveStreamWatchingCounts,
 } from '../types/websocket';
-import type { HandlerContext, WebSocketHandler } from './handlers/base.handler';
-import { ChatMessageHandler } from './handlers/chat.handler';
-import { LiveStreamHandler } from './handlers/stream.handler';
-import { VideoStatusHandler } from './handlers/video-status.handler';
-import { EchoHandler } from './handlers/echo.handler';
+import type { HandlerContext, WebSocketHandler } from './handlers/base';
+import { ChatMessageHandler } from './handlers/chat';
+import { LiveStreamHandler } from './handlers/stream';
+import { VideoStatusHandler } from './handlers/video-status';
+import { EchoHandler } from './handlers/echo';
 
 /**
  * Logger interface for the WebSocket manager

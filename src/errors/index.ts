@@ -5,7 +5,7 @@
  */
 
 // Base error
-export { AppError } from './base.error';
+export { AppError } from './base';
 
 // HTTP errors
 export {
@@ -21,4 +21,4 @@ export {
   ServiceUnavailableError,
   ValidationError,
   type ValidationErrorDetails,
-} from './http.errors';
+} from './http';

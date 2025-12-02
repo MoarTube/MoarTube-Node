@@ -5,10 +5,10 @@
  */
 
 // Error handling
-export { default as errorHandlerPlugin } from './error-handler.plugin';
+export { default as errorHandlerPlugin } from './error-handler';
 
 // Authentication
-export { default as authenticationPlugin } from './authentication.plugin';
+export { default as authenticationPlugin } from './authentication';
 
 // Validation
 export {
@@ -17,4 +17,4 @@ export {
   validateQuery,
   validateParams,
   validate,
-} from './validation.plugin';
+} from './validation';

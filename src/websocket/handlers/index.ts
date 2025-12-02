@@ -4,8 +4,8 @@
  * Barrel export for all WebSocket message handlers.
  */
 
-export { WebSocketHandler, type HandlerContext } from './base.handler';
-export { ChatMessageHandler } from './chat.handler';
-export { LiveStreamHandler } from './stream.handler';
-export { VideoStatusHandler } from './video-status.handler';
-export { EchoHandler } from './echo.handler';
+export { WebSocketHandler, type HandlerContext } from './base';
+export { ChatMessageHandler } from './chat';
+export { LiveStreamHandler } from './stream';
+export { VideoStatusHandler } from './video-status';
+export { EchoHandler } from './echo';
