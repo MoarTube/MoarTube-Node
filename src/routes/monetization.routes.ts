@@ -1,0 +1,47 @@
+/**
+ * Monetization Routes
+ *
+ * Routes for crypto wallet address management.
+ */
+import type { FastifyInstance } from 'fastify';
+import { MonetizationController } from '../controllers/monetization.controller';
+import type { Container } from '../core/container';
+
+/**
+ * Register monetization routes
+ *
+ * @param fastify - Fastify instance
+ * @param container - DI container
+ */
+export function monetizationRoutes(fastify: FastifyInstance, container: Container): void {
+  const cryptoWalletAddressRepository = container.resolve('cryptoWalletAddressRepository');
+  const cloudflareService = container.resolve('cloudflareService');
+  const controller = new MonetizationController(cryptoWalletAddressRepository, cloudflareService);
+
+  // Get all wallet addresses - public (no auth required)
+  fastify.get(
+    '/all',
+    {
+      preHandler: fastify.optionalAuthenticate,
+    },
+    controller.getAllWalletAddresses.bind(controller)
+  );
+
+  // Add wallet address - authenticated
+  fastify.post(
+    '/add',
+    {
+      preHandler: fastify.authenticate,
+    },
+    controller.addWalletAddress.bind(controller)
+  );
+
+  // Delete wallet address - authenticated
+  fastify.post(
+    '/delete',
+    {
+      preHandler: fastify.authenticate,
+    },
+    controller.deleteWalletAddress.bind(controller)
+  );
+}
