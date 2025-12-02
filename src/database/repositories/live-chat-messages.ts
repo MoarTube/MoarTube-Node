@@ -39,7 +39,7 @@ export class LiveChatMessageRepository extends BaseRepository {
     videoId: string,
     options?: PaginationOptions
   ): Promise<DrizzleLiveChatMessage[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit, offset } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
@@ -107,6 +107,24 @@ export class LiveChatMessageRepository extends BaseRepository {
       .from(liveChatMessages)
       .where(eq(liveChatMessages.videoId, videoId));
     return result[0]?.count ?? 0;
+  }
+
+  /**
+   * Finds all live chat messages with optional pagination
+   *
+   * @param options - Pagination options (optional limit/offset)
+   * @returns Array of all live chat messages
+   */
+  async findAll(options?: PaginationOptions): Promise<DrizzleLiveChatMessage[]> {
+    const { limit, offset } = this.getPaginationParams(options);
+
+    const query = this.db.select().from(liveChatMessages);
+
+    if (limit !== undefined) {
+      return query.limit(limit).offset(offset);
+    }
+
+    return query.offset(offset);
   }
 
   /**
@@ -192,5 +210,28 @@ export class LiveChatMessageRepository extends BaseRepository {
       .returning();
 
     return result.length;
+  }
+
+  /**
+   * Deletes all live chat message records
+   *
+   * @returns Number of deleted messages
+   */
+  async deleteAll(): Promise<number> {
+    const result = await this.db.delete(liveChatMessages).returning();
+    return result.length;
+  }
+
+  /**
+   * Creates multiple live chat message records in bulk
+   *
+   * @param data - Array of message data for insertion
+   * @returns Array of created message records
+   */
+  async createMany(data: DrizzleNewLiveChatMessage[]): Promise<DrizzleLiveChatMessage[]> {
+    if (data.length === 0) {
+      return [];
+    }
+    return this.db.insert(liveChatMessages).values(data).returning();
   }
 }

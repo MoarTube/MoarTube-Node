@@ -368,28 +368,373 @@ export class CloudflareService extends BaseService implements ICloudflareService
   }
 
   /**
-   * Set CDN configuration
+   * Purge entire cache with explicit credentials (for configuration changes)
    */
-  setCdnConfiguration(): void {
-    // This would configure Cloudflare CDN settings like caching rules
-    // Implementation depends on specific requirements
-    this.logger.info('CDN configuration set');
+  async purgeEntireCacheWithCredentials(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string
+  ): Promise<void> {
+    try {
+      await axios.post(
+        `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/purge_cache`,
+        { purge_everything: true },
+        {
+          headers: {
+            'X-Auth-Email': cloudflareEmailAddress,
+            'X-Auth-Key': cloudflareGlobalApiKey,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      this.logger.info('Entire cache purged with explicit credentials');
+    } catch (error) {
+      this.logger.error('Failed to purge entire cache with credentials', error as Error);
+      throw error;
+    }
   }
 
   /**
-   * Reset CDN configuration
+   * Set CDN configuration - creates cache rules, enables tiered caching, etc.
    */
-  resetCdn(): void {
-    // Reset CDN to default settings
-    this.logger.info('CDN configuration reset');
+  async setCdnConfiguration(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string
+  ): Promise<void> {
+    const headers = {
+      'X-Auth-Email': cloudflareEmailAddress,
+      'X-Auth-Key': cloudflareGlobalApiKey,
+      'Content-Type': 'application/json',
+    };
+
+    this.logger.info('Setting Cloudflare CDN configuration for MoarTube Node');
+
+    // Create http_request_cache_settings phase ruleset
+    const newZoneRuleSet = {
+      rules: [
+        {
+          description: 'Node External - Video',
+          action: 'set_cache_settings',
+          enabled: true,
+          expression: '(starts_with(http.request.uri, "/external/videos"))',
+          action_parameters: {
+            cache: true,
+            edge_ttl: { mode: 'override_origin', default: 31536000 },
+            browser_ttl: { mode: 'bypass' },
+          },
+        },
+        {
+          description: 'Node External - JavaScript, CSS',
+          action: 'set_cache_settings',
+          enabled: true,
+          expression:
+            '(starts_with(http.request.uri, "/external/resources/javascript")) or (starts_with(http.request.uri, "/external/resources/css"))',
+          action_parameters: {
+            cache: true,
+            edge_ttl: { mode: 'override_origin', default: 86400 },
+            browser_ttl: { mode: 'override_origin', default: 28800 },
+          },
+        },
+        {
+          description: 'Node External - Images',
+          action: 'set_cache_settings',
+          enabled: true,
+          expression: '(starts_with(http.request.uri, "/external/resources/images"))',
+          action_parameters: {
+            cache: true,
+            edge_ttl: { mode: 'override_origin', default: 86400 },
+            browser_ttl: { mode: 'bypass' },
+          },
+        },
+        {
+          description: 'Node Watch - Watch Page for Displaying a Video',
+          action: 'set_cache_settings',
+          enabled: true,
+          expression: '(starts_with(http.request.uri, "/watch"))',
+          action_parameters: {
+            cache: true,
+            edge_ttl: { mode: 'respect_origin' },
+            browser_ttl: { mode: 'bypass' },
+          },
+        },
+        {
+          description: 'Node Search - Cache Searches on the Node Page',
+          action: 'set_cache_settings',
+          enabled: true,
+          expression: '(starts_with(http.request.uri, "/node/search?searchTerm=&sortTerm"))',
+          action_parameters: {
+            cache: true,
+            edge_ttl: { mode: 'override_origin', default: 86400 },
+            browser_ttl: { mode: 'bypass' },
+          },
+        },
+        {
+          description: 'Node Page - Cache for Different Variations of the Node Page',
+          action: 'set_cache_settings',
+          enabled: true,
+          expression:
+            '(starts_with(http.request.uri, "/node")) or (starts_with(http.request.uri, "/node?searchTerm=&sortTerm"))',
+          action_parameters: {
+            cache: true,
+            edge_ttl: { mode: 'override_origin', default: 86400 },
+            browser_ttl: { mode: 'bypass' },
+          },
+        },
+        {
+          description: 'Node External - Cache Bypass for Live (dynamic) HLS stream manifests',
+          action: 'set_cache_settings',
+          enabled: true,
+          expression:
+            '(http.request.uri.path contains "/adaptive/m3u8/dynamic/") and (http.request.method == "GET")',
+          action_parameters: { cache: false },
+        },
+      ],
+    };
+
+    await axios.put(
+      `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/rulesets/phases/http_request_cache_settings/entrypoint`,
+      newZoneRuleSet,
+      { headers }
+    );
+
+    this.logger.info('Created zone http_request_cache_settings phase ruleset');
+
+    // Set Browser Cache TTL to "Respect Existing Headers"
+    await axios.patch(
+      `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/settings/browser_cache_ttl`,
+      { value: 0 },
+      { headers }
+    );
+
+    this.logger.info('Set Browser Cache TTL to Respect Existing Headers');
+
+    // Enable Always Use HTTPS
+    await axios.patch(
+      `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/settings/always_use_https`,
+      { value: 'on' },
+      { headers }
+    );
+
+    this.logger.info('Enabled Always Use HTTPS');
+
+    // Enable Argo Tiered Caching
+    await axios.patch(
+      `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/argo/tiered_caching`,
+      { value: 'on' },
+      { headers }
+    );
+
+    this.logger.info('Enabled Argo Tiered Caching');
+
+    // Enable Tiered Cache Smart Topology
+    await axios.patch(
+      `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/cache/tiered_cache_smart_topology_enable`,
+      { value: 'on' },
+      { headers }
+    );
+
+    this.logger.info('Enabled Tiered Cache Smart Topology');
+    this.logger.info('Successfully set Cloudflare CDN configuration');
   }
 
   /**
-   * Add DNS record
+   * Reset CDN configuration - removes cache rules, disables tiered caching
    */
-  addDnsRecord(): void {
-    // Implementation for adding DNS records
-    this.logger.info('DNS record added');
+  async resetCdn(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string
+  ): Promise<void> {
+    const headers = {
+      'X-Auth-Email': cloudflareEmailAddress,
+      'X-Auth-Key': cloudflareGlobalApiKey,
+      'Content-Type': 'application/json',
+    };
+
+    this.logger.info('Resetting Cloudflare CDN configuration');
+
+    // Get all rulesets in the zone
+    const response = await axios.get<{
+      success: boolean;
+      result: Array<{ id: string; phase: string }>;
+    }>(`${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/rulesets`, { headers });
+
+    if (response.data.success) {
+      // Delete http_request_cache_settings phase rulesets
+      for (const ruleSet of response.data.result) {
+        if (ruleSet.phase === 'http_request_cache_settings') {
+          this.logger.info(`Deleting ruleset: ${ruleSet.id}`);
+          await axios.delete(
+            `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/rulesets/${ruleSet.id}`,
+            { headers }
+          );
+        }
+      }
+    }
+
+    // Disable Argo Tiered Caching
+    await axios.patch(
+      `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/argo/tiered_caching`,
+      { value: 'off' },
+      { headers }
+    );
+
+    this.logger.info('Disabled Argo Tiered Caching');
+
+    // Disable Tiered Cache Smart Topology
+    await axios.patch(
+      `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/cache/tiered_cache_smart_topology_enable`,
+      { value: 'off' },
+      { headers }
+    );
+
+    this.logger.info('Disabled Tiered Cache Smart Topology');
+
+    // Remove CDN related DNS records
+    await this.removeCdnDnsRecords(
+      cloudflareEmailAddress,
+      cloudflareZoneId,
+      cloudflareGlobalApiKey
+    );
+
+    this.logger.info('Successfully reset Cloudflare CDN configuration');
+  }
+
+  /**
+   * Add CDN DNS record for storage configuration
+   */
+  async addCdnDnsRecord(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string,
+    storageConfig: {
+      storageMode: 'filesystem' | 's3provider';
+      s3Config?:
+        | {
+            bucketName: string;
+            s3ProviderClientConfig: {
+              endpoint?: string | undefined;
+              region: string;
+              forcePathStyle?: boolean;
+              credentials?: {
+                accessKeyId: string;
+                secretAccessKey: string;
+              };
+            };
+          }
+        | undefined;
+    }
+  ): Promise<void> {
+    const headers = {
+      'X-Auth-Email': cloudflareEmailAddress,
+      'X-Auth-Key': cloudflareGlobalApiKey,
+      'Content-Type': 'application/json',
+    };
+
+    // First remove existing CDN DNS records
+    await this.removeCdnDnsRecords(
+      cloudflareEmailAddress,
+      cloudflareZoneId,
+      cloudflareGlobalApiKey
+    );
+
+    if (storageConfig.storageMode === 's3provider' && storageConfig.s3Config) {
+      const bucketName = storageConfig.s3Config.bucketName;
+      const recordName = bucketName;
+      let recordContent: string;
+
+      const endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
+
+      if (endpoint !== undefined && endpoint !== '') {
+        // Non-AWS S3 provider
+        const url = new URL(endpoint);
+        recordContent = `${bucketName}.${url.hostname}`;
+      } else {
+        // AWS S3
+        const region = storageConfig.s3Config.s3ProviderClientConfig.region;
+        recordContent = `${bucketName}.s3.${region}.amazonaws.com`;
+      }
+
+      this.logger.info(`Adding DNS record: ${recordName} -> ${recordContent}`);
+
+      await axios.post(
+        `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/dns_records`,
+        {
+          type: 'CNAME',
+          name: recordName,
+          content: recordContent,
+          ttl: 1,
+          proxied: true,
+        },
+        { headers }
+      );
+
+      this.logger.info('DNS record added successfully');
+    }
+  }
+
+  /**
+   * Validate Cloudflare credentials by making an API call
+   */
+  async validateCredentials(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string
+  ): Promise<boolean> {
+    try {
+      const headers = {
+        'X-Auth-Email': cloudflareEmailAddress,
+        'X-Auth-Key': cloudflareGlobalApiKey,
+        'Content-Type': 'application/json',
+      };
+
+      const response = await axios.get<{ success: boolean }>(
+        `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}`,
+        { headers }
+      );
+
+      return response.data.success === true;
+    } catch (error) {
+      this.logger.error('Failed to validate Cloudflare credentials', error as Error);
+      return false;
+    }
+  }
+
+  /**
+   * Remove CDN-related DNS records
+   */
+  private async removeCdnDnsRecords(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string
+  ): Promise<void> {
+    const headers = {
+      'X-Auth-Email': cloudflareEmailAddress,
+      'X-Auth-Key': cloudflareGlobalApiKey,
+      'Content-Type': 'application/json',
+    };
+
+    const response = await axios.get<{
+      success: boolean;
+      result: Array<{ id: string; name: string }>;
+    }>(`${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/dns_records`, { headers });
+
+    if (response.data.success) {
+      for (const dnsRecord of response.data.result) {
+        if (
+          dnsRecord.name.includes('externalvideos') ||
+          dnsRecord.name.includes('testingexternalvideos')
+        ) {
+          this.logger.info(`Removing DNS record: ${dnsRecord.name}`);
+          await axios.delete(
+            `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/dns_records/${dnsRecord.id}`,
+            { headers }
+          );
+        }
+      }
+    }
   }
 
   // ============================================================================

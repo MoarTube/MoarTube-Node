@@ -29,20 +29,24 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
   }
 
   /**
-   * Finds all archived video reports with pagination
+   * Finds all archived video reports with optional pagination
    *
-   * @param options - Pagination options
+   * @param options - Pagination options (optional limit/offset)
    * @returns Array of archived video reports
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]> {
     const { limit, offset } = this.getPaginationParams(options);
 
-    return this.db
+    const query = this.db
       .select()
       .from(videoReportsArchive)
-      .orderBy(desc(videoReportsArchive.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .orderBy(desc(videoReportsArchive.timestamp));
+
+    if (limit !== undefined) {
+      return query.limit(limit).offset(offset);
+    }
+
+    return query.offset(offset);
   }
 
   /**
@@ -56,7 +60,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
     videoId: string,
     options?: PaginationOptions
   ): Promise<DrizzleVideoReportArchive[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit, offset } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
@@ -133,5 +137,28 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
       .where(eq(videoReportsArchive.videoId, videoId))
       .returning();
     return result.length;
+  }
+
+  /**
+   * Deletes all archived video report records
+   *
+   * @returns Number of deleted archive records
+   */
+  async deleteAll(): Promise<number> {
+    const result = await this.db.delete(videoReportsArchive).returning();
+    return result.length;
+  }
+
+  /**
+   * Creates multiple archived video report records in bulk
+   *
+   * @param data - Array of archive data for insertion
+   * @returns Array of created archive records
+   */
+  async createMany(data: DrizzleNewVideoReportArchive[]): Promise<DrizzleVideoReportArchive[]> {
+    if (data.length === 0) {
+      return [];
+    }
+    return this.db.insert(videoReportsArchive).values(data).returning();
   }
 }

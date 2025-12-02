@@ -4,6 +4,7 @@
  * Routes for node settings and configuration endpoints.
  */
 import type { FastifyInstance } from 'fastify';
+import multipart from '@fastify/multipart';
 
 import type { Container } from '../core/container';
 import { SettingsController } from '../controllers';
@@ -14,10 +15,29 @@ import { SettingsController } from '../controllers';
  * @param fastify - Fastify instance
  * @param container - DI container
  */
-export function settingsRoutes(fastify: FastifyInstance, container: Container): void {
-  const settingsService = container.resolve('settingsService');
+export async function settingsRoutes(
+  fastify: FastifyInstance,
+  container: Container
+): Promise<void> {
+  // Register multipart plugin for file uploads
+  await fastify.register(multipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB max file size
+      files: 5, // max 5 files at once
+    },
+  });
 
-  const controller = new SettingsController(settingsService);
+  const settingsService = container.resolve('settingsService');
+  const videoRepository = container.resolve('videoRepository');
+  const cloudflareService = container.resolve('cloudflareService');
+  const websocketService = container.resolve('websocketService');
+
+  const controller = new SettingsController(
+    settingsService,
+    videoRepository,
+    cloudflareService,
+    websocketService
+  );
 
   // ============================================================================
   // Settings Root
@@ -46,17 +66,12 @@ export function settingsRoutes(fastify: FastifyInstance, container: Container): 
   );
 
   // Upload avatar (requires auth)
-  // Note: File upload handling would need @fastify/multipart plugin
-  // For now, this is a placeholder that will be enhanced when multipart is added
   fastify.post(
     '/avatar',
     {
       preHandler: fastify.authenticate,
     },
-    async (_request, reply) => {
-      // File upload handling requires @fastify/multipart
-      void reply.status(501).send({ isError: true, message: 'avatar upload not yet implemented' });
-    }
+    controller.uploadAvatar.bind(controller)
   );
 
   // Get banner (public)
@@ -69,16 +84,12 @@ export function settingsRoutes(fastify: FastifyInstance, container: Container): 
   );
 
   // Upload banner (requires auth)
-  // Note: File upload handling would need @fastify/multipart plugin
   fastify.post(
     '/banner',
     {
       preHandler: fastify.authenticate,
     },
-    async (_request, reply) => {
-      // File upload handling requires @fastify/multipart
-      void reply.status(501).send({ isError: true, message: 'banner upload not yet implemented' });
-    }
+    controller.uploadBanner.bind(controller)
   );
 
   // ============================================================================
@@ -117,18 +128,12 @@ export function settingsRoutes(fastify: FastifyInstance, container: Container): 
   // ============================================================================
 
   // Update secure mode (HTTPS)
-  // Note: File upload handling would need @fastify/multipart plugin
   fastify.post(
     '/secure',
     {
       preHandler: fastify.authenticate,
     },
-    async (_request, reply) => {
-      // Certificate upload handling requires @fastify/multipart
-      void reply
-        .status(501)
-        .send({ isError: true, message: 'secure mode configuration not yet implemented' });
-    }
+    controller.configureSecure.bind(controller)
   );
 
   // Update account credentials

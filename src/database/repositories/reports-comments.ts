@@ -29,20 +29,21 @@ export class ReportsCommentsRepository extends BaseRepository {
   }
 
   /**
-   * Finds all comment reports with pagination
+   * Finds all comment reports with optional pagination
    *
-   * @param options - Pagination options
+   * @param options - Pagination options (optional limit/offset)
    * @returns Array of comment reports
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
     const { limit, offset } = this.getPaginationParams(options);
 
-    return this.db
-      .select()
-      .from(commentReports)
-      .orderBy(desc(commentReports.timestamp))
-      .limit(limit)
-      .offset(offset);
+    const query = this.db.select().from(commentReports).orderBy(desc(commentReports.timestamp));
+
+    if (limit !== undefined) {
+      return query.limit(limit).offset(offset);
+    }
+
+    return query.offset(offset);
   }
 
   /**
@@ -56,7 +57,7 @@ export class ReportsCommentsRepository extends BaseRepository {
     videoId: string,
     options?: PaginationOptions
   ): Promise<DrizzleCommentReport[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit, offset } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
@@ -78,7 +79,7 @@ export class ReportsCommentsRepository extends BaseRepository {
     commentId: string,
     options?: PaginationOptions
   ): Promise<DrizzleCommentReport[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit, offset } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
@@ -168,5 +169,28 @@ export class ReportsCommentsRepository extends BaseRepository {
       .from(commentReports)
       .where(gt(commentReports.timestamp, timestamp));
     return result[0]?.count ?? 0;
+  }
+
+  /**
+   * Deletes all comment report records
+   *
+   * @returns Number of deleted reports
+   */
+  async deleteAll(): Promise<number> {
+    const result = await this.db.delete(commentReports).returning();
+    return result.length;
+  }
+
+  /**
+   * Creates multiple comment report records in bulk
+   *
+   * @param data - Array of report data for insertion
+   * @returns Array of created report records
+   */
+  async createMany(data: DrizzleNewCommentReport[]): Promise<DrizzleCommentReport[]> {
+    if (data.length === 0) {
+      return [];
+    }
+    return this.db.insert(commentReports).values(data).returning();
   }
 }

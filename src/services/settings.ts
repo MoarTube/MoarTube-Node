@@ -121,19 +121,28 @@ export class SettingsService extends BaseService implements ISettingsService {
 
   /**
    * Update node name
+   * Only updates indexer if there are indexed videos and performs node identification first
    */
-  async updateNodeName(name: string): Promise<void> {
+  async updateNodeName(name: string, hasIndexedVideos: boolean = false): Promise<void> {
     const config = getConfig();
     config.updateNodeSettings({ nodeName: name });
 
-    // Update in indexer if available
-    if (this.indexerService) {
+    // Update in indexer if there are indexed videos
+    if (hasIndexedVideos && this.indexerService) {
       try {
+        // Perform node identification before updating indexer
+        await this.indexerService.performNodeIdentification();
         await this.indexerService.updateNodeName(name);
+
+        // Purge node page from Cloudflare cache
+        if (this.cloudflareService !== undefined && this.cloudflareService.isEnabled()) {
+          await this.cloudflareService.purgeNodePage();
+        }
       } catch (error) {
         this.logger.warn('Failed to update node name in indexer', {
           error: (error as Error).message,
         });
+        throw error;
       }
     }
 
@@ -142,19 +151,28 @@ export class SettingsService extends BaseService implements ISettingsService {
 
   /**
    * Update node about
+   * Only updates indexer if there are indexed videos and performs node identification first
    */
-  async updateNodeAbout(about: string): Promise<void> {
+  async updateNodeAbout(about: string, hasIndexedVideos: boolean = false): Promise<void> {
     const config = getConfig();
     config.updateNodeSettings({ nodeAbout: about });
 
-    // Update in indexer if available
-    if (this.indexerService) {
+    // Update in indexer if there are indexed videos
+    if (hasIndexedVideos && this.indexerService) {
       try {
+        // Perform node identification before updating indexer
+        await this.indexerService.performNodeIdentification();
         await this.indexerService.updateNodeAbout(about);
+
+        // Purge node page from Cloudflare cache
+        if (this.cloudflareService !== undefined && this.cloudflareService.isEnabled()) {
+          await this.cloudflareService.purgeNodePage();
+        }
       } catch (error) {
         this.logger.warn('Failed to update node about in indexer', {
           error: (error as Error).message,
         });
+        throw error;
       }
     }
 
@@ -163,21 +181,31 @@ export class SettingsService extends BaseService implements ISettingsService {
 
   /**
    * Update node ID
+   * Only updates indexer if there are indexed videos and performs node identification first
    */
-  async updateNodeId(nodeId: string): Promise<void> {
-    const config = getConfig();
-    config.updateNodeSettings({ nodeId });
-
-    // Update in indexer if available
-    if (this.indexerService) {
+  async updateNodeId(nodeId: string, hasIndexedVideos: boolean = false): Promise<void> {
+    // Update in indexer first if there are indexed videos
+    if (hasIndexedVideos && this.indexerService) {
       try {
+        // Perform node identification before updating indexer
+        await this.indexerService.performNodeIdentification();
         await this.indexerService.updateNodeId(nodeId);
+
+        // Purge node page from Cloudflare cache
+        if (this.cloudflareService !== undefined && this.cloudflareService.isEnabled()) {
+          await this.cloudflareService.purgeNodePage();
+        }
       } catch (error) {
         this.logger.warn('Failed to update node ID in indexer', {
           error: (error as Error).message,
         });
+        throw error;
       }
     }
+
+    // Update local config after successful indexer update (or if no indexer update needed)
+    const config = getConfig();
+    config.updateNodeSettings({ nodeId });
 
     this.logger.info('Node ID updated', { nodeId });
   }
@@ -215,25 +243,36 @@ export class SettingsService extends BaseService implements ISettingsService {
 
   /**
    * Update network settings
+   * Only updates indexer if there are indexed videos and performs node identification first
    */
-  async updateNetworkSettings(protocol: string, address: string, port: string): Promise<void> {
+  async updateNetworkSettings(
+    protocol: string,
+    address: string,
+    port: string,
+    hasIndexedVideos: boolean = false
+  ): Promise<void> {
+    // Update in indexer first if there are indexed videos
+    if (hasIndexedVideos && this.indexerService) {
+      try {
+        // Perform node identification before updating indexer
+        await this.indexerService.performNodeIdentification();
+        // Pass the new network values to the indexer (NOT the old config values)
+        await this.indexerService.updateExternalNetwork(protocol, address, port);
+      } catch (error) {
+        this.logger.warn('Failed to update network in indexer', {
+          error: (error as Error).message,
+        });
+        throw error;
+      }
+    }
+
+    // Then update local config
     const config = getConfig();
     config.updateNodeSettings({
       publicNodeProtocol: protocol as '' | 'http' | 'https',
       publicNodeAddress: address,
       publicNodePort: port,
     });
-
-    // Update in indexer if available
-    if (this.indexerService) {
-      try {
-        await this.indexerService.updateExternalNetwork();
-      } catch (error) {
-        this.logger.warn('Failed to update network in indexer', {
-          error: (error as Error).message,
-        });
-      }
-    }
 
     this.logger.info('Network settings updated', { protocol, address, port });
   }

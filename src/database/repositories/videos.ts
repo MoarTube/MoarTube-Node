@@ -3,7 +3,7 @@
  *
  * Provides data access methods for video records using Drizzle ORM.
  */
-import { eq, desc, asc, sql, and, or, like } from 'drizzle-orm';
+import { eq, desc, asc, sql, and, or, like, type SQL } from 'drizzle-orm';
 import type { DrizzleVideo, DrizzleNewVideo } from '../schema';
 import { videos } from '../schema';
 import { BaseRepository } from './base';
@@ -60,7 +60,7 @@ export class VideosRepository extends BaseRepository {
    * @returns Array of published videos
    */
   async findPublished(options?: VideoQueryOptions): Promise<DrizzleVideo[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit, offset } = this.getPaginationParamsWithDefault(options);
     const sortDir = options?.sortDirection === 'asc' ? asc : desc;
     const sortField = this.getSortField(options?.sortBy ?? 'creation_timestamp');
 
@@ -76,7 +76,7 @@ export class VideosRepository extends BaseRepository {
   /**
    * Finds all videos with optional filters and pagination
    *
-   * @param options - Query options
+   * @param options - Query options including optional limit/offset
    * @returns Array of videos matching the criteria
    */
   async findAll(options?: VideoQueryOptions): Promise<DrizzleVideo[]> {
@@ -86,18 +86,17 @@ export class VideosRepository extends BaseRepository {
 
     const conditions = this.buildWhereConditions(options);
 
-    const query = this.db
-      .select()
-      .from(videos)
-      .orderBy(sortDir(sortField))
-      .limit(limit)
-      .offset(offset);
+    let query = this.db.select().from(videos).orderBy(sortDir(sortField));
 
     if (conditions) {
-      return query.where(conditions);
+      query = query.where(conditions) as typeof query;
     }
 
-    return query;
+    if (limit !== undefined) {
+      return query.limit(limit).offset(offset);
+    }
+
+    return query.offset(offset);
   }
 
   /**
@@ -242,6 +241,19 @@ export class VideosRepository extends BaseRepository {
   }
 
   /**
+   * Finds all indexed videos
+   *
+   * @returns Array of indexed videos
+   */
+  async findIndexed(): Promise<DrizzleVideo[]> {
+    return this.db
+      .select()
+      .from(videos)
+      .where(eq(videos.isIndexed, true))
+      .orderBy(desc(videos.creationTimestamp));
+  }
+
+  /**
    * Finds all videos that need indexing
    *
    * @returns Array of videos pending indexing
@@ -259,9 +271,25 @@ export class VideosRepository extends BaseRepository {
   }
 
   /**
+   * Marks all indexed videos as outdated
+   *
+   * This is used when node settings change (e.g., avatar update)
+   * to signal that indexed videos need to be re-indexed.
+   */
+  async markAllIndexedAsOutdated(): Promise<void> {
+    await this.db.update(videos).set({ isIndexOutdated: true }).where(eq(videos.isIndexed, true));
+  }
+
+  /**
    * Gets the sort field based on the sort option
    */
-  private getSortField(sortBy: string) {
+  private getSortField(
+    sortBy: string
+  ):
+    | typeof videos.views
+    | typeof videos.likes
+    | typeof videos.title
+    | typeof videos.creationTimestamp {
     switch (sortBy) {
       case 'views':
         return videos.views;
@@ -278,8 +306,8 @@ export class VideosRepository extends BaseRepository {
   /**
    * Builds WHERE conditions from query options
    */
-  private buildWhereConditions(options?: VideoQueryOptions) {
-    if (!options) {
+  private buildWhereConditions(options?: VideoQueryOptions): SQL | undefined {
+    if (options === undefined) {
       return undefined;
     }
 
@@ -297,7 +325,7 @@ export class VideosRepository extends BaseRepository {
       conditions.push(eq(videos.isFinalized, options.isFinalized));
     }
 
-    if (options.search) {
+    if (options.search !== undefined && options.search !== '') {
       const searchPattern = `%${options.search}%`;
       conditions.push(
         or(
@@ -315,5 +343,28 @@ export class VideosRepository extends BaseRepository {
       return conditions[0];
     }
     return and(...conditions);
+  }
+
+  /**
+   * Deletes all video records
+   *
+   * @returns Number of deleted videos
+   */
+  async deleteAll(): Promise<number> {
+    const result = await this.db.delete(videos).returning();
+    return result.length;
+  }
+
+  /**
+   * Creates multiple video records in bulk
+   *
+   * @param data - Array of video data for insertion
+   * @returns Array of created video records
+   */
+  async createMany(data: DrizzleNewVideo[]): Promise<DrizzleVideo[]> {
+    if (data.length === 0) {
+      return [];
+    }
+    return this.db.insert(videos).values(data).returning();
   }
 }

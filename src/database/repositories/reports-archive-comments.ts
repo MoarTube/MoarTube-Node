@@ -29,20 +29,24 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
   }
 
   /**
-   * Finds all archived comment reports with pagination
+   * Finds all archived comment reports with optional pagination
    *
-   * @param options - Pagination options
+   * @param options - Pagination options (optional limit/offset)
    * @returns Array of archived comment reports
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleCommentReportArchive[]> {
     const { limit, offset } = this.getPaginationParams(options);
 
-    return this.db
+    const query = this.db
       .select()
       .from(commentReportsArchive)
-      .orderBy(desc(commentReportsArchive.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .orderBy(desc(commentReportsArchive.timestamp));
+
+    if (limit !== undefined) {
+      return query.limit(limit).offset(offset);
+    }
+
+    return query.offset(offset);
   }
 
   /**
@@ -56,7 +60,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
     videoId: string,
     options?: PaginationOptions
   ): Promise<DrizzleCommentReportArchive[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit, offset } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
@@ -78,7 +82,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
     commentId: string,
     options?: PaginationOptions
   ): Promise<DrizzleCommentReportArchive[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit, offset } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
@@ -171,5 +175,28 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
       .where(eq(commentReportsArchive.videoId, videoId))
       .returning();
     return result.length;
+  }
+
+  /**
+   * Deletes all archived comment report records
+   *
+   * @returns Number of deleted archive records
+   */
+  async deleteAll(): Promise<number> {
+    const result = await this.db.delete(commentReportsArchive).returning();
+    return result.length;
+  }
+
+  /**
+   * Creates multiple archived comment report records in bulk
+   *
+   * @param data - Array of archive data for insertion
+   * @returns Array of created archive records
+   */
+  async createMany(data: DrizzleNewCommentReportArchive[]): Promise<DrizzleCommentReportArchive[]> {
+    if (data.length === 0) {
+      return [];
+    }
+    return this.db.insert(commentReportsArchive).values(data).returning();
   }
 }

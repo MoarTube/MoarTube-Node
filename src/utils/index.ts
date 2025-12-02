@@ -44,6 +44,7 @@ export {
   isJobTypeValid,
   isStorageConfigValid,
   isDatabaseConfigValid,
+  isCloudflareCredentialsValid,
   isIpv4Address,
   isLimitValid,
   isResolutionValid,

@@ -25,15 +25,21 @@ export class LinksRepository extends BaseRepository {
   }
 
   /**
-   * Finds all links with pagination
+   * Finds all links with optional pagination
    *
-   * @param options - Pagination options
+   * @param options - Pagination options (optional limit/offset)
    * @returns Array of links
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleLink[]> {
     const { limit, offset } = this.getPaginationParams(options);
 
-    return this.db.select().from(links).orderBy(desc(links.timestamp)).limit(limit).offset(offset);
+    const query = this.db.select().from(links).orderBy(desc(links.timestamp));
+
+    if (limit !== undefined) {
+      return query.limit(limit).offset(offset);
+    }
+
+    return query.offset(offset);
   }
 
   /**
@@ -107,6 +113,19 @@ export class LinksRepository extends BaseRepository {
   async deleteAll(): Promise<number> {
     const result = await this.db.delete(links).returning();
     return result.length;
+  }
+
+  /**
+   * Creates multiple link records in bulk
+   *
+   * @param data - Array of link data for insertion
+   * @returns Array of created link records
+   */
+  async createMany(data: DrizzleNewLink[]): Promise<DrizzleLink[]> {
+    if (data.length === 0) {
+      return [];
+    }
+    return this.db.insert(links).values(data).returning();
   }
 
   /**

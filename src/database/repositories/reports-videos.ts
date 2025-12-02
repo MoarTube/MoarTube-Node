@@ -29,20 +29,21 @@ export class ReportsVideosRepository extends BaseRepository {
   }
 
   /**
-   * Finds all video reports with pagination
+   * Finds all video reports with optional pagination
    *
-   * @param options - Pagination options
+   * @param options - Pagination options (optional limit/offset)
    * @returns Array of video reports
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
     const { limit, offset } = this.getPaginationParams(options);
 
-    return this.db
-      .select()
-      .from(videoReports)
-      .orderBy(desc(videoReports.timestamp))
-      .limit(limit)
-      .offset(offset);
+    const query = this.db.select().from(videoReports).orderBy(desc(videoReports.timestamp));
+
+    if (limit !== undefined) {
+      return query.limit(limit).offset(offset);
+    }
+
+    return query.offset(offset);
   }
 
   /**
@@ -53,7 +54,7 @@ export class ReportsVideosRepository extends BaseRepository {
    * @returns Array of reports for the video
    */
   async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit, offset } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
@@ -129,5 +130,28 @@ export class ReportsVideosRepository extends BaseRepository {
       .from(videoReports)
       .where(gt(videoReports.timestamp, timestamp));
     return result[0]?.count ?? 0;
+  }
+
+  /**
+   * Deletes all video report records
+   *
+   * @returns Number of deleted reports
+   */
+  async deleteAll(): Promise<number> {
+    const result = await this.db.delete(videoReports).returning();
+    return result.length;
+  }
+
+  /**
+   * Creates multiple video report records in bulk
+   *
+   * @param data - Array of report data for insertion
+   * @returns Array of created report records
+   */
+  async createMany(data: DrizzleNewVideoReport[]): Promise<DrizzleVideoReport[]> {
+    if (data.length === 0) {
+      return [];
+    }
+    return this.db.insert(videoReports).values(data).returning();
   }
 }

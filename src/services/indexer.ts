@@ -195,10 +195,13 @@ export class IndexerService extends BaseService implements IIndexerService {
   /**
    * Update external network configuration
    */
-  async updateExternalNetwork(): Promise<void> {
+  async updateExternalNetwork(
+    publicNodeProtocol: string,
+    publicNodeAddress: string,
+    publicNodePort: string
+  ): Promise<void> {
     return this.withErrorLogging('updateExternalNetwork', async () => {
       const config = getConfig();
-      const nodeSettings = config.nodeSettings;
       const nodeIdentification = config.nodeIdentification;
 
       if (!nodeIdentification) {
@@ -206,9 +209,9 @@ export class IndexerService extends BaseService implements IIndexerService {
       }
 
       const data = {
-        publicNodeProtocol: nodeSettings.publicNodeProtocol,
-        publicNodeAddress: nodeSettings.publicNodeAddress,
-        publicNodePort: nodeSettings.publicNodePort,
+        publicNodeProtocol,
+        publicNodeAddress,
+        publicNodePort,
         moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
       };
 

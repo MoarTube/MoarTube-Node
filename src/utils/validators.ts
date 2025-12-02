@@ -745,6 +745,37 @@ export function isStorageConfigValid(config: unknown): config is StorageConfig {
 // ============================================
 
 /**
+ * Validate Cloudflare credentials by making an API call
+ * @param cloudflareEmailAddress - Cloudflare account email
+ * @param cloudflareZoneId - Cloudflare zone ID
+ * @param cloudflareGlobalApiKey - Cloudflare Global API key
+ * @returns Promise<boolean> - Whether credentials are valid
+ */
+export async function isCloudflareCredentialsValid(
+  cloudflareEmailAddress: string,
+  cloudflareZoneId: string,
+  cloudflareGlobalApiKey: string
+): Promise<boolean> {
+  try {
+    const axios = (await import('axios')).default;
+
+    const response = await axios.get<{ success: boolean }>(
+      `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}`,
+      {
+        headers: {
+          'X-Auth-Email': cloudflareEmailAddress,
+          'X-Auth-Key': cloudflareGlobalApiKey,
+        },
+      }
+    );
+
+    return response.data.success === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Check if a Cloudflare Turnstile token is valid
  * @param token - The token to validate
  * @param canBeEmpty - Whether an empty token is valid
@@ -821,5 +852,6 @@ export const validators = {
   isVideoPermissionTypeValid,
   isDatabaseConfigValid,
   isStorageConfigValid,
+  isCloudflareCredentialsValid,
   isCloudflareTurnstileTokenValid,
 } as const;

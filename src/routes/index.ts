@@ -210,9 +210,8 @@ export async function registerRoutes(
 
   // Settings routes (/settings/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      settingsRoutes(instance, container);
-      done();
+    async (instance: FastifyInstance) => {
+      await settingsRoutes(instance, container);
     },
     { prefix: '/settings' }
   );

@@ -29,20 +29,24 @@ export class MonetizationRepository extends BaseRepository {
   }
 
   /**
-   * Finds all wallet addresses with pagination
+   * Finds all wallet addresses with optional pagination
    *
-   * @param options - Pagination options
+   * @param options - Pagination options (optional limit/offset)
    * @returns Array of wallet addresses
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleCryptoWalletAddress[]> {
     const { limit, offset } = this.getPaginationParams(options);
 
-    return this.db
+    const query = this.db
       .select()
       .from(cryptoWalletAddresses)
-      .orderBy(desc(cryptoWalletAddresses.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .orderBy(desc(cryptoWalletAddresses.timestamp));
+
+    if (limit !== undefined) {
+      return query.limit(limit).offset(offset);
+    }
+
+    return query.offset(offset);
   }
 
   /**
@@ -56,7 +60,7 @@ export class MonetizationRepository extends BaseRepository {
     chain: string,
     options?: PaginationOptions
   ): Promise<DrizzleCryptoWalletAddress[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit, offset } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
@@ -168,5 +172,28 @@ export class MonetizationRepository extends BaseRepository {
       .from(cryptoWalletAddresses)
       .where(eq(cryptoWalletAddresses.walletAddress, walletAddress));
     return (result[0]?.count ?? 0) > 0;
+  }
+
+  /**
+   * Deletes all crypto wallet address records
+   *
+   * @returns Number of deleted wallet addresses
+   */
+  async deleteAll(): Promise<number> {
+    const result = await this.db.delete(cryptoWalletAddresses).returning();
+    return result.length;
+  }
+
+  /**
+   * Creates multiple crypto wallet address records in bulk
+   *
+   * @param data - Array of wallet address data for insertion
+   * @returns Array of created wallet address records
+   */
+  async createMany(data: DrizzleNewCryptoWalletAddress[]): Promise<DrizzleCryptoWalletAddress[]> {
+    if (data.length === 0) {
+      return [];
+    }
+    return this.db.insert(cryptoWalletAddresses).values(data).returning();
   }
 }

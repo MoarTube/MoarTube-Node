@@ -43,7 +43,7 @@ export class CommentsRepository extends BaseRepository {
    * @returns Array of comments for the video
    */
   async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleComment[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit, offset } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
@@ -66,6 +66,24 @@ export class CommentsRepository extends BaseRepository {
       .from(comments)
       .where(eq(comments.videoId, videoId));
     return result[0]?.count ?? 0;
+  }
+
+  /**
+   * Finds all comments with optional pagination
+   *
+   * @param options - Pagination options (optional limit/offset)
+   * @returns Array of all comments
+   */
+  async findAll(options?: PaginationOptions): Promise<DrizzleComment[]> {
+    const { limit, offset } = this.getPaginationParams(options);
+
+    const query = this.db.select().from(comments);
+
+    if (limit !== undefined) {
+      return query.limit(limit).offset(offset);
+    }
+
+    return query.offset(offset);
   }
 
   /**
@@ -167,7 +185,7 @@ export class CommentsRepository extends BaseRepository {
    * @returns Array of matching comments
    */
   async search(options: CommentSearchOptions = {}): Promise<DrizzleComment[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit, offset } = this.getPaginationParamsWithDefault(options);
     const { videoId, searchTerm, beforeTimestamp, sortDirection = 'desc' } = options;
 
     // Build conditions array
@@ -200,5 +218,28 @@ export class CommentsRepository extends BaseRepository {
     }
 
     return query.limit(limit).offset(offset);
+  }
+
+  /**
+   * Deletes all comment records
+   *
+   * @returns Number of deleted comments
+   */
+  async deleteAll(): Promise<number> {
+    const result = await this.db.delete(comments).returning();
+    return result.length;
+  }
+
+  /**
+   * Creates multiple comment records in bulk
+   *
+   * @param data - Array of comment data for insertion
+   * @returns Array of created comment records
+   */
+  async createMany(data: DrizzleNewComment[]): Promise<DrizzleComment[]> {
+    if (data.length === 0) {
+      return [];
+    }
+    return this.db.insert(comments).values(data).returning();
   }
 }

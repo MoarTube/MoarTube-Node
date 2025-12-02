@@ -364,7 +364,11 @@ export interface IIndexerService {
   updateNodeId(nodeId: string): Promise<void>;
 
   /** Update external network configuration */
-  updateExternalNetwork(): Promise<void>;
+  updateExternalNetwork(
+    publicNodeProtocol: string,
+    publicNodeAddress: string,
+    publicNodePort: string
+  ): Promise<void>;
 
   /** Perform node identification */
   performNodeIdentification(): Promise<void>;
@@ -423,14 +427,57 @@ export interface ICloudflareService {
   /** Purge entire cache */
   purgeEntireCache(): Promise<void>;
 
-  /** Set CDN configuration */
-  setCdnConfiguration(): void;
+  /** Purge entire cache with provided credentials (before stored) */
+  purgeEntireCacheWithCredentials(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string
+  ): Promise<void>;
 
-  /** Reset CDN configuration */
-  resetCdn(): void;
+  /** Set CDN configuration with credentials */
+  setCdnConfiguration(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string
+  ): Promise<void>;
 
-  /** Add DNS record */
-  addDnsRecord(): void;
+  /** Reset CDN configuration with credentials */
+  resetCdn(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string
+  ): Promise<void>;
+
+  /** Add DNS record with credentials */
+  addCdnDnsRecord(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string,
+    storageConfig: {
+      storageMode: 'filesystem' | 's3provider';
+      s3Config?:
+        | {
+            bucketName: string;
+            s3ProviderClientConfig: {
+              endpoint?: string | undefined;
+              region: string;
+              forcePathStyle?: boolean;
+              credentials?: {
+                accessKeyId: string;
+                secretAccessKey: string;
+              };
+            };
+          }
+        | undefined;
+    }
+  ): Promise<void>;
+
+  /** Validate Cloudflare credentials */
+  validateCredentials(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string
+  ): Promise<boolean>;
 
   /** Check if Cloudflare is enabled */
   isEnabled(): boolean;
@@ -450,6 +497,7 @@ export type WebSocketEventName =
   | 'video_publish'
   | 'chat_message'
   | 'chat_settings'
+  | 'information'
   | 'live_stream_stats'
   | 'node_name_update'
   | 'node_about_update'
