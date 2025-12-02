@@ -3,7 +3,7 @@
  *
  * Provides data access methods for comment report records using Drizzle ORM.
  */
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, gt } from 'drizzle-orm';
 import type { DrizzleCommentReport, DrizzleNewCommentReport } from '../schema';
 import { commentReports } from '../schema';
 import { BaseRepository } from './base.repository';
@@ -154,5 +154,19 @@ export class CommentReportRepository extends BaseRepository {
       .where(eq(commentReports.videoId, videoId))
       .returning();
     return result.length;
+  }
+
+  /**
+   * Counts comment reports newer than a given timestamp
+   *
+   * @param timestamp - The timestamp to compare against
+   * @returns Count of comment reports newer than the timestamp
+   */
+  async countNewerThan(timestamp: number): Promise<number> {
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(commentReports)
+      .where(gt(commentReports.timestamp, timestamp));
+    return result[0]?.count ?? 0;
   }
 }

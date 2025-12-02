@@ -16,6 +16,9 @@ export { monetizationRoutes } from './monetization.routes';
 export { watchEmbedRoutes } from './watch-embed.routes';
 export { externalResourcesRoutes } from './external-resources.routes';
 export { externalVideosRoutes } from './external-videos.routes';
+export { commentsRoutes } from './comments.routes';
+export { watchRoutes } from './watch.routes';
+export { nodeRoutes } from './node.routes';
 
 // Import for registration
 import { statusRoutes, healthRoutes } from './status.routes';
@@ -27,6 +30,9 @@ import { monetizationRoutes } from './monetization.routes';
 import { watchEmbedRoutes } from './watch-embed.routes';
 import { externalResourcesRoutes } from './external-resources.routes';
 import { externalVideosRoutes } from './external-videos.routes';
+import { commentsRoutes } from './comments.routes';
+import { watchRoutes } from './watch.routes';
+import { nodeRoutes } from './node.routes';
 
 /**
  * Register all application routes
@@ -114,5 +120,32 @@ export async function registerRoutes(
       done();
     },
     { prefix: '/external/videos' }
+  );
+
+  // Comments routes (/comments/*)
+  await fastify.register(
+    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
+      commentsRoutes(instance, container);
+      done();
+    },
+    { prefix: '/comments' }
+  );
+
+  // Watch routes (/watch)
+  await fastify.register(
+    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
+      watchRoutes(instance, container);
+      done();
+    },
+    { prefix: '/watch' }
+  );
+
+  // Node routes (/node/*)
+  await fastify.register(
+    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
+      nodeRoutes(instance, container);
+      done();
+    },
+    { prefix: '/node' }
   );
 }

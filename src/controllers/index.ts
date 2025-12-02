@@ -25,3 +25,11 @@ export {
 export { WatchEmbedController } from './watch-embed.controller';
 export { ExternalResourcesController } from './external-resources.controller';
 export { ExternalVideosController } from './external-videos.controller';
+export {
+  CommentsController,
+  type CommentSearchQuery,
+  type CommentIdParams,
+  type CommentReportBody,
+} from './comments.controller';
+export { WatchController, type WatchQuery } from './watch.controller';
+export { NodeController, type NodeQuery, type ContentCheckedBody } from './node.controller';

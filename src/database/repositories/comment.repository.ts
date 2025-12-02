@@ -3,11 +3,22 @@
  *
  * Provides data access methods for comment records using Drizzle ORM.
  */
-import { eq, desc, sql, and } from 'drizzle-orm';
+import { eq, desc, sql, and, gt, like } from 'drizzle-orm';
 import type { DrizzleComment, DrizzleNewComment } from '../schema';
 import { comments } from '../schema';
 import { BaseRepository } from './base.repository';
 import type { PaginationOptions } from '../../types/models';
+
+/**
+ * Options for comment search
+ */
+export interface CommentSearchOptions extends PaginationOptions {
+  videoId?: string;
+  searchTerm?: string;
+  beforeTimestamp?: number;
+  sortBy?: 'timestamp';
+  sortDirection?: 'asc' | 'desc';
+}
 
 /**
  * CommentRepository class for comment CRUD operations
@@ -133,5 +144,61 @@ export class CommentRepository extends BaseRepository {
   async countAll(): Promise<number> {
     const result = await this.db.select({ count: sql<number>`count(*)` }).from(comments);
     return result[0]?.count ?? 0;
+  }
+
+  /**
+   * Counts comments newer than a given timestamp
+   *
+   * @param timestamp - The timestamp to compare against
+   * @returns Count of comments newer than the timestamp
+   */
+  async countNewerThan(timestamp: number): Promise<number> {
+    const result = await this.db
+      .select({ count: sql<number>`count(*)` })
+      .from(comments)
+      .where(gt(comments.timestamp, timestamp));
+    return result[0]?.count ?? 0;
+  }
+
+  /**
+   * Searches comments with optional filters
+   *
+   * @param options - Search options including videoId, searchTerm, beforeTimestamp
+   * @returns Array of matching comments
+   */
+  async search(options: CommentSearchOptions = {}): Promise<DrizzleComment[]> {
+    const { limit, offset } = this.getPaginationParams(options);
+    const { videoId, searchTerm, beforeTimestamp, sortDirection = 'desc' } = options;
+
+    // Build conditions array
+    const conditions = [];
+
+    if (videoId !== undefined && videoId !== '') {
+      conditions.push(eq(comments.videoId, videoId));
+    }
+
+    if (searchTerm !== undefined && searchTerm !== '') {
+      conditions.push(like(comments.commentPlainTextSanitized, `%${searchTerm}%`));
+    }
+
+    if (beforeTimestamp !== undefined) {
+      conditions.push(sql`${comments.timestamp} < ${beforeTimestamp}`);
+    }
+
+    // Build query
+    let query = this.db.select().from(comments);
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as typeof query;
+    }
+
+    // Sort
+    if (sortDirection === 'asc') {
+      query = query.orderBy(comments.timestamp) as typeof query;
+    } else {
+      query = query.orderBy(desc(comments.timestamp)) as typeof query;
+    }
+
+    return query.limit(limit).offset(offset);
   }
 }
