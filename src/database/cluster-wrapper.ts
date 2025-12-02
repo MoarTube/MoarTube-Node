@@ -90,8 +90,7 @@ export class ClusterDatabaseWrapper {
     }
 
     // In master or single-process mode, execute directly
-    // This would need to use the raw database connection
-    // For now, this is a placeholder for the legacy bridge
+    // Raw query execution is not supported - use Drizzle query builder
     throw new Error('Direct raw query execution not implemented. Use Drizzle query builder.');
   }
 

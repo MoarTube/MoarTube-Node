@@ -11,7 +11,23 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\moartube-node.js"
+            "program": "${workspaceFolder}\\dist\\moartube-node.js",
+            "preLaunchTask": "npm: build",
+            "outFiles": [
+                "${workspaceFolder}/dist/**/*.js"
+            ],
+            "sourceMaps": true
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch (Dev - tsx)",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["tsx", "${workspaceFolder}\\src\\moartube-node.ts"],
+            "console": "integratedTerminal"
         }
     ]
 }

@@ -41,21 +41,3 @@ export * from './schema';
 
 // Repository exports
 export * from './repositories';
-
-// Legacy bridge exports (deprecated)
-export {
-  initializeDatabase,
-  getVideoRepository,
-  getCommentRepository,
-  getVideoReportRepository,
-  getCommentReportRepository,
-  getVideoReportsArchiveRepository,
-  getCommentReportsArchiveRepository,
-  getLiveChatMessageRepository,
-  getMonetizationRepository,
-  getLinkRepository,
-  submitDatabaseWriteJob,
-  isDatabaseReady,
-  shutdownDatabase,
-  type DatabaseWriteJob,
-} from './legacy-bridge';

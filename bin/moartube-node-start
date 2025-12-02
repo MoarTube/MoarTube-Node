@@ -2,4 +2,4 @@
 
 process.title = 'MoarTube Node';
 
-const moartube = require('../moartube-node');
+require('../dist/moartube-node');

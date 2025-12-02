@@ -123,7 +123,7 @@ export interface IVideoUploadService {
   handleVideoUploadComplete(options: VideoUploadOptions): Promise<UploadResult>;
 
   /** Handle stream upload completion */
-  handleStreamUploadComplete(options: StreamUploadOptions): Promise<UploadResult>;
+  handleStreamUploadComplete(options: StreamUploadOptions): UploadResult;
 
   /** Handle image upload completion */
   handleImageUploadComplete(options: ImageUploadOptions): Promise<UploadResult>;
@@ -135,7 +135,7 @@ export interface IVideoUploadService {
   trackProgress(request: FastifyRequest, videoId: string, format: string, resolution: string): void;
 
   /** Handle video upload error */
-  handleUploadError(videoId: string, error: Error): Promise<void>;
+  handleUploadError(videoId: string, error: Error): void;
 }
 
 export class VideoUploadService implements IVideoUploadService {
