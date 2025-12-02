@@ -280,7 +280,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
   /**
    * Purge video preview images
    */
-  async purgeVideoPreviewImages(videoId: string): Promise<void> {
+  async purgeVideoPreviewImages(videoIds: string[]): Promise<void> {
     if (!this.isEnabled() || !this.httpClient) {
       return;
     }
@@ -289,17 +289,19 @@ export class CloudflareService extends BaseService implements ICloudflareService
       const config = getConfig();
       const baseUrl = config.getExternalVideosBaseUrl();
 
-      const files = [`${baseUrl}/external/videos/${videoId}/images/preview.jpg`];
+      const files = videoIds.map(
+        (videoId) => `${baseUrl}/external/videos/${videoId}/images/preview.jpg`
+      );
       await this.purgeCache(files, 'purgeVideoPreviewImages');
     } catch (error) {
-      this.logger.error('Failed to purge preview images', error as Error, { videoId });
+      this.logger.error('Failed to purge preview images', error as Error, { videoIds });
     }
   }
 
   /**
    * Purge video poster images
    */
-  async purgePosterImages(videoId: string): Promise<void> {
+  async purgeVideoPosterImages(videoIds: string[]): Promise<void> {
     if (!this.isEnabled() || !this.httpClient) {
       return;
     }
@@ -308,17 +310,19 @@ export class CloudflareService extends BaseService implements ICloudflareService
       const config = getConfig();
       const baseUrl = config.getExternalVideosBaseUrl();
 
-      const files = [`${baseUrl}/external/videos/${videoId}/images/poster.jpg`];
-      await this.purgeCache(files, 'purgePosterImages');
+      const files = videoIds.map(
+        (videoId) => `${baseUrl}/external/videos/${videoId}/images/poster.jpg`
+      );
+      await this.purgeCache(files, 'purgeVideoPosterImages');
     } catch (error) {
-      this.logger.error('Failed to purge poster images', error as Error, { videoId });
+      this.logger.error('Failed to purge poster images', error as Error, { videoIds });
     }
   }
 
   /**
    * Purge video thumbnail images
    */
-  async purgeThumbnailImages(videoId: string): Promise<void> {
+  async purgeVideoThumbnailImages(videoIds: string[]): Promise<void> {
     if (!this.isEnabled() || !this.httpClient) {
       return;
     }
@@ -327,10 +331,12 @@ export class CloudflareService extends BaseService implements ICloudflareService
       const config = getConfig();
       const baseUrl = config.getExternalVideosBaseUrl();
 
-      const files = [`${baseUrl}/external/videos/${videoId}/images/thumbnail.jpg`];
-      await this.purgeCache(files, 'purgeThumbnailImages');
+      const files = videoIds.map(
+        (videoId) => `${baseUrl}/external/videos/${videoId}/images/thumbnail.jpg`
+      );
+      await this.purgeCache(files, 'purgeVideoThumbnailImages');
     } catch (error) {
-      this.logger.error('Failed to purge thumbnail images', error as Error, { videoId });
+      this.logger.error('Failed to purge thumbnail images', error as Error, { videoIds });
     }
   }
 
@@ -340,9 +346,9 @@ export class CloudflareService extends BaseService implements ICloudflareService
   async purgeVideo(videoId: string): Promise<void> {
     await this.purgeAdaptiveVideos(videoId);
     await this.purgeProgressiveVideos(videoId);
-    await this.purgeVideoPreviewImages(videoId);
-    await this.purgePosterImages(videoId);
-    await this.purgeThumbnailImages(videoId);
+    await this.purgeVideoPreviewImages([videoId]);
+    await this.purgeVideoPosterImages([videoId]);
+    await this.purgeVideoThumbnailImages([videoId]);
   }
 
   /**

@@ -170,6 +170,24 @@ export class VideosRepository extends BaseRepository {
   }
 
   /**
+   * Increments the view count for a video by a specified amount
+   * Also marks the index as outdated if the video is indexed
+   *
+   * @param videoId - The unique video identifier
+   * @param count - The number of views to add
+   */
+  async incrementViewsBy(videoId: string, count: number): Promise<void> {
+    await this.db
+      .update(videos)
+      .set({
+        views: sql`${videos.views} + ${count}`,
+        // Mark index as outdated if video is indexed (matches JS behavior)
+        isIndexOutdated: sql`CASE WHEN ${videos.isIndexed} = 1 THEN 1 ELSE ${videos.isIndexOutdated} END`,
+      })
+      .where(eq(videos.videoId, videoId));
+  }
+
+  /**
    * Increments the like count for a video
    *
    * @param videoId - The unique video identifier

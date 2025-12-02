@@ -84,9 +84,8 @@ export async function registerRoutes(
 
   // Videos routes (/videos/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      videosRoutes(instance);
-      done();
+    async (instance: FastifyInstance) => {
+      await videosRoutes(instance);
     },
     { prefix: '/videos' }
   );

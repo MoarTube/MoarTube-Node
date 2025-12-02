@@ -15,6 +15,16 @@ import type {
   UpdateVideoInput,
   IStorageService,
   IWebSocketService,
+  ICloudflareService,
+  IIndexerService,
+  VideoWatchData,
+  VideoSource,
+  SourcesFormatsAndResolutions,
+  VideoPermissions,
+  VideoData,
+  AddToIndexOptions,
+  AddToIndexResult,
+  VideoIndexData,
 } from './interfaces';
 import type { VideosRepository } from '../database/repositories/videos';
 import type { CommentsRepository } from '../database/repositories/comments';
@@ -30,6 +40,8 @@ export interface VideosServiceDependencies {
   commentRepository?: CommentsRepository;
   storageService?: IStorageService;
   websocketService?: IWebSocketService;
+  cloudflareService?: ICloudflareService;
+  indexerService?: IIndexerService;
 }
 
 /**
@@ -47,6 +59,13 @@ export class VideosService extends BaseService implements IVideoService {
   private readonly commentRepository: CommentsRepository | undefined;
   private readonly storageService: IStorageService | undefined;
   private readonly websocketService: IWebSocketService | undefined;
+  private readonly cloudflareService: ICloudflareService | undefined;
+  private readonly indexerService: IIndexerService | undefined;
+
+  // Debounced view counter - tracks pending views per video
+  private readonly pendingViews: Map<string, number> = new Map();
+  private readonly viewTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private static readonly VIEW_DEBOUNCE_MS = 500;
 
   constructor(dependencies: VideosServiceDependencies, options?: ServiceOptions) {
     super('VideosService', options);
@@ -54,6 +73,8 @@ export class VideosService extends BaseService implements IVideoService {
     this.commentRepository = dependencies.commentRepository;
     this.storageService = dependencies.storageService;
     this.websocketService = dependencies.websocketService;
+    this.cloudflareService = dependencies.cloudflareService;
+    this.indexerService = dependencies.indexerService;
   }
 
   /**
@@ -304,7 +325,23 @@ export class VideosService extends BaseService implements IVideoService {
 
       this.logger.debug('Updating video', { videoId, fields: Object.keys(updates) });
 
-      return this.videoRepository.update(videoId, updates);
+      const updatedVideo = await this.videoRepository.update(videoId, updates);
+
+      // Purge Cloudflare cache after update
+      if (this.cloudflareService) {
+        try {
+          await this.cloudflareService.purgeEmbedVideoPages([videoId]);
+          await this.cloudflareService.purgeWatchPages([videoId]);
+          await this.cloudflareService.purgeNodePage();
+        } catch (error) {
+          this.logger.warn('Failed to purge Cloudflare cache after video update', {
+            videoId,
+            error,
+          });
+        }
+      }
+
+      return updatedVideo;
     });
   }
 
@@ -327,6 +364,25 @@ export class VideosService extends BaseService implements IVideoService {
 
       // Delete storage directories
       await this.deleteVideoStorageDirectories(videoId);
+
+      // Purge Cloudflare cache before deletion
+      if (this.cloudflareService) {
+        try {
+          await this.cloudflareService.purgeNodePage();
+          await this.cloudflareService.purgeEmbedVideoPages([videoId]);
+          await this.cloudflareService.purgeAdaptiveVideos(videoId);
+          await this.cloudflareService.purgeProgressiveVideos(videoId);
+          await this.cloudflareService.purgeAllWatchPages();
+          await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
+          await this.cloudflareService.purgeVideoPreviewImages([videoId]);
+          await this.cloudflareService.purgeVideoPosterImages([videoId]);
+        } catch (error) {
+          this.logger.warn('Failed to purge Cloudflare cache during video deletion', {
+            videoId,
+            error,
+          });
+        }
+      }
 
       // Delete video record
       return this.videoRepository.delete(videoId);
@@ -366,6 +422,17 @@ export class VideosService extends BaseService implements IVideoService {
       isPublished: true,
     });
 
+    // Purge Cloudflare cache after publishing
+    if (this.cloudflareService) {
+      try {
+        await this.cloudflareService.purgeNodePage();
+        await this.cloudflareService.purgeWatchPages([videoId]);
+        await this.cloudflareService.purgeEmbedVideoPages([videoId]);
+      } catch (error) {
+        this.logger.warn('Failed to purge Cloudflare cache after publishing', { videoId, error });
+      }
+    }
+
     this.logger.info('Video published', { videoId });
   }
 
@@ -377,6 +444,17 @@ export class VideosService extends BaseService implements IVideoService {
       isPublished: false,
     });
 
+    // Purge Cloudflare cache after unpublishing
+    if (this.cloudflareService) {
+      try {
+        await this.cloudflareService.purgeAllEmbedVideoPages();
+        await this.cloudflareService.purgeAllWatchPages();
+        await this.cloudflareService.purgeVideo(videoId);
+      } catch (error) {
+        this.logger.warn('Failed to purge Cloudflare cache after unpublishing', { videoId, error });
+      }
+    }
+
     this.logger.info('Video unpublished', { videoId });
   }
 
@@ -385,6 +463,60 @@ export class VideosService extends BaseService implements IVideoService {
    */
   async incrementViews(videoId: string): Promise<void> {
     await this.videoRepository.incrementViews(videoId);
+  }
+
+  /**
+   * Increment view count with debouncing
+   *
+   * Batches multiple view increments into a single database write after 500ms.
+   * Returns the current view count including pending views.
+   */
+  async incrementViewsDebounced(videoId: string): Promise<{ views: number }> {
+    return this.withErrorLogging('incrementViewsDebounced', async () => {
+      // Increment pending views for this video
+      const currentPending = this.pendingViews.get(videoId) ?? 0;
+      this.pendingViews.set(videoId, currentPending + 1);
+
+      // Clear existing timer for this video
+      const existingTimer = this.viewTimers.get(videoId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+
+      // Set new debounce timer
+      const timer = setTimeout(() => {
+        const pendingCount = this.pendingViews.get(videoId) ?? 0;
+        if (pendingCount > 0) {
+          this.pendingViews.delete(videoId);
+          this.viewTimers.delete(videoId);
+
+          this.videoRepository
+            .incrementViewsBy(videoId, pendingCount)
+            .then(() => {
+              this.logger.debug('Flushed pending views', { videoId, count: pendingCount });
+            })
+            .catch((err) => {
+              this.logger.error(
+                'Failed to flush pending views',
+                err instanceof Error ? err : new Error(String(err)),
+                { videoId, count: pendingCount }
+              );
+            });
+        }
+      }, VideosService.VIEW_DEBOUNCE_MS);
+
+      this.viewTimers.set(videoId, timer);
+
+      // Get current database view count
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        throw new Error('Video not found');
+      }
+
+      // Return current count + pending
+      const pendingCount = this.pendingViews.get(videoId) ?? 0;
+      return { views: video.views + pendingCount };
+    });
   }
 
   /**
@@ -451,6 +583,34 @@ export class VideosService extends BaseService implements IVideoService {
   }
 
   /**
+   * Mark video index as outdated (with Cloudflare cache purge)
+   *
+   * Also purges thumbnail, preview, and poster images from Cloudflare cache
+   */
+  async markIndexOutdated(videoId: string): Promise<void> {
+    return this.withErrorLogging('markIndexOutdated', async () => {
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        throw new Error(`Video not found: ${videoId}`);
+      }
+
+      // Only mark as outdated if currently indexed
+      if (video.isIndexed) {
+        await this.videoRepository.update(videoId, {
+          isIndexOutdated: true,
+        });
+
+        // Purge Cloudflare cache for images
+        if (this.cloudflareService) {
+          await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
+          await this.cloudflareService.purgeVideoPreviewImages([videoId]);
+          await this.cloudflareService.purgeVideoPosterImages([videoId]);
+        }
+      }
+    });
+  }
+
+  /**
    * Set video source file extension
    */
   async setSourceFileExtension(videoId: string, extension: string): Promise<void> {
@@ -461,16 +621,27 @@ export class VideosService extends BaseService implements IVideoService {
 
   /**
    * Update video length
+   *
+   * Also marks index as outdated if video is indexed
    */
   async setVideoLength(
     videoId: string,
     lengthSeconds: number,
     lengthTimestamp: string
   ): Promise<void> {
-    await this.videoRepository.update(videoId, {
+    const video = await this.videoRepository.findById(videoId);
+
+    const updates: Record<string, unknown> = {
       lengthSeconds,
       lengthTimestamp,
-    });
+    };
+
+    // Mark index as outdated if video is indexed
+    if (video?.isIndexed) {
+      updates['isIndexOutdated'] = true;
+    }
+
+    await this.videoRepository.update(videoId, updates);
   }
 
   /**
@@ -653,6 +824,297 @@ export class VideosService extends BaseService implements IVideoService {
   }
 
   /**
+   * Get video watch data for media player
+   *
+   * Builds the complete data structure needed by the video player including:
+   * - Adaptive sources (HLS m3u8 manifests)
+   * - Progressive sources (mp4, webm, ogv files)
+   * - Source formats and resolutions matrix
+   */
+  async getWatchData(videoId: string): Promise<VideoWatchData | null> {
+    return this.withErrorLogging('getWatchData', async () => {
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        return null;
+      }
+
+      const outputs = this.safeJsonParse<Record<string, string[]>>(video.outputs, {
+        m3u8: [],
+        mp4: [],
+        webm: [],
+        ogv: [],
+      });
+
+      // Determine manifest type based on streaming status
+      const manifestType = video.isStreaming ? 'dynamic' : 'static';
+
+      // Get external videos base URL
+      const config = getConfig();
+      const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
+
+      const adaptiveSources: VideoSource[] = [];
+      const progressiveSources: VideoSource[] = [];
+      const sourcesFormatsAndResolutions: SourcesFormatsAndResolutions = {
+        m3u8: [],
+        mp4: [],
+        webm: [],
+        ogv: [],
+      };
+
+      // Build sources from outputs
+      for (const format of Object.keys(outputs)) {
+        const resolutions = outputs[format] ?? [];
+
+        for (const resolution of resolutions) {
+          if (format === 'm3u8') {
+            // Adaptive streaming source (HLS)
+            const src = `${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${manifestType}/manifests/manifest-${resolution}.m3u8`;
+            adaptiveSources.push({ src, type: 'application/vnd.apple.mpegurl' });
+          } else {
+            // Progressive download source
+            const src = `${externalVideosBaseUrl}/external/videos/${videoId}/progressive/${format}/${resolution}.${format}`;
+
+            let type: string;
+            if (format === 'mp4') {
+              type = 'video/mp4';
+            } else if (format === 'webm') {
+              type = 'video/webm';
+            } else if (format === 'ogv') {
+              type = 'video/ogg';
+            } else {
+              continue; // Skip unknown formats
+            }
+
+            progressiveSources.push({ src, type });
+          }
+
+          // Track format/resolution availability
+          if (format in sourcesFormatsAndResolutions) {
+            sourcesFormatsAndResolutions[format as keyof SourcesFormatsAndResolutions].push(
+              resolution
+            );
+          }
+        }
+      }
+
+      // Add master manifest at the beginning if adaptive sources exist
+      if (adaptiveSources.length > 0) {
+        const masterSrc = `${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${manifestType}/manifests/manifest-master.m3u8`;
+        adaptiveSources.unshift({ src: masterSrc, type: 'application/vnd.apple.mpegurl' });
+      }
+
+      return {
+        videoId,
+        title: video.title,
+        description: video.description,
+        views: video.views,
+        likes: video.likes,
+        dislikes: video.dislikes,
+        isPublished: Boolean(video.isPublished),
+        isPublishing: Boolean(video.isPublishing),
+        isLive: Boolean(video.isLive),
+        isStreaming: Boolean(video.isStreaming),
+        isStreamed: Boolean(video.isStreamed),
+        comments: video.comments,
+        creationTimestamp: video.creationTimestamp,
+        isHlsAvailable: (outputs['m3u8']?.length ?? 0) > 0,
+        isMp4Available: (outputs['mp4']?.length ?? 0) > 0,
+        isWebmAvailable: (outputs['webm']?.length ?? 0) > 0,
+        isOgvAvailable: (outputs['ogv']?.length ?? 0) > 0,
+        adaptiveSources,
+        progressiveSources,
+        sourcesFormatsAndResolutions,
+      };
+    });
+  }
+
+  /**
+   * Get video permissions
+   */
+  async getPermissions(videoId: string): Promise<VideoPermissions | null> {
+    return this.withErrorLogging('getPermissions', async () => {
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        return null;
+      }
+
+      return {
+        isCommentsEnabled: Boolean(video.isCommentsEnabled),
+        isLikesEnabled: Boolean(video.isLikesEnabled),
+        isDislikesEnabled: Boolean(video.isDislikesEnabled),
+        isReportsEnabled: Boolean(video.isReportsEnabled),
+        isLiveChatEnabled: Boolean(video.isLiveChatEnabled),
+      };
+    });
+  }
+
+  /**
+   * Get video data with formatted fields
+   *
+   * Returns video data with alias URL and parsed JSON fields
+   */
+  async getVideoData(videoId: string): Promise<VideoData | null> {
+    return this.withErrorLogging('getVideoData', async () => {
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        return null;
+      }
+
+      return this.formatVideoData(video);
+    });
+  }
+
+  /**
+   * Get all videos data with formatted fields
+   */
+  async getAllVideosData(): Promise<VideoData[]> {
+    return this.withErrorLogging('getAllVideosData', async () => {
+      const videos = await this.videoRepository.findAll({});
+      return videos.map((video) => this.formatVideoData(video));
+    });
+  }
+
+  /**
+   * Format video into VideoData structure
+   */
+  private formatVideoData(video: DrizzleVideo): VideoData {
+    const config = getConfig();
+    const nodeSettings = config.nodeSettings;
+
+    const outputs = this.safeJsonParse<Record<string, string[]>>(video.outputs, {
+      m3u8: [],
+      mp4: [],
+      webm: [],
+      ogv: [],
+    });
+
+    const meta = this.safeJsonParse<Record<string, unknown>>(video.meta, {});
+
+    // Build video alias URL if indexed
+    let videoAliasUrl = 'MoarTube Aliaser link unavailable';
+
+    if (video.isIndexed && nodeSettings.nodeId) {
+      const isDeveloperMode = config.runtime.isDeveloperMode ?? false;
+      if (isDeveloperMode) {
+        // Use localhost for development
+        const aliaserPort = config.urls.getAliaserConfig().port;
+        videoAliasUrl = `http://localhost:${aliaserPort}/nodes/${nodeSettings.nodeId}/videos/${video.videoId}`;
+      } else {
+        videoAliasUrl = `https://moartu.be/nodes/${nodeSettings.nodeId}/videos/${video.videoId}`;
+      }
+    }
+
+    return {
+      videoId: video.videoId,
+      title: video.title,
+      description: video.description,
+      tags: video.tags,
+      views: video.views,
+      isIndexed: Boolean(video.isIndexed),
+      isPublished: Boolean(video.isPublished),
+      isLive: Boolean(video.isLive),
+      isStreaming: Boolean(video.isStreaming),
+      isFinalized: Boolean(video.isFinalized),
+      isStreamRecordedRemotely: Boolean(video.isStreamRecordedRemotely),
+      timestamp: video.creationTimestamp,
+      videoAliasUrl,
+      outputs,
+      meta,
+    };
+  }
+
+  /**
+   * Get recommended videos (published or live)
+   */
+  async getRecommendedVideos(): Promise<DrizzleVideo[]> {
+    return this.withErrorLogging('getRecommendedVideos', async () => {
+      // Get all published or live videos, ordered by creation timestamp
+      const videos = await this.videoRepository.findAll({
+        sortBy: 'creation_timestamp',
+        sortDirection: 'desc',
+      });
+
+      // Filter to only published or live videos
+      return videos.filter((v) => v.isPublished || v.isLive);
+    });
+  }
+
+  /**
+   * Get unique tags from published/live videos
+   */
+  async getPublishedTags(): Promise<string[]> {
+    return this.withErrorLogging('getPublishedTags', async () => {
+      const videos = await this.getRecommendedVideos();
+      return this.extractUniqueTags(videos);
+    });
+  }
+
+  /**
+   * Get unique tags from all videos
+   */
+  async getAllTags(): Promise<string[]> {
+    return this.withErrorLogging('getAllTags', async () => {
+      const videos = await this.videoRepository.findAll({
+        sortBy: 'creation_timestamp',
+        sortDirection: 'desc',
+      });
+      return this.extractUniqueTags(videos);
+    });
+  }
+
+  /**
+   * Extract unique tags from videos
+   */
+  private extractUniqueTags(videos: DrizzleVideo[]): string[] {
+    const tagsSet = new Set<string>();
+
+    for (const video of videos) {
+      if (video.tags) {
+        const tags = video.tags.split(',');
+        for (const tag of tags) {
+          const trimmedTag = tag.trim();
+          if (trimmedTag) {
+            tagsSet.add(trimmedTag);
+          }
+        }
+      }
+    }
+
+    return Array.from(tagsSet);
+  }
+
+  /**
+   * Get video alias URL for indexed videos
+   */
+  async getAliasUrl(videoId: string): Promise<string | null> {
+    return this.withErrorLogging('getAliasUrl', async () => {
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        return null;
+      }
+
+      if (!video.isIndexed) {
+        throw new Error('Video is not indexed');
+      }
+
+      const config = getConfig();
+      const nodeSettings = config.nodeSettings;
+
+      if (!nodeSettings.nodeId) {
+        throw new Error('Node ID not configured');
+      }
+
+      const isDeveloperMode = config.runtime.isDeveloperMode ?? false;
+      if (isDeveloperMode) {
+        const aliaserPort = config.urls.getAliaserConfig().port;
+        return `http://localhost:${aliaserPort}/nodes/${nodeSettings.nodeId}/videos/${videoId}`;
+      } else {
+        return `https://moartu.be/nodes/${nodeSettings.nodeId}/videos/${videoId}`;
+      }
+    });
+  }
+
+  /**
    * Get all publish statuses for video formats/resolutions
    */
   async getPublishes(
@@ -778,6 +1240,408 @@ export class VideosService extends BaseService implements IVideoService {
       });
       // Don't throw - record update should still succeed
     }
+  }
+
+  /**
+   * Batch delete videos with safety filters
+   *
+   * Only deletes videos that are NOT:
+   * - importing
+   * - publishing
+   * - streaming
+   * - indexing
+   * - indexed (without force flag)
+   */
+  async deleteVideos(
+    videoIds: string[],
+    force = false
+  ): Promise<{ deletedVideoIds: string[]; nonDeletedVideoIds: string[] }> {
+    return this.withErrorLogging('deleteVideos', async () => {
+      const deletedVideoIds: string[] = [];
+      const nonDeletedVideoIds: string[] = [];
+
+      for (const videoId of videoIds) {
+        const video = await this.videoRepository.findById(videoId);
+        if (!video) {
+          nonDeletedVideoIds.push(videoId);
+          continue;
+        }
+
+        // Safety checks - don't delete videos in active states
+        const isInActiveState =
+          video.isImporting ||
+          video.isPublishing ||
+          video.isStreaming ||
+          video.isIndexing ||
+          (!force && video.isIndexed);
+
+        if (isInActiveState) {
+          nonDeletedVideoIds.push(videoId);
+          this.logger.debug('Skipping video deletion - in active state', {
+            videoId,
+            isImporting: video.isImporting,
+            isPublishing: video.isPublishing,
+            isStreaming: video.isStreaming,
+            isIndexing: video.isIndexing,
+            isIndexed: video.isIndexed,
+          });
+          continue;
+        }
+
+        // Perform deletion
+        const deleted = await this.deleteVideo(videoId);
+        if (deleted) {
+          deletedVideoIds.push(videoId);
+        } else {
+          nonDeletedVideoIds.push(videoId);
+        }
+      }
+
+      this.logger.info('Batch delete completed', {
+        deleted: deletedVideoIds.length,
+        skipped: nonDeletedVideoIds.length,
+      });
+
+      return { deletedVideoIds, nonDeletedVideoIds };
+    });
+  }
+
+  /**
+   * Batch finalize videos with safety filters
+   *
+   * Only finalizes videos that are NOT:
+   * - importing
+   * - publishing
+   * - streaming
+   * - indexing
+   * - indexed (without force flag)
+   */
+  async finalizeVideos(
+    videoIds: string[],
+    force = false
+  ): Promise<{ finalizedVideoIds: string[]; nonFinalizedVideoIds: string[] }> {
+    return this.withErrorLogging('finalizeVideos', async () => {
+      const finalizedVideoIds: string[] = [];
+      const nonFinalizedVideoIds: string[] = [];
+
+      for (const videoId of videoIds) {
+        const video = await this.videoRepository.findById(videoId);
+        if (!video) {
+          nonFinalizedVideoIds.push(videoId);
+          continue;
+        }
+
+        // Safety checks - don't finalize videos in active states
+        const isInActiveState =
+          video.isImporting ||
+          video.isPublishing ||
+          video.isStreaming ||
+          video.isIndexing ||
+          (!force && video.isIndexed);
+
+        if (isInActiveState) {
+          nonFinalizedVideoIds.push(videoId);
+          this.logger.debug('Skipping video finalize - in active state', {
+            videoId,
+            isImporting: video.isImporting,
+            isPublishing: video.isPublishing,
+            isStreaming: video.isStreaming,
+            isIndexing: video.isIndexing,
+            isIndexed: video.isIndexed,
+          });
+          continue;
+        }
+
+        // Finalize = stop any active operations and mark as ready
+        await this.videoRepository.update(videoId, {
+          isImporting: false,
+          isPublishing: false,
+          isStreaming: false,
+        });
+
+        finalizedVideoIds.push(videoId);
+      }
+
+      this.logger.info('Batch finalize completed', {
+        finalized: finalizedVideoIds.length,
+        skipped: nonFinalizedVideoIds.length,
+      });
+
+      return { finalizedVideoIds, nonFinalizedVideoIds };
+    });
+  }
+
+  /**
+   * Write HLS master manifest for adaptive streaming
+   *
+   * Writes the M3U8 master manifest file to:
+   * {videosDir}/{videoId}/adaptive/m3u8/manifest-{type}.m3u8
+   */
+  async writeMasterManifest(
+    videoId: string,
+    manifestType: 'video' | 'audio',
+    content: string
+  ): Promise<void> {
+    return this.withErrorLogging('writeMasterManifest', async () => {
+      const config = getConfig();
+      const storageMode = config.nodeSettings.storageConfig.storageMode;
+
+      if (storageMode === 'filesystem') {
+        const videosDir = config.paths.videosDirectoryPath;
+        const manifestDir = path.join(videosDir, videoId, 'adaptive', 'm3u8');
+
+        // Ensure directory exists
+        fs.mkdirSync(manifestDir, { recursive: true });
+
+        const manifestPath = path.join(manifestDir, `manifest-${manifestType}.m3u8`);
+        fs.writeFileSync(manifestPath, content);
+
+        this.logger.debug('Wrote HLS master manifest', {
+          videoId,
+          manifestType,
+          path: manifestPath,
+        });
+      } else if (storageMode === 's3provider' && this.storageService) {
+        const key = `external/videos/${videoId}/adaptive/m3u8/manifest-${manifestType}.m3u8`;
+        await this.storageService.saveFile(key, Buffer.from(content), 'application/x-mpegURL');
+
+        this.logger.debug('Wrote HLS master manifest to S3', {
+          videoId,
+          manifestType,
+          key,
+        });
+      }
+    });
+  }
+
+  /**
+   * Purge Cloudflare cache for video images
+   */
+  async purgeVideoImageCache(videoId: string): Promise<void> {
+    if (this.cloudflareService) {
+      await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
+      await this.cloudflareService.purgeVideoPreviewImages([videoId]);
+      await this.cloudflareService.purgeVideoPosterImages([videoId]);
+    }
+  }
+
+  /**
+   * Get node icon as base64 encoded PNG
+   *
+   * Returns custom icon if exists, otherwise the default icon
+   */
+  getNodeIconPngBase64(): string {
+    const config = getConfig();
+    const customPath = path.join(config.paths.dataDirectoryPath, 'images', 'icon.png');
+    const defaultPath = path.join(config.paths.publicDirectoryPath, 'images', 'icon.png');
+
+    if (fs.existsSync(customPath)) {
+      return fs.readFileSync(customPath).toString('base64');
+    }
+    return fs.readFileSync(defaultPath).toString('base64');
+  }
+
+  /**
+   * Get node avatar as base64 encoded PNG
+   *
+   * Returns custom avatar if exists, otherwise the default avatar
+   */
+  getNodeAvatarPngBase64(): string {
+    const config = getConfig();
+    const customPath = path.join(config.paths.dataDirectoryPath, 'images', 'avatar.png');
+    const defaultPath = path.join(config.paths.publicDirectoryPath, 'images', 'avatar.png');
+
+    if (fs.existsSync(customPath)) {
+      return fs.readFileSync(customPath).toString('base64');
+    }
+    return fs.readFileSync(defaultPath).toString('base64');
+  }
+
+  /**
+   * Get video preview image as base64 encoded JPG
+   *
+   * Supports both filesystem and S3 storage modes
+   */
+  async getVideoPreviewJpgBase64(videoId: string): Promise<string> {
+    return this.withErrorLogging('getVideoPreviewJpgBase64', async () => {
+      const config = getConfig();
+      const storageMode = config.nodeSettings.storageConfig.storageMode;
+
+      if (storageMode === 'filesystem') {
+        const previewPath = path.join(
+          config.paths.videosDirectoryPath,
+          videoId,
+          'images',
+          'preview.jpg'
+        );
+
+        if (!fs.existsSync(previewPath)) {
+          throw new Error('Video preview image not found');
+        }
+
+        return fs.readFileSync(previewPath).toString('base64');
+      } else if (storageMode === 's3provider') {
+        // Use storage service for S3
+        if (!this.storageService) {
+          throw new Error('Storage service not available for S3 mode');
+        }
+
+        const key = `external/videos/${videoId}/images/preview.jpg`;
+        const buffer = await this.storageService.getFile(key);
+        return buffer.toString('base64');
+      }
+
+      throw new Error('Unknown storage mode');
+    });
+  }
+
+  /**
+   * Add video to MoarTube index
+   *
+   * Performs node identification, gathers video and node data,
+   * and submits to the MoarTube indexer
+   */
+  async addToIndex(videoId: string, options: AddToIndexOptions): Promise<AddToIndexResult> {
+    return this.withErrorLogging('addToIndex', async () => {
+      if (!this.indexerService) {
+        throw new Error('Indexer service not available');
+      }
+
+      // Validate terms of service agreement
+      if (!options.termsOfServiceAgreed) {
+        throw new Error('Terms of service must be agreed to');
+      }
+
+      // Get video and validate it's in a valid state
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        throw new Error('Video not found');
+      }
+
+      if (!video.isPublished && !video.isLive) {
+        throw new Error('Video must be published or live to be indexed');
+      }
+
+      // Perform node identification
+      await this.indexerService.performNodeIdentification();
+
+      // Get config and node settings
+      const config = getConfig();
+      const nodeSettings = config.nodeSettings;
+      const nodeIdentification = config.nodeIdentification;
+
+      if (!nodeIdentification?.moarTubeTokenProof) {
+        throw new Error('Node identification failed - no token proof');
+      }
+
+      // Get image data
+      const nodeIconPngBase64 = this.getNodeIconPngBase64();
+      const nodeAvatarPngBase64 = this.getNodeAvatarPngBase64();
+      const videoPreviewJpgBase64 = await this.getVideoPreviewJpgBase64(videoId);
+
+      // Prepare submission data
+      const indexData: VideoIndexData = {
+        videoId: video.videoId,
+        nodeId: nodeSettings.nodeId ?? '',
+        nodeName: nodeSettings.nodeName ?? '',
+        nodeAbout: nodeSettings.nodeAbout ?? '',
+        publicNodeProtocol: nodeSettings.publicNodeProtocol ?? 'https',
+        publicNodeAddress: nodeSettings.publicNodeAddress ?? '',
+        publicNodePort: nodeSettings.publicNodePort ?? '',
+        title: video.title,
+        tags: video.tags,
+        views: video.views,
+        isLive: Boolean(video.isLive),
+        isStreaming: Boolean(video.isStreaming),
+        lengthSeconds: video.lengthSeconds,
+        creationTimestamp: video.creationTimestamp,
+        containsAdultContent: options.containsAdultContent,
+        nodeIconPngBase64,
+        nodeAvatarPngBase64,
+        videoPreviewJpgBase64,
+        moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
+        cloudflareTurnstileToken: options.cloudflareTurnstileToken,
+      };
+
+      // Mark video as indexing
+      await this.videoRepository.update(videoId, { isIndexing: true });
+
+      // Submit to indexer
+      const result = await this.indexerService.submitVideoToIndex(indexData);
+
+      if (result.isError) {
+        // Reset indexing state on error
+        await this.videoRepository.update(videoId, { isIndexing: false });
+
+        // Check for 413 (request too large)
+        if (result.statusCode === 413) {
+          return {
+            success: false,
+            message: result.message,
+            isRequestTooLarge: true,
+          };
+        }
+
+        return {
+          success: false,
+          message: result.message ?? 'Failed to add video to index',
+        };
+      }
+
+      // Mark video as indexed
+      await this.videoRepository.update(videoId, {
+        isIndexing: false,
+        isIndexed: true,
+        isIndexOutdated: false,
+      });
+
+      this.logger.info('Video added to index', { videoId });
+
+      return { success: true };
+    });
+  }
+
+  /**
+   * Remove video from MoarTube index
+   */
+  async removeFromIndex(videoId: string, cloudflareTurnstileToken: string): Promise<void> {
+    return this.withErrorLogging('removeFromIndex', async () => {
+      if (!this.indexerService) {
+        throw new Error('Indexer service not available');
+      }
+
+      // Get video and validate
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        throw new Error('Video not found');
+      }
+
+      // Perform node identification
+      await this.indexerService.performNodeIdentification();
+
+      // Get node identification
+      const config = getConfig();
+      const nodeIdentification = config.nodeIdentification;
+
+      if (!nodeIdentification?.moarTubeTokenProof) {
+        throw new Error('Node identification failed - no token proof');
+      }
+
+      // Remove from indexer
+      await this.indexerService.removeVideoFromIndex({
+        videoId,
+        moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
+        cloudflareTurnstileToken,
+      });
+
+      // Update video record
+      await this.videoRepository.update(videoId, {
+        isIndexed: false,
+        isIndexOutdated: false,
+      });
+
+      this.logger.info('Video removed from index', { videoId });
+    });
   }
 
   // ============================================================================

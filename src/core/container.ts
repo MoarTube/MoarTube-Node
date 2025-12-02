@@ -29,6 +29,8 @@ import { CloudflareService } from '../services/cloudflare';
 import { WebSocketService } from '../services/websocket';
 import { ReportService } from '../services/report';
 import { SettingsService } from '../services/settings';
+import { UploadTrackerService } from '../services/upload-tracker';
+import { VideoUploadService } from '../services/video-upload';
 
 /**
  * Container cradle type - defines all registered dependencies
@@ -59,6 +61,8 @@ export interface ContainerCradle {
   websocketService: WebSocketService;
   reportService: ReportService;
   settingsService: SettingsService;
+  uploadTrackerService: UploadTrackerService;
+  videoUploadService: VideoUploadService;
 }
 
 /**
@@ -113,6 +117,8 @@ export function createAppContainer(db: DatabaseClient): Container {
     streamService: asClass(StreamService).singleton(),
     reportService: asClass(ReportService).singleton(),
     settingsService: asClass(SettingsService).singleton(),
+    uploadTrackerService: asClass(UploadTrackerService).singleton(),
+    videoUploadService: asClass(VideoUploadService).singleton(),
   });
 
   // Store globally

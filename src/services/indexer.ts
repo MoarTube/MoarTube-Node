@@ -4,10 +4,15 @@
  * Service layer for communication with the MoarTube Indexer service.
  * Handles video indexing, node identification, and network updates.
  */
-import axios, { type AxiosInstance } from 'axios';
+import axios, { type AxiosInstance, type AxiosError } from 'axios';
 
 import { BaseService, type ServiceOptions } from './base';
-import type { IIndexerService } from './interfaces';
+import type {
+  IIndexerService,
+  VideoIndexData,
+  RemoveFromIndexData,
+  IndexerSubmitResult,
+} from './interfaces';
 import { getConfig } from '../config';
 
 /**
@@ -17,32 +22,6 @@ interface IndexerResponse {
   isError: boolean;
   message?: string;
   moarTubeTokenProof?: string;
-}
-
-/**
- * Video index data for submission
- */
-export interface VideoIndexData {
-  videoId: string;
-  nodeId: string;
-  nodeName: string;
-  nodeAbout: string;
-  publicNodeProtocol: string;
-  publicNodeAddress: string;
-  publicNodePort: string | number;
-  title: string;
-  tags: string;
-  views: number;
-  isLive: boolean;
-  isStreaming: boolean;
-  lengthSeconds: number;
-  creationTimestamp: number;
-  containsAdultContent: boolean;
-  nodeIconPngBase64: string;
-  nodeAvatarPngBase64: string;
-  videoPreviewJpgBase64: string;
-  moarTubeTokenProof: string;
-  cloudflareTurnstileToken: string;
 }
 
 /**
@@ -87,32 +66,58 @@ export class IndexerService extends BaseService implements IIndexerService {
   /**
    * Submit full video data to index
    */
-  async submitVideoToIndex(data: VideoIndexData): Promise<IndexerResponse> {
-    return this.withErrorLogging('submitVideoToIndex', async () => {
+  async submitVideoToIndex(data: VideoIndexData): Promise<IndexerSubmitResult> {
+    try {
       const response = await this.httpClient.post<IndexerResponse>('/index/video/add', data);
-      return response.data;
-    });
+      const result: IndexerSubmitResult = {
+        isError: response.data.isError,
+        statusCode: response.status,
+      };
+      if (response.data.message !== undefined) {
+        result.message = response.data.message;
+      }
+      return result;
+    } catch (error) {
+      const axiosError = error as AxiosError<IndexerResponse>;
+
+      // Handle 413 Request Entity Too Large specifically
+      if (axiosError.response?.status === 413) {
+        this.logger.warn('Video index submission too large', { videoId: data.videoId });
+        return {
+          isError: true,
+          message:
+            'The request size exceeded the 1MB limit. Try reducing the size of your node icon, avatar, and/or video preview images.',
+          statusCode: 413,
+        };
+      }
+
+      // Re-throw for other errors to be handled by withErrorLogging
+      this.logger.error('Failed to submit video to index', error as Error, {
+        videoId: data.videoId,
+      });
+      const result: IndexerSubmitResult = {
+        isError: true,
+        message: axiosError.response?.data?.message ?? (error as Error).message,
+      };
+      if (axiosError.response?.status !== undefined) {
+        result.statusCode = axiosError.response.status;
+      }
+      return result;
+    }
   }
 
   /**
    * Remove a video from the index
    */
-  async removeVideoFromIndex(videoId: string): Promise<void> {
+  async removeVideoFromIndex(data: RemoveFromIndexData): Promise<void> {
     return this.withErrorLogging('removeVideoFromIndex', async () => {
-      const config = getConfig();
-      const nodeIdentification = config.nodeIdentification;
+      const response = await this.httpClient.post<IndexerResponse>('/index/video/remove', data);
 
-      if (!nodeIdentification) {
-        throw new Error('Node not identified - cannot remove from index');
+      if (response.data.isError) {
+        throw new Error(response.data.message ?? 'Failed to remove video from index');
       }
 
-      const data = {
-        videoId,
-        moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
-      };
-
-      await this.httpClient.post('/index/video/remove', data);
-      this.logger.info('Video removed from index', { videoId });
+      this.logger.info('Video removed from index', { videoId: data.videoId });
     });
   }
 

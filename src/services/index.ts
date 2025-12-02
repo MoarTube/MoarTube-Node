@@ -50,8 +50,22 @@ export {
 } from './stream';
 export { AuthService, type JwtPayload } from './auth';
 export { StorageService, type S3Config } from './storage';
-export { IndexerService, type VideoIndexData } from './indexer';
+export { IndexerService } from './indexer';
 export { CloudflareService, type CloudflareServiceDependencies } from './cloudflare';
 export { WebSocketService, type WebSocketClient } from './websocket';
 export { ReportService, type ReportServiceDependencies } from './report';
 export { SettingsService, type SettingsServiceDependencies } from './settings';
+export {
+  UploadTrackerService,
+  type IUploadTrackerService,
+  type UploadTrackerServiceDependencies,
+} from './upload-tracker';
+export {
+  VideoUploadService,
+  type IVideoUploadService,
+  type VideoUploadServiceDependencies,
+  type UploadResult,
+  type VideoUploadOptions,
+  type StreamUploadOptions,
+  type ImageUploadOptions,
+} from './video-upload';

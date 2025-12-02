@@ -76,6 +76,82 @@ export interface VideoWithMeta extends DrizzleVideo {
 }
 
 /**
+ * Video source for media player
+ */
+export interface VideoSource {
+  src: string;
+  type: string;
+}
+
+/**
+ * Sources by format and resolution
+ */
+export interface SourcesFormatsAndResolutions {
+  m3u8: string[];
+  mp4: string[];
+  webm: string[];
+  ogv: string[];
+}
+
+/**
+ * Video watch data for media player
+ */
+export interface VideoWatchData {
+  videoId: string;
+  title: string;
+  description: string;
+  views: number;
+  likes: number;
+  dislikes: number;
+  isPublished: boolean;
+  isPublishing: boolean;
+  isLive: boolean;
+  isStreaming: boolean;
+  isStreamed: boolean;
+  comments: number;
+  creationTimestamp: number;
+  isHlsAvailable: boolean;
+  isMp4Available: boolean;
+  isWebmAvailable: boolean;
+  isOgvAvailable: boolean;
+  adaptiveSources: VideoSource[];
+  progressiveSources: VideoSource[];
+  sourcesFormatsAndResolutions: SourcesFormatsAndResolutions;
+}
+
+/**
+ * Video permissions
+ */
+export interface VideoPermissions {
+  isCommentsEnabled: boolean;
+  isLikesEnabled: boolean;
+  isDislikesEnabled: boolean;
+  isReportsEnabled: boolean;
+  isLiveChatEnabled: boolean;
+}
+
+/**
+ * Video data with formatted fields for API responses
+ */
+export interface VideoData {
+  videoId: string;
+  title: string;
+  description: string;
+  tags: string;
+  views: number;
+  isIndexed: boolean;
+  isPublished: boolean;
+  isLive: boolean;
+  isStreaming: boolean;
+  isFinalized: boolean;
+  isStreamRecordedRemotely: boolean;
+  timestamp: number;
+  videoAliasUrl: string;
+  outputs: Record<string, string[]>;
+  meta: Record<string, unknown>;
+}
+
+/**
  * Video service interface
  */
 export interface IVideoService {
@@ -112,6 +188,9 @@ export interface IVideoService {
   /** Increment view count */
   incrementViews(videoId: string): Promise<void>;
 
+  /** Increment view count with debouncing for batched DB writes */
+  incrementViewsDebounced(videoId: string): Promise<{ views: number }>;
+
   /** Increment like count */
   incrementLikes(videoId: string): Promise<void>;
 
@@ -132,6 +211,12 @@ export interface IVideoService {
 
   /** Mark video index as outdated */
   setIndexOutdated(videoId: string): Promise<void>;
+
+  /** Set video length (seconds and timestamp) */
+  setVideoLength(videoId: string, lengthSeconds: number, lengthTimestamp: string): Promise<void>;
+
+  /** Add a resolution to video outputs */
+  addOutputResolution(videoId: string, format: string, resolution: string): Promise<void>;
 
   /** Mark specific format/resolution as published */
   markFormatResolutionPublished(videoId: string, format: string, resolution: string): Promise<void>;
@@ -155,6 +240,94 @@ export interface IVideoService {
 
   /** Unpublish a specific format/resolution */
   unpublishFormatResolution(videoId: string, format: string, resolution: string): Promise<void>;
+
+  /** Get video watch data for media player */
+  getWatchData(videoId: string): Promise<VideoWatchData | null>;
+
+  /** Get video permissions */
+  getPermissions(videoId: string): Promise<VideoPermissions | null>;
+
+  /** Get video data with formatted fields */
+  getVideoData(videoId: string): Promise<VideoData | null>;
+
+  /** Get all videos data with formatted fields */
+  getAllVideosData(): Promise<VideoData[]>;
+
+  /** Get recommended videos (published or live) */
+  getRecommendedVideos(): Promise<DrizzleVideo[]>;
+
+  /** Get unique tags from published/live videos */
+  getPublishedTags(): Promise<string[]>;
+
+  /** Get unique tags from all videos */
+  getAllTags(): Promise<string[]>;
+
+  /** Get video alias URL for indexed videos */
+  getAliasUrl(videoId: string): Promise<string | null>;
+
+  /** Batch delete videos with safety filters */
+  deleteVideos(
+    videoIds: string[],
+    force?: boolean
+  ): Promise<{ deletedVideoIds: string[]; nonDeletedVideoIds: string[] }>;
+
+  /** Batch finalize videos with safety filters */
+  finalizeVideos(
+    videoIds: string[],
+    force?: boolean
+  ): Promise<{ finalizedVideoIds: string[]; nonFinalizedVideoIds: string[] }>;
+
+  /** Write HLS master manifest for adaptive streaming */
+  writeMasterManifest(
+    videoId: string,
+    manifestType: 'video' | 'audio',
+    content: string
+  ): Promise<void>;
+
+  /** Mark video index as outdated with Cloudflare cache purge */
+  markIndexOutdated(videoId: string): Promise<void>;
+
+  /** Purge Cloudflare cache for video images */
+  purgeVideoImageCache(videoId: string): Promise<void>;
+
+  /** Add video to MoarTube index */
+  addToIndex(videoId: string, options: AddToIndexOptions): Promise<AddToIndexResult>;
+
+  /** Remove video from MoarTube index */
+  removeFromIndex(videoId: string, cloudflareTurnstileToken: string): Promise<void>;
+
+  /** Get node icon as base64 encoded PNG */
+  getNodeIconPngBase64(): string;
+
+  /** Get node avatar as base64 encoded PNG */
+  getNodeAvatarPngBase64(): string;
+
+  /** Get video preview image as base64 encoded JPG */
+  getVideoPreviewJpgBase64(videoId: string): Promise<string>;
+}
+
+/**
+ * Options for adding a video to the MoarTube index
+ */
+export interface AddToIndexOptions {
+  /** Whether the video contains adult content */
+  containsAdultContent: boolean;
+  /** User agreed to terms of service */
+  termsOfServiceAgreed: boolean;
+  /** Cloudflare Turnstile token for validation */
+  cloudflareTurnstileToken: string;
+}
+
+/**
+ * Result of adding a video to the MoarTube index
+ */
+export interface AddToIndexResult {
+  /** Whether the operation succeeded */
+  success: boolean;
+  /** Error message if failed */
+  message?: string | undefined;
+  /** Specific error code for 413 (request too large) */
+  isRequestTooLarge?: boolean | undefined;
 }
 
 // ============================================================================
@@ -351,8 +524,11 @@ export interface IIndexerService {
   /** Add a video to the index */
   addVideoToIndex(videoId: string): void;
 
+  /** Submit full video data to index */
+  submitVideoToIndex(data: VideoIndexData): Promise<IndexerSubmitResult>;
+
   /** Remove a video from the index */
-  removeVideoFromIndex(videoId: string): Promise<void>;
+  removeVideoFromIndex(data: RemoveFromIndexData): Promise<void>;
 
   /** Update node personalization (name) */
   updateNodeName(name: string): Promise<void>;
@@ -375,6 +551,50 @@ export interface IIndexerService {
 
   /** Check indexer health/connectivity */
   checkHealth(): Promise<boolean>;
+}
+
+/**
+ * Video index data for submission to indexer
+ */
+export interface VideoIndexData {
+  videoId: string;
+  nodeId: string;
+  nodeName: string;
+  nodeAbout: string;
+  publicNodeProtocol: string;
+  publicNodeAddress: string;
+  publicNodePort: string | number;
+  title: string;
+  tags: string;
+  views: number;
+  isLive: boolean;
+  isStreaming: boolean;
+  lengthSeconds: number;
+  creationTimestamp: number;
+  containsAdultContent: boolean;
+  nodeIconPngBase64: string;
+  nodeAvatarPngBase64: string;
+  videoPreviewJpgBase64: string;
+  moarTubeTokenProof: string;
+  cloudflareTurnstileToken: string;
+}
+
+/**
+ * Data for removing a video from the index
+ */
+export interface RemoveFromIndexData {
+  videoId: string;
+  moarTubeTokenProof: string;
+  cloudflareTurnstileToken: string;
+}
+
+/**
+ * Result from indexer submission
+ */
+export interface IndexerSubmitResult {
+  isError: boolean;
+  message?: string;
+  statusCode?: number;
 }
 
 // ============================================================================
@@ -413,13 +633,13 @@ export interface ICloudflareService {
   purgeProgressiveVideos(videoId: string): Promise<void>;
 
   /** Purge video preview images */
-  purgeVideoPreviewImages(videoId: string): Promise<void>;
+  purgeVideoPreviewImages(videoIds: string[]): Promise<void>;
 
   /** Purge video poster images */
-  purgePosterImages(videoId: string): Promise<void>;
+  purgeVideoPosterImages(videoIds: string[]): Promise<void>;
 
   /** Purge video thumbnail images */
-  purgeThumbnailImages(videoId: string): Promise<void>;
+  purgeVideoThumbnailImages(videoIds: string[]): Promise<void>;
 
   /** Purge entire video cache */
   purgeVideo(videoId: string): Promise<void>;
