@@ -1311,10 +1311,33 @@ export async function writeJsonFile<T>(path: string, data: T): Promise<void>;
 
 ---
 
-## Phase 8: Testing & Documentation (Week 12)
+## Phase 8: Cleanup & Optimization (Week 12)
+**Goal:** Remove legacy code, optimize performance, final polish
+
+### 8.1 Legacy Code Removal
+- [ ] Remove JavaScript source files (keep only TypeScript)
+- [ ] Remove legacy bridge adapters
+- [ ] Remove deprecated functions
+- [ ] Clean up unused dependencies
+
+### 8.2 Performance Optimizations
+- [ ] Add connection pooling for PostgreSQL
+- [ ] Implement response caching where appropriate
+- [ ] Optimize database queries
+- [ ] Add compression middleware
+- [ ] Review and optimize memory usage
+
+### 8.3 Deliverables
+- Zero JavaScript in src/
+- All dependencies up to date
+- Performance benchmarks documented
+
+---
+
+## Phase 9: Testing & Documentation (Week 13)
 **Goal:** Comprehensive test coverage and documentation
 
-### 8.1 Testing Strategy
+### 9.1 Testing Strategy
 ```
 tests/
 ├── unit/
@@ -1329,7 +1352,7 @@ tests/
     └── flows/
 ```
 
-### 8.2 Test Coverage Targets
+### 9.2 Test Coverage Targets
 | Layer | Target Coverage |
 |-------|-----------------|
 | Services | 90% |
@@ -1338,7 +1361,7 @@ tests/
 | Utilities | 95% |
 | Overall | 85% |
 
-### 8.3 Test Examples
+### 9.3 Test Examples
 ```typescript
 // tests/unit/services/video.service.test.ts
 describe('VideoService', () => {
@@ -1372,14 +1395,14 @@ describe('VideoService', () => {
 });
 ```
 
-### 8.4 Documentation
+### 9.4 Documentation
 - [ ] API documentation with OpenAPI/Swagger
 - [ ] Architecture decision records (ADRs)
 - [ ] Developer setup guide
 - [ ] Contribution guidelines
 - [ ] Migration guide from JavaScript version
 
-### 8.5 Deliverables
+### 9.5 Deliverables
 - 85%+ test coverage
 - All tests passing
 - API documentation generated
@@ -1388,23 +1411,10 @@ describe('VideoService', () => {
 
 ---
 
-## Phase 9: Cleanup & Optimization (Week 13)
-**Goal:** Remove legacy code, optimize performance, final polish
+## Phase 10: Security, CI/CD & Release (Week 14)
+**Goal:** Security hardening, deployment infrastructure, and final release preparation
 
-### 9.1 Legacy Code Removal
-- [ ] Remove JavaScript source files (keep only TypeScript)
-- [ ] Remove legacy bridge adapters
-- [ ] Remove deprecated functions
-- [ ] Clean up unused dependencies
-
-### 9.2 Performance Optimizations
-- [ ] Add connection pooling for PostgreSQL
-- [ ] Implement response caching where appropriate
-- [ ] Optimize database queries
-- [ ] Add compression middleware
-- [ ] Review and optimize memory usage
-
-### 9.3 Security Hardening
+### 10.1 Security Hardening
 - [ ] Audit all input validation (Zod schemas)
 - [ ] Review authentication flows (@fastify/jwt)
 - [ ] Configure rate limiting (@fastify/rate-limit)
@@ -1413,7 +1423,7 @@ describe('VideoService', () => {
 - [ ] Response compression (@fastify/compress)
 - [ ] Add request logging (pino)
 
-### 9.4 Docker Multi-Stage Build
+### 10.2 Docker Multi-Stage Build
 ```dockerfile
 # Dockerfile
 # Build stage
@@ -1467,7 +1477,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 CMD ["node", "dist/index.js"]
 ```
 
-### 9.5 CI/CD Pipeline (GitHub Actions)
+### 10.3 CI/CD Pipeline (GitHub Actions)
 ```yaml
 # .github/workflows/ci.yml
 name: CI
@@ -1541,7 +1551,7 @@ jobs:
           cache-to: type=gha,mode=max
 ```
 
-### 9.6 Final Package.json
+### 10.4 Final Package.json
 ```json
 {
   "name": "@moartube/moartube-node",
@@ -1561,11 +1571,10 @@ jobs:
 }
 ```
 
-### 9.7 Deliverables
-- Zero JavaScript in src/
-- All dependencies up to date
-- Performance benchmarks documented
+### 10.5 Deliverables
 - Security audit completed
+- Docker image optimized and tested
+- CI/CD pipeline functional
 - Ready for v2.0.0 release
 
 ---
@@ -1582,10 +1591,11 @@ jobs:
 | Phase 5 | Week 8-9 | Controllers & routes |
 | Phase 6 | Week 10 | WebSocket & cluster |
 | Phase 7 | Week 11 | Utilities |
-| Phase 8 | Week 12 | Testing & docs |
-| Phase 9 | Week 13 | Cleanup & release |
+| Phase 8 | Week 12 | Cleanup & optimization |
+| Phase 9 | Week 13 | Testing & docs |
+| Phase 10 | Week 14 | Security, CI/CD & release |
 
-**Total Estimated Duration:** 13 weeks
+**Total Estimated Duration:** 14 weeks
 
 ---
 
