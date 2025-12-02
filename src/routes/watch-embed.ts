@@ -6,14 +6,18 @@
 import type { FastifyInstance } from 'fastify';
 import { WatchEmbedController } from '../controllers/watch-embed';
 import type { Container } from '../core/container';
+import { watchEmbedVideoIdParamsSchema } from '../validators';
 
 /**
  * Register watch embed routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function watchEmbedRoutes(fastify: FastifyInstance, container: Container): void {
+export function watchEmbedRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const videoRepository = container.resolve('videoRepository');
   const linkRepository = container.resolve('linkRepository');
   const monetizationRepository = container.resolve('monetizationRepository');
@@ -29,6 +33,9 @@ export function watchEmbedRoutes(fastify: FastifyInstance, container: Container)
     '/video/:videoId',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: watchEmbedVideoIdParamsSchema,
+      },
     },
     controller.getEmbedVideo.bind(controller)
   );
@@ -38,6 +45,9 @@ export function watchEmbedRoutes(fastify: FastifyInstance, container: Container)
     '/chat/:videoId',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: watchEmbedVideoIdParamsSchema,
+      },
     },
     controller.getEmbedChat.bind(controller)
   );

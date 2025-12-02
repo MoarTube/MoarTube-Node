@@ -7,14 +7,25 @@ import type { FastifyInstance } from 'fastify';
 
 import type { Container } from '../core/container';
 import { StreamsController } from '../controllers';
+import {
+  streamVideoIdParamsSchema,
+  streamSegmentParamsSchema,
+  streamStartBodySchema,
+  chatSettingsBodySchema,
+  removeSegmentBodySchema,
+  chatHistoryQuerySchema,
+} from '../validators';
 
 /**
  * Register streams routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function streamsRoutes(fastify: FastifyInstance, container: Container): void {
+export function streamsRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const videoRepository = container.resolve('videoRepository');
   const liveChatMessageRepository = container.resolve('liveChatMessageRepository');
   const streamService = container.resolve('streamService');
@@ -34,6 +45,9 @@ export function streamsRoutes(fastify: FastifyInstance, container: Container): v
     '/start',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: streamStartBodySchema,
+      },
     },
     controller.startStream.bind(controller)
   );
@@ -43,6 +57,9 @@ export function streamsRoutes(fastify: FastifyInstance, container: Container): v
     '/:videoId/stop',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: streamVideoIdParamsSchema,
+      },
     },
     controller.stopStream.bind(controller)
   );
@@ -56,6 +73,10 @@ export function streamsRoutes(fastify: FastifyInstance, container: Container): v
     '/:videoId/adaptive/:format/:resolution/segments/remove',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: streamSegmentParamsSchema,
+        body: removeSegmentBodySchema,
+      },
     },
     controller.removeSegment.bind(controller)
   );
@@ -69,6 +90,9 @@ export function streamsRoutes(fastify: FastifyInstance, container: Container): v
     '/:videoId/bandwidth',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: streamVideoIdParamsSchema,
+      },
     },
     controller.getBandwidth.bind(controller)
   );
@@ -82,6 +106,10 @@ export function streamsRoutes(fastify: FastifyInstance, container: Container): v
     '/:videoId/chat/settings',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: streamVideoIdParamsSchema,
+        body: chatSettingsBodySchema,
+      },
     },
     controller.updateChatSettings.bind(controller)
   );
@@ -91,6 +119,10 @@ export function streamsRoutes(fastify: FastifyInstance, container: Container): v
     '/:videoId/chat/history',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: streamVideoIdParamsSchema,
+        querystring: chatHistoryQuerySchema,
+      },
     },
     controller.getChatHistory.bind(controller)
   );

@@ -7,14 +7,22 @@ import type { FastifyInstance } from 'fastify';
 
 import { CommentsController } from '../controllers/comments';
 import type { Container } from '../core/container';
+import {
+  commentIdParamsSchema,
+  commentSearchQuerySchema,
+  commentReportBodySchema,
+} from '../validators';
 
 /**
  * Register comments routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function commentsRoutes(fastify: FastifyInstance, container: Container): void {
+export function commentsRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const commentRepository = container.resolve('commentRepository');
   const commentReportRepository = container.resolve('commentReportRepository');
   const videoRepository = container.resolve('videoRepository');
@@ -32,6 +40,9 @@ export function commentsRoutes(fastify: FastifyInstance, container: Container): 
     '/search',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        querystring: commentSearchQuerySchema,
+      },
     },
     controller.search.bind(controller)
   );
@@ -41,6 +52,10 @@ export function commentsRoutes(fastify: FastifyInstance, container: Container): 
     '/:commentId/report',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: commentIdParamsSchema,
+        body: commentReportBodySchema,
+      },
     },
     controller.reportComment.bind(controller)
   );

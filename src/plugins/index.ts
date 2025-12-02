@@ -7,6 +7,11 @@
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import fastifyMultipart from '@fastify/multipart';
+import {
+  serializerCompiler,
+  validatorCompiler,
+  type ZodTypeProvider,
+} from 'fastify-type-provider-zod';
 
 import { createAppContainer } from '../core/container';
 import { getDatabase } from '../database';
@@ -19,19 +24,18 @@ export { default as errorHandlerPlugin } from './error-handler';
 // Authentication
 export { default as authenticationPlugin } from './authentication';
 
-// Validation
-export {
-  default as validationPlugin,
-  validateBody,
-  validateQuery,
-  validateParams,
-  validate,
-} from './validation';
+// Re-export type provider for route typing
+export type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
 /**
- * Create and configure a Fastify application instance
+ * Fastify instance with Zod type provider
+ */
+export type FastifyZodInstance = FastifyInstance;
+
+/**
+ * Create and configure a Fastify application instance with Zod validation
  *
- * @returns Configured Fastify instance
+ * @returns Configured Fastify instance with Zod type provider
  */
 export async function createFastifyApp(): Promise<FastifyInstance> {
   const config = getConfig();
@@ -53,6 +57,10 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
     trustProxy: true,
   });
 
+  // Set up Zod validation and serialization
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+
   // Register multipart support (for file uploads)
   await app.register(fastifyMultipart, {
     limits: {
@@ -64,8 +72,8 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   const db = getDatabase();
   const container = createAppContainer(db);
 
-  // Register routes
-  await registerRoutes(app, container);
+  // Register routes with Zod type provider
+  await registerRoutes(app.withTypeProvider<ZodTypeProvider>(), container);
 
   // Register error handler
   const { default: errorHandlerPlugin } = await import('./error-handler');

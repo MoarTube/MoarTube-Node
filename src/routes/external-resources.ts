@@ -5,15 +5,18 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { ExternalResourcesController } from '../controllers/external-resources';
+import { filenameParamsSchema, imageNameParamsSchema } from '../validators';
 
 /**
  * Register external resources routes
  *
  * All routes are public (no authentication required).
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  */
-export function externalResourcesRoutes(fastify: FastifyInstance): void {
+export function externalResourcesRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>
+): void {
   const controller = new ExternalResourcesController();
 
   // JavaScript files
@@ -21,6 +24,9 @@ export function externalResourcesRoutes(fastify: FastifyInstance): void {
     '/javascript/:filename',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: filenameParamsSchema,
+      },
     },
     controller.getJavaScript.bind(controller)
   );
@@ -30,6 +36,9 @@ export function externalResourcesRoutes(fastify: FastifyInstance): void {
     '/css/:filename',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: filenameParamsSchema,
+      },
     },
     controller.getCss.bind(controller)
   );
@@ -39,6 +48,9 @@ export function externalResourcesRoutes(fastify: FastifyInstance): void {
     '/fonts/:filename',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: filenameParamsSchema,
+      },
     },
     controller.getFonts.bind(controller)
   );
@@ -48,6 +60,9 @@ export function externalResourcesRoutes(fastify: FastifyInstance): void {
     '/images/:imageName',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: imageNameParamsSchema,
+      },
     },
     controller.getImage.bind(controller)
   );

@@ -7,14 +7,18 @@ import type { FastifyInstance } from 'fastify';
 
 import { ReportsVideosController } from '../controllers/reports-videos';
 import type { Container } from '../core/container';
+import { reportIdParamsSchema, reportsQuerySchema, archiveReportBodySchema } from '../validators';
 
 /**
  * Register reports videos routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function reportsVideosRoutes(fastify: FastifyInstance, container: Container): void {
+export function reportsVideosRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const videoReportRepository = container.resolve('videoReportRepository');
   const videoReportsArchiveRepository = container.resolve('videoReportsArchiveRepository');
 
@@ -28,6 +32,9 @@ export function reportsVideosRoutes(fastify: FastifyInstance, container: Contain
     '/',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        querystring: reportsQuerySchema,
+      },
     },
     controller.getAllReports.bind(controller)
   );
@@ -37,6 +44,9 @@ export function reportsVideosRoutes(fastify: FastifyInstance, container: Contain
     '/archive',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: archiveReportBodySchema,
+      },
     },
     controller.archiveReport.bind(controller)
   );
@@ -46,6 +56,9 @@ export function reportsVideosRoutes(fastify: FastifyInstance, container: Contain
     '/:reportId/delete',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: reportIdParamsSchema,
+      },
     },
     controller.deleteReport.bind(controller)
   );

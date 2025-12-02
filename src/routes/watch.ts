@@ -7,14 +7,18 @@ import type { FastifyInstance } from 'fastify';
 
 import { WatchController } from '../controllers/watch';
 import type { Container } from '../core/container';
+import { watchQuerySchema } from '../validators';
 
 /**
  * Register watch routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function watchRoutes(fastify: FastifyInstance, container: Container): void {
+export function watchRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const videoRepository = container.resolve('videoRepository');
   const commentRepository = container.resolve('commentRepository');
   const linkRepository = container.resolve('linkRepository');
@@ -32,6 +36,9 @@ export function watchRoutes(fastify: FastifyInstance, container: Container): voi
     '/',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        querystring: watchQuerySchema,
+      },
     },
     controller.getWatchPage.bind(controller)
   );

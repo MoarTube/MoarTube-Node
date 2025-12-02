@@ -69,7 +69,7 @@ export type VideoCommentIdParams = z.infer<typeof videoCommentIdParamsSchema>;
  */
 export const videoAdaptiveManifestParamsSchema = z.object({
   videoId: videoIdSchema,
-  type: manifestTypeSchema,
+  manifestType: manifestTypeSchema,
 });
 
 export type VideoAdaptiveManifestParams = z.infer<typeof videoAdaptiveManifestParamsSchema>;

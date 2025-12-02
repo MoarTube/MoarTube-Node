@@ -6,13 +6,40 @@
 import type { FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 import { VideosController } from '../controllers';
+import {
+  videoIdParamsSchema,
+  videoFormatResolutionParamsSchema,
+  videoCommentIdParamsSchema,
+  videoAdaptiveManifestParamsSchema,
+  videoSearchQuerySchema,
+  videoCommentsQuerySchema,
+  videoCommentDeleteQuerySchema,
+  videoUploadQuerySchema,
+  videoImportBodySchema,
+  videoIdBodySchema,
+  videoDataBodySchema,
+  videoUnpublishBodySchema,
+  videoSourceFileExtensionBodySchema,
+  videoIndexAddBodySchema,
+  videoIndexRemoveBodySchema,
+  videoLengthsBodySchema,
+  videoDeleteBodySchema,
+  videoFinalizeBodySchema,
+  videoCommentBodySchema,
+  videoLikeDislikeBodySchema,
+  videoReportBodySchema,
+  videoPermissionsBodySchema,
+  videoMasterManifestBodySchema,
+} from '../validators';
 
 /**
  * Register videos routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  */
-export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
+export async function videosRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>
+): Promise<void> {
   // Register multipart plugin for file uploads (no limits - user decides what to upload)
   await fastify.register(multipart);
 
@@ -27,6 +54,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/search',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        querystring: videoSearchQuerySchema,
+      },
     },
     controller.searchVideos.bind(controller)
   );
@@ -63,6 +93,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/comments',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        querystring: videoCommentsQuerySchema,
+      },
     },
     controller.getComments.bind(controller)
   );
@@ -72,6 +106,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/comments/:commentId',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoCommentIdParamsSchema,
+      },
     },
     controller.getComment.bind(controller)
   );
@@ -81,6 +118,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/alias',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.getAlias.bind(controller)
   );
@@ -90,6 +130,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/watch',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.getWatchData.bind(controller)
   );
@@ -99,6 +142,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/permissions',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.getVideoPermissions.bind(controller)
   );
@@ -108,6 +154,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/data',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.getVideoData.bind(controller)
   );
@@ -117,6 +166,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/data/all',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.getAllVideosData.bind(controller)
   );
@@ -126,6 +178,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/views/increment',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.incrementViews.bind(controller)
   );
@@ -135,6 +190,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/like',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        body: videoLikeDislikeBodySchema,
+      },
     },
     controller.likeVideo.bind(controller)
   );
@@ -144,6 +203,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/dislike',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        body: videoLikeDislikeBodySchema,
+      },
     },
     controller.dislikeVideo.bind(controller)
   );
@@ -153,6 +216,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/comments/comment',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        body: videoCommentBodySchema,
+      },
     },
     controller.addComment.bind(controller)
   );
@@ -162,6 +229,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/report',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        body: videoReportBodySchema,
+      },
     },
     controller.reportVideo.bind(controller)
   );
@@ -175,6 +246,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/delete',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: videoDeleteBodySchema,
+      },
     },
     controller.batchDelete.bind(controller)
   );
@@ -184,6 +258,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/finalize',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: videoFinalizeBodySchema,
+      },
     },
     controller.batchFinalize.bind(controller)
   );
@@ -193,6 +270,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/import',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: videoImportBodySchema,
+      },
     },
     controller.importVideo.bind(controller)
   );
@@ -202,6 +282,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/imported',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: videoIdBodySchema,
+      },
     },
     controller.videoImportedFromBody.bind(controller)
   );
@@ -211,6 +294,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/publishing',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: videoIdBodySchema,
+      },
     },
     controller.startPublishingFromBody.bind(controller)
   );
@@ -220,6 +306,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/published',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: videoIdBodySchema,
+      },
     },
     controller.videoPublishedFromBody.bind(controller)
   );
@@ -229,6 +318,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/error',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: videoIdBodySchema,
+      },
     },
     controller.setErrorFromBody.bind(controller)
   );
@@ -238,6 +330,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/data',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        body: videoDataBodySchema,
+      },
     },
     controller.updateVideo.bind(controller)
   );
@@ -247,6 +343,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/lengths',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        body: videoLengthsBodySchema,
+      },
     },
     controller.setVideoLengths.bind(controller)
   );
@@ -256,6 +356,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/index/outdated',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.markIndexOutdated.bind(controller)
   );
@@ -265,6 +368,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/adaptive/m3u8/:manifestType/manifests/masterManifest',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoAdaptiveManifestParamsSchema,
+        body: videoMasterManifestBodySchema,
+      },
     },
     controller.writeMasterManifest.bind(controller)
   );
@@ -274,6 +381,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/comments/:commentId/delete',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoCommentIdParamsSchema,
+        querystring: videoCommentDeleteQuerySchema,
+      },
     },
     controller.deleteComment.bind(controller)
   );
@@ -283,6 +394,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/permissions',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        body: videoPermissionsBodySchema,
+      },
     },
     controller.updateVideoPermission.bind(controller)
   );
@@ -292,6 +407,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/upload',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        querystring: videoUploadQuerySchema,
+      },
     },
     controller.uploadVideo.bind(controller)
   );
@@ -301,6 +420,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/stream',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.uploadStream.bind(controller)
   );
@@ -310,6 +432,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/images/thumbnail',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.uploadThumbnail.bind(controller)
   );
@@ -319,6 +444,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/images/preview',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.uploadPreview.bind(controller)
   );
@@ -328,6 +456,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/images/poster',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.uploadPoster.bind(controller)
   );
@@ -337,6 +468,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/publishing/stop',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.stopPublishing.bind(controller)
   );
@@ -346,6 +480,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/importing/stop',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.stopImporting.bind(controller)
   );
@@ -355,6 +492,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/sourceFileExtension',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        body: videoSourceFileExtensionBodySchema,
+      },
     },
     controller.setSourceFileExtension.bind(controller)
   );
@@ -364,6 +505,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/sourceFileExtension',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.getSourceFileExtension.bind(controller)
   );
@@ -373,6 +517,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/publishes',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+      },
     },
     controller.getPublishes.bind(controller)
   );
@@ -382,6 +529,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/unpublish',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        body: videoUnpublishBodySchema,
+      },
     },
     controller.unpublishFormatResolution.bind(controller)
   );
@@ -391,6 +542,9 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/:format/:resolution/published',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoFormatResolutionParamsSchema,
+      },
     },
     controller.formatResolutionPublished.bind(controller)
   );
@@ -400,6 +554,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/index/add',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        body: videoIndexAddBodySchema,
+      },
     },
     controller.addToIndex.bind(controller)
   );
@@ -409,6 +567,10 @@ export async function videosRoutes(fastify: FastifyInstance): Promise<void> {
     '/:videoId/index/remove',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: videoIdParamsSchema,
+        body: videoIndexRemoveBodySchema,
+      },
     },
     controller.removeFromIndex.bind(controller)
   );

@@ -5,17 +5,19 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { AccountController } from '../controllers';
-import { validateBody } from '../plugins';
 import { signInBodySchema } from '../validators';
 import type { Container } from '../core/container';
 
 /**
  * Register account routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function accountRoutes(fastify: FastifyInstance, container: Container): void {
+export function accountRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const authService = container.resolve('authService');
   const controller = new AccountController(authService);
 
@@ -24,7 +26,9 @@ export function accountRoutes(fastify: FastifyInstance, container: Container): v
     '/signin',
     {
       preHandler: fastify.optionalAuthenticate,
-      preValidation: validateBody(signInBodySchema),
+      schema: {
+        body: signInBodySchema,
+      },
     },
     controller.signIn.bind(controller)
   );

@@ -7,14 +7,18 @@ import type { FastifyInstance } from 'fastify';
 
 import { NodeController } from '../controllers/node';
 import type { Container } from '../core/container';
+import { nodeSearchQuerySchema, contentCheckedBodySchema } from '../validators';
 
 /**
  * Register node routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function nodeRoutes(fastify: FastifyInstance, container: Container): void {
+export function nodeRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const videoRepository = container.resolve('videoRepository');
   const commentRepository = container.resolve('commentRepository');
   const videoReportRepository = container.resolve('videoReportRepository');
@@ -45,6 +49,9 @@ export function nodeRoutes(fastify: FastifyInstance, container: Container): void
     '/search',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        querystring: nodeSearchQuerySchema,
+      },
     },
     controller.search.bind(controller)
   );
@@ -63,6 +70,9 @@ export function nodeRoutes(fastify: FastifyInstance, container: Container): void
     '/contentChecked',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: contentCheckedBodySchema,
+      },
     },
     controller.contentChecked.bind(controller)
   );

@@ -10,10 +10,13 @@ import type { Container } from '../core/container';
 /**
  * Register status routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function statusRoutes(fastify: FastifyInstance, container: Container): void {
+export function statusRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const controller = new StatusController(container);
 
   // Public endpoints (no authentication required)

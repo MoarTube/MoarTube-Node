@@ -6,16 +6,25 @@
 import type { FastifyInstance } from 'fastify';
 import { ExternalVideosController } from '../controllers/external-videos';
 import type { Container } from '../core/container';
+import {
+  externalVideoIdParamsSchema,
+  adaptiveManifestParamsSchema,
+  adaptiveSegmentParamsSchema,
+  progressiveVideoParamsSchema,
+} from '../validators';
 
 /**
  * Register external videos routes
  *
  * Most routes are public (optional auth) for video serving.
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function externalVideosRoutes(fastify: FastifyInstance, container: Container): void {
+export function externalVideosRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const videoRepository = container.resolve('videoRepository');
   const controller = new ExternalVideosController(videoRepository);
 
@@ -33,6 +42,9 @@ export function externalVideosRoutes(fastify: FastifyInstance, container: Contai
     '/:videoId/images/thumbnail.jpg',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: externalVideoIdParamsSchema,
+      },
     },
     controller.getThumbnail.bind(controller)
   );
@@ -42,6 +54,9 @@ export function externalVideosRoutes(fastify: FastifyInstance, container: Contai
     '/:videoId/images/preview.jpg',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: externalVideoIdParamsSchema,
+      },
     },
     controller.getPreview.bind(controller)
   );
@@ -51,6 +66,9 @@ export function externalVideosRoutes(fastify: FastifyInstance, container: Contai
     '/:videoId/images/poster.jpg',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: externalVideoIdParamsSchema,
+      },
     },
     controller.getPoster.bind(controller)
   );
@@ -60,6 +78,9 @@ export function externalVideosRoutes(fastify: FastifyInstance, container: Contai
     '/:videoId/adaptive/:format/:type/manifests/:manifestName',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: adaptiveManifestParamsSchema,
+      },
     },
     controller.getAdaptiveManifest.bind(controller)
   );
@@ -69,6 +90,9 @@ export function externalVideosRoutes(fastify: FastifyInstance, container: Contai
     '/:videoId/adaptive/:format/:resolution/segments/:segmentName',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: adaptiveSegmentParamsSchema,
+      },
     },
     controller.getAdaptiveSegment.bind(controller)
   );
@@ -78,6 +102,9 @@ export function externalVideosRoutes(fastify: FastifyInstance, container: Contai
     '/:videoId/progressive/:format/:progressiveFilename',
     {
       preHandler: fastify.optionalAuthenticate,
+      schema: {
+        params: progressiveVideoParamsSchema,
+      },
     },
     controller.getProgressive.bind(controller)
   );

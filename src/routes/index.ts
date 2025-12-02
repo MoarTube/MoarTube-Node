@@ -4,7 +4,13 @@
  * Barrel export and route registration for Fastify.
  */
 import type { FastifyInstance } from 'fastify';
+import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { Container } from '../core/container';
+
+/**
+ * Fastify instance with Zod type provider
+ */
+export type FastifyZod = FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>;
 
 // Route definitions
 export { statusRoutes, healthRoutes } from './status';
@@ -51,7 +57,7 @@ import { streamsRoutes } from './streams';
 /**
  * Register all application routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container for dependency injection
  */
 export async function registerRoutes(
@@ -66,8 +72,8 @@ export async function registerRoutes(
 
   // Status routes (/status/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      statusRoutes(instance, container);
+    (instance, _opts, done) => {
+      statusRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/status' }
@@ -75,8 +81,8 @@ export async function registerRoutes(
 
   // Account routes (/account/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      accountRoutes(instance, container);
+    (instance, _opts, done) => {
+      accountRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/account' }
@@ -84,16 +90,16 @@ export async function registerRoutes(
 
   // Videos routes (/videos/*)
   await fastify.register(
-    async (instance: FastifyInstance) => {
-      await videosRoutes(instance);
+    async (instance) => {
+      await videosRoutes(instance.withTypeProvider<ZodTypeProvider>());
     },
     { prefix: '/videos' }
   );
 
   // Links routes (/links/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      linksRoutes(instance, container);
+    (instance, _opts, done) => {
+      linksRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/links' }
@@ -101,8 +107,8 @@ export async function registerRoutes(
 
   // Monetization routes (/monetization/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      monetizationRoutes(instance, container);
+    (instance, _opts, done) => {
+      monetizationRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/monetization' }
@@ -110,8 +116,8 @@ export async function registerRoutes(
 
   // Watch embed routes (/watch/embed/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      watchEmbedRoutes(instance, container);
+    (instance, _opts, done) => {
+      watchEmbedRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/watch/embed' }
@@ -119,8 +125,8 @@ export async function registerRoutes(
 
   // External resources routes (/external/resources/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      externalResourcesRoutes(instance);
+    (instance, _opts, done) => {
+      externalResourcesRoutes(instance.withTypeProvider<ZodTypeProvider>());
       done();
     },
     { prefix: '/external/resources' }
@@ -128,8 +134,8 @@ export async function registerRoutes(
 
   // External videos routes (/external/videos/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      externalVideosRoutes(instance, container);
+    (instance, _opts, done) => {
+      externalVideosRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/external/videos' }
@@ -137,8 +143,8 @@ export async function registerRoutes(
 
   // Comments routes (/comments/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      commentsRoutes(instance, container);
+    (instance, _opts, done) => {
+      commentsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/comments' }
@@ -146,8 +152,8 @@ export async function registerRoutes(
 
   // Watch routes (/watch)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      watchRoutes(instance, container);
+    (instance, _opts, done) => {
+      watchRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/watch' }
@@ -155,8 +161,8 @@ export async function registerRoutes(
 
   // Node routes (/node/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      nodeRoutes(instance, container);
+    (instance, _opts, done) => {
+      nodeRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/node' }
@@ -164,8 +170,8 @@ export async function registerRoutes(
 
   // Reports routes (/reports/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      reportsRoutes(instance, container);
+    (instance, _opts, done) => {
+      reportsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/reports' }
@@ -173,8 +179,8 @@ export async function registerRoutes(
 
   // Reports videos routes (/reports/videos/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      reportsVideosRoutes(instance, container);
+    (instance, _opts, done) => {
+      reportsVideosRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/reports/videos' }
@@ -182,8 +188,8 @@ export async function registerRoutes(
 
   // Reports comments routes (/reports/comments/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      reportsCommentsRoutes(instance, container);
+    (instance, _opts, done) => {
+      reportsCommentsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/reports/comments' }
@@ -191,8 +197,8 @@ export async function registerRoutes(
 
   // Reports archive videos routes (/reports/archive/videos/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      reportsArchiveVideosRoutes(instance, container);
+    (instance, _opts, done) => {
+      reportsArchiveVideosRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/reports/archive/videos' }
@@ -200,8 +206,8 @@ export async function registerRoutes(
 
   // Reports archive comments routes (/reports/archive/comments/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      reportsArchiveCommentsRoutes(instance, container);
+    (instance, _opts, done) => {
+      reportsArchiveCommentsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/reports/archive/comments' }
@@ -209,16 +215,16 @@ export async function registerRoutes(
 
   // Settings routes (/settings/*)
   await fastify.register(
-    async (instance: FastifyInstance) => {
-      await settingsRoutes(instance, container);
+    async (instance) => {
+      await settingsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
     },
     { prefix: '/settings' }
   );
 
   // Streams routes (/streams/*)
   await fastify.register(
-    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
-      streamsRoutes(instance, container);
+    (instance, _opts, done) => {
+      streamsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
       done();
     },
     { prefix: '/streams' }

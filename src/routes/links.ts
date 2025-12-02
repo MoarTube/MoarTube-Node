@@ -6,14 +6,18 @@
 import type { FastifyInstance } from 'fastify';
 import { LinksController } from '../controllers/links';
 import type { Container } from '../core/container';
+import { addLinkBodySchema, deleteLinkBodySchema } from '../validators';
 
 /**
  * Register links routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function linksRoutes(fastify: FastifyInstance, container: Container): void {
+export function linksRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const linkRepository = container.resolve('linkRepository');
   const cloudflareService = container.resolve('cloudflareService');
   const controller = new LinksController(linkRepository, cloudflareService);
@@ -32,6 +36,9 @@ export function linksRoutes(fastify: FastifyInstance, container: Container): voi
     '/add',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: addLinkBodySchema,
+      },
     },
     controller.addLink.bind(controller)
   );
@@ -41,6 +48,9 @@ export function linksRoutes(fastify: FastifyInstance, container: Container): voi
     '/delete',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: deleteLinkBodySchema,
+      },
     },
     controller.deleteLink.bind(controller)
   );

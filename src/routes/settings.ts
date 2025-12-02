@@ -8,15 +8,29 @@ import multipart from '@fastify/multipart';
 
 import type { Container } from '../core/container';
 import { SettingsController } from '../controllers';
+import {
+  personalizeNodeNameBodySchema,
+  personalizeNodeAboutBodySchema,
+  personalizeNodeIdBodySchema,
+  configureSecureBodySchema,
+  updateAccountBodySchema,
+  networkInternalBodySchema,
+  networkExternalBodySchema,
+  cloudflareConfigureBodySchema,
+  cloudflareTurnstileConfigureBodySchema,
+  featureToggleBodySchema,
+  databaseConfigToggleBodySchema,
+  storageConfigToggleBodySchema,
+} from '../validators';
 
 /**
  * Register settings routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
 export async function settingsRoutes(
-  fastify: FastifyInstance,
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): Promise<void> {
   // Register multipart plugin for file uploads
@@ -101,6 +115,9 @@ export async function settingsRoutes(
     '/personalize/nodeName',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: personalizeNodeNameBodySchema,
+      },
     },
     controller.personalizeNodeName.bind(controller)
   );
@@ -110,6 +127,9 @@ export async function settingsRoutes(
     '/personalize/nodeAbout',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: personalizeNodeAboutBodySchema,
+      },
     },
     controller.personalizeNodeAbout.bind(controller)
   );
@@ -119,6 +139,9 @@ export async function settingsRoutes(
     '/personalize/nodeId',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: personalizeNodeIdBodySchema,
+      },
     },
     controller.personalizeNodeId.bind(controller)
   );
@@ -132,6 +155,9 @@ export async function settingsRoutes(
     '/secure',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: configureSecureBodySchema,
+      },
     },
     controller.configureSecure.bind(controller)
   );
@@ -141,6 +167,9 @@ export async function settingsRoutes(
     '/account',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: updateAccountBodySchema,
+      },
     },
     controller.updateAccount.bind(controller)
   );
@@ -154,6 +183,9 @@ export async function settingsRoutes(
     '/network/internal',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: networkInternalBodySchema,
+      },
     },
     controller.networkInternal.bind(controller)
   );
@@ -163,6 +195,9 @@ export async function settingsRoutes(
     '/network/external',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: networkExternalBodySchema,
+      },
     },
     controller.networkExternal.bind(controller)
   );
@@ -176,6 +211,9 @@ export async function settingsRoutes(
     '/cloudflare/configure',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: cloudflareConfigureBodySchema,
+      },
     },
     controller.cloudflareConfigure.bind(controller)
   );
@@ -194,6 +232,9 @@ export async function settingsRoutes(
     '/cloudflare/turnstile/configure',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: cloudflareTurnstileConfigureBodySchema,
+      },
     },
     controller.cloudflareTurnstileConfigure.bind(controller)
   );
@@ -216,6 +257,9 @@ export async function settingsRoutes(
     '/comments/toggle',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: featureToggleBodySchema,
+      },
     },
     controller.commentsToggle.bind(controller)
   );
@@ -225,6 +269,9 @@ export async function settingsRoutes(
     '/likes/toggle',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: featureToggleBodySchema,
+      },
     },
     controller.likesToggle.bind(controller)
   );
@@ -234,6 +281,9 @@ export async function settingsRoutes(
     '/dislikes/toggle',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: featureToggleBodySchema,
+      },
     },
     controller.dislikesToggle.bind(controller)
   );
@@ -243,6 +293,9 @@ export async function settingsRoutes(
     '/reports/toggle',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: featureToggleBodySchema,
+      },
     },
     controller.reportsToggle.bind(controller)
   );
@@ -252,6 +305,9 @@ export async function settingsRoutes(
     '/liveChat/toggle',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: featureToggleBodySchema,
+      },
     },
     controller.liveChatToggle.bind(controller)
   );
@@ -265,6 +321,9 @@ export async function settingsRoutes(
     '/databaseConfig/toggle',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: databaseConfigToggleBodySchema,
+      },
     },
     controller.databaseConfigToggle.bind(controller)
   );
@@ -274,6 +333,9 @@ export async function settingsRoutes(
     '/storageConfig/toggle',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: storageConfigToggleBodySchema,
+      },
     },
     controller.storageConfigToggle.bind(controller)
   );

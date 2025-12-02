@@ -7,14 +7,18 @@ import type { FastifyInstance } from 'fastify';
 
 import { ReportsArchiveCommentsController } from '../controllers/reports-archive-comments';
 import type { Container } from '../core/container';
+import { archiveIdParamsSchema, reportsQuerySchema } from '../validators';
 
 /**
  * Register reports archive comments routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function reportsArchiveCommentsRoutes(fastify: FastifyInstance, container: Container): void {
+export function reportsArchiveCommentsRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const commentReportsArchiveRepository = container.resolve('commentReportsArchiveRepository');
 
   const controller = new ReportsArchiveCommentsController(commentReportsArchiveRepository);
@@ -24,6 +28,9 @@ export function reportsArchiveCommentsRoutes(fastify: FastifyInstance, container
     '/',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        querystring: reportsQuerySchema,
+      },
     },
     controller.getAllArchives.bind(controller)
   );
@@ -33,6 +40,9 @@ export function reportsArchiveCommentsRoutes(fastify: FastifyInstance, container
     '/:archiveId/delete',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: archiveIdParamsSchema,
+      },
     },
     controller.deleteArchive.bind(controller)
   );

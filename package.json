@@ -59,6 +59,7 @@
     "drizzle-orm": "^0.44.2",
     "fastify": "^5.6.2",
     "fastify-plugin": "^5.1.0",
+    "fastify-type-provider-zod": "^6.1.0",
     "http-terminator": "^3.2.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.1",

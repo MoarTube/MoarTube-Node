@@ -11,10 +11,13 @@ import type { Container } from '../core/container';
 /**
  * Register reports routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function reportsRoutes(fastify: FastifyInstance, container: Container): void {
+export function reportsRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const videoReportRepository = container.resolve('videoReportRepository');
   const commentReportRepository = container.resolve('commentReportRepository');
 

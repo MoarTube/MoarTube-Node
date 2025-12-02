@@ -7,14 +7,18 @@ import type { FastifyInstance } from 'fastify';
 
 import { ReportsCommentsController } from '../controllers/reports-comments';
 import type { Container } from '../core/container';
+import { reportIdParamsSchema, reportsQuerySchema, archiveReportBodySchema } from '../validators';
 
 /**
  * Register reports comments routes
  *
- * @param fastify - Fastify instance
+ * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function reportsCommentsRoutes(fastify: FastifyInstance, container: Container): void {
+export function reportsCommentsRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
   const commentReportRepository = container.resolve('commentReportRepository');
   const commentReportsArchiveRepository = container.resolve('commentReportsArchiveRepository');
 
@@ -28,6 +32,9 @@ export function reportsCommentsRoutes(fastify: FastifyInstance, container: Conta
     '/',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        querystring: reportsQuerySchema,
+      },
     },
     controller.getAllReports.bind(controller)
   );
@@ -37,6 +44,9 @@ export function reportsCommentsRoutes(fastify: FastifyInstance, container: Conta
     '/archive',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        body: archiveReportBodySchema,
+      },
     },
     controller.archiveReport.bind(controller)
   );
@@ -46,6 +56,9 @@ export function reportsCommentsRoutes(fastify: FastifyInstance, container: Conta
     '/:reportId/delete',
     {
       preHandler: fastify.authenticate,
+      schema: {
+        params: reportIdParamsSchema,
+      },
     },
     controller.deleteReport.bind(controller)
   );
