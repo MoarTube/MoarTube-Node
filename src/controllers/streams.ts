@@ -9,7 +9,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base';
 import type { VideosRepository } from '../database/repositories/videos';
-import type { LiveChatMessageRepository } from '../database/repositories/live-chat-message';
+import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages';
 import type { StreamService } from '../services/stream';
 import { getConfig } from '../config';
 import {

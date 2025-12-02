@@ -14,7 +14,7 @@ import { ReportsVideosRepository } from '../database/repositories/reports-videos
 import { ReportsCommentsRepository } from '../database/repositories/reports-comments';
 import { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos';
 import { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments';
-import { LiveChatMessageRepository } from '../database/repositories/live-chat-message';
+import { LiveChatMessageRepository } from '../database/repositories/live-chat-messages';
 import { MonetizationRepository } from '../database/repositories/monetization';
 import { LinksRepository } from '../database/repositories/links';
 

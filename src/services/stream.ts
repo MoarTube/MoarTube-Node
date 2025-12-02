@@ -10,7 +10,7 @@ import path from 'node:path';
 import { BaseService, type ServiceOptions } from './base';
 import type { IStreamService, StreamConfig, IWebSocketService } from './interfaces';
 import type { VideosRepository } from '../database/repositories/videos';
-import type { LiveChatMessageRepository } from '../database/repositories/live-chat-message';
+import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages';
 import type { DrizzleVideo, DrizzleNewVideo } from '../database/schema';
 import { getConfig } from '../config';
 
