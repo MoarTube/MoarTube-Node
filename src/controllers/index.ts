@@ -52,3 +52,25 @@ export {
   ReportsArchiveCommentsController,
   type CommentArchiveIdParams,
 } from './reports-archive-comments.controller';
+export {
+  SettingsController,
+  type PersonalizeNodeNameBody,
+  type PersonalizeNodeAboutBody,
+  type PersonalizeNodeIdBody,
+  type AccountBody,
+  type NetworkInternalBody,
+  type NetworkExternalBody,
+  type CloudflareConfigureBody,
+  type CloudflareTurnstileConfigureBody,
+  type ToggleBooleanBody,
+  type DatabaseConfigBody,
+  type StorageConfigBody,
+} from './settings.controller';
+export {
+  StreamsController,
+  type StartStreamBody,
+  type VideoIdParams,
+  type SegmentRemoveParams,
+  type SegmentRemoveBody,
+  type ChatSettingsBody,
+} from './streams.controller';

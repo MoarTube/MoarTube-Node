@@ -24,6 +24,8 @@ export { reportsVideosRoutes } from './reports-videos.routes';
 export { reportsCommentsRoutes } from './reports-comments.routes';
 export { reportsArchiveVideosRoutes } from './reports-archive-videos.routes';
 export { reportsArchiveCommentsRoutes } from './reports-archive-comments.routes';
+export { settingsRoutes } from './settings.routes';
+export { streamsRoutes } from './streams.routes';
 
 // Import for registration
 import { statusRoutes, healthRoutes } from './status.routes';
@@ -43,6 +45,8 @@ import { reportsVideosRoutes } from './reports-videos.routes';
 import { reportsCommentsRoutes } from './reports-comments.routes';
 import { reportsArchiveVideosRoutes } from './reports-archive-videos.routes';
 import { reportsArchiveCommentsRoutes } from './reports-archive-comments.routes';
+import { settingsRoutes } from './settings.routes';
+import { streamsRoutes } from './streams.routes';
 
 /**
  * Register all application routes
@@ -202,5 +206,23 @@ export async function registerRoutes(
       done();
     },
     { prefix: '/reports/archive/comments' }
+  );
+
+  // Settings routes (/settings/*)
+  await fastify.register(
+    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
+      settingsRoutes(instance, container);
+      done();
+    },
+    { prefix: '/settings' }
+  );
+
+  // Streams routes (/streams/*)
+  await fastify.register(
+    (instance: FastifyInstance, _opts: Record<string, unknown>, done: (err?: Error) => void) => {
+      streamsRoutes(instance, container);
+      done();
+    },
+    { prefix: '/streams' }
   );
 }
