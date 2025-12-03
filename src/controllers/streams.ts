@@ -313,15 +313,15 @@ export class StreamsController extends BaseController {
 
       // Update meta with chat settings
       let meta: Record<string, unknown> = {};
-      if (video.meta !== undefined && video.meta !== null && video.meta !== '') {
+      if (video.meta !== '') {
         try {
-          meta = JSON.parse(String(video.meta)) as Record<string, unknown>;
+          meta = JSON.parse(video.meta) as Record<string, unknown>;
         } catch {
           // Invalid JSON
         }
       }
 
-      const chatSettings = (meta['chatSettings'] as Record<string, unknown>) ?? {};
+      const chatSettings = (meta['chatSettings'] as Record<string, unknown> | undefined) ?? {};
       chatSettings['isChatHistoryEnabled'] = isChatHistoryEnabled;
       chatSettings['chatHistoryLimit'] = chatHistoryLimit;
       meta['chatSettings'] = chatSettings;

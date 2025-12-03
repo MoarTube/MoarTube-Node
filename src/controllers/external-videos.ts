@@ -341,7 +341,7 @@ export class ExternalVideosController extends BaseController {
 
         void reply
           .status(206)
-          .header('Content-Range', `bytes ${start}-${end}/${fileSize}`)
+          .header('Content-Range', `bytes ${String(start)}-${String(end)}/${String(fileSize)}`)
           .header('Accept-Ranges', 'bytes')
           .header('Content-Length', chunkSize)
           .header('Content-Type', `video/${format}`)

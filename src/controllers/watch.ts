@@ -228,13 +228,13 @@ export class WatchController extends BaseController {
       isError: false as const,
       information: {
         nodeVideoCount: videoCount,
-        nodeId: String(nodeSettings.nodeId ?? ''),
-        nodeName: String(nodeSettings.nodeName ?? ''),
-        nodeAbout: String(nodeSettings.nodeAbout ?? ''),
-        publicNodeProtocol: String(nodeSettings.publicNodeProtocol ?? ''),
-        publicNodeAddress: String(nodeSettings.publicNodeAddress ?? ''),
-        publicNodePort: String(nodeSettings.publicNodePort ?? ''),
-        cloudflareTurnstileSiteKey: String(nodeSettings.cloudflareTurnstileSiteKey ?? ''),
+        nodeId: nodeSettings.nodeId,
+        nodeName: nodeSettings.nodeName,
+        nodeAbout: nodeSettings.nodeAbout,
+        publicNodeProtocol: nodeSettings.publicNodeProtocol,
+        publicNodeAddress: nodeSettings.publicNodeAddress,
+        publicNodePort: String(nodeSettings.publicNodePort),
+        cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
       },
     };
   }
@@ -281,11 +281,11 @@ export class WatchController extends BaseController {
    * Parse video format metadata
    */
   private parseVideoFormats(video: DrizzleVideo): Record<string, unknown> {
-    if (video.meta === undefined || video.meta === null || video.meta === '') {
+    if (video.meta === '') {
       return {};
     }
     try {
-      return JSON.parse(String(video.meta)) as Record<string, unknown>;
+      return JSON.parse(video.meta) as Record<string, unknown>;
     } catch {
       return {};
     }
