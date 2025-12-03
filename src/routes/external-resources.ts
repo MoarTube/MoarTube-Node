@@ -4,8 +4,8 @@
  * Routes for serving static assets (JavaScript, CSS, fonts, images).
  */
 import type { FastifyInstance } from 'fastify';
-import { ExternalResourcesController } from '../controllers/external-resources';
-import { filenameParamsSchema, imageNameParamsSchema } from '../validators';
+import { ExternalResourcesController } from '../controllers/external-resources.js';
+import { filenameParamsSchema, imageNameParamsSchema } from '../validators/index.js';
 
 /**
  * Register external resources routes

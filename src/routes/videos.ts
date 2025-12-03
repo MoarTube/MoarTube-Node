@@ -5,7 +5,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
-import { VideosController } from '../controllers';
+import { VideosController } from '../controllers/index.js';
 import {
   videoIdParamsSchema,
   videoFormatResolutionParamsSchema,
@@ -30,7 +30,7 @@ import {
   videoReportBodySchema,
   videoPermissionsBodySchema,
   videoMasterManifestBodySchema,
-} from '../validators';
+} from '../validators/index.js';
 
 /**
  * Register videos routes

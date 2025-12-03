@@ -17,7 +17,7 @@ export {
   isPostgresDb,
   type DatabaseConfig,
   type DatabaseClient,
-} from './connection';
+} from './connection.js';
 
 // Cluster wrapper
 export {
@@ -25,7 +25,7 @@ export {
   getClusterDatabaseWrapper,
   createClusterDatabaseWrapper,
   resetClusterDatabaseWrapper,
-} from './cluster-wrapper';
+} from './cluster-wrapper.js';
 
 // Write queue
 export {
@@ -34,10 +34,10 @@ export {
   resetWriteQueue,
   type DatabaseWriteJobMessage,
   type DatabaseWriteJobResultMessage,
-} from './write-queue';
+} from './write-queue.js';
 
 // Schema exports
-export * from './schema';
+export * from './schema/index.js';
 
 // Repository exports
-export * from './repositories';
+export * from './repositories/index.js';

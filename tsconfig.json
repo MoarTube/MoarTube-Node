@@ -3,8 +3,8 @@
     // Language & Environment
     "target": "ES2022",
     "lib": ["ES2022"],
-    "module": "CommonJS",
-    "moduleResolution": "node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
 
     // Strict Type Checking
     "strict": true,

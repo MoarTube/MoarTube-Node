@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { BaseService, type ServiceOptions } from './base';
+import { BaseService, type ServiceOptions } from './base.js';
 import type {
   ISettingsService,
   UpdateNodeSettingsInput,
@@ -15,9 +15,9 @@ import type {
   StorageConfigInput,
   IIndexerService,
   ICloudflareService,
-} from './interfaces';
-import { getConfig } from '../config';
-import type { DatabaseConfig, StorageConfig } from '../types';
+} from './interfaces.js';
+import { getConfig } from '../config/index.js';
+import type { DatabaseConfig, StorageConfig } from '../types/index.js';
 
 /**
  * Settings service dependencies

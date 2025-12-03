@@ -4,9 +4,9 @@
  * Routes for embedded video and chat pages.
  */
 import type { FastifyInstance } from 'fastify';
-import { WatchEmbedController } from '../controllers/watch-embed';
-import type { Container } from '../core/container';
-import { watchEmbedVideoIdParamsSchema } from '../validators';
+import { WatchEmbedController } from '../controllers/watch-embed.js';
+import type { Container } from '../core/container.js';
+import { watchEmbedVideoIdParamsSchema } from '../validators/index.js';
 
 /**
  * Register watch embed routes

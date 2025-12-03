@@ -21,9 +21,9 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-import { BaseService, type ServiceOptions } from './base';
-import type { IStorageService, StorageMode, FileMetadata } from './interfaces';
-import { getConfig } from '../config';
+import { BaseService, type ServiceOptions } from './base.js';
+import type { IStorageService, StorageMode, FileMetadata } from './interfaces.js';
+import { getConfig } from '../config/index.js';
 
 /**
  * S3 configuration for the storage service

@@ -4,10 +4,10 @@
  * Provides data access methods for social link records using Drizzle ORM.
  */
 import { eq, desc, sql } from 'drizzle-orm';
-import type { DrizzleLink, DrizzleNewLink } from '../schema';
-import { links } from '../schema';
-import { BaseRepository } from './base';
-import type { PaginationOptions } from '../../types/models';
+import type { DrizzleLink, DrizzleNewLink } from '../schema/index.js';
+import { links } from '../schema/index.js';
+import { BaseRepository } from './base.js';
+import type { PaginationOptions } from '../../types/models.js';
 
 /**
  * LinksRepository class for link CRUD operations

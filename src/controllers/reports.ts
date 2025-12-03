@@ -5,9 +5,9 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-import { BaseController } from './base';
-import type { ReportsVideosRepository } from '../database/repositories/reports-videos';
-import type { ReportsCommentsRepository } from '../database/repositories/reports-comments';
+import { BaseController } from './base.js';
+import type { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
+import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
 
 /**
  * ReportsController class

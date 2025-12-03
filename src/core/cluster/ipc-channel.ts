@@ -12,7 +12,7 @@ import type {
   IPCMessage,
   IPCMessageToMaster,
   IPCMessageToWorker,
-} from '../../types/ipc';
+} from '../../types/ipc.js';
 
 /**
  * IPC message handler function type

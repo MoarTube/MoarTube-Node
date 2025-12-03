@@ -7,30 +7,30 @@
 import { createContainer, asClass, asValue, InjectionMode, type AwilixContainer } from 'awilix';
 
 // Database layer
-import type { DatabaseClient } from '../database/connection';
-import { VideosRepository } from '../database/repositories/videos';
-import { CommentsRepository } from '../database/repositories/comments';
-import { ReportsVideosRepository } from '../database/repositories/reports-videos';
-import { ReportsCommentsRepository } from '../database/repositories/reports-comments';
-import { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos';
-import { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments';
-import { LiveChatMessageRepository } from '../database/repositories/live-chat-messages';
-import { MonetizationRepository } from '../database/repositories/monetization';
-import { LinksRepository } from '../database/repositories/links';
+import type { DatabaseClient } from '../database/connection.js';
+import { VideosRepository } from '../database/repositories/videos.js';
+import { CommentsRepository } from '../database/repositories/comments.js';
+import { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
+import { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
+import { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
+import { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
+import { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
+import { MonetizationRepository } from '../database/repositories/monetization.js';
+import { LinksRepository } from '../database/repositories/links.js';
 
 // Services
-import { VideosService } from '../services/videos';
-import { CommentService } from '../services/comment';
-import { StreamService } from '../services/stream';
-import { AuthService } from '../services/auth';
-import { StorageService } from '../services/storage';
-import { IndexerService } from '../services/indexer';
-import { CloudflareService } from '../services/cloudflare';
-import { WebSocketService } from '../services/websocket';
-import { ReportService } from '../services/report';
-import { SettingsService } from '../services/settings';
-import { UploadTrackerService } from '../services/upload-tracker';
-import { VideoUploadService } from '../services/video-upload';
+import { VideosService } from '../services/videos.js';
+import { CommentService } from '../services/comment.js';
+import { StreamService } from '../services/stream.js';
+import { AuthService } from '../services/auth.js';
+import { StorageService } from '../services/storage.js';
+import { IndexerService } from '../services/indexer.js';
+import { CloudflareService } from '../services/cloudflare.js';
+import { WebSocketService } from '../services/websocket.js';
+import { ReportService } from '../services/report.js';
+import { SettingsService } from '../services/settings.js';
+import { UploadTrackerService } from '../services/upload-tracker.js';
+import { VideoUploadService } from '../services/video-upload.js';
 
 /**
  * Container cradle type - defines all registered dependencies

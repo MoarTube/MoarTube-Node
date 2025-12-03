@@ -4,9 +4,9 @@
  * Routes for crypto wallet address management.
  */
 import type { FastifyInstance } from 'fastify';
-import { MonetizationController } from '../controllers/monetization';
-import type { Container } from '../core/container';
-import { addWalletAddressBodySchema, deleteWalletAddressBodySchema } from '../validators';
+import { MonetizationController } from '../controllers/monetization.js';
+import type { Container } from '../core/container.js';
+import { addWalletAddressBodySchema, deleteWalletAddressBodySchema } from '../validators/index.js';
 
 /**
  * Register monetization routes

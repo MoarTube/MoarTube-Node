@@ -5,9 +5,9 @@
  */
 import type { FastifyInstance } from 'fastify';
 
-import { NodeController } from '../controllers/node';
-import type { Container } from '../core/container';
-import { nodeSearchQuerySchema, contentCheckedBodySchema } from '../validators';
+import { NodeController } from '../controllers/node.js';
+import type { Container } from '../core/container.js';
+import { nodeSearchQuerySchema, contentCheckedBodySchema } from '../validators/index.js';
 
 /**
  * Register node routes

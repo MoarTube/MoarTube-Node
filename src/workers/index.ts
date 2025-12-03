@@ -5,4 +5,4 @@
  * The actual implementation is in src/core/cluster.
  */
 
-export { ClusterWorker, type ClusterWorkerConfig } from '../core/cluster';
+export { ClusterWorker, type ClusterWorkerConfig } from '../core/cluster/index.js';

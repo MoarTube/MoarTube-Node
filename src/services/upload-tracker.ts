@@ -6,8 +6,8 @@
  */
 
 import type { FastifyRequest } from 'fastify';
-import type { IWebSocketService } from './interfaces';
-import type { ServiceLogger } from './base';
+import type { IWebSocketService } from './interfaces.js';
+import type { ServiceLogger } from './base.js';
 
 /**
  * Upload tracking state for a single video

@@ -4,10 +4,10 @@
  * Handles authentication and account-related endpoints.
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { BaseController } from './base';
-import type { AuthService } from '../services';
-import type { SignInBody } from '../validators';
-import { getConfig } from '../config';
+import { BaseController } from './base.js';
+import type { AuthService } from '../services/index.js';
+import type { SignInBody } from '../validators/index.js';
+import { getConfig } from '../config/index.js';
 
 /**
  * AccountController class

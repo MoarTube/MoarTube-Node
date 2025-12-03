@@ -7,12 +7,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { BaseService, type ServiceOptions } from './base';
-import type { IStreamService, StreamConfig, IWebSocketService } from './interfaces';
-import type { VideosRepository } from '../database/repositories/videos';
-import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages';
-import type { DrizzleVideo, DrizzleNewVideo } from '../database/schema';
-import { getConfig } from '../config';
+import { BaseService, type ServiceOptions } from './base.js';
+import type { IStreamService, StreamConfig, IWebSocketService } from './interfaces.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
+import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
+import type { DrizzleVideo, DrizzleNewVideo } from '../database/schema/index.js';
+import { getConfig } from '../config/index.js';
 
 /**
  * Stream service dependencies

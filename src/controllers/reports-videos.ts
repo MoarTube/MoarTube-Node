@@ -5,10 +5,10 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-import { BaseController } from './base';
-import type { ReportsVideosRepository } from '../database/repositories/reports-videos';
-import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos';
-import { isReportIdValid } from '../utils';
+import { BaseController } from './base.js';
+import type { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
+import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
+import { isReportIdValid } from '../utils/index.js';
 
 /**
  * Request body for archiving a report

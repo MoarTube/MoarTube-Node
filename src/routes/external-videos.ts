@@ -4,14 +4,14 @@
  * Routes for serving video content (thumbnails, adaptive streams, progressive downloads).
  */
 import type { FastifyInstance } from 'fastify';
-import { ExternalVideosController } from '../controllers/external-videos';
-import type { Container } from '../core/container';
+import { ExternalVideosController } from '../controllers/external-videos.js';
+import type { Container } from '../core/container.js';
 import {
   externalVideoIdParamsSchema,
   adaptiveManifestParamsSchema,
   adaptiveSegmentParamsSchema,
   progressiveVideoParamsSchema,
-} from '../validators';
+} from '../validators/index.js';
 
 /**
  * Register external videos routes

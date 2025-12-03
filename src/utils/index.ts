@@ -5,7 +5,7 @@
  */
 
 // Logger
-export { Logger, LogLevel, type ILogger, type LoggerConfig, createLogger } from './logger';
+export { Logger, LogLevel, type ILogger, type LoggerConfig, createLogger } from './logger.js';
 
 // Validators
 export {
@@ -62,7 +62,7 @@ export {
   isCloudflareTurnstileTokenValid,
   validators,
   type VideoResolution,
-} from './validators';
+} from './validators.js';
 
 // Filesystem
 export {
@@ -100,7 +100,7 @@ export {
   getBasename,
   getExtname,
   FilesystemError,
-} from './filesystem';
+} from './filesystem.js';
 
 // Cloudflare Client
 export {
@@ -111,7 +111,7 @@ export {
   type CloudflareCredentials,
   type CloudflareApiResponse,
   type DnsRecord,
-} from './cloudflare-client';
+} from './cloudflare-client.js';
 
 // Indexer Client
 export {
@@ -122,7 +122,7 @@ export {
   type IndexerApiResponse,
   type NodeIdentification,
   type VideoIndexData,
-} from './indexer-client';
+} from './indexer-client.js';
 
 // S3 Storage Client
 export {
@@ -133,7 +133,7 @@ export {
   type S3ObjectInfo,
   type S3ListResult,
   type S3UploadOptions,
-} from './s3-client';
+} from './s3-client.js';
 
 // Helpers
 export {
@@ -177,4 +177,4 @@ export {
   // URL utilities
   buildUrl,
   type ParsedUrl,
-} from './helpers';
+} from './helpers.js';

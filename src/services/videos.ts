@@ -7,7 +7,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { BaseService, type ServiceOptions } from './base';
+import { BaseService, type ServiceOptions } from './base.js';
 import type {
   IVideoService,
   GetVideosOptions,
@@ -25,12 +25,12 @@ import type {
   AddToIndexOptions,
   AddToIndexResult,
   VideoIndexData,
-} from './interfaces';
-import type { VideosRepository } from '../database/repositories/videos';
-import type { CommentsRepository } from '../database/repositories/comments';
-import type { DrizzleVideo, DrizzleNewVideo } from '../database/schema';
-import type { PaginatedResult } from '../types/models';
-import { getConfig } from '../config';
+} from './interfaces.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
+import type { CommentsRepository } from '../database/repositories/comments.js';
+import type { DrizzleVideo, DrizzleNewVideo } from '../database/schema/index.js';
+import type { PaginatedResult } from '../types/models.js';
+import { getConfig } from '../config/index.js';
 
 /**
  * Videos service dependencies

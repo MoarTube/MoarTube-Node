@@ -5,7 +5,7 @@
  * Includes standardized response methods and error handling.
  */
 import type { FastifyReply } from 'fastify';
-import { Logger, type ILogger } from '../utils/logger';
+import { Logger, type ILogger } from '../utils/logger.js';
 
 /**
  * Standard API success response

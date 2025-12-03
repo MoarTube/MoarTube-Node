@@ -10,15 +10,15 @@ import * as path from 'path';
 import type { MultipartFile } from '@fastify/multipart';
 import type { FastifyRequest } from 'fastify';
 
-import { getConfig } from '../config';
+import { getConfig } from '../config/index.js';
 import type {
   IVideoService,
   ICloudflareService,
   IWebSocketService,
   IStorageService,
-} from './interfaces';
-import type { ServiceLogger } from './base';
-import type { IUploadTrackerService } from './upload-tracker';
+} from './interfaces.js';
+import type { ServiceLogger } from './base.js';
+import type { IUploadTrackerService } from './upload-tracker.js';
 
 // ============================================================================
 // Types

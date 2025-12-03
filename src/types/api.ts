@@ -3,8 +3,8 @@
  * Complete type definitions for all API endpoints in MoarTube-Node
  */
 
-import type { Video, Comment } from './models';
-import type { NodeSettings } from './config';
+import type { Video, Comment } from './models.js';
+import type { NodeSettings } from './config.js';
 
 // ============================================
 // Base Response Types

@@ -17,7 +17,7 @@ import {
   type _Object,
 } from '@aws-sdk/client-s3';
 import type { Readable } from 'stream';
-import type { ILogger } from './logger';
+import type { ILogger } from './logger.js';
 
 /**
  * S3 storage error

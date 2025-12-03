@@ -28,7 +28,7 @@ import {
   reportEmailSchema,
   reportTypeSchema,
   reportMessageSchema,
-} from './common.schemas';
+} from './common.schemas.js';
 
 // ============================================================================
 // Route Parameter Schemas

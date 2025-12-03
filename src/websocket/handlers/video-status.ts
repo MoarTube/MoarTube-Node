@@ -10,8 +10,8 @@ import type {
   IncomingWebSocketMessage,
   VideoStatusMessage,
   WebSocketMessage,
-} from '../../types/websocket';
-import { type HandlerContext, WebSocketHandler } from './base';
+} from '../../types/websocket.js';
+import { type HandlerContext, WebSocketHandler } from './base.js';
 
 /**
  * Handler for video status events

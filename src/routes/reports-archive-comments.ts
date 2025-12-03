@@ -5,9 +5,9 @@
  */
 import type { FastifyInstance } from 'fastify';
 
-import { ReportsArchiveCommentsController } from '../controllers/reports-archive-comments';
-import type { Container } from '../core/container';
-import { archiveIdParamsSchema, reportsQuerySchema } from '../validators';
+import { ReportsArchiveCommentsController } from '../controllers/reports-archive-comments.js';
+import type { Container } from '../core/container.js';
+import { archiveIdParamsSchema, reportsQuerySchema } from '../validators/index.js';
 
 /**
  * Register reports archive comments routes

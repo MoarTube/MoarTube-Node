@@ -5,9 +5,9 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-import { BaseController } from './base';
-import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos';
-import { isArchiveIdValid } from '../utils';
+import { BaseController } from './base.js';
+import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
+import { isArchiveIdValid } from '../utils/index.js';
 
 /**
  * Request params for archive operations

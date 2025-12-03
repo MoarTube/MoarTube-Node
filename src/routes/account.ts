@@ -4,9 +4,9 @@
  * Routes for authentication and account management.
  */
 import type { FastifyInstance } from 'fastify';
-import { AccountController } from '../controllers';
-import { signInBodySchema } from '../validators';
-import type { Container } from '../core/container';
+import { AccountController } from '../controllers/index.js';
+import { signInBodySchema } from '../validators/index.js';
+import type { Container } from '../core/container.js';
 
 /**
  * Register account routes

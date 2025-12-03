@@ -13,13 +13,13 @@ import type {
   WebSocketClientType,
   BroadcastOptions,
   LiveStreamWatchingCounts,
-} from '../types/websocket';
-import type { HandlerContext, WebSocketHandler } from './handlers/base';
-import { ChatMessageHandler } from './handlers/chat';
-import { LiveStreamHandler } from './handlers/stream';
-import { VideoStatusHandler } from './handlers/video-status';
-import { EchoHandler } from './handlers/echo';
-import { Logger, type ILogger } from '../utils/logger';
+} from '../types/websocket.js';
+import type { HandlerContext, WebSocketHandler } from './handlers/base.js';
+import { ChatMessageHandler } from './handlers/chat.js';
+import { LiveStreamHandler } from './handlers/stream.js';
+import { VideoStatusHandler } from './handlers/video-status.js';
+import { EchoHandler } from './handlers/echo.js';
+import { Logger, type ILogger } from '../utils/logger.js';
 
 /**
  * Logger interface for the WebSocket manager

@@ -4,10 +4,10 @@
  * Provides data access methods for archived comment report records using Drizzle ORM.
  */
 import { eq, desc, sql } from 'drizzle-orm';
-import type { DrizzleCommentReportArchive, DrizzleNewCommentReportArchive } from '../schema';
-import { commentReportsArchive } from '../schema';
-import { BaseRepository } from './base';
-import type { PaginationOptions } from '../../types/models';
+import type { DrizzleCommentReportArchive, DrizzleNewCommentReportArchive } from '../schema/index.js';
+import { commentReportsArchive } from '../schema/index.js';
+import { BaseRepository } from './base.js';
+import type { PaginationOptions } from '../../types/models.js';
 
 /**
  * ReportsArchiveCommentsRepository class for archived comment report CRUD operations

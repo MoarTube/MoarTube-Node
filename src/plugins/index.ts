@@ -13,16 +13,16 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 
-import { createAppContainer } from '../core/container';
-import { getDatabase } from '../database';
-import { registerRoutes } from '../routes';
-import { getConfig } from '../config';
+import { createAppContainer } from '../core/container.js';
+import { getDatabase } from '../database/index.js';
+import { registerRoutes } from '../routes/index.js';
+import { getConfig } from '../config/index.js';
 
 // Error handling
-export { default as errorHandlerPlugin } from './error-handler';
+export { default as errorHandlerPlugin } from './error-handler.js';
 
 // Authentication
-export { default as authenticationPlugin } from './authentication';
+export { default as authenticationPlugin } from './authentication.js';
 
 // Re-export type provider for route typing
 export type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -76,7 +76,7 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   await registerRoutes(app.withTypeProvider<ZodTypeProvider>(), container);
 
   // Register error handler
-  const { default: errorHandlerPlugin } = await import('./error-handler');
+  const { default: errorHandlerPlugin } = await import('./error-handler.js');
   await app.register(errorHandlerPlugin);
 
   return app;

@@ -5,9 +5,9 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-import { BaseController } from './base';
-import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments';
-import { isArchiveIdValid } from '../utils';
+import { BaseController } from './base.js';
+import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
+import { isArchiveIdValid } from '../utils/index.js';
 
 /**
  * Request params for archive operations

@@ -10,45 +10,45 @@ export {
   type ApiSuccessResponse,
   type ApiErrorResponse,
   type PaginatedResponse,
-} from './base';
+} from './base.js';
 
 // Individual controllers
-export { StatusController } from './status';
-export { AccountController } from './account';
-export { VideosController } from './videos';
-export { LinksController, type AddLinkBody, type DeleteLinkBody } from './links';
+export { StatusController } from './status.js';
+export { AccountController } from './account.js';
+export { VideosController } from './videos.js';
+export { LinksController, type AddLinkBody, type DeleteLinkBody } from './links.js';
 export {
   MonetizationController,
   type AddWalletAddressBody,
   type DeleteWalletAddressBody,
-} from './monetization';
-export { WatchEmbedController } from './watch-embed';
-export { ExternalResourcesController } from './external-resources';
-export { ExternalVideosController } from './external-videos';
+} from './monetization.js';
+export { WatchEmbedController } from './watch-embed.js';
+export { ExternalResourcesController } from './external-resources.js';
+export { ExternalVideosController } from './external-videos.js';
 export {
   CommentsController,
   type CommentSearchQuery,
   type CommentIdParams,
   type CommentReportBody,
-} from './comments';
-export { WatchController, type WatchQuery } from './watch';
-export { NodeController, type NodeQuery, type ContentCheckedBody } from './node';
-export { ReportsController } from './reports';
+} from './comments.js';
+export { WatchController, type WatchQuery } from './watch.js';
+export { NodeController, type NodeQuery, type ContentCheckedBody } from './node.js';
+export { ReportsController } from './reports.js';
 export {
   ReportsVideosController,
   type ArchiveReportBody,
   type ReportIdParams,
-} from './reports-videos';
+} from './reports-videos.js';
 export {
   ReportsCommentsController,
   type ArchiveCommentReportBody,
   type CommentReportIdParams,
-} from './reports-comments';
-export { ReportsArchiveVideosController, type ArchiveIdParams } from './reports-archive-videos';
+} from './reports-comments.js';
+export { ReportsArchiveVideosController, type ArchiveIdParams } from './reports-archive-videos.js';
 export {
   ReportsArchiveCommentsController,
   type CommentArchiveIdParams,
-} from './reports-archive-comments';
+} from './reports-archive-comments.js';
 export {
   SettingsController,
   type PersonalizeNodeNameBody,
@@ -62,7 +62,7 @@ export {
   type ToggleBooleanBody,
   type DatabaseConfigBody,
   type StorageConfigBody,
-} from './settings';
+} from './settings.js';
 export {
   StreamsController,
   type StartStreamBody,
@@ -70,4 +70,4 @@ export {
   type SegmentRemoveParams,
   type SegmentRemoveBody,
   type ChatSettingsBody,
-} from './streams';
+} from './streams.js';

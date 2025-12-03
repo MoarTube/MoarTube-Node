@@ -5,8 +5,8 @@
  */
 import type { FastifyInstance } from 'fastify';
 
-import { ReportsController } from '../controllers/reports';
-import type { Container } from '../core/container';
+import { ReportsController } from '../controllers/reports.js';
+import type { Container } from '../core/container.js';
 
 /**
  * Register reports routes

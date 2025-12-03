@@ -10,7 +10,7 @@ import {
   tagTermSchema,
   tagLimitSchema,
   timestampSchema,
-} from './common.schemas';
+} from './common.schemas.js';
 
 // ============================================================================
 // Query Parameter Schemas

@@ -7,9 +7,9 @@
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-import { BaseService, type ServiceOptions } from './base';
-import type { IAuthService, SignInInput, SignInResult } from './interfaces';
-import { getConfig } from '../config';
+import { BaseService, type ServiceOptions } from './base.js';
+import type { IAuthService, SignInInput, SignInResult } from './interfaces.js';
+import { getConfig } from '../config/index.js';
 
 /**
  * JWT payload structure

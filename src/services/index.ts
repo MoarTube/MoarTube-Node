@@ -6,7 +6,7 @@
  */
 
 // Base service
-export { BaseService, type ServiceOptions, type ServiceLogger } from './base';
+export { BaseService, type ServiceOptions, type ServiceLogger } from './base.js';
 
 // Service interfaces
 export type {
@@ -37,29 +37,29 @@ export type {
   UpdateNodeSettingsInput,
   DatabaseConfigInput,
   StorageConfigInput,
-} from './interfaces';
+} from './interfaces.js';
 
 // Service implementations
-export { VideosService, type VideosServiceDependencies } from './videos';
-export { CommentService, type CommentServiceDependencies } from './comment';
+export { VideosService, type VideosServiceDependencies } from './videos.js';
+export { CommentService, type CommentServiceDependencies } from './comment.js';
 export {
   StreamService,
   type StreamServiceDependencies,
   type StreamMeta,
   type StartStreamOptions,
-} from './stream';
-export { AuthService, type JwtPayload } from './auth';
-export { StorageService, type S3Config } from './storage';
-export { IndexerService } from './indexer';
-export { CloudflareService, type CloudflareServiceDependencies } from './cloudflare';
-export { WebSocketService, type WebSocketClient } from './websocket';
-export { ReportService, type ReportServiceDependencies } from './report';
-export { SettingsService, type SettingsServiceDependencies } from './settings';
+} from './stream.js';
+export { AuthService, type JwtPayload } from './auth.js';
+export { StorageService, type S3Config } from './storage.js';
+export { IndexerService } from './indexer.js';
+export { CloudflareService, type CloudflareServiceDependencies } from './cloudflare.js';
+export { WebSocketService, type WebSocketClient } from './websocket.js';
+export { ReportService, type ReportServiceDependencies } from './report.js';
+export { SettingsService, type SettingsServiceDependencies } from './settings.js';
 export {
   UploadTrackerService,
   type IUploadTrackerService,
   type UploadTrackerServiceDependencies,
-} from './upload-tracker';
+} from './upload-tracker.js';
 export {
   VideoUploadService,
   type IVideoUploadService,
@@ -68,4 +68,4 @@ export {
   type VideoUploadOptions,
   type StreamUploadOptions,
   type ImageUploadOptions,
-} from './video-upload';
+} from './video-upload.js';

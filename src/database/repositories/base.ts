@@ -3,8 +3,8 @@
  *
  * All repository classes extend this base class to share common functionality.
  */
-import type { DatabaseClient } from '../connection';
-import type { PaginationOptions } from '../../types/models';
+import type { DatabaseClient } from '../connection.js';
+import type { PaginationOptions } from '../../types/models.js';
 
 /**
  * Base repository with common operations

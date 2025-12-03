@@ -4,7 +4,7 @@
  * Zod schemas for node settings API endpoints.
  */
 import { z } from 'zod';
-import { protocolSchema, addressSchema, portSchema, booleanSchema } from './common.schemas';
+import { protocolSchema, addressSchema, portSchema, booleanSchema } from './common.schemas.js';
 
 // ============================================================================
 // Request Body Schemas

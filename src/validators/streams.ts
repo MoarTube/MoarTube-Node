@@ -4,7 +4,7 @@
  * Zod schemas for live streaming API endpoints.
  */
 import { z } from 'zod';
-import { videoIdSchema, formatSchema, resolutionSchema } from './common.schemas';
+import { videoIdSchema, formatSchema, resolutionSchema } from './common.schemas.js';
 
 // ============================================================================
 // Route Parameter Schemas

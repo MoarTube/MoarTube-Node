@@ -4,9 +4,9 @@
  * Handles status and health check endpoints.
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { BaseController } from './base';
-import { getConfig } from '../config';
-import type { Container } from '../core/container';
+import { BaseController } from './base.js';
+import { getConfig } from '../config/index.js';
+import type { Container } from '../core/container.js';
 
 /**
  * Status information response

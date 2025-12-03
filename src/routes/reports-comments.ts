@@ -5,9 +5,9 @@
  */
 import type { FastifyInstance } from 'fastify';
 
-import { ReportsCommentsController } from '../controllers/reports-comments';
-import type { Container } from '../core/container';
-import { reportIdParamsSchema, reportsQuerySchema, archiveReportBodySchema } from '../validators';
+import { ReportsCommentsController } from '../controllers/reports-comments.js';
+import type { Container } from '../core/container.js';
+import { reportIdParamsSchema, reportsQuerySchema, archiveReportBodySchema } from '../validators/index.js';
 
 /**
  * Register reports comments routes

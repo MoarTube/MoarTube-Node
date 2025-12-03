@@ -4,16 +4,16 @@
  * Service layer for content reporting and moderation functionality.
  * Handles video and comment reports, archiving, and moderation workflows.
  */
-import { BaseService, type ServiceOptions } from './base';
+import { BaseService, type ServiceOptions } from './base.js';
 import type {
   IReportService,
   CreateVideoReportInput,
   CreateCommentReportInput,
-} from './interfaces';
-import type { ReportsVideosRepository } from '../database/repositories/reports-videos';
-import type { ReportsCommentsRepository } from '../database/repositories/reports-comments';
-import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos';
-import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments';
+} from './interfaces.js';
+import type { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
+import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
+import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
+import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
 import type {
   DrizzleVideoReport,
   DrizzleCommentReport,
@@ -23,8 +23,8 @@ import type {
   DrizzleNewCommentReport,
   DrizzleNewVideoReportArchive,
   DrizzleNewCommentReportArchive,
-} from '../database/schema';
-import type { PaginationOptions } from '../types/models';
+} from '../database/schema/index.js';
+import type { PaginationOptions } from '../types/models.js';
 
 /**
  * Report service dependencies

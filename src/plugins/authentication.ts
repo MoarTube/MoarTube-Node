@@ -7,8 +7,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
 import jwt from 'jsonwebtoken';
-import { getConfig } from '../config';
-import { UnauthorizedError } from '../errors';
+import { getConfig } from '../config/index.js';
+import { UnauthorizedError } from '../errors/index.js';
 
 /**
  * JWT payload structure

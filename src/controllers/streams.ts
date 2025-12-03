@@ -7,11 +7,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-import { BaseController } from './base';
-import type { VideosRepository } from '../database/repositories/videos';
-import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages';
-import type { StreamService } from '../services/stream';
-import { getConfig } from '../config';
+import { BaseController } from './base.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
+import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
+import type { StreamService } from '../services/stream.js';
+import { getConfig } from '../config/index.js';
 import {
   isTitleValid,
   isDescriptionValid,
@@ -24,7 +24,7 @@ import {
   isBooleanValid,
   isNetworkAddressValid,
   isChatHistoryLimitValid,
-} from '../utils';
+} from '../utils/index.js';
 
 /**
  * Request body for starting a stream

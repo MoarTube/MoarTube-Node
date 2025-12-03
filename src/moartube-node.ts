@@ -11,12 +11,17 @@
 
 import cluster from 'node:cluster';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { v4 as uuidv4 } from 'uuid';
 
-import { initializeConfig, getConfig } from './config';
-import { ClusterMaster, ClusterWorker } from './core/cluster';
-import { createDatabase, getDatabase } from './database';
-import { logDebugMessageToConsole } from './utils/logger';
+import { initializeConfig, getConfig } from './config/index.js';
+import { ClusterMaster, ClusterWorker } from './core/cluster/index.js';
+import { createDatabase, getDatabase } from './database/index.js';
+import { getLogger } from './utils/logger.js';
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Determine base directory (where config.json lives)
 const baseDir = path.resolve(__dirname, '..');
@@ -34,17 +39,16 @@ function loadConfig(): void {
  */
 async function startMaster(): Promise<void> {
   const config = getConfig();
+  const logger = getLogger();
 
-  logDebugMessageToConsole('Starting MoarTube Node', null, null);
-  logDebugMessageToConsole(
-    `Configured MoarTube Node to use data directory path: ${config.paths.dataDirectoryPath}`,
-    null,
-    null
+  logger.info('Starting MoarTube Node');
+  logger.info(
+    `Configured MoarTube Node to use data directory path: ${config.paths.dataDirectoryPath}`
   );
 
   // Create database connection for master
   const dbConfig = config.nodeSettings.databaseConfig;
-  const dbDialect = dbConfig.databaseDialect as 'sqlite' | 'postgres';
+  const dbDialect = dbConfig.databaseDialect;
 
   if (dbDialect === 'postgres') {
     const pgConfig = dbConfig as {
@@ -56,7 +60,7 @@ async function startMaster(): Promise<void> {
     };
     createDatabase({
       dialect: 'postgres',
-      connectionString: `postgres://${pgConfig.postgresUser ?? 'postgres'}:${pgConfig.postgresPassword ?? ''}@${pgConfig.postgresHost ?? 'localhost'}:${pgConfig.postgresPort ?? 5432}/${pgConfig.postgresDatabase ?? 'moartube'}`,
+      connectionString: `postgres://${pgConfig.postgresUser ?? 'postgres'}:${pgConfig.postgresPassword ?? ''}@${pgConfig.postgresHost ?? 'localhost'}:${String(pgConfig.postgresPort ?? 5432)}/${pgConfig.postgresDatabase ?? 'moartube'}`,
     });
   } else {
     createDatabase({
@@ -69,12 +73,12 @@ async function startMaster(): Promise<void> {
     database: {
       provision: (): Promise<void> => {
         // Database is already provisioned via Drizzle migrations
-        logDebugMessageToConsole('Database provisioned', null, null);
+        logger.debug('Database provisioned');
         return Promise.resolve();
       },
       open: (): Promise<void> => {
         // Database connection is managed by the connection module
-        logDebugMessageToConsole('Database opened', null, null);
+        logger.debug('Database opened');
         return Promise.resolve();
       },
       executeWrite: (query: string, parameters: unknown[]): Promise<void> => {
@@ -98,7 +102,7 @@ async function startMaster(): Promise<void> {
     },
     getNodeSettings: (): Record<string, unknown> =>
       config.nodeSettings as unknown as Record<string, unknown>,
-    setNodeSettings: (settings): void => {
+    setNodeSettings: (settings: Record<string, unknown>): void => {
       config.updateNodeSettings(settings as Parameters<typeof config.updateNodeSettings>[0]);
     },
     getNodeIdentification: (): { moarTubeTokenProof: string } => {
@@ -110,7 +114,7 @@ async function startMaster(): Promise<void> {
       return Promise.resolve();
     },
     generateVideoId: (): Promise<string> => {
-      return Promise.resolve(uuidv4().replace(/-/g, ''));
+      return Promise.resolve(uuidv4().replaceAll('-', ''));
     },
     getNodeIconPngBase64: (): string => '',
     getNodeAvatarPngBase64: (): string => '',
@@ -129,10 +133,11 @@ async function startMaster(): Promise<void> {
  */
 async function startWorker(): Promise<void> {
   const config = getConfig();
+  const logger = getLogger();
 
   // Create database connection for worker
   const dbConfig = config.nodeSettings.databaseConfig;
-  const dbDialect = dbConfig.databaseDialect as 'sqlite' | 'postgres';
+  const dbDialect = dbConfig.databaseDialect;
 
   if (dbDialect === 'postgres') {
     const pgConfig = dbConfig as {
@@ -144,7 +149,7 @@ async function startWorker(): Promise<void> {
     };
     createDatabase({
       dialect: 'postgres',
-      connectionString: `postgres://${pgConfig.postgresUser ?? 'postgres'}:${pgConfig.postgresPassword ?? ''}@${pgConfig.postgresHost ?? 'localhost'}:${pgConfig.postgresPort ?? 5432}/${pgConfig.postgresDatabase ?? 'moartube'}`,
+      connectionString: `postgres://${pgConfig.postgresUser ?? 'postgres'}:${pgConfig.postgresPassword ?? ''}@${pgConfig.postgresHost ?? 'localhost'}:${String(pgConfig.postgresPort ?? 5432)}/${pgConfig.postgresDatabase ?? 'moartube'}`,
     });
   } else {
     createDatabase({
@@ -154,14 +159,14 @@ async function startWorker(): Promise<void> {
   }
 
   // Import Fastify app setup dynamically to avoid loading in master
-  const { createFastifyApp } = await import('./plugins');
+  const { createFastifyApp } = await import('./plugins/index.js');
   const app = await createFastifyApp();
 
   const worker = new ClusterWorker({
-    openDatabase: async () => {
+    openDatabase: async (): Promise<void> => {
       // Database is already opened above
     },
-    restartHttpServer: async () => {
+    restartHttpServer: async (): Promise<void> => {
       await app.close();
       const newApp = await createFastifyApp();
       const nodeSettings = config.nodeSettings;
@@ -170,11 +175,11 @@ async function startWorker(): Promise<void> {
         host: '0.0.0.0',
       });
     },
-    setJwtSecret: (secret) => {
+    setJwtSecret: (secret: string): void => {
       config.setJwtSecret(secret);
     },
-    getHttpServer: () => null, // Fastify manages its own server
-    getWebSocketClients: () => new Set(),
+    getHttpServer: (): null => null, // Fastify manages its own server
+    getWebSocketClients: (): Set<unknown> => new Set(),
   });
 
   await worker.start();
@@ -185,30 +190,25 @@ async function startWorker(): Promise<void> {
 
   try {
     await app.listen({ port, host: '0.0.0.0' });
-    logDebugMessageToConsole(`Worker ${cluster.worker?.id} listening on port ${port}`, null, null);
+    logger.info(`Worker ${String(cluster.worker?.id)} listening on port ${String(port)}`);
   } catch (err) {
-    logDebugMessageToConsole(`Worker ${cluster.worker?.id} failed to start`, err as Error, null);
+    logger.error(`Worker ${String(cluster.worker?.id)} failed to start`, err as Error);
     process.exit(1);
   }
 }
 
 /**
- * Main entry point
+ * Main entry point using top-level await (ESM)
  */
-async function main(): Promise<void> {
-  try {
-    loadConfig();
+try {
+  loadConfig();
 
-    if (cluster.isPrimary) {
-      await startMaster();
-    } else {
-      await startWorker();
-    }
-  } catch (error) {
-    logDebugMessageToConsole('Fatal error during startup', error as Error, new Error().stack);
-    process.exit(1);
+  if (cluster.isPrimary) {
+    await startMaster();
+  } else {
+    await startWorker();
   }
+} catch (error) {
+  getLogger().error('Fatal error during startup', error as Error);
+  process.exit(1);
 }
-
-// Run
-void main();

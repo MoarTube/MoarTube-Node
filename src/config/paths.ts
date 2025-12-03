@@ -4,7 +4,7 @@
  */
 
 import path from 'node:path';
-import { getEnv } from './env';
+import { getEnv } from './env.js';
 
 /**
  * Path configuration interface

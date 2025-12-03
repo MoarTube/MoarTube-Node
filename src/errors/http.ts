@@ -4,7 +4,7 @@
  * Specific error classes for common HTTP error responses.
  * These errors are operational (expected) and should be caught and handled.
  */
-import { AppError } from './base';
+import { AppError } from './base.js';
 
 /**
  * 400 Bad Request

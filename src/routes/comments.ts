@@ -5,13 +5,13 @@
  */
 import type { FastifyInstance } from 'fastify';
 
-import { CommentsController } from '../controllers/comments';
-import type { Container } from '../core/container';
+import { CommentsController } from '../controllers/comments.js';
+import type { Container } from '../core/container.js';
 import {
   commentIdParamsSchema,
   commentSearchQuerySchema,
   commentReportBodySchema,
-} from '../validators';
+} from '../validators/index.js';
 
 /**
  * Register comments routes

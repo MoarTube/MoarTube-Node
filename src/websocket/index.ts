@@ -10,7 +10,7 @@ export {
   WebSocketManager,
   type WebSocketManagerOptions,
   type WebSocketLogger,
-} from './websocket-manager';
+} from './websocket-manager.js';
 
 // Handlers
 export {
@@ -20,4 +20,4 @@ export {
   LiveStreamHandler,
   VideoStatusHandler,
   EchoHandler,
-} from './handlers';
+} from './handlers/index.js';

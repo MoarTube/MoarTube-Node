@@ -4,8 +4,8 @@
  * Service layer for WebSocket message broadcasting and client management.
  * Provides abstraction over the cluster-aware WebSocket system.
  */
-import { BaseService, type ServiceOptions } from './base';
-import type { IWebSocketService, WebSocketMessage, WebSocketEventName } from './interfaces';
+import { BaseService, type ServiceOptions } from './base.js';
+import type { IWebSocketService, WebSocketMessage, WebSocketEventName } from './interfaces.js';
 
 /**
  * WebSocket client connection info

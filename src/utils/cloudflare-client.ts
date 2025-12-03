@@ -6,7 +6,7 @@
  */
 
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
-import type { ILogger } from './logger';
+import type { ILogger } from './logger.js';
 
 /**
  * Cloudflare API error

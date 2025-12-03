@@ -6,14 +6,14 @@
  */
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
 
-import { BaseService, type ServiceOptions } from './base';
+import { BaseService, type ServiceOptions } from './base.js';
 import type {
   IIndexerService,
   VideoIndexData,
   RemoveFromIndexData,
   IndexerSubmitResult,
-} from './interfaces';
-import { getConfig } from '../config';
+} from './interfaces.js';
+import { getConfig } from '../config/index.js';
 
 /**
  * Indexer response structure

@@ -5,9 +5,9 @@
  */
 import type { FastifyInstance } from 'fastify';
 
-import { ReportsArchiveVideosController } from '../controllers/reports-archive-videos';
-import type { Container } from '../core/container';
-import { archiveIdParamsSchema, reportsQuerySchema } from '../validators';
+import { ReportsArchiveVideosController } from '../controllers/reports-archive-videos.js';
+import type { Container } from '../core/container.js';
+import { archiveIdParamsSchema, reportsQuerySchema } from '../validators/index.js';
 
 /**
  * Register reports archive videos routes

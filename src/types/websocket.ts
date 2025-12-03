@@ -4,7 +4,7 @@
  */
 
 import type { WebSocket } from 'ws';
-import type { VideoDataPayload } from './api';
+import type { VideoDataPayload } from './api.js';
 
 // ============================================
 // WebSocket Event Names

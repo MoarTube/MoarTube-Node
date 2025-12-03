@@ -1,8 +1,8 @@
 /**
  * Shared type definitions barrel export
  */
-export * from './config';
-export * from './models';
-export * from './api';
-export * from './websocket';
-export * from './ipc';
+export * from './config.js';
+export * from './models.js';
+export * from './api.js';
+export * from './websocket.js';
+export * from './ipc.js';

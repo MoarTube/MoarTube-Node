@@ -4,7 +4,7 @@
  * Zod schemas for report management API endpoints.
  */
 import { z } from 'zod';
-import { timestampSchema } from './common.schemas';
+import { timestampSchema } from './common.schemas.js';
 
 // ============================================================================
 // Route Parameter Schemas

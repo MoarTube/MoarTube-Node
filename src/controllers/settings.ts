@@ -9,20 +9,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 
-import { BaseController } from './base';
-import type { SettingsService } from '../services/settings';
-import type { VideosRepository } from '../database/repositories/videos';
-import type { CommentsRepository } from '../database/repositories/comments';
-import type { ReportsVideosRepository } from '../database/repositories/reports-videos';
-import type { ReportsCommentsRepository } from '../database/repositories/reports-comments';
-import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos';
-import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments';
-import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages';
-import type { MonetizationRepository } from '../database/repositories/monetization';
-import type { LinksRepository } from '../database/repositories/links';
-import type { CloudflareService } from '../services/cloudflare';
-import type { WebSocketService } from '../services/websocket';
-import { getConfig } from '../config';
+import { BaseController } from './base.js';
+import type { SettingsService } from '../services/settings.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
+import type { CommentsRepository } from '../database/repositories/comments.js';
+import type { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
+import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
+import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
+import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
+import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
+import type { MonetizationRepository } from '../database/repositories/monetization.js';
+import type { LinksRepository } from '../database/repositories/links.js';
+import type { CloudflareService } from '../services/cloudflare.js';
+import type { WebSocketService } from '../services/websocket.js';
+import { getConfig } from '../config/index.js';
 import {
   isNodeNameValid,
   isNodeAboutValid,
@@ -36,7 +36,7 @@ import {
   isDatabaseConfigValid,
   isStorageConfigValid,
   isCloudflareCredentialsValid,
-} from '../utils';
+} from '../utils/index.js';
 
 /**
  * Request body interfaces

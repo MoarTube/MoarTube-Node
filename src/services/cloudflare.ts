@@ -6,10 +6,10 @@
  */
 import axios, { type AxiosInstance } from 'axios';
 
-import { BaseService, type ServiceOptions } from './base';
-import type { ICloudflareService } from './interfaces';
-import type { VideosRepository } from '../database/repositories/videos';
-import { getConfig } from '../config';
+import { BaseService, type ServiceOptions } from './base.js';
+import type { ICloudflareService } from './interfaces.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
+import { getConfig } from '../config/index.js';
 
 /**
  * Cloudflare API endpoints

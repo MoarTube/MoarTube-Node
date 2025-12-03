@@ -6,9 +6,9 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
-import { BaseController } from './base';
-import type { VideosRepository } from '../database/repositories/videos';
-import { getConfig } from '../config';
+import { BaseController } from './base.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
+import { getConfig } from '../config/index.js';
 import {
   isVideoIdValid,
   isAdaptiveFormatValid,
@@ -18,7 +18,7 @@ import {
   isSegmentNameValid,
   isManifestTypeValid,
   isProgressiveFilenameValid,
-} from '../utils';
+} from '../utils/index.js';
 
 /**
  * Route params for video images

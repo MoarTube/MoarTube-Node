@@ -6,12 +6,12 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import sanitizeHtml from 'sanitize-html';
 
-import { BaseController } from './base';
-import type { CommentsRepository } from '../database/repositories/comments';
-import type { ReportsCommentsRepository } from '../database/repositories/reports-comments';
-import type { VideosRepository } from '../database/repositories/videos';
-import type { CloudflareService } from '../services/cloudflare';
-import { getConfig } from '../config';
+import { BaseController } from './base.js';
+import type { CommentsRepository } from '../database/repositories/comments.js';
+import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
+import type { CloudflareService } from '../services/cloudflare.js';
+import { getConfig } from '../config/index.js';
 import {
   isCommentIdValid,
   isReportEmailValid,
@@ -22,7 +22,7 @@ import {
   isLimitValid,
   isSearchTermValid,
   isVideoIdValid,
-} from '../utils';
+} from '../utils/index.js';
 
 /**
  * Query parameters for comment search

@@ -5,14 +5,14 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-import { BaseController } from './base';
-import type { VideosRepository } from '../database/repositories/videos';
-import type { CommentsRepository } from '../database/repositories/comments';
-import type { LinksRepository } from '../database/repositories/links';
-import type { MonetizationRepository } from '../database/repositories/monetization';
-import type { DrizzleVideo } from '../database/schema';
-import { getConfig } from '../config';
-import { isVideoIdValid } from '../utils';
+import { BaseController } from './base.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
+import type { CommentsRepository } from '../database/repositories/comments.js';
+import type { LinksRepository } from '../database/repositories/links.js';
+import type { MonetizationRepository } from '../database/repositories/monetization.js';
+import type { DrizzleVideo } from '../database/schema/index.js';
+import { getConfig } from '../config/index.js';
+import { isVideoIdValid } from '../utils/index.js';
 
 /**
  * Fastify reply with view engine support

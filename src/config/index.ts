@@ -7,10 +7,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-import type { NodeSettings, NodeIdentification, LastCheckedContentTracker } from '../types';
+import type { NodeSettings, NodeIdentification, LastCheckedContentTracker } from '../types/index.js';
 
-import { getEnv, type Env } from './env';
-import { initializePaths, type Paths, type PathConfig } from './paths';
+import { getEnv, type Env } from './env.js';
+import { initializePaths, type Paths, type PathConfig } from './paths.js';
 import {
   initializeUrls,
   buildNodeBaseUrl,
@@ -18,7 +18,7 @@ import {
   buildExternalResourcesBaseUrl,
   type Urls,
   type UrlConfig,
-} from './urls';
+} from './urls.js';
 import {
   validateNodeSettings,
   validateAppConfig,
@@ -26,7 +26,7 @@ import {
   validateLastCheckedContentTracker,
   type NodeSettingsValidated,
   type AppConfigValidated,
-} from './schema';
+} from './schema.js';
 
 /**
  * Runtime configuration (not persisted)
@@ -396,6 +396,6 @@ export function getConfig(): Config {
 export { Config };
 
 // Re-export subsystem exports for convenience
-export { getEnv } from './env';
-export { getPaths, type PathConfig } from './paths';
-export { getUrls, type UrlConfig } from './urls';
+export { getEnv } from './env.js';
+export { getPaths, type PathConfig } from './paths.js';
+export { getUrls, type UrlConfig } from './urls.js';

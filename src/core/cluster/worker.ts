@@ -7,11 +7,11 @@
 import cluster from 'node:cluster';
 import type { Server as HttpServer } from 'node:http';
 import type { Server as HttpsServer } from 'node:https';
-import type { LiveStreamWatchingCountsTracker, LiveStreamWatchingCounts } from '../../types/ipc';
-import type { LiveStreamStatsMessage, WebSocketMessage } from '../../types/websocket';
+import type { LiveStreamWatchingCountsTracker, LiveStreamWatchingCounts } from '../../types/ipc.js';
+import type { LiveStreamStatsMessage, WebSocketMessage } from '../../types/websocket.js';
 import type { WebSocket as WsWebSocket } from 'ws';
-import { IPCChannel, type IPCLogger } from './ipc-channel';
-import { WebSocketManager } from '../../websocket/websocket-manager';
+import { IPCChannel, type IPCLogger } from './ipc-channel.js';
+import { WebSocketManager } from '../../websocket/websocket-manager.js';
 
 /**
  * Worker configuration
@@ -37,17 +37,21 @@ export interface ClusterWorkerConfig {
 const defaultLogger: IPCLogger = {
   debug: (message, context) => {
     if (process.env['NODE_ENV'] === 'development') {
-      console.debug(`[Worker ${cluster.worker?.id}] ${message}`, context ?? '');
+      // eslint-disable-next-line no-console
+      console.debug(`[Worker ${String(cluster.worker?.id)}] ${message}`, context ?? '');
     }
   },
   info: (message, context) => {
-    console.info(`[Worker ${cluster.worker?.id}] ${message}`, context ?? '');
+    // eslint-disable-next-line no-console
+    console.info(`[Worker ${String(cluster.worker?.id)}] ${message}`, context ?? '');
   },
   warn: (message, context) => {
-    console.warn(`[Worker ${cluster.worker?.id}] ${message}`, context ?? '');
+    // eslint-disable-next-line no-console
+    console.warn(`[Worker ${String(cluster.worker?.id)}] ${message}`, context ?? '');
   },
   error: (message, error, context) => {
-    console.error(`[Worker ${cluster.worker?.id}] ${message}`, error ?? '', context ?? '');
+    // eslint-disable-next-line no-console
+    console.error(`[Worker ${String(cluster.worker?.id)}] ${message}`, error ?? '', context ?? '');
   },
 };
 

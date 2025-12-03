@@ -7,7 +7,7 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
-import * as schema from './schema';
+import * as schema from './schema/index.js';
 
 /**
  * Database configuration interface
@@ -55,7 +55,7 @@ let currentDialect: 'sqlite' | 'postgres' | null = null;
  */
 export function createDatabase(config: DatabaseConfig): DatabaseClient {
   if (config.dialect === 'sqlite') {
-    if (!config.filepath) {
+    if (config.filepath === undefined || config.filepath === '') {
       throw new Error('SQLite filepath is required');
     }
 

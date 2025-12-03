@@ -9,7 +9,7 @@ import type {
   ExtendedWebSocket,
   WebSocketMessage,
   IncomingWebSocketMessage,
-} from '../../types/websocket';
+} from '../../types/websocket.js';
 
 /**
  * Handler context passed to handle methods

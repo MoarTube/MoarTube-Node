@@ -13,7 +13,7 @@ import {
   reportTypeSchema,
   reportMessageSchema,
   cloudflareTurnstileTokenSchema,
-} from './common.schemas';
+} from './common.schemas.js';
 
 // ============================================================================
 // Route Parameter Schemas

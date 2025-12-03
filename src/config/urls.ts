@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import type { IndexerConfig, AliaserConfig, NodeSettings, StorageConfig } from '../types';
+import type { IndexerConfig, AliaserConfig, NodeSettings, StorageConfig } from '../types/index.js';
 
 /**
  * Service endpoint configuration schema

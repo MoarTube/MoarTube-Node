@@ -4,10 +4,10 @@
  * Provides data access methods for comment records using Drizzle ORM.
  */
 import { eq, desc, sql, and, gt, like } from 'drizzle-orm';
-import type { DrizzleComment, DrizzleNewComment } from '../schema';
-import { comments } from '../schema';
-import { BaseRepository } from './base';
-import type { PaginationOptions } from '../../types/models';
+import type { DrizzleComment, DrizzleNewComment } from '../schema/index.js';
+import { comments } from '../schema/index.js';
+import { BaseRepository } from './base.js';
+import type { PaginationOptions } from '../../types/models.js';
 
 /**
  * Options for comment search

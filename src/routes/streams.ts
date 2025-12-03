@@ -5,8 +5,8 @@
  */
 import type { FastifyInstance } from 'fastify';
 
-import type { Container } from '../core/container';
-import { StreamsController } from '../controllers';
+import type { Container } from '../core/container.js';
+import { StreamsController } from '../controllers/index.js';
 import {
   streamVideoIdParamsSchema,
   streamSegmentParamsSchema,
@@ -14,7 +14,7 @@ import {
   chatSettingsBodySchema,
   removeSegmentBodySchema,
   chatHistoryQuerySchema,
-} from '../validators';
+} from '../validators/index.js';
 
 /**
  * Register streams routes

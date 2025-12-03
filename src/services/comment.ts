@@ -5,17 +5,17 @@
  * and integration with video comment counts.
  */
 
-import { BaseService, type ServiceOptions } from './base';
+import { BaseService, type ServiceOptions } from './base.js';
 import type {
   ICommentService,
   GetCommentsOptions,
   CreateCommentInput,
   IWebSocketService,
-} from './interfaces';
-import type { CommentsRepository } from '../database/repositories/comments';
-import type { VideosRepository } from '../database/repositories/videos';
-import type { DrizzleComment, DrizzleNewComment } from '../database/schema';
-import type { PaginationOptions } from '../types/models';
+} from './interfaces.js';
+import type { CommentsRepository } from '../database/repositories/comments.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
+import type { DrizzleComment, DrizzleNewComment } from '../database/schema/index.js';
+import type { PaginationOptions } from '../types/models.js';
 
 /**
  * Comment service dependencies

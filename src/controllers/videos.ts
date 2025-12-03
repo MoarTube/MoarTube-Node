@@ -8,7 +8,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { BaseController } from './base';
+import { BaseController } from './base.js';
 import type {
   IVideoService,
   ICommentService,
@@ -16,11 +16,11 @@ import type {
   IReportService,
   UpdateVideoInput,
   ReportType,
-} from '../services/interfaces';
-import type { IVideoUploadService } from '../services';
-import { NotFoundError, BadRequestError, ForbiddenError } from '../errors';
-import { resolve } from '../core/container';
-import { getConfig } from '../config';
+} from '../services/interfaces.js';
+import type { IVideoUploadService } from '../services/index.js';
+import { NotFoundError, BadRequestError, ForbiddenError } from '../errors/index.js';
+import { resolve } from '../core/container.js';
+import { getConfig } from '../config/index.js';
 
 /**
  * Request body/query/params type definitions

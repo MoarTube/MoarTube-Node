@@ -6,8 +6,8 @@
 import type { FastifyInstance } from 'fastify';
 import multipart from '@fastify/multipart';
 
-import type { Container } from '../core/container';
-import { SettingsController } from '../controllers';
+import type { Container } from '../core/container.js';
+import { SettingsController } from '../controllers/index.js';
 import {
   personalizeNodeNameBodySchema,
   personalizeNodeAboutBodySchema,
@@ -21,7 +21,7 @@ import {
   featureToggleBodySchema,
   databaseConfigToggleBodySchema,
   storageConfigToggleBodySchema,
-} from '../validators';
+} from '../validators/index.js';
 
 /**
  * Register settings routes

@@ -8,8 +8,8 @@ import type {
   ExtendedWebSocket,
   IncomingWebSocketMessage,
   ChatMessage,
-} from '../../types/websocket';
-import { WebSocketHandler, type HandlerContext } from './base';
+} from '../../types/websocket.js';
+import { WebSocketHandler, type HandlerContext } from './base.js';
 
 /**
  * Incoming chat message structure

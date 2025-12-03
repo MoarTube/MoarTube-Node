@@ -15,7 +15,7 @@ export {
   createScope,
   type Container,
   type ContainerCradle,
-} from './container';
+} from './container.js';
 
 // Cluster management
 export {
@@ -27,7 +27,7 @@ export {
   type IPCLogger,
   type ClusterMasterConfig,
   type ClusterWorkerConfig,
-} from './cluster';
+} from './cluster/index.js';
 
 // Graceful shutdown
 export {
@@ -35,4 +35,4 @@ export {
   createGracefulShutdown,
   type GracefulShutdownConfig,
   type ShutdownLogger,
-} from './shutdown';
+} from './shutdown.js';

@@ -4,11 +4,11 @@
  * Handles embedded video and chat page rendering.
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { BaseController } from './base';
-import type { VideosRepository } from '../database/repositories/videos';
-import type { LinksRepository } from '../database/repositories/links';
-import type { MonetizationRepository } from '../database/repositories/monetization';
-import { getConfig } from '../config';
+import { BaseController } from './base.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
+import type { LinksRepository } from '../database/repositories/links.js';
+import type { MonetizationRepository } from '../database/repositories/monetization.js';
+import { getConfig } from '../config/index.js';
 
 /**
  * Route params for video/chat endpoints

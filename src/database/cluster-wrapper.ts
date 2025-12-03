@@ -6,10 +6,10 @@
  * are routed through the master process to avoid SQLite locking issues.
  */
 import cluster from 'cluster';
-import type { DatabaseClient } from './connection';
-import { getDatabase } from './connection';
-import type { WriteQueue } from './write-queue';
-import { getWriteQueue } from './write-queue';
+import type { DatabaseClient } from './connection.js';
+import { getDatabase } from './connection.js';
+import type { WriteQueue } from './write-queue.js';
+import { getWriteQueue } from './write-queue.js';
 
 /**
  * ClusterDatabaseWrapper class

@@ -14,9 +14,9 @@ import type {
   LiveStreamWorkerStatsResponseMessage,
   RestartDatabaseMessage,
   LiveStreamWatchingCountsTracker,
-} from '../../types/ipc';
-import type { WebSocketMessage } from '../../types/websocket';
-import { IPCChannel, type IPCLogger } from './ipc-channel';
+} from '../../types/ipc.js';
+import type { WebSocketMessage } from '../../types/websocket.js';
+import { IPCChannel, type IPCLogger } from './ipc-channel.js';
 
 /**
  * Database operations interface

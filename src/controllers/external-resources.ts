@@ -6,8 +6,8 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
-import { BaseController } from './base';
-import { getConfig } from '../config';
+import { BaseController } from './base.js';
+import { getConfig } from '../config/index.js';
 
 /**
  * Route params for images

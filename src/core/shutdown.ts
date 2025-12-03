@@ -8,7 +8,7 @@
 import type { Server as HttpServer } from 'node:http';
 import type { Server as HttpsServer } from 'node:https';
 import { createHttpTerminator, type HttpTerminator } from 'http-terminator';
-import type { WebSocketManager } from '../websocket/websocket-manager';
+import type { WebSocketManager } from '../websocket/websocket-manager.js';
 
 /**
  * Logger interface for shutdown
