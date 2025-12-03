@@ -139,7 +139,7 @@ export class WebSocketManager {
     const client = ws as ExtendedWebSocket;
 
     // Assign client metadata
-    client.clientId = `client_${++this.clientIdCounter}_${Date.now()}`;
+    client.clientId = `client_${String(++this.clientIdCounter)}_${String(Date.now())}`;
     client.socketType = clientType;
     client.isAuthenticated = isAuthenticated;
     client.lastActivity = Date.now();

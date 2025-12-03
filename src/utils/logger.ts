@@ -62,7 +62,7 @@ function formatTimestamp(date: Date): string {
   const minutes = String(date.getMinutes()).padStart(2, '0');
   const seconds = String(date.getSeconds()).padStart(2, '0');
 
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  return `${String(year)}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
 /**
@@ -196,7 +196,7 @@ export class Logger implements ILogger {
     if (error !== null && error !== undefined) {
       if (error.stack !== undefined) {
         console.error(error.stack);
-      } else if (error.message !== undefined) {
+      } else {
         console.error(`Error: ${error.message}`);
       }
     }

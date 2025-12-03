@@ -41,7 +41,7 @@ export class EchoHandler extends WebSocketHandler {
 
     const echoMessage = message as unknown as EchoMessage;
 
-    if (!echoMessage.data?.eventName) {
+    if (!echoMessage.data.eventName) {
       context.log.warn('Invalid echo message format', { clientId: client.clientId });
       return;
     }

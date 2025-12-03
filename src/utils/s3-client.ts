@@ -381,7 +381,7 @@ export class S3StorageClient {
         await this.client.send(command);
       }
 
-      this.logger?.debug(`Deleted ${keys.length} objects from ${bucket}`);
+      this.logger?.debug(`Deleted ${String(keys.length)} objects from ${bucket}`);
     } catch (error) {
       this.logger?.error('Failed to delete objects', error as Error, {
         bucket,

@@ -454,10 +454,10 @@ export async function readJsonFile<T>(filePath: string): Promise<T> {
  * Read and parse a JSON file (synchronous)
  * @param filePath - Path to JSON file
  */
-export function readJsonFileSync<T>(filePath: string): T {
+export function readJsonFileSync(filePath: string): unknown {
   const content = readFileSync(filePath);
   try {
-    return JSON.parse(content) as T;
+    return JSON.parse(content) as unknown;
   } catch (error) {
     throw new FilesystemError(
       `Failed to parse JSON: ${(error as Error).message}`,
@@ -473,7 +473,7 @@ export function readJsonFileSync<T>(filePath: string): T {
  * @param data - Data to write
  * @param pretty - Whether to format with indentation
  */
-export async function writeJsonFile<T>(filePath: string, data: T, pretty = true): Promise<void> {
+export async function writeJsonFile(filePath: string, data: unknown, pretty = true): Promise<void> {
   const content = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);
   await writeFile(filePath, content);
 }
@@ -484,7 +484,7 @@ export async function writeJsonFile<T>(filePath: string, data: T, pretty = true)
  * @param data - Data to write
  * @param pretty - Whether to format with indentation
  */
-export function writeJsonFileSync<T>(filePath: string, data: T, pretty = true): void {
+export function writeJsonFileSync(filePath: string, data: unknown, pretty = true): void {
   const content = pretty ? JSON.stringify(data, null, 2) : JSON.stringify(data);
   writeFileSync(filePath, content);
 }
