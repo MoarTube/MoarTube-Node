@@ -1268,8 +1268,7 @@ export class SettingsController extends BaseController {
        */
       for (const table of database) {
         table.rows = table.rows.map((row) => {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { id, ...rowWithoutId } = row;
+          const { id: _id, ...rowWithoutId } = row;
 
           // Convert 1/0 to true/false for boolean columns
           for (const column in rowWithoutId) {

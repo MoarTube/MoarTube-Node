@@ -20,7 +20,7 @@ module.exports = {
   rules: {
     // TypeScript-specific rules
     '@typescript-eslint/explicit-function-return-type': 'warn',
-    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     '@typescript-eslint/no-explicit-any': 'error',
     '@typescript-eslint/prefer-nullish-coalescing': 'error',
     '@typescript-eslint/prefer-optional-chain': 'error',
@@ -50,6 +50,5 @@ module.exports = {
     'public/',
     'data/',
     '*.js',
-    '!.eslintrc.js',
   ],
 };
