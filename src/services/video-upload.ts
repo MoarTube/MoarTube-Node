@@ -5,8 +5,8 @@
  * progress tracking, and WebSocket broadcasting.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { MultipartFile } from '@fastify/multipart';
 import type { FastifyRequest } from 'fastify';
 
@@ -23,6 +23,8 @@ import type { IUploadTrackerService } from './upload-tracker.js';
 // ============================================================================
 // Types
 // ============================================================================
+
+export type ImageType = 'thumbnail' | 'preview' | 'poster';
 
 export interface UploadResult {
   success: boolean;
@@ -46,7 +48,7 @@ export interface StreamUploadOptions {
 
 export interface ImageUploadOptions {
   videoId: string;
-  imageType: 'thumbnail' | 'preview' | 'poster';
+  imageType: ImageType;
 }
 
 export interface VideoUploadServiceDependencies {
@@ -62,23 +64,23 @@ export interface VideoUploadServiceDependencies {
 // Constants
 // ============================================================================
 
-const VALID_VIDEO_MIME_TYPES = [
+const VALID_VIDEO_MIME_TYPES = new Set([
   'application/vnd.apple.mpegurl', // m3u8 manifest
   'video/mp2t', // TS segments
   'video/mp4',
   'video/webm',
   'video/ogg',
-];
+]);
 
-const VALID_STREAM_MIME_TYPES = [
+const VALID_STREAM_MIME_TYPES = new Set([
   'application/vnd.apple.mpegurl', // m3u8 manifest
   'video/mp2t', // TS segments
-];
+]);
 
-const VALID_IMAGE_MIME_TYPES = ['image/jpeg'];
+const VALID_IMAGE_MIME_TYPES = new Set(['image/jpeg']);
 
-const VALID_FORMATS = ['m3u8', 'mp4', 'webm', 'ogv'];
-const VALID_RESOLUTIONS = ['2160p', '1440p', '1080p', '720p', '480p', '360p', '240p'];
+const VALID_FORMATS = new Set(['m3u8', 'mp4', 'webm', 'ogv']);
+const VALID_RESOLUTIONS = new Set(['2160p', '1440p', '1080p', '720p', '480p', '360p', '240p']);
 
 // ============================================================================
 // Service
@@ -105,7 +107,7 @@ export interface IVideoUploadService {
   ): string | null;
 
   /** Get destination path for an image upload */
-  getImageDestinationPath(videoId: string, imageType: 'thumbnail' | 'preview' | 'poster'): string;
+  getImageDestinationPath(videoId: string, imageType: ImageType): string;
 
   /** Validate video file mime type */
   isValidVideoMimeType(mimeType: string): boolean;
@@ -158,7 +160,7 @@ export class VideoUploadService implements IVideoUploadService {
    * Validate video upload parameters
    */
   validateVideoUploadParams(format: string, resolution: string): boolean {
-    return VALID_FORMATS.includes(format) && VALID_RESOLUTIONS.includes(resolution);
+    return VALID_FORMATS.has(format) && VALID_RESOLUTIONS.has(resolution);
   }
 
   /**
@@ -234,21 +236,21 @@ export class VideoUploadService implements IVideoUploadService {
    * Validate video file mime type
    */
   isValidVideoMimeType(mimeType: string): boolean {
-    return VALID_VIDEO_MIME_TYPES.includes(mimeType);
+    return VALID_VIDEO_MIME_TYPES.has(mimeType);
   }
 
   /**
    * Validate stream file mime type
    */
   isValidStreamMimeType(mimeType: string): boolean {
-    return VALID_STREAM_MIME_TYPES.includes(mimeType);
+    return VALID_STREAM_MIME_TYPES.has(mimeType);
   }
 
   /**
    * Validate image file mime type
    */
   isValidImageMimeType(mimeType: string): boolean {
-    return VALID_IMAGE_MIME_TYPES.includes(mimeType);
+    return VALID_IMAGE_MIME_TYPES.has(mimeType);
   }
 
   /**
@@ -392,7 +394,7 @@ export class VideoUploadService implements IVideoUploadService {
     format: string,
     resolution: string
   ): void {
-    const contentLength = parseInt(request.headers['content-length'] ?? '0', 10);
+    const contentLength = Number.parseInt(request.headers['content-length'] ?? '0', 10);
 
     if (contentLength <= 0) {
       return;
