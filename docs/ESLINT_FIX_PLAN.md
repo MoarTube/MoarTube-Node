@@ -2,8 +2,8 @@
 
 ## Summary (Updated 2025-12-03)
 
-- **Total Problems**: 118 (90 errors, 28 warnings)
-- **Files Affected**: 18 files
+- **Total Problems**: 48 (37 errors, 11 warnings)
+- **Files Affected**: 12 files
 
 ---
 
@@ -13,10 +13,11 @@
 |-------|--------|--------|----------|
 | Batch 1: Services | ✅ DONE | 0 | 0 |
 | Batch 2: Config | ✅ DONE | 0 | 0 |
-| Batch 3: Controllers - node/status | 🔲 TODO | 35 | 0 |
-| Batch 4: Controllers - watch/streams/others | 🔲 TODO | 28 | 0 |
-| Batch 5: Core/Database | 🔲 TODO | 9 | 12 |
-| Batch 6: Utils/WebSocket | 🔲 TODO | 9 | 8 |
+| Batch 3: Controllers - node/status | ✅ DONE | 0 | 0 |
+| Batch 4: Controllers - base | ✅ DONE | 0 | 0 |
+| Batch 5: Controllers - watch/streams/others | 🔲 TODO | 26 | 0 |
+| Batch 6: Core/Database | 🔲 TODO | 3 | 4 |
+| Batch 7: Utils/WebSocket | 🔲 TODO | 8 | 7 |
 
 ---
 
@@ -42,64 +43,85 @@
 - `src/config/urls.ts` - 9 errors fixed (singleton pattern, template expressions, nullable strings)
 - `src/config/schema.ts` - 1 error fixed (deprecated `z.string().url()` → `z.url()`)
 
-**Remaining**: 0 errors, 0 warnings
+---
+
+## Batch 3: Controllers (node.ts, status.ts) ✅ COMPLETED
+
+**Commit**: d9e244a
+
+**Files Fixed:**
+- `src/controllers/node.ts` - 20 errors fixed (removed unnecessary String(), ??, optional chains, refactored if-else to switch)
+- `src/controllers/status.ts` - 14 errors fixed (removed unnecessary String(), ??, type overlap check)
 
 ---
 
-## Batch 3: Controllers (node.ts, status.ts)
+## Batch 4: Controllers (base.ts) ✅ COMPLETED
+
+**Commit**: 9cdd66e
+
+**Files Fixed:**
+- `src/controllers/base.ts` - 2 errors fixed (removed unnecessary type parameters from sendSuccess/sendPaginated)
+
+---
+
+## Batch 5: Controllers (watch, streams, external-videos, watch-embed)
 
 **Files:**
 | File | Errors | Warnings | Main Issues |
 |------|--------|----------|-------------|
-| `src/controllers/node.ts` | 20 | 0 | String() conversions, unnecessary ?? operators |
-| `src/controllers/status.ts` | 15 | 0 | String() conversions, unnecessary ?? operators |
+| `src/controllers/watch.ts` | 17 | 0 | String() on strings (lines 231-237, 288), unnecessary ?? operators, type overlap (line 284) |
+| `src/controllers/streams.ts` | 4 | 0 | Type overlap (line 316), String() on string, unnecessary ?? |
+| `src/controllers/external-videos.ts` | 3 | 0 | Numbers in template literals (line 344) |
+| `src/controllers/watch-embed.ts` | 2 | 0 | Unused `_error` vars (lines 121, 186) |
 
-**Total**: 35 errors
+**Total**: 26 errors
+
+**Fix Patterns:**
+- Remove `String(nodeSettings.prop ?? '')` → `nodeSettings.prop`
+- Keep `String()` only for `publicNodePort` (number|string)
+- Wrap numbers in `String()` for template literals
+- Remove `_error` unused catch variables or use them
 
 ---
 
-## Batch 4: Controllers (watch, streams, others)
+## Batch 6: Core & Database
 
 **Files:**
 | File | Errors | Warnings | Main Issues |
 |------|--------|----------|-------------|
-| `src/controllers/base.ts` | 2 | 0 | type parameters |
-| `src/controllers/watch.ts` | 17 | 0 | String() conversions, unnecessary conditions |
-| `src/controllers/streams.ts` | 4 | 0 | unnecessary conditions, String() |
-| `src/controllers/watch-embed.ts` | 2 | 0 | unused vars |
-| `src/controllers/external-videos.ts` | 3 | 0 | template expressions |
+| `src/core/shutdown.ts` | 0 | 3 | console statements (lines 43, 46, 49) |
+| `src/database/index.ts` | 1 | 0 | Deprecated export `getRawPostgresClient` (line 15) |
+| `src/database/write-queue.ts` | 2 | 1 | Template expression (line 204), nullish coalescing (line 223), strict-boolean (line 188) |
 
-**Total**: 28 errors
+**Total**: 3 errors, 4 warnings
+
+**Fix Patterns:**
+- Replace console with Logger utility
+- Remove deprecated export or mark with @deprecated JSDoc
+- Use `??=` operator pattern
+- Wrap numbers with String() in templates
+- Handle nullable string explicitly
 
 ---
 
-## Batch 5: Core & Database
+## Batch 7: Utils & WebSocket
 
 **Files:**
 | File | Errors | Warnings | Main Issues |
 |------|--------|----------|-------------|
-| `src/core/cluster/ipc-channel.ts` | 3 | 4 | unnecessary conditions, nullish coalescing, console |
-| `src/core/cluster/master.ts` | 3 | 4 | template expressions, Boolean(), console |
-| `src/core/shutdown.ts` | 0 | 3 | console |
-| `src/database/index.ts` | 1 | 0 | deprecated export |
-| `src/database/write-queue.ts` | 2 | 1 | template expression, nullish coalescing, strict-boolean |
+| `src/utils/filesystem.ts` | 3 | 0 | Unused type parameters (lines 457, 476, 487) |
+| `src/utils/logger.ts` | 2 | 7 | Template expression (line 65), type overlap (line 199), console statements |
+| `src/utils/s3-client.ts` | 1 | 0 | Number in template (line 384) |
+| `src/websocket/handlers/echo.ts` | 1 | 0 | Unnecessary optional chain (line 44) |
+| `src/websocket/websocket-manager.ts` | 2 | 0 | Numbers in templates (line 142) |
 
-**Total**: 9 errors, 12 warnings
+**Total**: 9 errors, 7 warnings
 
----
-
-## Batch 6: Utils & WebSocket
-
-**Files:**
-| File | Errors | Warnings | Main Issues |
-|------|--------|----------|-------------|
-| `src/utils/filesystem.ts` | 3 | 0 | type parameters |
-| `src/utils/logger.ts` | 2 | 8 | template expression, unnecessary condition, console |
-| `src/utils/s3-client.ts` | 1 | 0 | template expression |
-| `src/websocket/handlers/echo.ts` | 1 | 0 | optional chain |
-| `src/websocket/websocket-manager.ts` | 2 | 0 | template expressions |
-
-**Total**: 9 errors, 8 warnings
+**Fix Patterns:**
+- Remove unused type parameters or refactor signatures
+- Wrap numbers with String() in templates
+- Remove unnecessary optional chains
+- Console warnings in logger.ts are intentional (it IS the logger)
 
 ---
 
@@ -107,20 +129,23 @@
 
 | Error Type | Count | Fix Strategy |
 |------------|-------|--------------|
-| `no-unnecessary-condition` | ~40 | Remove redundant conditionals or fix types |
-| `no-unnecessary-type-conversion` | ~25 | Remove redundant `String()` / `Boolean()` calls |
-| `restrict-template-expressions` | ~12 | Wrap numbers with `String()` in templates |
-| `strict-boolean-expressions` | ~10 | Handle nullish/empty cases explicitly |
-| `no-unnecessary-type-parameters` | 5 | Remove unused type parameters or refactor |
-| `prefer-nullish-coalescing` | 2 | Use `??=` operator |
-| `no-deprecated` | 2 | Replace deprecated API usage |
-| `no-unused-vars` | 2 | Remove or prefix with `_` |
-| `no-console` | ~15 | Intentional - consider if should fix |
+| `no-unnecessary-condition` | 14 | Remove redundant conditionals, fix type overlap |
+| `no-unnecessary-type-conversion` | 9 | Remove redundant `String()` calls on already-string values |
+| `restrict-template-expressions` | 8 | Wrap numbers with `String()` in template literals |
+| `no-console` | 10 | Replace with Logger utility (except in logger.ts itself) |
+| `no-unnecessary-type-parameters` | 3 | Remove or refactor unused type parameters |
+| `no-unused-vars` | 2 | Remove unused catch variable `_error` |
+| `strict-boolean-expressions` | 1 | Handle nullable string explicitly |
+| `prefer-nullish-coalescing` | 1 | Use `??=` operator |
+| `no-deprecated` | 1 | Remove deprecated export |
 
 ---
 
 ## Progress Log
 
 - **2025-12-03**: Batch 1 completed - services folder (commit a907929)
-- **2025-12-03**: Batch 2 completed - config folder (15 errors → 0 errors, 5 warnings remain for singleton pattern)
-- **2025-12-03**: Updated plan with current state
+- **2025-12-03**: Batch 2 completed - config folder (15 errors → 0)
+- **2025-12-03**: Removed eslint-disable comments from helpers.ts, cluster files
+- **2025-12-03**: Batch 3 completed - node.ts, status.ts (34 errors → 0, commit d9e244a)
+- **2025-12-03**: Batch 4 completed - base.ts (2 errors → 0, commit 9cdd66e)
+- **2025-12-03**: Updated plan - 48 problems remaining (37 errors, 11 warnings)
