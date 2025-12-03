@@ -68,9 +68,9 @@ export abstract class BaseController {
    * @param data - Response data
    * @param messageOrStatus - Optional message string or HTTP status code (default: 200)
    */
-  protected sendSuccess<T>(
+  protected sendSuccess(
     reply: FastifyReply,
-    data: T,
+    data: object,
     messageOrStatus: string | number = 200
   ): void {
     const status = typeof messageOrStatus === 'number' ? messageOrStatus : 200;
@@ -108,9 +108,9 @@ export abstract class BaseController {
    * @param page - Current page (1-indexed)
    * @param limit - Items per page
    */
-  protected sendPaginated<T>(
+  protected sendPaginated(
     reply: FastifyReply,
-    data: T[],
+    data: unknown[],
     total: number,
     page: number,
     limit: number
@@ -118,7 +118,7 @@ export abstract class BaseController {
     const pages = Math.ceil(total / limit);
     const hasMore = page < pages;
 
-    const response: PaginatedResponse<T> = {
+    const response = {
       isError: false,
       data,
       pagination: {
