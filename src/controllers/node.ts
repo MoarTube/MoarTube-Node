@@ -89,13 +89,13 @@ export class NodeController extends BaseController {
         isError: false,
         information: {
           nodeVideoCount: videoCount,
-          nodeId: String(nodeSettings.nodeId ?? ''),
-          nodeName: String(nodeSettings.nodeName ?? ''),
-          nodeAbout: String(nodeSettings.nodeAbout ?? ''),
-          publicNodeProtocol: String(nodeSettings.publicNodeProtocol ?? ''),
-          publicNodeAddress: String(nodeSettings.publicNodeAddress ?? ''),
-          publicNodePort: String(nodeSettings.publicNodePort ?? ''),
-          cloudflareTurnstileSiteKey: String(nodeSettings.cloudflareTurnstileSiteKey ?? ''),
+          nodeId: nodeSettings.nodeId,
+          nodeName: nodeSettings.nodeName,
+          nodeAbout: nodeSettings.nodeAbout,
+          publicNodeProtocol: nodeSettings.publicNodeProtocol,
+          publicNodeAddress: nodeSettings.publicNodeAddress,
+          publicNodePort: String(nodeSettings.publicNodePort),
+          cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
         },
       };
 
@@ -114,7 +114,7 @@ export class NodeController extends BaseController {
 
       const tagsSet = new Set<string>();
       for (const video of allVideos) {
-        const videoTags = video.tags?.split(',') ?? [];
+        const videoTags = video.tags.split(',');
         for (const tag of videoTags) {
           if (tag.trim()) {
             tagsSet.add(tag.trim());
@@ -239,12 +239,16 @@ export class NodeController extends BaseController {
 
       const timestamp = Date.now();
 
-      if (contentType === 'comments') {
-        config.updateLastCheckedContentTracker({ lastCheckedCommentsTimestamp: timestamp });
-      } else if (contentType === 'videoReports') {
-        config.updateLastCheckedContentTracker({ lastCheckedVideoReportsTimestamp: timestamp });
-      } else if (contentType === 'commentReports') {
-        config.updateLastCheckedContentTracker({ lastCheckedCommentReportsTimestamp: timestamp });
+      switch (contentType) {
+        case 'comments':
+          config.updateLastCheckedContentTracker({ lastCheckedCommentsTimestamp: timestamp });
+          break;
+        case 'videoReports':
+          config.updateLastCheckedContentTracker({ lastCheckedVideoReportsTimestamp: timestamp });
+          break;
+        case 'commentReports':
+          config.updateLastCheckedContentTracker({ lastCheckedCommentReportsTimestamp: timestamp });
+          break;
       }
 
       this.sendOk(reply);
@@ -331,7 +335,7 @@ export class NodeController extends BaseController {
     const results: DrizzleVideo[] = [];
 
     for (const video of videos) {
-      const tagsArray = video.tags?.split(',').map((t: string) => t.trim()) ?? [];
+      const tagsArray = video.tags.split(',').map((t: string) => t.trim());
       if (tagsArray.includes(tagTerm) && !results.includes(video)) {
         results.push(video);
       }
@@ -365,7 +369,7 @@ export class NodeController extends BaseController {
     tagLimitCounter: Record<string, number>,
     tagLimit: number
   ): boolean {
-    const tagsArray = video.tags?.split(',') ?? [];
+    const tagsArray = video.tags.split(',');
 
     for (const tag of tagsArray) {
       const trimmedTag = tag.trim();

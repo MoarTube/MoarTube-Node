@@ -60,13 +60,13 @@ export class StatusController extends BaseController {
 
     const information: StatusInformation = {
       nodeVideoCount: videoCount,
-      nodeId: String(nodeSettings.nodeId ?? ''),
-      nodeName: String(nodeSettings.nodeName ?? ''),
-      nodeAbout: String(nodeSettings.nodeAbout ?? ''),
-      publicNodeProtocol: String(nodeSettings.publicNodeProtocol ?? ''),
-      publicNodeAddress: String(nodeSettings.publicNodeAddress ?? ''),
-      publicNodePort: String(nodeSettings.publicNodePort ?? ''),
-      cloudflareTurnstileSiteKey: String(nodeSettings.cloudflareTurnstileSiteKey ?? ''),
+      nodeId: nodeSettings.nodeId,
+      nodeName: nodeSettings.nodeName,
+      nodeAbout: nodeSettings.nodeAbout,
+      publicNodeProtocol: nodeSettings.publicNodeProtocol,
+      publicNodeAddress: nodeSettings.publicNodeAddress,
+      publicNodePort: String(nodeSettings.publicNodePort),
+      cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
     };
 
     this.sendSuccess(reply, { information });
@@ -114,7 +114,7 @@ export class StatusController extends BaseController {
     try {
       const config = getConfig();
       const nodeId = config.nodeSettings.nodeId;
-      if (nodeId === undefined || nodeId === '') {
+      if (nodeId === '') {
         configurationCheck = {
           status: 'error',
           message: 'Node not configured',
