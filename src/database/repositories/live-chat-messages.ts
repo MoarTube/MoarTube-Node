@@ -191,7 +191,7 @@ export class LiveChatMessageRepository extends BaseRepository {
       return 0;
     }
 
-    const lastMessage = recentMessages[recentMessages.length - 1];
+    const lastMessage = recentMessages.at(-1);
     if (!lastMessage) {
       // Should not happen given the length check above, but satisfies TypeScript
       return 0;
