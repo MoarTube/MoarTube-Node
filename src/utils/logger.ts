@@ -1,9 +1,10 @@
 /**
  * Logger Module
  *
- * Centralized logging functionality with support for different log levels,
- * timestamps, and structured context.
+ * Uses Pino for fast, structured logging.
  */
+
+import pino from 'pino';
 
 /**
  * Log levels in order of severity
@@ -14,16 +15,6 @@ export enum LogLevel {
   WARN = 'warn',
   ERROR = 'error',
 }
-
-/**
- * Log level numeric values for comparison
- */
-const LOG_LEVEL_VALUES: Record<LogLevel, number> = {
-  [LogLevel.DEBUG]: 0,
-  [LogLevel.INFO]: 1,
-  [LogLevel.WARN]: 2,
-  [LogLevel.ERROR]: 3,
-};
 
 /**
  * Logger configuration options
@@ -52,47 +43,42 @@ export interface ILogger {
 }
 
 /**
- * Format a date as a human-readable timestamp
- */
-function formatTimestamp(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-
-  return `${String(year)}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-}
-
-/**
- * Format context object for logging
- */
-function formatContext(context: Record<string, unknown>): string {
-  try {
-    return JSON.stringify(context);
-  } catch {
-    return '[Unable to stringify context]';
-  }
-}
-
-/**
- * Logger class
+ * Logger class using Pino
  *
  * Provides structured logging with configurable levels and formatting.
  */
 export class Logger implements ILogger {
   private static instance: Logger | null = null;
-  private readonly config: Required<LoggerConfig>;
+  private readonly logger: pino.Logger;
 
-  constructor(config: LoggerConfig = {}) {
-    this.config = {
-      level: config.level ?? LogLevel.INFO,
-      timestamps: config.timestamps ?? true,
-      prefix: config.prefix ?? '',
-      logToFile: config.logToFile ?? false,
-      logFilePath: config.logFilePath ?? '',
-    };
+  constructor(config: LoggerConfig = {}, existingLogger?: pino.Logger) {
+    if (existingLogger) {
+      this.logger = existingLogger;
+    } else {
+      const level = config.level ?? LogLevel.INFO;
+      const options: pino.LoggerOptions = { level };
+      if (config.timestamps !== false) {
+        options.timestamp = pino.stdTimeFunctions.isoTime;
+      }
+
+      let logger = pino(options);
+
+      if (config.logToFile === true) {
+        if (config.logFilePath !== undefined) {
+          const streams = [
+            { stream: process.stdout },
+            { stream: pino.destination(config.logFilePath) },
+          ];
+          logger = pino(options, pino.multistream(streams));
+        }
+      }
+
+      if (config.prefix !== undefined && config.prefix.length > 0) {
+        logger = logger.child({ prefix: config.prefix });
+      }
+
+      this.logger = logger;
+    }
   }
 
   /**
@@ -111,107 +97,44 @@ export class Logger implements ILogger {
   }
 
   /**
-   * Check if a log level should be output
-   */
-  private shouldLog(level: LogLevel): boolean {
-    return LOG_LEVEL_VALUES[level] >= LOG_LEVEL_VALUES[this.config.level];
-  }
-
-  /**
-   * Build the log message
-   */
-  private buildMessage(
-    level: LogLevel,
-    message: string,
-    context?: Record<string, unknown>
-  ): string {
-    const parts: string[] = [];
-
-    if (this.config.timestamps) {
-      parts.push(`[${formatTimestamp(new Date())}]`);
-    }
-
-    parts.push(`[${level.toUpperCase()}]`);
-
-    if (this.config.prefix !== '') {
-      parts.push(`[${this.config.prefix}]`);
-    }
-
-    parts.push(message);
-
-    if (context !== undefined && Object.keys(context).length > 0) {
-      parts.push(formatContext(context));
-    }
-
-    return parts.join(' ');
-  }
-
-  /**
    * Log a debug message
    */
   debug(message: string, context?: Record<string, unknown>): void {
-    if (!this.shouldLog(LogLevel.DEBUG)) {
-      return;
-    }
-
-    const formattedMessage = this.buildMessage(LogLevel.DEBUG, message, context);
-    console.debug(formattedMessage);
+    this.logger.debug(context ?? {}, message);
   }
 
   /**
    * Log an info message
    */
   info(message: string, context?: Record<string, unknown>): void {
-    if (!this.shouldLog(LogLevel.INFO)) {
-      return;
-    }
-
-    const formattedMessage = this.buildMessage(LogLevel.INFO, message, context);
-    console.info(formattedMessage);
+    this.logger.info(context ?? {}, message);
   }
 
   /**
    * Log a warning message
    */
   warn(message: string, context?: Record<string, unknown>): void {
-    if (!this.shouldLog(LogLevel.WARN)) {
-      return;
-    }
-
-    const formattedMessage = this.buildMessage(LogLevel.WARN, message, context);
-    console.warn(formattedMessage);
+    this.logger.warn(context ?? {}, message);
   }
 
   /**
    * Log an error message with optional error object
    */
   error(message: string, error?: Error | null, context?: Record<string, unknown>): void {
-    if (!this.shouldLog(LogLevel.ERROR)) {
-      return;
+    const logContext = { ...context };
+    if (error) {
+      logContext['error'] = error.message;
+      logContext['stack'] = error.stack;
     }
-
-    const formattedMessage = this.buildMessage(LogLevel.ERROR, message, context);
-    console.error(formattedMessage);
-
-    if (error !== null && error !== undefined) {
-      if (error.stack !== undefined) {
-        console.error(error.stack);
-      } else {
-        console.error(`Error: ${error.message}`);
-      }
-    }
+    this.logger.error(logContext, message);
   }
 
   /**
    * Create a child logger with a prefix
    */
   child(prefix: string): Logger {
-    const combinedPrefix = this.config.prefix !== '' ? `${this.config.prefix}:${prefix}` : prefix;
-
-    return new Logger({
-      ...this.config,
-      prefix: combinedPrefix,
-    });
+    const childLogger = this.logger.child({ component: prefix });
+    return new Logger({}, childLogger);
   }
 }
 
@@ -224,22 +147,17 @@ export function logDebugMessageToConsole(
   error: Error | null | undefined,
   stackTrace: string | null | undefined
 ): void {
-  const date = new Date();
-  const humanReadableTimestamp = formatTimestamp(date);
-
-  let errorMessage = `<message: ${message ?? 'null'}, date: ${humanReadableTimestamp}>`;
-
-  if (error !== null && error !== undefined) {
-    if (error.stack !== undefined) {
-      errorMessage += `\n${error.stack}`;
-    }
+  const logger = Logger.getInstance();
+  const msg = message ?? 'null';
+  const context: Record<string, unknown> = {};
+  if (error) {
+    context['error'] = error.message;
+    context['stack'] = error.stack;
   }
-
-  if (stackTrace !== null && stackTrace !== undefined) {
-    errorMessage += `\n${stackTrace}`;
+  if (stackTrace !== null) {
+    context['customStack'] = stackTrace;
   }
-
-  console.log(errorMessage);
+  logger.debug(msg, context);
 }
 
 /**
