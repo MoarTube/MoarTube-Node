@@ -5,6 +5,7 @@
  */
 
 import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
 import * as jwt from 'jsonwebtoken';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -444,10 +445,7 @@ export function toTitleCase(str: string): string {
  */
 export function isDockerEnvironment(): boolean {
   try {
-    // Use dynamic import-style check to avoid bundling issues
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const fsModule = require('node:fs') as { existsSync: (path: string) => boolean };
-    return fsModule.existsSync('/.dockerenv');
+    return fs.existsSync('/.dockerenv');
   } catch {
     return false;
   }

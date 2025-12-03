@@ -12,6 +12,7 @@ import type { LiveStreamStatsMessage, WebSocketMessage } from '../../types/webso
 import type { WebSocket as WsWebSocket } from 'ws';
 import { IPCChannel, type IPCLogger } from './ipc-channel.js';
 import { WebSocketManager } from '../../websocket/websocket-manager.js';
+import { Logger } from '../../utils/logger.js';
 
 /**
  * Worker configuration
@@ -32,28 +33,11 @@ export interface ClusterWorkerConfig {
 }
 
 /**
- * Default logger
+ * Default logger using Logger utility
  */
-const defaultLogger: IPCLogger = {
-  debug: (message, context) => {
-    if (process.env['NODE_ENV'] === 'development') {
-      // eslint-disable-next-line no-console
-      console.debug(`[Worker ${String(cluster.worker?.id)}] ${message}`, context ?? '');
-    }
-  },
-  info: (message, context) => {
-    // eslint-disable-next-line no-console
-    console.info(`[Worker ${String(cluster.worker?.id)}] ${message}`, context ?? '');
-  },
-  warn: (message, context) => {
-    // eslint-disable-next-line no-console
-    console.warn(`[Worker ${String(cluster.worker?.id)}] ${message}`, context ?? '');
-  },
-  error: (message, error, context) => {
-    // eslint-disable-next-line no-console
-    console.error(`[Worker ${String(cluster.worker?.id)}] ${message}`, error ?? '', context ?? '');
-  },
-};
+const defaultLogger: IPCLogger = new Logger({
+  prefix: `Worker ${String(cluster.worker?.id ?? 'unknown')}`,
+});
 
 /**
  * Cluster Worker Process Manager

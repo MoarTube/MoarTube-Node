@@ -12,7 +12,7 @@
 | Batch | Status | Errors | Warnings |
 |-------|--------|--------|----------|
 | Batch 1: Services | ✅ DONE | 0 | 0 |
-| Batch 2: Config | 🔲 TODO | 15 | 7 |
+| Batch 2: Config | ✅ DONE | 0 | 0 |
 | Batch 3: Controllers - node/status | 🔲 TODO | 35 | 0 |
 | Batch 4: Controllers - watch/streams/others | 🔲 TODO | 28 | 0 |
 | Batch 5: Core/Database | 🔲 TODO | 9 | 12 |
@@ -34,17 +34,15 @@
 
 ---
 
-## Batch 2: Config Files
+## Batch 2: Config Files ✅ COMPLETED
 
-**Files:**
-| File | Errors | Warnings | Main Issues |
-|------|--------|----------|-------------|
-| `src/config/env.ts` | 1 | 1 | unnecessary condition, strict-boolean |
-| `src/config/paths.ts` | 4 | 2 | unnecessary conditions |
-| `src/config/urls.ts` | 9 | 4 | unnecessary conditions, template expressions, strict-boolean |
-| `src/config/schema.ts` | 1 | 0 | deprecated API (`z.string().url()`) |
+**Files Fixed:**
+- `src/config/env.ts` - 1 error fixed (nullable string handling)
+- `src/config/paths.ts` - 4 errors fixed (singleton pattern)
+- `src/config/urls.ts` - 9 errors fixed (singleton pattern, template expressions, nullable strings)
+- `src/config/schema.ts` - 1 error fixed (deprecated `z.string().url()` → `z.url()`)
 
-**Total**: 15 errors, 7 warnings
+**Remaining**: 0 errors, 0 warnings
 
 ---
 
@@ -124,4 +122,5 @@
 ## Progress Log
 
 - **2025-12-03**: Batch 1 completed - services folder (commit a907929)
-- **2025-12-03**: Updated plan with current state (90 errors, 28 warnings remaining)
+- **2025-12-03**: Batch 2 completed - config folder (15 errors → 0 errors, 5 warnings remain for singleton pattern)
+- **2025-12-03**: Updated plan with current state

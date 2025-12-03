@@ -20,7 +20,7 @@ const EnvSchema = z.object({
   PORT: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : undefined)),
+    .transform((val) => (val !== undefined && val !== '' ? parseInt(val, 10) : undefined)),
   HOST: z.string().optional(),
 });
 
@@ -33,7 +33,7 @@ export type EnvConfig = z.infer<typeof EnvSchema>;
  * Environment configuration singleton
  */
 class Env {
-  private static instance: Env;
+  private static instance: Env | undefined;
   private config: EnvConfig;
 
   private constructor() {
@@ -44,9 +44,7 @@ class Env {
    * Get the singleton instance
    */
   static getInstance(): Env {
-    if (!Env.instance) {
-      Env.instance = new Env();
-    }
+    Env.instance ??= new Env();
     return Env.instance;
   }
 

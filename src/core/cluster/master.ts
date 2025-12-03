@@ -17,6 +17,7 @@ import type {
 } from '../../types/ipc.js';
 import type { WebSocketMessage } from '../../types/websocket.js';
 import { IPCChannel, type IPCLogger } from './ipc-channel.js';
+import { Logger } from '../../utils/logger.js';
 
 /**
  * Database operations interface
@@ -86,24 +87,9 @@ export interface ClusterMasterConfig {
 }
 
 /**
- * Default logger
+ * Default logger using Logger utility
  */
-const defaultLogger: IPCLogger = {
-  debug: (message, context) => {
-    if (process.env['NODE_ENV'] === 'development') {
-      console.debug(`[Master] ${message}`, context ?? '');
-    }
-  },
-  info: (message, context) => {
-    console.info(`[Master] ${message}`, context ?? '');
-  },
-  warn: (message, context) => {
-    console.warn(`[Master] ${message}`, context ?? '');
-  },
-  error: (message, error, context) => {
-    console.error(`[Master] ${message}`, error ?? '', context ?? '');
-  },
-};
+const defaultLogger: IPCLogger = new Logger({ prefix: 'Master' });
 
 /**
  * Cluster Master Process Manager
@@ -312,7 +298,7 @@ export class ClusterMaster {
       cluster.fork();
     }
 
-    this.logger.info(`Forked ${numCPUs} workers`);
+    this.logger.info(`Forked ${String(numCPUs)} workers`);
   }
 
   /**
@@ -320,11 +306,10 @@ export class ClusterMaster {
    */
   private setupWorkerExitHandler(): void {
     cluster.on('exit', (worker, code, signal) => {
-      this.logger.warn(`Worker ${worker.id} exited`, { code, signal });
+      this.logger.warn(`Worker ${String(worker.id)} exited`, { code, signal });
 
-      // Clean up tracking - use assignment to undefined to avoid dynamic delete
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete this.liveStreamWatchingCountsTracker[worker.id];
+      // Clean up tracking
+      Reflect.deleteProperty(this.liveStreamWatchingCountsTracker, worker.id);
 
       // Fork replacement worker
       if (this.isRunning) {
@@ -410,7 +395,7 @@ export class ClusterMaster {
             title: video.title,
             tags: video.tags,
             views: video.views,
-            isStreaming: Boolean(video.is_streaming),
+            isStreaming: video.is_streaming,
             lengthSeconds: video.length_seconds,
             nodeIconPngBase64: this.config.getNodeIconPngBase64(),
             nodeAvatarPngBase64: this.config.getNodeAvatarPngBase64(),

@@ -47,7 +47,7 @@ export const S3ProviderClientConfigSchema = z.object({
   forcePathStyle: z.boolean().default(false),
   region: z.string().min(1, 'Region is required'),
   credentials: S3CredentialsSchema,
-  endpoint: z.string().url().optional(),
+  endpoint: z.url().optional(),
 });
 
 /**

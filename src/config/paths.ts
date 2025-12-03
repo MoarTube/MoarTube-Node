@@ -32,7 +32,7 @@ export interface PathConfig {
  * Path configuration singleton class
  */
 class Paths implements PathConfig {
-  private static instance: Paths;
+  private static instance: Paths | undefined;
 
   // Base directories
   readonly publicDirectoryPath: string;
@@ -83,9 +83,7 @@ class Paths implements PathConfig {
    * Initialize the paths singleton with the application base directory
    */
   static initialize(baseDir: string): Paths {
-    if (!Paths.instance) {
-      Paths.instance = new Paths(baseDir);
-    }
+    Paths.instance ??= new Paths(baseDir);
     return Paths.instance;
   }
 

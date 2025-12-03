@@ -1266,19 +1266,16 @@ export class SettingsController extends BaseController {
        */
       for (const table of database) {
         table.rows = table.rows.map((row) => {
-          const { id: _id, ...rowWithoutId } = row;
+          Reflect.deleteProperty(row, 'id');
 
           // Convert 1/0 to true/false for boolean columns
-          for (const column in rowWithoutId) {
-            if (
-              column.startsWith('is') &&
-              (rowWithoutId[column] === 0 || rowWithoutId[column] === 1)
-            ) {
-              rowWithoutId[column] = Boolean(rowWithoutId[column]);
+          for (const column in row) {
+            if (column.startsWith('is') && (row[column] === 0 || row[column] === 1)) {
+              row[column] = Boolean(row[column]);
             }
           }
 
-          return rowWithoutId;
+          return row;
         });
       }
 

@@ -13,6 +13,7 @@ import type {
   IPCMessageToMaster,
   IPCMessageToWorker,
 } from '../../types/ipc.js';
+import { Logger } from '../../utils/logger.js';
 
 /**
  * IPC message handler function type
@@ -33,24 +34,9 @@ export interface IPCLogger {
 }
 
 /**
- * Default console logger
+ * Default console logger using Logger utility
  */
-const defaultLogger: IPCLogger = {
-  debug: (message, context) => {
-    if (process.env['NODE_ENV'] === 'development') {
-      console.debug(`[IPC] ${message}`, context ?? '');
-    }
-  },
-  info: (message, context) => {
-    console.info(`[IPC] ${message}`, context ?? '');
-  },
-  warn: (message, context) => {
-    console.warn(`[IPC] ${message}`, context ?? '');
-  },
-  error: (message, error, context) => {
-    console.error(`[IPC] ${message}`, error ?? '', context ?? '');
-  },
-};
+const defaultLogger: IPCLogger = new Logger({ prefix: 'IPC' });
 
 /**
  * IPC Channel for cluster communication
@@ -106,7 +92,11 @@ export class IPCChannel {
   private startMasterListener(): void {
     // Listen for messages from each worker
     cluster.on('message', (worker: Worker, message: unknown) => {
-      this.handleMessage(message as IPCMessage, worker);
+      if (this.isValidIPCMessage(message)) {
+        this.handleMessage(message, worker);
+      } else {
+        this.logger.warn('Received invalid IPC message', { message });
+      }
     });
 
     this.logger.debug('Master IPC listener started');
@@ -117,21 +107,32 @@ export class IPCChannel {
    */
   private startWorkerListener(): void {
     process.on('message', (message: unknown) => {
-      this.handleMessage(message as IPCMessage);
+      if (this.isValidIPCMessage(message)) {
+        this.handleMessage(message);
+      } else {
+        this.logger.warn('Received invalid IPC message', { message });
+      }
     });
 
     this.logger.debug('Worker IPC listener started');
   }
 
   /**
+   * Type guard for IPC messages
+   */
+  private isValidIPCMessage(message: unknown): message is IPCMessage {
+    return (
+      typeof message === 'object' &&
+      message !== null &&
+      'cmd' in message &&
+      typeof (message as { cmd: unknown }).cmd === 'string'
+    );
+  }
+
+  /**
    * Handle incoming IPC message
    */
   private handleMessage(message: IPCMessage, worker?: Worker): void {
-    if (!message?.cmd) {
-      this.logger.warn('Received invalid IPC message', { message });
-      return;
-    }
-
     const handler = this.handlers.get(message.cmd);
 
     if (handler === undefined) {
@@ -267,9 +268,7 @@ let ipcChannelInstance: IPCChannel | null = null;
  * Get or create the IPC channel instance
  */
 export function getIPCChannel(logger?: IPCLogger): IPCChannel {
-  if (ipcChannelInstance === null) {
-    ipcChannelInstance = new IPCChannel(logger);
-  }
+  ipcChannelInstance ??= new IPCChannel(logger);
   return ipcChannelInstance;
 }
 

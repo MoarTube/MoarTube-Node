@@ -28,7 +28,7 @@ export interface UrlConfig {
  * URL configuration singleton class
  */
 class Urls {
-  private static instance: Urls;
+  private static instance: Urls | undefined;
 
   private indexerConfig: IndexerConfig;
   private aliaserConfig: AliaserConfig;
@@ -53,9 +53,7 @@ class Urls {
    * Initialize the URLs singleton with service configurations
    */
   static initialize(indexerConfig: IndexerConfig, aliaserConfig: AliaserConfig): Urls {
-    if (!Urls.instance) {
-      Urls.instance = new Urls(indexerConfig, aliaserConfig);
-    }
+    Urls.instance ??= new Urls(indexerConfig, aliaserConfig);
     return Urls.instance;
   }
 
@@ -122,7 +120,7 @@ class Urls {
     const portSuffix =
       (protocol === 'http' && port === 80) || (protocol === 'https' && port === 443)
         ? ''
-        : `:${port}`;
+        : `:${String(port)}`;
     return `${protocol}://${host}${portSuffix}`;
   }
 
@@ -153,9 +151,9 @@ export function buildNodeBaseUrl(nodeSettings: NodeSettings): string {
   // Omit default ports
   let portSuffix = '';
   if (publicNodeProtocol === 'http' && port !== 80) {
-    portSuffix = `:${port}`;
+    portSuffix = `:${String(port)}`;
   } else if (publicNodeProtocol === 'https' && port !== 443) {
-    portSuffix = `:${port}`;
+    portSuffix = `:${String(port)}`;
   }
 
   return `${publicNodeProtocol}://${publicNodeAddress}${portSuffix}`;
@@ -192,19 +190,21 @@ function buildS3ExternalUrl(storageConfig: StorageConfig, isCloudflareCdnEnabled
   }
 
   // Custom endpoint (non-AWS S3 provider)
-  if (endpoint) {
+  if (endpoint !== undefined && endpoint !== '') {
     if (forcePathStyle) {
       // Path-style: endpoint/bucket
       return `${endpoint}/${bucketName}`;
     } else {
       // Virtual-hosted style: bucket.endpoint
       const protocolMatch = endpoint.match(/^(https?:\/\/)(.*)/);
-      if (!protocolMatch?.[1] || !protocolMatch[2]) {
+      const protocol = protocolMatch?.[1];
+      const rest = protocolMatch?.[2];
+
+      if (protocol === undefined || protocol === '' || rest === undefined || rest === '') {
         throw new Error(`Invalid S3 endpoint format: ${endpoint}`);
       }
 
-      const protocol = protocolMatch[1];
-      const hostAndPort = protocolMatch[2];
+      const hostAndPort = rest;
       const colonIndex = hostAndPort.indexOf(':');
 
       if (colonIndex !== -1) {
