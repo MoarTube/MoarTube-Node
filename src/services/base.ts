@@ -207,6 +207,6 @@ export abstract class BaseService {
     }
 
     this.logger.error(`${operation} failed after ${maxRetries} retries`, lastError);
-    throw lastError;
+    throw lastError as Error;
   }
 }

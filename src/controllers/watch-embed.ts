@@ -118,7 +118,7 @@ export class WatchEmbedController extends BaseController {
           externalResourcesBaseUrl,
         });
       }
-    } catch (error) {
+    } catch (_error) {
       this.sendError(reply, 'error loading embedded video');
     }
   };
@@ -183,7 +183,7 @@ export class WatchEmbedController extends BaseController {
           cryptoWalletAddresses,
         });
       }
-    } catch (error) {
+    } catch (_error) {
       this.sendError(reply, 'error loading embedded chat');
     }
   };

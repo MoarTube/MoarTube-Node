@@ -445,7 +445,7 @@ export function toTitleCase(str: string): string {
 export function isDockerEnvironment(): boolean {
   try {
     // Use dynamic import-style check to avoid bundling issues
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fsModule = require('node:fs') as { existsSync: (path: string) => boolean };
     return fsModule.existsSync('/.dockerenv');
   } catch {

@@ -7,7 +7,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-import type { NodeSettings, NodeIdentification, LastCheckedContentTracker } from '../types/index.js';
+import type {
+  NodeSettings,
+  NodeIdentification,
+  LastCheckedContentTracker,
+} from '../types/index.js';
 
 import { getEnv, type Env } from './env.js';
 import { initializePaths, type Paths, type PathConfig } from './paths.js';

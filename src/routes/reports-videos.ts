@@ -7,7 +7,11 @@ import type { FastifyInstance } from 'fastify';
 
 import { ReportsVideosController } from '../controllers/reports-videos.js';
 import type { Container } from '../core/container.js';
-import { reportIdParamsSchema, reportsQuerySchema, archiveReportBodySchema } from '../validators/index.js';
+import {
+  reportIdParamsSchema,
+  reportsQuerySchema,
+  archiveReportBodySchema,
+} from '../validators/index.js';
 
 /**
  * Register reports videos routes
