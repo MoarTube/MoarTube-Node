@@ -133,20 +133,16 @@ export abstract class BaseService {
    * @param length - Length of the ID (default: 11)
    * @returns Generated unique ID
    */
-  protected async generateId(length: number = 11): Promise<string> {
-    const crypto = await import('node:crypto');
+  protected generateId(length: number = 11): string {
     const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-';
-    let id = '';
+
     let hyphenCount = 0;
     let underscoreCount = 0;
 
-    // Generate enough random bytes to cover the requested length
-    const bytes = crypto.randomBytes(length * 2); // Generate extra bytes for safety
+    let id = '';
 
     for (let i = 0; i < length; ) {
-      // Use random byte to select character, ensuring uniform distribution
-      const randomIndex = bytes[i] % characters.length;
-      const randomChar = characters.charAt(randomIndex);
+      const randomChar = characters.charAt(Math.floor(Math.random() * characters.length));
 
       // Limit special characters
       if (randomChar === '-') {

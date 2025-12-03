@@ -177,6 +177,32 @@ export function buildExternalVideosBaseUrl(nodeSettings: NodeSettings): string {
 /**
  * Build S3 external URL based on configuration
  */
+function buildCustomS3Url(endpoint: string, bucketName: string, forcePathStyle: boolean): string {
+  if (forcePathStyle) {
+    return `${endpoint}/${bucketName}`;
+  }
+
+  // Virtual-hosted style: bucket.endpoint
+  const protocolMatch = /^(https?:\/\/)(.*)/.exec(endpoint);
+  const protocol = protocolMatch?.[1];
+  const rest = protocolMatch?.[2];
+
+  if (protocol === undefined || protocol === '' || rest === undefined || rest === '') {
+    throw new Error(`Invalid S3 endpoint format: ${endpoint}`);
+  }
+
+  const hostAndPort = rest;
+  const colonIndex = hostAndPort.indexOf(':');
+
+  if (colonIndex !== -1) {
+    const host = hostAndPort.slice(0, colonIndex);
+    const port = hostAndPort.slice(colonIndex + 1);
+    return `${protocol}${bucketName}.${host}:${port}`;
+  } else {
+    return `${protocol}${bucketName}.${hostAndPort}`;
+  }
+}
+
 function buildS3ExternalUrl(storageConfig: StorageConfig, isCloudflareCdnEnabled: boolean): string {
   if (storageConfig.storageMode !== 's3provider' || !storageConfig.s3Config) {
     throw new Error('S3 config required for s3provider storage mode');
@@ -192,30 +218,7 @@ function buildS3ExternalUrl(storageConfig: StorageConfig, isCloudflareCdnEnabled
 
   // Custom endpoint (non-AWS S3 provider)
   if (endpoint !== undefined && endpoint !== '') {
-    if (forcePathStyle) {
-      // Path-style: endpoint/bucket
-      return `${endpoint}/${bucketName}`;
-    } else {
-      // Virtual-hosted style: bucket.endpoint
-      const protocolMatch = /^(https?:\/\/)(.*)/.exec(endpoint);
-      const protocol = protocolMatch?.[1];
-      const rest = protocolMatch?.[2];
-
-      if (protocol === undefined || protocol === '' || rest === undefined || rest === '') {
-        throw new Error(`Invalid S3 endpoint format: ${endpoint}`);
-      }
-
-      const hostAndPort = rest;
-      const colonIndex = hostAndPort.indexOf(':');
-
-      if (colonIndex !== -1) {
-        const host = hostAndPort.slice(0, colonIndex);
-        const port = hostAndPort.slice(colonIndex + 1);
-        return `${protocol}${bucketName}.${host}:${port}`;
-      } else {
-        return `${protocol}${bucketName}.${hostAndPort}`;
-      }
-    }
+    return buildCustomS3Url(endpoint, bucketName, forcePathStyle);
   }
 
   // AWS S3 (no custom endpoint)

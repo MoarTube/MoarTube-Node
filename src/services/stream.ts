@@ -187,10 +187,10 @@ export class StreamService extends BaseService implements IStreamService {
 
       // Generate new video ID if not resuming
       if (videoId === undefined || videoId === '') {
-        videoId = await this.generateId(11);
+        videoId = this.generateId(11);
         // Keep generating until unique
         while (await this.videoRepository.findById(videoId)) {
-          videoId = await this.generateId(11);
+          videoId = this.generateId(11);
         }
       }
 

@@ -275,53 +275,7 @@ export class VideosService extends BaseService implements IVideoService {
         return null;
       }
 
-      // Build update object with only provided fields
-      const updates: Partial<DrizzleNewVideo> = {};
-
-      if (data.title !== undefined) {
-        updates.title = data.title;
-      }
-      if (data.description !== undefined) {
-        updates.description = data.description;
-      }
-      if (data.tags !== undefined) {
-        updates.tags = this.sanitizeWhitespace(data.tags);
-      }
-      if (data.isPublished !== undefined) {
-        updates.isPublished = data.isPublished;
-      }
-      if (data.isHidden !== undefined) {
-        updates.isHidden = data.isHidden;
-      }
-      if (data.isPassworded !== undefined) {
-        updates.isPassworded = data.isPassworded;
-      }
-      if (data.password !== undefined) {
-        updates.password = data.password;
-      }
-      if (data.isCommentsEnabled !== undefined) {
-        updates.isCommentsEnabled = data.isCommentsEnabled;
-      }
-      if (data.isLikesEnabled !== undefined) {
-        updates.isLikesEnabled = data.isLikesEnabled;
-      }
-      if (data.isDislikesEnabled !== undefined) {
-        updates.isDislikesEnabled = data.isDislikesEnabled;
-      }
-      if (data.isReportsEnabled !== undefined) {
-        updates.isReportsEnabled = data.isReportsEnabled;
-      }
-      if (data.isLiveChatEnabled !== undefined) {
-        updates.isLiveChatEnabled = data.isLiveChatEnabled;
-      }
-
-      // Mark index as outdated if metadata changed and video is indexed
-      if (
-        existingVideo.isIndexed &&
-        (data.title !== undefined || data.description !== undefined || data.tags !== undefined)
-      ) {
-        updates.isIndexOutdated = true;
-      }
+      const updates = this.buildVideoUpdateObject(data, existingVideo);
 
       this.logger.debug('Updating video', { videoId, fields: Object.keys(updates) });
 
@@ -676,8 +630,8 @@ export class VideosService extends BaseService implements IVideoService {
 
       // Sort resolutions descending by quality
       outputs[format].sort((a, b) => {
-        const aHeight = Number.parseInt(a.split('p')[0] ?? '0', 10);
-        const bHeight = Number.parseInt(b.split('p')[0] ?? '0', 10);
+        const aHeight = Number(a.split('p')[0] ?? '0');
+        const bHeight = Number(b.split('p')[0] ?? '0');
         return bHeight - aHeight;
       });
     }
@@ -777,8 +731,8 @@ export class VideosService extends BaseService implements IVideoService {
         outputs[format].push(resolution);
         // Sort by resolution (descending)
         outputs[format].sort((a: string, b: string) => {
-          const aRes = Number.parseInt(a.split('p')[0] ?? '0');
-          const bRes = Number.parseInt(b.split('p')[0] ?? '0');
+          const aRes = Number(a.split('p')[0] ?? '0');
+          const bRes = Number(b.split('p')[0] ?? '0');
           return bRes - aRes;
         });
       }
@@ -848,8 +802,6 @@ export class VideosService extends BaseService implements IVideoService {
       const config = getConfig();
       const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
 
-      const adaptiveSources: VideoSource[] = [];
-      const progressiveSources: VideoSource[] = [];
       const sourcesFormatsAndResolutions: SourcesFormatsAndResolutions = {
         m3u8: [],
         mp4: [],
@@ -858,46 +810,13 @@ export class VideosService extends BaseService implements IVideoService {
       };
 
       // Build sources from outputs
-      for (const format of Object.keys(outputs)) {
-        const resolutions = outputs[format] ?? [];
-
-        for (const resolution of resolutions) {
-          if (format === 'm3u8') {
-            // Adaptive streaming source (HLS)
-            const src = `${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${manifestType}/manifests/manifest-${resolution}.m3u8`;
-            adaptiveSources.push({ src, type: 'application/vnd.apple.mpegurl' });
-          } else {
-            // Progressive download source
-            const src = `${externalVideosBaseUrl}/external/videos/${videoId}/progressive/${format}/${resolution}.${format}`;
-
-            let type: string;
-            if (format === 'mp4') {
-              type = 'video/mp4';
-            } else if (format === 'webm') {
-              type = 'video/webm';
-            } else if (format === 'ogv') {
-              type = 'video/ogg';
-            } else {
-              continue; // Skip unknown formats
-            }
-
-            progressiveSources.push({ src, type });
-          }
-
-          // Track format/resolution availability
-          if (format in sourcesFormatsAndResolutions) {
-            sourcesFormatsAndResolutions[format as keyof SourcesFormatsAndResolutions].push(
-              resolution
-            );
-          }
-        }
-      }
-
-      // Add master manifest at the beginning if adaptive sources exist
-      if (adaptiveSources.length > 0) {
-        const masterSrc = `${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${manifestType}/manifests/manifest-master.m3u8`;
-        adaptiveSources.unshift({ src: masterSrc, type: 'application/vnd.apple.mpegurl' });
-      }
+      const { adaptiveSources, progressiveSources } = this.buildVideoSources(
+        outputs,
+        videoId,
+        externalVideosBaseUrl,
+        manifestType,
+        sourcesFormatsAndResolutions
+      );
 
       return {
         videoId,
@@ -1655,7 +1574,7 @@ export class VideosService extends BaseService implements IVideoService {
     let videoId = '';
 
     while (!isUnique) {
-      videoId = await this.generateId(11);
+      videoId = this.generateId(11);
 
       // Check if ID already exists
       const existing = await this.videoRepository.findById(videoId);
@@ -1731,6 +1650,129 @@ export class VideosService extends BaseService implements IVideoService {
           payload,
         },
       });
+    }
+  }
+
+  /**
+   * Build update object for video metadata
+   */
+  private buildVideoUpdateObject(
+    data: UpdateVideoInput,
+    existingVideo: DrizzleVideo
+  ): Partial<DrizzleNewVideo> {
+    const updates: Partial<DrizzleNewVideo> = {};
+
+    if (data.title !== undefined) {
+      updates.title = data.title;
+    }
+    if (data.description !== undefined) {
+      updates.description = data.description;
+    }
+    if (data.tags !== undefined) {
+      updates.tags = this.sanitizeWhitespace(data.tags);
+    }
+    if (data.isPublished !== undefined) {
+      updates.isPublished = data.isPublished;
+    }
+    if (data.isHidden !== undefined) {
+      updates.isHidden = data.isHidden;
+    }
+    if (data.isPassworded !== undefined) {
+      updates.isPassworded = data.isPassworded;
+    }
+    if (data.password !== undefined) {
+      updates.password = data.password;
+    }
+    if (data.isCommentsEnabled !== undefined) {
+      updates.isCommentsEnabled = data.isCommentsEnabled;
+    }
+    if (data.isLikesEnabled !== undefined) {
+      updates.isLikesEnabled = data.isLikesEnabled;
+    }
+    if (data.isDislikesEnabled !== undefined) {
+      updates.isDislikesEnabled = data.isDislikesEnabled;
+    }
+    if (data.isReportsEnabled !== undefined) {
+      updates.isReportsEnabled = data.isReportsEnabled;
+    }
+    if (data.isLiveChatEnabled !== undefined) {
+      updates.isLiveChatEnabled = data.isLiveChatEnabled;
+    }
+
+    // Mark index as outdated if metadata changed and video is indexed
+    if (
+      existingVideo.isIndexed &&
+      (data.title !== undefined || data.description !== undefined || data.tags !== undefined)
+    ) {
+      updates.isIndexOutdated = true;
+    }
+
+    return updates;
+  }
+
+  /**
+   * Build adaptive and progressive sources from video outputs
+   */
+  private buildVideoSources(
+    outputs: Record<string, string[]>,
+    videoId: string,
+    externalVideosBaseUrl: string,
+    manifestType: string,
+    sourcesFormatsAndResolutions: SourcesFormatsAndResolutions
+  ): { adaptiveSources: VideoSource[]; progressiveSources: VideoSource[] } {
+    const adaptiveSources: VideoSource[] = [];
+    const progressiveSources: VideoSource[] = [];
+
+    // Build sources from outputs
+    for (const format of Object.keys(outputs)) {
+      const resolutions = outputs[format] ?? [];
+
+      for (const resolution of resolutions) {
+        if (format === 'm3u8') {
+          // Adaptive streaming source (HLS)
+          const src = `${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${manifestType}/manifests/manifest-${resolution}.m3u8`;
+          adaptiveSources.push({ src, type: 'application/vnd.apple.mpegurl' });
+        } else {
+          // Progressive download source
+          const src = `${externalVideosBaseUrl}/external/videos/${videoId}/progressive/${format}/${resolution}.${format}`;
+          const type = this.getVideoMimeType(format);
+
+          if (type !== null) {
+            progressiveSources.push({ src, type });
+          }
+        }
+
+        // Track format/resolution availability
+        if (format in sourcesFormatsAndResolutions) {
+          sourcesFormatsAndResolutions[format as keyof SourcesFormatsAndResolutions].push(
+            resolution
+          );
+        }
+      }
+    }
+
+    // Add master manifest at the beginning if adaptive sources exist
+    if (adaptiveSources.length > 0) {
+      const masterSrc = `${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${manifestType}/manifests/manifest-master.m3u8`;
+      adaptiveSources.unshift({ src: masterSrc, type: 'application/vnd.apple.mpegurl' });
+    }
+
+    return { adaptiveSources, progressiveSources };
+  }
+
+  /**
+   * Get MIME type for video format
+   */
+  private getVideoMimeType(format: string): string | null {
+    switch (format) {
+      case 'mp4':
+        return 'video/mp4';
+      case 'webm':
+        return 'video/webm';
+      case 'ogv':
+        return 'video/ogg';
+      default:
+        return null;
     }
   }
 }
