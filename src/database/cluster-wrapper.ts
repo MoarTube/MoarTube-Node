@@ -5,7 +5,7 @@
  * single-process and clustered modes. In cluster mode, write operations
  * are routed through the master process to avoid SQLite locking issues.
  */
-import cluster from 'cluster';
+import cluster from 'node:cluster';
 import type { DatabaseClient } from './connection.js';
 import { getDatabase } from './connection.js';
 import type { WriteQueue } from './write-queue.js';

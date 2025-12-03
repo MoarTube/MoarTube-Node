@@ -25,8 +25,8 @@ export interface WebSocketClient {
  */
 export class WebSocketService extends BaseService implements IWebSocketService {
   // Track client counts (in actual implementation these would be managed by master process)
-  private nodeClientCount: number = 0;
-  private chatClientCounts: Map<string, number> = new Map();
+  private readonly nodeClientCount: number = 0;
+  private readonly chatClientCounts: Map<string, number> = new Map();
 
   constructor(options?: ServiceOptions) {
     super('WebSocketService', options);

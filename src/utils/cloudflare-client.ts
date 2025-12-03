@@ -194,9 +194,11 @@ export class CloudflareClient {
     const files: string[] = [];
 
     for (const videoId of videoIds) {
-      files.push(`${nodeBaseUrl}/watch/embed/video/${videoId}`);
-      files.push(`${nodeBaseUrl}/watch/embed/video/${videoId}?autostart=0`);
-      files.push(`${nodeBaseUrl}/watch/embed/video/${videoId}?autostart=1`);
+      const temp1 = `${nodeBaseUrl}/watch/embed/video/${videoId}`;
+      const temp2 = `${nodeBaseUrl}/watch/embed/video/${videoId}?autostart=0`;
+      const temp3 = `${nodeBaseUrl}/watch/embed/video/${videoId}?autostart=1`;
+
+      files.push(temp1, temp2, temp3);
     }
 
     await this.purgeCache(files);
@@ -216,15 +218,19 @@ export class CloudflareClient {
     // Sort variations without tags
     const sortTerms = ['latest', 'popular', 'oldest'];
     for (const sortTerm of sortTerms) {
-      files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=${sortTerm}&tagTerm=`);
-      files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=${sortTerm}&tagTerm=`);
+      const temp1 = `${nodeBaseUrl}/node?searchTerm=&sortTerm=${sortTerm}&tagTerm=`;
+      const temp2 = `${nodeBaseUrl}/node/search?searchTerm=&sortTerm=${sortTerm}&tagTerm=`;
+
+      files.push(temp1, temp2);
     }
 
     // Tag variations
     for (const tag of tags) {
       for (const sortTerm of sortTerms) {
-        files.push(`${nodeBaseUrl}/node?searchTerm=&sortTerm=${sortTerm}&tagTerm=${tag}`);
-        files.push(`${nodeBaseUrl}/node/search?searchTerm=&sortTerm=${sortTerm}&tagTerm=${tag}`);
+        const temp1 = `${nodeBaseUrl}/node?searchTerm=&sortTerm=${sortTerm}&tagTerm=${tag}`;
+        const temp2 = `${nodeBaseUrl}/node/search?searchTerm=&sortTerm=${sortTerm}&tagTerm=${tag}`;
+
+        files.push(temp1, temp2);
       }
     }
 
