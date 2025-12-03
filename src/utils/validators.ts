@@ -6,8 +6,11 @@
  */
 
 // ============================================
-// String Validators
+// Types
 // ============================================
+
+export type PortValue = number | string | null | undefined;
+export type LimitValue = number | string | null | undefined;
 
 /**
  * Check if a node name is valid
@@ -59,7 +62,7 @@ export function isPublicNodeProtocolValid(
 /**
  * Video ID regex pattern (11 characters, alphanumeric with optional underscore/hyphen)
  */
-const VIDEO_ID_REGEX = /^(?=.*[a-zA-Z]|\d)?[a-zA-Z0-9_-]{0,11}$/;
+const VIDEO_ID_REGEX = /^[a-zA-Z0-9_-]{11}$/;
 
 /**
  * Check if a video ID is valid
@@ -71,8 +74,8 @@ export function isVideoIdValid(videoId: string | null | undefined, canBeEmpty = 
     return false;
   }
 
-  if (canBeEmpty) {
-    return videoId.length === 0 || (videoId.length === 11 && VIDEO_ID_REGEX.test(videoId));
+  if (canBeEmpty && videoId.length === 0) {
+    return true;
   }
 
   return videoId.length === 11 && VIDEO_ID_REGEX.test(videoId);
@@ -402,7 +405,7 @@ export function isChatHistoryLimitValid(limit: number | null | undefined): boole
 /**
  * Username regex (alphanumeric with special characters)
  */
-const USERNAME_REGEX = /^[\w!@#$%^&*()\-_=+]+$/;
+const USERNAME_REGEX = /^[\w!@#$%^&*()+=]+$/;
 
 /**
  * Check if a username is valid
@@ -421,7 +424,7 @@ export function isUsernameValid(username: string | null | undefined): boolean {
 /**
  * Password regex (alphanumeric with special characters)
  */
-const PASSWORD_REGEX = /^[\w!@#$%^&*()\-_=+]+$/;
+const PASSWORD_REGEX = /^[\w!@#$%^&*()+=]+$/;
 
 /**
  * Check if a password is valid
@@ -445,7 +448,7 @@ export function isPasswordValid(password: string | null | undefined): boolean {
  * IPv4 address regex
  */
 const IPV4_REGEX =
-  /^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}$/;
+  /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
 
 /**
  * Check if a value is a valid IPv4 address
@@ -485,7 +488,7 @@ export function isPublicNodeAddressValid(publicNodeAddress: string | null | unde
  * Check if a port number is valid
  * @param port - The port to validate
  */
-export function isPortValid(port: number | string | null | undefined): boolean {
+export function isPortValid(port: PortValue): boolean {
   const portNum = typeof port === 'string' ? Number(port) : port;
   return (
     portNum !== null &&
@@ -543,8 +546,8 @@ export function isCommentsTypeValid(type: string | null | undefined): type is 'b
  * Check if a limit is valid
  * @param limit - The limit to validate
  */
-export function isLimitValid(limit: number | string | null | undefined): boolean {
-  const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : limit;
+export function isLimitValid(limit: LimitValue): boolean {
+  const limitNum = typeof limit === 'string' ? Number.parseInt(limit, 10) : limit;
   return limitNum !== null && limitNum !== undefined && Number.isInteger(limitNum);
 }
 
@@ -553,7 +556,7 @@ export function isLimitValid(limit: number | string | null | undefined): boolean
  * @param timestamp - The timestamp to validate
  */
 export function isTimestampValid(timestamp: number | string | null | undefined): boolean {
-  const timestampNum = typeof timestamp === 'string' ? parseInt(timestamp, 10) : timestamp;
+  const timestampNum = typeof timestamp === 'string' ? Number.parseInt(timestamp, 10) : timestamp;
   return (
     timestampNum !== null &&
     timestampNum !== undefined &&
