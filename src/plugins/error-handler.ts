@@ -148,5 +148,5 @@ function errorHandlerPlugin(fastify: FastifyInstance): void {
 
 export default fp(errorHandlerPlugin, {
   name: 'errorHandler',
-  fastify: '4.x',
+  fastify: '5.x',
 });

@@ -33,11 +33,13 @@ export interface ClusterWorkerConfig {
 }
 
 /**
- * Default logger using Logger utility
+ * Get default logger (lazy initialization to ensure Config is loaded)
  */
-const defaultLogger: IPCLogger = new Logger({
-  prefix: `Worker ${String(cluster.worker?.id ?? 'unknown')}`,
-});
+function getDefaultLogger(): IPCLogger {
+  return new Logger({
+    prefix: `Worker ${String(cluster.worker?.id ?? 'unknown')}`,
+  });
+}
 
 /**
  * Cluster Worker Process Manager
@@ -53,7 +55,7 @@ export class ClusterWorker {
 
   constructor(config: ClusterWorkerConfig) {
     this.config = config;
-    this.logger = config.logger ?? defaultLogger;
+    this.logger = config.logger ?? getDefaultLogger();
     this.ipc = new IPCChannel(this.logger);
     this.wsManager = new WebSocketManager({ logger: this.logger });
   }

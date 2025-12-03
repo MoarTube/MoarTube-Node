@@ -4,7 +4,6 @@
  * Routes for video-related endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-import multipart from '@fastify/multipart';
 import { VideosController } from '../controllers/index.js';
 import {
   videoIdParamsSchema,
@@ -37,12 +36,9 @@ import {
  *
  * @param fastify - Fastify instance with Zod type provider
  */
-export async function videosRoutes(
+export function videosRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>
-): Promise<void> {
-  // Register multipart plugin for file uploads (no limits - user decides what to upload)
-  await fastify.register(multipart);
-
+): void {
   const controller = new VideosController();
 
   // ============================================================================

@@ -4,25 +4,43 @@
  * Barrel export for all Fastify plugins and app factory.
  */
 
-import Fastify from 'fastify';
-import type { FastifyInstance } from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyLoggerOptions } from 'fastify';
+import fastifyCookie from '@fastify/cookie';
 import fastifyMultipart from '@fastify/multipart';
 import {
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
+import type { PinoLoggerOptions } from 'fastify/types/logger.js';
 
 import { createAppContainer } from '../core/container.js';
 import { getDatabase } from '../database/index.js';
 import { registerRoutes } from '../routes/index.js';
-import { getConfig } from '../config/index.js';
+import authenticationPlugin from './authentication.js';
+
+/**
+ * Get logger configuration for Fastify
+ * Always uses pino-pretty for readable output
+ */
+function getLoggerConfig(): FastifyLoggerOptions & PinoLoggerOptions {
+  return {
+    level: 'info',
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        translateTime: 'HH:MM:ss Z',
+        ignore: 'pid,hostname',
+      },
+    },
+  };
+}
 
 // Error handling
 export { default as errorHandlerPlugin } from './error-handler.js';
 
 // Authentication
-export { default as authenticationPlugin } from './authentication.js';
+// export { default as authenticationPlugin } from './authentication.js'; // Now imported directly
 
 // Re-export type provider for route typing
 export type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -38,22 +56,9 @@ export type FastifyZodInstance = FastifyInstance;
  * @returns Configured Fastify instance with Zod type provider
  */
 export async function createFastifyApp(): Promise<FastifyInstance> {
-  const config = getConfig();
-
-  // Create Fastify instance
+  // Create Fastify instance with pino-pretty logger
   const app = Fastify({
-    logger: config.isDeveloperMode
-      ? {
-          level: 'debug',
-          transport: {
-            target: 'pino-pretty',
-            options: {
-              translateTime: 'HH:MM:ss Z',
-              ignore: 'pid,hostname',
-            },
-          },
-        }
-      : true,
+    logger: getLoggerConfig(),
     trustProxy: true,
   });
 
@@ -61,12 +66,18 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
 
+  // Register cookie support (required for authentication)
+  await app.register(fastifyCookie);
+
   // Register multipart support (for file uploads)
   await app.register(fastifyMultipart, {
     limits: {
-      fileSize: 1024 * 1024 * 1024 * 10, // 10GB
+      fileSize: 1000 * 1000 * 1000 * 1000, // 1TB
     },
   });
+
+  // Register authentication plugin
+  await app.register(authenticationPlugin);
 
   // Create DI container with database
   const db = getDatabase();

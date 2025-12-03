@@ -87,9 +87,11 @@ export interface ClusterMasterConfig {
 }
 
 /**
- * Default logger using Logger utility
+ * Get default logger (lazy initialization to ensure Config is loaded)
  */
-const defaultLogger: IPCLogger = new Logger({ prefix: 'Master' });
+function getDefaultLogger(): IPCLogger {
+  return new Logger({ prefix: 'Master' });
+}
 
 /**
  * Cluster Master Process Manager
@@ -108,7 +110,7 @@ export class ClusterMaster {
 
   constructor(config: ClusterMasterConfig) {
     this.config = config;
-    this.logger = config.logger ?? defaultLogger;
+    this.logger = config.logger ?? getDefaultLogger();
     this.ipc = new IPCChannel(this.logger);
     this.jwtSecret = crypto.randomBytes(32).toString('hex');
   }
@@ -194,8 +196,8 @@ export class ClusterMaster {
     const nodeSettings = this.config.getNodeSettings() as { nodeId?: string };
 
     if (nodeSettings.nodeId === undefined || nodeSettings.nodeId === '') {
-      nodeSettings.nodeId = await this.config.generateVideoId();
-      this.config.setNodeSettings(nodeSettings);
+      const newNodeId = await this.config.generateVideoId();
+      this.config.setNodeSettings({ ...nodeSettings, nodeId: newNodeId });
       this.logger.info('Generated new node ID');
     }
   }

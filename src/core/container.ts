@@ -6,6 +6,9 @@
  */
 import { createContainer, asClass, asValue, InjectionMode, type AwilixContainer } from 'awilix';
 
+// Logger
+import { Logger, type ILogger } from '../utils/logger.js';
+
 // Database layer
 import type { DatabaseClient } from '../database/connection.js';
 import { VideosRepository } from '../database/repositories/videos.js';
@@ -36,6 +39,9 @@ import { VideoUploadService } from '../services/video-upload.js';
  * Container cradle type - defines all registered dependencies
  */
 export interface ContainerCradle {
+  // Core utilities
+  logger: ILogger;
+
   // Database
   db: DatabaseClient;
 
@@ -90,6 +96,11 @@ export function createAppContainer(db: DatabaseClient): Container {
   // Register database client
   appContainer.register({
     db: asValue(db),
+  });
+
+  // Register logger
+  appContainer.register({
+    logger: asValue(Logger.getInstance()),
   });
 
   // Register repositories (they need db in constructor)

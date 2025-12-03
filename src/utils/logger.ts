@@ -43,9 +43,9 @@ export interface ILogger {
 }
 
 /**
- * Logger class using Pino
+ * Logger class using Pino with pino-pretty
  *
- * Provides structured logging with configurable levels and formatting.
+ * Provides structured logging with configurable levels and pretty formatting.
  */
 export class Logger implements ILogger {
   private static instance: Logger | null = null;
@@ -56,10 +56,17 @@ export class Logger implements ILogger {
       this.logger = existingLogger;
     } else {
       const level = config.level ?? LogLevel.INFO;
-      const options: pino.LoggerOptions = { level };
-      if (config.timestamps !== false) {
-        options.timestamp = pino.stdTimeFunctions.isoTime;
-      }
+
+      const options: pino.LoggerOptions = {
+        level,
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            translateTime: 'HH:MM:ss Z',
+            ignore: 'pid,hostname',
+          },
+        },
+      };
 
       let logger = pino(options);
 

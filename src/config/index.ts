@@ -66,6 +66,9 @@ class Config {
     // Initialize paths
     this._paths = initializePaths(baseDir);
 
+    // Ensure data directories exist
+    this.ensureDataDirectoriesExist();
+
     // Load app config (config.json)
     this._appConfig = this.loadAppConfig(baseDir);
 
@@ -117,11 +120,25 @@ class Config {
   }
 
   // ============================================
+  // Data Directory Setup
+  // ============================================
+
+  /**
+   * Ensure all required data directories exist
+   */
+  private ensureDataDirectoriesExist(): void {
+    fs.mkdirSync(this._paths.imagesDirectoryPath, { recursive: true });
+    fs.mkdirSync(this._paths.videosDirectoryPath, { recursive: true });
+    fs.mkdirSync(this._paths.databaseDirectoryPath, { recursive: true });
+    fs.mkdirSync(this._paths.certificatesDirectoryPath, { recursive: true });
+  }
+
+  // ============================================
   // App Config (config.json)
   // ============================================
 
   private loadAppConfig(baseDir: string): AppConfigValidated {
-    const configPath = path.join(baseDir, 'config.json');
+    const configPath = path.join(baseDir, 'config_test.json');
 
     if (!fs.existsSync(configPath)) {
       throw new Error(`App config not found: ${configPath}`);
@@ -153,11 +170,54 @@ class Config {
     const settingsPath = this._paths.nodeSettingsPath;
 
     if (!fs.existsSync(settingsPath)) {
-      throw new Error(`Node settings not found: ${settingsPath}`);
+      // Create default settings if they don't exist
+      const defaultSettings = this.createDefaultNodeSettings();
+      fs.mkdirSync(path.dirname(settingsPath), { recursive: true });
+      fs.writeFileSync(settingsPath, JSON.stringify(defaultSettings, null, 2));
+      return validateNodeSettings(defaultSettings);
     }
 
     const rawSettings: unknown = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
     return validateNodeSettings(rawSettings);
+  }
+
+  /**
+   * Create default node settings
+   */
+  private createDefaultNodeSettings(): Record<string, unknown> {
+    return {
+      nodeListeningPort: 80,
+      isSecure: false,
+      publicNodeProtocol: '',
+      publicNodeAddress: '',
+      publicNodePort: '',
+      nodeName: 'moartube node',
+      nodeAbout: 'just a MoarTube node',
+      nodeId: '',
+      // admin / admin (Base64 encoded bcrypt hashes)
+      username: 'JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL',
+      password: 'JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX',
+      expressSessionName: crypto.randomBytes(64).toString('hex'),
+      expressSessionSecret: crypto.randomBytes(64).toString('hex'),
+      isCloudflareCdnEnabled: false,
+      cloudflareEmailAddress: '',
+      cloudflareZoneId: '',
+      cloudflareGlobalApiKey: '',
+      isCloudflareTurnstileEnabled: false,
+      cloudflareTurnstileSiteKey: '',
+      cloudflareTurnstileSecretKey: '',
+      isCommentsEnabled: true,
+      isLikesEnabled: true,
+      isDislikesEnabled: true,
+      isReportsEnabled: true,
+      isLiveChatEnabled: true,
+      databaseConfig: {
+        databaseDialect: 'sqlite',
+      },
+      storageConfig: {
+        storageMode: 'filesystem',
+      },
+    };
   }
 
   /**

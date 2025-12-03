@@ -90,7 +90,7 @@ export const NodeSettingsSchema = z.object({
   // Node Identity
   nodeName: z.string().default('MoarTube Node'),
   nodeAbout: z.string().default('A MoarTube Node'),
-  nodeId: z.string().min(1, 'Node ID is required'),
+  nodeId: z.string().default(''), // May be empty initially, generated on first startup
 
   // Authentication (Base64 encoded bcrypt hashes)
   username: z.string().min(1, 'Username hash is required'),

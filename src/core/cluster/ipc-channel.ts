@@ -34,9 +34,11 @@ export interface IPCLogger {
 }
 
 /**
- * Default console logger using Logger utility
+ * Get default logger (lazy initialization to ensure Config is loaded)
  */
-const defaultLogger: IPCLogger = new Logger({ prefix: 'IPC' });
+function getDefaultLogger(): IPCLogger {
+  return new Logger({ prefix: 'IPC' });
+}
 
 /**
  * IPC Channel for cluster communication
@@ -50,7 +52,7 @@ export class IPCChannel {
   private isListening = false;
 
   constructor(logger?: IPCLogger) {
-    this.logger = logger ?? defaultLogger;
+    this.logger = logger ?? getDefaultLogger();
   }
 
   /**

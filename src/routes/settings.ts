@@ -4,7 +4,6 @@
  * Routes for node settings and configuration endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-import multipart from '@fastify/multipart';
 
 import type { Container } from '../core/container.js';
 import { SettingsController } from '../controllers/index.js';
@@ -29,18 +28,10 @@ import {
  * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export async function settingsRoutes(
+export function settingsRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
-): Promise<void> {
-  // Register multipart plugin for file uploads
-  await fastify.register(multipart, {
-    limits: {
-      fileSize: 10 * 1024 * 1024, // 10MB max file size
-      files: 5, // max 5 files at once
-    },
-  });
-
+): void {
   const settingsService = container.resolve('settingsService');
   const videoRepository = container.resolve('videoRepository');
   const cloudflareService = container.resolve('cloudflareService');

@@ -173,6 +173,5 @@ function authenticationPlugin(fastify: FastifyInstance): void {
 
 export default fp(authenticationPlugin, {
   name: 'authentication',
-  fastify: '4.x',
-  dependencies: ['@fastify/cookie'],
+  fastify: '5.x',
 });
