@@ -124,23 +124,29 @@ export abstract class BaseService {
    * @returns Sanitized string
    */
   protected sanitizeWhitespace(str: string): string {
-    return str.replace(/\s+/g, ' ').trim();
+    return str.replaceAll(/\s+/g, ' ').trim();
   }
 
   /**
-   * Generate a unique ID using similar pattern to existing video ID generation
+   * Generate a unique ID using cryptographically secure random generation
    *
    * @param length - Length of the ID (default: 11)
    * @returns Generated unique ID
    */
-  protected generateId(length: number = 11): string {
+  protected async generateId(length: number = 11): Promise<string> {
+    const crypto = await import('node:crypto');
     const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_-';
     let id = '';
     let hyphenCount = 0;
     let underscoreCount = 0;
 
+    // Generate enough random bytes to cover the requested length
+    const bytes = crypto.randomBytes(length * 2); // Generate extra bytes for safety
+
     for (let i = 0; i < length; ) {
-      const randomChar = characters.charAt(Math.floor(Math.random() * characters.length));
+      // Use random byte to select character, ensuring uniform distribution
+      const randomIndex = bytes[i] % characters.length;
+      const randomChar = characters.charAt(randomIndex);
 
       // Limit special characters
       if (randomChar === '-') {
@@ -153,10 +159,10 @@ export abstract class BaseService {
         if (underscoreCount > 1) {
           continue;
         }
+      } else {
+        id += randomChar;
+        i++;
       }
-
-      id += randomChar;
-      i++;
     }
 
     return id;
@@ -170,43 +176,5 @@ export abstract class BaseService {
    */
   protected delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Retry an operation with exponential backoff
-   *
-   * @param operation - Operation name for logging
-   * @param fn - Async function to retry
-   * @param maxRetries - Maximum number of retries (default: 3)
-   * @param baseDelay - Base delay in ms (default: 1000)
-   * @returns Promise with result
-   */
-  protected async withRetry<T>(
-    operation: string,
-    fn: () => Promise<T>,
-    maxRetries: number = 3,
-    baseDelay: number = 1000
-  ): Promise<T> {
-    let lastError: Error | undefined;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        return await fn();
-      } catch (error) {
-        lastError = error as Error;
-        if (attempt < maxRetries) {
-          const delayMs = baseDelay * Math.pow(2, attempt);
-          this.logger.warn(`${operation} failed, retrying in ${String(delayMs)}ms`, {
-            attempt: attempt + 1,
-            maxRetries,
-            error: lastError.message,
-          });
-          await this.delay(delayMs);
-        }
-      }
-    }
-
-    this.logger.error(`${operation} failed after ${String(maxRetries)} retries`, lastError);
-    throw lastError as Error;
   }
 }

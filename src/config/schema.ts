@@ -76,8 +76,8 @@ export const StorageConfigSchema = z.object({
 export const NodeSettingsSchema = z.object({
   // Server Configuration
   nodeListeningPort: z.union([z.number(), z.string()]).transform((val) => {
-    const num = typeof val === 'string' ? parseInt(val, 10) : val;
-    if (isNaN(num) || num < 1 || num > 65535) {
+    const num = typeof val === 'string' ? Number(val) : val;
+    if (Number.isNaN(num) || num < 1 || num > 65535) {
       throw new Error('Port must be between 1 and 65535');
     }
     return num;

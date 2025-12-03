@@ -45,7 +45,7 @@ const defaultLogger: IPCLogger = new Logger({ prefix: 'IPC' });
  * messages between master and worker processes.
  */
 export class IPCChannel {
-  private handlers = new Map<IPCCommand, IPCHandler>();
+  private readonly handlers = new Map<IPCCommand, IPCHandler>();
   private readonly logger: IPCLogger;
   private isListening = false;
 

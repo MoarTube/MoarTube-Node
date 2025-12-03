@@ -233,35 +233,6 @@ export function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Retry a function with exponential backoff
- * @param fn - Function to retry
- * @param maxRetries - Maximum number of retries
- * @param baseDelayMs - Base delay in milliseconds
- */
-export async function retryWithBackoff<T>(
-  fn: () => Promise<T>,
-  maxRetries = 3,
-  baseDelayMs = 1000
-): Promise<T> {
-  let lastError: Error | undefined;
-
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error as Error;
-
-      if (attempt < maxRetries) {
-        const delay = baseDelayMs * Math.pow(2, attempt);
-        await sleep(delay);
-      }
-    }
-  }
-
-  throw lastError ?? new Error('Retry failed');
-}
-
-/**
  * Chunk an array into smaller arrays
  * @param array - Array to chunk
  * @param size - Chunk size

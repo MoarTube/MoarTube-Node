@@ -16,7 +16,7 @@ import {
   type S3ClientConfig,
   type _Object,
 } from '@aws-sdk/client-s3';
-import type { Readable } from 'stream';
+import type { Readable } from 'node:stream';
 import type { ILogger } from './logger.js';
 
 /**

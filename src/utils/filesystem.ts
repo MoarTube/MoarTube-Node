@@ -524,7 +524,7 @@ export function getHostsFilePath(): string {
   switch (platform) {
     case 'win32':
       return path.join(
-        process.env['SystemRoot'] ?? 'C:\\Windows',
+        process.env['SystemRoot'] ?? String.raw`C:\Windows`,
         'System32',
         'drivers',
         'etc',

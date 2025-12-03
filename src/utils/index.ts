@@ -170,7 +170,6 @@ export {
   // Function utilities
   debounce,
   throttle,
-  retryWithBackoff,
   // Environment
   getHostsFilePath,
   isDockerEnvironment,

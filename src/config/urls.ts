@@ -30,8 +30,8 @@ export interface UrlConfig {
 class Urls {
   private static instance: Urls | undefined;
 
-  private indexerConfig: IndexerConfig;
-  private aliaserConfig: AliaserConfig;
+  private readonly indexerConfig: IndexerConfig;
+  private readonly aliaserConfig: AliaserConfig;
 
   private constructor(indexerConfig: IndexerConfig, aliaserConfig: AliaserConfig) {
     // Validate configs
@@ -146,13 +146,14 @@ export function buildNodeBaseUrl(nodeSettings: NodeSettings): string {
     throw new Error('Node public protocol and address must be configured');
   }
 
-  const port = typeof publicNodePort === 'string' ? parseInt(publicNodePort, 10) : publicNodePort;
+  const port = typeof publicNodePort === 'string' ? Number(publicNodePort) : publicNodePort;
 
   // Omit default ports
   let portSuffix = '';
-  if (publicNodeProtocol === 'http' && port !== 80) {
-    portSuffix = `:${String(port)}`;
-  } else if (publicNodeProtocol === 'https' && port !== 443) {
+  if (
+    (publicNodeProtocol === 'http' && port !== 80) ||
+    (publicNodeProtocol === 'https' && port !== 443)
+  ) {
     portSuffix = `:${String(port)}`;
   }
 
@@ -196,7 +197,7 @@ function buildS3ExternalUrl(storageConfig: StorageConfig, isCloudflareCdnEnabled
       return `${endpoint}/${bucketName}`;
     } else {
       // Virtual-hosted style: bucket.endpoint
-      const protocolMatch = endpoint.match(/^(https?:\/\/)(.*)/);
+      const protocolMatch = /^(https?:\/\/)(.*)/.exec(endpoint);
       const protocol = protocolMatch?.[1];
       const rest = protocolMatch?.[2];
 

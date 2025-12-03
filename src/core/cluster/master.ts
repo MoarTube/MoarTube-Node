@@ -323,11 +323,24 @@ export class ClusterMaster {
    */
   private startPeriodicTasks(): void {
     // Index update task (every 3 seconds)
-    this.intervalHandles.push(
-      setInterval(() => {
-        void this.runIndexUpdateTask();
-      }, 3000)
-    );
+    const temp1 = setInterval(() => {
+      void this.runIndexUpdateTask();
+    }, 3000);
+
+    // Request live stream stats from workers (every second)
+    const temp2 = setInterval(() => {
+      this.ipc.broadcast({ cmd: 'live_stream_worker_stats_request' });
+    }, 1000);
+
+    // Broadcast aggregated live stream stats (every second)
+    const temp3 = setInterval(() => {
+      this.ipc.broadcast({
+        cmd: 'live_stream_worker_stats_update',
+        liveStreamWatchingCountsTracker: this.liveStreamWatchingCountsTracker,
+      });
+    }, 1000);
+
+    this.intervalHandles.push(temp1, temp2, temp3);
 
     // Cloudflare purge task (every 10 minutes)
     if (this.config.cloudflare !== undefined) {
@@ -337,23 +350,6 @@ export class ClusterMaster {
         }, 60000 * 10)
       );
     }
-
-    // Request live stream stats from workers (every second)
-    this.intervalHandles.push(
-      setInterval(() => {
-        this.ipc.broadcast({ cmd: 'live_stream_worker_stats_request' });
-      }, 1000)
-    );
-
-    // Broadcast aggregated live stream stats (every second)
-    this.intervalHandles.push(
-      setInterval(() => {
-        this.ipc.broadcast({
-          cmd: 'live_stream_worker_stats_update',
-          liveStreamWatchingCountsTracker: this.liveStreamWatchingCountsTracker,
-        });
-      }, 1000)
-    );
   }
 
   /**

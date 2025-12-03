@@ -20,7 +20,7 @@ const EnvSchema = z.object({
   PORT: z
     .string()
     .optional()
-    .transform((val) => (val !== undefined && val !== '' ? parseInt(val, 10) : undefined)),
+    .transform((val) => (val !== '' ? Number(val) : undefined)),
   HOST: z.string().optional(),
 });
 
@@ -34,7 +34,7 @@ export type EnvConfig = z.infer<typeof EnvSchema>;
  */
 class Env {
   private static instance: Env | undefined;
-  private config: EnvConfig;
+  private readonly config: EnvConfig;
 
   private constructor() {
     this.config = this.loadAndValidate();

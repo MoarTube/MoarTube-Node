@@ -676,8 +676,8 @@ export class VideosService extends BaseService implements IVideoService {
 
       // Sort resolutions descending by quality
       outputs[format].sort((a, b) => {
-        const aHeight = parseInt(a.split('p')[0] ?? '0', 10);
-        const bHeight = parseInt(b.split('p')[0] ?? '0', 10);
+        const aHeight = Number.parseInt(a.split('p')[0] ?? '0', 10);
+        const bHeight = Number.parseInt(b.split('p')[0] ?? '0', 10);
         return bHeight - aHeight;
       });
     }
@@ -777,8 +777,8 @@ export class VideosService extends BaseService implements IVideoService {
         outputs[format].push(resolution);
         // Sort by resolution (descending)
         outputs[format].sort((a: string, b: string) => {
-          const aRes = parseInt(a.split('p')[0] ?? '0');
-          const bRes = parseInt(b.split('p')[0] ?? '0');
+          const aRes = Number.parseInt(a.split('p')[0] ?? '0');
+          const bRes = Number.parseInt(b.split('p')[0] ?? '0');
           return bRes - aRes;
         });
       }
@@ -1485,8 +1485,6 @@ export class VideosService extends BaseService implements IVideoService {
         const buffer = await this.storageService.getFile(key);
         return buffer.toString('base64');
       }
-
-      throw new Error('Unknown storage mode');
     });
   }
 
@@ -1657,7 +1655,7 @@ export class VideosService extends BaseService implements IVideoService {
     let videoId = '';
 
     while (!isUnique) {
-      videoId = this.generateId(11);
+      videoId = await this.generateId(11);
 
       // Check if ID already exists
       const existing = await this.videoRepository.findById(videoId);

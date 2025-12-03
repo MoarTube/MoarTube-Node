@@ -5,7 +5,7 @@
  * are performed by the master process to avoid database locking issues.
  * This queue handles sending write operations from worker processes to the master.
  */
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Pending job interface for tracking submitted write operations
@@ -43,7 +43,7 @@ export interface DatabaseWriteJobResultMessage {
  * process via IPC. The master executes the query and sends back the result.
  */
 export class WriteQueue {
-  private pendingJobs = new Map<string, PendingJob<unknown>>();
+  private readonly pendingJobs = new Map<string, PendingJob<unknown>>();
   private readonly jobTimeout: number;
 
   /**
@@ -87,40 +87,6 @@ export class WriteQueue {
         process.send(message);
       } else {
         // Not in cluster mode - execute directly would require different handling
-        this.pendingJobs.delete(jobId);
-        reject(new Error('WriteQueue: Not running in cluster worker mode'));
-      }
-    });
-  }
-
-  /**
-   * Submits a database write operation that returns a result
-   *
-   * @param query - The SQL query string to execute
-   * @param parameters - Query parameters
-   * @returns Promise that resolves with the query result
-   * @throws Error if the operation fails or times out
-   */
-  submitWithResult<T>(query: string, parameters: unknown[] = []): Promise<T> {
-    return new Promise((resolve, reject) => {
-      const jobId = randomUUID();
-
-      this.pendingJobs.set(jobId, {
-        resolve: resolve as (value: unknown) => void,
-        reject,
-        timestamp: Date.now(),
-      });
-
-      const message: DatabaseWriteJobMessage = {
-        cmd: 'database_write_job',
-        query,
-        parameters,
-        databaseWriteJobId: jobId,
-      };
-
-      if (typeof process.send === 'function') {
-        process.send(message);
-      } else {
         this.pendingJobs.delete(jobId);
         reject(new Error('WriteQueue: Not running in cluster worker mode'));
       }
