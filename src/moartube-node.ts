@@ -13,6 +13,7 @@ import cluster from 'node:cluster';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { v4 as uuidv4 } from 'uuid';
+import type { WebSocket as WsWebSocket } from 'ws';
 
 import { initializeConfig, getConfig } from './config/index.js';
 import { ClusterMaster, ClusterWorker } from './core/cluster/index.js';
@@ -179,7 +180,7 @@ async function startWorker(): Promise<void> {
       config.setJwtSecret(secret);
     },
     getHttpServer: (): null => null, // Fastify manages its own server
-    getWebSocketClients: (): Set<unknown> => new Set(),
+    getWebSocketClients: (): Set<WsWebSocket> => new Set(),
   });
 
   await worker.start();
