@@ -9,6 +9,7 @@ import type { Server as HttpServer } from 'node:http';
 import type { Server as HttpsServer } from 'node:https';
 import { createHttpTerminator, type HttpTerminator } from 'http-terminator';
 import type { WebSocketManager } from '../websocket/websocket-manager.js';
+import { Logger } from '../utils/logger.js';
 
 /**
  * Logger interface for shutdown
@@ -36,17 +37,22 @@ export interface GracefulShutdownConfig {
 }
 
 /**
- * Default console logger
+ * Default console logger using Logger utility
  */
+const logger = Logger.getInstance();
 const defaultLogger: ShutdownLogger = {
   info: (message, context) => {
-    console.info(`[Shutdown] ${message}`, context ?? '');
+    logger.info(`[Shutdown] ${message}`, context !== undefined ? { context } : undefined);
   },
   warn: (message, context) => {
-    console.warn(`[Shutdown] ${message}`, context ?? '');
+    logger.warn(`[Shutdown] ${message}`, context !== undefined ? { context } : undefined);
   },
   error: (message, error, context) => {
-    console.error(`[Shutdown] ${message}`, error ?? '', context ?? '');
+    logger.error(
+      `[Shutdown] ${message}`,
+      error instanceof Error ? error : null,
+      context !== undefined ? { context } : undefined
+    );
   },
 };
 

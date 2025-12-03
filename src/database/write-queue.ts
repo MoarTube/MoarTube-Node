@@ -185,7 +185,8 @@ export class WriteQueue {
         (message as { cmd: string }).cmd === 'database_write_job_result'
       ) {
         const resultMessage = message as DatabaseWriteJobResultMessage;
-        const error = resultMessage.error ? new Error(resultMessage.error) : undefined;
+        const error =
+          resultMessage.error !== undefined ? new Error(resultMessage.error) : undefined;
         this.complete(resultMessage.databaseWriteJobId, error, resultMessage.result);
       }
     });
@@ -201,7 +202,9 @@ export class WriteQueue {
       for (const [jobId, job] of this.pendingJobs) {
         if (now - job.timestamp > this.jobTimeout) {
           this.pendingJobs.delete(jobId);
-          job.reject(new Error(`WriteQueue: Job ${jobId} timed out after ${this.jobTimeout}ms`));
+          job.reject(
+            new Error(`WriteQueue: Job ${jobId} timed out after ${String(this.jobTimeout)}ms`)
+          );
         }
       }
     }, 5000); // Check every 5 seconds
@@ -220,9 +223,7 @@ let writeQueueInstance: WriteQueue | null = null;
  * @returns The WriteQueue singleton instance
  */
 export function getWriteQueue(jobTimeout?: number): WriteQueue {
-  if (!writeQueueInstance) {
-    writeQueueInstance = new WriteQueue(jobTimeout);
-  }
+  writeQueueInstance ??= new WriteQueue(jobTimeout);
   return writeQueueInstance;
 }
 

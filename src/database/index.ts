@@ -12,7 +12,6 @@ export {
   getCurrentDialect,
   closeDatabase,
   getRawSqliteDb,
-  getRawPostgresClient,
   isSqliteDb,
   isPostgresDb,
   type DatabaseConfig,
