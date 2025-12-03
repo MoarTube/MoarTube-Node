@@ -196,7 +196,7 @@ export abstract class BaseService {
         lastError = error as Error;
         if (attempt < maxRetries) {
           const delayMs = baseDelay * Math.pow(2, attempt);
-          this.logger.warn(`${operation} failed, retrying in ${delayMs}ms`, {
+          this.logger.warn(`${operation} failed, retrying in ${String(delayMs)}ms`, {
             attempt: attempt + 1,
             maxRetries,
             error: lastError.message,
@@ -206,7 +206,7 @@ export abstract class BaseService {
       }
     }
 
-    this.logger.error(`${operation} failed after ${maxRetries} retries`, lastError);
+    this.logger.error(`${operation} failed after ${String(maxRetries)} retries`, lastError);
     throw lastError as Error;
   }
 }

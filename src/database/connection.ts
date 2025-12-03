@@ -67,7 +67,7 @@ export function createDatabase(config: DatabaseConfig): DatabaseClient {
     drizzleDb = drizzle(sqliteDb, { schema });
     currentDialect = 'sqlite';
     return drizzleDb;
-  } else if (config.dialect === 'postgres') {
+  } else {
     // PostgreSQL support will be implemented in a future phase
     // For now, throw an error indicating it's not yet supported
     throw new Error(
@@ -75,8 +75,6 @@ export function createDatabase(config: DatabaseConfig): DatabaseClient {
         'Please use SQLite for now. PostgreSQL will be added in a future phase.'
     );
   }
-
-  throw new Error(`Unsupported database dialect: ${String(config.dialect)}`);
 }
 
 /**

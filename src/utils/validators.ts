@@ -769,7 +769,7 @@ export async function isCloudflareCredentialsValid(
       }
     );
 
-    return response.data.success === true;
+    return response.data.success;
   } catch {
     return false;
   }

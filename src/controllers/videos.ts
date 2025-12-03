@@ -153,7 +153,7 @@ export class VideosController extends BaseController {
       return; // Turnstile not enabled, validation passes
     }
 
-    if (!token || token.length === 0) {
+    if (token === undefined || token.length === 0) {
       throw new ForbiddenError(
         'Human verification is enabled on this MoarTube Node, please refresh your browser'
       );
@@ -304,10 +304,6 @@ export class VideosController extends BaseController {
     const { videoId } = request.params as VideoIdParams;
     const { format, resolution } = request.body as FormatResolutionBody;
 
-    if (!format || !resolution) {
-      throw new BadRequestError('Format and resolution are required');
-    }
-
     await videoService.markFormatResolutionPublished(videoId, format, resolution);
 
     this.sendSuccess(reply, { videoId, format, resolution }, 'Format/resolution published');
@@ -335,10 +331,6 @@ export class VideosController extends BaseController {
     const { videoId } = request.params as VideoIdParams;
     const { format, resolution } = request.body as FormatResolutionBody;
 
-    if (!format || !resolution) {
-      throw new BadRequestError('Format and resolution are required');
-    }
-
     await videoService.notifyUploadComplete(videoId, format, resolution);
 
     this.sendSuccess(reply, { videoId }, 'Video upload notification processed');
@@ -352,10 +344,6 @@ export class VideosController extends BaseController {
     const videoService = this.getVideoService();
     const { videoId } = request.params as VideoIdParams;
     const { format, resolution } = request.body as FormatResolutionBody;
-
-    if (!format || !resolution) {
-      throw new BadRequestError('Format and resolution are required');
-    }
 
     await videoService.notifyStreamComplete(videoId, format, resolution);
 
@@ -457,10 +445,6 @@ export class VideosController extends BaseController {
     const videoService = this.getVideoService();
     const { videoId } = request.params as VideoIdParams;
     const { format, resolution } = request.body as FormatResolutionBody;
-
-    if (!format || !resolution) {
-      throw new BadRequestError('Format and resolution are required');
-    }
 
     await videoService.unpublishFormatResolution(videoId, format, resolution);
 
@@ -601,7 +585,7 @@ export class VideosController extends BaseController {
     const videoService = this.getVideoService();
     const cloudflareService = this.getCloudflareService();
     const { videoId } = request.params as VideoIdParams;
-    const { cloudflareTurnstileToken } = (request.body as LikeDislikeBody) || {};
+    const { cloudflareTurnstileToken } = (request.body ?? {}) as LikeDislikeBody;
 
     // Check global setting
     const config = getConfig();
@@ -646,7 +630,7 @@ export class VideosController extends BaseController {
     const videoService = this.getVideoService();
     const cloudflareService = this.getCloudflareService();
     const { videoId } = request.params as VideoIdParams;
-    const { cloudflareTurnstileToken } = (request.body as LikeDislikeBody) || {};
+    const { cloudflareTurnstileToken } = (request.body ?? {}) as LikeDislikeBody;
 
     // Check global setting
     const config = getConfig();
@@ -712,7 +696,7 @@ export class VideosController extends BaseController {
 
     // Validate Cloudflare Turnstile token if enabled
     if (nodeSettings.isCloudflareTurnstileEnabled) {
-      if (!cloudflareTurnstileToken) {
+      if (cloudflareTurnstileToken === undefined || cloudflareTurnstileToken === '') {
         throw new BadRequestError(
           'human verification was enabled on this MoarTube Node, please refresh your browser'
         );
@@ -726,11 +710,6 @@ export class VideosController extends BaseController {
       if (!isValid) {
         throw new BadRequestError('human verification failed, please try again');
       }
-    }
-
-    // Validate required fields
-    if (!email || !reportType || !message) {
-      throw new BadRequestError('email, reportType, and message are required');
     }
 
     // Create the video report
@@ -801,7 +780,7 @@ export class VideosController extends BaseController {
 
     // Validate Cloudflare Turnstile token if enabled
     if (nodeSettings.isCloudflareTurnstileEnabled) {
-      if (!cloudflareTurnstileToken) {
+      if (cloudflareTurnstileToken === undefined || cloudflareTurnstileToken === '') {
         throw new BadRequestError(
           'human verification was enabled on this MoarTube Node, please refresh your browser'
         );
@@ -1233,7 +1212,7 @@ export class VideosController extends BaseController {
             file.filename
           );
 
-          if (!destPath) {
+          if (destPath === null || destPath === '') {
             throw new BadRequestError(`Invalid filename: ${file.filename}`);
           }
 
@@ -1300,7 +1279,7 @@ export class VideosController extends BaseController {
             file.filename
           );
 
-          if (!destPath) {
+          if (destPath === null || destPath === '') {
             throw new BadRequestError(`Invalid filename: ${file.filename}`);
           }
 
@@ -1422,7 +1401,7 @@ export class VideosController extends BaseController {
       throw new BadRequestError('containsAdultContent is required');
     }
 
-    if (termsOfServiceAgreed !== true) {
+    if (!termsOfServiceAgreed) {
       throw new BadRequestError('You must agree to the Terms of Service');
     }
 
@@ -1445,7 +1424,7 @@ export class VideosController extends BaseController {
 
     if (!result.success) {
       // Return error response with appropriate status code
-      const statusCode = result.isRequestTooLarge ? 413 : 400;
+      const statusCode = result.isRequestTooLarge === true ? 413 : 400;
       return reply.status(statusCode).send({
         isError: true,
         message: result.message ?? 'Failed to add video to index',

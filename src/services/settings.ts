@@ -508,7 +508,7 @@ export class SettingsService extends BaseService implements ISettingsService {
    */
   getNodeIdentification(): Record<string, unknown> {
     const config = getConfig();
-    return (config.nodeIdentification as Record<string, unknown>) ?? {};
+    return config.nodeIdentification as Record<string, unknown>;
   }
 
   /**

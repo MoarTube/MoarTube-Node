@@ -97,7 +97,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
         remoteip: ip,
       });
 
-      return response.data.success === true;
+      return response.data.success;
     });
   }
 
@@ -703,7 +703,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
         { headers }
       );
 
-      return response.data.success === true;
+      return response.data.success;
     } catch (error) {
       this.logger.error('Failed to validate Cloudflare credentials', error as Error);
       return false;
@@ -771,7 +771,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
         });
       }
 
-      this.logger.debug(`${operation}: purged ${files.length} files`);
+      this.logger.debug(`${operation}: purged ${String(files.length)} files`);
     } catch (error) {
       this.logger.error(`${operation} failed`, error as Error);
     }

@@ -181,7 +181,7 @@ export function formatBytes(bytes: number, decimals = 2): string {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   const sizeLabel = sizes[i] ?? 'Bytes';
 
-  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizeLabel;
+  return `${String(Number.parseFloat((bytes / Math.pow(k, i)).toFixed(dm)))} ${sizeLabel}`;
 }
 
 /**
@@ -494,7 +494,7 @@ export function buildUrl(
 ): string {
   const portNum = typeof port === 'string' ? Number.parseInt(port, 10) : port;
   const defaultPort = protocol === 'http' ? 80 : 443;
-  const portString = portNum !== defaultPort ? `:${portNum}` : '';
+  const portString = portNum !== defaultPort ? `:${String(portNum)}` : '';
 
   return `${protocol}://${address}${portString}${pathPart}`;
 }

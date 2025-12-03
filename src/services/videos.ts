@@ -495,7 +495,7 @@ export class VideosService extends BaseService implements IVideoService {
             .then(() => {
               this.logger.debug('Flushed pending views', { videoId, count: pendingCount });
             })
-            .catch((err) => {
+            .catch((err: unknown) => {
               this.logger.error(
                 'Failed to flush pending views',
                 err instanceof Error ? err : new Error(String(err)),
@@ -637,7 +637,7 @@ export class VideosService extends BaseService implements IVideoService {
     };
 
     // Mark index as outdated if video is indexed
-    if (video?.isIndexed) {
+    if (video?.isIndexed === true) {
       updates['isIndexOutdated'] = true;
     }
 
@@ -669,9 +669,7 @@ export class VideosService extends BaseService implements IVideoService {
       ogv: [],
     });
 
-    if (!outputs[format]) {
-      outputs[format] = [];
-    }
+    outputs[format] ??= [];
 
     if (!outputs[format].includes(resolution)) {
       outputs[format].push(resolution);
@@ -738,7 +736,7 @@ export class VideosService extends BaseService implements IVideoService {
         publishes.push({
           format,
           resolution,
-          isPublished: Boolean(video.isPublished) && Boolean(outputs[format]?.includes(resolution)),
+          isPublished: video.isPublished && (outputs[format]?.includes(resolution) ?? false),
         });
       }
     }
@@ -771,13 +769,11 @@ export class VideosService extends BaseService implements IVideoService {
       const outputs: Record<string, string[]> =
         typeof video.outputs === 'string'
           ? (JSON.parse(video.outputs) as Record<string, string[]>)
-          : ((video.outputs as Record<string, string[]>) ?? {});
+          : (video.outputs as Record<string, string[]>);
 
       // Add resolution to format if not already present
-      if (!outputs[format]?.includes(resolution)) {
-        if (!outputs[format]) {
-          outputs[format] = [];
-        }
+      if (outputs[format]?.includes(resolution) !== true) {
+        outputs[format] ??= [];
         outputs[format].push(resolution);
         // Sort by resolution (descending)
         outputs[format].sort((a: string, b: string) => {
@@ -910,11 +906,11 @@ export class VideosService extends BaseService implements IVideoService {
         views: video.views,
         likes: video.likes,
         dislikes: video.dislikes,
-        isPublished: Boolean(video.isPublished),
-        isPublishing: Boolean(video.isPublishing),
-        isLive: Boolean(video.isLive),
-        isStreaming: Boolean(video.isStreaming),
-        isStreamed: Boolean(video.isStreamed),
+        isPublished: video.isPublished,
+        isPublishing: video.isPublishing,
+        isLive: video.isLive,
+        isStreaming: video.isStreaming,
+        isStreamed: video.isStreamed,
         comments: video.comments,
         creationTimestamp: video.creationTimestamp,
         isHlsAvailable: (outputs['m3u8']?.length ?? 0) > 0,
@@ -939,11 +935,11 @@ export class VideosService extends BaseService implements IVideoService {
       }
 
       return {
-        isCommentsEnabled: Boolean(video.isCommentsEnabled),
-        isLikesEnabled: Boolean(video.isLikesEnabled),
-        isDislikesEnabled: Boolean(video.isDislikesEnabled),
-        isReportsEnabled: Boolean(video.isReportsEnabled),
-        isLiveChatEnabled: Boolean(video.isLiveChatEnabled),
+        isCommentsEnabled: video.isCommentsEnabled,
+        isLikesEnabled: video.isLikesEnabled,
+        isDislikesEnabled: video.isDislikesEnabled,
+        isReportsEnabled: video.isReportsEnabled,
+        isLiveChatEnabled: video.isLiveChatEnabled,
       };
     });
   }
@@ -994,11 +990,11 @@ export class VideosService extends BaseService implements IVideoService {
     let videoAliasUrl = 'MoarTube Aliaser link unavailable';
 
     if (video.isIndexed && nodeSettings.nodeId) {
-      const isDeveloperMode = config.runtime.isDeveloperMode ?? false;
+      const isDeveloperMode = config.runtime.isDeveloperMode;
       if (isDeveloperMode) {
         // Use localhost for development
         const aliaserPort = config.urls.getAliaserConfig().port;
-        videoAliasUrl = `http://localhost:${aliaserPort}/nodes/${nodeSettings.nodeId}/videos/${video.videoId}`;
+        videoAliasUrl = `http://localhost:${String(aliaserPort)}/nodes/${nodeSettings.nodeId}/videos/${video.videoId}`;
       } else {
         videoAliasUrl = `https://moartu.be/nodes/${nodeSettings.nodeId}/videos/${video.videoId}`;
       }
@@ -1010,12 +1006,12 @@ export class VideosService extends BaseService implements IVideoService {
       description: video.description,
       tags: video.tags,
       views: video.views,
-      isIndexed: Boolean(video.isIndexed),
-      isPublished: Boolean(video.isPublished),
-      isLive: Boolean(video.isLive),
-      isStreaming: Boolean(video.isStreaming),
-      isFinalized: Boolean(video.isFinalized),
-      isStreamRecordedRemotely: Boolean(video.isStreamRecordedRemotely),
+      isIndexed: video.isIndexed,
+      isPublished: video.isPublished,
+      isLive: video.isLive,
+      isStreaming: video.isStreaming,
+      isFinalized: video.isFinalized,
+      isStreamRecordedRemotely: video.isStreamRecordedRemotely,
       timestamp: video.creationTimestamp,
       videoAliasUrl,
       outputs,
@@ -1104,10 +1100,10 @@ export class VideosService extends BaseService implements IVideoService {
         throw new Error('Node ID not configured');
       }
 
-      const isDeveloperMode = config.runtime.isDeveloperMode ?? false;
+      const isDeveloperMode = config.runtime.isDeveloperMode;
       if (isDeveloperMode) {
         const aliaserPort = config.urls.getAliaserConfig().port;
-        return `http://localhost:${aliaserPort}/nodes/${nodeSettings.nodeId}/videos/${videoId}`;
+        return `http://localhost:${String(aliaserPort)}/nodes/${nodeSettings.nodeId}/videos/${videoId}`;
       } else {
         return `https://moartu.be/nodes/${nodeSettings.nodeId}/videos/${videoId}`;
       }
@@ -1130,7 +1126,7 @@ export class VideosService extends BaseService implements IVideoService {
       const outputs: Record<string, string[]> =
         typeof video.outputs === 'string'
           ? (JSON.parse(video.outputs) as Record<string, string[]>)
-          : ((video.outputs as Record<string, string[]>) ?? {});
+          : (video.outputs as Record<string, string[]>);
 
       // Build complete publish status list
       const formats = ['m3u8', 'mp4', 'webm', 'ogv'];
@@ -1143,8 +1139,7 @@ export class VideosService extends BaseService implements IVideoService {
           publishes.push({
             format,
             resolution,
-            isPublished:
-              video.isPublished === true && (outputs[format]?.includes(resolution) ?? false),
+            isPublished: video.isPublished && (outputs[format]?.includes(resolution) ?? false),
           });
         }
       }
@@ -1171,7 +1166,7 @@ export class VideosService extends BaseService implements IVideoService {
       const outputs: Record<string, string[]> =
         typeof video.outputs === 'string'
           ? (JSON.parse(video.outputs) as Record<string, string[]>)
-          : ((video.outputs as Record<string, string[]>) ?? {});
+          : (video.outputs as Record<string, string[]>);
 
       // Remove resolution from format
       if (outputs[format]) {
@@ -1401,7 +1396,7 @@ export class VideosService extends BaseService implements IVideoService {
           manifestType,
           path: manifestPath,
         });
-      } else if (storageMode === 's3provider' && this.storageService) {
+      } else if (this.storageService) {
         const key = `external/videos/${videoId}/adaptive/m3u8/manifest-${manifestType}.m3u8`;
         await this.storageService.saveFile(key, Buffer.from(content), 'application/x-mpegURL');
 
@@ -1480,7 +1475,7 @@ export class VideosService extends BaseService implements IVideoService {
         }
 
         return fs.readFileSync(previewPath).toString('base64');
-      } else if (storageMode === 's3provider') {
+      } else {
         // Use storage service for S3
         if (!this.storageService) {
           throw new Error('Storage service not available for S3 mode');
@@ -1530,7 +1525,10 @@ export class VideosService extends BaseService implements IVideoService {
       const nodeSettings = config.nodeSettings;
       const nodeIdentification = config.nodeIdentification;
 
-      if (!nodeIdentification?.moarTubeTokenProof) {
+      if (
+        nodeIdentification?.moarTubeTokenProof === undefined ||
+        nodeIdentification.moarTubeTokenProof === ''
+      ) {
         throw new Error('Node identification failed - no token proof');
       }
 
@@ -1542,17 +1540,17 @@ export class VideosService extends BaseService implements IVideoService {
       // Prepare submission data
       const indexData: VideoIndexData = {
         videoId: video.videoId,
-        nodeId: nodeSettings.nodeId ?? '',
-        nodeName: nodeSettings.nodeName ?? '',
-        nodeAbout: nodeSettings.nodeAbout ?? '',
-        publicNodeProtocol: nodeSettings.publicNodeProtocol ?? 'https',
-        publicNodeAddress: nodeSettings.publicNodeAddress ?? '',
-        publicNodePort: nodeSettings.publicNodePort ?? '',
+        nodeId: nodeSettings.nodeId,
+        nodeName: nodeSettings.nodeName,
+        nodeAbout: nodeSettings.nodeAbout,
+        publicNodeProtocol: nodeSettings.publicNodeProtocol,
+        publicNodeAddress: nodeSettings.publicNodeAddress,
+        publicNodePort: nodeSettings.publicNodePort,
         title: video.title,
         tags: video.tags,
         views: video.views,
-        isLive: Boolean(video.isLive),
-        isStreaming: Boolean(video.isStreaming),
+        isLive: video.isLive,
+        isStreaming: video.isStreaming,
         lengthSeconds: video.lengthSeconds,
         creationTimestamp: video.creationTimestamp,
         containsAdultContent: options.containsAdultContent,
@@ -1623,7 +1621,10 @@ export class VideosService extends BaseService implements IVideoService {
       const config = getConfig();
       const nodeIdentification = config.nodeIdentification;
 
-      if (!nodeIdentification?.moarTubeTokenProof) {
+      if (
+        nodeIdentification?.moarTubeTokenProof === undefined ||
+        nodeIdentification.moarTubeTokenProof === ''
+      ) {
         throw new Error('Node identification failed - no token proof');
       }
 
@@ -1709,7 +1710,7 @@ export class VideosService extends BaseService implements IVideoService {
           fs.rmSync(videoDir, { recursive: true, force: true });
           this.logger.debug('Deleted video directories', { videoId });
         }
-      } else if (storageMode === 's3provider' && this.storageService) {
+      } else if (this.storageService) {
         // Delete from S3
         await this.storageService.deleteDirectory(`external/videos/${videoId}`);
         this.logger.debug('Deleted video from S3', { videoId });

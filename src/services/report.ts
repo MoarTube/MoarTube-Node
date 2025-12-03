@@ -146,7 +146,7 @@ export class ReportService extends BaseService implements IReportService {
     return this.withErrorLogging('archiveVideoReport', async () => {
       const report = await this.videoReportRepository.findById(reportId);
       if (!report) {
-        throw new Error(`Video report not found: ${reportId}`);
+        throw new Error(`Video report not found: ${String(reportId)}`);
       }
 
       // Create archive record
@@ -178,7 +178,7 @@ export class ReportService extends BaseService implements IReportService {
     return this.withErrorLogging('archiveCommentReport', async () => {
       const report = await this.commentReportRepository.findById(reportId);
       if (!report) {
-        throw new Error(`Comment report not found: ${reportId}`);
+        throw new Error(`Comment report not found: ${String(reportId)}`);
       }
 
       // Create archive record

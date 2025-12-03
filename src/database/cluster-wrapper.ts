@@ -32,7 +32,7 @@ export class ClusterDatabaseWrapper {
   constructor(db: DatabaseClient, writeQueue?: WriteQueue) {
     this.db = db;
     this.writeQueue = writeQueue ?? getWriteQueue();
-    this.isWorker = cluster.isWorker === true;
+    this.isWorker = cluster.isWorker;
   }
 
   /**

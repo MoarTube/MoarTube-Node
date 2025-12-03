@@ -42,7 +42,7 @@ export class IndexerService extends BaseService implements IIndexerService {
 
     const config = getConfig();
     const indexerConfig = config.appConfig.indexerConfig;
-    this.indexerUrl = `${indexerConfig.httpProtocol}://${indexerConfig.host}:${indexerConfig.port}`;
+    this.indexerUrl = `${indexerConfig.httpProtocol}://${indexerConfig.host}:${String(indexerConfig.port)}`;
 
     this.httpClient = axios.create({
       baseURL: this.indexerUrl,
@@ -97,7 +97,7 @@ export class IndexerService extends BaseService implements IIndexerService {
       });
       const result: IndexerSubmitResult = {
         isError: true,
-        message: axiosError.response?.data?.message ?? (error as Error).message,
+        message: axiosError.response?.data.message ?? (error as Error).message,
       };
       if (axiosError.response?.status !== undefined) {
         result.statusCode = axiosError.response.status;

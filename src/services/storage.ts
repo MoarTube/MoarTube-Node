@@ -142,7 +142,7 @@ export class StorageService extends BaseService implements IStorageService {
         const filePath = this.resolveFilePath(key);
         return fs.existsSync(filePath);
       } else {
-        return this.existsInS3(key);
+        return await this.existsInS3(key);
       }
     } catch {
       return false;
@@ -157,7 +157,7 @@ export class StorageService extends BaseService implements IStorageService {
       if (this.getStorageMode() === 'filesystem') {
         return this.getFilesystemMetadata(key);
       } else {
-        return this.getS3Metadata(key);
+        return await this.getS3Metadata(key);
       }
     } catch {
       return null;
@@ -512,7 +512,9 @@ export class StorageService extends BaseService implements IStorageService {
     return new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
       stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on('end', () => {
+        resolve(Buffer.concat(chunks));
+      });
       stream.on('error', reject);
     });
   }

@@ -410,7 +410,7 @@ export class SettingsController extends BaseController {
         await pipeline(part.file, fs.createWriteStream(certPath));
       } else if (part.fieldname === 'caFiles') {
         caFileCount++;
-        const caPath = path.join(certsDir, `ca_${caFileCount}.pem`);
+        const caPath = path.join(certsDir, `ca_${String(caFileCount)}.pem`);
         await pipeline(part.file, fs.createWriteStream(caPath));
       }
     }
@@ -424,7 +424,7 @@ export class SettingsController extends BaseController {
   private disableHttpsMode(request: FastifyRequest, reply: FastifyReply): void {
     const body = request.body as SecureBody;
 
-    if (body.isSecure === false) {
+    if (!body.isSecure) {
       this.logger.info('switching node to HTTP mode');
       const config = getConfig();
       config.updateNodeSettings({ isSecure: false });
@@ -633,7 +633,7 @@ export class SettingsController extends BaseController {
     const nodeSettings = config.nodeSettings;
 
     if (
-      nodeSettings.storageConfig?.storageMode !== 'filesystem' ||
+      nodeSettings.storageConfig.storageMode !== 'filesystem' ||
       this.videoRepository === undefined
     ) {
       return;
@@ -664,7 +664,7 @@ export class SettingsController extends BaseController {
 
     let outputs: { m3u8?: string[] };
     try {
-      outputs = JSON.parse(String(outputsJson)) as { m3u8?: string[] };
+      outputs = JSON.parse(outputsJson) as { m3u8?: string[] };
     } catch {
       return; // Skip if outputs is invalid JSON
     }
@@ -759,14 +759,12 @@ export class SettingsController extends BaseController {
         );
 
         // Add CDN DNS record based on storage config
-        if (storageConfig !== undefined) {
-          await this.cloudflareService.addCdnDnsRecord(
-            cloudflareEmailAddress,
-            cloudflareZoneId,
-            cloudflareGlobalApiKey,
-            storageConfig
-          );
-        }
+        await this.cloudflareService.addCdnDnsRecord(
+          cloudflareEmailAddress,
+          cloudflareZoneId,
+          cloudflareGlobalApiKey,
+          storageConfig
+        );
 
         // Purge entire cache
         await this.cloudflareService.purgeEntireCacheWithCredentials(
@@ -1066,7 +1064,7 @@ export class SettingsController extends BaseController {
         } finally {
           db.close();
         }
-      } else if (databaseDialect === 'postgres') {
+      } else {
         // Test PostgreSQL connection using postgres driver
         const postgresConfig = databaseConfig.postgresConfig;
 
