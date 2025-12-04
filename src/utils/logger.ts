@@ -5,6 +5,7 @@
  */
 
 import pino from 'pino';
+import pinoPretty from 'pino-pretty';
 
 /**
  * Log levels in order of severity
@@ -55,36 +56,18 @@ export class Logger implements ILogger {
     if (existingLogger) {
       this.logger = existingLogger;
     } else {
-      const level = config.level ?? LogLevel.INFO;
+      const stream = pinoPretty({
+        colorize: true,
+        translateTime: 'HH:MM:ss Z',
+      });
 
-      const options: pino.LoggerOptions = {
-        level,
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            translateTime: 'HH:MM:ss Z',
-            ignore: 'pid,hostname',
-          },
-        },
-      };
+      if (config.logToFile === true && config.logFilePath !== undefined) {
+        const streams = [{ stream: stream }, { stream: pino.destination(config.logFilePath) }];
 
-      let logger = pino(options);
-
-      if (config.logToFile === true) {
-        if (config.logFilePath !== undefined) {
-          const streams = [
-            { stream: process.stdout },
-            { stream: pino.destination(config.logFilePath) },
-          ];
-          logger = pino(options, pino.multistream(streams));
-        }
+        this.logger = pino(pino.multistream(streams));
+      } else {
+        this.logger = pino(stream);
       }
-
-      if (config.prefix !== undefined && config.prefix.length > 0) {
-        logger = logger.child({ prefix: config.prefix });
-      }
-
-      this.logger = logger;
     }
   }
 

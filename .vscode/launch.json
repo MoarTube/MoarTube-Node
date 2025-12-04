@@ -16,7 +16,8 @@
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.js"
             ],
-            "sourceMaps": true
+            "sourceMaps": true,
+            "console": "integratedTerminal"
         },
         {
             "type": "node",
