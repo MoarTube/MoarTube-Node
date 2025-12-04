@@ -84,7 +84,7 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   const container = createAppContainer(db);
 
   // Register routes with Zod type provider
-  await registerRoutes(app.withTypeProvider<ZodTypeProvider>(), container);
+  registerRoutes(app.withTypeProvider<ZodTypeProvider>(), container);
 
   // Register error handler
   const { default: errorHandlerPlugin } = await import('./error-handler.js');

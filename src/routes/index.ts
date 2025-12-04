@@ -60,10 +60,7 @@ import { streamsRoutes } from './streams.js';
  * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container for dependency injection
  */
-export async function registerRoutes(
-  fastify: FastifyInstance,
-  container: Container
-): Promise<void> {
+export function registerRoutes(fastify: FastifyInstance, container: Container): void {
   // Health check routes (top-level)
   healthRoutes(fastify, container);
 
@@ -71,19 +68,17 @@ export async function registerRoutes(
   baseRoutes(fastify);
 
   // Status routes (/status/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       statusRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/status' }
   );
 
   // Account routes (/account/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       accountRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/account' }
   );
@@ -97,118 +92,105 @@ export async function registerRoutes(
   );
 
   // Links routes (/links/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       linksRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/links' }
   );
 
   // Monetization routes (/monetization/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       monetizationRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/monetization' }
   );
 
   // Watch embed routes (/watch/embed/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       watchEmbedRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/watch/embed' }
   );
 
   // External resources routes (/external/resources/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       externalResourcesRoutes(instance.withTypeProvider<ZodTypeProvider>());
-      done();
     },
     { prefix: '/external/resources' }
   );
 
   // External videos routes (/external/videos/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       externalVideosRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/external/videos' }
   );
 
   // Comments routes (/comments/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       commentsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/comments' }
   );
 
   // Watch routes (/watch)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       watchRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/watch' }
   );
 
   // Node routes (/node/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       nodeRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/node' }
   );
 
   // Reports routes (/reports/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       reportsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/reports' }
   );
 
   // Reports videos routes (/reports/videos/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       reportsVideosRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/reports/videos' }
   );
 
   // Reports comments routes (/reports/comments/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       reportsCommentsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/reports/comments' }
   );
 
   // Reports archive videos routes (/reports/archive/videos/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       reportsArchiveVideosRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/reports/archive/videos' }
   );
 
   // Reports archive comments routes (/reports/archive/comments/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       reportsArchiveCommentsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/reports/archive/comments' }
   );
@@ -222,10 +204,9 @@ export async function registerRoutes(
   );
 
   // Streams routes (/streams/*)
-  await fastify.register(
-    (instance, _opts, done) => {
+  fastify.register(
+    (instance) => {
       streamsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      done();
     },
     { prefix: '/streams' }
   );
