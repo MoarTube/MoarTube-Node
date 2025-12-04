@@ -39,8 +39,6 @@ export interface RuntimeConfig {
   jwtSecret: string;
   isDockerEnvironment: boolean;
   isDeveloperMode: boolean;
-  expressSessionName: string;
-  expressSessionSecret: string;
 }
 
 /**
@@ -69,7 +67,7 @@ class Config {
     // Ensure data directories exist
     this.ensureDataDirectoriesExist();
 
-    // Load app config (config.json)
+    // Load app config json file
     this._appConfig = this.loadAppConfig(baseDir, configFileName);
 
     // Initialize URLs with indexer/aliaser configs
@@ -89,8 +87,6 @@ class Config {
       jwtSecret: '', // Set later via setJwtSecret
       isDockerEnvironment: this._env.isDockerEnvironment,
       isDeveloperMode: this._appConfig.isDeveloperMode,
-      expressSessionName: this._nodeSettings.expressSessionName,
-      expressSessionSecret: this._nodeSettings.expressSessionSecret,
     };
   }
 
@@ -194,11 +190,8 @@ class Config {
       nodeName: 'moartube node',
       nodeAbout: 'just a MoarTube node',
       nodeId: '',
-      // admin / admin (Base64 encoded bcrypt hashes)
-      username: 'JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL',
-      password: 'JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX',
-      expressSessionName: crypto.randomBytes(64).toString('hex'),
-      expressSessionSecret: crypto.randomBytes(64).toString('hex'),
+      username: 'JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL', // admin (Base64 encoded bcrypt hash)
+      password: 'JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX', // admin (Base64 encoded bcrypt hash)
       isCloudflareCdnEnabled: false,
       cloudflareEmailAddress: '',
       cloudflareZoneId: '',

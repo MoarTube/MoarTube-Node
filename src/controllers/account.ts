@@ -76,8 +76,6 @@ export class AccountController extends BaseController {
    * Sign out the current user
    */
   signOut = (_request: FastifyRequest, reply: FastifyReply): void => {
-    // In JWT-based auth, signout is handled client-side by discarding the token
-    // The session (if using express-session compatibility) is cleared here
     this.sendSuccess(reply, { wasAuthenticated: true });
   };
 

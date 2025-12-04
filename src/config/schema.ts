@@ -95,8 +95,6 @@ export const NodeSettingsSchema = z.object({
   // Authentication (Base64 encoded bcrypt hashes)
   username: z.string().min(1, 'Username hash is required'),
   password: z.string().min(1, 'Password hash is required'),
-  expressSessionName: z.string().min(1, 'Session name is required'),
-  expressSessionSecret: z.string().min(1, 'Session secret is required'),
 
   // Cloudflare Settings
   isCloudflareCdnEnabled: z.boolean().default(false),

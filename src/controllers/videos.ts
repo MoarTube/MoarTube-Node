@@ -2,7 +2,6 @@
  * Videos Controller
  *
  * Handles HTTP requests for video-related operations.
- * Migrated from Express to Fastify with proper TypeScript types.
  */
 
 import * as fs from 'node:fs';

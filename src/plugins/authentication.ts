@@ -75,12 +75,6 @@ function extractToken(request: FastifyRequest): string | null {
     }
   }
 
-  // Check session (for Express compatibility)
-  const session = (request as unknown as { session?: { token?: string } }).session;
-  if (session?.token !== undefined) {
-    return session.token;
-  }
-
   // Check query parameter (for legacy support)
   const query = request.query as Record<string, unknown>;
   const queryToken = query['token'];
