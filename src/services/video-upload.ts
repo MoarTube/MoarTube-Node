@@ -147,13 +147,19 @@ export class VideoUploadService implements IVideoUploadService {
   private readonly websocketService?: IWebSocketService | undefined;
   private readonly logger?: ServiceLogger | undefined;
 
-  constructor(deps: VideoUploadServiceDependencies) {
-    this.videoService = deps.videoService;
-    this.uploadTrackerService = deps.uploadTrackerService;
-    this.cloudflareService = deps.cloudflareService;
-    this.websocketService = deps.websocketService;
-    // deps.storageService reserved for future S3 storage support
-    this.logger = deps.logger;
+  constructor(
+    videoService: IVideoService,
+    uploadTrackerService: IUploadTrackerService,
+    cloudflareService?: ICloudflareService,
+    websocketService?: IWebSocketService,
+    logger?: ServiceLogger
+  ) {
+    this.videoService = videoService;
+    this.uploadTrackerService = uploadTrackerService;
+    this.cloudflareService = cloudflareService;
+    this.websocketService = websocketService;
+    // storageService reserved for future S3 storage support
+    this.logger = logger;
   }
 
   /**

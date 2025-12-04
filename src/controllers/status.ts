@@ -54,7 +54,7 @@ export class StatusController extends BaseController {
 
     // Get video count from repository
     const videoRepository = this.container.resolve('videoRepository');
-    const videoCount = await videoRepository.count({
+    const videoCount = await videoRepository.getCount({
       isPublished: true,
     });
 
@@ -102,7 +102,7 @@ export class StatusController extends BaseController {
     // Check database connectivity
     try {
       const videoRepository = this.container.resolve('videoRepository');
-      await videoRepository.count({});
+      await videoRepository.getCount({});
     } catch (error) {
       databaseCheck = {
         status: 'error',

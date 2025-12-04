@@ -3,7 +3,7 @@
  *
  * Provides data access methods for comment report records using Drizzle ORM.
  */
-import { eq, desc, sql, gt } from 'drizzle-orm';
+import { eq, desc, count, gt } from 'drizzle-orm';
 import type { DrizzleCommentReport, DrizzleNewCommentReport } from '../schema/index.js';
 import { commentReports } from '../schema/index.js';
 import { BaseRepository } from './base.js';
@@ -95,8 +95,8 @@ export class ReportsCommentsRepository extends BaseRepository {
    *
    * @returns Total count of comment reports
    */
-  async count(): Promise<number> {
-    const result = await this.db.select({ count: sql<number>`count(*)` }).from(commentReports);
+  async getCount(): Promise<number> {
+    const result = await this.db.select({ count: count() }).from(commentReports);
     return result[0]?.count ?? 0;
   }
 
@@ -165,7 +165,7 @@ export class ReportsCommentsRepository extends BaseRepository {
    */
   async countNewerThan(timestamp: number): Promise<number> {
     const result = await this.db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: count() })
       .from(commentReports)
       .where(gt(commentReports.timestamp, timestamp));
     return result[0]?.count ?? 0;

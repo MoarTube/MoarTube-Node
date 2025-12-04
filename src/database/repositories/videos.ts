@@ -3,7 +3,7 @@
  *
  * Provides data access methods for video records using Drizzle ORM.
  */
-import { eq, desc, asc, sql, and, or, like, type SQL } from 'drizzle-orm';
+import { eq, desc, asc, sql, and, or, like, count, type SQL } from 'drizzle-orm';
 import type { DrizzleVideo, DrizzleNewVideo } from '../schema/index.js';
 import { videos } from '../schema/index.js';
 import { BaseRepository } from './base.js';
@@ -105,10 +105,10 @@ export class VideosRepository extends BaseRepository {
    * @param options - Query options for filtering
    * @returns Total count of matching videos
    */
-  async count(options?: VideoQueryOptions): Promise<number> {
+  async getCount(options?: VideoQueryOptions): Promise<number> {
     const conditions = this.buildWhereConditions(options);
 
-    const query = this.db.select({ count: sql<number>`count(*)` }).from(videos);
+    const query = this.db.select({ count: count() }).from(videos);
 
     const result = conditions ? await query.where(conditions) : await query;
 

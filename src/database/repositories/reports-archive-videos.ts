@@ -3,7 +3,7 @@
  *
  * Provides data access methods for archived video report records using Drizzle ORM.
  */
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, count } from 'drizzle-orm';
 import type { DrizzleVideoReportArchive, DrizzleNewVideoReportArchive } from '../schema/index.js';
 import { videoReportsArchive } from '../schema/index.js';
 import { BaseRepository } from './base.js';
@@ -91,8 +91,8 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    *
    * @returns Total count of archived video reports
    */
-  async count(): Promise<number> {
-    const result = await this.db.select({ count: sql<number>`count(*)` }).from(videoReportsArchive);
+  async getCount(): Promise<number> {
+    const result = await this.db.select({ count: count() }).from(videoReportsArchive);
     return result[0]?.count ?? 0;
   }
 

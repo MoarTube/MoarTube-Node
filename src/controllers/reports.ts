@@ -30,8 +30,8 @@ export class ReportsController extends BaseController {
    */
   getReportsCount = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
-      const videoReportCount = await this.videoReportRepository.count();
-      const commentReportCount = await this.commentReportRepository.count();
+      const videoReportCount = await this.videoReportRepository.getCount();
+      const commentReportCount = await this.commentReportRepository.getCount();
       const totalReportCount = videoReportCount + commentReportCount;
 
       this.sendSuccess(reply, {

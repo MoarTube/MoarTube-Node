@@ -167,7 +167,7 @@ export class WatchController extends BaseController {
 
     // Fetch all data in parallel
     const [videoCount, links, walletAddresses, recommendedVideos, comments] = await Promise.all([
-      this.videoRepository.count({ isPublished: true }),
+      this.videoRepository.getCount({ isPublished: true }),
       this.linkRepository.findAll(),
       this.monetizationRepository.findAll(),
       this.videoRepository.findAll({

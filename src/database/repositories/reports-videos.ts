@@ -3,7 +3,7 @@
  *
  * Provides data access methods for video report records using Drizzle ORM.
  */
-import { eq, desc, sql, gt } from 'drizzle-orm';
+import { eq, desc, count, gt } from 'drizzle-orm';
 import type { DrizzleVideoReport, DrizzleNewVideoReport } from '../schema/index.js';
 import { videoReports } from '../schema/index.js';
 import { BaseRepository } from './base.js';
@@ -70,8 +70,8 @@ export class ReportsVideosRepository extends BaseRepository {
    *
    * @returns Total count of video reports
    */
-  async count(): Promise<number> {
-    const result = await this.db.select({ count: sql<number>`count(*)` }).from(videoReports);
+  async getCount(): Promise<number> {
+    const result = await this.db.select({ count: count() }).from(videoReports);
     return result[0]?.count ?? 0;
   }
 
@@ -126,7 +126,7 @@ export class ReportsVideosRepository extends BaseRepository {
    */
   async countNewerThan(timestamp: number): Promise<number> {
     const result = await this.db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: count() })
       .from(videoReports)
       .where(gt(videoReports.timestamp, timestamp));
     return result[0]?.count ?? 0;

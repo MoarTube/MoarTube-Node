@@ -3,7 +3,7 @@
  *
  * Provides data access methods for crypto wallet address records using Drizzle ORM.
  */
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, count } from 'drizzle-orm';
 import type { DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress } from '../schema/index.js';
 import { cryptoWalletAddresses } from '../schema/index.js';
 import { BaseRepository } from './base.js';
@@ -91,10 +91,8 @@ export class MonetizationRepository extends BaseRepository {
    *
    * @returns Total count of wallet addresses
    */
-  async count(): Promise<number> {
-    const result = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(cryptoWalletAddresses);
+  async getCount(): Promise<number> {
+    const result = await this.db.select({ count: count() }).from(cryptoWalletAddresses);
     return result[0]?.count ?? 0;
   }
 
@@ -168,7 +166,7 @@ export class MonetizationRepository extends BaseRepository {
    */
   async exists(walletAddress: string): Promise<boolean> {
     const result = await this.db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: count() })
       .from(cryptoWalletAddresses)
       .where(eq(cryptoWalletAddresses.walletAddress, walletAddress));
     return (result[0]?.count ?? 0) > 0;

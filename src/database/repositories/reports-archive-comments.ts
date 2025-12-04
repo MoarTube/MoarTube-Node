@@ -3,7 +3,7 @@
  *
  * Provides data access methods for archived comment report records using Drizzle ORM.
  */
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, count } from 'drizzle-orm';
 import type {
   DrizzleCommentReportArchive,
   DrizzleNewCommentReportArchive,
@@ -116,10 +116,8 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    *
    * @returns Total count of archived comment reports
    */
-  async count(): Promise<number> {
-    const result = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(commentReportsArchive);
+  async getCount(): Promise<number> {
+    const result = await this.db.select({ count: count() }).from(commentReportsArchive);
     return result[0]?.count ?? 0;
   }
 

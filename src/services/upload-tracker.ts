@@ -67,9 +67,9 @@ export class UploadTrackerService implements IUploadTrackerService {
   private readonly websocketService?: IWebSocketService | undefined;
   private readonly logger?: ServiceLogger | undefined;
 
-  constructor(deps: UploadTrackerServiceDependencies = {}) {
-    this.websocketService = deps.websocketService;
-    this.logger = deps.logger;
+  constructor(websocketService?: IWebSocketService, logger?: ServiceLogger) {
+    this.websocketService = websocketService;
+    this.logger = logger;
   }
 
   /**

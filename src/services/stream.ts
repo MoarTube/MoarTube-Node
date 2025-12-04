@@ -69,11 +69,16 @@ export class StreamService extends BaseService implements IStreamService {
   private readonly liveChatMessageRepository: LiveChatMessageRepository | undefined;
   private readonly websocketService: IWebSocketService | undefined;
 
-  constructor(dependencies: StreamServiceDependencies, options?: ServiceOptions) {
+  constructor(
+    videoRepository: VideosRepository,
+    liveChatMessageRepository: LiveChatMessageRepository,
+    websocketService?: IWebSocketService,
+    options?: ServiceOptions
+  ) {
     super('StreamService', options);
-    this.videoRepository = dependencies.videoRepository;
-    this.liveChatMessageRepository = dependencies.liveChatMessageRepository;
-    this.websocketService = dependencies.websocketService;
+    this.videoRepository = videoRepository;
+    this.liveChatMessageRepository = liveChatMessageRepository;
+    this.websocketService = websocketService;
   }
 
   /**

@@ -39,11 +39,16 @@ export class CommentService extends BaseService implements ICommentService {
   private readonly videoRepository: VideosRepository | undefined;
   private readonly websocketService: IWebSocketService | undefined;
 
-  constructor(dependencies: CommentServiceDependencies, options?: ServiceOptions) {
+  constructor(
+    commentRepository: CommentsRepository,
+    videoRepository?: VideosRepository,
+    websocketService?: IWebSocketService,
+    options?: ServiceOptions
+  ) {
     super('CommentService', options);
-    this.commentRepository = dependencies.commentRepository;
-    this.videoRepository = dependencies.videoRepository;
-    this.websocketService = dependencies.websocketService;
+    this.commentRepository = commentRepository;
+    this.videoRepository = videoRepository;
+    this.websocketService = websocketService;
   }
 
   /**

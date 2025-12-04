@@ -36,9 +36,9 @@ export class CloudflareService extends BaseService implements ICloudflareService
   private readonly videoRepository: VideosRepository | undefined;
   private httpClient: AxiosInstance | null = null;
 
-  constructor(dependencies?: CloudflareServiceDependencies, options?: ServiceOptions) {
+  constructor(videoRepository?: VideosRepository, options?: ServiceOptions) {
     super('CloudflareService', options);
-    this.videoRepository = dependencies?.videoRepository;
+    this.videoRepository = videoRepository;
     this.initializeHttpClient();
   }
 

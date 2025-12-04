@@ -3,7 +3,7 @@
  *
  * Provides data access methods for social link records using Drizzle ORM.
  */
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, count } from 'drizzle-orm';
 import type { DrizzleLink, DrizzleNewLink } from '../schema/index.js';
 import { links } from '../schema/index.js';
 import { BaseRepository } from './base.js';
@@ -58,8 +58,8 @@ export class LinksRepository extends BaseRepository {
    *
    * @returns Total count of links
    */
-  async count(): Promise<number> {
-    const result = await this.db.select({ count: sql<number>`count(*)` }).from(links);
+  async getCount(): Promise<number> {
+    const result = await this.db.select({ count: count() }).from(links);
     return result[0]?.count ?? 0;
   }
 
@@ -135,10 +135,7 @@ export class LinksRepository extends BaseRepository {
    * @returns true if the URL exists, false otherwise
    */
   async existsByUrl(url: string): Promise<boolean> {
-    const result = await this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(links)
-      .where(eq(links.url, url));
+    const result = await this.db.select({ count: count() }).from(links).where(eq(links.url, url));
     return (result[0]?.count ?? 0) > 0;
   }
 }

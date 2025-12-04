@@ -3,7 +3,7 @@
  *
  * Provides data access methods for comment records using Drizzle ORM.
  */
-import { eq, desc, sql, and, gt, like } from 'drizzle-orm';
+import { eq, desc, and, gt, lt, like, count } from 'drizzle-orm';
 import type { DrizzleComment, DrizzleNewComment } from '../schema/index.js';
 import { comments } from '../schema/index.js';
 import { BaseRepository } from './base.js';
@@ -62,7 +62,7 @@ export class CommentsRepository extends BaseRepository {
    */
   async countByVideoId(videoId: string): Promise<number> {
     const result = await this.db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: count() })
       .from(comments)
       .where(eq(comments.videoId, videoId));
     return result[0]?.count ?? 0;
@@ -160,7 +160,7 @@ export class CommentsRepository extends BaseRepository {
    * @returns Total count of all comments
    */
   async countAll(): Promise<number> {
-    const result = await this.db.select({ count: sql<number>`count(*)` }).from(comments);
+    const result = await this.db.select({ count: count() }).from(comments);
     return result[0]?.count ?? 0;
   }
 
@@ -172,7 +172,7 @@ export class CommentsRepository extends BaseRepository {
    */
   async countNewerThan(timestamp: number): Promise<number> {
     const result = await this.db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: count() })
       .from(comments)
       .where(gt(comments.timestamp, timestamp));
     return result[0]?.count ?? 0;
@@ -200,7 +200,7 @@ export class CommentsRepository extends BaseRepository {
     }
 
     if (beforeTimestamp !== undefined) {
-      conditions.push(sql`${comments.timestamp} < ${beforeTimestamp}`);
+      conditions.push(lt(comments.timestamp, beforeTimestamp));
     }
 
     // Build query

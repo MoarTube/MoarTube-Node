@@ -29,7 +29,7 @@
   "scripts": {
     "dev": "tsx watch src/moartube-node.ts",
     "build": "tsc",
-    "start": "node dist/moartube-node.js",
+    "start": "npm run db:push && node dist/moartube-node.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
@@ -38,7 +38,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "db:push": "tsx node_modules/drizzle-kit/bin.cjs push",
+    "db:migrate": "tsx node_modules/drizzle-kit/bin.cjs migrate"
   },
   "lint-staged": {
     "src/**/*.ts": [

@@ -41,10 +41,14 @@ export class SettingsService extends BaseService implements ISettingsService {
   private readonly indexerService: IIndexerService | undefined;
   private readonly cloudflareService: ICloudflareService | undefined;
 
-  constructor(dependencies?: SettingsServiceDependencies, options?: ServiceOptions) {
+  constructor(
+    indexerService?: IIndexerService,
+    cloudflareService?: ICloudflareService,
+    options?: ServiceOptions
+  ) {
     super('SettingsService', options);
-    this.indexerService = dependencies?.indexerService;
-    this.cloudflareService = dependencies?.cloudflareService;
+    this.indexerService = indexerService;
+    this.cloudflareService = cloudflareService;
   }
 
   /**

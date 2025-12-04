@@ -9,6 +9,9 @@ import { createContainer, asClass, asValue, InjectionMode, type AwilixContainer 
 // Logger
 import { Logger, type ILogger } from '../utils/logger.js';
 
+// Services
+import { type ServiceOptions } from '../services/base.js';
+
 // Database layer
 import type { DatabaseClient } from '../database/connection.js';
 import { VideosRepository } from '../database/repositories/videos.js';
@@ -41,6 +44,7 @@ import { VideoUploadService } from '../services/video-upload.js';
 export interface ContainerCradle {
   // Core utilities
   logger: ILogger;
+  options: ServiceOptions;
 
   // Database
   db: DatabaseClient;
@@ -89,7 +93,7 @@ let container: Container | null = null;
  */
 export function createAppContainer(db: DatabaseClient): Container {
   const appContainer = createContainer<ContainerCradle>({
-    injectionMode: InjectionMode.PROXY,
+    injectionMode: InjectionMode.CLASSIC,
     strict: true,
   });
 
@@ -101,6 +105,11 @@ export function createAppContainer(db: DatabaseClient): Container {
   // Register logger
   appContainer.register({
     logger: asValue(Logger.getInstance()),
+  });
+
+  // Register service options
+  appContainer.register({
+    options: asValue({ logger: Logger.getInstance() }),
   });
 
   // Register repositories (they need db in constructor)

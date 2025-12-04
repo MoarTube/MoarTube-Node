@@ -3,7 +3,7 @@
  *
  * Provides data access methods for live chat message records using Drizzle ORM.
  */
-import { eq, desc, sql, and, gte } from 'drizzle-orm';
+import { eq, desc, and, gte, count, lt } from 'drizzle-orm';
 import type { DrizzleLiveChatMessage, DrizzleNewLiveChatMessage } from '../schema/index.js';
 import { liveChatMessages } from '../schema/index.js';
 import { BaseRepository } from './base.js';
@@ -103,7 +103,7 @@ export class LiveChatMessageRepository extends BaseRepository {
    */
   async countByVideoId(videoId: string): Promise<number> {
     const result = await this.db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: count() })
       .from(liveChatMessages)
       .where(eq(liveChatMessages.videoId, videoId));
     return result[0]?.count ?? 0;
@@ -202,10 +202,7 @@ export class LiveChatMessageRepository extends BaseRepository {
     const result = await this.db
       .delete(liveChatMessages)
       .where(
-        and(
-          eq(liveChatMessages.videoId, videoId),
-          sql`${liveChatMessages.timestamp} < ${cutoffTimestamp}`
-        )
+        and(eq(liveChatMessages.videoId, videoId), lt(liveChatMessages.timestamp, cutoffTimestamp))
       )
       .returning();
 

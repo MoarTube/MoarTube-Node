@@ -84,7 +84,8 @@ export class NodeController extends BaseController {
       const nodeSettings = config.nodeSettings;
 
       // Get node information
-      const videoCount = await this.videoRepository.count({ isPublished: true });
+      const videoCount = await this.videoRepository.getCount({ isPublished: true });
+
       const informationData = {
         isError: false,
         information: {

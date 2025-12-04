@@ -67,14 +67,22 @@ export class VideosService extends BaseService implements IVideoService {
   private readonly viewTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private static readonly VIEW_DEBOUNCE_MS = 500;
 
-  constructor(dependencies: VideosServiceDependencies, options?: ServiceOptions) {
+  constructor(
+    videoRepository: VideosRepository,
+    commentRepository?: CommentsRepository,
+    storageService?: IStorageService,
+    websocketService?: IWebSocketService,
+    cloudflareService?: ICloudflareService,
+    indexerService?: IIndexerService,
+    options?: ServiceOptions
+  ) {
     super('VideosService', options);
-    this.videoRepository = dependencies.videoRepository;
-    this.commentRepository = dependencies.commentRepository;
-    this.storageService = dependencies.storageService;
-    this.websocketService = dependencies.websocketService;
-    this.cloudflareService = dependencies.cloudflareService;
-    this.indexerService = dependencies.indexerService;
+    this.videoRepository = videoRepository;
+    this.commentRepository = commentRepository;
+    this.storageService = storageService;
+    this.websocketService = websocketService;
+    this.cloudflareService = cloudflareService;
+    this.indexerService = indexerService;
   }
 
   /**
@@ -150,7 +158,7 @@ export class VideosService extends BaseService implements IVideoService {
       }
 
       // Get total count for pagination
-      const total = await this.videoRepository.count(countOptions);
+      const total = await this.videoRepository.getCount(countOptions);
 
       return {
         data: videos,

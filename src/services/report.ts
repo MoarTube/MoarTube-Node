@@ -51,12 +51,18 @@ export class ReportService extends BaseService implements IReportService {
   private readonly videoReportsArchiveRepository: ReportsArchiveVideosRepository;
   private readonly commentReportsArchiveRepository: ReportsArchiveCommentsRepository;
 
-  constructor(dependencies: ReportServiceDependencies, options?: ServiceOptions) {
+  constructor(
+    videoReportRepository: ReportsVideosRepository,
+    commentReportRepository: ReportsCommentsRepository,
+    videoReportsArchiveRepository: ReportsArchiveVideosRepository,
+    commentReportsArchiveRepository: ReportsArchiveCommentsRepository,
+    options?: ServiceOptions
+  ) {
     super('ReportService', options);
-    this.videoReportRepository = dependencies.videoReportRepository;
-    this.commentReportRepository = dependencies.commentReportRepository;
-    this.videoReportsArchiveRepository = dependencies.videoReportsArchiveRepository;
-    this.commentReportsArchiveRepository = dependencies.commentReportsArchiveRepository;
+    this.videoReportRepository = videoReportRepository;
+    this.commentReportRepository = commentReportRepository;
+    this.videoReportsArchiveRepository = videoReportsArchiveRepository;
+    this.commentReportsArchiveRepository = commentReportsArchiveRepository;
   }
 
   /**
@@ -256,14 +262,14 @@ export class ReportService extends BaseService implements IReportService {
    * Count total video reports
    */
   async countVideoReports(): Promise<number> {
-    return this.videoReportRepository.count();
+    return this.videoReportRepository.getCount();
   }
 
   /**
    * Count total comment reports
    */
   async countCommentReports(): Promise<number> {
-    return this.commentReportRepository.count();
+    return this.commentReportRepository.getCount();
   }
 
   /**
@@ -279,8 +285,8 @@ export class ReportService extends BaseService implements IReportService {
       await Promise.all([
         this.countVideoReports(),
         this.countCommentReports(),
-        this.videoReportsArchiveRepository.count(),
-        this.commentReportsArchiveRepository.count(),
+        this.videoReportsArchiveRepository.getCount(),
+        this.commentReportsArchiveRepository.getCount(),
       ]);
 
     return {
