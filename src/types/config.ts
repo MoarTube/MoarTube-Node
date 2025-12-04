@@ -104,8 +104,6 @@ export interface NodeSettings {
   // Authentication (Base64 encoded bcrypt hashes)
   username: string;
   password: string;
-  expressSessionName: string;
-  expressSessionSecret: string;
 
   // Cloudflare Settings
   isCloudflareCdnEnabled: boolean;
@@ -197,8 +195,6 @@ export interface RuntimeConfig {
   jwtSecret: string;
   isDockerEnvironment: boolean;
   isDeveloperMode: boolean;
-  expressSessionName: string;
-  expressSessionSecret: string;
 }
 
 // ============================================

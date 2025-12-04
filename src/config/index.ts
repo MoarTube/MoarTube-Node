@@ -234,14 +234,6 @@ class Config {
     const merged = { ...this._nodeSettings, ...updates };
     this._nodeSettings = validateNodeSettings(merged);
     this.persistNodeSettings();
-
-    // Update runtime config if session credentials changed
-    if (updates.expressSessionName !== undefined && updates.expressSessionName !== '') {
-      this._runtime.expressSessionName = this._nodeSettings.expressSessionName;
-    }
-    if (updates.expressSessionSecret !== undefined && updates.expressSessionSecret !== '') {
-      this._runtime.expressSessionSecret = this._nodeSettings.expressSessionSecret;
-    }
   }
 
   private persistNodeSettings(): void {
