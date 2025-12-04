@@ -28,9 +28,9 @@
   },
   "scripts": {
     "dev": "tsx watch src/moartube-node.ts",
-    "dev:run": "tsx src/moartube-node.ts",
     "build": "tsc && npm run db:push",
     "start": "node dist/moartube-node.js",
+    "dev:start": "tsx src/moartube-node.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
