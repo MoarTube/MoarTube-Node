@@ -89,9 +89,9 @@ export async function registerRoutes(
   );
 
   // Videos routes (/videos/*)
-  await fastify.register(
-    async (instance) => {
-      await videosRoutes(instance.withTypeProvider<ZodTypeProvider>());
+  fastify.register(
+    (instance) => {
+      videosRoutes(instance.withTypeProvider<ZodTypeProvider>());
     },
     { prefix: '/videos' }
   );
@@ -214,9 +214,9 @@ export async function registerRoutes(
   );
 
   // Settings routes (/settings/*)
-  await fastify.register(
-    async (instance) => {
-      await settingsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
+  fastify.register(
+    (instance) => {
+      settingsRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
     },
     { prefix: '/settings' }
   );
