@@ -12,7 +12,7 @@
                 "<node_internals>/**"
             ],
             "program": "${workspaceFolder}\\dist\\moartube-node.js",
-            "preLaunchTask": "npm: build",
+            "preLaunchTask": "build and db:push",
             "outFiles": [
                 "${workspaceFolder}/dist/**/*.js"
             ],
