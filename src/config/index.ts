@@ -59,7 +59,7 @@ class Config {
   private _lastCheckedContentTracker: LastCheckedContentTracker;
   private readonly _runtime: RuntimeConfig;
 
-  private constructor(baseDir: string) {
+  private constructor(baseDir: string, configFileName: string) {
     // Initialize environment first
     this._env = getEnv();
 
@@ -70,7 +70,7 @@ class Config {
     this.ensureDataDirectoriesExist();
 
     // Load app config (config.json)
-    this._appConfig = this.loadAppConfig(baseDir);
+    this._appConfig = this.loadAppConfig(baseDir, configFileName);
 
     // Initialize URLs with indexer/aliaser configs
     this._urls = initializeUrls(this._appConfig.indexerConfig, this._appConfig.aliaserConfig);
@@ -97,8 +97,8 @@ class Config {
   /**
    * Initialize the configuration system
    */
-  static initialize(baseDir: string): Config {
-    Config.instance ??= new Config(baseDir);
+  static initialize(baseDir: string, configFileName: string): Config {
+    Config.instance ??= new Config(baseDir, configFileName);
     return Config.instance;
   }
 
@@ -137,8 +137,8 @@ class Config {
   // App Config (config.json)
   // ============================================
 
-  private loadAppConfig(baseDir: string): AppConfigValidated {
-    const configPath = path.join(baseDir, 'config_test.json');
+  private loadAppConfig(baseDir: string, configFileName: string): AppConfigValidated {
+    const configPath = path.join(baseDir, configFileName);
 
     if (!fs.existsSync(configPath)) {
       throw new Error(`App config not found: ${configPath}`);
@@ -443,8 +443,8 @@ class Config {
 /**
  * Initialize the configuration system
  */
-export function initializeConfig(baseDir: string): Config {
-  return Config.initialize(baseDir);
+export function initializeConfig(baseDir: string, configFileName: string): Config {
+  return Config.initialize(baseDir, configFileName);
 }
 
 /**

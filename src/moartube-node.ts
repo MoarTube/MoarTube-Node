@@ -29,7 +29,7 @@ const baseDir = path.resolve(__dirname, '..');
  */
 function loadConfig(): void {
   process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
-  initializeConfig(baseDir);
+  initializeConfig(baseDir, 'config.json');
 }
 
 /**
