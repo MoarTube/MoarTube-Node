@@ -5,31 +5,21 @@
  */
 
 import cluster from 'node:cluster';
-import type { Server as HttpServer } from 'node:http';
-import type { Server as HttpsServer } from 'node:https';
+import type { FastifyInstance } from 'fastify';
 import type { LiveStreamWatchingCountsTracker, LiveStreamWatchingCounts } from '../../types/ipc.js';
 import type { LiveStreamStatsMessage, WebSocketMessage } from '../../types/websocket.js';
-import type { WebSocket as WsWebSocket } from 'ws';
 import { IPCChannel, type IPCLogger } from './ipc-channel.js';
 import { WebSocketManager } from '../../websocket/websocket-manager.js';
 import { Logger } from '../../utils/logger.js';
+import { getConfig } from '../../config/index.js';
+import { createDatabase } from '../../database/index.js';
 
 /**
- * Worker configuration
+ * Optional worker configuration for advanced use cases
  */
-export interface ClusterWorkerConfig {
+export interface ClusterWorkerOptions {
   /** Logger instance */
   logger?: IPCLogger;
-  /** Open database connection */
-  openDatabase: () => Promise<void>;
-  /** Restart HTTP server */
-  restartHttpServer: () => Promise<void>;
-  /** Set JWT secret */
-  setJwtSecret: (secret: string) => void;
-  /** Get HTTP server */
-  getHttpServer: () => HttpServer | HttpsServer | null;
-  /** Get WebSocket server clients */
-  getWebSocketClients: () => Set<WsWebSocket>;
 }
 
 /**
@@ -49,13 +39,12 @@ function getDefaultLogger(): IPCLogger {
 export class ClusterWorker {
   private readonly ipc: IPCChannel;
   private readonly logger: IPCLogger;
-  private readonly config: ClusterWorkerConfig;
   private readonly wsManager: WebSocketManager;
+  private app: FastifyInstance | null = null;
   private isRunning = false;
 
-  constructor(config: ClusterWorkerConfig) {
-    this.config = config;
-    this.logger = config.logger ?? getDefaultLogger();
+  constructor(options: ClusterWorkerOptions = {}) {
+    this.logger = options.logger ?? getDefaultLogger();
     this.ipc = new IPCChannel(this.logger);
     this.wsManager = new WebSocketManager({ logger: this.logger });
   }
@@ -77,8 +66,12 @@ export class ClusterWorker {
 
     this.logger.info('Starting worker');
 
-    // Open database connection
-    await this.config.openDatabase();
+    // Initialize database connection
+    this.initializeDatabase();
+
+    // Initialize Fastify app
+    const { createFastifyApp } = await import('../../plugins/index.js');
+    this.app = await createFastifyApp();
 
     // Set up IPC handlers
     this.setupIPCHandlers();
@@ -90,6 +83,18 @@ export class ClusterWorker {
     // Start WebSocket heartbeat
     this.wsManager.startHeartbeat();
 
+    // Start HTTP server
+    const config = getConfig();
+    const port = config.nodeSettings.nodeListeningPort;
+
+    try {
+      await this.app.listen({ port, host: '0.0.0.0' });
+      this.logger.info(`Worker ${String(cluster.worker?.id)} listening on port ${String(port)}`);
+    } catch (err) {
+      this.logger.error(`Worker ${String(cluster.worker?.id)} failed to start`, err as Error);
+      process.exit(1);
+    }
+
     this.isRunning = true;
     this.logger.info('Worker started');
   }
@@ -97,18 +102,50 @@ export class ClusterWorker {
   /**
    * Stop the worker
    */
-  stop(): Promise<void> {
+  async stop(): Promise<void> {
     if (!this.isRunning) {
-      return Promise.resolve();
+      return;
     }
 
     this.logger.info('Stopping worker');
+
+    // Close HTTP server
+    if (this.app) {
+      await this.app.close();
+    }
 
     // Close WebSocket connections
     this.wsManager.closeAll();
 
     this.isRunning = false;
-    return Promise.resolve();
+  }
+
+  /**
+   * Initialize database connection
+   */
+  private initializeDatabase(): void {
+    const config = getConfig();
+    const dbConfig = config.nodeSettings.databaseConfig;
+    const dbDialect = dbConfig.databaseDialect;
+
+    if (dbDialect === 'postgres') {
+      const pgConfig = dbConfig as {
+        postgresUser?: string;
+        postgresPassword?: string;
+        postgresHost?: string;
+        postgresPort?: number;
+        postgresDatabase?: string;
+      };
+      createDatabase({
+        dialect: 'postgres',
+        connectionString: `postgres://${pgConfig.postgresUser ?? 'postgres'}:${pgConfig.postgresPassword ?? ''}@${pgConfig.postgresHost ?? 'localhost'}:${String(pgConfig.postgresPort ?? 5432)}/${pgConfig.postgresDatabase ?? 'moartube'}`,
+      });
+    } else {
+      createDatabase({
+        dialect: 'sqlite',
+        filepath: config.paths.databaseFilePath,
+      });
+    }
   }
 
   /**
@@ -118,7 +155,8 @@ export class ClusterWorker {
     // JWT secret response
     this.ipc.on('get_jwt_secret_response', (message) => {
       const jwtSecret = (message as { jwtSecret: string }).jwtSecret;
-      this.config.setJwtSecret(jwtSecret);
+      const config = getConfig();
+      config.setJwtSecret(jwtSecret);
       this.logger.debug('Received JWT secret');
     });
 
@@ -194,13 +232,13 @@ export class ClusterWorker {
     // Server restart response
     this.ipc.on('restart_server_response', () => {
       this.logger.info('Received server restart request');
-      void this.config.restartHttpServer();
+      void this.restartHttpServer();
     });
 
     // Database restart response
     this.ipc.on('restart_database_response', () => {
       this.logger.info('Received database restart request');
-      void this.config.openDatabase();
+      this.initializeDatabase();
     });
 
     // Node name update response
@@ -256,5 +294,23 @@ export class ClusterWorker {
       cmd: 'update_node_name',
       nodeName,
     });
+  }
+
+  /**
+   * Restart HTTP server
+   */
+  private async restartHttpServer(): Promise<void> {
+    if (this.app) {
+      await this.app.close();
+    }
+
+    const { createFastifyApp } = await import('../../plugins/index.js');
+    this.app = await createFastifyApp();
+
+    const config = getConfig();
+    const port = config.nodeSettings.nodeListeningPort;
+
+    await this.app.listen({ port, host: '0.0.0.0' });
+    this.logger.info(`Worker ${String(cluster.worker?.id)} restarted on port ${String(port)}`);
   }
 }

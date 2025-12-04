@@ -9,6 +9,7 @@ import cluster from 'node:cluster';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import { Mutex } from 'async-mutex';
+import { v4 as uuidv4 } from 'uuid';
 import type {
   DatabaseWriteJobMessage,
   LiveStreamWorkerStatsResponseMessage,
@@ -18,16 +19,8 @@ import type {
 import type { WebSocketMessage } from '../../types/websocket.js';
 import { IPCChannel, type IPCLogger } from './ipc-channel.js';
 import { Logger } from '../../utils/logger.js';
-
-/**
- * Database operations interface
- */
-export interface MasterDatabaseOperations {
-  provision: () => Promise<void>;
-  open: () => Promise<void>;
-  executeWrite: (query: string, parameters: unknown[]) => Promise<void>;
-  readAll: <T>(query: string, parameters: unknown[]) => Promise<T[]>;
-}
+import { getConfig } from '../../config/index.js';
+import { createDatabase, getDatabase } from '../../database/index.js';
 
 /**
  * Indexer operations interface
@@ -52,38 +45,15 @@ export interface NodeIdentification {
 }
 
 /**
- * Master configuration
+ * Optional master configuration for advanced use cases
  */
-export interface ClusterMasterConfig {
+export interface ClusterMasterOptions {
   /** Logger instance */
   logger?: IPCLogger;
-  /** Database operations */
-  database: MasterDatabaseOperations;
   /** Indexer operations */
   indexer?: MasterIndexerOperations;
   /** Cloudflare operations */
   cloudflare?: MasterCloudflareOperations;
-  /** Get node settings */
-  getNodeSettings: () => Record<string, unknown>;
-  /** Set node settings */
-  setNodeSettings: (settings: Record<string, unknown>) => void;
-  /** Get node identification */
-  getNodeIdentification: () => NodeIdentification;
-  /** Perform node identification */
-  performNodeIdentification: () => Promise<void>;
-  /** Generate video ID */
-  generateVideoId: () => Promise<string>;
-  /** Get node icon */
-  getNodeIconPngBase64: () => string;
-  /** Get node avatar */
-  getNodeAvatarPngBase64: () => string;
-  /** Get video preview */
-  getVideoPreviewJpgBase64: (
-    nodeSettings: Record<string, unknown>,
-    videoId: string
-  ) => Promise<string>;
-  /** Submit database write job */
-  submitDatabaseWriteJob: (query: string, parameters: unknown[]) => Promise<void>;
 }
 
 /**
@@ -101,16 +71,16 @@ function getDefaultLogger(): IPCLogger {
 export class ClusterMaster {
   private readonly ipc: IPCChannel;
   private readonly logger: IPCLogger;
-  private readonly config: ClusterMasterConfig;
+  private readonly options: ClusterMasterOptions;
   private readonly mutex = new Mutex();
   private readonly jwtSecret: string;
   private liveStreamWatchingCountsTracker: LiveStreamWatchingCountsTracker = {};
   private intervalHandles: NodeJS.Timeout[] = [];
   private isRunning = false;
 
-  constructor(config: ClusterMasterConfig) {
-    this.config = config;
-    this.logger = config.logger ?? getDefaultLogger();
+  constructor(options: ClusterMasterOptions = {}) {
+    this.options = options;
+    this.logger = options.logger ?? getDefaultLogger();
     this.ipc = new IPCChannel(this.logger);
     this.jwtSecret = crypto.randomBytes(32).toString('hex');
   }
@@ -118,21 +88,27 @@ export class ClusterMaster {
   /**
    * Start the cluster master
    */
-  async start(): Promise<void> {
+  start(): void {
     if (this.isRunning) {
       return;
     }
 
+    const config = getConfig();
+
     this.logger.info('Starting MoarTube Node cluster master');
+
+    this.logger.info(
+      `Configured MoarTube Node to use data directory path: ${config.paths.dataDirectoryPath}`
+    );
 
     // Set up global error handlers
     this.setupErrorHandlers();
 
-    // Provision database
-    await this.config.database.provision();
+    // Initialize database
+    this.initializeDatabase();
 
     // Ensure node has an ID
-    await this.ensureNodeId();
+    this.ensureNodeId();
 
     // Set up IPC handlers
     this.setupIPCHandlers();
@@ -148,6 +124,7 @@ export class ClusterMaster {
     this.startPeriodicTasks();
 
     this.isRunning = true;
+
     this.logger.info('Cluster master started');
   }
 
@@ -190,14 +167,45 @@ export class ClusterMaster {
   }
 
   /**
+   * Initialize database connection
+   */
+  private initializeDatabase(): void {
+    const config = getConfig();
+    const dbConfig = config.nodeSettings.databaseConfig;
+    const dbDialect = dbConfig.databaseDialect;
+
+    if (dbDialect === 'postgres') {
+      const pgConfig = dbConfig as {
+        postgresUser?: string;
+        postgresPassword?: string;
+        postgresHost?: string;
+        postgresPort?: number;
+        postgresDatabase?: string;
+      };
+      createDatabase({
+        dialect: 'postgres',
+        connectionString: `postgres://${pgConfig.postgresUser ?? 'postgres'}:${pgConfig.postgresPassword ?? ''}@${pgConfig.postgresHost ?? 'localhost'}:${String(pgConfig.postgresPort ?? 5432)}/${pgConfig.postgresDatabase ?? 'moartube'}`,
+      });
+    } else {
+      createDatabase({
+        dialect: 'sqlite',
+        filepath: config.paths.databaseFilePath,
+      });
+    }
+
+    this.logger.debug('Database initialized');
+  }
+
+  /**
    * Ensure node has an ID
    */
-  private async ensureNodeId(): Promise<void> {
-    const nodeSettings = this.config.getNodeSettings() as { nodeId?: string };
+  private ensureNodeId(): void {
+    const config = getConfig();
+    const nodeSettings = config.nodeSettings as { nodeId?: string };
 
     if (nodeSettings.nodeId === undefined || nodeSettings.nodeId === '') {
-      const newNodeId = await this.config.generateVideoId();
-      this.config.setNodeSettings({ ...nodeSettings, nodeId: newNodeId });
+      const newNodeId = uuidv4().replaceAll('-', '');
+      config.updateNodeSettings({ nodeId: newNodeId });
       this.logger.info('Generated new node ID');
     }
   }
@@ -248,7 +256,13 @@ export class ClusterMaster {
       const release = await this.mutex.acquire();
 
       try {
-        await this.config.database.executeWrite(message.query, message.parameters);
+        const db = getDatabase();
+        if ('run' in db) {
+          (db as { run: (sql: string, ...params: unknown[]) => void }).run(
+            message.query,
+            ...message.parameters
+          );
+        }
 
         if (worker !== undefined) {
           this.ipc.sendToWorker(worker, {
@@ -283,9 +297,9 @@ export class ClusterMaster {
     });
 
     // Database restart request
-    this.ipc.on<RestartDatabaseMessage>('restart_database', async (message) => {
+    this.ipc.on<RestartDatabaseMessage>('restart_database', (message) => {
       this.logger.info(`Changing database configuration to: ${message.databaseDialect}`);
-      await this.config.database.open();
+      this.initializeDatabase();
       this.ipc.broadcast({ cmd: 'restart_database_response' });
     });
   }
@@ -345,7 +359,7 @@ export class ClusterMaster {
     this.intervalHandles.push(temp1, temp2, temp3);
 
     // Cloudflare purge task (every 10 minutes)
-    if (this.config.cloudflare !== undefined) {
+    if (this.options.cloudflare !== undefined) {
       this.intervalHandles.push(
         setInterval(() => {
           void this.runCloudflarePurgeTask();
@@ -358,36 +372,36 @@ export class ClusterMaster {
    * Run index update task
    */
   private async runIndexUpdateTask(): Promise<void> {
-    if (this.config.indexer === undefined) {
+    if (this.options.indexer === undefined) {
       return;
     }
 
     try {
-      const videos = await this.config.database.readAll<{
+      const db = getDatabase();
+      let videos: Array<{
         video_id: string;
         title: string;
         tags: string;
         views: number;
         is_streaming: boolean;
         length_seconds: number;
-      }>('SELECT * FROM videos WHERE is_indexed = ? AND is_index_outdated = ?', [true, true]);
+      }> = [];
+
+      if ('all' in db) {
+        videos = (db as { all: (sql: string) => typeof videos }).all(
+          'SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1'
+        );
+      }
 
       if (videos.length === 0) {
         return;
       }
 
-      await this.config.performNodeIdentification();
-
-      const nodeSettings = this.config.getNodeSettings();
-      const nodeIdentification = this.config.getNodeIdentification();
+      const config = getConfig();
+      const nodeIdentification = config.nodeIdentification ?? { moarTubeTokenProof: '' };
 
       for (const video of videos) {
         try {
-          const videoPreviewJpgBase64 = await this.config.getVideoPreviewJpgBase64(
-            nodeSettings,
-            video.video_id
-          );
-
           const data = {
             videoId: video.video_id,
             title: video.title,
@@ -395,22 +409,26 @@ export class ClusterMaster {
             views: video.views,
             isStreaming: video.is_streaming,
             lengthSeconds: video.length_seconds,
-            nodeIconPngBase64: this.config.getNodeIconPngBase64(),
-            nodeAvatarPngBase64: this.config.getNodeAvatarPngBase64(),
-            videoPreviewJpgBase64,
+            nodeIconPngBase64: '',
+            nodeAvatarPngBase64: '',
+            videoPreviewJpgBase64: '',
             moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
           };
 
-          const response = await this.config.indexer.doIndexUpdate(data);
+          const response = await this.options.indexer.doIndexUpdate(data);
 
           if (response.isError) {
             throw new Error(response.message);
           }
 
-          await this.config.submitDatabaseWriteJob(
-            'UPDATE videos SET is_index_outdated = ? WHERE video_id = ?',
-            [false, video.video_id]
-          );
+          // Update via direct database access
+          if ('run' in db) {
+            (db as { run: (sql: string, ...params: unknown[]) => void }).run(
+              'UPDATE videos SET is_index_outdated = ? WHERE video_id = ?',
+              false,
+              video.video_id
+            );
+          }
 
           this.logger.debug(`Updated video index: ${video.video_id}`);
         } catch (error) {
@@ -426,13 +444,13 @@ export class ClusterMaster {
    * Run Cloudflare purge task
    */
   private async runCloudflarePurgeTask(): Promise<void> {
-    if (this.config.cloudflare === undefined) {
+    if (this.options.cloudflare === undefined) {
       return;
     }
 
     try {
-      await this.config.cloudflare.purgeAllWatchPages();
-      await this.config.cloudflare.purgeNodePage();
+      await this.options.cloudflare.purgeAllWatchPages();
+      await this.options.cloudflare.purgeNodePage();
     } catch (error) {
       this.logger.error('Cloudflare purge task failed', error as Error);
     }

@@ -17,12 +17,11 @@ export {
 // Master process
 export {
   ClusterMaster,
-  type ClusterMasterConfig,
-  type MasterDatabaseOperations,
+  type ClusterMasterOptions,
   type MasterIndexerOperations,
   type MasterCloudflareOperations,
   type NodeIdentification,
 } from './master.js';
 
 // Worker process
-export { ClusterWorker, type ClusterWorkerConfig } from './worker.js';
+export { ClusterWorker, type ClusterWorkerOptions } from './worker.js';

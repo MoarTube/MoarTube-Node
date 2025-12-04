@@ -25,8 +25,8 @@ export {
   ClusterWorker,
   type IPCHandler,
   type IPCLogger,
-  type ClusterMasterConfig,
-  type ClusterWorkerConfig,
+  type ClusterMasterOptions,
+  type ClusterWorkerOptions,
 } from './cluster/index.js';
 
 // Graceful shutdown
