@@ -41,20 +41,6 @@ export function verifyJwtToken(token: string | null | undefined, secret: string)
 }
 
 /**
- * Generate JWT token
- * @param payload - Token payload
- * @param secret - JWT secret
- * @param expiresIn - Expiration time (e.g., '1h', '7d')
- */
-export function generateJwtToken(payload: object, secret: string, expiresIn?: string): string {
-  const options: jwt.SignOptions = {};
-  if (expiresIn !== undefined && expiresIn !== '') {
-    options.expiresIn = expiresIn;
-  }
-  return jwt.sign(payload, secret, options);
-}
-
-/**
  * Sanitize tags by normalizing whitespace
  * @param tags - Tags string to sanitize
  */

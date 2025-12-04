@@ -139,7 +139,6 @@ export {
 export {
   // JWT
   verifyJwtToken,
-  generateJwtToken,
   type JwtVerifyResult,
   // String utilities
   sanitizeTagsSpaces,
