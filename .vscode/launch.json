@@ -11,12 +11,9 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\dist\\moartube-node.js",
-            "preLaunchTask": "build and db:push",
-            "outFiles": [
-                "${workspaceFolder}/dist/**/*.js"
-            ],
-            "sourceMaps": true,
+            "preLaunchTask": "npm: build",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "start"],
             "console": "integratedTerminal"
         },
         {
@@ -26,8 +23,9 @@
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "runtimeExecutable": "npx",
-            "runtimeArgs": ["tsx", "${workspaceFolder}\\src\\moartube-node.ts"],
+            "preLaunchTask": "npm: db:push",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "dev:run"],
             "console": "integratedTerminal"
         }
     ]
