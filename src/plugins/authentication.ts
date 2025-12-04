@@ -56,30 +56,13 @@ declare module 'fastify' {
 /**
  * Extract JWT token from request
  *
- * Checks Authorization header (Bearer token), cookies, and query parameters
+ * Checks Authorization header (Bearer token)
  */
 function extractToken(request: FastifyRequest): string | null {
   // Check Authorization header
   const authHeader = request.headers.authorization;
   if (authHeader?.startsWith('Bearer ') === true) {
     return authHeader.slice(7);
-  }
-
-  // Check cookies (if available)
-  const req = request as unknown as { cookies?: Record<string, string | undefined> };
-  const cookies = req.cookies;
-  if (cookies !== undefined) {
-    const cookieToken = cookies['token'];
-    if (cookieToken !== undefined) {
-      return cookieToken;
-    }
-  }
-
-  // Check query parameter (for legacy support)
-  const query = request.query as Record<string, unknown>;
-  const queryToken = query['token'];
-  if (typeof queryToken === 'string') {
-    return queryToken;
   }
 
   return null;

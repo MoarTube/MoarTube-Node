@@ -9,7 +9,6 @@ import Fastify, {
   type FastifyRequest,
   type FastifyLoggerOptions,
 } from 'fastify';
-import fastifyCookie from '@fastify/cookie';
 import fastifyMultipart from '@fastify/multipart';
 import {
   serializerCompiler,
@@ -68,22 +67,17 @@ function isAllowedEndpoint(request: FastifyRequest): boolean {
   const url = request.url;
   const method = request.method;
 
-  // Allow sign-in and sign-out endpoints
-  if (url.startsWith('/signin') || url.startsWith('/signout')) {
+  // Allow account endpoints
+  if (url.startsWith('/account')) {
     return true;
   }
 
-  // Allow health check endpoints
-  if (url === '/health' || url === '/status') {
+  // Allow status endpoints
+  if (url.startsWith('/status')) {
     return true;
   }
 
-  // Allow static assets (CSS, JS, images)
-  if (url.startsWith('/css/') || url.startsWith('/javascript/') || url.startsWith('/images/')) {
-    return true;
-  }
-
-  // Allow OPTIONS requests (CORS preflight)
+  // Allow OPTIONS requests (CORS pre-flight)
   if (method === 'OPTIONS') {
     return true;
   }
@@ -137,9 +131,6 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   // Set up Zod validation and serialization
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
-
-  // Register cookie support (required for authentication)
-  await app.register(fastifyCookie);
 
   // Register multipart support (for file uploads)
   await app.register(fastifyMultipart, {
