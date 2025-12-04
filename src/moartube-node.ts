@@ -17,18 +17,19 @@ import { initializeConfig } from './config/index.js';
 import { ClusterMaster, ClusterWorker } from './core/cluster/index.js';
 import { getLogger } from './utils/logger.js';
 
-// ESM equivalent of __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Determine base directory where config json files live
-const baseDir = path.resolve(__dirname, '..');
-
 /**
  * Initialize configuration
  */
 function loadConfig(): void {
   process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
+
+  // ESM equivalent of __dirname
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+
+  // Determine base directory where config json files live
+  const baseDir = path.resolve(__dirname, '..');
+
   initializeConfig(baseDir, 'config_test.json');
 }
 
