@@ -92,7 +92,7 @@ export class WatchEmbedController extends BaseController {
       // Render the embedded video template using view engine
       const replyWithView = reply as FastifyReplyWithView;
 
-      await replyWithView.view('embed-video', {
+      const model = {
         video: videoData,
         autostart: autostart === '1' || autostart === 'true',
         externalVideosBaseUrl,
@@ -107,7 +107,9 @@ export class WatchEmbedController extends BaseController {
           isCloudflareTurnstileEnabled: nodeSettings.isCloudflareTurnstileEnabled,
           cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
         },
-      });
+      };
+
+      await replyWithView.view('embed-video', { model });
     } catch {
       this.sendError(reply, 'error loading embedded video');
     }
@@ -141,7 +143,7 @@ export class WatchEmbedController extends BaseController {
       // Render the embedded chat template using view engine
       const replyWithView = reply as FastifyReplyWithView;
 
-      await replyWithView.view('embed-chat', {
+      const model = {
         videoId: video.videoId,
         isLiveChatEnabled: video.isLiveChatEnabled,
         isLive: video.isLive,
@@ -159,7 +161,9 @@ export class WatchEmbedController extends BaseController {
           isCloudflareTurnstileEnabled: nodeSettings.isCloudflareTurnstileEnabled,
           cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
         },
-      });
+      };
+
+      await replyWithView.view('embed-chat', { model });
     } catch {
       this.sendError(reply, 'error loading embedded chat');
     }

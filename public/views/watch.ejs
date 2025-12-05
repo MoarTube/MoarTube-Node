@@ -5,35 +5,35 @@
 
 	<meta name="twitter:card" content="summary" />
 	<meta name="twitter:site" content="@MoarTubes" />
-	<meta name="twitter:title" content="[[= model.videoData.video.title]]" />
-	<meta name="twitter:description" content="[[= model.videoData.video.description]]" />
+	<meta name="twitter:title" content="<%=model.videoData.video.title%>" />
+	<meta name="twitter:description" content="<%=model.videoData.video.description%>" />
 	<meta name="twitter:image"
-		content="[[=model.externalVideosBaseUrl]]/external/videos/[[= model.videoData.video.videoId]]/thumbnail" />
+		content="<%=model.externalVideosBaseUrl%>/external/videos/<%=model.videoData.video.videoId%>/thumbnail" />
 
 	<meta property="og:site_name" content="MoarTube.com" />
-	<meta property="og:title" content="[[= model.videoData.video.title]]" />
-	<meta property="og:description" content="[[= model.videoData.video.description]]" />
+	<meta property="og:title" content="<%=model.videoData.video.title%>" />
+	<meta property="og:description" content="<%=model.videoData.video.description%>" />
 	<meta property="og:type" content="desktopprofile" />
 	<meta property="og:image"
-		content="[[=model.externalVideosBaseUrl]]/external/videos/[[= model.videoData.video.videoId]]/thumbnail" />
+		content="<%=model.externalVideosBaseUrl%>/external/videos/<%=model.videoData.video.videoId%>/thumbnail" />
 
 	<title>MoarTube</title>
 	<link rel="icon" type="image/x-icon"
-		href="[[=model.externalResourcesBaseUrl]]/external/resources/images/favicon.ico">
-	<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/keen-slider-6.8.5.min.css" rel="stylesheet"
+		href="<%=model.externalResourcesBaseUrl%>/external/resources/images/favicon.ico">
+	<link href="<%=model.externalResourcesBaseUrl%>/external/resources/css/keen-slider-6.8.5.min.css" rel="stylesheet"
 		type="text/css" /> <!--recommendations slider-->
-	<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/videojs-8.6.1.css" rel="stylesheet"
+	<link href="<%=model.externalResourcesBaseUrl%>/external/resources/css/videojs-8.6.1.css" rel="stylesheet"
 		type="text/css" />
-	<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/videojs-theme.css" rel="stylesheet"
+	<link href="<%=model.externalResourcesBaseUrl%>/external/resources/css/videojs-theme.css" rel="stylesheet"
 		type="text/css" />
-	<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet"
+	<link href="<%=model.externalResourcesBaseUrl%>/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet"
 		type="text/css" />
-	<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/sweetalert2-11.0.11.min.css" rel="stylesheet"
+	<link href="<%=model.externalResourcesBaseUrl%>/external/resources/css/sweetalert2-11.0.11.min.css" rel="stylesheet"
 		type="text/css" />
-	<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/jquery-3.6.4.min.js"></script>
-	<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/popper-2.11.6.min.js"></script>
+	<script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/jquery-3.6.4.min.js"></script>
+	<script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/popper-2.11.6.min.js"></script>
 	<!--popup menus, such as report buttons-->
-	<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
+	<script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
 	<style>
 		body {
 			background: #f9f9f9;
@@ -980,7 +980,7 @@ body {
 								<div class="row align-items-center">
 									<div class="col-xl-6 col-md-12">
 										<a href="/"><img
-												src="[[=model.externalResourcesBaseUrl]]/external/resources/images/icon.png"
+												src="<%=model.externalResourcesBaseUrl%>/external/resources/images/icon.png"
 												style="border-radius: 50%;width: 40px;height: 40px;"></a>
 										<span id="node-name" class="text-break">........</span>
 									</div>
@@ -1199,14 +1199,14 @@ body {
 	<div id="captcha-container"></div>
 	<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
 	<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
-	<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/videojs-8.6.1.js"></script>
+	<script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/videojs-8.6.1.js"></script>
 	<script
-		src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
-	<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/sweetalert-11.0.11.min.js"></script>
-	<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/keen-slider-6.8.5.min.js"></script>
+		src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
+	<script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/sweetalert-11.0.11.min.js"></script>
+	<script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/keen-slider-6.8.5.min.js"></script>
 
 	<script>
-		const INCOMING_PARAMETERS = [[= JSON.stringify(model)]];
+		const INCOMING_PARAMETERS = <%- JSON.stringify(model) %>;
 
 		let VIDEO_ID;
 		let VIEW_COUNT;

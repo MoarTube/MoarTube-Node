@@ -3,18 +3,18 @@
 <head>
 	<title>MoarTube</title>
 	<link rel="icon" type="image/x-icon"
-		href="[[=model.externalResourcesBaseUrl]]/external/resources/images/favicon.ico">
-	<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/videojs-8.6.1.css" rel="stylesheet"
+		href="<%=model.externalResourcesBaseUrl%>/external/resources/images/favicon.ico">
+	<link href="<%=model.externalResourcesBaseUrl%>/external/resources/css/videojs-8.6.1.css" rel="stylesheet"
 		type="text/css" />
-	<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/videojs-theme.css" rel="stylesheet"
+	<link href="<%=model.externalResourcesBaseUrl%>/external/resources/css/videojs-theme.css" rel="stylesheet"
 		type="text/css" />
-	<link href="[[=model.externalResourcesBaseUrl]]/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet"
+	<link href="<%=model.externalResourcesBaseUrl%>/external/resources/css/bootstrap.min-5.3.0.css" rel="stylesheet"
 		type="text/css" />
-	<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/jquery-3.6.4.min.js"></script>
-	<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/videojs-8.6.1.js"></script>
+	<script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/jquery-3.6.4.min.js"></script>
+	<script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/videojs-8.6.1.js"></script>
 	<script
-		src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
-	<script src="[[=model.externalResourcesBaseUrl]]/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
+		src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/videojs-landscape-fullscreen.min.js"></script>
+	<script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
 	<style>
 		body {
 			font-family: Arial, sans-serif;
@@ -501,7 +501,7 @@
 				style="height:auto;background:#0000007a;">
 				<a id="mtp-channel-link" class="text-decoration-none me-2" href="/" target="_blank">
 					<img class="mpt-video-icon"
-						src="[[=model.externalResourcesBaseUrl]]/external/resources/images/icon.png">
+						src="<%=model.externalResourcesBaseUrl%>/external/resources/images/icon.png">
 				</a>
 				<a id="mtp-video-link" class="text-decoration-none text-truncate" target="_blank"
 					style="max-width: 100%;">
@@ -549,7 +549,7 @@
 		</div>
 	</div>
 	<script>
-		const INCOMING_PARAMETERS = [[= JSON.stringify(model)]];
+		const INCOMING_PARAMETERS = <%- JSON.stringify(model) %>;
 
 		let VIDEO_ID;
 		let AUTO_START;

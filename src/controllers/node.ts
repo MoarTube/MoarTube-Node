@@ -123,8 +123,8 @@ export class NodeController extends BaseController {
       const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
       const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
 
-      // Render the node page
-      return await reply.view('node', {
+      // Build model object for template JavaScript access
+      const model = {
         informationData,
         linksData,
         cryptoWalletAddressesData,
@@ -132,7 +132,10 @@ export class NodeController extends BaseController {
         searchResultsData,
         externalVideosBaseUrl,
         externalResourcesBaseUrl,
-      });
+      };
+
+      // Render the node page
+      return await reply.view('node', { model });
     } catch (error) {
       this.logger.error('Node page rendering failed', error instanceof Error ? error : null);
       void reply.status(500).send('node page rendering error');

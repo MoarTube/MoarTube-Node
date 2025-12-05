@@ -31,16 +31,24 @@ export class ExternalResourcesController extends BaseController {
   }
 
   /**
-   * Serve a static file with proper content type
+   * Serve a static file with proper content type using streams
    */
-  private serveStaticFile(filePath: string, contentType: string, reply: FastifyReply): void {
+  private async serveStaticFile(
+    filePath: string,
+    contentType: string,
+    reply: FastifyReply
+  ): Promise<FastifyReply> {
     if (!fs.existsSync(filePath)) {
-      void reply.status(404).send('File not found');
-      return;
+      return reply.status(404).send('File not found');
     }
 
-    const fileStream = fs.createReadStream(filePath);
-    void reply.header('Content-Type', contentType).send(fileStream);
+    const stat = fs.statSync(filePath);
+    const stream = fs.createReadStream(filePath);
+
+    return reply
+      .header('Content-Type', contentType)
+      .header('Content-Length', stat.size)
+      .send(stream);
   }
 
   /**
@@ -54,7 +62,7 @@ export class ExternalResourcesController extends BaseController {
       const config = getConfig();
       const filePath = path.join(config.paths.publicDirectoryPath, 'javascript', filename);
 
-      this.serveStaticFile(filePath, 'application/javascript', reply);
+      await this.serveStaticFile(filePath, 'application/javascript', reply);
     } catch (error) {
       this.logger.error('Error serving JavaScript file', error instanceof Error ? error : null);
       this.sendError(reply, 'error serving JavaScript file', 500);
@@ -72,7 +80,7 @@ export class ExternalResourcesController extends BaseController {
       const config = getConfig();
       const filePath = path.join(config.paths.publicDirectoryPath, 'css', filename);
 
-      this.serveStaticFile(filePath, 'text/css', reply);
+      await this.serveStaticFile(filePath, 'text/css', reply);
     } catch (error) {
       this.logger.error('Error serving CSS file', error instanceof Error ? error : null);
       this.sendError(reply, 'error serving CSS file', 500);
@@ -106,7 +114,7 @@ export class ExternalResourcesController extends BaseController {
         contentType = 'application/vnd.ms-fontobject';
       }
 
-      this.serveStaticFile(filePath, contentType, reply);
+      await this.serveStaticFile(filePath, contentType, reply);
     } catch (error) {
       this.logger.error('Error serving font file', error instanceof Error ? error : null);
       this.sendError(reply, 'error serving font file', 500);
@@ -155,7 +163,7 @@ export class ExternalResourcesController extends BaseController {
         contentType = 'image/x-icon';
       }
 
-      this.serveStaticFile(filePath, contentType, reply);
+      await this.serveStaticFile(filePath, contentType, reply);
     } catch (error) {
       this.logger.error('Error serving image file', error instanceof Error ? error : null);
       this.sendError(reply, 'error serving image file', 500);

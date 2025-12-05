@@ -345,7 +345,7 @@ export class WatchController extends BaseController {
   private async renderPage(reply: FastifyReply, data: WatchPageData): Promise<FastifyReply> {
     const replyWithView = reply as FastifyReplyWithView;
 
-    const viewData = {
+    const model = {
       informationData: data.informationData,
       linksData: data.linksData,
       cryptoWalletAddressesData: data.cryptoWalletAddressesData,
@@ -356,6 +356,6 @@ export class WatchController extends BaseController {
       externalResourcesBaseUrl: data.externalResourcesBaseUrl,
     };
 
-    return await replyWithView.view('watch', viewData);
+    return await replyWithView.view('watch', { model });
   }
 }

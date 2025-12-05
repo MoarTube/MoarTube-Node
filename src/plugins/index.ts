@@ -73,13 +73,13 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
     },
   });
 
-  // Register view engine with DOT templating
+  // Register view engine with EJS templating
   await app.register(fastifyView, {
     engine: {
-      dot: (await import('dot')).default,
+      ejs: (await import('ejs')).default,
     },
     root: './public/views',
-    viewExt: 'dot',
+    viewExt: 'ejs',
   });
 
   // Register authentication plugin
