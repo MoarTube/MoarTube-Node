@@ -4,11 +4,7 @@
  * Barrel export for all Fastify plugins and app factory.
  */
 
-import Fastify, {
-  type FastifyInstance,
-  type FastifyRequest,
-  type FastifyLoggerOptions,
-} from 'fastify';
+import Fastify, { type FastifyInstance, type FastifyLoggerOptions } from 'fastify';
 import fastifyMultipart from '@fastify/multipart';
 import {
   serializerCompiler,
@@ -19,71 +15,8 @@ import type { PinoLoggerOptions } from 'fastify/types/logger.js';
 
 import { createAppContainer } from '../core/container.js';
 import { getDatabase } from '../database/index.js';
-import { getConfig } from '../config/index.js';
 import { registerRoutes } from '../routes/index.js';
 import authenticationPlugin from './authentication.js';
-
-/**
- * Middleware to check if node is configured
- * Blocks all requests except allowed endpoints until initial setup is complete
- */
-function nodeSetupMiddleware(app: FastifyInstance): void {
-  app.addHook('preHandler', async (request, reply) => {
-    // Skip middleware if node is already configured
-    if (isNodeConfigured()) {
-      return;
-    }
-
-    // Allow certain endpoints during setup
-    if (isAllowedEndpoint(request)) {
-      return;
-    }
-
-    // Block all other requests with setup required error
-    return reply.status(503).send({
-      isError: true,
-      message:
-        'This MoarTube Node needs to be configured before use. Please sign in via the MoarTube Client to complete the initial setup.',
-    });
-  });
-}
-
-/**
- * Check if the node has been configured with public URL settings
- */
-function isNodeConfigured(): boolean {
-  const config = getConfig();
-  const settings = config.nodeSettings;
-
-  return Boolean(
-    settings.publicNodeProtocol && settings.publicNodeAddress && settings.publicNodePort
-  );
-}
-
-/**
- * Check if the current request should be allowed during setup
- */
-function isAllowedEndpoint(request: FastifyRequest): boolean {
-  const url = request.url;
-  const method = request.method;
-
-  // Allow account endpoints
-  if (url.startsWith('/account')) {
-    return true;
-  }
-
-  // Allow status endpoints
-  if (url.startsWith('/status')) {
-    return true;
-  }
-
-  // Allow OPTIONS requests (CORS pre-flight)
-  if (method === 'OPTIONS') {
-    return true;
-  }
-
-  return false;
-}
 
 /**
  * Get logger configuration for Fastify
@@ -141,9 +74,6 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
 
   // Register authentication plugin
   await app.register(authenticationPlugin);
-
-  // Register node setup middleware (blocks requests until configured)
-  nodeSetupMiddleware(app);
 
   // Create DI container with database
   const db = getDatabase();

@@ -143,7 +143,7 @@ export function buildNodeBaseUrl(nodeSettings: NodeSettings): string {
   const { publicNodeProtocol, publicNodeAddress, publicNodePort } = nodeSettings;
 
   if (!publicNodeProtocol || !publicNodeAddress) {
-    throw new Error('Node public protocol and address must be configured');
+    return '';
   }
 
   const port = typeof publicNodePort === 'string' ? Number(publicNodePort) : publicNodePort;

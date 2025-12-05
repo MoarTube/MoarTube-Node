@@ -7,7 +7,6 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base.js';
 import type { AuthService } from '../services/index.js';
 import type { SignInBody } from '../validators/index.js';
-import { getConfig } from '../config/index.js';
 
 /**
  * AccountController class
@@ -31,38 +30,13 @@ export class AccountController extends BaseController {
    * Authenticate user with username and password
    */
   signIn = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    const {
-      username,
-      password,
-      moarTubeNodeHttpProtocol,
-      moarTubeNodeIp,
-      moarTubeNodePort,
-      rememberMe,
-    } = request.body as SignInBody;
+    const { username, password, rememberMe } = request.body as SignInBody;
 
     const result = await this.authService.signIn({
       username,
       password,
       rememberMe,
     });
-
-    if (result.isAuthenticated) {
-      // Update node settings if this is first login (empty values)
-      const config = getConfig();
-      const nodeSettings = config.nodeSettings;
-
-      if (
-        nodeSettings.publicNodeProtocol === '' &&
-        nodeSettings.publicNodeAddress === '' &&
-        nodeSettings.publicNodePort === ''
-      ) {
-        config.updateNodeSettings({
-          publicNodeProtocol: moarTubeNodeHttpProtocol,
-          publicNodeAddress: moarTubeNodeIp,
-          publicNodePort: String(moarTubeNodePort),
-        });
-      }
-    }
 
     this.sendSuccess(reply, {
       isAuthenticated: result.isAuthenticated,
