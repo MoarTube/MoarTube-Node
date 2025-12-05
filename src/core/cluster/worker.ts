@@ -12,7 +12,7 @@ import { IPCChannel, type IPCLogger } from './ipc-channel.js';
 import { WebSocketManager } from '../../websocket/websocket-manager.js';
 import { Logger } from '../../utils/logger.js';
 import { getConfig } from '../../config/index.js';
-import { createDatabase } from '../../database/index.js';
+import { createDatabase, initializeDatabaseSchema } from '../../database/index.js';
 
 /**
  * Optional worker configuration for advanced use cases
@@ -146,6 +146,9 @@ export class ClusterWorker {
         filepath: config.paths.databaseFilePath,
       });
     }
+
+    // Initialize database schema
+    initializeDatabaseSchema();
   }
 
   /**

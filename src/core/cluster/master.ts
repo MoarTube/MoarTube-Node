@@ -20,7 +20,7 @@ import type { WebSocketMessage } from '../../types/websocket.js';
 import { IPCChannel, type IPCLogger } from './ipc-channel.js';
 import { Logger } from '../../utils/logger.js';
 import { getConfig } from '../../config/index.js';
-import { createDatabase, getDatabase } from '../../database/index.js';
+import { createDatabase, initializeDatabaseSchema, getDatabase } from '../../database/index.js';
 
 /**
  * Indexer operations interface
@@ -192,6 +192,9 @@ export class ClusterMaster {
         filepath: config.paths.databaseFilePath,
       });
     }
+
+    // Initialize database schema
+    initializeDatabaseSchema();
 
     this.logger.debug('Database initialized');
   }

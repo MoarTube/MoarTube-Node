@@ -7,6 +7,7 @@
 // Connection management
 export {
   createDatabase,
+  initializeDatabaseSchema,
   getDatabase,
   isDatabaseInitialized,
   getCurrentDialect,

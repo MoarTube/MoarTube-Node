@@ -7,6 +7,7 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import * as schema from './schema/index.js';
 
 /**
@@ -74,6 +75,31 @@ export function createDatabase(config: DatabaseConfig): DatabaseClient {
       'PostgreSQL support is not yet implemented. ' +
         'Please use SQLite for now. PostgreSQL will be added in a future phase.'
     );
+  }
+}
+
+/**
+ * Initialize the database schema by running migrations
+ *
+ * This should be called after createDatabase() to ensure the database schema is up to date.
+ * Runs the migration files to create tables and apply schema changes.
+ *
+ * @throws Error if database is not initialized or migration fails
+ */
+export function initializeDatabaseSchema(): void {
+  if (!drizzleDb) {
+    throw new Error('Database not initialized. Call createDatabase() first.');
+  }
+
+  if (currentDialect !== 'sqlite') {
+    throw new Error('Schema initialization only supported for SQLite currently');
+  }
+
+  try {
+    // Run migrations from the drizzle directory
+    migrate(drizzleDb, { migrationsFolder: './drizzle' });
+  } catch (error) {
+    throw new Error(`Failed to initialize database schema: ${String(error)}`);
   }
 }
 
