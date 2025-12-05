@@ -28,9 +28,9 @@ interface VideoEmbedQuery {
  * Extended FastifyReply with view method
  * View engine will be registered in app setup
  */
-interface FastifyReplyWithView extends FastifyReply {
+type FastifyReplyWithView = FastifyReply & {
   view(template: string, data: Record<string, unknown>): Promise<FastifyReply>;
-}
+};
 
 /**
  * WatchEmbedController class
@@ -92,32 +92,22 @@ export class WatchEmbedController extends BaseController {
       // Render the embedded video template using view engine
       const replyWithView = reply as FastifyReplyWithView;
 
-      if (typeof replyWithView.view === 'function') {
-        await replyWithView.view('embed-video', {
-          video: videoData,
-          autostart: autostart === '1' || autostart === 'true',
-          externalVideosBaseUrl,
-          externalResourcesBaseUrl,
-          nodeSettings: {
-            nodeName: nodeSettings.nodeName,
-            nodeAbout: nodeSettings.nodeAbout,
-            nodeId: nodeSettings.nodeId,
-            publicNodeProtocol: nodeSettings.publicNodeProtocol,
-            publicNodeAddress: nodeSettings.publicNodeAddress,
-            publicNodePort: nodeSettings.publicNodePort,
-            isCloudflareTurnstileEnabled: nodeSettings.isCloudflareTurnstileEnabled,
-            cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
-          },
-        });
-      } else {
-        // Fallback: return JSON data if view engine not registered
-        this.sendSuccess(reply, {
-          video: videoData,
-          autostart: autostart === '1' || autostart === 'true',
-          externalVideosBaseUrl,
-          externalResourcesBaseUrl,
-        });
-      }
+      await replyWithView.view('embed-video', {
+        video: videoData,
+        autostart: autostart === '1' || autostart === 'true',
+        externalVideosBaseUrl,
+        externalResourcesBaseUrl,
+        nodeSettings: {
+          nodeName: nodeSettings.nodeName,
+          nodeAbout: nodeSettings.nodeAbout,
+          nodeId: nodeSettings.nodeId,
+          publicNodeProtocol: nodeSettings.publicNodeProtocol,
+          publicNodeAddress: nodeSettings.publicNodeAddress,
+          publicNodePort: nodeSettings.publicNodePort,
+          isCloudflareTurnstileEnabled: nodeSettings.isCloudflareTurnstileEnabled,
+          cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
+        },
+      });
     } catch {
       this.sendError(reply, 'error loading embedded video');
     }
@@ -151,38 +141,25 @@ export class WatchEmbedController extends BaseController {
       // Render the embedded chat template using view engine
       const replyWithView = reply as FastifyReplyWithView;
 
-      if (typeof replyWithView.view === 'function') {
-        await replyWithView.view('embed-chat', {
-          videoId: video.videoId,
-          isLiveChatEnabled: video.isLiveChatEnabled,
-          isLive: video.isLive,
-          isStreaming: video.isStreaming,
-          externalResourcesBaseUrl,
-          links,
-          cryptoWalletAddresses,
-          nodeSettings: {
-            nodeName: nodeSettings.nodeName,
-            nodeAbout: nodeSettings.nodeAbout,
-            nodeId: nodeSettings.nodeId,
-            publicNodeProtocol: nodeSettings.publicNodeProtocol,
-            publicNodeAddress: nodeSettings.publicNodeAddress,
-            publicNodePort: nodeSettings.publicNodePort,
-            isCloudflareTurnstileEnabled: nodeSettings.isCloudflareTurnstileEnabled,
-            cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
-          },
-        });
-      } else {
-        // Fallback: return JSON data if view engine not registered
-        this.sendSuccess(reply, {
-          videoId: video.videoId,
-          isLiveChatEnabled: video.isLiveChatEnabled,
-          isLive: video.isLive,
-          isStreaming: video.isStreaming,
-          externalResourcesBaseUrl,
-          links,
-          cryptoWalletAddresses,
-        });
-      }
+      await replyWithView.view('embed-chat', {
+        videoId: video.videoId,
+        isLiveChatEnabled: video.isLiveChatEnabled,
+        isLive: video.isLive,
+        isStreaming: video.isStreaming,
+        externalResourcesBaseUrl,
+        links,
+        cryptoWalletAddresses,
+        nodeSettings: {
+          nodeName: nodeSettings.nodeName,
+          nodeAbout: nodeSettings.nodeAbout,
+          nodeId: nodeSettings.nodeId,
+          publicNodeProtocol: nodeSettings.publicNodeProtocol,
+          publicNodeAddress: nodeSettings.publicNodeAddress,
+          publicNodePort: nodeSettings.publicNodePort,
+          isCloudflareTurnstileEnabled: nodeSettings.isCloudflareTurnstileEnabled,
+          cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
+        },
+      });
     } catch {
       this.sendError(reply, 'error loading embedded chat');
     }

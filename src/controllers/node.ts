@@ -17,13 +17,6 @@ import { getConfig } from '../config/index.js';
 import { isSearchTermValid, isSortTermValid, isTagTermValid } from '../utils/index.js';
 
 /**
- * Fastify reply with view engine support
- */
-interface FastifyReplyWithView extends FastifyReply {
-  view?: (template: string, data: Record<string, unknown>) => FastifyReply;
-}
-
-/**
  * Query parameters for node page
  */
 export interface NodeQuery {
@@ -131,29 +124,15 @@ export class NodeController extends BaseController {
       const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
 
       // Render the node page
-      const replyWithView = reply as FastifyReplyWithView;
-      if (replyWithView.view) {
-        void replyWithView.view('node', {
-          informationData,
-          linksData,
-          cryptoWalletAddressesData,
-          tagsData,
-          searchResultsData,
-          externalVideosBaseUrl,
-          externalResourcesBaseUrl,
-        });
-      } else {
-        // Fallback to JSON response if view engine not available
-        void reply.send({
-          informationData,
-          linksData,
-          cryptoWalletAddressesData,
-          tagsData,
-          searchResultsData,
-          externalVideosBaseUrl,
-          externalResourcesBaseUrl,
-        });
-      }
+      return await reply.view('node', {
+        informationData,
+        linksData,
+        cryptoWalletAddressesData,
+        tagsData,
+        searchResultsData,
+        externalVideosBaseUrl,
+        externalResourcesBaseUrl,
+      });
     } catch (error) {
       this.logger.error('Node page rendering failed', error instanceof Error ? error : null);
       void reply.status(500).send('node page rendering error');

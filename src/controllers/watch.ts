@@ -17,9 +17,9 @@ import { isVideoIdValid } from '../utils/index.js';
 /**
  * Fastify reply with view engine support
  */
-interface FastifyReplyWithView extends FastifyReply {
-  view?: (template: string, data: Record<string, unknown>) => FastifyReply;
-}
+type FastifyReplyWithView = FastifyReply & {
+  view(template: string, data: Record<string, unknown>): Promise<FastifyReply>;
+};
 
 /**
  * Query parameters for watch page
@@ -127,29 +127,27 @@ export class WatchController extends BaseController {
    *
    * Render the video watch page
    */
-  getWatchPage = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getWatchPage = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { v: videoId } = request.query as WatchQuery;
 
       if (videoId === undefined || videoId === '' || !isVideoIdValid(videoId, false)) {
-        void reply.status(400).send('invalid video id');
-        return;
+        return await reply.status(400).send('invalid video id');
       }
 
       const config = getConfig();
       const video = await this.videoRepository.findById(videoId);
 
       if (!video) {
-        void reply.status(404).send('that video could not be loaded');
-        return;
+        return await reply.status(404).send('that video could not be loaded');
       }
 
       const pageData = await this.buildPageData(video, videoId, config);
       this.setCacheHeaders(reply, video, pageData.adaptiveSources, pageData.progressiveSources);
-      this.renderPage(reply, pageData);
+      return await this.renderPage(reply, pageData);
     } catch (error) {
       this.logger.error('Watch page rendering failed', error instanceof Error ? error : null);
-      void reply.status(500).send('that video could not be loaded');
+      return await reply.status(500).send('that video could not be loaded');
     }
   };
 
@@ -344,7 +342,7 @@ export class WatchController extends BaseController {
   /**
    * Render the watch page or return JSON
    */
-  private renderPage(reply: FastifyReply, data: WatchPageData): void {
+  private async renderPage(reply: FastifyReply, data: WatchPageData): Promise<FastifyReply> {
     const replyWithView = reply as FastifyReplyWithView;
 
     const viewData = {
@@ -358,10 +356,6 @@ export class WatchController extends BaseController {
       externalResourcesBaseUrl: data.externalResourcesBaseUrl,
     };
 
-    if (replyWithView.view) {
-      void replyWithView.view('watch', viewData);
-    } else {
-      void reply.send(viewData);
-    }
+    return await replyWithView.view('watch', viewData);
   }
 }

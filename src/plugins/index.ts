@@ -6,6 +6,7 @@
 
 import Fastify, { type FastifyInstance, type FastifyLoggerOptions } from 'fastify';
 import fastifyMultipart from '@fastify/multipart';
+import fastifyView from '@fastify/view';
 import {
   serializerCompiler,
   validatorCompiler,
@@ -70,6 +71,15 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
     limits: {
       fileSize: 1000 * 1000 * 1000 * 1000, // 1TB
     },
+  });
+
+  // Register view engine with DOT templating
+  await app.register(fastifyView, {
+    engine: {
+      dot: (await import('dot')).default,
+    },
+    root: './public/views',
+    viewExt: 'dot',
   });
 
   // Register authentication plugin
