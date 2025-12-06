@@ -13,8 +13,9 @@ import { z } from 'zod';
  * Add wallet address request body schema
  */
 export const addWalletAddressBodySchema = z.object({
+  walletAddress: z.string().min(1, 'Wallet address is required').max(200),
   chain: z.string().min(1, 'Chain is required').max(50),
-  address: z.string().min(1, 'Address is required').max(200),
+  currency: z.string().min(1, 'Currency is required').max(10),
 });
 
 export type AddWalletAddressBody = z.infer<typeof addWalletAddressBodySchema>;

@@ -37,7 +37,7 @@ export type NodeSearchQuery = z.infer<typeof nodeSearchQuerySchema>;
  * Content checked request body schema
  */
 export const contentCheckedBodySchema = z.object({
-  type: z.enum(['videos', 'comments', 'videoReports', 'commentReports']),
+  contentType: z.enum(['comments', 'videoReports', 'commentReports']),
 });
 
 export type ContentCheckedBody = z.infer<typeof contentCheckedBodySchema>;
