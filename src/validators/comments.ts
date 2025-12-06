@@ -5,14 +5,15 @@
  */
 import { z } from 'zod';
 import {
-  searchTermSchema,
-  sortTermSchema,
-  tagTermSchema,
   timestampSchema,
   reportEmailSchema,
   reportTypeSchema,
   reportMessageSchema,
   cloudflareTurnstileTokenSchema,
+  sortDirectionSchema,
+  limitSchema,
+  videoIdSchemaOptional,
+  searchTermSchemaOptional,
 } from './common.schemas.js';
 
 // ============================================================================
@@ -36,9 +37,10 @@ export type CommentIdParams = z.infer<typeof commentIdParamsSchema>;
  * Comment search query parameters schema
  */
 export const commentSearchQuerySchema = z.object({
-  searchTerm: searchTermSchema,
-  sortTerm: sortTermSchema,
-  tagTerm: tagTermSchema,
+  videoId: videoIdSchemaOptional,
+  searchTerm: searchTermSchemaOptional,
+  limit: limitSchema,
+  sortDirection: sortDirectionSchema,
   timestamp: timestampSchema,
 });
 

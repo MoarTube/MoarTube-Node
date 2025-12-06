@@ -15,9 +15,9 @@ import type { PaginationOptions } from '../../types/models.js';
 export interface CommentSearchOptions extends PaginationOptions {
   videoId?: string;
   searchTerm?: string;
-  beforeTimestamp?: number;
+  timestamp?: number;
   sortBy?: 'timestamp';
-  sortDirection?: 'asc' | 'desc';
+  sortDirection?: string;
 }
 
 /**
@@ -186,21 +186,21 @@ export class CommentsRepository extends BaseRepository {
    */
   async search(options: CommentSearchOptions = {}): Promise<DrizzleComment[]> {
     const { limit, offset } = this.getPaginationParamsWithDefault(options);
-    const { videoId, searchTerm, beforeTimestamp, sortDirection = 'desc' } = options;
+    const { videoId, searchTerm, timestamp, sortDirection = 'desc' } = options;
 
     // Build conditions array
     const conditions = [];
 
-    if (videoId !== undefined && videoId !== '') {
+    if (videoId !== undefined) {
       conditions.push(eq(comments.videoId, videoId));
     }
 
-    if (searchTerm !== undefined && searchTerm !== '') {
+    if (searchTerm !== undefined) {
       conditions.push(like(comments.commentPlainTextSanitized, `%${searchTerm}%`));
     }
 
-    if (beforeTimestamp !== undefined) {
-      conditions.push(lt(comments.timestamp, beforeTimestamp));
+    if (timestamp !== undefined) {
+      conditions.push(lt(comments.timestamp, timestamp));
     }
 
     // Build query
@@ -211,7 +211,7 @@ export class CommentsRepository extends BaseRepository {
     }
 
     // Sort
-    if (sortDirection === 'asc') {
+    if (sortDirection === 'ascending') {
       query = query.orderBy(comments.timestamp) as typeof query;
     } else {
       query = query.orderBy(desc(comments.timestamp)) as typeof query;

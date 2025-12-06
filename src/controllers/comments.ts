@@ -19,8 +19,6 @@ import {
   isReportMessageValid,
   isCloudflareTurnstileTokenValid,
   isTimestampValid,
-  isLimitValid,
-  isSearchTermValid,
   isVideoIdValid,
 } from '../utils/index.js';
 
@@ -30,8 +28,9 @@ import {
 export interface CommentSearchQuery {
   videoId?: string;
   searchTerm?: string;
-  timestamp?: string;
-  limit?: string;
+  limit: number;
+  timestamp: number;
+  sortDirection: string;
 }
 
 /**
@@ -77,46 +76,13 @@ export class CommentsController extends BaseController {
    */
   search = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
-      const {
-        videoId = '',
-        searchTerm = '',
-        timestamp = '',
-        limit = '',
-      } = request.query as CommentSearchQuery;
-
-      if (
-        !isVideoIdValid(videoId, true) ||
-        !isSearchTermValid(searchTerm) ||
-        !isTimestampValid(timestamp) ||
-        !isLimitValid(limit)
-      ) {
-        this.sendError(reply, 'invalid parameters');
-        return;
-      }
-
-      // Use the repository's search method
       const searchOptions: {
         videoId?: string;
         searchTerm?: string;
-        beforeTimestamp?: number;
-        limit?: number;
-        sortDirection: 'desc';
-      } = {
-        sortDirection: 'desc',
-      };
-
-      if (videoId.length > 0) {
-        searchOptions.videoId = videoId;
-      }
-      if (searchTerm.length > 0) {
-        searchOptions.searchTerm = searchTerm;
-      }
-      if (timestamp.length > 0) {
-        searchOptions.beforeTimestamp = Number.parseInt(timestamp, 10);
-      }
-      if (limit.length > 0) {
-        searchOptions.limit = Number.parseInt(limit, 10);
-      }
+        limit: number;
+        sortDirection: string;
+        timestamp: number;
+      } = request.query as CommentSearchQuery;
 
       const comments = await this.commentRepository.search(searchOptions);
 

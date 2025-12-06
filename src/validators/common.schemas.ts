@@ -13,6 +13,10 @@ import { z } from 'zod';
  * Video ID schema - YouTube-style alphanumeric ID
  */
 export const videoIdSchema = z.string().regex(/^[a-zA-Z0-9_-]{11}$/, 'Invalid video ID format');
+export const videoIdSchemaOptional = z
+  .string()
+  .regex(/^[a-zA-Z0-9_-]{11}$/, 'Invalid video ID format')
+  .optional();
 
 /**
  * Comment ID schema - positive integer
@@ -22,7 +26,7 @@ export const commentIdSchema = z.coerce.number().int().positive();
 /**
  * Timestamp schema - Unix timestamp in milliseconds
  */
-export const timestampSchema = z.coerce.number().int().min(0);
+export const timestampSchema = z.coerce.number().int().min(0).max(32503680000000); // Up to year 3000
 
 /**
  * Boolean coercion schema - handles string "true"/"false" values
@@ -88,7 +92,8 @@ export const manifestTypeSchema = z.enum(['static', 'dynamic']);
 /**
  * Search term schema
  */
-export const searchTermSchema = z.string().max(100).optional().default('');
+export const searchTermSchema = z.string().max(100);
+export const searchTermSchemaOptional = z.string().max(100).optional();
 
 /**
  * Sort term schema for video listings
@@ -108,7 +113,7 @@ export const tagLimitSchema = z.coerce.number().int().min(0).optional().default(
 /**
  * Pagination limit schema
  */
-export const limitSchema = z.coerce.number().int().min(1).max(100).optional().default(20);
+export const limitSchema = z.coerce.number().int().min(1).max(100);
 
 /**
  * Pagination offset schema
@@ -118,10 +123,7 @@ export const offsetSchema = z.coerce.number().int().min(0).optional().default(0)
 /**
  * Sort direction schema
  */
-export const sortDirectionSchema = z
-  .enum(['ascending', 'descending'])
-  .optional()
-  .default('descending');
+export const sortDirectionSchema = z.enum(['ascending', 'descending']);
 
 /**
  * Comments type schema (for pagination direction)
