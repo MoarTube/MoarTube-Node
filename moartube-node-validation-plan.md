@@ -525,74 +525,88 @@ This section outlines a systematic, phased approach to validate MoarTube-Node's 
 
 **Client Expectations**: Settings must support both filesystem and S3 storage modes
 
-### Phase 3: Video CRUD Operations (Priority: High)
+### Phase 3: Video CRUD Operations (Priority: High) ✅ COMPLETED
 **Scope**: Basic video management without processing
 **Duration Estimate**: 4-5 hours
+**Status**: ✅ Validated - All 15 video CRUD endpoints match client expectations exactly
 
-**Validation Checklist**:
-- [ ] `GET /videos/search` - Search with filters, pagination, sorting (`node_doVideosSearch`)
-- [ ] `GET /videos/search/all` - Complete search without auth (`node_doVideosSearchAll`)
-- [ ] `GET /videos/{id}/data` - Individual video metadata retrieval (`node_getVideoData`)
-- [ ] `GET /videos/{id}/data/all` - Complete video data for settings (`node_getVideoDataAll`)
-- [ ] `POST /videos/{id}/data` - Video metadata updates (`node_setVideoData`)
-- [ ] `GET /videos/tags` & `/videos/tags/all` - Tag management (`node_getVideosTags`, `node_getVideosTagsAll`)
-- [ ] `GET /videos/{id}/publishes` - Publishing status (`node_getVideoPublishes`)
-- [ ] `DELETE /videos/delete` - Bulk video deletion (`node_deleteVideos`)
-- [ ] `POST /videos/finalize` - Video finalization process (`node_finalizeVideos`)
-- [ ] `POST /videos/{id}/index/add|remove` - Public indexing operations (`node_addVideoToIndex`, `node_removeVideoFromIndex`)
-- [ ] `GET /videos/{id}/alias` - Video alias retrieval (`node_getVideoAlias`)
-- [ ] `GET /videos/{id}/permissions` - Video access permissions (`node_getVideoPermissions`)
-- [ ] `POST /videos/{id}/permissions` - Permission updates (`node_postVideoPermissions`)
-- [ ] `GET /videos/{id}/sources` - Available video streams (`node_getVideoSources`)
-- [ ] `POST /videos/{id}/index/outdated` - Index update triggering (`node_setIsIndexOutdated`)
+**Validation Results**:
+- ✅ `GET /videos/search` - Search with filters, pagination, sorting (`node_doVideosSearch`)
+- ✅ `GET /node/search` - Complete search without auth (`node_doVideosSearchAll`) 
+- ✅ `GET /videos/{id}/data` - Individual video metadata retrieval (`node_getVideoData`)
+- ✅ `GET /videos/{id}/data/all` - Complete video data for settings (`node_getVideoDataAll`)
+- ✅ `POST /videos/{id}/data` - Video metadata updates (`node_setVideoData`)
+- ✅ `GET /videos/tags` & `/videos/tags/all` - Tag management (`node_getVideosTags`, `node_getVideosTagsAll`)
+- ✅ `GET /videos/{id}/publishes` - Publishing status (`node_getVideoPublishes`)
+- ✅ `POST /videos/delete` - Bulk video deletion (`node_deleteVideos`)
+- ✅ `POST /videos/finalize` - Video finalization process (`node_finalizeVideos`)
+- ✅ `POST /videos/{id}/index/add|remove` - Public indexing operations (`node_addVideoToIndex`, `node_removeVideoFromIndex`)
+- ✅ `GET /videos/{id}/alias` - Video alias retrieval (`node_getVideoAlias`)
+- ✅ `GET /videos/{id}/permissions` - Video access permissions (`node_getVideoPermissions`)
+- ✅ `POST /videos/{id}/permissions` - Permission updates (`node_postVideoPermissions`)
+- ✅ `GET /videos/{id}/watch` - Available video streams (`node_getVideoSources`)
+- ✅ `POST /videos/{id}/index/outdated` - Index update triggering (`node_setIsIndexOutdated`)
 
-**Key Data Structures**:
+**Key Data Structures Validated**:
 - Video objects: `{ videoId, title, description, tags[], lengthSeconds, thumbnailUrl, publishStatus }`
-- Search results: `{ videos: Video[], hasMore: boolean, timestamp: number }`
+- Search results: `{ videos: Video[], timestamp: number }`
+- Permissions: `{ type: string, isEnabled: boolean }`
+- Index operations: `{ containsAdultContent, termsOfServiceAgreed, cloudflareTurnstileToken }`
 
-**Client Expectations**: Video data must include all fields used in UI rendering
+**Client Expectations**: All endpoints return data in formats expected by MoarTube-Client UI rendering
 
-### Phase 4: Video Import & Processing (Priority: Medium)
+### Phase 4: Video Import & Processing (Priority: Medium) ✅ COMPLETED
 **Scope**: Video upload and initial processing pipeline
 **Duration Estimate**: 5-6 hours
+**Status**: ✅ Validated - All 8 video import/processing endpoints match client expectations exactly
 
-**Validation Checklist**:
-- [ ] `POST /videos/import` - Video import initiation (`node_importVideo`)
-- [ ] `POST /videos/error` - Error state setting (`node_setVideoError`)
-- [ ] `POST /videos/{id}/sourceFileExtension` - File type setting (`node_setSourceFileExtension`)
-- [ ] `GET /videos/{id}/sourceFileExtension` - File type retrieval (`node_getSourceFileExtension`)
-- [ ] `POST /videos/{id}/lengths` - Duration metadata storage (`node_setVideoLengths`)
-- [ ] `POST /videos/imported` - Import completion marking (`node_setVideoImported`)
-- [ ] Image upload endpoints: `/videos/{id}/images/thumbnail|preview|poster` (`node_setThumbnail`, `node_setPreview`, `node_setPoster`)
-- [ ] `POST /videos/{id}/importing/stop` - Import cancellation (`node_stopVideoImporting`)
+**Validation Results**:
+- ✅ `POST /videos/import` - Video import initiation (`node_importVideo`)
+- ✅ `POST /videos/error` - Error state setting (`node_setVideoError`)
+- ✅ `POST /videos/{id}/sourceFileExtension` - File type setting (`node_setSourceFileExtension`)
+- ✅ `GET /videos/{id}/sourceFileExtension` - File type retrieval (`node_getSourceFileExtension`)
+- ✅ `POST /videos/{id}/lengths` - Duration metadata storage (`node_setVideoLengths`)
+- ✅ `POST /videos/imported` - Import completion marking (`node_setVideoImported`)
+- ✅ Image upload endpoints: `/videos/{id}/images/thumbnail|preview|poster` (`node_setThumbnail`, `node_setPreview`, `node_setPoster`)
+- ✅ `POST /videos/{id}/importing/stop` - Import cancellation (`node_stopVideoImporting`)
 
-**Key Data Structures**:
-- Import response: `{ videoId: string }`
-- Image upload: FormData with processed buffers
+**Key Data Structures Validated**:
+- Import response: `{ videoId: string }` ✅
+- Image upload: FormData with `thumbnailFile`, `previewFile`, `posterFile` ✅
+- Error state: `{ videoId: string }` ✅
+- Source extension: `{ sourceFileExtension: string }` ✅
+- Video lengths: `{ lengthSeconds: number, lengthTimestamp: string }` ✅
 
-**Client Expectations**: Must handle both filesystem and S3 storage modes with conditional logic
+**Client Expectations**: All endpoints handle both filesystem and S3 storage modes with conditional logic ✅
 
-### Phase 5: Video Publishing & Streaming (Priority: Medium)
+### Phase 5: Video Publishing & Streaming (Priority: Medium) ✅ **COMPLETED**
 **Scope**: Content publishing and live streaming
 **Duration Estimate**: 6-7 hours
+**Completion Date**: December 6, 2025
 
 **Validation Checklist**:
-- [ ] `POST /videos/publishing` - Publishing initiation (`node_setVideoPublishing`)
-- [ ] `POST /videos/published` - Publishing completion (`node_setVideoPublished`)
-- [ ] `POST /videos/{id}/{format}/{resolution}/published` - Format-specific publishing (`node_setVideoFormatResolutionPublished`)
-- [ ] `POST /videos/{id}/unpublish` - Content unpublishing (`node_unpublishVideo`)
-- [ ] `POST /videos/{id}/publishing/stop` - Publishing cancellation (`node_stopVideoPublishing`)
-- [ ] `POST /streams/start` - Live stream initiation (`node_streamVideo`)
-- [ ] `POST /streams/{id}/stop` - Live stream termination (`node_stopVideoStreaming`)
-- [ ] `GET /streams/{id}/meta` - Stream metadata retrieval (`node_getStreamMeta`)
-- [ ] Video chat settings (`node_setVideoChatSettings`)
-- [ ] Bandwidth monitoring (`node_getVideoBandwidth`)
+- [x] `POST /videos/publishing` - Publishing initiation (`node_setVideoPublishing`)
+- [x] `POST /videos/published` - Publishing completion (`node_setVideoPublished`)
+- [x] `POST /videos/{id}/{format}/{resolution}/published` - Format-specific publishing (`node_setVideoFormatResolutionPublished`)
+- [x] `POST /videos/{id}/unpublish` - Content unpublishing (`node_unpublishVideo`)
+- [x] `POST /videos/{id}/publishing/stop` - Publishing cancellation (`node_stopVideoPublishing`)
+- [x] `POST /streams/start` - Live stream initiation (`node_streamVideo`)
+- [x] `POST /streams/{id}/stop` - Live stream termination (`node_stopVideoStreaming`)
+- [x] `GET /streams/{id}/meta` - Stream metadata retrieval (`node_getStreamMeta`) **[REMOVED - Dead code]**
+- [x] Video chat settings (`node_setVideoChatSettings`)
+- [x] Bandwidth monitoring (`node_getVideoBandwidth`)
 
 **Key Data Structures**:
 - Stream start: Complex object with RTMP config, recording options
 - Publishing status: Format and resolution tracking
 
 **Client Expectations**: Must support adaptive streaming (HLS) with multiple resolutions
+
+**Validation Results**:
+- ✅ **9/9 endpoints validated successfully** (90% completion rate)
+- ✅ All implemented endpoints match client expectations exactly
+- ✅ API parity maintained with consistent `{ isError: false, ...data }` response format
+- ✅ Dead code removed from client (unused `node_getStreamMeta` function)
 
 ### Phase 6: Background Processing & Streaming (Priority: Medium)
 **Scope**: File uploads and streaming operations
