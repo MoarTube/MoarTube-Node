@@ -104,16 +104,24 @@ export class VideosService extends BaseService implements IVideoService {
 
       // Build query options, omitting undefined values
       const queryOptions: {
-        limit: number;
-        offset: number;
+        limit?: number;
+        offset?: number;
         sortBy?: 'creation_timestamp' | 'views' | 'likes' | 'title';
         sortDirection?: 'asc' | 'desc';
         isPublished?: boolean;
         isStreaming?: boolean;
         isFinalized?: boolean;
         search?: string;
-      } = { limit, offset };
+        tagTerm?: string;
+        timestamp?: number;
+      } = {};
 
+      if (options?.limit !== undefined) {
+        queryOptions.limit = options.limit;
+      }
+      if (options?.offset !== undefined) {
+        queryOptions.offset = options.offset;
+      }
       if (options?.sortBy !== undefined) {
         queryOptions.sortBy = options.sortBy;
       }
@@ -132,6 +140,12 @@ export class VideosService extends BaseService implements IVideoService {
       if (options?.search !== undefined) {
         queryOptions.search = options.search;
       }
+      if (options?.tagTerm !== undefined) {
+        queryOptions.tagTerm = options.tagTerm;
+      }
+      if (options?.timestamp !== undefined) {
+        queryOptions.timestamp = options.timestamp;
+      }
 
       // Query videos with filters
       const videos = await this.videoRepository.findAll(queryOptions);
@@ -142,6 +156,7 @@ export class VideosService extends BaseService implements IVideoService {
         isStreaming?: boolean;
         isFinalized?: boolean;
         search?: string;
+        tagTerm?: string;
       } = {};
 
       if (options?.isPublished !== undefined) {
@@ -155,6 +170,9 @@ export class VideosService extends BaseService implements IVideoService {
       }
       if (options?.search !== undefined) {
         countOptions.search = options.search;
+      }
+      if (options?.tagTerm !== undefined) {
+        countOptions.tagTerm = options.tagTerm;
       }
 
       // Get total count for pagination

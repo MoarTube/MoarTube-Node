@@ -3,7 +3,7 @@
  *
  * Provides data access methods for video records using Drizzle ORM.
  */
-import { eq, desc, asc, sql, and, or, like, count, type SQL } from 'drizzle-orm';
+import { eq, desc, asc, sql, and, or, like, count, lt, type SQL } from 'drizzle-orm';
 import type { DrizzleVideo, DrizzleNewVideo } from '../schemas/index.js';
 import { videos } from '../schemas/index.js';
 import { BaseRepository } from './base.js';
@@ -25,6 +25,10 @@ export interface VideoQueryOptions extends PaginationOptions {
   isFinalized?: boolean;
   /** Search in title, description, or tags */
   search?: string;
+  /** Filter by specific tag */
+  tagTerm?: string;
+  /** Timestamp for pagination */
+  timestamp?: number;
 }
 
 /**
@@ -355,6 +359,15 @@ export class VideosRepository extends BaseRepository {
           like(videos.tags, searchPattern)
         )
       );
+    }
+
+    if (options.tagTerm !== undefined && options.tagTerm !== '') {
+      const tagPattern = `%${options.tagTerm}%`;
+      conditions.push(like(videos.tags, tagPattern));
+    }
+
+    if (options.timestamp !== undefined) {
+      conditions.push(lt(videos.creation_timestamp, options.timestamp));
     }
 
     if (conditions.length === 0) {

@@ -39,6 +39,10 @@ export interface GetVideosOptions extends PaginationOptions {
   isFinalized?: boolean;
   /** Search in title, description, or tags */
   search?: string;
+  /** Filter by specific tag */
+  tagTerm?: string;
+  /** Timestamp for pagination */
+  timestamp?: number;
 }
 
 /**

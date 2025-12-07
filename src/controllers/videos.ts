@@ -487,12 +487,13 @@ export class VideosController extends BaseController {
     }
 
     // Build options, only include search if defined
-    const searchValue = searchTerm ?? tagTerm;
     const options = {
       sortBy,
       sortDirection,
       limit: tagLimit,
-      ...(searchValue !== undefined ? { search: searchValue } : {}),
+      timestamp,
+      ...(searchTerm !== undefined ? { search: searchTerm } : {}),
+      ...(tagTerm !== undefined ? { tagTerm } : {}),
     };
 
     const result = await videoService.getVideos(options);
