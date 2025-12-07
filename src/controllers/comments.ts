@@ -155,7 +155,7 @@ export class CommentsController extends BaseController {
         return;
       }
 
-      if (!video.isReportsEnabled) {
+      if (!video.is_reports_enabled) {
         this.sendError(reply, 'reporting is currently disabled');
         return;
       }

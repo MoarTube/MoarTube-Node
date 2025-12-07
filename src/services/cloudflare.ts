@@ -117,7 +117,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
       if (ids.length === 0 && this.videoRepository) {
         // Get all videos if none specified
         const videos = await this.videoRepository.findAll({ limit: 10000 });
-        ids.push(...videos.map((v) => v.videoId));
+        ids.push(...videos.map((v) => v.video_id));
       }
 
       const files = ids.map((id) => `${nodeBaseUrl}/watch?v=${id}`);
@@ -149,7 +149,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
       const ids = videoIds ?? [];
       if (ids.length === 0 && this.videoRepository) {
         const videos = await this.videoRepository.findAll({ limit: 10000 });
-        ids.push(...videos.map((v) => v.videoId));
+        ids.push(...videos.map((v) => v.video_id));
       }
 
       const files: string[] = [];

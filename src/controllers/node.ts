@@ -273,11 +273,11 @@ export class NodeController extends BaseController {
 
     const videoMap = new Map<string, DrizzleVideo>();
     for (const video of videos) {
-      videoMap.set(video.videoId, video);
+      videoMap.set(video.video_id, video);
     }
     for (const video of liveVideos) {
-      if (!videoMap.has(video.videoId)) {
-        videoMap.set(video.videoId, video);
+      if (!videoMap.has(video.video_id)) {
+        videoMap.set(video.video_id, video);
       }
     }
 
@@ -291,11 +291,11 @@ export class NodeController extends BaseController {
     const sorted = [...videos];
 
     if (sortTerm === 'latest') {
-      sorted.sort((a, b) => b.creationTimestamp - a.creationTimestamp);
+      sorted.sort((a, b) => b.creation_timestamp - a.creation_timestamp);
     } else if (sortTerm === 'popular') {
       sorted.sort((a, b) => b.views - a.views);
     } else if (sortTerm === 'oldest') {
-      sorted.sort((a, b) => a.creationTimestamp - b.creationTimestamp);
+      sorted.sort((a, b) => a.creation_timestamp - b.creation_timestamp);
     }
 
     return sorted;

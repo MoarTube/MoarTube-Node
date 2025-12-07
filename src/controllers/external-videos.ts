@@ -101,34 +101,29 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve video thumbnail image
    */
-  getThumbnail = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
+  getThumbnail = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    const { videoId } = request.params as VideoIdParams;
 
-      if (!isVideoIdValid(videoId, false)) {
-        void reply.status(404).send('thumbnail not found');
-        return;
-      }
+    const config = getConfig();
 
-      const config = getConfig();
-      const thumbnailPath = path.join(
-        config.paths.videosDirectoryPath,
-        videoId,
-        'images',
-        'thumbnail.jpg'
-      );
+    const thumbnailPath = path.join(
+      config.paths.videosDirectoryPath,
+      videoId,
+      'images',
+      'thumbnail.jpg'
+    );
 
-      if (!fs.existsSync(thumbnailPath)) {
-        void reply.status(404).send('thumbnail not found');
-        return;
-      }
-
-      const fileStream = fs.createReadStream(thumbnailPath);
-      void reply.header('Content-Type', 'image/jpeg').send(fileStream);
-    } catch (error) {
-      this.logger.error('Get thumbnail failed', error instanceof Error ? error : null);
-      void reply.status(404).send('thumbnail not found');
+    if (!fs.existsSync(thumbnailPath)) {
+      return reply.status(404).send('thumbnail not found');
     }
+
+    const stat = fs.statSync(thumbnailPath);
+    const stream = fs.createReadStream(thumbnailPath);
+
+    return reply
+      .header('Content-Type', 'image/jpeg')
+      .header('Content-Length', stat.size)
+      .send(stream);
   };
 
   /**
@@ -136,34 +131,29 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve video preview image
    */
-  getPreview = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
+  getPreview = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    const { videoId } = request.params as VideoIdParams;
 
-      if (!isVideoIdValid(videoId, false)) {
-        void reply.status(404).send('preview not found');
-        return;
-      }
+    const config = getConfig();
 
-      const config = getConfig();
-      const previewPath = path.join(
-        config.paths.videosDirectoryPath,
-        videoId,
-        'images',
-        'preview.jpg'
-      );
+    const previewPath = path.join(
+      config.paths.videosDirectoryPath,
+      videoId,
+      'images',
+      'preview.jpg'
+    );
 
-      if (!fs.existsSync(previewPath)) {
-        void reply.status(404).send('preview not found');
-        return;
-      }
-
-      const fileStream = fs.createReadStream(previewPath);
-      void reply.header('Content-Type', 'image/jpeg').send(fileStream);
-    } catch (error) {
-      this.logger.error('Get preview failed', error instanceof Error ? error : null);
-      void reply.status(404).send('preview not found');
+    if (!fs.existsSync(previewPath)) {
+      return reply.status(404).send('preview not found');
     }
+
+    const stats = fs.statSync(previewPath);
+    const fileStream = fs.createReadStream(previewPath);
+
+    return reply
+      .header('Content-Type', 'image/jpeg')
+      .header('Content-Length', stats.size)
+      .send(fileStream);
   };
 
   /**
@@ -171,34 +161,24 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve video poster image
    */
-  getPoster = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
+  getPoster = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    const { videoId } = request.params as VideoIdParams;
 
-      if (!isVideoIdValid(videoId, false)) {
-        void reply.status(404).send('poster not found');
-        return;
-      }
+    const config = getConfig();
 
-      const config = getConfig();
-      const posterPath = path.join(
-        config.paths.videosDirectoryPath,
-        videoId,
-        'images',
-        'poster.jpg'
-      );
+    const posterPath = path.join(config.paths.videosDirectoryPath, videoId, 'images', 'poster.jpg');
 
-      if (!fs.existsSync(posterPath)) {
-        void reply.status(404).send('poster not found');
-        return;
-      }
-
-      const fileStream = fs.createReadStream(posterPath);
-      void reply.header('Content-Type', 'image/jpeg').send(fileStream);
-    } catch (error) {
-      this.logger.error('Get poster failed', error instanceof Error ? error : null);
-      void reply.status(404).send('poster not found');
+    if (!fs.existsSync(posterPath)) {
+      return reply.status(404).send('poster not found');
     }
+
+    const stats = fs.statSync(posterPath);
+    const fileStream = fs.createReadStream(posterPath);
+
+    return reply
+      .header('Content-Type', 'image/jpeg')
+      .header('Content-Length', stats.size)
+      .send(fileStream);
   };
 
   /**
@@ -234,8 +214,12 @@ export class ExternalVideosController extends BaseController {
         return;
       }
 
+      const stats = fs.statSync(manifestPath);
       const fileStream = fs.createReadStream(manifestPath);
-      void reply.header('Content-Type', 'application/vnd.apple.mpegurl').send(fileStream);
+      void reply
+        .header('Content-Type', 'application/vnd.apple.mpegurl')
+        .header('Content-Length', stats.size)
+        .send(fileStream);
     } catch (error) {
       this.logger.error('Get adaptive manifest failed', error instanceof Error ? error : null);
       void reply.status(404).send('video not found');
@@ -279,8 +263,12 @@ export class ExternalVideosController extends BaseController {
       // Track bandwidth asynchronously
       this.trackSegmentBandwidth(segmentPath, videoId);
 
+      const stats = fs.statSync(segmentPath);
       const fileStream = fs.createReadStream(segmentPath);
-      void reply.header('Content-Type', 'video/mp2t').send(fileStream);
+      void reply
+        .header('Content-Type', 'video/mp2t')
+        .header('Content-Length', stats.size)
+        .send(fileStream);
     } catch (error) {
       this.logger.error('Get adaptive segment failed', error instanceof Error ? error : null);
       void reply.status(404).send('video not found');

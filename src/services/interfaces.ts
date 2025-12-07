@@ -425,6 +425,9 @@ export interface ICommentService {
 export interface SignInInput {
   username: string;
   password: string;
+  moarTubeNodeHttpProtocol: string;
+  moarTubeNodeIp: string;
+  moarTubeNodePort: number;
   rememberMe?: boolean;
 }
 

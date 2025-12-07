@@ -12,7 +12,6 @@ import {
   formatSchema,
   resolutionSchema,
   manifestTypeSchema,
-  searchTermSchema,
   sortTermSchema,
   tagTermSchema,
   tagLimitSchema,
@@ -24,6 +23,7 @@ import {
   reportEmailSchema,
   reportTypeSchema,
   reportMessageSchema,
+  searchTermSchemaOptional,
 } from './common.js';
 
 // ============================================================================
@@ -78,7 +78,7 @@ export type VideoAdaptiveManifestParams = z.infer<typeof videoAdaptiveManifestPa
  * Video search query parameters schema
  */
 export const videoSearchQuerySchema = z.object({
-  searchTerm: searchTermSchema,
+  searchTerm: searchTermSchemaOptional,
   sortTerm: sortTermSchema,
   tagTerm: tagTermSchema,
   tagLimit: tagLimitSchema,
@@ -195,7 +195,7 @@ export type VideoIndexRemoveBody = z.infer<typeof videoIndexRemoveBodySchema>;
  * Video lengths request body schema
  */
 export const videoLengthsBodySchema = z.object({
-  lengthSeconds: z.coerce.number().int().min(0),
+  lengthSeconds: z.coerce.number().min(0).transform(Math.floor),
   lengthTimestamp: z.string(),
 });
 

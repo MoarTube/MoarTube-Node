@@ -70,18 +70,18 @@ export class WatchEmbedController extends BaseController {
 
       // Build video data for template
       const videoData = {
-        videoId: video.videoId,
+        video_id: video.video_id,
         title: video.title,
         description: video.description,
         tags: video.tags,
-        lengthSeconds: video.lengthSeconds,
-        lengthTimestamp: video.lengthTimestamp,
+        length_seconds: video.length_seconds,
+        length_timestamp: video.length_timestamp,
         views: video.views,
         likes: video.likes,
         dislikes: video.dislikes,
-        isPublished: video.isPublished,
-        isLive: video.isLive,
-        isStreaming: video.isStreaming,
+        is_published: video.is_published,
+        is_live: video.is_live,
+        is_streaming: video.is_streaming,
         outputs: video.outputs,
       };
 
@@ -144,10 +144,10 @@ export class WatchEmbedController extends BaseController {
       const replyWithView = reply as FastifyReplyWithView;
 
       const model = {
-        videoId: video.videoId,
-        isLiveChatEnabled: video.isLiveChatEnabled,
-        isLive: video.isLive,
-        isStreaming: video.isStreaming,
+        videoId: video.video_id,
+        isLiveChatEnabled: video.is_live_chat_enabled,
+        isLive: video.is_live,
+        isStreaming: video.is_streaming,
         externalResourcesBaseUrl,
         links,
         cryptoWalletAddresses,

@@ -38,7 +38,7 @@ export class VideosRepository extends BaseRepository {
    * @returns The video record or null if not found
    */
   async findById(videoId: string): Promise<DrizzleVideo | null> {
-    const result = await this.db.select().from(videos).where(eq(videos.videoId, videoId)).limit(1);
+    const result = await this.db.select().from(videos).where(eq(videos.video_id, videoId)).limit(1);
     return result[0] ?? null;
   }
 
@@ -67,7 +67,7 @@ export class VideosRepository extends BaseRepository {
     return this.db
       .select()
       .from(videos)
-      .where(eq(videos.isPublished, true))
+      .where(eq(videos.is_published, true))
       .orderBy(sortDir(sortField))
       .limit(limit)
       .offset(offset);
@@ -141,7 +141,7 @@ export class VideosRepository extends BaseRepository {
     const result = await this.db
       .update(videos)
       .set(data)
-      .where(eq(videos.videoId, videoId))
+      .where(eq(videos.video_id, videoId))
       .returning();
     return result[0] ?? null;
   }
@@ -153,7 +153,7 @@ export class VideosRepository extends BaseRepository {
    * @returns true if deleted, false if not found
    */
   async delete(videoId: string): Promise<boolean> {
-    const result = await this.db.delete(videos).where(eq(videos.videoId, videoId)).returning();
+    const result = await this.db.delete(videos).where(eq(videos.video_id, videoId)).returning();
     return result.length > 0;
   }
 
@@ -166,7 +166,7 @@ export class VideosRepository extends BaseRepository {
     await this.db
       .update(videos)
       .set({ views: sql`${videos.views} + 1` })
-      .where(eq(videos.videoId, videoId));
+      .where(eq(videos.video_id, videoId));
   }
 
   /**
@@ -182,9 +182,9 @@ export class VideosRepository extends BaseRepository {
       .set({
         views: sql`${videos.views} + ${count}`,
         // Mark index as outdated if video is indexed (matches JS behavior)
-        isIndexOutdated: sql`CASE WHEN ${videos.isIndexed} = 1 THEN 1 ELSE ${videos.isIndexOutdated} END`,
+        is_index_outdated: sql`CASE WHEN ${videos.is_indexed} = 1 THEN 1 ELSE ${videos.is_index_outdated} END`,
       })
-      .where(eq(videos.videoId, videoId));
+      .where(eq(videos.video_id, videoId));
   }
 
   /**
@@ -196,7 +196,7 @@ export class VideosRepository extends BaseRepository {
     await this.db
       .update(videos)
       .set({ likes: sql`${videos.likes} + 1` })
-      .where(eq(videos.videoId, videoId));
+      .where(eq(videos.video_id, videoId));
   }
 
   /**
@@ -208,7 +208,7 @@ export class VideosRepository extends BaseRepository {
     await this.db
       .update(videos)
       .set({ dislikes: sql`${videos.dislikes} + 1` })
-      .where(eq(videos.videoId, videoId));
+      .where(eq(videos.video_id, videoId));
   }
 
   /**
@@ -220,7 +220,7 @@ export class VideosRepository extends BaseRepository {
     await this.db
       .update(videos)
       .set({ comments: sql`${videos.comments} + 1` })
-      .where(eq(videos.videoId, videoId));
+      .where(eq(videos.video_id, videoId));
   }
 
   /**
@@ -232,7 +232,7 @@ export class VideosRepository extends BaseRepository {
     await this.db
       .update(videos)
       .set({ comments: sql`${videos.comments} - 1` })
-      .where(eq(videos.videoId, videoId));
+      .where(eq(videos.video_id, videoId));
   }
 
   /**
@@ -242,7 +242,7 @@ export class VideosRepository extends BaseRepository {
    * @param bandwidth - The new bandwidth value
    */
   async updateBandwidth(videoId: string, bandwidth: number): Promise<void> {
-    await this.db.update(videos).set({ bandwidth }).where(eq(videos.videoId, videoId));
+    await this.db.update(videos).set({ bandwidth }).where(eq(videos.video_id, videoId));
   }
 
   /**
@@ -254,8 +254,8 @@ export class VideosRepository extends BaseRepository {
     return this.db
       .select()
       .from(videos)
-      .where(eq(videos.isStreaming, true))
-      .orderBy(desc(videos.creationTimestamp));
+      .where(eq(videos.is_streaming, true))
+      .orderBy(desc(videos.creation_timestamp));
   }
 
   /**
@@ -267,8 +267,8 @@ export class VideosRepository extends BaseRepository {
     return this.db
       .select()
       .from(videos)
-      .where(eq(videos.isIndexed, true))
-      .orderBy(desc(videos.creationTimestamp));
+      .where(eq(videos.is_indexed, true))
+      .orderBy(desc(videos.creation_timestamp));
   }
 
   /**
@@ -282,8 +282,8 @@ export class VideosRepository extends BaseRepository {
       .from(videos)
       .where(
         and(
-          eq(videos.isPublished, true),
-          or(eq(videos.isIndexed, false), eq(videos.isIndexOutdated, true))
+          eq(videos.is_published, true),
+          or(eq(videos.is_indexed, false), eq(videos.is_index_outdated, true))
         )
       );
   }
@@ -295,7 +295,10 @@ export class VideosRepository extends BaseRepository {
    * to signal that indexed videos need to be re-indexed.
    */
   async markAllIndexedAsOutdated(): Promise<void> {
-    await this.db.update(videos).set({ isIndexOutdated: true }).where(eq(videos.isIndexed, true));
+    await this.db
+      .update(videos)
+      .set({ is_index_outdated: true })
+      .where(eq(videos.is_indexed, true));
   }
 
   /**
@@ -307,7 +310,7 @@ export class VideosRepository extends BaseRepository {
     | typeof videos.views
     | typeof videos.likes
     | typeof videos.title
-    | typeof videos.creationTimestamp {
+    | typeof videos.creation_timestamp {
     switch (sortBy) {
       case 'views':
         return videos.views;
@@ -317,7 +320,7 @@ export class VideosRepository extends BaseRepository {
         return videos.title;
       case 'creation_timestamp':
       default:
-        return videos.creationTimestamp;
+        return videos.creation_timestamp;
     }
   }
 
@@ -332,15 +335,15 @@ export class VideosRepository extends BaseRepository {
     const conditions = [];
 
     if (options.isPublished !== undefined) {
-      conditions.push(eq(videos.isPublished, options.isPublished));
+      conditions.push(eq(videos.is_published, options.isPublished));
     }
 
     if (options.isStreaming !== undefined) {
-      conditions.push(eq(videos.isStreaming, options.isStreaming));
+      conditions.push(eq(videos.is_streaming, options.isStreaming));
     }
 
     if (options.isFinalized !== undefined) {
-      conditions.push(eq(videos.isFinalized, options.isFinalized));
+      conditions.push(eq(videos.is_finalized, options.isFinalized));
     }
 
     if (options.search !== undefined && options.search !== '') {

@@ -646,11 +646,11 @@ export class SettingsController extends BaseController {
    * Rewrite manifest URLs for a single video
    */
   private rewriteVideoManifests(
-    video: { videoId: string; outputs?: string | null },
+    video: { video_id: string; outputs?: string | null },
     videosDirectoryPath: string,
     externalVideosBaseUrl: string
   ): void {
-    const { videoId, outputs: outputsJson } = video;
+    const { video_id: videoId, outputs: outputsJson } = video;
 
     if (outputsJson === undefined || outputsJson === null || outputsJson === '') {
       return;

@@ -193,11 +193,11 @@ export class WatchController extends BaseController {
       recommendedVideosData: {
         isError: false as const,
         recommendedVideos: recommendedVideos.map((v) => ({
-          videoId: v.videoId,
+          videoId: v.video_id,
           title: v.title,
           tags: v.tags,
           views: v.views,
-          creationTimestamp: v.creationTimestamp,
+          creationTimestamp: v.creation_timestamp,
         })),
       },
       commentsData: {
@@ -247,7 +247,7 @@ export class WatchController extends BaseController {
     const adaptiveSources: VideoSource[] = [];
     const progressiveSources: VideoSource[] = [];
 
-    if (!video.isPublished && !video.isLive) {
+    if (!video.is_published && !video.is_live) {
       return { adaptiveSources, progressiveSources };
     }
 
@@ -257,7 +257,7 @@ export class WatchController extends BaseController {
       adaptiveSources.push({
         format: 'hls',
         resolution: 'auto',
-        url: `${externalVideosBaseUrl}/${video.videoId}/adaptive/dynamic/manifest-master.m3u8`,
+        url: `${externalVideosBaseUrl}/${video.video_id}/adaptive/dynamic/manifest-master.m3u8`,
       });
     }
 
@@ -267,7 +267,7 @@ export class WatchController extends BaseController {
         progressiveSources.push({
           format: 'mp4',
           resolution,
-          url: `${externalVideosBaseUrl}/${video.videoId}/progressive/${resolution}.mp4`,
+          url: `${externalVideosBaseUrl}/${video.video_id}/progressive/${resolution}.mp4`,
         });
       }
     }
@@ -300,19 +300,19 @@ export class WatchController extends BaseController {
     return {
       isError: false as const,
       video: {
-        videoId: video.videoId,
+        videoId: video.video_id,
         title: video.title,
         description: video.description,
         tags: video.tags,
         views: video.views,
         likes: video.likes,
         dislikes: video.dislikes,
-        isPublished: video.isPublished,
-        isStreaming: video.isLive,
-        isStreamed: video.isStreamed,
-        isCommentsEnabled: video.isCommentsEnabled,
-        isReportsEnabled: video.isReportsEnabled,
-        creationTimestamp: video.creationTimestamp,
+        isPublished: video.is_published,
+        isStreaming: video.is_streaming,
+        isStreamed: video.is_streamed,
+        isCommentsEnabled: video.is_comments_enabled,
+        isReportsEnabled: video.is_reports_enabled,
+        creationTimestamp: video.creation_timestamp,
         adaptiveSources,
         progressiveSources,
       },
@@ -329,10 +329,10 @@ export class WatchController extends BaseController {
     progressiveSources: VideoSource[]
   ): void {
     const hasSources = adaptiveSources.length > 0 || progressiveSources.length > 0;
-    const isAvailable = video.isPublished || video.isLive;
+    const isAvailable = video.is_published || video.is_live;
 
     if (!hasSources || !isAvailable) {
-      const cacheValue = video.isStreamed ? 'public, s-maxage=86400' : 'no-store';
+      const cacheValue = video.is_streamed ? 'public, s-maxage=86400' : 'no-store';
       void reply.header('Cache-Control', cacheValue);
     } else {
       void reply.header('Cache-Control', 'public, s-maxage=86400');

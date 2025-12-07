@@ -601,7 +601,7 @@ export class VideosController extends BaseController {
       throw new NotFoundError('Video not found');
     }
 
-    if (!video.isLikesEnabled) {
+    if (!video.is_likes_enabled) {
       throw new ForbiddenError('Likes are currently disabled for this video');
     }
 
@@ -646,7 +646,7 @@ export class VideosController extends BaseController {
       throw new NotFoundError('Video not found');
     }
 
-    if (!video.isDislikesEnabled) {
+    if (!video.is_dislikes_enabled) {
       throw new ForbiddenError('Dislikes are currently disabled for this video');
     }
 
@@ -689,7 +689,7 @@ export class VideosController extends BaseController {
     if (!video) {
       throw new NotFoundError('this video no longer exists');
     }
-    if (!video.isReportsEnabled) {
+    if (!video.is_reports_enabled) {
       throw new BadRequestError('reporting is currently disabled for this video');
     }
 
@@ -714,7 +714,7 @@ export class VideosController extends BaseController {
     // Create the video report
     await reportService.createVideoReport({
       videoId,
-      videoTimestamp: video.creationTimestamp,
+      videoTimestamp: video.creation_timestamp,
       email,
       type: reportType,
       message,
@@ -773,7 +773,7 @@ export class VideosController extends BaseController {
     if (!video) {
       throw new NotFoundError(`Video not found: ${videoId}`);
     }
-    if (!video.isCommentsEnabled) {
+    if (!video.is_comments_enabled) {
       throw new BadRequestError('commenting is currently disabled for this video');
     }
 
@@ -1050,7 +1050,7 @@ export class VideosController extends BaseController {
       throw new NotFoundError(`Video not found: ${videoId}`);
     }
 
-    if (!video.isIndexed) {
+    if (!video.is_indexed) {
       throw new BadRequestError('Video is not indexed');
     }
 

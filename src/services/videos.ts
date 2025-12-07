@@ -196,43 +196,43 @@ export class VideosService extends BaseService implements IVideoService {
 
       // Create video record
       const videoData: DrizzleNewVideo = {
-        videoId,
-        sourceFileExtension: '',
+        video_id: videoId,
+        source_file_extension: '',
         title: data.title,
         description: data.description,
         tags: tagsSanitized,
-        lengthSeconds: 0,
-        lengthTimestamp: '',
+        length_seconds: 0,
+        length_timestamp: '',
         views: 0,
         comments: 0,
         likes: 0,
         dislikes: 0,
         bandwidth: 0,
-        isImporting: true,
-        isImported: false,
-        isPublishing: false,
-        isPublished: false,
-        isStreaming: false,
-        isStreamed: false,
-        isStreamRecordedRemotely: false,
-        isStreamRecordedLocally: false,
-        isLive: false,
-        isIndexing: false,
-        isIndexed: false,
-        isIndexOutdated: false,
-        isError: false,
-        isFinalized: false,
-        isHidden: false,
-        isPassworded: false,
+        is_importing: true,
+        is_imported: false,
+        is_publishing: false,
+        is_published: false,
+        is_streaming: false,
+        is_streamed: false,
+        is_stream_recorded_remotely: false,
+        is_stream_recorded_locally: false,
+        is_live: false,
+        is_indexing: false,
+        is_indexed: false,
+        is_index_outdated: false,
+        is_error: false,
+        is_finalized: false,
+        is_hidden: false,
+        is_passworded: false,
         password: '',
-        isCommentsEnabled: true,
-        isLikesEnabled: true,
-        isDislikesEnabled: true,
-        isReportsEnabled: true,
-        isLiveChatEnabled: true,
+        is_comments_enabled: true,
+        is_likes_enabled: true,
+        is_dislikes_enabled: true,
+        is_reports_enabled: true,
+        is_live_chat_enabled: true,
         outputs,
         meta,
-        creationTimestamp,
+        creation_timestamp: creationTimestamp,
       };
 
       await this.videoRepository.create(videoData);
@@ -355,7 +355,7 @@ export class VideosService extends BaseService implements IVideoService {
    * Mark video as importing
    */
   async setImporting(videoId: string, isImporting: boolean): Promise<void> {
-    await this.videoRepository.update(videoId, { isImporting });
+    await this.videoRepository.update(videoId, { is_importing: isImporting });
   }
 
   /**
@@ -363,8 +363,8 @@ export class VideosService extends BaseService implements IVideoService {
    */
   async setImported(videoId: string): Promise<void> {
     await this.videoRepository.update(videoId, {
-      isImporting: false,
-      isImported: true,
+      is_importing: false,
+      is_imported: true,
     });
   }
 
@@ -372,7 +372,7 @@ export class VideosService extends BaseService implements IVideoService {
    * Mark video as publishing
    */
   async setPublishing(videoId: string, isPublishing: boolean): Promise<void> {
-    await this.videoRepository.update(videoId, { isPublishing });
+    await this.videoRepository.update(videoId, { is_publishing: isPublishing });
   }
 
   /**
@@ -380,8 +380,8 @@ export class VideosService extends BaseService implements IVideoService {
    */
   async publishVideo(videoId: string): Promise<void> {
     await this.videoRepository.update(videoId, {
-      isPublishing: false,
-      isPublished: true,
+      is_publishing: false,
+      is_published: true,
     });
 
     // Purge Cloudflare cache after publishing
@@ -403,7 +403,7 @@ export class VideosService extends BaseService implements IVideoService {
    */
   async unpublishVideo(videoId: string): Promise<void> {
     await this.videoRepository.update(videoId, {
-      isPublished: false,
+      is_published: false,
     });
 
     // Purge Cloudflare cache after unpublishing
@@ -500,7 +500,7 @@ export class VideosService extends BaseService implements IVideoService {
    */
   async finalizeVideo(videoId: string): Promise<void> {
     await this.videoRepository.update(videoId, {
-      isFinalized: true,
+      is_finalized: true,
     });
 
     this.logger.info('Video finalized', { videoId });
@@ -510,7 +510,7 @@ export class VideosService extends BaseService implements IVideoService {
    * Set video error state
    */
   async setError(videoId: string, isError: boolean): Promise<void> {
-    await this.videoRepository.update(videoId, { isError });
+    await this.videoRepository.update(videoId, { is_error: isError });
 
     if (isError) {
       this.logger.warn('Video marked as error', { videoId });
@@ -529,9 +529,9 @@ export class VideosService extends BaseService implements IVideoService {
    */
   async setIndexed(videoId: string, isIndexed: boolean): Promise<void> {
     await this.videoRepository.update(videoId, {
-      isIndexed,
-      isIndexOutdated: false,
-      isIndexing: false,
+      is_indexed: isIndexed,
+      is_index_outdated: false,
+      is_indexing: false,
     });
   }
 
@@ -540,7 +540,7 @@ export class VideosService extends BaseService implements IVideoService {
    */
   async setIndexOutdated(videoId: string): Promise<void> {
     await this.videoRepository.update(videoId, {
-      isIndexOutdated: true,
+      is_index_outdated: true,
     });
   }
 
@@ -557,9 +557,9 @@ export class VideosService extends BaseService implements IVideoService {
       }
 
       // Only mark as outdated if currently indexed
-      if (video.isIndexed) {
+      if (video.is_indexed) {
         await this.videoRepository.update(videoId, {
-          isIndexOutdated: true,
+          is_index_outdated: true,
         });
 
         // Purge Cloudflare cache for images
@@ -577,7 +577,7 @@ export class VideosService extends BaseService implements IVideoService {
    */
   async setSourceFileExtension(videoId: string, extension: string): Promise<void> {
     await this.videoRepository.update(videoId, {
-      sourceFileExtension: extension,
+      source_file_extension: extension,
     });
   }
 
@@ -599,8 +599,8 @@ export class VideosService extends BaseService implements IVideoService {
     };
 
     // Mark index as outdated if video is indexed
-    if (video?.isIndexed === true) {
-      updates['isIndexOutdated'] = true;
+    if (video?.is_indexed === true) {
+      updates['is_index_outdated'] = true;
     }
 
     await this.videoRepository.update(videoId, updates);
@@ -698,7 +698,7 @@ export class VideosService extends BaseService implements IVideoService {
         publishes.push({
           format,
           resolution,
-          isPublished: video.isPublished && (outputs[format]?.includes(resolution) ?? false),
+          isPublished: video.is_published && (outputs[format]?.includes(resolution) ?? false),
         });
       }
     }
@@ -778,7 +778,7 @@ export class VideosService extends BaseService implements IVideoService {
    */
   async getSourceFileExtension(videoId: string): Promise<string | null> {
     const video = await this.videoRepository.findById(videoId);
-    return video?.sourceFileExtension ?? null;
+    return video?.source_file_extension ?? null;
   }
 
   /**
@@ -804,7 +804,7 @@ export class VideosService extends BaseService implements IVideoService {
       });
 
       // Determine manifest type based on streaming status
-      const manifestType = video.isStreaming ? 'dynamic' : 'static';
+      const manifestType = video.is_streaming ? 'dynamic' : 'static';
 
       // Get external videos base URL
       const config = getConfig();
@@ -833,13 +833,13 @@ export class VideosService extends BaseService implements IVideoService {
         views: video.views,
         likes: video.likes,
         dislikes: video.dislikes,
-        isPublished: video.isPublished,
-        isPublishing: video.isPublishing,
-        isLive: video.isLive,
-        isStreaming: video.isStreaming,
-        isStreamed: video.isStreamed,
+        isPublished: video.is_published,
+        isPublishing: video.is_publishing,
+        isLive: video.is_live,
+        isStreaming: video.is_streaming,
+        isStreamed: video.is_streamed,
         comments: video.comments,
-        creationTimestamp: video.creationTimestamp,
+        creationTimestamp: video.creation_timestamp,
         isHlsAvailable: (outputs['m3u8']?.length ?? 0) > 0,
         isMp4Available: (outputs['mp4']?.length ?? 0) > 0,
         isWebmAvailable: (outputs['webm']?.length ?? 0) > 0,
@@ -862,11 +862,11 @@ export class VideosService extends BaseService implements IVideoService {
       }
 
       return {
-        isCommentsEnabled: video.isCommentsEnabled,
-        isLikesEnabled: video.isLikesEnabled,
-        isDislikesEnabled: video.isDislikesEnabled,
-        isReportsEnabled: video.isReportsEnabled,
-        isLiveChatEnabled: video.isLiveChatEnabled,
+        isCommentsEnabled: video.is_comments_enabled,
+        isLikesEnabled: video.is_likes_enabled,
+        isDislikesEnabled: video.is_dislikes_enabled,
+        isReportsEnabled: video.is_reports_enabled,
+        isLiveChatEnabled: video.is_live_chat_enabled,
       };
     });
   }
@@ -916,30 +916,30 @@ export class VideosService extends BaseService implements IVideoService {
     // Build video alias URL if indexed
     let videoAliasUrl = 'MoarTube Aliaser link unavailable';
 
-    if (video.isIndexed && nodeSettings.nodeId) {
+    if (video.is_indexed && nodeSettings.nodeId) {
       const isDeveloperMode = config.runtime.isDeveloperMode;
       if (isDeveloperMode) {
         // Use localhost for development
         const aliaserPort = config.urls.getAliaserConfig().port;
-        videoAliasUrl = `http://localhost:${String(aliaserPort)}/nodes/${nodeSettings.nodeId}/videos/${video.videoId}`;
+        videoAliasUrl = `http://localhost:${String(aliaserPort)}/nodes/${nodeSettings.nodeId}/videos/${video.video_id}`;
       } else {
-        videoAliasUrl = `https://moartu.be/nodes/${nodeSettings.nodeId}/videos/${video.videoId}`;
+        videoAliasUrl = `https://moartu.be/nodes/${nodeSettings.nodeId}/videos/${video.video_id}`;
       }
     }
 
     return {
-      videoId: video.videoId,
+      videoId: video.video_id,
       title: video.title,
       description: video.description,
       tags: video.tags,
       views: video.views,
-      isIndexed: video.isIndexed,
-      isPublished: video.isPublished,
-      isLive: video.isLive,
-      isStreaming: video.isStreaming,
-      isFinalized: video.isFinalized,
-      isStreamRecordedRemotely: video.isStreamRecordedRemotely,
-      timestamp: video.creationTimestamp,
+      isIndexed: video.is_indexed,
+      isPublished: video.is_published,
+      isLive: video.is_live,
+      isStreaming: video.is_streaming,
+      isFinalized: video.is_finalized,
+      isStreamRecordedRemotely: video.is_stream_recorded_remotely,
+      timestamp: video.creation_timestamp,
       videoAliasUrl,
       outputs,
       meta,
@@ -958,7 +958,7 @@ export class VideosService extends BaseService implements IVideoService {
       });
 
       // Filter to only published or live videos
-      return videos.filter((v) => v.isPublished || v.isLive);
+      return videos.filter((v) => v.is_published || v.is_live);
     });
   }
 
@@ -1016,7 +1016,7 @@ export class VideosService extends BaseService implements IVideoService {
         return null;
       }
 
-      if (!video.isIndexed) {
+      if (!video.is_indexed) {
         throw new Error('Video is not indexed');
       }
 
@@ -1066,7 +1066,7 @@ export class VideosService extends BaseService implements IVideoService {
           publishes.push({
             format,
             resolution,
-            isPublished: video.isPublished && (outputs[format]?.includes(resolution) ?? false),
+            isPublished: video.is_published && (outputs[format]?.includes(resolution) ?? false),
           });
         }
       }
@@ -1191,21 +1191,21 @@ export class VideosService extends BaseService implements IVideoService {
 
         // Safety checks - don't delete videos in active states
         const isInActiveState =
-          video.isImporting ||
-          video.isPublishing ||
-          video.isStreaming ||
-          video.isIndexing ||
-          (!force && video.isIndexed);
+          video.is_importing ||
+          video.is_publishing ||
+          video.is_streaming ||
+          video.is_indexing ||
+          (!force && video.is_indexed);
 
         if (isInActiveState) {
           nonDeletedVideoIds.push(videoId);
           this.logger.debug('Skipping video deletion - in active state', {
             videoId,
-            isImporting: video.isImporting,
-            isPublishing: video.isPublishing,
-            isStreaming: video.isStreaming,
-            isIndexing: video.isIndexing,
-            isIndexed: video.isIndexed,
+            isImporting: video.is_importing,
+            isPublishing: video.is_publishing,
+            isStreaming: video.is_streaming,
+            isIndexing: video.is_indexing,
+            isIndexed: video.is_indexed,
           });
           continue;
         }
@@ -1255,30 +1255,30 @@ export class VideosService extends BaseService implements IVideoService {
 
         // Safety checks - don't finalize videos in active states
         const isInActiveState =
-          video.isImporting ||
-          video.isPublishing ||
-          video.isStreaming ||
-          video.isIndexing ||
-          (!force && video.isIndexed);
+          video.is_importing ||
+          video.is_publishing ||
+          video.is_streaming ||
+          video.is_indexing ||
+          (!force && video.is_indexed);
 
         if (isInActiveState) {
           nonFinalizedVideoIds.push(videoId);
           this.logger.debug('Skipping video finalize - in active state', {
             videoId,
-            isImporting: video.isImporting,
-            isPublishing: video.isPublishing,
-            isStreaming: video.isStreaming,
-            isIndexing: video.isIndexing,
-            isIndexed: video.isIndexed,
+            is_importing: video.is_importing,
+            is_publishing: video.is_publishing,
+            is_streaming: video.is_streaming,
+            is_indexing: video.is_indexing,
+            is_indexed: video.is_indexed,
           });
           continue;
         }
 
         // Finalize = stop any active operations and mark as ready
         await this.videoRepository.update(videoId, {
-          isImporting: false,
-          isPublishing: false,
-          isStreaming: false,
+          is_importing: false,
+          is_publishing: false,
+          is_streaming: false,
         });
 
         finalizedVideoIds.push(videoId);
@@ -1438,7 +1438,7 @@ export class VideosService extends BaseService implements IVideoService {
         throw new Error('Video not found');
       }
 
-      if (!video.isPublished && !video.isLive) {
+      if (!video.is_published && !video.is_live) {
         throw new Error('Video must be published or live to be indexed');
       }
 
@@ -1464,7 +1464,7 @@ export class VideosService extends BaseService implements IVideoService {
 
       // Prepare submission data
       const indexData: VideoIndexData = {
-        videoId: video.videoId,
+        videoId: video.video_id,
         nodeId: nodeSettings.nodeId,
         nodeName: nodeSettings.nodeName,
         nodeAbout: nodeSettings.nodeAbout,
@@ -1474,10 +1474,10 @@ export class VideosService extends BaseService implements IVideoService {
         title: video.title,
         tags: video.tags,
         views: video.views,
-        isLive: video.isLive,
-        isStreaming: video.isStreaming,
-        lengthSeconds: video.lengthSeconds,
-        creationTimestamp: video.creationTimestamp,
+        isLive: video.is_live,
+        isStreaming: video.is_streaming,
+        lengthSeconds: video.length_seconds,
+        creationTimestamp: video.creation_timestamp,
         containsAdultContent: options.containsAdultContent,
         nodeIconPngBase64,
         nodeAvatarPngBase64,
@@ -1487,14 +1487,14 @@ export class VideosService extends BaseService implements IVideoService {
       };
 
       // Mark video as indexing
-      await this.videoRepository.update(videoId, { isIndexing: true });
+      await this.videoRepository.update(videoId, { is_indexing: true });
 
       // Submit to indexer
       const result = await this.indexerService.submitVideoToIndex(indexData);
 
       if (result.isError) {
         // Reset indexing state on error
-        await this.videoRepository.update(videoId, { isIndexing: false });
+        await this.videoRepository.update(videoId, { is_indexing: false });
 
         // Check for 413 (request too large)
         if (result.statusCode === 413) {
@@ -1513,9 +1513,9 @@ export class VideosService extends BaseService implements IVideoService {
 
       // Mark video as indexed
       await this.videoRepository.update(videoId, {
-        isIndexing: false,
-        isIndexed: true,
-        isIndexOutdated: false,
+        is_indexing: false,
+        is_indexed: true,
+        is_index_outdated: false,
       });
 
       this.logger.info('Video added to index', { videoId });
@@ -1562,8 +1562,8 @@ export class VideosService extends BaseService implements IVideoService {
 
       // Update video record
       await this.videoRepository.update(videoId, {
-        isIndexed: false,
-        isIndexOutdated: false,
+        is_indexed: false,
+        is_index_outdated: false,
       });
 
       this.logger.info('Video removed from index', { videoId });
@@ -1680,39 +1680,39 @@ export class VideosService extends BaseService implements IVideoService {
       updates.tags = this.sanitizeWhitespace(data.tags);
     }
     if (data.isPublished !== undefined) {
-      updates.isPublished = data.isPublished;
+      updates.is_published = data.isPublished;
     }
     if (data.isHidden !== undefined) {
-      updates.isHidden = data.isHidden;
+      updates.is_hidden = data.isHidden;
     }
     if (data.isPassworded !== undefined) {
-      updates.isPassworded = data.isPassworded;
+      updates.is_passworded = data.isPassworded;
     }
     if (data.password !== undefined) {
       updates.password = data.password;
     }
     if (data.isCommentsEnabled !== undefined) {
-      updates.isCommentsEnabled = data.isCommentsEnabled;
+      updates.is_comments_enabled = data.isCommentsEnabled;
     }
     if (data.isLikesEnabled !== undefined) {
-      updates.isLikesEnabled = data.isLikesEnabled;
+      updates.is_likes_enabled = data.isLikesEnabled;
     }
     if (data.isDislikesEnabled !== undefined) {
-      updates.isDislikesEnabled = data.isDislikesEnabled;
+      updates.is_dislikes_enabled = data.isDislikesEnabled;
     }
     if (data.isReportsEnabled !== undefined) {
-      updates.isReportsEnabled = data.isReportsEnabled;
+      updates.is_reports_enabled = data.isReportsEnabled;
     }
     if (data.isLiveChatEnabled !== undefined) {
-      updates.isLiveChatEnabled = data.isLiveChatEnabled;
+      updates.is_live_chat_enabled = data.isLiveChatEnabled;
     }
 
     // Mark index as outdated if metadata changed and video is indexed
     if (
-      existingVideo.isIndexed &&
+      existingVideo.is_indexed &&
       (data.title !== undefined || data.description !== undefined || data.tags !== undefined)
     ) {
-      updates.isIndexOutdated = true;
+      updates.is_index_outdated = true;
     }
 
     return updates;

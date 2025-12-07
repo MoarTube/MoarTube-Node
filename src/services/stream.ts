@@ -95,12 +95,12 @@ export class StreamService extends BaseService implements IStreamService {
       const isRecordedLocally = config?.isRecordedLocally ?? false;
 
       await this.videoRepository.update(videoId, {
-        isStreaming: true,
-        isStreamed: false,
-        isLive: true,
-        isStreamRecordedRemotely: isRecordedRemotely,
-        isStreamRecordedLocally: isRecordedLocally,
-        isError: false,
+        is_streaming: true,
+        is_streamed: false,
+        is_live: true,
+        is_stream_recorded_remotely: isRecordedRemotely,
+        is_stream_recorded_locally: isRecordedLocally,
+        is_error: false,
       });
 
       this.logger.info('Stream started', { videoId, isRecordedRemotely, isRecordedLocally });
@@ -125,9 +125,9 @@ export class StreamService extends BaseService implements IStreamService {
       }
 
       await this.videoRepository.update(videoId, {
-        isStreaming: false,
-        isLive: false,
-        isStreamed: true,
+        is_streaming: false,
+        is_live: false,
+        is_streamed: true,
       });
 
       this.logger.info('Stream stopped', { videoId });
@@ -146,7 +146,7 @@ export class StreamService extends BaseService implements IStreamService {
    * Set stream as live (receiving data)
    */
   async setLive(videoId: string, isLive: boolean): Promise<void> {
-    await this.videoRepository.update(videoId, { isLive });
+    await this.videoRepository.update(videoId, { is_live: isLive });
 
     this.broadcastStreamEvent('stream_live_status', {
       videoId,
@@ -166,7 +166,7 @@ export class StreamService extends BaseService implements IStreamService {
    */
   async isStreaming(videoId: string): Promise<boolean> {
     const video = await this.videoRepository.findById(videoId);
-    return video?.isStreaming ?? false;
+    return video?.is_streaming ?? false;
   }
 
   /**
@@ -174,9 +174,9 @@ export class StreamService extends BaseService implements IStreamService {
    */
   async setStreamed(videoId: string): Promise<void> {
     await this.videoRepository.update(videoId, {
-      isStreaming: false,
-      isStreamed: true,
-      isLive: false,
+      is_streaming: false,
+      is_streamed: true,
+      is_live: false,
     });
 
     this.logger.info('Stream marked as completed', { videoId });
@@ -232,24 +232,24 @@ export class StreamService extends BaseService implements IStreamService {
           title: options.title,
           description: options.description,
           tags: tagsSanitized,
-          lengthSeconds: 0,
-          lengthTimestamp: '',
+          length_seconds: 0,
+          length_timestamp: '',
           views: 0,
           comments: 0,
           likes: 0,
           dislikes: 0,
           bandwidth: 0,
-          isPublishing: false,
-          isPublished: false,
-          isStreaming: true,
-          isStreamed: false,
-          isStreamRecordedRemotely: options.isRecordingStreamRemotely,
-          isStreamRecordedLocally: options.isRecordingStreamLocally,
-          isLive: true,
-          isError: false,
+          is_publishing: false,
+          is_published: false,
+          is_streaming: true,
+          is_streamed: false,
+          is_stream_recorded_remotely: options.isRecordingStreamRemotely,
+          is_stream_recorded_locally: options.isRecordingStreamLocally,
+          is_live: true,
+          is_error: false,
           outputs,
           meta: JSON.stringify(meta),
-          creationTimestamp: timestamp,
+          creation_timestamp: timestamp,
         });
 
         // Clear previous comments for resumed stream
@@ -261,43 +261,43 @@ export class StreamService extends BaseService implements IStreamService {
       } else {
         // Create new video record for stream
         const videoData: DrizzleNewVideo = {
-          videoId,
-          sourceFileExtension: '',
+          video_id: videoId,
+          source_file_extension: '',
           title: options.title,
           description: options.description,
           tags: tagsSanitized,
-          lengthSeconds: 0,
-          lengthTimestamp: '',
+          length_seconds: 0,
+          length_timestamp: '',
           views: 0,
           comments: 0,
           likes: 0,
           dislikes: 0,
           bandwidth: 0,
-          isImporting: false,
-          isImported: false,
-          isPublishing: false,
-          isPublished: false,
-          isStreaming: true,
-          isStreamed: false,
-          isStreamRecordedRemotely: options.isRecordingStreamRemotely,
-          isStreamRecordedLocally: options.isRecordingStreamLocally,
-          isLive: true,
-          isIndexing: false,
-          isIndexed: false,
-          isIndexOutdated: false,
-          isError: false,
-          isFinalized: false,
-          isHidden: false,
-          isPassworded: false,
+          is_importing: false,
+          is_imported: false,
+          is_publishing: false,
+          is_published: false,
+          is_streaming: true,
+          is_streamed: false,
+          is_stream_recorded_remotely: options.isRecordingStreamRemotely,
+          is_stream_recorded_locally: options.isRecordingStreamLocally,
+          is_live: true,
+          is_indexing: false,
+          is_indexed: false,
+          is_index_outdated: false,
+          is_error: false,
+          is_finalized: false,
+          is_hidden: false,
+          is_passworded: false,
           password: '',
-          isCommentsEnabled: true,
-          isLikesEnabled: true,
-          isDislikesEnabled: true,
-          isReportsEnabled: true,
-          isLiveChatEnabled: true,
+          is_comments_enabled: true,
+          is_likes_enabled: true,
+          is_dislikes_enabled: true,
+          is_reports_enabled: true,
+          is_live_chat_enabled: true,
           outputs,
           meta: JSON.stringify(meta),
-          creationTimestamp: timestamp,
+          creation_timestamp: timestamp,
         };
 
         await this.videoRepository.create(videoData);
