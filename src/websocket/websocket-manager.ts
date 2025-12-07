@@ -19,6 +19,7 @@ import { ChatMessageHandler } from './handlers/chat.js';
 import { LiveStreamHandler } from './handlers/stream.js';
 import { VideoStatusHandler } from './handlers/video-status.js';
 import { EchoHandler } from './handlers/echo.js';
+import { RegisterHandler } from './handlers/register.js';
 import { Logger, type ILogger } from '../utils/logger.js';
 
 /**
@@ -75,6 +76,7 @@ export class WebSocketManager {
     this.registerHandler(new LiveStreamHandler());
     this.registerHandler(new VideoStatusHandler());
     this.registerHandler(new EchoHandler());
+    this.registerHandler(new RegisterHandler());
   }
 
   /**

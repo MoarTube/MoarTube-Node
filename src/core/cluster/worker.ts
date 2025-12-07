@@ -6,6 +6,9 @@
 
 import cluster from 'node:cluster';
 import type { FastifyInstance } from 'fastify';
+import { WebSocketServer } from 'ws';
+import type { IncomingMessage } from 'node:http';
+import type { Duplex } from 'node:stream';
 import type { LiveStreamWatchingCountsTracker, LiveStreamWatchingCounts } from '../../types/ipc.js';
 import type { LiveStreamStatsMessage, WebSocketMessage } from '../../types/websocket.js';
 import { IPCChannel, type IPCLogger } from './ipc-channel.js';
@@ -41,6 +44,7 @@ export class ClusterWorker {
   private readonly logger: IPCLogger;
   private readonly wsManager: WebSocketManager;
   private app: FastifyInstance | null = null;
+  private wss: WebSocketServer | null = null;
   private isRunning = false;
 
   constructor(options: ClusterWorkerOptions = {}) {
@@ -90,6 +94,9 @@ export class ClusterWorker {
     try {
       await this.app.listen({ port, host: '0.0.0.0' });
       this.logger.info(`Worker ${String(cluster.worker?.id)} listening on port ${String(port)}`);
+
+      // Set up WebSocket server
+      this.setupWebSocketServer();
     } catch (err) {
       this.logger.error(`Worker ${String(cluster.worker?.id)} failed to start`, err as Error);
       process.exit(1);
@@ -97,6 +104,72 @@ export class ClusterWorker {
 
     this.isRunning = true;
     this.logger.info('Worker started');
+  }
+
+  /**
+   * Set up WebSocket server
+   */
+  private setupWebSocketServer(): void {
+    if (!this.app) {
+      throw new Error('Fastify app not initialized');
+    }
+
+    // Create WebSocket server
+    this.wss = new WebSocketServer({
+      noServer: true,
+      perMessageDeflate: false,
+    });
+
+    // Handle WebSocket connections
+    this.wss.on('connection', (ws) => {
+      this.logger.debug('WebSocket client connected');
+
+      // Add client to WebSocket manager
+      const client = this.wsManager.addClient(ws, 'viewer', false);
+
+      // Handle client disconnection
+      ws.on('close', () => {
+        this.logger.debug('WebSocket client disconnected');
+        this.wsManager.removeClient(client);
+      });
+
+      // Handle incoming messages
+      ws.on('message', (data) => {
+        // Convert RawData to Buffer
+        let bufferData: Buffer;
+        if (Buffer.isBuffer(data)) {
+          bufferData = data;
+        } else if (data instanceof ArrayBuffer) {
+          bufferData = Buffer.from(data);
+        } else if (Array.isArray(data)) {
+          // Handle array of Buffers/ArrayBuffers
+          bufferData = Buffer.concat(
+            data.map((item) => (Buffer.isBuffer(item) ? item : Buffer.from(item)))
+          );
+        } else {
+          // Handle string case
+          bufferData = Buffer.from(data as string);
+        }
+        this.wsManager.handleMessage(client, bufferData);
+      });
+    });
+
+    // Handle HTTP upgrade requests for WebSocket connections
+    const server = this.app.server;
+    server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+      if (!this.wss) {
+        socket.destroy();
+        return;
+      }
+
+      this.wss.handleUpgrade(request, socket, head, (ws) => {
+        if (this.wss) {
+          this.wss.emit('connection', ws, request);
+        }
+      });
+    });
+
+    this.logger.info('WebSocket server set up');
   }
 
   /**
@@ -112,6 +185,12 @@ export class ClusterWorker {
     // Close HTTP server
     if (this.app) {
       await this.app.close();
+    }
+
+    // Close WebSocket server
+    if (this.wss) {
+      this.wss.close();
+      this.wss = null;
     }
 
     // Close WebSocket connections

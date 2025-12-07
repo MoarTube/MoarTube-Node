@@ -33,8 +33,12 @@ export class EchoHandler extends WebSocketHandler {
     message: IncomingWebSocketMessage,
     context: HandlerContext
   ): void {
-    // Only authenticated/admin clients can send echo broadcasts
-    if (client.socketType !== 'admin' && client.isAuthenticated !== true) {
+    // Only authenticated clients or moartube_client can send echo broadcasts
+    if (
+      client.socketType !== 'admin' &&
+      client.socketType !== 'moartube_client' &&
+      client.isAuthenticated !== true
+    ) {
       context.log.warn('Unauthorized echo attempt', { clientId: client.clientId });
       return;
     }

@@ -33,6 +33,8 @@ export type WebSocketEventName =
   // Node events
   | 'node_name_update'
   | 'node_about_update'
+  // Registration events
+  | 'registered'
   // Echo event (generic broadcast)
   | 'echo';
 
@@ -43,7 +45,7 @@ export type WebSocketEventName =
 /**
  * Type of WebSocket client connection
  */
-export type WebSocketClientType = 'node_peer' | 'admin' | 'viewer';
+export type WebSocketClientType = 'node_peer' | 'admin' | 'viewer' | 'moartube_client';
 
 /**
  * Extended WebSocket with additional properties for MoarTube
