@@ -56,7 +56,7 @@ export class RegisterHandler extends WebSocketHandler {
     if (typeof jwtToken === 'string' && jwtToken.trim() !== '') {
       try {
         const config = getConfig();
-        jwt.verify(registerMessage.jwtToken, config.jwtSecret);
+        jwt.verify(jwtToken, config.jwtSecret);
         client.isAuthenticated = true;
       } catch (error) {
         client.isAuthenticated = false;
