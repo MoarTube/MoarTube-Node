@@ -197,6 +197,9 @@ export class WatchController extends BaseController {
           title: v.title,
           tags: v.tags,
           views: v.views,
+          isLive: v.is_live,
+          isStreaming: v.is_streaming,
+          lengthSeconds: v.length_seconds,
           creationTimestamp: v.creation_timestamp,
         })),
       },
@@ -251,9 +254,9 @@ export class WatchController extends BaseController {
       return { adaptiveSources, progressiveSources };
     }
 
-    const formats = this.parseVideoFormats(video);
+    const outputs = JSON.parse(video.outputs) as Record<string, unknown>;
 
-    if (formats['m3u8'] === true) {
+    if (outputs['m3u8'] === true) {
       adaptiveSources.push({
         format: 'hls',
         resolution: 'auto',
@@ -263,7 +266,7 @@ export class WatchController extends BaseController {
 
     const resolutions = ['2160p', '1440p', '1080p', '720p', '480p', '360p', '240p'];
     for (const resolution of resolutions) {
-      if (formats[`mp4_${resolution}`] === true) {
+      if (outputs[`mp4_${resolution}`] === true) {
         progressiveSources.push({
           format: 'mp4',
           resolution,
@@ -273,20 +276,6 @@ export class WatchController extends BaseController {
     }
 
     return { adaptiveSources, progressiveSources };
-  }
-
-  /**
-   * Parse video format metadata
-   */
-  private parseVideoFormats(video: DrizzleVideo): Record<string, unknown> {
-    if (video.meta === '') {
-      return {};
-    }
-    try {
-      return JSON.parse(video.meta) as Record<string, unknown>;
-    } catch {
-      return {};
-    }
   }
 
   /**

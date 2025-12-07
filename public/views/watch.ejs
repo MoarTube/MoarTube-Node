@@ -1427,13 +1427,13 @@ body {
 		}
 
 		function loadRecommendedVideo(recommendedVideo) {
-			const videoId = recommendedVideo.video_id;
+			const videoId = recommendedVideo.videoId;
 			const title = recommendedVideo.title;
 			const views = (videoId === VIDEO_ID ? VIEW_COUNT != null ? VIEW_COUNT : '...' : recommendedVideo.views);
-			const isLive = recommendedVideo.is_live;
-			const isStreaming = recommendedVideo.is_streaming;
-			const lengthSeconds = recommendedVideo.length_seconds;
-			const creationTimestamp = recommendedVideo.creation_timestamp;
+			const isLive = recommendedVideo.isLive;
+			const isStreaming = recommendedVideo.isStreaming;
+			const lengthSeconds = recommendedVideo.lengthSeconds;
+			const creationTimestamp = recommendedVideo.creationTimestamp;
 			const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
 			const viewsFormatted = getViewsFormatted(views);
 
