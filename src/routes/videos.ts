@@ -7,7 +7,6 @@ import type { FastifyInstance } from 'fastify';
 import { VideosController } from '../controllers/index.js';
 import {
   videoIdParamsSchema,
-  videoFormatResolutionParamsSchema,
   videoCommentIdParamsSchema,
   videoAdaptiveManifestParamsSchema,
   videoSearchQuerySchema,
@@ -535,11 +534,12 @@ export function videosRoutes(
 
   // Mark format/resolution as published
   fastify.post(
-    '/:videoId/:format/:resolution/published',
+    '/:videoId/published',
     {
       preHandler: [fastify.authenticate],
       schema: {
-        params: videoFormatResolutionParamsSchema,
+        params: videoIdParamsSchema,
+        body: videoUnpublishBodySchema,
       },
     },
     controller.formatResolutionPublished.bind(controller)
