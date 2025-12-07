@@ -1323,7 +1323,7 @@ export class VideosService extends BaseService implements IVideoService {
         // Ensure directory exists
         fs.mkdirSync(manifestDir, { recursive: true });
 
-        const manifestPath = path.join(manifestDir, `manifest-${manifestType}.m3u8`);
+        const manifestPath = path.join(manifestDir, `manifest-master.m3u8`);
         fs.writeFileSync(manifestPath, content);
 
         this.logger.debug('Wrote HLS master manifest', {
@@ -1332,7 +1332,7 @@ export class VideosService extends BaseService implements IVideoService {
           path: manifestPath,
         });
       } else if (this.storageService) {
-        const key = `external/videos/${videoId}/adaptive/m3u8/manifest-${manifestType}.m3u8`;
+        const key = `external/videos/${videoId}/adaptive/m3u8/manifest-master.m3u8`;
         await this.storageService.saveFile(key, Buffer.from(content), 'application/x-mpegURL');
 
         this.logger.debug('Wrote HLS master manifest to S3', {

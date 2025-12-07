@@ -11,12 +11,7 @@ import type { VideosRepository } from '../database/repositories/videos.js';
 import { getConfig } from '../config/index.js';
 import {
   isVideoIdValid,
-  isAdaptiveFormatValid,
   isProgressiveFormatValid,
-  isResolutionValid,
-  isManifestNameValid,
-  isSegmentNameValid,
-  isManifestTypeValid,
   isProgressiveFilenameValid,
 } from '../utils/index.js';
 
@@ -186,21 +181,15 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve HLS/DASH manifest files
    */
-  getAdaptiveManifest = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getAdaptiveManifest = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
-      const { videoId, format, type, manifestName } = request.params as AdaptiveManifestParams;
-
-      if (
-        !isVideoIdValid(videoId, false) ||
-        !isAdaptiveFormatValid(format) ||
-        !isManifestTypeValid(type) ||
-        !isManifestNameValid(manifestName)
-      ) {
-        void reply.status(404).send('video not found');
-        return;
-      }
+      const { videoId, format, manifestName } = request.params as AdaptiveManifestParams;
 
       const config = getConfig();
+
       const manifestPath = path.join(
         config.paths.videosDirectoryPath,
         videoId,
@@ -210,19 +199,18 @@ export class ExternalVideosController extends BaseController {
       );
 
       if (!fs.existsSync(manifestPath)) {
-        void reply.status(404).send('video not found');
-        return;
+        return await reply.status(404).send('video not found');
       }
 
       const stats = fs.statSync(manifestPath);
       const fileStream = fs.createReadStream(manifestPath);
-      void reply
+      return await reply
         .header('Content-Type', 'application/vnd.apple.mpegurl')
         .header('Content-Length', stats.size)
         .send(fileStream);
     } catch (error) {
       this.logger.error('Get adaptive manifest failed', error instanceof Error ? error : null);
-      void reply.status(404).send('video not found');
+      return await reply.status(404).send('video not found');
     }
   };
 
@@ -231,21 +219,15 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve HLS/DASH segment files with bandwidth tracking
    */
-  getAdaptiveSegment = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getAdaptiveSegment = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const { videoId, format, resolution, segmentName } = request.params as AdaptiveSegmentParams;
 
-      if (
-        !isVideoIdValid(videoId, false) ||
-        !isAdaptiveFormatValid(format) ||
-        !isResolutionValid(resolution) ||
-        !isSegmentNameValid(segmentName)
-      ) {
-        void reply.status(404).send('video not found');
-        return;
-      }
-
       const config = getConfig();
+
       const segmentPath = path.join(
         config.paths.videosDirectoryPath,
         videoId,
@@ -256,8 +238,7 @@ export class ExternalVideosController extends BaseController {
       );
 
       if (!fs.existsSync(segmentPath)) {
-        void reply.status(404).send('video not found');
-        return;
+        return await reply.status(404).send('video not found');
       }
 
       // Track bandwidth asynchronously
@@ -265,13 +246,13 @@ export class ExternalVideosController extends BaseController {
 
       const stats = fs.statSync(segmentPath);
       const fileStream = fs.createReadStream(segmentPath);
-      void reply
+      return await reply
         .header('Content-Type', 'video/mp2t')
         .header('Content-Length', stats.size)
         .send(fileStream);
     } catch (error) {
       this.logger.error('Get adaptive segment failed', error instanceof Error ? error : null);
-      void reply.status(404).send('video not found');
+      return await reply.status(404).send('video not found');
     }
   };
 
