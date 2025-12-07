@@ -30,10 +30,10 @@ interface VideoIdParams {
 
 interface VideoSearchQuery {
   searchTerm?: string;
-  sortTerm?: 'latest' | 'popular' | 'oldest';
+  sortTerm: 'latest' | 'popular' | 'oldest';
   tagTerm?: string;
-  tagLimit?: number;
-  timestamp?: number;
+  tagLimit: number;
+  timestamp: number;
 }
 
 interface VideoImportBody {
@@ -491,7 +491,7 @@ export class VideosController extends BaseController {
     const options = {
       sortBy,
       sortDirection,
-      limit: tagLimit ?? 20,
+      limit: tagLimit,
       ...(searchValue !== undefined ? { search: searchValue } : {}),
     };
 
@@ -499,7 +499,7 @@ export class VideosController extends BaseController {
 
     this.sendSuccess(reply, {
       videos: result.data,
-      timestamp: timestamp ?? Date.now(),
+      timestamp: timestamp,
     });
   };
 

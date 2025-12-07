@@ -126,7 +126,7 @@ export const tagTermSchema = z.string().max(100).optional();
 /**
  * Tag limit schema
  */
-export const tagLimitSchema = z.coerce.number().int().min(0).optional().default(10);
+export const tagLimitSchema = z.coerce.number().int().min(0);
 
 /**
  * Sort direction schema
