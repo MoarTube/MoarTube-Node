@@ -1311,11 +1311,7 @@ export class VideosService extends BaseService implements IVideoService {
    * Writes the M3U8 master manifest file to:
    * {videosDir}/{videoId}/adaptive/m3u8/manifest-{type}.m3u8
    */
-  async writeMasterManifest(
-    videoId: string,
-    manifestType: 'video' | 'audio',
-    content: string
-  ): Promise<void> {
+  async writeMasterManifest(videoId: string, manifestType: string, content: string): Promise<void> {
     return this.withErrorLogging('writeMasterManifest', async () => {
       const config = getConfig();
       const storageMode = config.nodeSettings.storageConfig.storageMode;

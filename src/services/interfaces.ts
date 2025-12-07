@@ -282,11 +282,7 @@ export interface IVideoService {
   ): Promise<{ finalizedVideoIds: string[]; nonFinalizedVideoIds: string[] }>;
 
   /** Write HLS master manifest for adaptive streaming */
-  writeMasterManifest(
-    videoId: string,
-    manifestType: 'video' | 'audio',
-    content: string
-  ): Promise<void>;
+  writeMasterManifest(videoId: string, manifestType: string, content: string): Promise<void>;
 
   /** Mark video index as outdated with Cloudflare cache purge */
   markIndexOutdated(videoId: string): Promise<void>;

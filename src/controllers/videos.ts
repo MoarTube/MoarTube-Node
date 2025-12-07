@@ -17,6 +17,8 @@ import type {
   ReportType,
 } from '../services/interfaces.js';
 import type { IVideoUploadService } from '../services/index.js';
+import type { VideoMasterManifestBody } from '../validators/schemas/videos.js';
+import type { VideoAdaptiveManifestParams } from '../validators/schemas/videos.js';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../errors/index.js';
 import { resolve } from '../core/container.js';
 import { getConfig } from '../config/index.js';
@@ -1145,23 +1147,15 @@ export class VideosController extends BaseController {
    */
   writeMasterManifest = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     const videoService = this.getVideoService();
-    const { videoId, manifestType } = request.params as VideoIdParams & { manifestType: string };
-    const { manifest } = request.body as { manifest: string };
-
-    if (manifestType !== 'video' && manifestType !== 'audio') {
-      throw new BadRequestError('manifestType must be "video" or "audio"');
-    }
-
-    if (typeof manifest !== 'string' || manifest.length === 0) {
-      throw new BadRequestError('manifest content is required');
-    }
+    const { videoId, manifestType } = request.params as VideoAdaptiveManifestParams;
+    const { masterManifest } = request.body as VideoMasterManifestBody;
 
     const video = await videoService.getVideo(videoId);
     if (video === null) {
       throw new NotFoundError(`Video not found: ${videoId}`);
     }
 
-    await videoService.writeMasterManifest(videoId, manifestType, manifest);
+    await videoService.writeMasterManifest(videoId, manifestType, masterManifest);
 
     this.sendSuccess(reply, { videoId }, 'Master manifest written successfully');
   };
