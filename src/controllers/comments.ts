@@ -142,7 +142,7 @@ export class CommentsController extends BaseController {
       }
 
       // Verify the comment matches the video and timestamp
-      if (comment.videoId !== videoId || comment.timestamp !== Number.parseInt(timestamp, 10)) {
+      if (comment.video_id !== videoId || comment.timestamp !== Number.parseInt(timestamp, 10)) {
         this.sendError(reply, 'this comment no longer exists');
         return;
       }
@@ -166,9 +166,9 @@ export class CommentsController extends BaseController {
 
       // Create the report
       await this.commentReportRepository.create({
-        commentId: String(commentIdNum),
-        videoId,
-        commentTimestamp: comment.timestamp,
+        comment_id: String(commentIdNum),
+        video_id: videoId,
+        comment_timestamp: comment.timestamp,
         email: sanitizedEmail,
         type: reportType,
         message: sanitizedMessage,

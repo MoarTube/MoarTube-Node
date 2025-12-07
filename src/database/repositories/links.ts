@@ -20,7 +20,7 @@ export class LinksRepository extends BaseRepository {
    * @returns The link record or null if not found
    */
   async findById(linkId: number): Promise<DrizzleLink | null> {
-    const result = await this.db.select().from(links).where(eq(links.linkId, linkId)).limit(1);
+    const result = await this.db.select().from(links).where(eq(links.link_id, linkId)).limit(1);
     return result[0] ?? null;
   }
 
@@ -89,7 +89,7 @@ export class LinksRepository extends BaseRepository {
     const result = await this.db
       .update(links)
       .set(data)
-      .where(eq(links.linkId, linkId))
+      .where(eq(links.link_id, linkId))
       .returning();
     return result[0] ?? null;
   }
@@ -101,7 +101,7 @@ export class LinksRepository extends BaseRepository {
    * @returns true if deleted, false if not found
    */
   async delete(linkId: number): Promise<boolean> {
-    const result = await this.db.delete(links).where(eq(links.linkId, linkId)).returning();
+    const result = await this.db.delete(links).where(eq(links.link_id, linkId)).returning();
     return result.length > 0;
   }
 

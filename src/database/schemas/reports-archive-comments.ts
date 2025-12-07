@@ -11,22 +11,22 @@ import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
  */
 export const commentReportsArchive = sqliteTable('commentreportsarchives', {
   // Primary key - auto-incrementing integer
-  archiveId: integer('archive_id').primaryKey({ autoIncrement: true }),
+  archive_id: integer('archive_id').primaryKey({ autoIncrement: true }),
 
   // Original report ID (from commentreports table)
-  reportId: integer('report_id').notNull(),
+  report_id: integer('report_id').notNull(),
 
   // Timestamp when the report was filed
   timestamp: integer('timestamp').notNull(),
 
   // Timestamp when the comment was created
-  commentTimestamp: integer('comment_timestamp').notNull(),
+  comment_timestamp: integer('comment_timestamp').notNull(),
 
   // Reference to the video containing the reported comment
-  videoId: text('video_id').notNull(),
+  video_id: text('video_id').notNull(),
 
   // Reference to the reported comment
-  commentId: text('comment_id').notNull(),
+  comment_id: text('comment_id').notNull(),
 
   // Reporter's email address
   email: text('email').notNull(),

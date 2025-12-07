@@ -11,13 +11,13 @@ import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
  */
 export const links = sqliteTable('links', {
   // Primary key - auto-incrementing integer
-  linkId: integer('link_id').primaryKey({ autoIncrement: true }),
+  link_id: integer('link_id').primaryKey({ autoIncrement: true }),
 
   // The full URL of the link
   url: text('url').notNull(),
 
   // SVG graphic markup for the link icon
-  svgGraphic: text('svg_graphic').notNull(),
+  svg_graphic: text('svg_graphic').notNull(),
 
   // Unix timestamp of link creation
   timestamp: integer('timestamp').notNull(),

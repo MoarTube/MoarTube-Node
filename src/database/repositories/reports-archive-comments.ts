@@ -26,7 +26,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
     const result = await this.db
       .select()
       .from(commentReportsArchive)
-      .where(eq(commentReportsArchive.archiveId, archiveId))
+      .where(eq(commentReportsArchive.archive_id, archiveId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -68,7 +68,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
     return this.db
       .select()
       .from(commentReportsArchive)
-      .where(eq(commentReportsArchive.videoId, videoId))
+      .where(eq(commentReportsArchive.video_id, videoId))
       .orderBy(desc(commentReportsArchive.timestamp))
       .limit(limit);
   }
@@ -89,7 +89,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
     return this.db
       .select()
       .from(commentReportsArchive)
-      .where(eq(commentReportsArchive.commentId, commentId))
+      .where(eq(commentReportsArchive.comment_id, commentId))
       .orderBy(desc(commentReportsArchive.timestamp))
       .limit(limit);
   }
@@ -104,7 +104,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
     const result = await this.db
       .select()
       .from(commentReportsArchive)
-      .where(eq(commentReportsArchive.reportId, reportId))
+      .where(eq(commentReportsArchive.report_id, reportId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -143,7 +143,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
   async delete(archiveId: number): Promise<boolean> {
     const result = await this.db
       .delete(commentReportsArchive)
-      .where(eq(commentReportsArchive.archiveId, archiveId))
+      .where(eq(commentReportsArchive.archive_id, archiveId))
       .returning();
     return result.length > 0;
   }
@@ -157,7 +157,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
   async deleteByCommentId(commentId: string): Promise<number> {
     const result = await this.db
       .delete(commentReportsArchive)
-      .where(eq(commentReportsArchive.commentId, commentId))
+      .where(eq(commentReportsArchive.comment_id, commentId))
       .returning();
     return result.length;
   }
@@ -171,7 +171,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
   async deleteByVideoId(videoId: string): Promise<number> {
     const result = await this.db
       .delete(commentReportsArchive)
-      .where(eq(commentReportsArchive.videoId, videoId))
+      .where(eq(commentReportsArchive.video_id, videoId))
       .returning();
     return result.length;
   }

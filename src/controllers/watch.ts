@@ -205,7 +205,7 @@ export class WatchController extends BaseController {
         comments: comments.map((c) => ({
           commentId: c.id,
           timestamp: c.timestamp,
-          commentPlainTextSanitized: c.commentPlainTextSanitized,
+          commentPlainTextSanitized: c.comment_plain_text_sanitized,
         })),
       },
       externalVideosBaseUrl,

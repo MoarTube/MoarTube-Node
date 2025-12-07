@@ -48,7 +48,7 @@ export class CommentsRepository extends BaseRepository {
     return this.db
       .select()
       .from(comments)
-      .where(eq(comments.videoId, videoId))
+      .where(eq(comments.video_id, videoId))
       .orderBy(desc(comments.timestamp))
       .limit(limit);
   }
@@ -63,7 +63,7 @@ export class CommentsRepository extends BaseRepository {
     const result = await this.db
       .select({ count: count() })
       .from(comments)
-      .where(eq(comments.videoId, videoId));
+      .where(eq(comments.video_id, videoId));
     return result[0]?.count ?? 0;
   }
 
@@ -130,7 +130,7 @@ export class CommentsRepository extends BaseRepository {
    * @returns Number of deleted comments
    */
   async deleteByVideoId(videoId: string): Promise<number> {
-    const result = await this.db.delete(comments).where(eq(comments.videoId, videoId)).returning();
+    const result = await this.db.delete(comments).where(eq(comments.video_id, videoId)).returning();
     return result.length;
   }
 
@@ -148,7 +148,7 @@ export class CommentsRepository extends BaseRepository {
     const result = await this.db
       .select()
       .from(comments)
-      .where(and(eq(comments.videoId, videoId), eq(comments.timestamp, timestamp)))
+      .where(and(eq(comments.video_id, videoId), eq(comments.timestamp, timestamp)))
       .limit(1);
     return result[0] ?? null;
   }
@@ -191,11 +191,11 @@ export class CommentsRepository extends BaseRepository {
     const conditions = [];
 
     if (videoId !== undefined) {
-      conditions.push(eq(comments.videoId, videoId));
+      conditions.push(eq(comments.video_id, videoId));
     }
 
     if (searchTerm !== undefined) {
-      conditions.push(like(comments.commentPlainTextSanitized, `%${searchTerm}%`));
+      conditions.push(like(comments.comment_plain_text_sanitized, `%${searchTerm}%`));
     }
 
     if (timestamp !== undefined) {

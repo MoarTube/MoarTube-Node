@@ -100,8 +100,8 @@ export class CommentService extends BaseService implements ICommentService {
 
       // Create comment data
       const commentData: DrizzleNewComment = {
-        videoId: data.videoId,
-        commentPlainTextSanitized: data.commentText,
+        video_id: data.videoId,
+        comment_plain_text_sanitized: data.commentText,
         timestamp,
       };
 
@@ -150,7 +150,7 @@ export class CommentService extends BaseService implements ICommentService {
 
       this.logger.debug('Deleting comment', {
         commentId,
-        videoId: comment.videoId,
+        videoId: comment.video_id,
       });
 
       // Delete the comment
@@ -158,7 +158,7 @@ export class CommentService extends BaseService implements ICommentService {
 
       if (deleted && this.videoRepository) {
         // Decrement video comment count
-        await this.videoRepository.decrementComments(comment.videoId);
+        await this.videoRepository.decrementComments(comment.video_id);
       }
 
       return deleted;

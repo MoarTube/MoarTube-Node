@@ -11,16 +11,16 @@ import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
  */
 export const cryptoWalletAddresses = sqliteTable('cryptowalletaddresses', {
   // Primary key - auto-incrementing integer
-  walletAddressId: integer('wallet_address_id').primaryKey({ autoIncrement: true }),
+  wallet_address_id: integer('wallet_address_id').primaryKey({ autoIncrement: true }),
 
   // The wallet address string
-  walletAddress: text('wallet_address').notNull(),
+  wallet_address: text('wallet_address').notNull(),
 
   // Blockchain chain name (e.g., "Ethereum", "Bitcoin")
   chain: text('chain').notNull(),
 
   // Chain ID (e.g., "1" for Ethereum mainnet)
-  chainId: text('chain_id').notNull(),
+  chain_id: text('chain_id').notNull(),
 
   // Currency symbol (e.g., "ETH", "BTC")
   currency: text('currency').notNull(),

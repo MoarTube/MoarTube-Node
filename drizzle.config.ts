@@ -12,7 +12,7 @@ import type { Config } from 'drizzle-kit';
  *   - Open Drizzle Studio: npm run db:studio
  */
 export default {
-  schema: './src/database/schema/index.ts',
+  schema: './src/database/schemas/index.ts',
   out: './drizzle',
   dialect: 'sqlite',
   dbCredentials: {

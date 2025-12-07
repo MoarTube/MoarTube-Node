@@ -80,11 +80,11 @@ export class ReportsCommentsController extends BaseController {
 
       // Create archive record
       await this.commentReportsArchiveRepository.create({
-        reportId: report.reportId,
+        report_id: report.report_id,
         timestamp: report.timestamp,
-        commentTimestamp: report.commentTimestamp,
-        videoId: report.videoId,
-        commentId: report.commentId,
+        comment_timestamp: report.comment_timestamp,
+        video_id: report.video_id,
+        comment_id: report.comment_id,
         email: report.email,
         type: report.type,
         message: report.message,

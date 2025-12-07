@@ -23,7 +23,7 @@ export class LiveChatMessageRepository extends BaseRepository {
     const result = await this.db
       .select()
       .from(liveChatMessages)
-      .where(eq(liveChatMessages.chatMessageId, chatMessageId))
+      .where(eq(liveChatMessages.chat_message_id, chatMessageId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -44,7 +44,7 @@ export class LiveChatMessageRepository extends BaseRepository {
     return this.db
       .select()
       .from(liveChatMessages)
-      .where(eq(liveChatMessages.videoId, videoId))
+      .where(eq(liveChatMessages.video_id, videoId))
       .orderBy(desc(liveChatMessages.timestamp))
       .limit(limit);
   }
@@ -63,7 +63,7 @@ export class LiveChatMessageRepository extends BaseRepository {
     const messages = await this.db
       .select()
       .from(liveChatMessages)
-      .where(eq(liveChatMessages.videoId, videoId))
+      .where(eq(liveChatMessages.video_id, videoId))
       .orderBy(desc(liveChatMessages.timestamp))
       .limit(count);
 
@@ -88,7 +88,7 @@ export class LiveChatMessageRepository extends BaseRepository {
       .select()
       .from(liveChatMessages)
       .where(
-        and(eq(liveChatMessages.videoId, videoId), gte(liveChatMessages.timestamp, afterTimestamp))
+        and(eq(liveChatMessages.video_id, videoId), gte(liveChatMessages.timestamp, afterTimestamp))
       )
       .orderBy(liveChatMessages.timestamp)
       .limit(limit);
@@ -104,7 +104,7 @@ export class LiveChatMessageRepository extends BaseRepository {
     const result = await this.db
       .select({ count: count() })
       .from(liveChatMessages)
-      .where(eq(liveChatMessages.videoId, videoId));
+      .where(eq(liveChatMessages.video_id, videoId));
     return result[0]?.count ?? 0;
   }
 
@@ -150,7 +150,7 @@ export class LiveChatMessageRepository extends BaseRepository {
   async delete(chatMessageId: number): Promise<boolean> {
     const result = await this.db
       .delete(liveChatMessages)
-      .where(eq(liveChatMessages.chatMessageId, chatMessageId))
+      .where(eq(liveChatMessages.chat_message_id, chatMessageId))
       .returning();
     return result.length > 0;
   }
@@ -164,7 +164,7 @@ export class LiveChatMessageRepository extends BaseRepository {
   async deleteByVideoId(videoId: string): Promise<number> {
     const result = await this.db
       .delete(liveChatMessages)
-      .where(eq(liveChatMessages.videoId, videoId))
+      .where(eq(liveChatMessages.video_id, videoId))
       .returning();
     return result.length;
   }
@@ -181,7 +181,7 @@ export class LiveChatMessageRepository extends BaseRepository {
     const recentMessages = await this.db
       .select({ timestamp: liveChatMessages.timestamp })
       .from(liveChatMessages)
-      .where(eq(liveChatMessages.videoId, videoId))
+      .where(eq(liveChatMessages.video_id, videoId))
       .orderBy(desc(liveChatMessages.timestamp))
       .limit(keepCount);
 
@@ -201,7 +201,7 @@ export class LiveChatMessageRepository extends BaseRepository {
     const result = await this.db
       .delete(liveChatMessages)
       .where(
-        and(eq(liveChatMessages.videoId, videoId), lt(liveChatMessages.timestamp, cutoffTimestamp))
+        and(eq(liveChatMessages.video_id, videoId), lt(liveChatMessages.timestamp, cutoffTimestamp))
       )
       .returning();
 

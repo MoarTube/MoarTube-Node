@@ -83,9 +83,9 @@ export class MonetizationController extends BaseController {
       const chainId = getChainId(chain);
 
       const cryptoWalletAddress = await this.monetizationRepository.create({
-        walletAddress,
+        wallet_address: walletAddress,
         chain,
-        chainId,
+        chain_id: chainId,
         currency,
         timestamp,
       });

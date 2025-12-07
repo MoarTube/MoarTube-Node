@@ -741,7 +741,7 @@ export class VideosController extends BaseController {
     const formattedComments = comments.map((comment) => ({
       commentId: comment.id,
       timestamp: comment.timestamp,
-      commentPlainTextSanitized: comment.commentPlainTextSanitized,
+      commentPlainTextSanitized: comment.comment_plain_text_sanitized,
     }));
 
     this.sendSuccess(reply, {
@@ -815,7 +815,7 @@ export class VideosController extends BaseController {
     const formattedComments = comments.map((c) => ({
       id: c.id,
       video_id: videoId,
-      comment_plain_text_sanitized: c.commentPlainTextSanitized,
+      comment_plain_text_sanitized: c.comment_plain_text_sanitized,
       timestamp: c.timestamp,
     }));
 
@@ -995,7 +995,7 @@ export class VideosController extends BaseController {
     }
 
     // Verify comment belongs to video
-    if (comment.videoId !== videoId) {
+    if (comment.video_id !== videoId) {
       throw new NotFoundError(`Comment not found for video: ${videoId}`);
     }
 

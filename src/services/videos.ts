@@ -606,8 +606,8 @@ export class VideosService extends BaseService implements IVideoService {
     const video = await this.videoRepository.findById(videoId);
 
     const updates: Record<string, unknown> = {
-      lengthSeconds,
-      lengthTimestamp,
+      length_seconds: lengthSeconds,
+      length_timestamp: lengthTimestamp,
     };
 
     // Mark index as outdated if video is indexed

@@ -80,10 +80,10 @@ export class ReportsVideosController extends BaseController {
 
       // Create archive record
       await this.videoReportsArchiveRepository.create({
-        reportId: report.reportId,
+        report_id: report.report_id,
         timestamp: report.timestamp,
-        videoTimestamp: report.videoTimestamp,
-        videoId: report.videoId,
+        video_timestamp: report.video_timestamp,
+        video_id: report.video_id,
         email: report.email,
         type: report.type,
         message: report.message,

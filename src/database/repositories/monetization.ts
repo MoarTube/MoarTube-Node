@@ -26,7 +26,7 @@ export class MonetizationRepository extends BaseRepository {
     const result = await this.db
       .select()
       .from(cryptoWalletAddresses)
-      .where(eq(cryptoWalletAddresses.walletAddressId, walletAddressId))
+      .where(eq(cryptoWalletAddresses.wallet_address_id, walletAddressId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -83,7 +83,7 @@ export class MonetizationRepository extends BaseRepository {
     const result = await this.db
       .select()
       .from(cryptoWalletAddresses)
-      .where(eq(cryptoWalletAddresses.walletAddress, walletAddress))
+      .where(eq(cryptoWalletAddresses.wallet_address, walletAddress))
       .limit(1);
     return result[0] ?? null;
   }
@@ -127,7 +127,7 @@ export class MonetizationRepository extends BaseRepository {
     const result = await this.db
       .update(cryptoWalletAddresses)
       .set(data)
-      .where(eq(cryptoWalletAddresses.walletAddressId, walletAddressId))
+      .where(eq(cryptoWalletAddresses.wallet_address_id, walletAddressId))
       .returning();
     return result[0] ?? null;
   }
@@ -141,7 +141,7 @@ export class MonetizationRepository extends BaseRepository {
   async delete(walletAddressId: number): Promise<boolean> {
     const result = await this.db
       .delete(cryptoWalletAddresses)
-      .where(eq(cryptoWalletAddresses.walletAddressId, walletAddressId))
+      .where(eq(cryptoWalletAddresses.wallet_address_id, walletAddressId))
       .returning();
     return result.length > 0;
   }
@@ -170,7 +170,7 @@ export class MonetizationRepository extends BaseRepository {
     const result = await this.db
       .select({ count: count() })
       .from(cryptoWalletAddresses)
-      .where(eq(cryptoWalletAddresses.walletAddress, walletAddress));
+      .where(eq(cryptoWalletAddresses.wallet_address, walletAddress));
     return (result[0]?.count ?? 0) > 0;
   }
 

@@ -11,19 +11,19 @@ import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
  */
 export const videoReportsArchive = sqliteTable('videoreportsarchives', {
   // Primary key - auto-incrementing integer
-  archiveId: integer('archive_id').primaryKey({ autoIncrement: true }),
+  archive_id: integer('archive_id').primaryKey({ autoIncrement: true }),
 
   // Original report ID (from videoreports table)
-  reportId: integer('report_id').notNull(),
+  report_id: integer('report_id').notNull(),
 
   // Timestamp when the report was filed
   timestamp: integer('timestamp').notNull(),
 
   // Timestamp when the video was created
-  videoTimestamp: integer('video_timestamp').notNull(),
+  video_timestamp: integer('video_timestamp').notNull(),
 
   // Reference to the reported video
-  videoId: text('video_id').notNull(),
+  video_id: text('video_id').notNull(),
 
   // Reporter's email address
   email: text('email').notNull(),

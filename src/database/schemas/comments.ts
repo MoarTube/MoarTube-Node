@@ -14,10 +14,10 @@ export const comments = sqliteTable('comments', {
   id: integer('id').primaryKey({ autoIncrement: true }),
 
   // Reference to the video this comment belongs to
-  videoId: text('video_id').notNull(),
+  video_id: text('video_id').notNull(),
 
   // Sanitized comment text (HTML stripped)
-  commentPlainTextSanitized: text('comment_plain_text_sanitized').notNull(),
+  comment_plain_text_sanitized: text('comment_plain_text_sanitized').notNull(),
 
   // Unix timestamp of comment creation
   timestamp: integer('timestamp').notNull(),

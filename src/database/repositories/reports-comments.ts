@@ -23,7 +23,7 @@ export class ReportsCommentsRepository extends BaseRepository {
     const result = await this.db
       .select()
       .from(commentReports)
-      .where(eq(commentReports.reportId, reportId))
+      .where(eq(commentReports.report_id, reportId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -62,7 +62,7 @@ export class ReportsCommentsRepository extends BaseRepository {
     return this.db
       .select()
       .from(commentReports)
-      .where(eq(commentReports.videoId, videoId))
+      .where(eq(commentReports.video_id, videoId))
       .orderBy(desc(commentReports.timestamp))
       .limit(limit);
   }
@@ -83,7 +83,7 @@ export class ReportsCommentsRepository extends BaseRepository {
     return this.db
       .select()
       .from(commentReports)
-      .where(eq(commentReports.commentId, commentId))
+      .where(eq(commentReports.comment_id, commentId))
       .orderBy(desc(commentReports.timestamp))
       .limit(limit);
   }
@@ -122,7 +122,7 @@ export class ReportsCommentsRepository extends BaseRepository {
   async delete(reportId: number): Promise<boolean> {
     const result = await this.db
       .delete(commentReports)
-      .where(eq(commentReports.reportId, reportId))
+      .where(eq(commentReports.report_id, reportId))
       .returning();
     return result.length > 0;
   }
@@ -136,7 +136,7 @@ export class ReportsCommentsRepository extends BaseRepository {
   async deleteByCommentId(commentId: string): Promise<number> {
     const result = await this.db
       .delete(commentReports)
-      .where(eq(commentReports.commentId, commentId))
+      .where(eq(commentReports.comment_id, commentId))
       .returning();
     return result.length;
   }
@@ -150,7 +150,7 @@ export class ReportsCommentsRepository extends BaseRepository {
   async deleteByVideoId(videoId: string): Promise<number> {
     const result = await this.db
       .delete(commentReports)
-      .where(eq(commentReports.videoId, videoId))
+      .where(eq(commentReports.video_id, videoId))
       .returning();
     return result.length;
   }

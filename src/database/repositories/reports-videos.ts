@@ -23,7 +23,7 @@ export class ReportsVideosRepository extends BaseRepository {
     const result = await this.db
       .select()
       .from(videoReports)
-      .where(eq(videoReports.reportId, reportId))
+      .where(eq(videoReports.report_id, reportId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -59,7 +59,7 @@ export class ReportsVideosRepository extends BaseRepository {
     return this.db
       .select()
       .from(videoReports)
-      .where(eq(videoReports.videoId, videoId))
+      .where(eq(videoReports.video_id, videoId))
       .orderBy(desc(videoReports.timestamp))
       .limit(limit);
   }
@@ -98,7 +98,7 @@ export class ReportsVideosRepository extends BaseRepository {
   async delete(reportId: number): Promise<boolean> {
     const result = await this.db
       .delete(videoReports)
-      .where(eq(videoReports.reportId, reportId))
+      .where(eq(videoReports.report_id, reportId))
       .returning();
     return result.length > 0;
   }
@@ -112,7 +112,7 @@ export class ReportsVideosRepository extends BaseRepository {
   async deleteByVideoId(videoId: string): Promise<number> {
     const result = await this.db
       .delete(videoReports)
-      .where(eq(videoReports.videoId, videoId))
+      .where(eq(videoReports.video_id, videoId))
       .returning();
     return result.length;
   }

@@ -11,16 +11,16 @@ import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
  */
 export const videoReports = sqliteTable('videoreports', {
   // Primary key - auto-incrementing integer
-  reportId: integer('report_id').primaryKey({ autoIncrement: true }),
+  report_id: integer('report_id').primaryKey({ autoIncrement: true }),
 
   // Timestamp when the report was filed
   timestamp: integer('timestamp').notNull(),
 
   // Timestamp when the video was created
-  videoTimestamp: integer('video_timestamp').notNull(),
+  video_timestamp: integer('video_timestamp').notNull(),
 
   // Reference to the reported video
-  videoId: text('video_id').notNull(),
+  video_id: text('video_id').notNull(),
 
   // Reporter's email address
   email: text('email').notNull(),

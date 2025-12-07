@@ -23,7 +23,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
     const result = await this.db
       .select()
       .from(videoReportsArchive)
-      .where(eq(videoReportsArchive.archiveId, archiveId))
+      .where(eq(videoReportsArchive.archive_id, archiveId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -65,7 +65,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
     return this.db
       .select()
       .from(videoReportsArchive)
-      .where(eq(videoReportsArchive.videoId, videoId))
+      .where(eq(videoReportsArchive.video_id, videoId))
       .orderBy(desc(videoReportsArchive.timestamp))
       .limit(limit);
   }
@@ -80,7 +80,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
     const result = await this.db
       .select()
       .from(videoReportsArchive)
-      .where(eq(videoReportsArchive.reportId, reportId))
+      .where(eq(videoReportsArchive.report_id, reportId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -119,7 +119,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
   async delete(archiveId: number): Promise<boolean> {
     const result = await this.db
       .delete(videoReportsArchive)
-      .where(eq(videoReportsArchive.archiveId, archiveId))
+      .where(eq(videoReportsArchive.archive_id, archiveId))
       .returning();
     return result.length > 0;
   }
@@ -133,7 +133,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
   async deleteByVideoId(videoId: string): Promise<number> {
     const result = await this.db
       .delete(videoReportsArchive)
-      .where(eq(videoReportsArchive.videoId, videoId))
+      .where(eq(videoReportsArchive.video_id, videoId))
       .returning();
     return result.length;
   }

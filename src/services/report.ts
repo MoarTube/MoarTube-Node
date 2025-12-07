@@ -74,8 +74,8 @@ export class ReportService extends BaseService implements IReportService {
 
       const reportData: DrizzleNewVideoReport = {
         timestamp,
-        videoTimestamp: data.videoTimestamp,
-        videoId: data.videoId,
+        video_timestamp: data.videoTimestamp,
+        video_id: data.videoId,
         email: data.email,
         type: data.type,
         message: data.message,
@@ -99,9 +99,9 @@ export class ReportService extends BaseService implements IReportService {
 
       const reportData: DrizzleNewCommentReport = {
         timestamp,
-        commentTimestamp: data.commentTimestamp,
-        videoId: data.videoId,
-        commentId: data.commentId,
+        comment_timestamp: data.commentTimestamp,
+        video_id: data.videoId,
+        comment_id: data.commentId,
         email: data.email,
         type: data.type,
         message: data.message,
@@ -157,10 +157,10 @@ export class ReportService extends BaseService implements IReportService {
 
       // Create archive record
       const archiveData: DrizzleNewVideoReportArchive = {
-        reportId: report.reportId,
+        report_id: report.report_id,
         timestamp: report.timestamp,
-        videoTimestamp: report.videoTimestamp,
-        videoId: report.videoId,
+        video_timestamp: report.video_timestamp,
+        video_id: report.video_id,
         email: report.email,
         type: report.type,
         message: report.message,
@@ -171,7 +171,7 @@ export class ReportService extends BaseService implements IReportService {
       // Delete original report
       await this.videoReportRepository.delete(reportId);
 
-      this.logger.info('Video report archived', { reportId, videoId: report.videoId });
+      this.logger.info('Video report archived', { reportId, videoId: report.video_id });
 
       return archived;
     });
@@ -189,11 +189,11 @@ export class ReportService extends BaseService implements IReportService {
 
       // Create archive record
       const archiveData: DrizzleNewCommentReportArchive = {
-        reportId: report.reportId,
+        report_id: report.report_id,
         timestamp: report.timestamp,
-        commentTimestamp: report.commentTimestamp,
-        videoId: report.videoId,
-        commentId: report.commentId,
+        comment_timestamp: report.comment_timestamp,
+        video_id: report.video_id,
+        comment_id: report.comment_id,
         email: report.email,
         type: report.type,
         message: report.message,
@@ -206,8 +206,8 @@ export class ReportService extends BaseService implements IReportService {
 
       this.logger.info('Comment report archived', {
         reportId,
-        videoId: report.videoId,
-        commentId: report.commentId,
+        videoId: report.video_id,
+        commentId: report.comment_id,
       });
 
       return archived;

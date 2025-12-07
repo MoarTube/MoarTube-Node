@@ -68,7 +68,7 @@ export class LinksController extends BaseController {
 
       const link = await this.linkRepository.create({
         url,
-        svgGraphic,
+        svg_graphic: svgGraphic,
         timestamp,
       });
 
