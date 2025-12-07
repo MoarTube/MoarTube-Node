@@ -274,7 +274,6 @@ export type NewLink = Omit<Link, 'link_id'>;
  */
 export interface PaginationOptions {
   limit?: number;
-  offset?: number;
 }
 
 /**
@@ -302,8 +301,6 @@ export interface PaginatedResult<T> {
   total: number;
   /** Number of items in current page */
   count: number;
-  /** Current offset */
-  offset: number;
   /** Current limit */
   limit: number;
   /** Whether there are more results */

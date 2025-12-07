@@ -16,16 +16,14 @@ export abstract class BaseRepository {
    * Generates pagination SQL parameters for queries that should return all results by default.
    * Use this for findAll-style methods where no limit means "return everything".
    *
-   * @param options - Pagination options with optional limit and offset
-   * @returns Object with limit (undefined if not specified) and offset (defaults to 0)
+   * @param options - Pagination options with optional limit
+   * @returns Object with limit (undefined if not specified)
    */
   protected getPaginationParams(options?: PaginationOptions): {
     limit: number | undefined;
-    offset: number;
   } {
     return {
       limit: options?.limit,
-      offset: options?.offset ?? 0,
     };
   }
 
@@ -33,17 +31,16 @@ export abstract class BaseRepository {
    * Generates pagination SQL parameters with a default limit.
    * Use this for paginated queries where a limit is always expected.
    *
-   * @param options - Pagination options with limit and offset
+   * @param options - Pagination options with limit
    * @param defaultLimit - Default limit when not specified (default: 20)
-   * @returns Object with limit and offset values (limit is always a number)
+   * @returns Object with limit value (always a number)
    */
   protected getPaginationParamsWithDefault(
     options?: PaginationOptions,
     defaultLimit: number = 20
-  ): { limit: number; offset: number } {
+  ): { limit: number } {
     return {
       limit: options?.limit ?? defaultLimit,
-      offset: options?.offset ?? 0,
     };
   }
 

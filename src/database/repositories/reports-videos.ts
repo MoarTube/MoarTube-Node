@@ -31,19 +31,19 @@ export class ReportsVideosRepository extends BaseRepository {
   /**
    * Finds all video reports with optional pagination
    *
-   * @param options - Pagination options (optional limit/offset)
+   * @param options - Pagination options (optional limit)
    * @returns Array of video reports
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit } = this.getPaginationParams(options);
 
     const query = this.db.select().from(videoReports).orderBy(desc(videoReports.timestamp));
 
     if (limit !== undefined) {
-      return query.limit(limit).offset(offset);
+      return query.limit(limit);
     }
 
-    return query.offset(offset);
+    return query;
   }
 
   /**
@@ -54,15 +54,14 @@ export class ReportsVideosRepository extends BaseRepository {
    * @returns Array of reports for the video
    */
   async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
-    const { limit, offset } = this.getPaginationParamsWithDefault(options);
+    const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
       .from(videoReports)
       .where(eq(videoReports.videoId, videoId))
       .orderBy(desc(videoReports.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .limit(limit);
   }
 
   /**

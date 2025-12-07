@@ -43,15 +43,14 @@ export class CommentsRepository extends BaseRepository {
    * @returns Array of comments for the video
    */
   async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleComment[]> {
-    const { limit, offset } = this.getPaginationParamsWithDefault(options);
+    const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
       .from(comments)
       .where(eq(comments.videoId, videoId))
       .orderBy(desc(comments.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .limit(limit);
   }
 
   /**
@@ -71,19 +70,19 @@ export class CommentsRepository extends BaseRepository {
   /**
    * Finds all comments with optional pagination
    *
-   * @param options - Pagination options (optional limit/offset)
+   * @param options - Pagination options (optional limit)
    * @returns Array of all comments
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleComment[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit } = this.getPaginationParams(options);
 
     const query = this.db.select().from(comments);
 
     if (limit !== undefined) {
-      return query.limit(limit).offset(offset);
+      return query.limit(limit);
     }
 
-    return query.offset(offset);
+    return query;
   }
 
   /**
@@ -185,7 +184,7 @@ export class CommentsRepository extends BaseRepository {
    * @returns Array of matching comments
    */
   async search(options: CommentSearchOptions = {}): Promise<DrizzleComment[]> {
-    const { limit, offset } = this.getPaginationParamsWithDefault(options);
+    const { limit } = this.getPaginationParamsWithDefault(options);
     const { videoId, searchTerm, timestamp, sortDirection = 'desc' } = options;
 
     // Build conditions array
@@ -217,7 +216,7 @@ export class CommentsRepository extends BaseRepository {
       query = query.orderBy(desc(comments.timestamp)) as typeof query;
     }
 
-    return query.limit(limit).offset(offset);
+    return query.limit(limit);
   }
 
   /**

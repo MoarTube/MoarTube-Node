@@ -70,9 +70,6 @@ export class CommentService extends BaseService implements ICommentService {
         if (options.limit !== undefined) {
           paginationOptions.limit = options.limit;
         }
-        if (options.offset !== undefined) {
-          paginationOptions.offset = options.offset;
-        }
         return this.commentRepository.findByVideoId(options.videoId, paginationOptions);
       }
 

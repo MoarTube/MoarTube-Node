@@ -34,11 +34,11 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
   /**
    * Finds all archived comment reports with optional pagination
    *
-   * @param options - Pagination options (optional limit/offset)
+   * @param options - Pagination options (optional limit)
    * @returns Array of archived comment reports
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleCommentReportArchive[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit } = this.getPaginationParams(options);
 
     const query = this.db
       .select()
@@ -46,10 +46,10 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
       .orderBy(desc(commentReportsArchive.timestamp));
 
     if (limit !== undefined) {
-      return query.limit(limit).offset(offset);
+      return query.limit(limit);
     }
 
-    return query.offset(offset);
+    return query;
   }
 
   /**
@@ -63,15 +63,14 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
     videoId: string,
     options?: PaginationOptions
   ): Promise<DrizzleCommentReportArchive[]> {
-    const { limit, offset } = this.getPaginationParamsWithDefault(options);
+    const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
       .from(commentReportsArchive)
       .where(eq(commentReportsArchive.videoId, videoId))
       .orderBy(desc(commentReportsArchive.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .limit(limit);
   }
 
   /**
@@ -85,15 +84,14 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
     commentId: string,
     options?: PaginationOptions
   ): Promise<DrizzleCommentReportArchive[]> {
-    const { limit, offset } = this.getPaginationParamsWithDefault(options);
+    const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
       .from(commentReportsArchive)
       .where(eq(commentReportsArchive.commentId, commentId))
       .orderBy(desc(commentReportsArchive.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .limit(limit);
   }
 
   /**

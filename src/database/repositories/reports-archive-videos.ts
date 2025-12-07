@@ -31,11 +31,11 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
   /**
    * Finds all archived video reports with optional pagination
    *
-   * @param options - Pagination options (optional limit/offset)
+   * @param options - Pagination options (optional limit)
    * @returns Array of archived video reports
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit } = this.getPaginationParams(options);
 
     const query = this.db
       .select()
@@ -43,10 +43,10 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
       .orderBy(desc(videoReportsArchive.timestamp));
 
     if (limit !== undefined) {
-      return query.limit(limit).offset(offset);
+      return query.limit(limit);
     }
 
-    return query.offset(offset);
+    return query;
   }
 
   /**
@@ -60,15 +60,14 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
     videoId: string,
     options?: PaginationOptions
   ): Promise<DrizzleVideoReportArchive[]> {
-    const { limit, offset } = this.getPaginationParamsWithDefault(options);
+    const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
       .from(videoReportsArchive)
       .where(eq(videoReportsArchive.videoId, videoId))
       .orderBy(desc(videoReportsArchive.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .limit(limit);
   }
 
   /**

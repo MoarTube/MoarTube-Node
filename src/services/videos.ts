@@ -100,12 +100,10 @@ export class VideosService extends BaseService implements IVideoService {
   async getVideos(options?: GetVideosOptions): Promise<PaginatedResult<DrizzleVideo>> {
     return this.withErrorLogging('getVideos', async () => {
       const limit = options?.limit ?? 20;
-      const offset = options?.offset ?? 0;
 
       // Build query options, omitting undefined values
       const queryOptions: {
         limit?: number;
-        offset?: number;
         sortBy?: 'creation_timestamp' | 'views' | 'likes' | 'title';
         sortDirection?: 'asc' | 'desc';
         isPublished?: boolean;
@@ -118,9 +116,6 @@ export class VideosService extends BaseService implements IVideoService {
 
       if (options?.limit !== undefined) {
         queryOptions.limit = options.limit;
-      }
-      if (options?.offset !== undefined) {
-        queryOptions.offset = options.offset;
       }
       if (options?.sortBy !== undefined) {
         queryOptions.sortBy = options.sortBy;
@@ -182,9 +177,8 @@ export class VideosService extends BaseService implements IVideoService {
         data: videos,
         total,
         count: videos.length,
-        offset,
         limit,
-        hasMore: offset + videos.length < total,
+        hasMore: videos.length === limit,
       };
     });
   }

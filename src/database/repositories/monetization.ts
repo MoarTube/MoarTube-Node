@@ -38,7 +38,7 @@ export class MonetizationRepository extends BaseRepository {
    * @returns Array of wallet addresses
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleCryptoWalletAddress[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit } = this.getPaginationParams(options);
 
     const query = this.db
       .select()
@@ -46,10 +46,10 @@ export class MonetizationRepository extends BaseRepository {
       .orderBy(desc(cryptoWalletAddresses.timestamp));
 
     if (limit !== undefined) {
-      return query.limit(limit).offset(offset);
+      return query.limit(limit);
     }
 
-    return query.offset(offset);
+    return query;
   }
 
   /**
@@ -63,15 +63,14 @@ export class MonetizationRepository extends BaseRepository {
     chain: string,
     options?: PaginationOptions
   ): Promise<DrizzleCryptoWalletAddress[]> {
-    const { limit, offset } = this.getPaginationParamsWithDefault(options);
+    const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
       .from(cryptoWalletAddresses)
       .where(eq(cryptoWalletAddresses.chain, chain))
       .orderBy(desc(cryptoWalletAddresses.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .limit(limit);
   }
 
   /**

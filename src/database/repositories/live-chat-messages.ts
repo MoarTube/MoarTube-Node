@@ -39,15 +39,14 @@ export class LiveChatMessageRepository extends BaseRepository {
     videoId: string,
     options?: PaginationOptions
   ): Promise<DrizzleLiveChatMessage[]> {
-    const { limit, offset } = this.getPaginationParamsWithDefault(options);
+    const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
       .from(liveChatMessages)
       .where(eq(liveChatMessages.videoId, videoId))
       .orderBy(desc(liveChatMessages.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .limit(limit);
   }
 
   /**
@@ -116,15 +115,15 @@ export class LiveChatMessageRepository extends BaseRepository {
    * @returns Array of all live chat messages
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleLiveChatMessage[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit } = this.getPaginationParams(options);
 
     const query = this.db.select().from(liveChatMessages);
 
     if (limit !== undefined) {
-      return query.limit(limit).offset(offset);
+      return query.limit(limit);
     }
 
-    return query.offset(offset);
+    return query;
   }
 
   /**

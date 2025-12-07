@@ -27,19 +27,19 @@ export class LinksRepository extends BaseRepository {
   /**
    * Finds all links with optional pagination
    *
-   * @param options - Pagination options (optional limit/offset)
+   * @param options - Pagination options (optional limit)
    * @returns Array of links
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleLink[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit } = this.getPaginationParams(options);
 
     const query = this.db.select().from(links).orderBy(desc(links.timestamp));
 
     if (limit !== undefined) {
-      return query.limit(limit).offset(offset);
+      return query.limit(limit);
     }
 
-    return query.offset(offset);
+    return query;
   }
 
   /**

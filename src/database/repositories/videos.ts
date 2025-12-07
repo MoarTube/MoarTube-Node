@@ -64,7 +64,7 @@ export class VideosRepository extends BaseRepository {
    * @returns Array of published videos
    */
   async findPublished(options?: VideoQueryOptions): Promise<DrizzleVideo[]> {
-    const { limit, offset } = this.getPaginationParamsWithDefault(options);
+    const { limit } = this.getPaginationParamsWithDefault(options);
     const sortDir = options?.sortDirection === 'asc' ? asc : desc;
     const sortField = this.getSortField(options?.sortBy ?? 'creation_timestamp');
 
@@ -73,18 +73,17 @@ export class VideosRepository extends BaseRepository {
       .from(videos)
       .where(eq(videos.is_published, true))
       .orderBy(sortDir(sortField))
-      .limit(limit)
-      .offset(offset);
+      .limit(limit);
   }
 
   /**
    * Finds all videos with optional filters and pagination
    *
-   * @param options - Query options including optional limit/offset
+   * @param options - Query options including optional limit
    * @returns Array of videos matching the criteria
    */
   async findAll(options?: VideoQueryOptions): Promise<DrizzleVideo[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit } = this.getPaginationParams(options);
     const sortDir = options?.sortDirection === 'asc' ? asc : desc;
     const sortField = this.getSortField(options?.sortBy ?? 'creation_timestamp');
 
@@ -97,10 +96,10 @@ export class VideosRepository extends BaseRepository {
     }
 
     if (limit !== undefined) {
-      return query.limit(limit).offset(offset);
+      return query.limit(limit);
     }
 
-    return query.offset(offset);
+    return query;
   }
 
   /**

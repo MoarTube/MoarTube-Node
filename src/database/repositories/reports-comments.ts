@@ -31,19 +31,19 @@ export class ReportsCommentsRepository extends BaseRepository {
   /**
    * Finds all comment reports with optional pagination
    *
-   * @param options - Pagination options (optional limit/offset)
+   * @param options - Pagination options (optional limit)
    * @returns Array of comment reports
    */
   async findAll(options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
-    const { limit, offset } = this.getPaginationParams(options);
+    const { limit } = this.getPaginationParams(options);
 
     const query = this.db.select().from(commentReports).orderBy(desc(commentReports.timestamp));
 
     if (limit !== undefined) {
-      return query.limit(limit).offset(offset);
+      return query.limit(limit);
     }
 
-    return query.offset(offset);
+    return query;
   }
 
   /**
@@ -57,15 +57,14 @@ export class ReportsCommentsRepository extends BaseRepository {
     videoId: string,
     options?: PaginationOptions
   ): Promise<DrizzleCommentReport[]> {
-    const { limit, offset } = this.getPaginationParamsWithDefault(options);
+    const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
       .from(commentReports)
       .where(eq(commentReports.videoId, videoId))
       .orderBy(desc(commentReports.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .limit(limit);
   }
 
   /**
@@ -79,15 +78,14 @@ export class ReportsCommentsRepository extends BaseRepository {
     commentId: string,
     options?: PaginationOptions
   ): Promise<DrizzleCommentReport[]> {
-    const { limit, offset } = this.getPaginationParamsWithDefault(options);
+    const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
       .from(commentReports)
       .where(eq(commentReports.commentId, commentId))
       .orderBy(desc(commentReports.timestamp))
-      .limit(limit)
-      .offset(offset);
+      .limit(limit);
   }
 
   /**
