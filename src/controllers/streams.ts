@@ -12,19 +12,6 @@ import type { VideosRepository } from '../database/repositories/videos.js';
 import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
 import type { StreamService } from '../services/stream.js';
 import { getConfig } from '../config/index.js';
-import {
-  isTitleValid,
-  isDescriptionValid,
-  isTagsValid,
-  isPortValid,
-  isVideoIdValid,
-  isAdaptiveFormatValid,
-  isResolutionValid,
-  isSegmentNameValid,
-  isBooleanValid,
-  isNetworkAddressValid,
-  isChatHistoryLimitValid,
-} from '../utils/index.js';
 
 /**
  * Request body for starting a stream
@@ -104,55 +91,12 @@ export class StreamsController extends BaseController {
         description,
         tags,
         rtmpPort,
-        uuid,
         isRecordingStreamRemotely,
         isRecordingStreamLocally,
         networkAddress,
         resolution,
         videoId = '',
       } = request.body as StartStreamBody;
-
-      // Validate all parameters
-      if (!isTitleValid(title)) {
-        this.sendError(reply, 'title is not valid');
-        return;
-      }
-      if (!isDescriptionValid(description)) {
-        this.sendError(reply, 'description is not valid');
-        return;
-      }
-      if (!isTagsValid(tags)) {
-        this.sendError(reply, 'tags are not valid');
-        return;
-      }
-      if (!isPortValid(rtmpPort)) {
-        this.sendError(reply, 'rtmp port not valid');
-        return;
-      }
-      if (uuid !== 'moartube') {
-        this.sendError(reply, 'uuid not valid');
-        return;
-      }
-      if (!isBooleanValid(isRecordingStreamRemotely)) {
-        this.sendError(reply, 'isRecordingStreamRemotely not valid');
-        return;
-      }
-      if (!isBooleanValid(isRecordingStreamLocally)) {
-        this.sendError(reply, 'isRecordingStreamLocally not valid');
-        return;
-      }
-      if (!isNetworkAddressValid(networkAddress)) {
-        this.sendError(reply, 'networkAddress not valid');
-        return;
-      }
-      if (!isResolutionValid(resolution)) {
-        this.sendError(reply, 'resolution not valid');
-        return;
-      }
-      if (!isVideoIdValid(videoId, true)) {
-        this.sendError(reply, 'videoId not valid');
-        return;
-      }
 
       const options: {
         title: string;
@@ -197,11 +141,6 @@ export class StreamsController extends BaseController {
     try {
       const { videoId } = request.params as VideoIdParams;
 
-      if (!isVideoIdValid(videoId, false)) {
-        this.sendError(reply, 'video id is not valid');
-        return;
-      }
-
       await this.streamService.stopStream(videoId);
 
       this.sendOk(reply);
@@ -220,16 +159,6 @@ export class StreamsController extends BaseController {
     try {
       const { videoId, format, resolution } = request.params as SegmentRemoveParams;
       const { segmentName } = request.body as SegmentRemoveBody;
-
-      if (
-        !isVideoIdValid(videoId, false) ||
-        !isAdaptiveFormatValid(format) ||
-        !isResolutionValid(resolution) ||
-        !isSegmentNameValid(segmentName)
-      ) {
-        this.sendError(reply, 'invalid parameters');
-        return;
-      }
 
       // Delete the segment file directly
       const config = getConfig();
@@ -266,11 +195,6 @@ export class StreamsController extends BaseController {
     try {
       const { videoId } = request.params as VideoIdParams;
 
-      if (!isVideoIdValid(videoId, false)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
-      }
-
       const video = await this.videoRepository.findById(videoId);
 
       if (video === null) {
@@ -294,15 +218,6 @@ export class StreamsController extends BaseController {
     try {
       const { videoId } = request.params as VideoIdParams;
       const { isChatHistoryEnabled, chatHistoryLimit } = request.body as ChatSettingsBody;
-
-      if (
-        !isVideoIdValid(videoId, false) ||
-        !isBooleanValid(isChatHistoryEnabled) ||
-        !isChatHistoryLimitValid(chatHistoryLimit)
-      ) {
-        this.sendError(reply, 'invalid parameters');
-        return;
-      }
 
       const video = await this.videoRepository.findById(videoId);
 
@@ -350,11 +265,6 @@ export class StreamsController extends BaseController {
   getChatHistory = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
       const { videoId } = request.params as VideoIdParams;
-
-      if (!isVideoIdValid(videoId, false)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
-      }
 
       const chatHistory = await this.liveChatMessageRepository.findByVideoId(videoId);
 

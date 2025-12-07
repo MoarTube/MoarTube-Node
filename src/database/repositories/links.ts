@@ -4,8 +4,8 @@
  * Provides data access methods for social link records using Drizzle ORM.
  */
 import { eq, desc, count } from 'drizzle-orm';
-import type { DrizzleLink, DrizzleNewLink } from '../schema/index.js';
-import { links } from '../schema/index.js';
+import type { DrizzleLink, DrizzleNewLink } from '../schemas/index.js';
+import { links } from '../schemas/index.js';
 import { BaseRepository } from './base.js';
 import type { PaginationOptions } from '../../types/models.js';
 

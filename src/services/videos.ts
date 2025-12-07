@@ -28,7 +28,7 @@ import type {
 } from './interfaces.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { CommentsRepository } from '../database/repositories/comments.js';
-import type { DrizzleVideo, DrizzleNewVideo } from '../database/schema/index.js';
+import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/index.js';
 import type { PaginatedResult } from '../types/models.js';
 import { getConfig } from '../config/index.js';
 

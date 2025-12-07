@@ -1,10 +1,56 @@
 /**
- * Settings Request Validators
+ * Settings Request Schemas
  *
  * Zod schemas for node settings API endpoints.
  */
 import { z } from 'zod';
-import { protocolSchema, addressSchema, portSchema, booleanSchema } from './common.schemas.js';
+import {
+  protocolSchema,
+  addressSchema,
+  portSchema,
+  booleanSchema,
+  usernameSchema,
+  passwordSchema,
+} from './common.js';
+
+// ============================================================================
+// Settings-Specific Schemas
+// ============================================================================
+
+/**
+ * Node name schema
+ */
+export const nodeNameSchema = z
+  .string()
+  .min(1, 'Node name is required')
+  .max(100, 'Node name must be less than 100 characters');
+
+/**
+ * Node about schema
+ */
+export const nodeAboutSchema = z
+  .string()
+  .max(5000, 'Node about must be less than 5000 characters')
+  .optional()
+  .default('');
+
+/**
+ * Node ID schema
+ */
+export const nodeIdSchema = z
+  .string()
+  .min(1, 'Node ID is required')
+  .max(100, 'Node ID must be less than 100 characters');
+
+/**
+ * Database dialect schema
+ */
+export const databaseDialectSchema = z.enum(['sqlite', 'postgres']);
+
+/**
+ * Storage mode schema
+ */
+export const storageModeSchema = z.enum(['filesystem', 's3']);
 
 // ============================================================================
 // Request Body Schemas
@@ -14,7 +60,7 @@ import { protocolSchema, addressSchema, portSchema, booleanSchema } from './comm
  * Node name personalization request body schema
  */
 export const personalizeNodeNameBodySchema = z.object({
-  nodeName: z.string().min(1, 'Node name is required').max(100),
+  nodeName: nodeNameSchema,
 });
 
 export type PersonalizeNodeNameBody = z.infer<typeof personalizeNodeNameBodySchema>;
@@ -23,7 +69,7 @@ export type PersonalizeNodeNameBody = z.infer<typeof personalizeNodeNameBodySche
  * Node about personalization request body schema
  */
 export const personalizeNodeAboutBodySchema = z.object({
-  nodeAbout: z.string().max(5000).optional().default(''),
+  nodeAbout: nodeAboutSchema,
 });
 
 export type PersonalizeNodeAboutBody = z.infer<typeof personalizeNodeAboutBodySchema>;
@@ -32,7 +78,7 @@ export type PersonalizeNodeAboutBody = z.infer<typeof personalizeNodeAboutBodySc
  * Node ID personalization request body schema
  */
 export const personalizeNodeIdBodySchema = z.object({
-  nodeId: z.string().min(1).max(100),
+  nodeId: nodeIdSchema,
 });
 
 export type PersonalizeNodeIdBody = z.infer<typeof personalizeNodeIdBodySchema>;
@@ -53,8 +99,8 @@ export type ConfigureSecureBody = z.infer<typeof configureSecureBodySchema>;
  * Account update request body schema
  */
 export const updateAccountBodySchema = z.object({
-  username: z.string().min(1).max(100),
-  password: z.string().min(1).max(256),
+  username: usernameSchema,
+  password: passwordSchema,
 });
 
 export type UpdateAccountBody = z.infer<typeof updateAccountBodySchema>;
@@ -83,7 +129,9 @@ export type NetworkExternalBody = z.infer<typeof networkExternalBodySchema>;
  * Cloudflare configuration request body schema
  */
 export const cloudflareConfigureBodySchema = z.object({
-  cloudflareEmailAddress: z.email(),
+  cloudflareEmailAddress: z
+    .email('Invalid email format')
+    .max(320, 'Email must be less than 320 characters'),
   cloudflareZoneId: z.string().min(1),
   cloudflareGlobalApiKey: z.string().min(1),
 });
@@ -115,7 +163,7 @@ export type FeatureToggleBody = z.infer<typeof featureToggleBodySchema>;
  * Database configuration toggle request body schema
  */
 export const databaseConfigToggleBodySchema = z.object({
-  databaseDialect: z.enum(['sqlite', 'postgres']),
+  databaseDialect: databaseDialectSchema,
   postgresHost: z.string().optional(),
   postgresPort: portSchema.optional(),
   postgresDatabase: z.string().optional(),
@@ -129,7 +177,7 @@ export type DatabaseConfigToggleBody = z.infer<typeof databaseConfigToggleBodySc
  * Storage configuration toggle request body schema
  */
 export const storageConfigToggleBodySchema = z.object({
-  storageMode: z.enum(['filesystem', 's3']),
+  storageMode: storageModeSchema,
   s3Endpoint: z.url().optional(),
   s3Region: z.string().optional(),
   s3Bucket: z.string().optional(),

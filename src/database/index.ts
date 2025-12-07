@@ -37,7 +37,7 @@ export {
 } from './write-queue.js';
 
 // Schema exports
-export * from './schema/index.js';
+export * from './schemas/index.js';
 
 // Repository exports
 export * from './repositories/index.js';

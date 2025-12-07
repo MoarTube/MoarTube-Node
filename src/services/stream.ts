@@ -11,7 +11,7 @@ import { BaseService, type ServiceOptions } from './base.js';
 import type { IStreamService, StreamConfig, IWebSocketService } from './interfaces.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
-import type { DrizzleVideo, DrizzleNewVideo } from '../database/schema/index.js';
+import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
 
 /**

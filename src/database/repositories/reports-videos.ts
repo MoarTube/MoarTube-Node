@@ -4,8 +4,8 @@
  * Provides data access methods for video report records using Drizzle ORM.
  */
 import { eq, desc, count, gt } from 'drizzle-orm';
-import type { DrizzleVideoReport, DrizzleNewVideoReport } from '../schema/index.js';
-import { videoReports } from '../schema/index.js';
+import type { DrizzleVideoReport, DrizzleNewVideoReport } from '../schemas/index.js';
+import { videoReports } from '../schemas/index.js';
 import { BaseRepository } from './base.js';
 import type { PaginationOptions } from '../../types/models.js';
 

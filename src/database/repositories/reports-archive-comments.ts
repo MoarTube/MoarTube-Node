@@ -7,8 +7,8 @@ import { eq, desc, count } from 'drizzle-orm';
 import type {
   DrizzleCommentReportArchive,
   DrizzleNewCommentReportArchive,
-} from '../schema/index.js';
-import { commentReportsArchive } from '../schema/index.js';
+} from '../schemas/index.js';
+import { commentReportsArchive } from '../schemas/index.js';
 import { BaseRepository } from './base.js';
 import type { PaginationOptions } from '../../types/models.js';
 

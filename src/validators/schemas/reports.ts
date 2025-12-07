@@ -1,10 +1,10 @@
 /**
- * Reports Request Validators
+ * Reports Request Schemas
  *
  * Zod schemas for report management API endpoints.
  */
 import { z } from 'zod';
-import { timestampSchema } from './common.schemas.js';
+import { timestampSchema, idSchema } from './common.js';
 
 // ============================================================================
 // Route Parameter Schemas
@@ -14,7 +14,7 @@ import { timestampSchema } from './common.schemas.js';
  * Report ID parameter schema
  */
 export const reportIdParamsSchema = z.object({
-  reportId: z.coerce.number().int().positive(),
+  reportId: idSchema,
 });
 
 export type ReportIdParams = z.infer<typeof reportIdParamsSchema>;
@@ -23,7 +23,7 @@ export type ReportIdParams = z.infer<typeof reportIdParamsSchema>;
  * Archive ID parameter schema
  */
 export const archiveIdParamsSchema = z.object({
-  archiveId: z.coerce.number().int().positive(),
+  archiveId: idSchema,
 });
 
 export type ArchiveIdParams = z.infer<typeof archiveIdParamsSchema>;
@@ -49,7 +49,7 @@ export type ReportsQuery = z.infer<typeof reportsQuerySchema>;
  * Archive report request body schema
  */
 export const archiveReportBodySchema = z.object({
-  reportId: z.coerce.number().int().positive(),
+  reportId: idSchema,
 });
 
 export type ArchiveReportBody = z.infer<typeof archiveReportBodySchema>;

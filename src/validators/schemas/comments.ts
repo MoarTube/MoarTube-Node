@@ -1,5 +1,5 @@
 /**
- * Comments Request Validators
+ * Comments Request Schemas
  *
  * Zod schemas for comment API endpoints.
  */
@@ -11,10 +11,11 @@ import {
   reportMessageSchema,
   cloudflareTurnstileTokenSchema,
   sortDirectionSchema,
-  limitSchema,
   videoIdSchemaOptional,
   searchTermSchemaOptional,
-} from './common.schemas.js';
+  videoIdSchema,
+  commentIdSchema,
+} from './common.js';
 
 // ============================================================================
 // Route Parameter Schemas
@@ -24,7 +25,7 @@ import {
  * Comment ID parameter schema
  */
 export const commentIdParamsSchema = z.object({
-  commentId: z.coerce.number().int().positive(),
+  commentId: commentIdSchema,
 });
 
 export type CommentIdParams = z.infer<typeof commentIdParamsSchema>;
@@ -39,7 +40,7 @@ export type CommentIdParams = z.infer<typeof commentIdParamsSchema>;
 export const commentSearchQuerySchema = z.object({
   videoId: videoIdSchemaOptional,
   searchTerm: searchTermSchemaOptional,
-  limit: limitSchema,
+  limit: z.coerce.number().int().min(0).optional().default(0),
   sortDirection: sortDirectionSchema,
   timestamp: timestampSchema,
 });
@@ -54,6 +55,8 @@ export type CommentSearchQuery = z.infer<typeof commentSearchQuerySchema>;
  * Comment report request body schema
  */
 export const commentReportBodySchema = z.object({
+  videoId: videoIdSchema,
+  timestamp: timestampSchema,
   email: reportEmailSchema,
   reportType: reportTypeSchema,
   message: reportMessageSchema,

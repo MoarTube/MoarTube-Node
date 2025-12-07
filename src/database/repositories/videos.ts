@@ -4,8 +4,8 @@
  * Provides data access methods for video records using Drizzle ORM.
  */
 import { eq, desc, asc, sql, and, or, like, count, type SQL } from 'drizzle-orm';
-import type { DrizzleVideo, DrizzleNewVideo } from '../schema/index.js';
-import { videos } from '../schema/index.js';
+import type { DrizzleVideo, DrizzleNewVideo } from '../schemas/index.js';
+import { videos } from '../schemas/index.js';
 import { BaseRepository } from './base.js';
 import type { PaginationOptions } from '../../types/models.js';
 

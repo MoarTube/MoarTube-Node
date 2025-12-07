@@ -1,5 +1,5 @@
 /**
- * Video Request Validators
+ * Video Request Schemas
  *
  * Zod schemas for video-related API endpoints.
  */
@@ -18,17 +18,13 @@ import {
   tagLimitSchema,
   timestampSchema,
   booleanSchema,
-  commentTextSchema,
   commentIdSchema,
-  commentsTypeSchema,
   sortDirectionSchema,
   cloudflareTurnstileTokenSchema,
-  videoPermissionTypeSchema,
-  sourceFileExtensionSchema,
   reportEmailSchema,
   reportTypeSchema,
   reportMessageSchema,
-} from './common.schemas.js';
+} from './common.js';
 
 // ============================================================================
 // Route Parameter Schemas
@@ -95,7 +91,7 @@ export type VideoSearchQuery = z.infer<typeof videoSearchQuerySchema>;
  * Video comments query parameters schema
  */
 export const videoCommentsQuerySchema = z.object({
-  type: commentsTypeSchema,
+  type: z.enum(['before', 'after']),
   sort: sortDirectionSchema,
   timestamp: timestampSchema,
 });
@@ -170,7 +166,7 @@ export type VideoUnpublishBody = z.infer<typeof videoUnpublishBodySchema>;
  * Video source file extension request body schema
  */
 export const videoSourceFileExtensionBodySchema = z.object({
-  sourceFileExtension: sourceFileExtensionSchema,
+  sourceFileExtension: z.string().max(10, 'Source file extension must be less than 10 characters'),
 });
 
 export type VideoSourceFileExtensionBody = z.infer<typeof videoSourceFileExtensionBodySchema>;
@@ -227,7 +223,10 @@ export type VideoFinalizeBody = z.infer<typeof videoFinalizeBodySchema>;
  * Video comment create request body schema
  */
 export const videoCommentBodySchema = z.object({
-  commentPlainText: commentTextSchema,
+  commentPlainText: z
+    .string()
+    .min(1, 'Comment is required')
+    .max(2000, 'Comment must be less than 2000 characters'),
   timestamp: timestampSchema,
   cloudflareTurnstileToken: cloudflareTurnstileTokenSchema,
 });
@@ -259,7 +258,7 @@ export type VideoReportBody = z.infer<typeof videoReportBodySchema>;
  * Video permissions request body schema
  */
 export const videoPermissionsBodySchema = z.object({
-  type: videoPermissionTypeSchema,
+  type: z.enum(['comments', 'likes', 'dislikes', 'reports', 'livechat']),
   isEnabled: booleanSchema,
 });
 

@@ -1,10 +1,10 @@
 /**
- * Watch Request Validators
+ * Watch Request Schemas
  *
  * Zod schemas for watch page API endpoints.
  */
 import { z } from 'zod';
-import { videoIdSchema } from './common.schemas.js';
+import { videoIdSchema } from './common.js';
 
 // ============================================================================
 // Query Parameter Schemas

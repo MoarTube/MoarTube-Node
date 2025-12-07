@@ -1,10 +1,62 @@
 /**
- * Stream Request Validators
+ * Streams Request Schemas
  *
  * Zod schemas for live streaming API endpoints.
  */
 import { z } from 'zod';
-import { videoIdSchema, formatSchema, resolutionSchema } from './common.schemas.js';
+import {
+  videoIdSchema,
+  formatSchema,
+  resolutionSchema,
+  videoIdSchemaOptional,
+  titleSchema,
+  descriptionSchema,
+  tagsSchema,
+  portSchema,
+} from './common.js';
+
+// ============================================================================
+// Stream-Specific Schemas
+// ============================================================================
+
+/**
+ * Network address schema (IP or hostname)
+ */
+export const networkAddressSchema = z
+  .string()
+  .min(1, 'Network address is required')
+  .max(100, 'Network address must be less than 100 characters');
+
+/**
+ * UUID schema
+ */
+export const uuidSchema = z.uuid();
+
+/**
+ * HLS segment name schema
+ */
+export const hlsSegmentNameSchema = z
+  .string()
+  .regex(
+    /^segment-(?:2160p|1440p|1080p|720p|480p|360p|240p)-\d+\.ts$/,
+    'Invalid segment name format'
+  );
+
+/**
+ * Chat history limit schema
+ */
+export const chatHistoryLimitSchema = z.coerce
+  .number()
+  .int()
+  .min(1)
+  .max(500)
+  .optional()
+  .default(100);
+
+/**
+ * Chat slow mode seconds schema
+ */
+export const chatSlowModeSecondsSchema = z.number().int().min(0).max(300).optional();
 
 // ============================================================================
 // Route Parameter Schemas
@@ -38,12 +90,16 @@ export type StreamSegmentParams = z.infer<typeof streamSegmentParamsSchema>;
  * Start stream request body schema
  */
 export const streamStartBodySchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(5000).optional().default(''),
-  tags: z.string().max(500).optional().default(''),
-  rtmpUrl: z.url().optional(),
-  isRecordingEnabled: z.boolean().optional().default(false),
-  isLiveChatEnabled: z.boolean().optional().default(true),
+  title: titleSchema,
+  description: descriptionSchema,
+  tags: tagsSchema,
+  rtmpPort: portSchema,
+  uuid: uuidSchema,
+  isRecordingStreamRemotely: z.boolean(),
+  isRecordingStreamLocally: z.boolean(),
+  networkAddress: networkAddressSchema,
+  resolution: resolutionSchema,
+  videoId: videoIdSchemaOptional,
 });
 
 export type StreamStartBody = z.infer<typeof streamStartBodySchema>;
@@ -54,7 +110,8 @@ export type StreamStartBody = z.infer<typeof streamStartBodySchema>;
 export const chatSettingsBodySchema = z.object({
   isChatEnabled: z.boolean().optional(),
   isChatHistoryEnabled: z.boolean().optional(),
-  chatSlowModeSeconds: z.number().int().min(0).max(300).optional(),
+  chatHistoryLimit: chatHistoryLimitSchema,
+  chatSlowModeSeconds: chatSlowModeSecondsSchema,
 });
 
 export type ChatSettingsBody = z.infer<typeof chatSettingsBodySchema>;
@@ -63,7 +120,7 @@ export type ChatSettingsBody = z.infer<typeof chatSettingsBodySchema>;
  * Remove segment request body schema
  */
 export const removeSegmentBodySchema = z.object({
-  segmentName: z.string().min(1),
+  segmentName: hlsSegmentNameSchema,
 });
 
 export type RemoveSegmentBody = z.infer<typeof removeSegmentBodySchema>;
@@ -76,7 +133,7 @@ export type RemoveSegmentBody = z.infer<typeof removeSegmentBodySchema>;
  * Chat history query parameters schema
  */
 export const chatHistoryQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(500).optional().default(100),
+  limit: chatHistoryLimitSchema,
   before: z.coerce.number().int().min(0).optional(),
 });
 

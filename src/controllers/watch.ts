@@ -10,7 +10,7 @@ import type { VideosRepository } from '../database/repositories/videos.js';
 import type { CommentsRepository } from '../database/repositories/comments.js';
 import type { LinksRepository } from '../database/repositories/links.js';
 import type { MonetizationRepository } from '../database/repositories/monetization.js';
-import type { DrizzleVideo } from '../database/schema/index.js';
+import type { DrizzleVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
 import { isVideoIdValid } from '../utils/index.js';
 

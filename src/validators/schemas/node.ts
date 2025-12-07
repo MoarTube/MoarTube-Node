@@ -1,5 +1,5 @@
 /**
- * Node Request Validators
+ * Node Request Schemas
  *
  * Zod schemas for node page API endpoints.
  */
@@ -10,7 +10,16 @@ import {
   tagTermSchema,
   tagLimitSchema,
   timestampSchema,
-} from './common.schemas.js';
+} from './common.js';
+
+// ============================================================================
+// Node-Specific Schemas
+// ============================================================================
+
+/**
+ * Content type schema for moderation
+ */
+export const contentTypeSchema = z.enum(['comments', 'videoReports', 'commentReports']);
 
 // ============================================================================
 // Query Parameter Schemas
@@ -37,7 +46,7 @@ export type NodeSearchQuery = z.infer<typeof nodeSearchQuerySchema>;
  * Content checked request body schema
  */
 export const contentCheckedBodySchema = z.object({
-  contentType: z.enum(['comments', 'videoReports', 'commentReports']),
+  contentType: contentTypeSchema,
 });
 
 export type ContentCheckedBody = z.infer<typeof contentCheckedBodySchema>;

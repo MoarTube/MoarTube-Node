@@ -12,7 +12,7 @@ import type { ReportsVideosRepository } from '../database/repositories/reports-v
 import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
 import type { LinksRepository } from '../database/repositories/links.js';
 import type { MonetizationRepository } from '../database/repositories/monetization.js';
-import type { DrizzleVideo } from '../database/schema/index.js';
+import type { DrizzleVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
 import { isSearchTermValid, isSortTermValid, isTagTermValid } from '../utils/index.js';
 

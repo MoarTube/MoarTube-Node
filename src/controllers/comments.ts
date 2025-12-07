@@ -12,15 +12,6 @@ import type { ReportsCommentsRepository } from '../database/repositories/reports
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { CloudflareService } from '../services/cloudflare.js';
 import { getConfig } from '../config/index.js';
-import {
-  isCommentIdValid,
-  isReportEmailValid,
-  isReportTypeValid,
-  isReportMessageValid,
-  isCloudflareTurnstileTokenValid,
-  isTimestampValid,
-  isVideoIdValid,
-} from '../utils/index.js';
 
 /**
  * Query parameters for comment search
@@ -109,20 +100,6 @@ export class CommentsController extends BaseController {
         message,
         cloudflareTurnstileToken = '',
       } = request.body as CommentReportBody;
-
-      // Validate all parameters
-      if (
-        !isVideoIdValid(videoId, false) ||
-        !isCommentIdValid(commentId) ||
-        !isTimestampValid(timestamp) ||
-        !isReportEmailValid(email) ||
-        !isReportTypeValid(reportType) ||
-        !isReportMessageValid(message) ||
-        !isCloudflareTurnstileTokenValid(cloudflareTurnstileToken, true)
-      ) {
-        this.sendError(reply, 'invalid parameters');
-        return;
-      }
 
       const config = getConfig();
       const nodeSettings = config.nodeSettings;

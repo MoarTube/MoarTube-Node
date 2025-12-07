@@ -10,7 +10,7 @@ import { z } from 'zod';
 // ============================================================================
 
 /**
- * Video ID schema - YouTube-style alphanumeric ID
+ * Video ID schema - 11 character alphanumeric with - and _
  */
 export const videoIdSchema = z.string().regex(/^[a-zA-Z0-9_-]{11}$/, 'Invalid video ID format');
 export const videoIdSchemaOptional = z
@@ -22,6 +22,11 @@ export const videoIdSchemaOptional = z
  * Comment ID schema - positive integer
  */
 export const commentIdSchema = z.coerce.number().int().positive();
+
+/**
+ * Generic ID schema - positive integer for any entity ID
+ */
+export const idSchema = z.coerce.number().int().positive();
 
 /**
  * Timestamp schema - Unix timestamp in milliseconds
@@ -39,6 +44,19 @@ export const booleanSchema = z
  * Optional boolean schema
  */
 export const optionalBooleanSchema = booleanSchema.optional();
+
+/**
+ * Filename schema
+ */
+export const filenameSchema = z.string().min(1).max(255);
+
+// ============================================================================
+// Email Schemas
+// ============================================================================
+
+/**
+ * Email schema
+ */
 
 // ============================================================================
 // Video Schemas
@@ -111,24 +129,9 @@ export const tagTermSchema = z.string().max(100).optional().default('');
 export const tagLimitSchema = z.coerce.number().int().min(0).optional().default(0);
 
 /**
- * Pagination limit schema
- */
-export const limitSchema = z.coerce.number().int().min(1).max(100);
-
-/**
- * Pagination offset schema
- */
-export const offsetSchema = z.coerce.number().int().min(0).optional().default(0);
-
-/**
  * Sort direction schema
  */
 export const sortDirectionSchema = z.enum(['ascending', 'descending']);
-
-/**
- * Comments type schema (for pagination direction)
- */
-export const commentsTypeSchema = z.enum(['before', 'after']);
 
 // ============================================================================
 // Account Schemas
@@ -209,14 +212,6 @@ export const reportMessageSchema = z
 // Comment Schemas
 // ============================================================================
 
-/**
- * Comment text schema
- */
-export const commentTextSchema = z
-  .string()
-  .min(1, 'Comment is required')
-  .max(2000, 'Comment must be less than 2000 characters');
-
 // ============================================================================
 // Cloudflare Schemas
 // ============================================================================
@@ -229,25 +224,3 @@ export const cloudflareTurnstileTokenSchema = z.string().optional().default('');
 // ============================================================================
 // Video Permission Schemas
 // ============================================================================
-
-/**
- * Video permission type schema
- */
-export const videoPermissionTypeSchema = z.enum([
-  'comments',
-  'likes',
-  'dislikes',
-  'reports',
-  'livechat',
-]);
-
-// ============================================================================
-// Source File Extension Schema
-// ============================================================================
-
-/**
- * Source file extension schema
- */
-export const sourceFileExtensionSchema = z
-  .string()
-  .max(10, 'Source file extension must be less than 10 characters');

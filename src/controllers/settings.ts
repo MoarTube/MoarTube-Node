@@ -24,7 +24,6 @@ import type { CloudflareService } from '../services/cloudflare.js';
 import type { WebSocketService } from '../services/websocket.js';
 import { getConfig } from '../config/index.js';
 import {
-  isNodeNameValid,
   isNodeAboutValid,
   isNodeIdValid,
   isUsernameValid,
@@ -442,11 +441,6 @@ export class SettingsController extends BaseController {
   personalizeNodeName = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
       const { nodeName } = request.body as PersonalizeNodeNameBody;
-
-      if (!isNodeNameValid(nodeName)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
-      }
 
       // Check if there are indexed videos to determine if indexer update is needed
       const hasIndexedVideos = this.videoRepository

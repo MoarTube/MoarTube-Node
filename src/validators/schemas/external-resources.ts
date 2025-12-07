@@ -1,9 +1,10 @@
 /**
- * External Resources Request Validators
+ * External Resources Request Schemas
  *
  * Zod schemas for static resource serving API endpoints.
  */
 import { z } from 'zod';
+import { filenameSchema } from './common.js';
 
 // ============================================================================
 // Route Parameter Schemas
@@ -13,7 +14,7 @@ import { z } from 'zod';
  * Filename parameter schema
  */
 export const filenameParamsSchema = z.object({
-  filename: z.string().min(1).max(255),
+  filename: filenameSchema,
 });
 
 export type FilenameParams = z.infer<typeof filenameParamsSchema>;
@@ -22,7 +23,7 @@ export type FilenameParams = z.infer<typeof filenameParamsSchema>;
  * Image name parameter schema
  */
 export const imageNameParamsSchema = z.object({
-  imageName: z.string().min(1).max(255),
+  imageName: filenameSchema,
 });
 
 export type ImageNameParams = z.infer<typeof imageNameParamsSchema>;

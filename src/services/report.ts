@@ -23,7 +23,7 @@ import type {
   DrizzleNewCommentReport,
   DrizzleNewVideoReportArchive,
   DrizzleNewCommentReportArchive,
-} from '../database/schema/index.js';
+} from '../database/schemas/index.js';
 import type { PaginationOptions } from '../types/models.js';
 
 /**

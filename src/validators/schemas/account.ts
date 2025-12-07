@@ -1,5 +1,5 @@
 /**
- * Account Request Validators
+ * Account Request Schemas
  *
  * Zod schemas for account-related API endpoints.
  */
@@ -10,8 +10,8 @@ import {
   protocolSchema,
   addressSchema,
   portSchema,
-  booleanSchema,
-} from './common.schemas.js';
+  optionalBooleanSchema,
+} from './common.js';
 
 /**
  * Sign in request body schema
@@ -22,7 +22,7 @@ export const signInBodySchema = z.object({
   moarTubeNodeHttpProtocol: protocolSchema,
   moarTubeNodeIp: addressSchema,
   moarTubeNodePort: portSchema,
-  rememberMe: booleanSchema.optional().default(false),
+  rememberMe: optionalBooleanSchema.default(false),
 });
 
 export type SignInBody = z.infer<typeof signInBodySchema>;

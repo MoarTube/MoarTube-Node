@@ -16,7 +16,7 @@ import type {
   DrizzleLiveChatMessage,
   DrizzleCryptoWalletAddress,
   DrizzleLink,
-} from '../database/schema/index.js';
+} from '../database/schemas/index.js';
 import type { PaginationOptions, PaginatedResult } from '../types/models.js';
 
 // ============================================================================

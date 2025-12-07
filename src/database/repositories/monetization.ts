@@ -4,8 +4,11 @@
  * Provides data access methods for crypto wallet address records using Drizzle ORM.
  */
 import { eq, desc, count } from 'drizzle-orm';
-import type { DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress } from '../schema/index.js';
-import { cryptoWalletAddresses } from '../schema/index.js';
+import type {
+  DrizzleCryptoWalletAddress,
+  DrizzleNewCryptoWalletAddress,
+} from '../schemas/index.js';
+import { cryptoWalletAddresses } from '../schemas/index.js';
 import { BaseRepository } from './base.js';
 import type { PaginationOptions } from '../../types/models.js';
 
