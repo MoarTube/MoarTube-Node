@@ -51,13 +51,14 @@ interface VideoUpdateBody {
 }
 
 interface VideoCommentsQuery {
-  timestamp?: number;
-  type?: string;
+  timestamp: number;
+  type: 'before' | 'after';
+  sort: 'ascending' | 'descending';
 }
 
 interface CommentBody {
   commentPlainText: string;
-  timestamp?: number;
+  timestamp: number;
   cloudflareTurnstileToken?: string;
 }
 
@@ -733,11 +734,9 @@ export class VideosController extends BaseController {
   getComments = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     const commentService = this.getCommentService();
     const { videoId } = request.params as VideoIdParams;
-    const { timestamp } = request.query as VideoCommentsQuery;
+    const { type, sort, timestamp } = request.query as VideoCommentsQuery;
 
-    const comments = await commentService.getCommentsForVideo(videoId, {
-      limit: 50,
-    });
+    const comments = await commentService.getCommentsForVideo(videoId, type, sort, timestamp);
 
     // Map comments to expected format
     const formattedComments = comments.map((comment) => ({
@@ -748,7 +747,7 @@ export class VideosController extends BaseController {
 
     this.sendSuccess(reply, {
       comments: formattedComments,
-      timestamp: timestamp ?? Date.now(),
+      timestamp: timestamp,
     });
   };
 
@@ -761,7 +760,7 @@ export class VideosController extends BaseController {
     const commentService = this.getCommentService();
     const cloudflareService = this.getCloudflareService();
     const { videoId } = request.params as VideoIdParams;
-    const { commentPlainText, cloudflareTurnstileToken } = request.body as CommentBody;
+    const { commentPlainText, timestamp, cloudflareTurnstileToken } = request.body as CommentBody;
 
     const config = getConfig();
     const nodeSettings = config.nodeSettings;
@@ -805,19 +804,21 @@ export class VideosController extends BaseController {
     // Create the comment (service handles sanitization and incrementing video count)
     const comment = await commentService.createComment({
       videoId,
-      commentText: commentPlainText,
+      commentPlainText,
     });
 
     // Get all comments (limited to recent ones for response)
-    const comments = await commentService.getCommentsForVideo(videoId, {
-      limit: 100,
-    });
+    const comments = await commentService.getCommentsForVideo(
+      videoId,
+      'after',
+      'ascending',
+      timestamp
+    );
 
     // Format comments for response (matching JS format)
     const formattedComments = comments.map((c) => ({
       id: c.id,
-      video_id: videoId,
-      comment_plain_text_sanitized: c.comment_plain_text_sanitized,
+      commentPlainTextSanitized: c.comment_plain_text_sanitized,
       timestamp: c.timestamp,
     }));
 

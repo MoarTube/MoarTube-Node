@@ -42,15 +42,38 @@ export class CommentsRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of comments for the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleComment[]> {
-    const { limit } = this.getPaginationParamsWithDefault(options);
-
+  async findByVideoId(videoId: string): Promise<DrizzleComment[]> {
     return this.db
       .select()
       .from(comments)
       .where(eq(comments.video_id, videoId))
-      .orderBy(desc(comments.timestamp))
-      .limit(limit);
+      .orderBy(desc(comments.timestamp));
+  }
+
+  /**
+   * Finds comments for a video with timestamp-based filtering and sorting
+   *
+   * @param videoId - The video identifier
+   * @param type - Direction filter: "before" or "after" the timestamp (non-inclusive)
+   * @param timestamp - The timestamp to filter against
+   * @param sort - Sort direction: "ascending" or "descending"
+   * @returns Array of filtered and sorted comments
+   */
+  async findByVideoIdWithTimestampFilter(
+    videoId: string,
+    type: 'before' | 'after',
+    sort: 'ascending' | 'descending',
+    timestamp: number
+  ): Promise<DrizzleComment[]> {
+    const timestampCondition =
+      type === 'before' ? lt(comments.timestamp, timestamp) : gt(comments.timestamp, timestamp);
+    const orderBy = sort === 'ascending' ? comments.timestamp : desc(comments.timestamp);
+
+    return this.db
+      .select()
+      .from(comments)
+      .where(and(eq(comments.video_id, videoId), timestampCondition))
+      .orderBy(orderBy);
   }
 
   /**

@@ -2490,7 +2490,7 @@ body {
 
 				comments.forEach(function (comment) {
 					const commentId = comment.id;
-					const commentPlainTextSanitized = comment.comment_plain_text_sanitized;
+					const commentPlainTextSanitized = comment.commentPlainTextSanitized;
 					const timestamp = comment.timestamp;
 
 					if (timestamp > MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP) {
@@ -2637,7 +2637,7 @@ body {
 									}
 									else {
 										const commentId = comment.id;
-										const commentPlainTextSanitized = comment.comment_plain_text_sanitized;
+										const commentPlainTextSanitized = comment.commentPlainTextSanitized;
 										const timestamp = comment.timestamp;
 
 										const formattedDate = getCreationTimestampFormatted(timestamp);
@@ -3356,7 +3356,8 @@ body {
 		function getCreationTimestampFormatted(creationTimestamp) {
 			let timeElapsed = '';
 
-			const timeDifference = Date.now() - creationTimestamp;
+			const currentTimestamp = Date.now();
+			const timeDifference = currentTimestamp - creationTimestamp;
 
 			if (timeDifference < 60000) {
 				timeElapsed = "just now"

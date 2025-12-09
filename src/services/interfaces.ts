@@ -386,7 +386,7 @@ export interface GetCommentsOptions extends PaginationOptions {
  */
 export interface CreateCommentInput {
   videoId: string;
-  commentText: string;
+  commentPlainText: string;
 }
 
 /**
@@ -400,7 +400,12 @@ export interface ICommentService {
   getComments(options?: GetCommentsOptions): Promise<DrizzleComment[]>;
 
   /** Get comments for a specific video */
-  getCommentsForVideo(videoId: string, options?: PaginationOptions): Promise<DrizzleComment[]>;
+  getCommentsForVideo(
+    videoId: string,
+    type: string,
+    sort: string,
+    timestamp: number
+  ): Promise<DrizzleComment[]>;
 
   /** Create a new comment */
   createComment(data: CreateCommentInput): Promise<DrizzleComment>;

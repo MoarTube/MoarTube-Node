@@ -107,7 +107,7 @@ interface WatchPageData {
   };
   commentsData: {
     isError: false;
-    comments: Array<{ commentId: number; timestamp: number; commentPlainTextSanitized: string }>;
+    comments: Array<{ id: number; timestamp: number; commentPlainTextSanitized: string }>;
   };
   externalVideosBaseUrl: string;
   externalResourcesBaseUrl: string;
@@ -188,7 +188,12 @@ export class WatchController extends BaseController {
         sortBy: 'creation_timestamp',
         sortDirection: 'desc',
       }),
-      this.commentRepository.findByVideoId(videoId, { limit: 50 }),
+      this.commentRepository.findByVideoIdWithTimestampFilter(
+        videoId,
+        'before',
+        'ascending',
+        Date.now()
+      ),
     ]);
 
     const {
@@ -234,7 +239,7 @@ export class WatchController extends BaseController {
       commentsData: {
         isError: false as const,
         comments: comments.map((c) => ({
-          commentId: c.id,
+          id: c.id,
           timestamp: c.timestamp,
           commentPlainTextSanitized: c.comment_plain_text_sanitized,
         })),

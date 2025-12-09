@@ -6,6 +6,7 @@
 
 import Fastify, { type FastifyInstance, type FastifyLoggerOptions } from 'fastify';
 import fastifyMultipart from '@fastify/multipart';
+import fastifyFormbody from '@fastify/formbody';
 import fastifyView from '@fastify/view';
 import {
   serializerCompiler,
@@ -72,6 +73,9 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
       fileSize: 1000 * 1000 * 1000 * 1000, // 1TB
     },
   });
+
+  // Register formbody support (for application/x-www-form-urlencoded)
+  await app.register(fastifyFormbody);
 
   // Register view engine with EJS templating
   await app.register(fastifyView, {

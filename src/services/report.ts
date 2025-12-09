@@ -70,7 +70,7 @@ export class ReportService extends BaseService implements IReportService {
    */
   async createVideoReport(data: CreateVideoReportInput): Promise<DrizzleVideoReport> {
     return this.withErrorLogging('createVideoReport', async () => {
-      const timestamp = this.getCurrentTimestamp();
+      const timestamp = this.getCurrentTimestampMs();
 
       const reportData: DrizzleNewVideoReport = {
         timestamp,
@@ -95,7 +95,7 @@ export class ReportService extends BaseService implements IReportService {
    */
   async createCommentReport(data: CreateCommentReportInput): Promise<DrizzleCommentReport> {
     return this.withErrorLogging('createCommentReport', async () => {
-      const timestamp = this.getCurrentTimestamp();
+      const timestamp = this.getCurrentTimestampMs();
 
       const reportData: DrizzleNewCommentReport = {
         timestamp,

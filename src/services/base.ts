@@ -73,13 +73,6 @@ export abstract class BaseService {
   }
 
   /**
-   * Gets the current Unix timestamp in seconds
-   */
-  protected getCurrentTimestamp(): number {
-    return Math.floor(Date.now() / 1000);
-  }
-
-  /**
    * Gets the current Unix timestamp in milliseconds
    */
   protected getCurrentTimestampMs(): number {

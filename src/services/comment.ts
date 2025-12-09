@@ -16,6 +16,7 @@ import type { CommentsRepository } from '../database/repositories/comments.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { DrizzleComment, DrizzleNewComment } from '../database/schemas/index.js';
 import type { PaginationOptions } from '../types/models.js';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * Comment service dependencies
@@ -49,6 +50,8 @@ export class CommentService extends BaseService implements ICommentService {
     this.commentRepository = commentRepository;
     this.videoRepository = videoRepository;
     this.websocketService = websocketService;
+    // Prevent unused variable warning - websocketService will be used for real-time comment updates
+    void this.websocketService;
   }
 
   /**
@@ -66,11 +69,7 @@ export class CommentService extends BaseService implements ICommentService {
   async getComments(options?: GetCommentsOptions): Promise<DrizzleComment[]> {
     return this.withErrorLogging('getComments', async () => {
       if (options?.videoId !== undefined && options.videoId !== '') {
-        const paginationOptions: PaginationOptions = {};
-        if (options.limit !== undefined) {
-          paginationOptions.limit = options.limit;
-        }
-        return this.commentRepository.findByVideoId(options.videoId, paginationOptions);
+        return this.commentRepository.findByVideoId(options.videoId);
       }
 
       // For now, return comments by video if specified, otherwise empty
@@ -84,10 +83,25 @@ export class CommentService extends BaseService implements ICommentService {
    */
   async getCommentsForVideo(
     videoId: string,
-    options?: PaginationOptions
+    type: string,
+    sort: string,
+    timestamp: number
   ): Promise<DrizzleComment[]> {
     return this.withErrorLogging('getCommentsForVideo', async () => {
-      return this.commentRepository.findByVideoId(videoId, options);
+      // Validate parameters
+      if (type !== 'before' && type !== 'after') {
+        throw new Error('Type must be "before" or "after"');
+      }
+      if (sort !== 'ascending' && sort !== 'descending') {
+        throw new Error('Sort must be "ascending" or "descending"');
+      }
+
+      return this.commentRepository.findByVideoIdWithTimestampFilter(
+        videoId,
+        type,
+        sort,
+        timestamp
+      );
     });
   }
 
@@ -96,19 +110,19 @@ export class CommentService extends BaseService implements ICommentService {
    */
   async createComment(data: CreateCommentInput): Promise<DrizzleComment> {
     return this.withErrorLogging('createComment', async () => {
-      const timestamp = this.getCurrentTimestamp();
+      const timestamp = this.getCurrentTimestampMs();
+
+      const commentPlainTextSanitized = sanitizeHtml(data.commentPlainText, {
+        allowedTags: [],
+        allowedAttributes: {},
+      });
 
       // Create comment data
       const commentData: DrizzleNewComment = {
         video_id: data.videoId,
-        comment_plain_text_sanitized: data.commentText,
+        comment_plain_text_sanitized: commentPlainTextSanitized,
         timestamp,
       };
-
-      this.logger.debug('Creating comment', {
-        videoId: data.videoId,
-        textLength: data.commentText.length,
-      });
 
       // Create the comment
       const comment = await this.commentRepository.create(commentData);
@@ -116,21 +130,6 @@ export class CommentService extends BaseService implements ICommentService {
       // Increment video comment count
       if (this.videoRepository) {
         await this.videoRepository.incrementComments(data.videoId);
-      }
-
-      // Broadcast new comment event
-      if (this.websocketService) {
-        this.websocketService.broadcastToNodes({
-          eventName: 'echo',
-          data: {
-            eventName: 'comment_added',
-            payload: {
-              videoId: data.videoId,
-              commentId: comment.id,
-              timestamp,
-            },
-          },
-        });
       }
 
       return comment;
@@ -216,7 +215,7 @@ export class CommentService extends BaseService implements ICommentService {
     limit: number = 50
   ): Promise<DrizzleComment[]> {
     // Would need repository method - for now filter in memory
-    const comments = await this.commentRepository.findByVideoId(videoId, { limit: 100 });
+    const comments = await this.commentRepository.findByVideoId(videoId);
     return comments.filter((c) => c.timestamp > afterTimestamp).slice(0, limit);
   }
 }

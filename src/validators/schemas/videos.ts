@@ -13,7 +13,6 @@ import {
   resolutionSchema,
   manifestTypeSchema,
   sortTermSchema,
-  tagTermSchema,
   tagLimitSchema,
   timestampSchema,
   booleanSchema,
@@ -24,6 +23,7 @@ import {
   reportTypeSchema,
   reportMessageSchema,
   searchTermSchemaOptional,
+  tagTermSchemaOptional,
 } from './common.js';
 
 // ============================================================================
@@ -80,7 +80,7 @@ export type VideoAdaptiveManifestParams = z.infer<typeof videoAdaptiveManifestPa
 export const videoSearchQuerySchema = z.object({
   searchTerm: searchTermSchemaOptional,
   sortTerm: sortTermSchema,
-  tagTerm: tagTermSchema,
+  tagTerm: tagTermSchemaOptional,
   tagLimit: tagLimitSchema,
   timestamp: timestampSchema,
 });
