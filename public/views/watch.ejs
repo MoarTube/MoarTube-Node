@@ -2782,7 +2782,7 @@ body {
 
 				for (const downloadableSource of DOWNLOADABLE_SOURCES) {
 					const segments = downloadableSource.src.split('/');
-					const downloadLink = downloadableSource.src + '/download';
+					const downloadLink = downloadableSource.src;
 
 					html += '<a href="' + downloadLink + '"><button type="button" class="btn btn-link">' + segments[7] + '-' + segments[8] + '</button></a><br>';
 				}

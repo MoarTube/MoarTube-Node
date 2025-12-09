@@ -1749,7 +1749,7 @@ export class VideosService extends BaseService implements IVideoService {
           const src = `${externalVideosBaseUrl}/external/videos/${videoId}/adaptive/m3u8/${manifestType}/manifests/manifest-${resolution}.m3u8`;
           adaptiveSources.push({ src, type: 'application/vnd.apple.mpegurl' });
         } else {
-          // Progressive download source
+          // Progressive streaming source (MP4, WebM, OGV)
           const src = `${externalVideosBaseUrl}/external/videos/${videoId}/progressive/${format}/${resolution}.${format}`;
           const type = this.getVideoMimeType(format);
 

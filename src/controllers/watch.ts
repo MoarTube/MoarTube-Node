@@ -12,7 +12,6 @@ import type { LinksRepository } from '../database/repositories/links.js';
 import type { MonetizationRepository } from '../database/repositories/monetization.js';
 import type { DrizzleVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
-import { isVideoIdValid } from '../utils/index.js';
 
 /**
  * Fastify reply with view engine support
@@ -25,7 +24,7 @@ type FastifyReplyWithView = FastifyReply & {
  * Query parameters for watch page
  */
 export interface WatchQuery {
-  v?: string;
+  v: string;
 }
 
 /**
@@ -140,11 +139,8 @@ export class WatchController extends BaseController {
     try {
       const { v: videoId } = request.query as WatchQuery;
 
-      if (videoId === undefined || videoId === '' || !isVideoIdValid(videoId, false)) {
-        return await reply.status(400).send('invalid video id');
-      }
-
       const config = getConfig();
+
       const video = await this.videoRepository.findById(videoId);
 
       if (!video) {
@@ -152,12 +148,7 @@ export class WatchController extends BaseController {
       }
 
       const pageData = await this.buildPageData(video, videoId, config);
-      this.setCacheHeaders(
-        reply,
-        video,
-        pageData.videoData.video.adaptiveSources,
-        pageData.videoData.video.progressiveSources
-      );
+
       return await this.renderPage(reply, pageData);
     } catch (error) {
       this.logger.error('Watch page rendering failed', error instanceof Error ? error : null);
@@ -417,26 +408,6 @@ export class WatchController extends BaseController {
         sourcesFormatsAndResolutions,
       },
     };
-  }
-
-  /**
-   * Set appropriate cache headers
-   */
-  private setCacheHeaders(
-    reply: FastifyReply,
-    video: DrizzleVideo,
-    adaptiveSources: VideoSource[],
-    progressiveSources: VideoSource[]
-  ): void {
-    const hasSources = adaptiveSources.length > 0 || progressiveSources.length > 0;
-    const isAvailable = video.is_published || video.is_live;
-
-    if (!hasSources || !isAvailable) {
-      const cacheValue = video.is_streamed ? 'public, s-maxage=86400' : 'no-store';
-      void reply.header('Cache-Control', cacheValue);
-    } else {
-      void reply.header('Cache-Control', 'public, s-maxage=86400');
-    }
   }
 
   /**
