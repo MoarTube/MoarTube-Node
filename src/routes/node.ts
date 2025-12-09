@@ -40,6 +40,9 @@ export function nodeRoutes(
     '/',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        querystring: nodeSearchQuerySchema,
+      },
     },
     controller.getNodePage.bind(controller)
   );

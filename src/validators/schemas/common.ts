@@ -116,12 +116,13 @@ export const searchTermSchemaOptional = z.string().max(100).optional();
 /**
  * Sort term schema for video listings
  */
-export const sortTermSchema = z.enum(['latest', 'popular', 'oldest']);
+export const sortTermSchema = z.enum(['latest', 'popular', 'oldest']).optional().default('latest');
 
 /**
  * Tag term schema for filtering
  */
-export const tagTermSchema = z.string().max(100).optional();
+export const tagTermSchema = z.string().max(100);
+export const tagTermSchemaOptional = z.string().max(100).optional();
 
 /**
  * Tag limit schema

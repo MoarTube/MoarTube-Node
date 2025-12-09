@@ -14,14 +14,13 @@ import type { LinksRepository } from '../database/repositories/links.js';
 import type { MonetizationRepository } from '../database/repositories/monetization.js';
 import type { DrizzleVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
-import { isSearchTermValid, isSortTermValid, isTagTermValid } from '../utils/index.js';
 
 /**
  * Query parameters for node page
  */
 export interface NodeQuery {
   searchTerm?: string;
-  sortTerm?: string;
+  sortTerm: string;
   tagTerm?: string;
 }
 
@@ -60,18 +59,7 @@ export class NodeController extends BaseController {
    */
   getNodePage = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
-      const queryParams = request.query as NodeQuery;
-
-      // Validate and sanitize query parameters
-      const searchTerm = isSearchTermValid(queryParams.searchTerm ?? '')
-        ? (queryParams.searchTerm ?? '')
-        : '';
-      const sortTerm = isSortTermValid(queryParams.sortTerm ?? '')
-        ? (queryParams.sortTerm ?? 'latest')
-        : 'latest';
-      const tagTerm = isTagTermValid(queryParams.tagTerm ?? '', true)
-        ? (queryParams.tagTerm ?? '')
-        : '';
+      const { searchTerm, sortTerm, tagTerm } = request.query as NodeQuery;
 
       const config = getConfig();
       const nodeSettings = config.nodeSettings;
@@ -138,7 +126,7 @@ export class NodeController extends BaseController {
       return await reply.view('node', { model });
     } catch (error) {
       this.logger.error('Node page rendering failed', error instanceof Error ? error : null);
-      void reply.status(500).send('node page rendering error');
+      return await reply.status(500).send('node page rendering error');
     }
   };
 
@@ -149,18 +137,7 @@ export class NodeController extends BaseController {
    */
   search = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
-      const queryParams = request.query as NodeQuery;
-
-      // Validate parameters
-      const searchTerm = isSearchTermValid(queryParams.searchTerm ?? '')
-        ? (queryParams.searchTerm ?? '')
-        : '';
-      const sortTerm = isSortTermValid(queryParams.sortTerm ?? '')
-        ? (queryParams.sortTerm ?? 'latest')
-        : 'latest';
-      const tagTerm = isTagTermValid(queryParams.tagTerm ?? '', true)
-        ? (queryParams.tagTerm ?? '')
-        : '';
+      const { searchTerm, sortTerm, tagTerm } = request.query as NodeQuery;
 
       const data = await this.performSearch(searchTerm, sortTerm, tagTerm);
       this.sendSuccess(reply, { searchResults: data.searchResults });
@@ -245,9 +222,9 @@ export class NodeController extends BaseController {
    * Perform video search with sorting and tag filtering
    */
   private async performSearch(
-    searchTerm: string,
+    searchTerm: string | undefined,
     sortTerm: string,
-    tagTerm: string
+    tagTerm: string | undefined
   ): Promise<{ isError: false; searchResults: DrizzleVideo[] }> {
     const videos = await this.fetchAndMergeVideos(searchTerm);
     const sortedVideos = this.sortVideos(videos, sortTerm);
@@ -259,12 +236,12 @@ export class NodeController extends BaseController {
   /**
    * Fetch published and live videos, merge and deduplicate
    */
-  private async fetchAndMergeVideos(searchTerm: string): Promise<DrizzleVideo[]> {
+  private async fetchAndMergeVideos(searchTerm: string | undefined): Promise<DrizzleVideo[]> {
     const queryOptions: { isPublished: boolean; search?: string } = {
       isPublished: true,
     };
 
-    if (searchTerm.length > 0) {
+    if (searchTerm !== undefined && searchTerm.length > 0) {
       queryOptions.search = searchTerm;
     }
 
@@ -304,8 +281,8 @@ export class NodeController extends BaseController {
   /**
    * Filter videos by tag with optional tag limit
    */
-  private filterByTag(videos: DrizzleVideo[], tagTerm: string): DrizzleVideo[] {
-    if (tagTerm.length > 0) {
+  private filterByTag(videos: DrizzleVideo[], tagTerm: string | undefined): DrizzleVideo[] {
+    if (tagTerm !== undefined && tagTerm.length > 0) {
       return this.filterBySpecificTag(videos, tagTerm);
     }
     return this.filterWithTagLimit(videos);

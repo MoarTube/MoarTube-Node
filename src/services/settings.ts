@@ -395,7 +395,7 @@ export class SettingsService extends BaseService implements ISettingsService {
   /**
    * Get avatar image stream
    */
-  getAvatar(): NodeJS.ReadableStream | null {
+  getAvatar(): { fileStream: NodeJS.ReadableStream; size: number } | null {
     try {
       const config = getConfig();
       const customPath = path.join(config.paths.dataDirectoryPath, 'images', 'avatar.png');
@@ -404,7 +404,10 @@ export class SettingsService extends BaseService implements ISettingsService {
       const imagePath = fs.existsSync(customPath) ? customPath : defaultPath;
 
       if (fs.existsSync(imagePath)) {
-        return fs.createReadStream(imagePath);
+        const size = fs.statSync(imagePath).size;
+        const fileStream = fs.createReadStream(imagePath);
+
+        return { fileStream, size };
       }
 
       return null;
@@ -450,7 +453,7 @@ export class SettingsService extends BaseService implements ISettingsService {
   /**
    * Get banner image stream
    */
-  getBanner(): NodeJS.ReadableStream | null {
+  getBanner(): { fileStream: NodeJS.ReadableStream; size: number } | null {
     try {
       const config = getConfig();
       const customPath = path.join(config.paths.dataDirectoryPath, 'images', 'banner.png');
@@ -459,7 +462,11 @@ export class SettingsService extends BaseService implements ISettingsService {
       const imagePath = fs.existsSync(customPath) ? customPath : defaultPath;
 
       if (fs.existsSync(imagePath)) {
-        return fs.createReadStream(imagePath);
+        const stats = fs.statSync(imagePath);
+        const size = stats.size;
+        const fileStream = fs.createReadStream(imagePath);
+
+        return { fileStream, size };
       }
 
       return null;

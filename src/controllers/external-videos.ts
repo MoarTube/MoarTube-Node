@@ -9,11 +9,6 @@ import path from 'node:path';
 import { BaseController } from './base.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import { getConfig } from '../config/index.js';
-import {
-  isVideoIdValid,
-  isProgressiveFormatValid,
-  isProgressiveFilenameValid,
-} from '../utils/index.js';
 
 /**
  * Route params for video images
@@ -261,20 +256,12 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve progressive video files with range request support
    */
-  getProgressive = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getProgressive = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { videoId, format, progressiveFilename } = request.params as ProgressiveParams;
 
-      if (
-        !isVideoIdValid(videoId, false) ||
-        !isProgressiveFormatValid(format) ||
-        !isProgressiveFilenameValid(progressiveFilename)
-      ) {
-        void reply.status(404).send('video not found');
-        return;
-      }
-
       const config = getConfig();
+
       const filePath = path.join(
         config.paths.videosDirectoryPath,
         videoId,
@@ -284,8 +271,7 @@ export class ExternalVideosController extends BaseController {
       );
 
       if (!fs.existsSync(filePath)) {
-        void reply.status(404).send('video not found');
-        return;
+        return await reply.status(404).send('video not found');
       }
 
       const stat = fs.statSync(filePath);
@@ -308,7 +294,7 @@ export class ExternalVideosController extends BaseController {
 
         const fileStream = fs.createReadStream(filePath, { start, end });
 
-        void reply
+        return await reply
           .status(206)
           .header('Content-Range', `bytes ${String(start)}-${String(end)}/${String(fileSize)}`)
           .header('Accept-Ranges', 'bytes')
@@ -319,14 +305,14 @@ export class ExternalVideosController extends BaseController {
         // Full file request
         const fileStream = fs.createReadStream(filePath);
 
-        void reply
+        return await reply
           .header('Content-Length', fileSize)
           .header('Content-Type', `video/${format}`)
           .send(fileStream);
       }
     } catch (error) {
       this.logger.error('Get progressive video failed', error instanceof Error ? error : null);
-      void reply.status(404).send('video not found');
+      return await reply.status(404).send('video not found');
     }
   };
 

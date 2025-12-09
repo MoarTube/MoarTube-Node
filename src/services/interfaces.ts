@@ -935,13 +935,13 @@ export interface ISettingsService {
   clearCloudflareConfig(): void;
 
   /** Get avatar image stream */
-  getAvatar(): NodeJS.ReadableStream | null;
+  getAvatar(): { fileStream: NodeJS.ReadableStream; size: number } | null;
 
   /** Update avatar and icon */
   updateAvatar(iconFile: string, avatarFile: string): Promise<void>;
 
   /** Get banner image stream */
-  getBanner(): NodeJS.ReadableStream | null;
+  getBanner(): { fileStream: NodeJS.ReadableStream; size: number } | null;
 
   /** Update banner */
   updateBanner(bannerFile: string): Promise<void>;

@@ -180,19 +180,21 @@ export class SettingsController extends BaseController {
    *
    * Get node avatar image
    */
-  getAvatar = (_request: FastifyRequest, reply: FastifyReply): void => {
+  getAvatar = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const fileStream = this.settingsService.getAvatar();
+      const avatar = this.settingsService.getAvatar();
 
-      if (fileStream !== null) {
-        void reply.header('Content-Type', 'image/png');
-        void reply.send(fileStream);
+      if (avatar !== null) {
+        return await reply
+          .header('Content-Type', 'image/png')
+          .header('Content-Length', avatar.size)
+          .send(avatar.fileStream);
       } else {
-        void reply.status(404).send('avatar not found');
+        return await reply.status(404).send('avatar not found');
       }
     } catch (error) {
       this.logger.error('Error retrieving avatar', error as Error);
-      void reply.status(500).send('node avatar retrieval error');
+      return await reply.status(500).send('node avatar retrieval error');
     }
   };
 
@@ -201,19 +203,21 @@ export class SettingsController extends BaseController {
    *
    * Get node banner image
    */
-  getBanner = (_request: FastifyRequest, reply: FastifyReply): void => {
+  getBanner = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const fileStream = this.settingsService.getBanner();
+      const banner = this.settingsService.getBanner();
 
-      if (fileStream !== null) {
-        void reply.header('Content-Type', 'image/png');
-        void reply.send(fileStream);
+      if (banner !== null) {
+        return await reply
+          .header('Content-Type', 'image/png')
+          .header('Content-Length', banner.size)
+          .send(banner.fileStream);
       } else {
-        void reply.status(404).send('banner not found');
+        return await reply.status(404).send('banner not found');
       }
     } catch (error) {
       this.logger.error('Error retrieving banner', error as Error);
-      void reply.status(500).send('node banner retrieval error');
+      return await reply.status(500).send('node banner retrieval error');
     }
   };
 

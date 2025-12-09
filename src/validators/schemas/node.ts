@@ -4,13 +4,7 @@
  * Zod schemas for node page API endpoints.
  */
 import { z } from 'zod';
-import {
-  searchTermSchema,
-  sortTermSchema,
-  tagTermSchema,
-  tagLimitSchema,
-  timestampSchema,
-} from './common.js';
+import { searchTermSchemaOptional, sortTermSchema, tagTermSchemaOptional } from './common.js';
 
 // ============================================================================
 // Node-Specific Schemas
@@ -29,11 +23,9 @@ export const contentTypeSchema = z.enum(['comments', 'videoReports', 'commentRep
  * Node search query parameters schema
  */
 export const nodeSearchQuerySchema = z.object({
-  searchTerm: searchTermSchema,
+  searchTerm: searchTermSchemaOptional,
   sortTerm: sortTermSchema,
-  tagTerm: tagTermSchema,
-  tagLimit: tagLimitSchema,
-  timestamp: timestampSchema,
+  tagTerm: tagTermSchemaOptional,
 });
 
 export type NodeSearchQuery = z.infer<typeof nodeSearchQuerySchema>;
