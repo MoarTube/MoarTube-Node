@@ -5,11 +5,11 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-import { BaseController } from './base.js';
-import type { VideosRepository } from '../database/repositories/videos.js';
+import { VideoControllerBase, type VideoSource } from './video-controller-base.js';
 import type { CommentsRepository } from '../database/repositories/comments.js';
 import type { LinksRepository } from '../database/repositories/links.js';
 import type { MonetizationRepository } from '../database/repositories/monetization.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
 import type { DrizzleVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
 
@@ -25,14 +25,6 @@ type FastifyReplyWithView = FastifyReply & {
  */
 export interface WatchQuery {
   v: string;
-}
-
-/**
- * Video source info
- */
-interface VideoSource {
-  src: string;
-  type: string;
 }
 
 /**
@@ -120,14 +112,14 @@ interface WatchPageData {
  * Handles:
  * - Main video watch page rendering
  */
-export class WatchController extends BaseController {
+export class WatchController extends VideoControllerBase {
   constructor(
-    private readonly videoRepository: VideosRepository,
+    videoRepository: VideosRepository,
     private readonly commentRepository: CommentsRepository,
     private readonly linkRepository: LinksRepository,
     private readonly monetizationRepository: MonetizationRepository
   ) {
-    super('WatchController');
+    super('WatchController', videoRepository);
   }
 
   /**
@@ -139,32 +131,27 @@ export class WatchController extends BaseController {
     try {
       const { v: videoId } = request.query as WatchQuery;
 
-      const config = getConfig();
-
       const video = await this.videoRepository.findById(videoId);
 
       if (!video) {
         return await reply.status(404).send('that video could not be loaded');
       }
 
-      const pageData = await this.buildPageData(video, videoId, config);
+      const pageData = await this.buildPageData(video);
 
       return await this.renderPage(reply, pageData);
     } catch (error) {
-      this.logger.error('Watch page rendering failed', error instanceof Error ? error : null);
+      this.logger.error('Get progressive video failed', error instanceof Error ? error : null);
       return await reply.status(500).send('that video could not be loaded');
     }
-  };
-
-  /**
+  }; /**
    * Build all data needed for the watch page
    */
-  private async buildPageData(
-    video: DrizzleVideo,
-    videoId: string,
-    config: ReturnType<typeof getConfig>
-  ): Promise<WatchPageData> {
+  private async buildPageData(video: DrizzleVideo): Promise<WatchPageData> {
+    const config = getConfig();
+
     const nodeSettings = config.nodeSettings;
+
     const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
     const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
 
@@ -180,22 +167,20 @@ export class WatchController extends BaseController {
         sortDirection: 'desc',
       }),
       this.commentRepository.findByVideoIdWithTimestampFilter(
-        videoId,
+        video.video_id,
         'before',
         'ascending',
         Date.now()
       ),
     ]);
 
-    const {
-      isHlsAvailable,
-      isMp4Available,
-      isWebmAvailable,
-      isOgvAvailable,
-      adaptiveSources,
-      progressiveSources,
-      sourcesFormatsAndResolutions,
-    } = this.buildVideoSources(video, externalVideosBaseUrl);
+    const { adaptiveSources, progressiveSources, sourcesFormatsAndResolutions } =
+      this.buildVideoSources(video, externalVideosBaseUrl);
+
+    const isHlsAvailable = sourcesFormatsAndResolutions.m3u8.length > 0;
+    const isMp4Available = sourcesFormatsAndResolutions.mp4.length > 0;
+    const isWebmAvailable = sourcesFormatsAndResolutions.webm.length > 0;
+    const isOgvAvailable = sourcesFormatsAndResolutions.ogv.length > 0;
 
     return {
       informationData: this.buildNodeInformation(nodeSettings, videoCount),
@@ -261,107 +246,6 @@ export class WatchController extends BaseController {
         publicNodePort: String(nodeSettings.publicNodePort),
         cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
       },
-    };
-  }
-
-  /**
-   * Build video sources from metadata
-   */
-  private buildVideoSources(
-    video: DrizzleVideo,
-    externalVideosBaseUrl: string
-  ): {
-    isHlsAvailable: boolean;
-    isMp4Available: boolean;
-    isWebmAvailable: boolean;
-    isOgvAvailable: boolean;
-    adaptiveSources: VideoSource[];
-    progressiveSources: VideoSource[];
-    sourcesFormatsAndResolutions: {
-      m3u8: string[];
-      mp4: string[];
-      webm: string[];
-      ogv: string[];
-    };
-  } {
-    const adaptiveSources: VideoSource[] = [];
-    const progressiveSources: VideoSource[] = [];
-    const sourcesFormatsAndResolutions = { m3u8: [], mp4: [], webm: [], ogv: [] } as {
-      m3u8: string[];
-      mp4: string[];
-      webm: string[];
-      ogv: string[];
-    };
-
-    if (!video.is_published && !video.is_live) {
-      return {
-        isHlsAvailable: false,
-        isMp4Available: false,
-        isWebmAvailable: false,
-        isOgvAvailable: false,
-        adaptiveSources,
-        progressiveSources,
-        sourcesFormatsAndResolutions,
-      };
-    }
-
-    const outputs = JSON.parse(video.outputs) as Record<string, string[]>;
-
-    const manifestType = video.is_streaming ? 'dynamic' : 'static';
-
-    const isHlsAvailable = (outputs['m3u8']?.length ?? 0) > 0;
-    const isMp4Available = (outputs['mp4']?.length ?? 0) > 0;
-    const isWebmAvailable = (outputs['webm']?.length ?? 0) > 0;
-    const isOgvAvailable = (outputs['ogv']?.length ?? 0) > 0;
-
-    for (const format in outputs) {
-      if (format in outputs) {
-        const resolutions = outputs[format] ?? [];
-
-        for (const resolution of resolutions) {
-          if (format === 'm3u8') {
-            const src = `${externalVideosBaseUrl}/external/videos/${video.video_id}/adaptive/m3u8/${manifestType}/manifests/manifest-${resolution}.m3u8`;
-            const source: VideoSource = { src, type: 'application/vnd.apple.mpegurl' };
-            adaptiveSources.push(source);
-          } else {
-            const src = `${externalVideosBaseUrl}/external/videos/${video.video_id}/progressive/${format}/${resolution}.${format}`;
-
-            let type: string;
-            if (format === 'mp4') {
-              type = 'video/mp4';
-            } else if (format === 'webm') {
-              type = 'video/webm';
-            } else if (format === 'ogv') {
-              type = 'video/ogg';
-            } else {
-              continue;
-            }
-
-            const source: VideoSource = { src, type };
-            progressiveSources.push(source);
-          }
-
-          if (format in sourcesFormatsAndResolutions) {
-            sourcesFormatsAndResolutions[format].push(resolution);
-          }
-        }
-      }
-    }
-
-    if (adaptiveSources.length > 0) {
-      const src = `${externalVideosBaseUrl}/external/videos/${video.video_id}/adaptive/m3u8/${manifestType}/manifests/manifest-master.m3u8`;
-      const source: VideoSource = { src, type: 'application/vnd.apple.mpegurl' };
-      adaptiveSources.unshift(source);
-    }
-
-    return {
-      isHlsAvailable,
-      isMp4Available,
-      isWebmAvailable,
-      isOgvAvailable,
-      adaptiveSources,
-      progressiveSources,
-      sourcesFormatsAndResolutions,
     };
   }
 

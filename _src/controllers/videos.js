@@ -728,7 +728,7 @@ async function videoIdData_GET(videoId) {
             const outputs = JSON.parse(video.outputs);
             const meta = JSON.parse(video.meta);
 
-            let videoAliasUrl = 'MoarTube Aliaser link unavailable';
+            let videoAliasUrl = 'MoarTube Aliaser link unavailable (video not indexed)';
 
             if (isIndexed) {
                 const nodeSettings = getNodeSettings();
@@ -791,7 +791,7 @@ async function videoIdDataAll_GET(videoId) {
         const outputs = JSON.parse(video.outputs);
         const meta = JSON.parse(video.meta);
 
-        let videoAliasUrl = 'MoarTube Aliaser link unavailable';
+        let videoAliasUrl = 'MoarTube Aliaser link unavailable (video not indexed)';
 
         if (isIndexed) {
             const nodeSettings = getNodeSettings();

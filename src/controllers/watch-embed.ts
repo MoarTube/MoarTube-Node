@@ -4,10 +4,14 @@
  * Handles embedded video and chat page rendering.
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { BaseController } from './base.js';
-import type { VideosRepository } from '../database/repositories/videos.js';
+import {
+  VideoControllerBase,
+  type FastifyReplyWithView,
+  type VideoSource,
+} from './video-controller-base.js';
 import type { LinksRepository } from '../database/repositories/links.js';
 import type { MonetizationRepository } from '../database/repositories/monetization.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
 import type { DrizzleVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
 
@@ -19,20 +23,34 @@ interface VideoIdParams {
 }
 
 /**
- * Video source info
+ * Page data for embedded video page
  */
-interface VideoSource {
-  src: string;
-  type: string;
+interface EmbedPageData {
+  videoData: {
+    video: {
+      title: string;
+      description: string;
+      views: number;
+      isPublishing: boolean;
+      isPublished: boolean;
+      isLive: boolean;
+      isStreaming: boolean;
+      isStreamed: boolean;
+      comments: number;
+      creationTimestamp: number;
+      adaptiveSources: VideoSource[];
+      progressiveSources: VideoSource[];
+      sourcesFormatsAndResolutions: {
+        m3u8: string[];
+        mp4: string[];
+        webm: string[];
+        ogv: string[];
+      };
+    };
+  };
+  externalVideosBaseUrl: string;
+  externalResourcesBaseUrl: string;
 }
-
-/**
- * Extended FastifyReply with view method
- * View engine will be registered in app setup
- */
-type FastifyReplyWithView = FastifyReply & {
-  view(template: string, data: Record<string, unknown>): Promise<FastifyReply>;
-};
 
 /**
  * WatchEmbedController class
@@ -41,13 +59,13 @@ type FastifyReplyWithView = FastifyReply & {
  * - Render embedded video player page
  * - Render embedded chat page
  */
-export class WatchEmbedController extends BaseController {
+export class WatchEmbedController extends VideoControllerBase {
   constructor(
-    private readonly videoRepository: VideosRepository,
+    videoRepository: VideosRepository,
     private readonly linkRepository: LinksRepository,
     private readonly monetizationRepository: MonetizationRepository
   ) {
-    super('WatchEmbedController');
+    super('WatchEmbedController', videoRepository);
   }
 
   /**
@@ -59,46 +77,17 @@ export class WatchEmbedController extends BaseController {
     try {
       const { videoId } = request.params as VideoIdParams;
 
-      const config = getConfig();
-
       const video = await this.videoRepository.findById(videoId);
 
       if (!video) {
         return await reply.status(404).send('that video could not be loaded');
       }
 
-      const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
-      const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
-
-      // Build video sources
-      const { adaptiveSources, progressiveSources, sourcesFormatsAndResolutions } =
-        this.buildVideoSources(video, externalVideosBaseUrl);
-
-      const model = {
-        videoData: {
-          video: {
-            title: video.title,
-            description: video.description,
-            views: video.views,
-            isPublishing: video.is_publishing,
-            isPublished: video.is_published,
-            isLive: video.is_live,
-            isStreaming: video.is_streaming,
-            isStreamed: video.is_streamed,
-            comments: video.comments,
-            creationTimestamp: video.creation_timestamp,
-            adaptiveSources,
-            progressiveSources,
-            sourcesFormatsAndResolutions,
-          },
-        },
-        externalVideosBaseUrl,
-        externalResourcesBaseUrl,
-      };
+      const model = this.buildPageData(video);
 
       return await reply.view('embed-video', { model });
     } catch (error) {
-      this.logger.error('Watch page rendering failed', error instanceof Error ? error : null);
+      this.logger.error('Get progressive video failed', error instanceof Error ? error : null);
       return await reply.status(500).send('that video could not be loaded');
     }
   };
@@ -158,80 +147,38 @@ export class WatchEmbedController extends BaseController {
   };
 
   /**
-   * Build video sources for embedded video player
+   * Build all data needed for the embedded video page
    */
-  private buildVideoSources(
-    video: DrizzleVideo,
-    externalVideosBaseUrl: string
-  ): {
-    adaptiveSources: VideoSource[];
-    progressiveSources: VideoSource[];
-    sourcesFormatsAndResolutions: {
-      m3u8: string[];
-      mp4: string[];
-      webm: string[];
-      ogv: string[];
-    };
-  } {
-    const adaptiveSources: VideoSource[] = [];
-    const progressiveSources: VideoSource[] = [];
-    const sourcesFormatsAndResolutions = { m3u8: [], mp4: [], webm: [], ogv: [] } as {
-      m3u8: string[];
-      mp4: string[];
-      webm: string[];
-      ogv: string[];
-    };
+  private buildPageData(video: DrizzleVideo): EmbedPageData {
+    const config = getConfig();
 
-    if (!video.is_published && !video.is_live) {
-      return {
-        adaptiveSources,
-        progressiveSources,
-        sourcesFormatsAndResolutions,
-      };
-    }
+    const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
+    const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
 
-    const outputs = JSON.parse(video.outputs) as Record<string, string[]>;
-
-    const manifestType = video.is_streaming ? 'dynamic' : 'static';
-
-    for (const format in outputs) {
-      if (format in outputs) {
-        const resolutions = outputs[format] ?? [];
-
-        for (const resolution of resolutions) {
-          if (format === 'm3u8') {
-            const src = `${externalVideosBaseUrl}/external/videos/${video.video_id}/adaptive/m3u8/${manifestType}/manifests/manifest-${resolution}.m3u8`;
-            const source: VideoSource = { src, type: 'application/vnd.apple.mpegurl' };
-            adaptiveSources.push(source);
-          } else {
-            const src = `${externalVideosBaseUrl}/external/videos/${video.video_id}/progressive/${format}/${resolution}.${format}`;
-
-            let type: string;
-            if (format === 'mp4') {
-              type = 'video/mp4';
-            } else if (format === 'webm') {
-              type = 'video/webm';
-            } else if (format === 'ogv') {
-              type = 'video/ogg';
-            } else {
-              continue;
-            }
-
-            const source: VideoSource = { src, type };
-            progressiveSources.push(source);
-          }
-
-          if (format in sourcesFormatsAndResolutions) {
-            sourcesFormatsAndResolutions[format].push(resolution);
-          }
-        }
-      }
-    }
+    // Build video sources
+    const { adaptiveSources, progressiveSources, sourcesFormatsAndResolutions } =
+      this.buildVideoSources(video, externalVideosBaseUrl);
 
     return {
-      adaptiveSources,
-      progressiveSources,
-      sourcesFormatsAndResolutions,
+      videoData: {
+        video: {
+          title: video.title,
+          description: video.description,
+          views: video.views,
+          isPublishing: video.is_publishing,
+          isPublished: video.is_published,
+          isLive: video.is_live,
+          isStreaming: video.is_streaming,
+          isStreamed: video.is_streamed,
+          comments: video.comments,
+          creationTimestamp: video.creation_timestamp,
+          adaptiveSources,
+          progressiveSources,
+          sourcesFormatsAndResolutions,
+        },
+      },
+      externalVideosBaseUrl,
+      externalResourcesBaseUrl,
     };
   }
 }

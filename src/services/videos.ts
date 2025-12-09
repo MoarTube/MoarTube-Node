@@ -926,7 +926,7 @@ export class VideosService extends BaseService implements IVideoService {
     const meta = this.safeJsonParse<Record<string, unknown>>(video.meta, {});
 
     // Build video alias URL if indexed
-    let videoAliasUrl = 'MoarTube Aliaser link unavailable';
+    let videoAliasUrl = 'MoarTube Aliaser link unavailable (video not indexed)';
 
     if (video.is_indexed && nodeSettings.nodeId) {
       const isDeveloperMode = config.runtime.isDeveloperMode;
