@@ -31,7 +31,11 @@ export class CommentsRepository extends BaseRepository {
    * @returns The comment record or null if not found
    */
   async findById(id: number): Promise<DrizzleComment | null> {
-    const result = await this.db.select().from(comments).where(eq(comments.id, id)).limit(1);
+    const result = await this.db
+      .select()
+      .from(comments)
+      .where(eq(comments.comment_id, id))
+      .limit(1);
     return result[0] ?? null;
   }
 
@@ -131,7 +135,11 @@ export class CommentsRepository extends BaseRepository {
    * @returns The updated comment record or null if not found
    */
   async update(id: number, data: Partial<DrizzleNewComment>): Promise<DrizzleComment | null> {
-    const result = await this.db.update(comments).set(data).where(eq(comments.id, id)).returning();
+    const result = await this.db
+      .update(comments)
+      .set(data)
+      .where(eq(comments.comment_id, id))
+      .returning();
     return result[0] ?? null;
   }
 
@@ -142,7 +150,7 @@ export class CommentsRepository extends BaseRepository {
    * @returns true if deleted, false if not found
    */
   async delete(id: number): Promise<boolean> {
-    const result = await this.db.delete(comments).where(eq(comments.id, id)).returning();
+    const result = await this.db.delete(comments).where(eq(comments.comment_id, id)).returning();
     return result.length > 0;
   }
 

@@ -991,7 +991,7 @@ async function videoIdCommentsComment_POST(videoId, commentPlainText, timestamp,
 
             cloudflare_purgeWatchPages([videoId]);
 
-            return { isError: false, commentId: commentId, comments: comments };
+            return { isError: false, id: commentId, comments: comments };
         }
         else {
             throw new Error(errorMessage);

@@ -107,7 +107,7 @@ interface WatchPageData {
   };
   commentsData: {
     isError: false;
-    comments: Array<{ id: number; timestamp: number; commentPlainTextSanitized: string }>;
+    comments: Array<{ commentId: number; timestamp: number; commentPlainTextSanitized: string }>;
   };
   externalVideosBaseUrl: string;
   externalResourcesBaseUrl: string;
@@ -239,7 +239,7 @@ export class WatchController extends BaseController {
       commentsData: {
         isError: false as const,
         comments: comments.map((c) => ({
-          id: c.id,
+          commentId: c.comment_id,
           timestamp: c.timestamp,
           commentPlainTextSanitized: c.comment_plain_text_sanitized,
         })),

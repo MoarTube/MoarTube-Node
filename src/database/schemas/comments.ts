@@ -11,7 +11,7 @@ import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
  */
 export const comments = sqliteTable('comments', {
   // Primary key - auto-incrementing integer
-  id: integer('id').primaryKey({ autoIncrement: true }),
+  comment_id: integer('comment_id').primaryKey({ autoIncrement: true }),
 
   // Reference to the video this comment belongs to
   video_id: text('video_id').notNull(),

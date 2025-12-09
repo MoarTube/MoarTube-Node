@@ -740,7 +740,7 @@ export class VideosController extends BaseController {
 
     // Map comments to expected format
     const formattedComments = comments.map((comment) => ({
-      commentId: comment.id,
+      commentId: comment.comment_id,
       timestamp: comment.timestamp,
       commentPlainTextSanitized: comment.comment_plain_text_sanitized,
     }));
@@ -817,7 +817,7 @@ export class VideosController extends BaseController {
 
     // Format comments for response (matching JS format)
     const formattedComments = comments.map((c) => ({
-      id: c.id,
+      commentId: c.comment_id,
       commentPlainTextSanitized: c.comment_plain_text_sanitized,
       timestamp: c.timestamp,
     }));
@@ -826,7 +826,7 @@ export class VideosController extends BaseController {
     await cloudflareService.purgeWatchPages([videoId]);
 
     this.sendSuccess(reply, {
-      commentId: comment.id,
+      commentId: comment.comment_id,
       comments: formattedComments,
     });
   };
