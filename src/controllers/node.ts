@@ -214,7 +214,7 @@ export class NodeController extends BaseController {
           break;
       }
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Content checked failed', error instanceof Error ? error : null);
       return await this.sendError(reply, 'error communicating with the MoarTube node');

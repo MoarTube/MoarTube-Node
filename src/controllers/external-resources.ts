@@ -41,13 +41,7 @@ export class ExternalResourcesController extends BaseController {
     if (!fs.existsSync(filePath)) {
       return await this.sendError(reply, 'file not found', 404);
     } else {
-      const stat = fs.statSync(filePath);
-      const stream = fs.createReadStream(filePath);
-
-      return reply
-        .header('Content-Type', contentType)
-        .header('Content-Length', stat.size)
-        .send(stream);
+      return await this.sendFile(reply, filePath, contentType);
     }
   }
 

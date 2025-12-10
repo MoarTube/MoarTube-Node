@@ -143,7 +143,7 @@ export class StreamsController extends BaseController {
 
       await this.streamService.stopStream(videoId);
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Stop stream failed', error instanceof Error ? error : null);
       return await this.sendError(reply, 'error communicating with the MoarTube node');
@@ -179,7 +179,7 @@ export class StreamsController extends BaseController {
         // Ignore file deletion errors
       }
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Remove segment failed', error instanceof Error ? error : null);
       return await this.sendError(reply, 'error communicating with the MoarTube node');
@@ -251,7 +251,7 @@ export class StreamsController extends BaseController {
         await this.liveChatMessageRepository.pruneOldMessages(videoId, chatHistoryLimit);
       }
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Update chat settings failed', error instanceof Error ? error : null);
       return await this.sendError(reply, 'error communicating with the MoarTube node');

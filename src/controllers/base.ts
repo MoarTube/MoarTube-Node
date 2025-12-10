@@ -5,6 +5,7 @@
  * Includes standardized response methods and error handling.
  */
 import type { FastifyReply } from 'fastify';
+import fs from 'node:fs';
 import { Logger, type ILogger } from '../utils/logger.js';
 
 /**
@@ -65,23 +66,13 @@ export abstract class BaseController {
    * Send a success response with data
    *
    * @param reply - Fastify reply object
-   * @param data - Response data
+   * @param data - Response data (optional)
    * @param status - HTTP status code (default: 200)
    */
-  protected sendSuccess(reply: FastifyReply, data: object, status: number = 200): FastifyReply {
-    const response = { isError: false as const, ...data };
+  protected sendSuccess(reply: FastifyReply, data?: object, status: number = 200): FastifyReply {
+    const response = data ? { isError: false as const, ...data } : { isError: false as const };
 
     return reply.status(status).send(response);
-  }
-
-  /**
-   * Send a success response without additional data
-   *
-   * @param reply - Fastify reply object
-   * @param status - HTTP status code (default: 200)
-   */
-  protected sendOk(reply: FastifyReply, status = 200): FastifyReply {
-    return reply.status(status).send({ isError: false });
   }
 
   /**
@@ -93,5 +84,56 @@ export abstract class BaseController {
    */
   protected sendError(reply: FastifyReply, message: string, status = 400): FastifyReply {
     return reply.status(status).send({ isError: true, message });
+  }
+
+  /**
+   * Send a file response
+   *
+   * @param reply - Fastify reply object
+   * @param filePath - Path to the file to send
+   * @param contentType - MIME type of the file
+   */
+  protected sendFile(reply: FastifyReply, filePath: string, contentType: string): FastifyReply {
+    if (!fs.existsSync(filePath)) {
+      return this.sendError(reply, 'file not found', 404);
+    }
+
+    const stat = fs.statSync(filePath);
+    const stream = fs.createReadStream(filePath);
+
+    return reply
+      .header('Content-Type', contentType)
+      .header('Content-Length', stat.size)
+      .send(stream);
+  }
+
+  /**
+   * Send a file chunk response for range requests
+   *
+   * @param reply - Fastify reply object
+   * @param filePath - Path to the file to send
+   * @param start - Start byte position
+   * @param end - End byte position
+   * @param fileSize - Total file size
+   * @param contentType - MIME type of the file
+   */
+  protected sendChunk(
+    reply: FastifyReply,
+    filePath: string,
+    start: number,
+    end: number,
+    fileSize: number,
+    chunkSize: number,
+    contentType: string
+  ): FastifyReply {
+    const fileStream = fs.createReadStream(filePath, { start, end });
+
+    return reply
+      .status(206)
+      .header('Content-Range', `bytes ${String(start)}-${String(end)}/${String(fileSize)}`)
+      .header('Accept-Ranges', 'bytes')
+      .header('Content-Length', chunkSize)
+      .header('Content-Type', contentType)
+      .send(fileStream);
   }
 }

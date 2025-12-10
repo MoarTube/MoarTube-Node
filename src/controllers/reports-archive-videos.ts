@@ -63,7 +63,7 @@ export class ReportsArchiveVideosController extends BaseController {
       const archiveIdNum = Number.parseInt(archiveId, 10);
       await this.videoReportsArchiveRepository.delete(archiveIdNum);
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error(
         'Failed to delete archived video report',

@@ -210,7 +210,7 @@ export class VideosController extends BaseController {
 
       await videoService.setImported(videoId);
 
-      return await this.sendSuccess(reply, {});
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error(
         'VideosController.videoImportedFromBody failed',
@@ -236,7 +236,7 @@ export class VideosController extends BaseController {
 
     await videoService.setPublishing(videoId, true);
 
-    return await this.sendSuccess(reply, {});
+    return await this.sendSuccess(reply);
   };
 
   /**
@@ -255,7 +255,7 @@ export class VideosController extends BaseController {
     await videoService.setPublishing(videoId, false);
     await videoService.publishVideo(videoId);
 
-    return await this.sendSuccess(reply, {});
+    return await this.sendSuccess(reply);
   };
 
   /**
@@ -397,7 +397,7 @@ export class VideosController extends BaseController {
 
     await videoService.setError(videoId, true);
 
-    return await this.sendSuccess(reply, {});
+    return await this.sendSuccess(reply);
   };
 
   /**
@@ -738,7 +738,7 @@ export class VideosController extends BaseController {
       message,
     });
 
-    return await this.sendSuccess(reply, {});
+    return await this.sendSuccess(reply);
   };
 
   /**

@@ -180,22 +180,19 @@ export class SettingsController extends BaseController {
    *
    * Get node avatar image
    */
-  getAvatar = (_request: FastifyRequest, reply: FastifyReply): void => {
+  getAvatar = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const avatar = this.settingsService.getAvatar();
+      const avatarFilePath = this.settingsService.getAvatarFilePath();
 
-      if (avatar === null) {
-        this.sendError(reply, 'avatar not found', 404);
+      if (avatarFilePath === null) {
+        return await this.sendError(reply, 'avatar not found', 404);
       } else {
-        reply
-          .header('Content-Type', 'image/png')
-          .header('Content-Length', avatar.size)
-          .send(avatar.fileStream);
+        return await this.sendFile(reply, avatarFilePath, 'image/png');
       }
     } catch (error) {
       this.logger.error('Error retrieving avatar', error as Error);
 
-      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -204,22 +201,19 @@ export class SettingsController extends BaseController {
    *
    * Get node banner image
    */
-  getBanner = (_request: FastifyRequest, reply: FastifyReply): void => {
+  getBanner = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const banner = this.settingsService.getBanner();
+      const bannerFilePath = this.settingsService.getBannerFilePath();
 
-      if (banner === null) {
-        this.sendError(reply, 'banner not found', 404);
+      if (bannerFilePath === null) {
+        return await this.sendError(reply, 'banner not found', 404);
       } else {
-        reply
-          .header('Content-Type', 'image/png')
-          .header('Content-Length', banner.size)
-          .send(banner.fileStream);
+        return await this.sendFile(reply, bannerFilePath, 'image/png');
       }
     } catch (error) {
       this.logger.error('Error retrieving banner', error as Error);
 
-      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -277,7 +271,7 @@ export class SettingsController extends BaseController {
           await this.videoRepository.markAllIndexedAsOutdated();
         }
 
-        return await this.sendOk(reply);
+        return await this.sendSuccess(reply);
       }
     } catch (error) {
       this.logger.error('SettingsController.uploadAvatar failed', error as Error);
@@ -327,7 +321,7 @@ export class SettingsController extends BaseController {
           }
         }
 
-        return await this.sendOk(reply);
+        return await this.sendSuccess(reply);
       }
     } catch (error) {
       this.logger.error('Banner upload error', error as Error);
@@ -349,14 +343,14 @@ export class SettingsController extends BaseController {
       if (contentType.includes('multipart/form-data')) {
         const result = await this.enableHttpsMode(request);
         if (result.success) {
-          return await this.sendOk(reply);
+          return await this.sendSuccess(reply);
         } else {
           return await this.sendError(reply, result.error ?? 'error enabling HTTPS mode');
         }
       } else {
         const result = this.disableHttpsMode(request);
         if (result.success) {
-          return await this.sendOk(reply);
+          return await this.sendSuccess(reply);
         } else {
           return await this.sendError(reply, result.error ?? 'error disabling HTTPS mode');
         }
@@ -467,7 +461,7 @@ export class SettingsController extends BaseController {
 
       await this.settingsService.updateNodeName(nodeName, hasIndexedVideos);
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error updating node name', error as Error);
       return await this.sendError(reply, 'error communicating with the MoarTube node');
@@ -497,7 +491,7 @@ export class SettingsController extends BaseController {
 
       await this.settingsService.updateNodeAbout(nodeAbout, hasIndexedVideos);
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error updating node about', error as Error);
       return await this.sendError(reply, 'error communicating with the MoarTube node');
@@ -527,7 +521,7 @@ export class SettingsController extends BaseController {
 
       await this.settingsService.updateNodeId(nodeId, hasIndexedVideos);
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error updating node ID', error as Error);
       return await this.sendError(reply, 'error communicating with the MoarTube node');
@@ -549,7 +543,7 @@ export class SettingsController extends BaseController {
 
       await this.settingsService.updateCredentials(username, password);
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error updating account', error as Error);
       return await this.sendError(reply, 'error communicating with the MoarTube node');
@@ -561,30 +555,28 @@ export class SettingsController extends BaseController {
    *
    * Update internal network settings
    */
-  networkInternal = (request: FastifyRequest, reply: FastifyReply): void => {
+  networkInternal = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       if (this.settingsService.isDockerEnvironment()) {
-        this.sendError(
+        return await this.sendError(
           reply,
           'This node cannot change listening ports because it is running inside of a docker container.'
         );
-        return;
       }
 
       const { listeningNodePort } = request.body as NetworkInternalBody;
 
       if (!isPortValid(listeningNodePort)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
+        return await this.sendError(reply, 'invalid parameters');
       }
 
       const config = getConfig();
       config.updateNodeSettings({ nodeListeningPort: Number.parseInt(listeningNodePort, 10) });
 
-      this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error updating internal network settings', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -621,7 +613,7 @@ export class SettingsController extends BaseController {
       // Rewrite HLS manifest URLs if using filesystem storage
       await this.rewriteAllManifestUrls();
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error updating external network settings', error as Error);
       return await this.sendError(reply, 'error communicating with the MoarTube node');
@@ -799,7 +791,7 @@ export class SettingsController extends BaseController {
         ''
       );
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Cloudflare configure error', error as Error);
       return await this.sendError(reply, 'error communicating with the MoarTube node');
@@ -843,7 +835,7 @@ export class SettingsController extends BaseController {
       // Clear configuration in settings
       this.settingsService.clearCloudflareConfig();
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Cloudflare clear error', error as Error);
       return await this.sendError(reply, 'error communicating with the MoarTube node');
@@ -885,7 +877,7 @@ export class SettingsController extends BaseController {
         await this.cloudflareService.purgeAllWatchPages();
       }
 
-      this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error configuring Cloudflare Turnstile', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
@@ -924,7 +916,7 @@ export class SettingsController extends BaseController {
         await this.cloudflareService.purgeAllWatchPages();
       }
 
-      this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error clearing Cloudflare Turnstile', error as Error);
       this.sendError(reply, 'error communicating with the MoarTube node');
@@ -936,22 +928,21 @@ export class SettingsController extends BaseController {
    *
    * Toggle comments enabled
    */
-  commentsToggle = (request: FastifyRequest, reply: FastifyReply): void => {
+  commentsToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { isCommentsEnabled } = request.body as ToggleBooleanBody;
 
       if (!isBooleanValid(isCommentsEnabled)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
+        return await this.sendError(reply, 'invalid parameters');
       }
 
       const config = getConfig();
       config.updateNodeSettings({ isCommentsEnabled });
 
-      this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error toggling comments', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -960,22 +951,21 @@ export class SettingsController extends BaseController {
    *
    * Toggle likes enabled
    */
-  likesToggle = (request: FastifyRequest, reply: FastifyReply): void => {
+  likesToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { isLikesEnabled } = request.body as ToggleBooleanBody;
 
       if (!isBooleanValid(isLikesEnabled)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
+        return await this.sendError(reply, 'invalid parameters');
       }
 
       const config = getConfig();
       config.updateNodeSettings({ isLikesEnabled });
 
-      this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error toggling likes', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -984,22 +974,21 @@ export class SettingsController extends BaseController {
    *
    * Toggle dislikes enabled
    */
-  dislikesToggle = (request: FastifyRequest, reply: FastifyReply): void => {
+  dislikesToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { isDislikesEnabled } = request.body as ToggleBooleanBody;
 
       if (!isBooleanValid(isDislikesEnabled)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
+        return await this.sendError(reply, 'invalid parameters');
       }
 
       const config = getConfig();
       config.updateNodeSettings({ isDislikesEnabled });
 
-      this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error toggling dislikes', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -1008,22 +997,21 @@ export class SettingsController extends BaseController {
    *
    * Toggle reports enabled
    */
-  reportsToggle = (request: FastifyRequest, reply: FastifyReply): void => {
+  reportsToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { isReportsEnabled } = request.body as ToggleBooleanBody;
 
       if (!isBooleanValid(isReportsEnabled)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
+        return await this.sendError(reply, 'invalid parameters');
       }
 
       const config = getConfig();
       config.updateNodeSettings({ isReportsEnabled });
 
-      this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error toggling reports', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -1032,22 +1020,21 @@ export class SettingsController extends BaseController {
    *
    * Toggle live chat enabled
    */
-  liveChatToggle = (request: FastifyRequest, reply: FastifyReply): void => {
+  liveChatToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { isLiveChatEnabled } = request.body as ToggleBooleanBody;
 
       if (!isBooleanValid(isLiveChatEnabled)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
+        return await this.sendError(reply, 'invalid parameters');
       }
 
       const config = getConfig();
       config.updateNodeSettings({ isLiveChatEnabled });
 
-      this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error toggling live chat', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -1139,7 +1126,7 @@ export class SettingsController extends BaseController {
         process.send({ cmd: 'restart_database', databaseDialect: databaseDialect });
       }
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Database connection test failed', error as Error);
       return await this.sendError(
@@ -1215,7 +1202,7 @@ export class SettingsController extends BaseController {
 
       this.settingsService.updateStorageConfig(input);
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Storage config toggle error', error as Error);
       return await this.sendError(reply, 'error communicating with the MoarTube node');
@@ -1453,7 +1440,7 @@ export class SettingsController extends BaseController {
 
       this.logger.info('database imported successfully');
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Database import error', error as Error);
       return await this.sendError(reply, 'error importing database');

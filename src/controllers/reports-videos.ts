@@ -90,7 +90,7 @@ export class ReportsVideosController extends BaseController {
       // Delete original report
       await this.videoReportRepository.delete(reportIdNum);
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Failed to archive video report', error instanceof Error ? error : null);
       return await this.sendError(reply, 'error communicating with the MoarTube node');
@@ -113,7 +113,7 @@ export class ReportsVideosController extends BaseController {
       const reportIdNum = Number.parseInt(reportId, 10);
       await this.videoReportRepository.delete(reportIdNum);
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Failed to delete video report', error instanceof Error ? error : null);
       return await this.sendError(reply, 'error communicating with the MoarTube node');

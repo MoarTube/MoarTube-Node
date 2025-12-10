@@ -63,7 +63,7 @@ export class ReportsArchiveCommentsController extends BaseController {
       const archiveIdNum = Number.parseInt(archiveId, 10);
       await this.commentReportsArchiveRepository.delete(archiveIdNum);
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error(
         'Delete archived comment report failed',

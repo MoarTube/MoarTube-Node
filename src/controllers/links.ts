@@ -102,7 +102,7 @@ export class LinksController extends BaseController {
       await this.cloudflareService.purgeAllWatchPages();
       await this.cloudflareService.purgeNodePage();
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Delete link failed', error instanceof Error ? error : null);
       return await this.sendError(reply, 'error communicating with the MoarTube node');

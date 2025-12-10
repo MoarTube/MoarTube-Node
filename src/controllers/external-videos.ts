@@ -108,13 +108,7 @@ export class ExternalVideosController extends BaseController {
       if (!fs.existsSync(thumbnailPath)) {
         return await this.sendError(reply, 'thumbnail not found', 404);
       } else {
-        const stat = fs.statSync(thumbnailPath);
-        const stream = fs.createReadStream(thumbnailPath);
-
-        return await reply
-          .header('Content-Type', 'image/jpeg')
-          .header('Content-Length', stat.size)
-          .send(stream);
+        return await this.sendFile(reply, thumbnailPath, 'image/jpeg');
       }
     } catch (error) {
       this.logger.error(
@@ -147,13 +141,7 @@ export class ExternalVideosController extends BaseController {
       if (!fs.existsSync(previewPath)) {
         return await this.sendError(reply, 'preview not found', 404);
       } else {
-        const stats = fs.statSync(previewPath);
-        const fileStream = fs.createReadStream(previewPath);
-
-        return await reply
-          .header('Content-Type', 'image/jpeg')
-          .header('Content-Length', stats.size)
-          .send(fileStream);
+        return await this.sendFile(reply, previewPath, 'image/jpeg');
       }
     } catch (error) {
       this.logger.error(
@@ -186,13 +174,7 @@ export class ExternalVideosController extends BaseController {
       if (!fs.existsSync(posterPath)) {
         return await this.sendError(reply, 'poster not found', 404);
       } else {
-        const stats = fs.statSync(posterPath);
-        const fileStream = fs.createReadStream(posterPath);
-
-        return await reply
-          .header('Content-Type', 'image/jpeg')
-          .header('Content-Length', stats.size)
-          .send(fileStream);
+        return await this.sendFile(reply, posterPath, 'image/jpeg');
       }
     } catch (error) {
       this.logger.error(
@@ -229,13 +211,7 @@ export class ExternalVideosController extends BaseController {
       if (!fs.existsSync(manifestPath)) {
         return await this.sendError(reply, 'report with id does not exist', 404);
       } else {
-        const stats = fs.statSync(manifestPath);
-        const fileStream = fs.createReadStream(manifestPath);
-
-        return await reply
-          .header('Content-Type', 'application/vnd.apple.mpegurl')
-          .header('Content-Length', stats.size)
-          .send(fileStream);
+        return await this.sendFile(reply, manifestPath, 'application/vnd.apple.mpegurl');
       }
     } catch (error) {
       this.logger.error('Get adaptive manifest failed', error instanceof Error ? error : null);
@@ -272,13 +248,7 @@ export class ExternalVideosController extends BaseController {
       } else {
         // Track bandwidth asynchronously
         this.trackSegmentBandwidth(segmentPath, videoId);
-
-        const stats = fs.statSync(segmentPath);
-        const fileStream = fs.createReadStream(segmentPath);
-        return await reply
-          .header('Content-Type', 'video/mp2t')
-          .header('Content-Length', stats.size)
-          .send(fileStream);
+        return await this.sendFile(reply, segmentPath, 'video/mp2t');
       }
     } catch (error) {
       this.logger.error('Get adaptive segment failed', error instanceof Error ? error : null);
@@ -314,7 +284,6 @@ export class ExternalVideosController extends BaseController {
         const range = request.headers.range;
 
         if (typeof range === 'string' && range.length > 0) {
-          // Handle range request
           const parts = range.replace(/bytes=/, '').split('-');
           const startPart = parts[0];
           const endPart = parts[1];
@@ -324,26 +293,19 @@ export class ExternalVideosController extends BaseController {
             endPart !== undefined && endPart !== '' ? Number.parseInt(endPart, 10) : fileSize - 1;
           const chunkSize = end - start + 1;
 
-          // Track bandwidth
           this.trackProgressiveBandwidth(chunkSize, videoId);
 
-          const fileStream = fs.createReadStream(filePath, { start, end });
-
-          return await reply
-            .status(206)
-            .header('Content-Range', `bytes ${String(start)}-${String(end)}/${String(fileSize)}`)
-            .header('Accept-Ranges', 'bytes')
-            .header('Content-Length', chunkSize)
-            .header('Content-Type', `video/${format}`)
-            .send(fileStream);
+          return await this.sendChunk(
+            reply,
+            filePath,
+            start,
+            end,
+            fileSize,
+            chunkSize,
+            `video/${format}`
+          );
         } else {
-          // Full file request
-          const fileStream = fs.createReadStream(filePath);
-
-          return await reply
-            .header('Content-Length', fileSize)
-            .header('Content-Type', `video/${format}`)
-            .send(fileStream);
+          return await this.sendFile(reply, filePath, `video/${format}`);
         }
       }
     } catch (error) {

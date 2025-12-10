@@ -85,7 +85,7 @@ export class ReportsCommentsController extends BaseController {
         // Delete original report
         await this.commentReportRepository.delete(reportIdNum);
 
-        return await this.sendOk(reply);
+        return await this.sendSuccess(reply);
       }
     } catch (error) {
       this.logger.error('Failed to archive comment report', error instanceof Error ? error : null);
@@ -106,7 +106,7 @@ export class ReportsCommentsController extends BaseController {
       const reportIdNum = Number.parseInt(reportId, 10);
       await this.commentReportRepository.delete(reportIdNum);
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Failed to delete comment report', error instanceof Error ? error : null);
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);

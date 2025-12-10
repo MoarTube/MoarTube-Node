@@ -169,7 +169,7 @@ export class CommentsController extends BaseController {
         timestamp: Date.now(),
       });
 
-      return await this.sendOk(reply);
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Comment report failed', error instanceof Error ? error : null);
 

@@ -939,14 +939,14 @@ export interface ISettingsService {
   /** Clear Cloudflare configuration */
   clearCloudflareConfig(): void;
 
-  /** Get avatar image stream */
-  getAvatar(): { fileStream: NodeJS.ReadableStream; size: number } | null;
+  /** Get avatar image file path */
+  getAvatarFilePath(): string | null;
 
   /** Update avatar and icon */
   updateAvatar(iconFile: string, avatarFile: string): Promise<void>;
 
-  /** Get banner image stream */
-  getBanner(): { fileStream: NodeJS.ReadableStream; size: number } | null;
+  /** Get banner image file path */
+  getBannerFilePath(): string | null;
 
   /** Update banner */
   updateBanner(bannerFile: string): Promise<void>;
