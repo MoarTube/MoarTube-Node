@@ -36,17 +36,3 @@ export function statusRoutes(
     controller.heartbeat.bind(controller)
   );
 }
-
-/**
- * Register health check routes (top-level)
- *
- * @param fastify - Fastify instance
- * @param container - DI container
- */
-export function healthRoutes(fastify: FastifyInstance, container: Container): void {
-  const controller = new StatusController(container);
-
-  // Health check endpoints (no authentication)
-  fastify.get('/health', controller.health.bind(controller));
-  fastify.get('/health/ready', controller.healthReady.bind(controller));
-}

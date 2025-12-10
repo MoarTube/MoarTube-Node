@@ -13,7 +13,7 @@ import type { Container } from '../core/container.js';
 export type FastifyZod = FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>;
 
 // Route definitions
-export { statusRoutes, healthRoutes } from './status.js';
+export { statusRoutes } from './status.js';
 export { accountRoutes } from './account.js';
 export { videosRoutes } from './videos.js';
 export { baseRoutes } from './base.js';
@@ -34,7 +34,7 @@ export { settingsRoutes } from './settings.js';
 export { streamsRoutes } from './streams.js';
 
 // Import for registration
-import { statusRoutes, healthRoutes } from './status.js';
+import { statusRoutes } from './status.js';
 import { accountRoutes } from './account.js';
 import { videosRoutes } from './videos.js';
 import { baseRoutes } from './base.js';
@@ -61,9 +61,6 @@ import { streamsRoutes } from './streams.js';
  * @param container - DI container for dependency injection
  */
 export function registerRoutes(fastify: FastifyInstance, container: Container): void {
-  // Health check routes (top-level)
-  healthRoutes(fastify, container);
-
   // Base routes (root redirect)
   baseRoutes(fastify);
 

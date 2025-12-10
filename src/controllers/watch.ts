@@ -14,13 +14,6 @@ import type { DrizzleVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
 
 /**
- * Fastify reply with view engine support
- */
-type FastifyReplyWithView = FastifyReply & {
-  view(template: string, data: Record<string, unknown>): Promise<FastifyReply>;
-};
-
-/**
  * Query parameters for watch page
  */
 export interface WatchQuery {
@@ -127,25 +120,27 @@ export class WatchController extends VideoControllerBase {
    *
    * Render the video watch page
    */
-  getWatchPage = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  getWatchPage = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     try {
       const { v: videoId } = request.query as WatchQuery;
 
       const video = await this.videoRepository.findById(videoId);
 
       if (!video) {
-        return await this.sendError(reply, 'that video could not be loaded', 404);
+        this.sendError(reply, 'that video could not be loaded', 404);
+      } else {
+        const model = await this.buildPageData(video);
+
+        await reply.view('watch.ejs', { model });
       }
-
-      const pageData = await this.buildPageData(video);
-
-      return await this.renderPage(reply, pageData);
     } catch (error) {
       this.logger.error('Get progressive video failed', error instanceof Error ? error : null);
 
-      return this.sendError(reply, 'that video could not be loaded', 500);
+      this.sendError(reply, 'that video could not be loaded', 500);
     }
-  }; /**
+  };
+
+  /**
    * Build all data needed for the watch page
    */
   private async buildPageData(video: DrizzleVideo): Promise<WatchPageData> {
@@ -293,25 +288,5 @@ export class WatchController extends VideoControllerBase {
         sourcesFormatsAndResolutions,
       },
     };
-  }
-
-  /**
-   * Render the watch page or return JSON
-   */
-  private async renderPage(reply: FastifyReply, data: WatchPageData): Promise<FastifyReply> {
-    const replyWithView = reply as FastifyReplyWithView;
-
-    const model = {
-      informationData: data.informationData,
-      linksData: data.linksData,
-      cryptoWalletAddressesData: data.cryptoWalletAddressesData,
-      videoData: data.videoData,
-      recommendedVideosData: data.recommendedVideosData,
-      commentsData: data.commentsData,
-      externalVideosBaseUrl: data.externalVideosBaseUrl,
-      externalResourcesBaseUrl: data.externalResourcesBaseUrl,
-    };
-
-    return await replyWithView.view('watch', { model });
   }
 }

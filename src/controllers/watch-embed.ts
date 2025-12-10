@@ -80,15 +80,19 @@ export class WatchEmbedController extends VideoControllerBase {
       const video = await this.videoRepository.findById(videoId);
 
       if (!video) {
-        return await reply.status(404).send('that video could not be loaded');
+        this.sendError(reply, 'video not found', 404);
+      } else {
+        const model = this.buildPageData(video);
+
+        await reply.view('embed-video.ejs', { model });
       }
-
-      const model = this.buildPageData(video);
-
-      return await reply.view('embed-video', { model });
     } catch (error) {
-      this.logger.error('Get progressive video failed', error instanceof Error ? error : null);
-      return await reply.status(500).send('that video could not be loaded');
+      this.logger.error(
+        'WatchEmbedController.getEmbedVideo failed',
+        error instanceof Error ? error : null
+      );
+
+      this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -140,9 +144,14 @@ export class WatchEmbedController extends VideoControllerBase {
         },
       };
 
-      await replyWithView.view('embed-chat', { model });
-    } catch {
-      this.sendError(reply, 'error loading embedded chat');
+      replyWithView.view('embed-chat', { model });
+    } catch (error) {
+      this.logger.error(
+        'WatchEmbedController.getEmbedChat failed',
+        error instanceof Error ? error : null
+      );
+
+      this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 

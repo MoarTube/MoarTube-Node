@@ -22,11 +22,6 @@ interface StatusInformation {
   cloudflareTurnstileSiteKey: string;
 }
 
-interface HealthCheck {
-  status: 'ok' | 'error';
-  message?: string;
-}
-
 /**
  * StatusController class
  *
@@ -79,64 +74,5 @@ export class StatusController extends BaseController {
    */
   heartbeat = (_request: FastifyRequest, reply: FastifyReply): void => {
     this.sendSuccess(reply, { timestamp: Date.now() });
-  };
-
-  /**
-   * GET /health
-   *
-   * Basic liveness check
-   */
-  health = (_request: FastifyRequest, reply: FastifyReply): void => {
-    void reply.send({ status: 'ok', timestamp: Date.now() });
-  };
-
-  /**
-   * GET /health/ready
-   *
-   * Detailed readiness check including database connectivity
-   */
-  healthReady = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    let databaseCheck: HealthCheck = { status: 'ok' };
-    let configurationCheck: HealthCheck = { status: 'ok' };
-
-    // Check database connectivity
-    try {
-      const videoRepository = this.container.resolve('videoRepository');
-      await videoRepository.getCount({});
-    } catch (error) {
-      databaseCheck = {
-        status: 'error',
-        message: (error as Error).message,
-      };
-    }
-
-    // Check configuration
-    try {
-      const config = getConfig();
-      const nodeId = config.nodeSettings.nodeId;
-      if (nodeId === '') {
-        configurationCheck = {
-          status: 'error',
-          message: 'Node not configured',
-        };
-      }
-    } catch (error) {
-      configurationCheck = {
-        status: 'error',
-        message: (error as Error).message,
-      };
-    }
-
-    const isHealthy = databaseCheck.status === 'ok' && configurationCheck.status === 'ok';
-    const httpStatus = isHealthy ? 200 : 503;
-
-    void reply.status(httpStatus).send({
-      status: isHealthy ? 'ok' : 'degraded',
-      timestamp: Date.now(),
-      checks: {
-        database: databaseCheck,
-        configuration: configurationCheck,
-      },
-    });
   };
 }

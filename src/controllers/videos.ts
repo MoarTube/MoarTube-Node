@@ -175,12 +175,21 @@ export class VideosController extends BaseController {
    * POST /videos/import
    */
   importVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    const videoService = this.getVideoService();
-    const { title, description, tags } = request.body as VideoImportBody;
+    try {
+      const videoService = this.getVideoService();
+      const { title, description, tags } = request.body as VideoImportBody;
 
-    const result = await videoService.createVideo({ title, description, tags });
+      const result = await videoService.createVideo({ title, description, tags });
 
-    this.sendSuccess(reply, result, 'Video imported successfully');
+      this.sendSuccess(reply, result);
+    } catch (error) {
+      this.logger.error(
+        'VideosController.importVideo failed',
+        error instanceof Error ? error : null
+      );
+
+      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+    }
   };
 
   /**
@@ -190,16 +199,21 @@ export class VideosController extends BaseController {
    * Takes videoId from request body (legacy route)
    */
   videoImportedFromBody = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    const videoService = this.getVideoService();
-    const { videoId } = request.body as { videoId: string };
+    try {
+      const videoService = this.getVideoService();
+      const { videoId } = request.body as { videoId: string };
 
-    if (!videoId) {
-      throw new BadRequestError('videoId is required');
+      await videoService.setImported(videoId);
+
+      this.sendSuccess(reply, {});
+    } catch (error) {
+      this.logger.error(
+        'VideosController.videoImportedFromBody failed',
+        error instanceof Error ? error : null
+      );
+
+      this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
-
-    await videoService.setImported(videoId);
-
-    this.sendSuccess(reply, {});
   };
 
   /**
@@ -211,10 +225,6 @@ export class VideosController extends BaseController {
   startPublishingFromBody = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     const videoService = this.getVideoService();
     const { videoId } = request.body as { videoId: string };
-
-    if (!videoId) {
-      throw new BadRequestError('videoId is required');
-    }
 
     await videoService.setPublishing(videoId, true);
 
@@ -230,10 +240,6 @@ export class VideosController extends BaseController {
   videoPublishedFromBody = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     const videoService = this.getVideoService();
     const { videoId } = request.body as { videoId: string };
-
-    if (!videoId) {
-      throw new BadRequestError('videoId is required');
-    }
 
     await videoService.setPublishing(videoId, false);
     await videoService.publishVideo(videoId);
@@ -251,7 +257,7 @@ export class VideosController extends BaseController {
 
     await videoService.setImported(videoId);
 
-    this.sendSuccess(reply, { videoId }, 'Video import completed');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -264,7 +270,7 @@ export class VideosController extends BaseController {
 
     await videoService.setImporting(videoId, false);
 
-    this.sendSuccess(reply, { videoId }, 'Video import stopped');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -277,7 +283,7 @@ export class VideosController extends BaseController {
 
     await videoService.setPublishing(videoId, true);
 
-    this.sendSuccess(reply, { videoId }, 'Video publishing started');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -291,7 +297,7 @@ export class VideosController extends BaseController {
     await videoService.setPublishing(videoId, false);
     await videoService.publishVideo(videoId);
 
-    this.sendSuccess(reply, { videoId }, 'Video publishing completed');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -308,7 +314,7 @@ export class VideosController extends BaseController {
 
     await videoService.markFormatResolutionPublished(videoId, format, resolution);
 
-    this.sendSuccess(reply, { videoId, format, resolution }, 'Format/resolution published');
+    this.sendSuccess(reply, { videoId, format, resolution });
   };
 
   /**
@@ -321,7 +327,7 @@ export class VideosController extends BaseController {
 
     await videoService.setPublishing(videoId, false);
 
-    this.sendSuccess(reply, { videoId }, 'Video publishing stopped');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -335,7 +341,7 @@ export class VideosController extends BaseController {
 
     await videoService.notifyUploadComplete(videoId, format, resolution);
 
-    this.sendSuccess(reply, { videoId }, 'Video upload notification processed');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -349,7 +355,7 @@ export class VideosController extends BaseController {
 
     await videoService.notifyStreamComplete(videoId, format, resolution);
 
-    this.sendSuccess(reply, { videoId }, 'Video stream notification processed');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -362,7 +368,7 @@ export class VideosController extends BaseController {
 
     await videoService.setError(videoId, true);
 
-    this.sendSuccess(reply, { videoId }, 'Video marked as error');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -374,10 +380,6 @@ export class VideosController extends BaseController {
   setErrorFromBody = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     const videoService = this.getVideoService();
     const { videoId } = request.body as { videoId: string };
-
-    if (!videoId) {
-      throw new BadRequestError('videoId is required');
-    }
 
     await videoService.setError(videoId, true);
 
@@ -393,13 +395,9 @@ export class VideosController extends BaseController {
     const { videoId } = request.params as VideoIdParams;
     const { sourceFileExtension } = request.body as SourceFileExtensionBody;
 
-    if (!sourceFileExtension) {
-      throw new BadRequestError('Source file extension is required');
-    }
-
     await videoService.setSourceFileExtension(videoId, sourceFileExtension);
 
-    this.sendSuccess(reply, { videoId, sourceFileExtension }, 'Source file extension set');
+    this.sendSuccess(reply, { videoId, sourceFileExtension });
   };
 
   /**
@@ -411,10 +409,6 @@ export class VideosController extends BaseController {
     const { videoId } = request.params as VideoIdParams;
 
     const sourceFileExtension = await videoService.getSourceFileExtension(videoId);
-
-    if (sourceFileExtension === null) {
-      throw new NotFoundError(`Video not found: ${videoId}`);
-    }
 
     this.sendSuccess(reply, { sourceFileExtension });
   };
@@ -450,7 +444,7 @@ export class VideosController extends BaseController {
 
     await videoService.unpublishFormatResolution(videoId, format, resolution);
 
-    this.sendSuccess(reply, { videoId, format, resolution }, 'Format/resolution unpublished');
+    this.sendSuccess(reply, { videoId, format, resolution });
   };
 
   /**
@@ -529,7 +523,7 @@ export class VideosController extends BaseController {
       throw new NotFoundError(`Video not found: ${videoId}`);
     }
 
-    this.sendSuccess(reply, { video }, 'Video updated successfully');
+    this.sendSuccess(reply, { video });
   };
 
   /**
@@ -546,7 +540,7 @@ export class VideosController extends BaseController {
       throw new NotFoundError(`Video not found: ${videoId}`);
     }
 
-    this.sendSuccess(reply, { videoId }, 'Video deleted successfully');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -559,7 +553,7 @@ export class VideosController extends BaseController {
 
     await videoService.finalizeVideo(videoId);
 
-    this.sendSuccess(reply, { videoId }, 'Video finalized successfully');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -724,7 +718,7 @@ export class VideosController extends BaseController {
       message,
     });
 
-    this.sendSuccess(reply, {}, 'Report submitted successfully');
+    this.sendSuccess(reply, {});
   };
 
   /**
@@ -854,7 +848,7 @@ export class VideosController extends BaseController {
     // Purge Cloudflare cache for watch page
     await cloudflareService.purgeWatchPages([videoId]);
 
-    this.sendSuccess(reply, { commentId }, 'Comment deleted successfully');
+    this.sendSuccess(reply, { commentId });
   };
 
   /**
@@ -867,7 +861,7 @@ export class VideosController extends BaseController {
 
     await videoService.publishVideo(videoId);
 
-    this.sendSuccess(reply, { videoId }, 'Video published successfully');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -880,7 +874,7 @@ export class VideosController extends BaseController {
 
     await videoService.unpublishVideo(videoId);
 
-    this.sendSuccess(reply, { videoId }, 'Video unpublished successfully');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -946,7 +940,7 @@ export class VideosController extends BaseController {
 
     await videoService.updateVideo(videoId, { [field]: isEnabled });
 
-    this.sendSuccess(reply, { videoId, type, isEnabled }, 'Permission updated successfully');
+    this.sendSuccess(reply, { videoId, type, isEnabled });
   };
 
   /**
@@ -1121,7 +1115,7 @@ export class VideosController extends BaseController {
 
     await videoService.setVideoLength(videoId, lengthSeconds, lengthTimestamp);
 
-    this.sendSuccess(reply, { videoId }, 'Video length updated successfully');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -1139,7 +1133,7 @@ export class VideosController extends BaseController {
 
     await videoService.markIndexOutdated(videoId);
 
-    this.sendSuccess(reply, { videoId }, 'Video index marked as outdated');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -1158,7 +1152,7 @@ export class VideosController extends BaseController {
 
     await videoService.writeMasterManifest(videoId, manifestType, masterManifest);
 
-    this.sendSuccess(reply, { videoId }, 'Master manifest written successfully');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -1426,7 +1420,7 @@ export class VideosController extends BaseController {
       });
     }
 
-    this.sendSuccess(reply, { videoId }, 'Video added to index');
+    this.sendSuccess(reply, { videoId });
   };
 
   /**
@@ -1453,6 +1447,6 @@ export class VideosController extends BaseController {
     // Remove from index
     await videoService.removeFromIndex(videoId, cloudflareTurnstileToken);
 
-    this.sendSuccess(reply, { videoId }, 'Video removed from index');
+    this.sendSuccess(reply, { videoId });
   };
 }

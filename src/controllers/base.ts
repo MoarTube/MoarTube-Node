@@ -66,16 +66,12 @@ export abstract class BaseController {
    *
    * @param reply - Fastify reply object
    * @param data - Response data
-   * @param messageOrStatus - Optional message string or HTTP status code (default: 200)
+   * @param status - HTTP status code (default: 200)
    */
-  protected sendSuccess(
-    reply: FastifyReply,
-    data: object,
-    messageOrStatus: string | number = 200
-  ): void {
-    const status = typeof messageOrStatus === 'number' ? messageOrStatus : 200;
+  protected sendSuccess(reply: FastifyReply, data: object, status: number = 200): void {
     const response = { isError: false as const, ...data };
-    void reply.status(status).send(response);
+
+    reply.status(status).send(response);
   }
 
   /**
@@ -84,8 +80,8 @@ export abstract class BaseController {
    * @param reply - Fastify reply object
    * @param status - HTTP status code (default: 200)
    */
-  protected sendOk(reply: FastifyReply, status = 200): FastifyReply {
-    return reply.status(status).send({ isError: false });
+  protected sendOk(reply: FastifyReply, status = 200): void {
+    reply.status(status).send({ isError: false });
   }
 
   /**
@@ -95,52 +91,7 @@ export abstract class BaseController {
    * @param message - Error message
    * @param status - HTTP status code (default: 400)
    */
-  protected sendError(reply: FastifyReply, message: string, status = 400): FastifyReply {
-    return reply.status(status).send({ isError: true, message });
-  }
-
-  /**
-   * Send a paginated response
-   *
-   * @param reply - Fastify reply object
-   * @param data - Array of items
-   * @param total - Total count (before pagination)
-   * @param page - Current page (1-indexed)
-   * @param limit - Items per page
-   */
-  protected sendPaginated(
-    reply: FastifyReply,
-    data: unknown[],
-    total: number,
-    page: number,
-    limit: number
-  ): void {
-    const pages = Math.ceil(total / limit);
-    const hasMore = page < pages;
-
-    const response = {
-      isError: false,
-      data,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages,
-        hasMore,
-      },
-    };
-
-    void reply.send(response);
-  }
-
-  /**
-   * Send raw data (for compatibility with existing API)
-   *
-   * @param reply - Fastify reply object
-   * @param data - Raw data to send
-   * @param status - HTTP status code (default: 200)
-   */
-  protected sendRaw(reply: FastifyReply, data: unknown, status = 200): void {
-    void reply.status(status).send(data);
+  protected sendError(reply: FastifyReply, message: string, status = 400): void {
+    reply.status(status).send({ isError: true, message });
   }
 }

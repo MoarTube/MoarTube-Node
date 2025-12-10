@@ -180,22 +180,22 @@ export class SettingsController extends BaseController {
    *
    * Get node avatar image
    */
-  getAvatar = (_request: FastifyRequest, reply: FastifyReply): FastifyReply => {
+  getAvatar = (_request: FastifyRequest, reply: FastifyReply): void => {
     try {
       const avatar = this.settingsService.getAvatar();
 
-      if (avatar !== null) {
-        return reply
+      if (avatar === null) {
+        this.sendError(reply, 'avatar not found', 404);
+      } else {
+        reply
           .header('Content-Type', 'image/png')
           .header('Content-Length', avatar.size)
           .send(avatar.fileStream);
-      } else {
-        return this.sendError(reply, 'avatar not found', 404);
       }
     } catch (error) {
       this.logger.error('Error retrieving avatar', error as Error);
 
-      return this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -204,21 +204,22 @@ export class SettingsController extends BaseController {
    *
    * Get node banner image
    */
-  getBanner = (_request: FastifyRequest, reply: FastifyReply): FastifyReply => {
+  getBanner = (_request: FastifyRequest, reply: FastifyReply): void => {
     try {
       const banner = this.settingsService.getBanner();
 
-      if (banner !== null) {
-        return reply
+      if (banner === null) {
+        this.sendError(reply, 'banner not found', 404);
+      } else {
+        reply
           .header('Content-Type', 'image/png')
           .header('Content-Length', banner.size)
           .send(banner.fileStream);
-      } else {
-        return this.sendError(reply, 'banner not found', 404);
       }
     } catch (error) {
       this.logger.error('Error retrieving banner', error as Error);
-      return this.sendError(reply, 'error communicating with the MoarTube node', 500);
+
+      this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -260,28 +261,28 @@ export class SettingsController extends BaseController {
       }
 
       if (iconFile === undefined || avatarFile === undefined) {
-        this.sendError(reply, 'both iconFile and avatarFile are required');
-        return;
-      }
-
-      // Purge Cloudflare cache if enabled
-      if (this.cloudflareService !== undefined) {
-        try {
-          await this.cloudflareService.purgeNodeImages();
-        } catch (purgeError) {
-          this.logger.error('Failed to purge node images from Cloudflare', purgeError as Error);
+        this.sendError(reply, 'both iconFile and avatarFile are required', 400);
+      } else {
+        // Purge Cloudflare cache if enabled
+        if (this.cloudflareService !== undefined) {
+          try {
+            await this.cloudflareService.purgeNodeImages();
+          } catch (purgeError) {
+            this.logger.error('Failed to purge node images from Cloudflare', purgeError as Error);
+          }
         }
-      }
 
-      // Mark all indexed videos as outdated
-      if (this.videoRepository !== undefined) {
-        await this.videoRepository.markAllIndexedAsOutdated();
-      }
+        // Mark all indexed videos as outdated
+        if (this.videoRepository !== undefined) {
+          await this.videoRepository.markAllIndexedAsOutdated();
+        }
 
-      this.sendOk(reply);
+        this.sendOk(reply);
+      }
     } catch (error) {
-      this.logger.error('Avatar upload error', error as Error);
-      this.sendError(reply, 'error uploading avatar');
+      this.logger.error('SettingsController.uploadAvatar failed', error as Error);
+
+      this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -316,19 +317,18 @@ export class SettingsController extends BaseController {
 
       if (bannerFile === undefined) {
         this.sendError(reply, 'bannerFile is required');
-        return;
-      }
-
-      // Purge Cloudflare cache if enabled
-      if (this.cloudflareService !== undefined) {
-        try {
-          await this.cloudflareService.purgeNodeImages();
-        } catch (purgeError) {
-          this.logger.error('Failed to purge node images from Cloudflare', purgeError as Error);
+      } else {
+        // Purge Cloudflare cache if enabled
+        if (this.cloudflareService !== undefined) {
+          try {
+            await this.cloudflareService.purgeNodeImages();
+          } catch (purgeError) {
+            this.logger.error('Failed to purge node images from Cloudflare', purgeError as Error);
+          }
         }
-      }
 
-      this.sendOk(reply);
+        this.sendOk(reply);
+      }
     } catch (error) {
       this.logger.error('Banner upload error', error as Error);
       this.sendError(reply, 'error uploading banner');

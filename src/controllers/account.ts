@@ -31,46 +31,52 @@ export class AccountController extends BaseController {
    * Authenticate user with username and password
    */
   signIn = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    const {
-      username,
-      password,
-      moarTubeNodeHttpProtocol,
-      moarTubeNodeIp,
-      moarTubeNodePort,
-      rememberMe,
-    } = request.body as SignInBody;
+    try {
+      const {
+        username,
+        password,
+        moarTubeNodeHttpProtocol,
+        moarTubeNodeIp,
+        moarTubeNodePort,
+        rememberMe,
+      } = request.body as SignInBody;
 
-    const result = await this.authService.signIn({
-      username,
-      password,
-      moarTubeNodeHttpProtocol,
-      moarTubeNodeIp,
-      moarTubeNodePort,
-      rememberMe,
-    });
+      const result = await this.authService.signIn({
+        username,
+        password,
+        moarTubeNodeHttpProtocol,
+        moarTubeNodeIp,
+        moarTubeNodePort,
+        rememberMe,
+      });
 
-    if (result.isAuthenticated) {
-      // Update node settings if this is first login (empty values)
-      const config = getConfig();
-      const nodeSettings = config.nodeSettings;
+      if (result.isAuthenticated) {
+        // Update node settings if this is first login (empty values)
+        const config = getConfig();
+        const nodeSettings = config.nodeSettings;
 
-      if (
-        nodeSettings.publicNodeProtocol === '' &&
-        nodeSettings.publicNodeAddress === '' &&
-        nodeSettings.publicNodePort === ''
-      ) {
-        config.updateNodeSettings({
-          publicNodeProtocol: moarTubeNodeHttpProtocol,
-          publicNodeAddress: moarTubeNodeIp,
-          publicNodePort: moarTubeNodePort,
-        });
+        if (
+          nodeSettings.publicNodeProtocol === '' &&
+          nodeSettings.publicNodeAddress === '' &&
+          nodeSettings.publicNodePort === ''
+        ) {
+          config.updateNodeSettings({
+            publicNodeProtocol: moarTubeNodeHttpProtocol,
+            publicNodeAddress: moarTubeNodeIp,
+            publicNodePort: moarTubeNodePort,
+          });
+        }
       }
-    }
 
-    this.sendSuccess(reply, {
-      isAuthenticated: result.isAuthenticated,
-      token: result.token,
-    });
+      this.sendSuccess(reply, {
+        isAuthenticated: result.isAuthenticated,
+        token: result.token,
+      });
+    } catch (error) {
+      this.logger.error('AccountController.signIn failed', error instanceof Error ? error : null);
+
+      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+    }
   };
 
   /**
@@ -79,7 +85,15 @@ export class AccountController extends BaseController {
    * Sign out the current user
    */
   signOut = (_request: FastifyRequest, reply: FastifyReply): void => {
-    this.sendSuccess(reply, { wasAuthenticated: true });
+    try {
+      this.sendSuccess(reply, {
+        wasAuthenticated: true,
+      });
+    } catch (error) {
+      this.logger.error('AccountController.signIn failed', error instanceof Error ? error : null);
+
+      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+    }
   };
 
   /**
@@ -88,8 +102,14 @@ export class AccountController extends BaseController {
    * Check if the current request is authenticated
    */
   authenticated = (request: FastifyRequest, reply: FastifyReply): void => {
-    this.sendSuccess(reply, {
-      isAuthenticated: request.isAuthenticated,
-    });
+    try {
+      this.sendSuccess(reply, {
+        isAuthenticated: request.isAuthenticated,
+      });
+    } catch (error) {
+      this.logger.error('AccountController.signIn failed', error instanceof Error ? error : null);
+
+      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+    }
   };
 }
