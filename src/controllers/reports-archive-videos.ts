@@ -33,17 +33,17 @@ export class ReportsArchiveVideosController extends BaseController {
    *
    * Get all archived video reports
    */
-  getAllArchives = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getAllArchives = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const reports = await this.videoReportsArchiveRepository.findAll();
 
-      this.sendSuccess(reply, { reports });
+      return await this.sendSuccess(reply, { reports });
     } catch (error) {
       this.logger.error(
         'Failed to get all archived video reports',
         error instanceof Error ? error : null
       );
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -52,25 +52,24 @@ export class ReportsArchiveVideosController extends BaseController {
    *
    * Delete an archived video report
    */
-  deleteArchive = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  deleteArchive = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { archiveId } = request.params as ArchiveIdParams;
 
       if (!isArchiveIdValid(archiveId)) {
-        this.sendError(reply, 'invalid archive id');
-        return;
+        return await this.sendError(reply, 'invalid archive id');
       }
 
       const archiveIdNum = Number.parseInt(archiveId, 10);
       await this.videoReportsArchiveRepository.delete(archiveIdNum);
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error(
         'Failed to delete archived video report',
         error instanceof Error ? error : null
       );
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 }

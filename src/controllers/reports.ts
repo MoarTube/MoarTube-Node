@@ -28,20 +28,23 @@ export class ReportsController extends BaseController {
    *
    * Get counts of video and comment reports
    */
-  getReportsCount = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getReportsCount = async (
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const videoReportCount = await this.videoReportRepository.getCount();
       const commentReportCount = await this.commentReportRepository.getCount();
       const totalReportCount = videoReportCount + commentReportCount;
 
-      this.sendSuccess(reply, {
+      return await this.sendSuccess(reply, {
         videoReportCount,
         commentReportCount,
         totalReportCount,
       });
     } catch (error) {
       this.logger.error('Get reports count failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 }

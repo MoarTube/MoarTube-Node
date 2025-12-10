@@ -68,10 +68,10 @@ export abstract class BaseController {
    * @param data - Response data
    * @param status - HTTP status code (default: 200)
    */
-  protected sendSuccess(reply: FastifyReply, data: object, status: number = 200): void {
+  protected sendSuccess(reply: FastifyReply, data: object, status: number = 200): FastifyReply {
     const response = { isError: false as const, ...data };
 
-    reply.status(status).send(response);
+    return reply.status(status).send(response);
   }
 
   /**
@@ -80,8 +80,8 @@ export abstract class BaseController {
    * @param reply - Fastify reply object
    * @param status - HTTP status code (default: 200)
    */
-  protected sendOk(reply: FastifyReply, status = 200): void {
-    reply.status(status).send({ isError: false });
+  protected sendOk(reply: FastifyReply, status = 200): FastifyReply {
+    return reply.status(status).send({ isError: false });
   }
 
   /**
@@ -91,7 +91,7 @@ export abstract class BaseController {
    * @param message - Error message
    * @param status - HTTP status code (default: 400)
    */
-  protected sendError(reply: FastifyReply, message: string, status = 400): void {
-    reply.status(status).send({ isError: true, message });
+  protected sendError(reply: FastifyReply, message: string, status = 400): FastifyReply {
+    return reply.status(status).send({ isError: true, message });
   }
 }

@@ -43,7 +43,7 @@ export class StatusController extends BaseController {
    *
    * Returns node information including video count and public settings
    */
-  information = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  information = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     const config = getConfig();
     const nodeSettings = config.nodeSettings;
 
@@ -64,7 +64,7 @@ export class StatusController extends BaseController {
       cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
     };
 
-    this.sendSuccess(reply, { information });
+    return await this.sendSuccess(reply, { information });
   };
 
   /**
@@ -72,7 +72,7 @@ export class StatusController extends BaseController {
    *
    * Returns current timestamp for health checks
    */
-  heartbeat = (_request: FastifyRequest, reply: FastifyReply): void => {
-    this.sendSuccess(reply, { timestamp: Date.now() });
+  heartbeat = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    return await this.sendSuccess(reply, { timestamp: Date.now() });
   };
 }

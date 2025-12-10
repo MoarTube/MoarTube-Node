@@ -57,7 +57,7 @@ export class NodeController extends BaseController {
    *
    * Render the main node page
    */
-  getNodePage = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getNodePage = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { searchTerm, sortTerm, tagTerm } = request.query as NodeQuery;
 
@@ -135,15 +135,15 @@ export class NodeController extends BaseController {
    *
    * Search videos
    */
-  search = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  search = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { searchTerm, sortTerm, tagTerm } = request.query as NodeQuery;
 
       const data = await this.performSearch(searchTerm, sortTerm, tagTerm);
-      this.sendSuccess(reply, { searchResults: data.searchResults });
+      return await this.sendSuccess(reply, { searchResults: data.searchResults });
     } catch (error) {
       this.logger.error('Search failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -152,7 +152,10 @@ export class NodeController extends BaseController {
    *
    * Get counts of new content since last check
    */
-  getNewContentCounts = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getNewContentCounts = async (
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const config = getConfig();
       const lastCheckedContentTracker = config.lastCheckedContentTracker;
@@ -174,7 +177,7 @@ export class NodeController extends BaseController {
         lastCheckedCommentReportsTimestamp
       );
 
-      this.sendSuccess(reply, {
+      return await this.sendSuccess(reply, {
         newContentCounts: {
           newCommentsCount,
           newVideoReportsCount,
@@ -183,7 +186,7 @@ export class NodeController extends BaseController {
       });
     } catch (error) {
       this.logger.error('Get new content counts failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -192,7 +195,7 @@ export class NodeController extends BaseController {
    *
    * Mark content type as checked
    */
-  contentChecked = (request: FastifyRequest, reply: FastifyReply): void => {
+  contentChecked = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { contentType } = request.body as ContentCheckedBody;
       const config = getConfig();
@@ -211,10 +214,10 @@ export class NodeController extends BaseController {
           break;
       }
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Content checked failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 

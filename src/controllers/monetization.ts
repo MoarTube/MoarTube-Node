@@ -60,13 +60,16 @@ export class MonetizationController extends BaseController {
    *
    * Get all crypto wallet addresses
    */
-  getAllWalletAddresses = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getAllWalletAddresses = async (
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const cryptoWalletAddresses = await this.monetizationRepository.findAll();
-      this.sendSuccess(reply, { cryptoWalletAddresses });
+      return await this.sendSuccess(reply, { cryptoWalletAddresses });
     } catch (error) {
       this.logger.error('Get all wallet addresses failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -75,7 +78,10 @@ export class MonetizationController extends BaseController {
    *
    * Add a new crypto wallet address
    */
-  addWalletAddress = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  addWalletAddress = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const { walletAddress, chain, currency } = request.body as AddWalletAddressBody;
 
@@ -94,10 +100,10 @@ export class MonetizationController extends BaseController {
       await this.cloudflareService.purgeAllWatchPages();
       await this.cloudflareService.purgeNodePage();
 
-      this.sendSuccess(reply, { cryptoWalletAddress });
+      return await this.sendSuccess(reply, { cryptoWalletAddress });
     } catch (error) {
       this.logger.error('Add wallet address failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -106,25 +112,27 @@ export class MonetizationController extends BaseController {
    *
    * Delete a crypto wallet address
    */
-  deleteWalletAddress = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  deleteWalletAddress = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const { cryptoWalletAddressId } = request.body as DeleteWalletAddressBody;
 
       const deleted = await this.monetizationRepository.delete(cryptoWalletAddressId);
 
       if (!deleted) {
-        this.sendError(reply, 'wallet address not found', 404);
-        return;
+        return await this.sendError(reply, 'wallet address not found', 404);
       }
 
       // Purge Cloudflare cache for node page and watch pages
       await this.cloudflareService.purgeAllWatchPages();
       await this.cloudflareService.purgeNodePage();
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Delete wallet address failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 }

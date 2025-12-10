@@ -39,16 +39,16 @@ export class ExternalResourcesController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> {
     if (!fs.existsSync(filePath)) {
-      return reply.status(404).send('File not found');
+      return await this.sendError(reply, 'file not found', 404);
+    } else {
+      const stat = fs.statSync(filePath);
+      const stream = fs.createReadStream(filePath);
+
+      return reply
+        .header('Content-Type', contentType)
+        .header('Content-Length', stat.size)
+        .send(stream);
     }
-
-    const stat = fs.statSync(filePath);
-    const stream = fs.createReadStream(filePath);
-
-    return reply
-      .header('Content-Type', contentType)
-      .header('Content-Length', stat.size)
-      .send(stream);
   }
 
   /**
@@ -56,16 +56,17 @@ export class ExternalResourcesController extends BaseController {
    *
    * Serve JavaScript files
    */
-  getJavaScript = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getJavaScript = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { filename } = request.params as { filename: string };
       const config = getConfig();
       const filePath = path.join(config.paths.publicDirectoryPath, 'javascript', filename);
 
-      await this.serveStaticFile(filePath, 'application/javascript', reply);
+      return await this.serveStaticFile(filePath, 'application/javascript', reply);
     } catch (error) {
       this.logger.error('Error serving JavaScript file', error instanceof Error ? error : null);
-      this.sendError(reply, 'error serving JavaScript file', 500);
+
+      return await this.sendError(reply, 'error serving JavaScript file', 500);
     }
   };
 
@@ -74,16 +75,17 @@ export class ExternalResourcesController extends BaseController {
    *
    * Serve CSS files
    */
-  getCss = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getCss = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { filename } = request.params as { filename: string };
       const config = getConfig();
       const filePath = path.join(config.paths.publicDirectoryPath, 'css', filename);
 
-      await this.serveStaticFile(filePath, 'text/css', reply);
+      return await this.serveStaticFile(filePath, 'text/css', reply);
     } catch (error) {
       this.logger.error('Error serving CSS file', error instanceof Error ? error : null);
-      this.sendError(reply, 'error serving CSS file', 500);
+
+      return await this.sendError(reply, 'error serving CSS file', 500);
     }
   };
 
@@ -92,7 +94,7 @@ export class ExternalResourcesController extends BaseController {
    *
    * Serve font files
    */
-  getFonts = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getFonts = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { filename } = request.params as { filename: string };
       const config = getConfig();
@@ -114,10 +116,11 @@ export class ExternalResourcesController extends BaseController {
         contentType = 'application/vnd.ms-fontobject';
       }
 
-      await this.serveStaticFile(filePath, contentType, reply);
+      return await this.serveStaticFile(filePath, contentType, reply);
     } catch (error) {
       this.logger.error('Error serving font file', error instanceof Error ? error : null);
-      this.sendError(reply, 'error serving font file', 500);
+
+      return await this.sendError(reply, 'error serving font file', 500);
     }
   };
 
@@ -126,7 +129,7 @@ export class ExternalResourcesController extends BaseController {
    *
    * Serve image files (handles both public assets and custom node images)
    */
-  getImage = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getImage = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { imageName } = request.params as ImageParams;
       const config = getConfig();
@@ -163,10 +166,11 @@ export class ExternalResourcesController extends BaseController {
         contentType = 'image/x-icon';
       }
 
-      await this.serveStaticFile(filePath, contentType, reply);
+      return await this.serveStaticFile(filePath, contentType, reply);
     } catch (error) {
       this.logger.error('Error serving image file', error instanceof Error ? error : null);
-      this.sendError(reply, 'error serving image file', 500);
+
+      return await this.sendError(reply, 'error serving image file', 500);
     }
   };
 }

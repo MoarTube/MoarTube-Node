@@ -84,7 +84,7 @@ export class StreamsController extends BaseController {
    *
    * Start a new stream or resume an existing one
    */
-  startStream = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  startStream = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const {
         title,
@@ -125,10 +125,10 @@ export class StreamsController extends BaseController {
 
       const result = await this.streamService.startNewStream(options);
 
-      this.sendSuccess(reply, { videoId: result.videoId });
+      return await this.sendSuccess(reply, { videoId: result.videoId });
     } catch (error) {
       this.logger.error('Start stream failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -137,16 +137,16 @@ export class StreamsController extends BaseController {
    *
    * Stop a stream
    */
-  stopStream = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  stopStream = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { videoId } = request.params as VideoIdParams;
 
       await this.streamService.stopStream(videoId);
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Stop stream failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -155,7 +155,7 @@ export class StreamsController extends BaseController {
    *
    * Remove a segment file
    */
-  removeSegment = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  removeSegment = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { videoId, format, resolution } = request.params as SegmentRemoveParams;
       const { segmentName } = request.body as SegmentRemoveBody;
@@ -179,10 +179,10 @@ export class StreamsController extends BaseController {
         // Ignore file deletion errors
       }
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Remove segment failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -191,21 +191,20 @@ export class StreamsController extends BaseController {
    *
    * Get stream bandwidth
    */
-  getBandwidth = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getBandwidth = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { videoId } = request.params as VideoIdParams;
 
       const video = await this.videoRepository.findById(videoId);
 
       if (video === null) {
-        this.sendError(reply, 'that video does not exist');
-        return;
+        return await this.sendError(reply, 'that video does not exist');
       }
 
-      this.sendSuccess(reply, { bandwidth: video.bandwidth });
+      return await this.sendSuccess(reply, { bandwidth: video.bandwidth });
     } catch (error) {
       this.logger.error('Get bandwidth failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -214,7 +213,10 @@ export class StreamsController extends BaseController {
    *
    * Update chat settings for a stream
    */
-  updateChatSettings = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  updateChatSettings = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const { videoId } = request.params as VideoIdParams;
       const { isChatHistoryEnabled, chatHistoryLimit } = request.body as ChatSettingsBody;
@@ -222,8 +224,7 @@ export class StreamsController extends BaseController {
       const video = await this.videoRepository.findById(videoId);
 
       if (video === null) {
-        this.sendError(reply, 'that video does not exist');
-        return;
+        return await this.sendError(reply, 'that video does not exist');
       }
 
       // Update meta with chat settings
@@ -250,10 +251,10 @@ export class StreamsController extends BaseController {
         await this.liveChatMessageRepository.pruneOldMessages(videoId, chatHistoryLimit);
       }
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Update chat settings failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -262,16 +263,16 @@ export class StreamsController extends BaseController {
    *
    * Get chat history for a stream
    */
-  getChatHistory = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getChatHistory = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { videoId } = request.params as VideoIdParams;
 
       const chatHistory = await this.liveChatMessageRepository.findByVideoId(videoId);
 
-      this.sendSuccess(reply, { chatHistory });
+      return await this.sendSuccess(reply, { chatHistory });
     } catch (error) {
       this.logger.error('Get chat history failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 }

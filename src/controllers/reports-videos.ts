@@ -45,14 +45,14 @@ export class ReportsVideosController extends BaseController {
    *
    * Get all video reports
    */
-  getAllReports = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getAllReports = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const reports = await this.videoReportRepository.findAll();
 
-      this.sendSuccess(reply, { reports });
+      return await this.sendSuccess(reply, { reports });
     } catch (error) {
       this.logger.error('Failed to get all video reports', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -61,21 +61,19 @@ export class ReportsVideosController extends BaseController {
    *
    * Archive a video report
    */
-  archiveReport = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  archiveReport = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { reportId } = request.body as ArchiveReportBody;
 
       if (!isReportIdValid(reportId)) {
-        this.sendError(reply, 'invalid report id');
-        return;
+        return await this.sendError(reply, 'invalid report id');
       }
 
       const reportIdNum = Number.parseInt(reportId, 10);
       const report = await this.videoReportRepository.findById(reportIdNum);
 
       if (!report) {
-        this.sendError(reply, 'report with id does not exist');
-        return;
+        return await this.sendError(reply, 'report with id does not exist');
       }
 
       // Create archive record
@@ -92,10 +90,10 @@ export class ReportsVideosController extends BaseController {
       // Delete original report
       await this.videoReportRepository.delete(reportIdNum);
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Failed to archive video report', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -104,22 +102,21 @@ export class ReportsVideosController extends BaseController {
    *
    * Delete a video report
    */
-  deleteReport = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  deleteReport = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { reportId } = request.params as ReportIdParams;
 
       if (!isReportIdValid(reportId)) {
-        this.sendError(reply, 'invalid report id');
-        return;
+        return await this.sendError(reply, 'invalid report id');
       }
 
       const reportIdNum = Number.parseInt(reportId, 10);
       await this.videoReportRepository.delete(reportIdNum);
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Failed to delete video report', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 }

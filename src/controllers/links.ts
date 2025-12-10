@@ -45,13 +45,13 @@ export class LinksController extends BaseController {
    *
    * Get all social links
    */
-  getAllLinks = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getAllLinks = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const links = await this.linkRepository.findAll();
-      this.sendSuccess(reply, { links });
+      return await this.sendSuccess(reply, { links });
     } catch (error) {
       this.logger.error('Get all links failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -60,7 +60,7 @@ export class LinksController extends BaseController {
    *
    * Add a new social link
    */
-  addLink = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  addLink = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { url, svgGraphic } = request.body as AddLinkBody;
 
@@ -76,10 +76,10 @@ export class LinksController extends BaseController {
       await this.cloudflareService.purgeAllWatchPages();
       await this.cloudflareService.purgeNodePage();
 
-      this.sendSuccess(reply, { link });
+      return await this.sendSuccess(reply, { link });
     } catch (error) {
       this.logger.error('Add link failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -88,25 +88,24 @@ export class LinksController extends BaseController {
    *
    * Delete a social link
    */
-  deleteLink = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  deleteLink = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { linkId } = request.body as DeleteLinkBody;
 
       const deleted = await this.linkRepository.delete(linkId);
 
       if (!deleted) {
-        this.sendError(reply, 'link not found', 404);
-        return;
+        return await this.sendError(reply, 'link not found', 404);
       }
 
       // Purge Cloudflare cache for node page and watch pages
       await this.cloudflareService.purgeAllWatchPages();
       await this.cloudflareService.purgeNodePage();
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Delete link failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 }

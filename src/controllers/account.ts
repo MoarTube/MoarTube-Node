@@ -30,7 +30,7 @@ export class AccountController extends BaseController {
    *
    * Authenticate user with username and password
    */
-  signIn = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  signIn = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const {
         username,
@@ -68,14 +68,14 @@ export class AccountController extends BaseController {
         }
       }
 
-      this.sendSuccess(reply, {
+      return await this.sendSuccess(reply, {
         isAuthenticated: result.isAuthenticated,
         token: result.token,
       });
     } catch (error) {
       this.logger.error('AccountController.signIn failed', error instanceof Error ? error : null);
 
-      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -84,15 +84,15 @@ export class AccountController extends BaseController {
    *
    * Sign out the current user
    */
-  signOut = (_request: FastifyRequest, reply: FastifyReply): void => {
+  signOut = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      this.sendSuccess(reply, {
+      return await this.sendSuccess(reply, {
         wasAuthenticated: true,
       });
     } catch (error) {
-      this.logger.error('AccountController.signIn failed', error instanceof Error ? error : null);
+      this.logger.error('AccountController.signOut failed', error instanceof Error ? error : null);
 
-      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -101,15 +101,18 @@ export class AccountController extends BaseController {
    *
    * Check if the current request is authenticated
    */
-  authenticated = (request: FastifyRequest, reply: FastifyReply): void => {
+  authenticated = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      this.sendSuccess(reply, {
+      return await this.sendSuccess(reply, {
         isAuthenticated: request.isAuthenticated,
       });
     } catch (error) {
-      this.logger.error('AccountController.signIn failed', error instanceof Error ? error : null);
+      this.logger.error(
+        'AccountController.authenticated failed',
+        error instanceof Error ? error : null
+      );
 
-      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 }

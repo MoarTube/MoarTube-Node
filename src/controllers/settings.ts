@@ -229,7 +229,7 @@ export class SettingsController extends BaseController {
    * Upload node avatar and icon images
    * Expects multipart form with 'iconFile' and 'avatarFile' fields
    */
-  uploadAvatar = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  uploadAvatar = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const config = getConfig();
       const imagesDir = config.paths.imagesDirectoryPath;
@@ -261,7 +261,7 @@ export class SettingsController extends BaseController {
       }
 
       if (iconFile === undefined || avatarFile === undefined) {
-        this.sendError(reply, 'both iconFile and avatarFile are required', 400);
+        return await this.sendError(reply, 'both iconFile and avatarFile are required', 400);
       } else {
         // Purge Cloudflare cache if enabled
         if (this.cloudflareService !== undefined) {
@@ -277,12 +277,12 @@ export class SettingsController extends BaseController {
           await this.videoRepository.markAllIndexedAsOutdated();
         }
 
-        this.sendOk(reply);
+        return await this.sendOk(reply);
       }
     } catch (error) {
       this.logger.error('SettingsController.uploadAvatar failed', error as Error);
 
-      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -292,7 +292,7 @@ export class SettingsController extends BaseController {
    * Upload node banner image
    * Expects multipart form with 'bannerFile' field
    */
-  uploadBanner = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  uploadBanner = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const config = getConfig();
       const imagesDir = config.paths.imagesDirectoryPath;
@@ -316,7 +316,7 @@ export class SettingsController extends BaseController {
       }
 
       if (bannerFile === undefined) {
-        this.sendError(reply, 'bannerFile is required');
+        return await this.sendError(reply, 'bannerFile is required');
       } else {
         // Purge Cloudflare cache if enabled
         if (this.cloudflareService !== undefined) {
@@ -327,11 +327,11 @@ export class SettingsController extends BaseController {
           }
         }
 
-        this.sendOk(reply);
+        return await this.sendOk(reply);
       }
     } catch (error) {
       this.logger.error('Banner upload error', error as Error);
-      this.sendError(reply, 'error uploading banner');
+      return await this.sendError(reply, 'error uploading banner');
     }
   };
 
@@ -342,25 +342,37 @@ export class SettingsController extends BaseController {
    * Expects multipart form with 'keyFile', 'certFile', and optionally 'caFiles'
    * Or a JSON body with isSecure: false to disable HTTPS
    */
-  configureSecure = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  configureSecure = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const contentType = request.headers['content-type'] ?? '';
 
       if (contentType.includes('multipart/form-data')) {
-        await this.enableHttpsMode(request, reply);
+        const result = await this.enableHttpsMode(request);
+        if (result.success) {
+          return await this.sendOk(reply);
+        } else {
+          return await this.sendError(reply, result.error ?? 'error enabling HTTPS mode');
+        }
       } else {
-        this.disableHttpsMode(request, reply);
+        const result = this.disableHttpsMode(request);
+        if (result.success) {
+          return await this.sendOk(reply);
+        } else {
+          return await this.sendError(reply, result.error ?? 'error disabling HTTPS mode');
+        }
       }
     } catch (error) {
       this.logger.error('Secure mode configuration error', error as Error);
-      this.sendError(reply, 'error configuring secure mode');
+      return await this.sendError(reply, 'error configuring secure mode');
     }
   };
 
   /**
    * Enable HTTPS mode by processing certificate files
    */
-  private async enableHttpsMode(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  private async enableHttpsMode(
+    request: FastifyRequest
+  ): Promise<{ success: boolean; error?: string }> {
     const config = getConfig();
     const certsDir = config.paths.certificatesDirectoryPath;
 
@@ -373,18 +385,16 @@ export class SettingsController extends BaseController {
     const { hasKeyFile, hasCertFile } = await this.saveCertificateFiles(request, certsDir);
 
     if (!hasKeyFile) {
-      this.sendError(reply, 'private key file is missing');
-      return;
+      return { success: false, error: 'private key file is missing' };
     }
 
     if (!hasCertFile) {
-      this.sendError(reply, 'cert file is missing');
-      return;
+      return { success: false, error: 'cert file is missing' };
     }
 
     this.logger.info('switching node to HTTPS mode');
     config.updateNodeSettings({ isSecure: true });
-    this.sendOk(reply);
+    return { success: true };
   }
 
   /**
@@ -425,16 +435,16 @@ export class SettingsController extends BaseController {
   /**
    * Disable HTTPS mode
    */
-  private disableHttpsMode(request: FastifyRequest, reply: FastifyReply): void {
+  private disableHttpsMode(request: FastifyRequest): { success: boolean; error?: string } {
     const body = request.body as SecureBody;
 
     if (!body.isSecure) {
       this.logger.info('switching node to HTTP mode');
       const config = getConfig();
       config.updateNodeSettings({ isSecure: false });
-      this.sendOk(reply);
+      return { success: true };
     } else {
-      this.sendError(reply, 'invalid parameters - use multipart for enabling HTTPS');
+      return { success: false, error: 'invalid parameters - use multipart for enabling HTTPS' };
     }
   }
 
@@ -443,7 +453,10 @@ export class SettingsController extends BaseController {
    *
    * Update node name
    */
-  personalizeNodeName = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  personalizeNodeName = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const { nodeName } = request.body as PersonalizeNodeNameBody;
 
@@ -454,10 +467,10 @@ export class SettingsController extends BaseController {
 
       await this.settingsService.updateNodeName(nodeName, hasIndexedVideos);
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Error updating node name', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -466,13 +479,15 @@ export class SettingsController extends BaseController {
    *
    * Update node about
    */
-  personalizeNodeAbout = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  personalizeNodeAbout = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const { nodeAbout } = request.body as PersonalizeNodeAboutBody;
 
       if (!isNodeAboutValid(nodeAbout)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
+        return await this.sendError(reply, 'invalid parameters');
       }
 
       // Check if there are indexed videos to determine if indexer update is needed
@@ -482,10 +497,10 @@ export class SettingsController extends BaseController {
 
       await this.settingsService.updateNodeAbout(nodeAbout, hasIndexedVideos);
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Error updating node about', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -494,13 +509,15 @@ export class SettingsController extends BaseController {
    *
    * Update node ID
    */
-  personalizeNodeId = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  personalizeNodeId = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const { nodeId } = request.body as PersonalizeNodeIdBody;
 
       if (!isNodeIdValid(nodeId)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
+        return await this.sendError(reply, 'invalid parameters');
       }
 
       // Check if there are indexed videos to determine if indexer update is needed
@@ -510,10 +527,10 @@ export class SettingsController extends BaseController {
 
       await this.settingsService.updateNodeId(nodeId, hasIndexedVideos);
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Error updating node ID', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -522,21 +539,20 @@ export class SettingsController extends BaseController {
    *
    * Update account credentials
    */
-  updateAccount = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  updateAccount = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { username, password } = request.body as AccountBody;
 
       if (!isUsernameValid(username) || !isPasswordValid(password)) {
-        this.sendError(reply, 'invalid username and/or password');
-        return;
+        return await this.sendError(reply, 'invalid username and/or password');
       }
 
       await this.settingsService.updateCredentials(username, password);
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Error updating account', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -578,7 +594,7 @@ export class SettingsController extends BaseController {
    * Update external network settings
    * Also rewrites HLS manifest URLs when storage mode is filesystem
    */
-  networkExternal = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  networkExternal = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { publicNodeProtocol, publicNodeAddress, publicNodePort } =
         request.body as NetworkExternalBody;
@@ -588,8 +604,7 @@ export class SettingsController extends BaseController {
         !isPublicNodeAddressValid(publicNodeAddress) ||
         !isPortValid(publicNodePort)
       ) {
-        this.sendError(reply, 'invalid parameters');
-        return;
+        return await this.sendError(reply, 'invalid parameters');
       }
 
       // Check if there are indexed videos (required for indexer update)
@@ -606,10 +621,10 @@ export class SettingsController extends BaseController {
       // Rewrite HLS manifest URLs if using filesystem storage
       await this.rewriteAllManifestUrls();
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Error updating external network settings', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -721,7 +736,10 @@ export class SettingsController extends BaseController {
    *
    * Configure Cloudflare CDN
    */
-  cloudflareConfigure = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  cloudflareConfigure = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const { cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey } =
         request.body as CloudflareConfigureBody;
@@ -734,8 +752,7 @@ export class SettingsController extends BaseController {
       );
 
       if (!isValid) {
-        this.sendError(reply, 'could not validate the Cloudflare credentials');
-        return;
+        return await this.sendError(reply, 'could not validate the Cloudflare credentials');
       }
 
       // Get current storage config for DNS record setup
@@ -782,10 +799,10 @@ export class SettingsController extends BaseController {
         ''
       );
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Cloudflare configure error', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -794,7 +811,10 @@ export class SettingsController extends BaseController {
    *
    * Clear Cloudflare configuration
    */
-  cloudflareClear = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  cloudflareClear = async (
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const config = getConfig();
       const nodeSettings = config.nodeSettings;
@@ -823,10 +843,10 @@ export class SettingsController extends BaseController {
       // Clear configuration in settings
       this.settingsService.clearCloudflareConfig();
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Cloudflare clear error', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -1037,13 +1057,15 @@ export class SettingsController extends BaseController {
    * Update database configuration
    * Tests connection using underlying drivers before saving config
    */
-  databaseConfigToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  databaseConfigToggle = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const { databaseConfig } = request.body as DatabaseConfigBody;
 
       if (!isDatabaseConfigValid(databaseConfig)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
+        return await this.sendError(reply, 'invalid parameters');
       }
 
       const databaseDialect = databaseConfig.databaseDialect;
@@ -1068,8 +1090,7 @@ export class SettingsController extends BaseController {
         const postgresConfig = databaseConfig.postgresConfig;
 
         if (postgresConfig === undefined) {
-          this.sendError(reply, 'postgres configuration is required');
-          return;
+          return await this.sendError(reply, 'postgres configuration is required');
         }
 
         const postgres = (await import('postgres')).default;
@@ -1118,10 +1139,13 @@ export class SettingsController extends BaseController {
         process.send({ cmd: 'restart_database', databaseDialect: databaseDialect });
       }
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Database connection test failed', error as Error);
-      this.sendError(reply, 'could not connect to database with provided configuration');
+      return await this.sendError(
+        reply,
+        'could not connect to database with provided configuration'
+      );
     }
   };
 
@@ -1130,14 +1154,16 @@ export class SettingsController extends BaseController {
    *
    * Update storage configuration
    */
-  storageConfigToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  storageConfigToggle = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     try {
       const { storageConfig } = request.body as StorageConfigBody;
 
       // Validate storage configuration
       if (!isStorageConfigValid(storageConfig)) {
-        this.sendError(reply, 'invalid parameters');
-        return;
+        return await this.sendError(reply, 'invalid parameters');
       }
 
       // Update Cloudflare CDN DNS record if CDN is enabled
@@ -1189,10 +1215,10 @@ export class SettingsController extends BaseController {
 
       this.settingsService.updateStorageConfig(input);
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Storage config toggle error', error as Error);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -1203,7 +1229,7 @@ export class SettingsController extends BaseController {
    * Removes auto-generated 'id' columns and normalizes boolean values
    * for cross-database compatibility (SQLite <-> PostgreSQL)
    */
-  exportDatabase = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  exportDatabase = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       // Check if all required repositories are available
       if (
@@ -1217,8 +1243,10 @@ export class SettingsController extends BaseController {
         this.monetizationRepository === undefined ||
         this.linksRepository === undefined
       ) {
-        this.sendError(reply, 'database export requires all repositories to be configured');
-        return;
+        return await this.sendError(
+          reply,
+          'database export requires all repositories to be configured'
+        );
       }
 
       // Fetch all data from all tables (no limit = return all)
@@ -1278,10 +1306,10 @@ export class SettingsController extends BaseController {
         });
       }
 
-      this.sendSuccess(reply, { database });
+      return await this.sendSuccess(reply, { database });
     } catch (error) {
       this.logger.error('Database export error', error as Error);
-      this.sendError(reply, 'error exporting database');
+      return await this.sendError(reply, 'error exporting database');
     }
   };
 
@@ -1292,7 +1320,7 @@ export class SettingsController extends BaseController {
    * Clears all existing data and imports from the uploaded file
    * Expects multipart form with 'databaseFile' field containing JSON
    */
-  importDatabase = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  importDatabase = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       // Check if all required repositories are available
       if (
@@ -1306,8 +1334,10 @@ export class SettingsController extends BaseController {
         this.monetizationRepository === undefined ||
         this.linksRepository === undefined
       ) {
-        this.sendError(reply, 'database import requires all repositories to be configured');
-        return;
+        return await this.sendError(
+          reply,
+          'database import requires all repositories to be configured'
+        );
       }
 
       // Parse multipart data
@@ -1323,8 +1353,7 @@ export class SettingsController extends BaseController {
       }
 
       if (databaseFileContent === undefined) {
-        this.sendError(reply, 'database file is missing');
-        return;
+        return await this.sendError(reply, 'database file is missing');
       }
 
       // Parse the JSON database
@@ -1424,10 +1453,10 @@ export class SettingsController extends BaseController {
 
       this.logger.info('database imported successfully');
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Database import error', error as Error);
-      this.sendError(reply, 'error importing database');
+      return await this.sendError(reply, 'error importing database');
     }
   };
 }

@@ -73,18 +73,18 @@ export class WatchEmbedController extends VideoControllerBase {
    *
    * Render embedded video player page
    */
-  getEmbedVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getEmbedVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { videoId } = request.params as VideoIdParams;
 
       const video = await this.videoRepository.findById(videoId);
 
       if (!video) {
-        this.sendError(reply, 'video not found', 404);
+        return await this.sendError(reply, 'video not found', 404);
       } else {
         const model = this.buildPageData(video);
 
-        await reply.view('embed-video.ejs', { model });
+        return await reply.view('embed-video.ejs', { model });
       }
     } catch (error) {
       this.logger.error(
@@ -92,7 +92,7 @@ export class WatchEmbedController extends VideoControllerBase {
         error instanceof Error ? error : null
       );
 
-      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -101,15 +101,14 @@ export class WatchEmbedController extends VideoControllerBase {
    *
    * Render embedded chat page
    */
-  getEmbedChat = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getEmbedChat = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { videoId } = request.params as VideoIdParams;
 
       const video = await this.videoRepository.findById(videoId);
 
       if (!video) {
-        this.sendError(reply, 'video not found', 404);
-        return;
+        return await this.sendError(reply, 'video not found', 404);
       }
 
       const config = getConfig();
@@ -144,14 +143,14 @@ export class WatchEmbedController extends VideoControllerBase {
         },
       };
 
-      replyWithView.view('embed-chat', { model });
+      return await replyWithView.view('embed-chat', { model });
     } catch (error) {
       this.logger.error(
         'WatchEmbedController.getEmbedChat failed',
         error instanceof Error ? error : null
       );
 
-      this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 

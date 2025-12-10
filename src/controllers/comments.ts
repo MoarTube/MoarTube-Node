@@ -65,7 +65,7 @@ export class CommentsController extends BaseController {
    *
    * Search comments with optional filters
    */
-  search = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  search = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const searchOptions: {
         videoId?: string;
@@ -77,10 +77,11 @@ export class CommentsController extends BaseController {
 
       const comments = await this.commentRepository.search(searchOptions);
 
-      this.sendSuccess(reply, { comments });
+      return await this.sendSuccess(reply, { comments });
     } catch (error) {
       this.logger.error('Comment search failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
@@ -89,7 +90,7 @@ export class CommentsController extends BaseController {
    *
    * Report a comment
    */
-  reportComment = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  reportComment = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { commentId } = request.params as CommentIdParams;
       const {
@@ -106,18 +107,16 @@ export class CommentsController extends BaseController {
 
       // Check if reports are enabled globally
       if (!nodeSettings.isReportsEnabled) {
-        this.sendError(reply, 'reporting is currently disabled');
-        return;
+        return await this.sendError(reply, 'reporting is currently disabled');
       }
 
       // Validate Cloudflare Turnstile if enabled
       if (nodeSettings.isCloudflareTurnstileEnabled) {
         if (cloudflareTurnstileToken.length === 0) {
-          this.sendError(
+          return await this.sendError(
             reply,
             'human verification was enabled on this MoarTube Node, please refresh your browser'
           );
-          return;
         }
 
         const cloudflareConnectingIp = request.headers['cf-connecting-ip'] as string;
@@ -127,8 +126,7 @@ export class CommentsController extends BaseController {
         );
 
         if (!isValidToken) {
-          this.sendError(reply, 'human verification failed');
-          return;
+          return await this.sendError(reply, 'human verification failed');
         }
       }
 
@@ -137,27 +135,23 @@ export class CommentsController extends BaseController {
       const comment = await this.commentRepository.findById(commentIdNum);
 
       if (!comment) {
-        this.sendError(reply, 'this comment no longer exists');
-        return;
+        return await this.sendError(reply, 'this comment no longer exists');
       }
 
       // Verify the comment matches the video and timestamp
       if (comment.video_id !== videoId || comment.timestamp !== Number.parseInt(timestamp, 10)) {
-        this.sendError(reply, 'this comment no longer exists');
-        return;
+        return await this.sendError(reply, 'this comment no longer exists');
       }
 
       // Check if video exists and has reports enabled
       const video = await this.videoRepository.findById(videoId);
 
       if (!video) {
-        this.sendError(reply, 'this video no longer exists');
-        return;
+        return await this.sendError(reply, 'this video no longer exists');
       }
 
       if (!video.is_reports_enabled) {
-        this.sendError(reply, 'reporting is currently disabled');
-        return;
+        return await this.sendError(reply, 'reporting is currently disabled');
       }
 
       // Sanitize input
@@ -175,10 +169,11 @@ export class CommentsController extends BaseController {
         timestamp: Date.now(),
       });
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Comment report failed', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 }

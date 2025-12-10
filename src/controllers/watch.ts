@@ -120,23 +120,23 @@ export class WatchController extends VideoControllerBase {
    *
    * Render the video watch page
    */
-  getWatchPage = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getWatchPage = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { v: videoId } = request.query as WatchQuery;
 
       const video = await this.videoRepository.findById(videoId);
 
       if (!video) {
-        this.sendError(reply, 'that video could not be loaded', 404);
+        return await this.sendError(reply, 'that video could not be loaded', 404);
       } else {
         const model = await this.buildPageData(video);
 
-        await reply.view('watch.ejs', { model });
+        return await reply.view('watch.ejs', { model });
       }
     } catch (error) {
       this.logger.error('Get progressive video failed', error instanceof Error ? error : null);
 
-      this.sendError(reply, 'that video could not be loaded', 500);
+      return await this.sendError(reply, 'that video could not be loaded', 500);
     }
   };
 
