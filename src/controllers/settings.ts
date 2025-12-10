@@ -180,21 +180,22 @@ export class SettingsController extends BaseController {
    *
    * Get node avatar image
    */
-  getAvatar = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  getAvatar = (_request: FastifyRequest, reply: FastifyReply): FastifyReply => {
     try {
       const avatar = this.settingsService.getAvatar();
 
       if (avatar !== null) {
-        return await reply
+        return reply
           .header('Content-Type', 'image/png')
           .header('Content-Length', avatar.size)
           .send(avatar.fileStream);
       } else {
-        return await reply.status(404).send('avatar not found');
+        return this.sendError(reply, 'avatar not found', 404);
       }
     } catch (error) {
       this.logger.error('Error retrieving avatar', error as Error);
-      return await reply.status(500).send('node avatar retrieval error');
+
+      return this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -203,21 +204,21 @@ export class SettingsController extends BaseController {
    *
    * Get node banner image
    */
-  getBanner = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  getBanner = (_request: FastifyRequest, reply: FastifyReply): FastifyReply => {
     try {
       const banner = this.settingsService.getBanner();
 
       if (banner !== null) {
-        return await reply
+        return reply
           .header('Content-Type', 'image/png')
           .header('Content-Length', banner.size)
           .send(banner.fileStream);
       } else {
-        return await reply.status(404).send('banner not found');
+        return this.sendError(reply, 'banner not found', 404);
       }
     } catch (error) {
       this.logger.error('Error retrieving banner', error as Error);
-      return await reply.status(500).send('node banner retrieval error');
+      return this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 

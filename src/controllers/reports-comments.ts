@@ -8,7 +8,6 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base.js';
 import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
 import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
-import { isReportIdValid } from '../utils/index.js';
 
 /**
  * Request body for archiving a report
@@ -52,7 +51,7 @@ export class ReportsCommentsController extends BaseController {
       this.sendSuccess(reply, { reports });
     } catch (error) {
       this.logger.error('Failed to get all comment reports', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -61,21 +60,15 @@ export class ReportsCommentsController extends BaseController {
    *
    * Archive a comment report
    */
-  archiveReport = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  archiveReport = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { reportId } = request.body as ArchiveCommentReportBody;
-
-      if (!isReportIdValid(reportId)) {
-        this.sendError(reply, 'invalid report id');
-        return;
-      }
 
       const reportIdNum = Number.parseInt(reportId, 10);
       const report = await this.commentReportRepository.findById(reportIdNum);
 
       if (!report) {
-        this.sendError(reply, 'report with id does not exist');
-        return;
+        return await this.sendError(reply, 'report with id does not exist', 404);
       }
 
       // Create archive record
@@ -93,10 +86,11 @@ export class ReportsCommentsController extends BaseController {
       // Delete original report
       await this.commentReportRepository.delete(reportIdNum);
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Failed to archive comment report', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+
+      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -105,22 +99,17 @@ export class ReportsCommentsController extends BaseController {
    *
    * Delete a comment report
    */
-  deleteReport = async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  deleteReport = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { reportId } = request.params as CommentReportIdParams;
-
-      if (!isReportIdValid(reportId)) {
-        this.sendError(reply, 'invalid report id');
-        return;
-      }
 
       const reportIdNum = Number.parseInt(reportId, 10);
       await this.commentReportRepository.delete(reportIdNum);
 
-      this.sendOk(reply);
+      return await this.sendOk(reply);
     } catch (error) {
       this.logger.error('Failed to delete comment report', error instanceof Error ? error : null);
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 }

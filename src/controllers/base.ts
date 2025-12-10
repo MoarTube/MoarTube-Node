@@ -84,8 +84,8 @@ export abstract class BaseController {
    * @param reply - Fastify reply object
    * @param status - HTTP status code (default: 200)
    */
-  protected sendOk(reply: FastifyReply, status = 200): void {
-    void reply.status(status).send({ isError: false });
+  protected sendOk(reply: FastifyReply, status = 200): FastifyReply {
+    return reply.status(status).send({ isError: false });
   }
 
   /**
@@ -95,8 +95,8 @@ export abstract class BaseController {
    * @param message - Error message
    * @param status - HTTP status code (default: 400)
    */
-  protected sendError(reply: FastifyReply, message: string, status = 400): void {
-    void reply.status(status).send({ isError: true, message });
+  protected sendError(reply: FastifyReply, message: string, status = 400): FastifyReply {
+    return reply.status(status).send({ isError: true, message });
   }
 
   /**

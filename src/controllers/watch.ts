@@ -134,7 +134,7 @@ export class WatchController extends VideoControllerBase {
       const video = await this.videoRepository.findById(videoId);
 
       if (!video) {
-        return await reply.status(404).send('that video could not be loaded');
+        return await this.sendError(reply, 'that video could not be loaded', 404);
       }
 
       const pageData = await this.buildPageData(video);
@@ -142,7 +142,8 @@ export class WatchController extends VideoControllerBase {
       return await this.renderPage(reply, pageData);
     } catch (error) {
       this.logger.error('Get progressive video failed', error instanceof Error ? error : null);
-      return await reply.status(500).send('that video could not be loaded');
+
+      return this.sendError(reply, 'that video could not be loaded', 500);
     }
   }; /**
    * Build all data needed for the watch page

@@ -91,7 +91,7 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve video thumbnail image
    */
-  getThumbnail = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  getThumbnail = (request: FastifyRequest, reply: FastifyReply): FastifyReply => {
     const { videoId } = request.params as VideoIdParams;
 
     const config = getConfig();
@@ -104,7 +104,7 @@ export class ExternalVideosController extends BaseController {
     );
 
     if (!fs.existsSync(thumbnailPath)) {
-      return reply.status(404).send('thumbnail not found');
+      return this.sendError(reply, 'thumbnail not found', 404);
     }
 
     const stat = fs.statSync(thumbnailPath);
@@ -121,7 +121,7 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve video preview image
    */
-  getPreview = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  getPreview = (request: FastifyRequest, reply: FastifyReply): FastifyReply => {
     const { videoId } = request.params as VideoIdParams;
 
     const config = getConfig();
@@ -134,7 +134,7 @@ export class ExternalVideosController extends BaseController {
     );
 
     if (!fs.existsSync(previewPath)) {
-      return reply.status(404).send('preview not found');
+      return this.sendError(reply, 'preview not found', 404);
     }
 
     const stats = fs.statSync(previewPath);
@@ -151,7 +151,7 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve video poster image
    */
-  getPoster = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  getPoster = (request: FastifyRequest, reply: FastifyReply): FastifyReply => {
     const { videoId } = request.params as VideoIdParams;
 
     const config = getConfig();
@@ -159,7 +159,7 @@ export class ExternalVideosController extends BaseController {
     const posterPath = path.join(config.paths.videosDirectoryPath, videoId, 'images', 'poster.jpg');
 
     if (!fs.existsSync(posterPath)) {
-      return reply.status(404).send('poster not found');
+      return this.sendError(reply, 'poster not found', 404);
     }
 
     const stats = fs.statSync(posterPath);
@@ -176,10 +176,7 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve HLS/DASH manifest files
    */
-  getAdaptiveManifest = async (
-    request: FastifyRequest,
-    reply: FastifyReply
-  ): Promise<FastifyReply> => {
+  getAdaptiveManifest = (request: FastifyRequest, reply: FastifyReply): FastifyReply => {
     try {
       const { videoId, format, manifestName } = request.params as AdaptiveManifestParams;
 
@@ -194,18 +191,20 @@ export class ExternalVideosController extends BaseController {
       );
 
       if (!fs.existsSync(manifestPath)) {
-        return await reply.status(404).send('video not found');
+        return this.sendError(reply, 'report with id does not exist', 404);
       }
 
       const stats = fs.statSync(manifestPath);
       const fileStream = fs.createReadStream(manifestPath);
-      return await reply
+
+      return reply
         .header('Content-Type', 'application/vnd.apple.mpegurl')
         .header('Content-Length', stats.size)
         .send(fileStream);
     } catch (error) {
       this.logger.error('Get adaptive manifest failed', error instanceof Error ? error : null);
-      return await reply.status(404).send('video not found');
+
+      return this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -214,10 +213,7 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve HLS/DASH segment files with bandwidth tracking
    */
-  getAdaptiveSegment = async (
-    request: FastifyRequest,
-    reply: FastifyReply
-  ): Promise<FastifyReply> => {
+  getAdaptiveSegment = (request: FastifyRequest, reply: FastifyReply): FastifyReply => {
     try {
       const { videoId, format, resolution, segmentName } = request.params as AdaptiveSegmentParams;
 
@@ -233,7 +229,7 @@ export class ExternalVideosController extends BaseController {
       );
 
       if (!fs.existsSync(segmentPath)) {
-        return await reply.status(404).send('video not found');
+        return this.sendError(reply, 'adaptive segment not found', 404);
       }
 
       // Track bandwidth asynchronously
@@ -241,13 +237,14 @@ export class ExternalVideosController extends BaseController {
 
       const stats = fs.statSync(segmentPath);
       const fileStream = fs.createReadStream(segmentPath);
-      return await reply
+      return reply
         .header('Content-Type', 'video/mp2t')
         .header('Content-Length', stats.size)
         .send(fileStream);
     } catch (error) {
       this.logger.error('Get adaptive segment failed', error instanceof Error ? error : null);
-      return await reply.status(404).send('video not found');
+
+      return this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
@@ -256,7 +253,7 @@ export class ExternalVideosController extends BaseController {
    *
    * Serve progressive video files with range request support
    */
-  getProgressive = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  getProgressive = (request: FastifyRequest, reply: FastifyReply): FastifyReply => {
     try {
       const { videoId, format, progressiveFilename } = request.params as ProgressiveParams;
 
@@ -271,7 +268,7 @@ export class ExternalVideosController extends BaseController {
       );
 
       if (!fs.existsSync(filePath)) {
-        return await reply.status(404).send('video not found');
+        return this.sendError(reply, 'progressive video not found', 404);
       }
 
       const stat = fs.statSync(filePath);
@@ -294,7 +291,7 @@ export class ExternalVideosController extends BaseController {
 
         const fileStream = fs.createReadStream(filePath, { start, end });
 
-        return await reply
+        return reply
           .status(206)
           .header('Content-Range', `bytes ${String(start)}-${String(end)}/${String(fileSize)}`)
           .header('Accept-Ranges', 'bytes')
@@ -305,14 +302,15 @@ export class ExternalVideosController extends BaseController {
         // Full file request
         const fileStream = fs.createReadStream(filePath);
 
-        return await reply
+        return reply
           .header('Content-Length', fileSize)
           .header('Content-Type', `video/${format}`)
           .send(fileStream);
       }
     } catch (error) {
       this.logger.error('Get progressive video failed', error instanceof Error ? error : null);
-      return await reply.status(404).send('video not found');
+
+      return this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
 
