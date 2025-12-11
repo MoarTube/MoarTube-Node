@@ -123,7 +123,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
       const files = ids.map((id) => `${nodeBaseUrl}/watch?v=${id}`);
       await this.purgeCache(files, 'purgeWatchPages');
     } catch (error) {
-      this.logger.error('Failed to purge watch pages', error as Error);
+      this.logger.error('Failed to purge watch pages', error);
     }
   }
 
@@ -163,7 +163,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
 
       await this.purgeCache(files, 'purgeEmbedVideoPages');
     } catch (error) {
-      this.logger.error('Failed to purge embed pages', error as Error);
+      this.logger.error('Failed to purge embed pages', error);
     }
   }
 
@@ -198,7 +198,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
 
       await this.purgeCache(files, 'purgeNodePage');
     } catch (error) {
-      this.logger.error('Failed to purge node page', error as Error);
+      this.logger.error('Failed to purge node page', error);
     }
   }
 
@@ -222,7 +222,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
 
       await this.purgeCache(files, 'purgeNodeImages');
     } catch (error) {
-      this.logger.error('Failed to purge node images', error as Error);
+      this.logger.error('Failed to purge node images', error);
     }
   }
 
@@ -245,7 +245,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
 
       await this.purgeCache(files, 'purgeAdaptiveVideos');
     } catch (error) {
-      this.logger.error('Failed to purge adaptive videos', error as Error, { videoId });
+      this.logger.error('Failed to purge adaptive videos', error, { videoId });
     }
   }
 
@@ -275,7 +275,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
 
       await this.purgeCache(files, 'purgeProgressiveVideos');
     } catch (error) {
-      this.logger.error('Failed to purge progressive videos', error as Error, { videoId });
+      this.logger.error('Failed to purge progressive videos', error, { videoId });
     }
   }
 
@@ -296,7 +296,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
       );
       await this.purgeCache(files, 'purgeVideoPreviewImages');
     } catch (error) {
-      this.logger.error('Failed to purge preview images', error as Error, { videoIds });
+      this.logger.error('Failed to purge preview images', error, { videoIds });
     }
   }
 
@@ -317,7 +317,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
       );
       await this.purgeCache(files, 'purgeVideoPosterImages');
     } catch (error) {
-      this.logger.error('Failed to purge poster images', error as Error, { videoIds });
+      this.logger.error('Failed to purge poster images', error, { videoIds });
     }
   }
 
@@ -338,7 +338,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
       );
       await this.purgeCache(files, 'purgeVideoThumbnailImages');
     } catch (error) {
-      this.logger.error('Failed to purge thumbnail images', error as Error, { videoIds });
+      this.logger.error('Failed to purge thumbnail images', error, { videoIds });
     }
   }
 
@@ -371,7 +371,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
 
       this.logger.info('Entire cache purged');
     } catch (error) {
-      this.logger.error('Failed to purge entire cache', error as Error);
+      this.logger.error('Failed to purge entire cache', error);
     }
   }
 
@@ -398,7 +398,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
 
       this.logger.info('Entire cache purged with explicit credentials');
     } catch (error) {
-      this.logger.error('Failed to purge entire cache with credentials', error as Error);
+      this.logger.error('Failed to purge entire cache with credentials', error);
       throw error;
     }
   }
@@ -705,7 +705,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
 
       return response.data.success;
     } catch (error) {
-      this.logger.error('Failed to validate Cloudflare credentials', error as Error);
+      this.logger.error('Failed to validate Cloudflare credentials', error);
       return false;
     }
   }
@@ -773,7 +773,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
 
       this.logger.debug(`${operation}: purged ${String(files.length)} files`);
     } catch (error) {
-      this.logger.error(`${operation} failed`, error as Error);
+      this.logger.error(`${operation} failed`, error);
     }
   }
 }

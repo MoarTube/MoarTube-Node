@@ -406,7 +406,8 @@ export class StreamService extends BaseService implements IStreamService {
         this.logger.debug('Created stream directories', { videoId, resolution });
       }
     } catch (error) {
-      this.logger.error('Failed to create stream directories', error as Error, { videoId });
+      this.logger.error('Failed to create stream directories', error, { videoId });
+
       throw error;
     }
   }

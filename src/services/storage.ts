@@ -68,9 +68,7 @@ export class StorageService extends BaseService implements IStorageService {
         });
       }
     } catch (error) {
-      this.logger.debug('S3 client not configured', {
-        error: (error as Error).message,
-      });
+      this.logger.error('S3 client not configured', error);
     }
   }
 

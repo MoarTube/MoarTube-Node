@@ -10,6 +10,7 @@ import type {
   WebSocketMessage,
   IncomingWebSocketMessage,
 } from '../../types/websocket.js';
+import { Logger, type ILogger } from '../../utils/logger.js';
 
 /**
  * Handler context passed to handle methods
@@ -22,12 +23,7 @@ export interface HandlerContext {
   /** Get all connected clients */
   getClients: () => Set<ExtendedWebSocket>;
   /** Logger instance */
-  log: {
-    debug: (message: string, context?: Record<string, unknown>) => void;
-    info: (message: string, context?: Record<string, unknown>) => void;
-    warn: (message: string, context?: Record<string, unknown>) => void;
-    error: (message: string, error?: Error, context?: Record<string, unknown>) => void;
-  };
+  log: ILogger;
 }
 
 /**
@@ -42,6 +38,11 @@ export abstract class WebSocketHandler {
    * Handler name for logging purposes
    */
   abstract readonly name: string;
+
+  /**
+   * Logger instance
+   */
+  protected readonly logger: ILogger = Logger.getInstance();
 
   /**
    * Check if this handler can process the given message

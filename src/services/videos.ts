@@ -1167,7 +1167,7 @@ export class VideosService extends BaseService implements IVideoService {
       }
       // For S3, use storage service
     } catch (error) {
-      this.logger.error('Failed to delete format/resolution files', error as Error, {
+      this.logger.error('Failed to delete format/resolution files', error, {
         videoId,
         format,
         resolution,
@@ -1622,7 +1622,8 @@ export class VideosService extends BaseService implements IVideoService {
       }
       // For S3, directories are virtual and created on-demand
     } catch (error) {
-      this.logger.error('Failed to create video directories', error as Error, { videoId });
+      this.logger.error('Failed to create video directories', error, { videoId });
+
       throw error;
     }
   }
@@ -1649,7 +1650,7 @@ export class VideosService extends BaseService implements IVideoService {
         this.logger.debug('Deleted video from S3', { videoId });
       }
     } catch (error) {
-      this.logger.error('Failed to delete video directories', error as Error, { videoId });
+      this.logger.error('Failed to delete video directories', error, { videoId });
       // Don't throw - video record deletion should still proceed
     }
   }

@@ -81,6 +81,7 @@ export class AuthService extends BaseService implements IAuthService {
   verifyToken(token: string): { valid: boolean; username?: string } {
     try {
       const config = getConfig();
+
       const decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
 
       return {
@@ -88,9 +89,7 @@ export class AuthService extends BaseService implements IAuthService {
         username: decoded.username,
       };
     } catch (error) {
-      this.logger.debug('Token verification failed', {
-        error: (error as Error).message,
-      });
+      this.logger.error('Token verification failed', error);
 
       return {
         valid: false,

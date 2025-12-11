@@ -92,7 +92,7 @@ export class IndexerService extends BaseService implements IIndexerService {
       }
 
       // Re-throw for other errors to be handled by withErrorLogging
-      this.logger.error('Failed to submit video to index', error as Error, {
+      this.logger.error('Failed to submit video to index', error, {
         videoId: data.videoId,
       });
       const result: IndexerSubmitResult = {

@@ -129,6 +129,7 @@ export class SettingsService extends BaseService implements ISettingsService {
    */
   async updateNodeName(name: string, hasIndexedVideos: boolean = false): Promise<void> {
     const config = getConfig();
+
     config.updateNodeSettings({ nodeName: name });
 
     // Update in indexer if there are indexed videos
@@ -143,9 +144,7 @@ export class SettingsService extends BaseService implements ISettingsService {
           await this.cloudflareService.purgeNodePage();
         }
       } catch (error) {
-        this.logger.warn('Failed to update node name in indexer', {
-          error: (error as Error).message,
-        });
+        this.logger.error('Failed to update node name in indexer', error);
         throw error;
       }
     }
@@ -173,9 +172,8 @@ export class SettingsService extends BaseService implements ISettingsService {
           await this.cloudflareService.purgeNodePage();
         }
       } catch (error) {
-        this.logger.warn('Failed to update node about in indexer', {
-          error: (error as Error).message,
-        });
+        this.logger.error('Failed to update node about in indexer', error);
+
         throw error;
       }
     }
@@ -200,9 +198,7 @@ export class SettingsService extends BaseService implements ISettingsService {
           await this.cloudflareService.purgeNodePage();
         }
       } catch (error) {
-        this.logger.warn('Failed to update node ID in indexer', {
-          error: (error as Error).message,
-        });
+        this.logger.error('Failed to update node ID in indexer', error);
         throw error;
       }
     }
@@ -263,9 +259,7 @@ export class SettingsService extends BaseService implements ISettingsService {
         // Pass the new network values to the indexer (NOT the old config values)
         await this.indexerService.updateExternalNetwork(protocol, address, port);
       } catch (error) {
-        this.logger.warn('Failed to update network in indexer', {
-          error: (error as Error).message,
-        });
+        this.logger.error('Failed to update network in indexer', error);
         throw error;
       }
     }

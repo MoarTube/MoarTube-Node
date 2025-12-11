@@ -139,10 +139,10 @@ export class IPCChannel {
 
     try {
       void Promise.resolve(handler(message, worker)).catch((error: unknown) => {
-        this.logger.error(`Handler error for ${message.cmd}`, error as Error);
+        this.logger.error(`Handler error for ${message.cmd}`, error);
       });
     } catch (error) {
-      this.logger.error(`Sync handler error for ${message.cmd}`, error as Error);
+      this.logger.error(`Sync handler error for ${message.cmd}`, error);
     }
   }
 
