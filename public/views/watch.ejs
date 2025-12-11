@@ -2523,7 +2523,7 @@ body {
 
 			function generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, highlight) {
 				const commentElement = $('\
-					<div class="postContainer replyContainer" id="pc' + commentId + '">\
+					<div class="postContainer replyContainer" id="pc' + commentId + '" data-timestamp="' + timestamp + '">\
 					  <div id="p' + commentId + '" class="post reply">\
 						<div class="postInfoM mobile" id="pim' + commentId + '">\
 						  <span class="nameBlock">\
@@ -2624,7 +2624,8 @@ body {
 					const div = document.getElementById('pc' + commentId);
 
 					if (div == null) {
-						$.ajax({ type: 'GET', url: '/videos/' + VIDEO_ID + '/comments/' + commentId })
+						const quotingTimestamp = $(quotelink).closest('.postContainer').data('timestamp');
+						$.ajax({ type: 'GET', url: '/videos/' + VIDEO_ID + '/comments/' + commentId, data: { timestamp: quotingTimestamp } })
 							.done(function (data, textStatus, xhr) {
 								if (data.isError) {
 									console.log(data.message);

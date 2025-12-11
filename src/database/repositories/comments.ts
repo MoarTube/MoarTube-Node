@@ -30,11 +30,21 @@ export class CommentsRepository extends BaseRepository {
    * @param id - The database primary key
    * @returns The comment record or null if not found
    */
-  async findById(videoId: string, commentId: number): Promise<DrizzleComment | null> {
+  async findById(
+    videoId: string,
+    commentId: number,
+    timestamp: number
+  ): Promise<DrizzleComment | null> {
     const result = await this.db
       .select()
       .from(comments)
-      .where(and(eq(comments.comment_id, commentId), eq(comments.video_id, videoId)))
+      .where(
+        and(
+          eq(comments.comment_id, commentId),
+          eq(comments.video_id, videoId),
+          eq(comments.timestamp, timestamp)
+        )
+      )
       .limit(1);
     return result[0] ?? null;
   }

@@ -36,7 +36,7 @@ export interface CommentIdParams {
  */
 export interface CommentReportBody {
   videoId: string;
-  timestamp: string;
+  timestamp: number;
   email: string;
   reportType: string;
   message: string;
@@ -131,14 +131,9 @@ export class CommentsController extends BaseController {
         }
       }
 
-      const comment = await this.commentRepository.findById(videoId, commentId);
+      const comment = await this.commentRepository.findById(videoId, commentId, timestamp);
 
       if (!comment) {
-        return await this.sendError(reply, 'this comment no longer exists');
-      }
-
-      // Verify the comment matches the video and timestamp
-      if (comment.video_id !== videoId || comment.timestamp !== Number.parseInt(timestamp, 10)) {
         return await this.sendError(reply, 'this comment no longer exists');
       }
 

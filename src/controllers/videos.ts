@@ -1185,9 +1185,9 @@ export class VideosController extends BaseController {
       const commentService = this.getCommentService();
 
       const { videoId, commentId } = request.params as VideoIdParams & { commentId: number };
-      // timestamp?
+      const { timestamp } = request.query as { timestamp: number };
 
-      const comment = await commentService.getComment(videoId, commentId);
+      const comment = await commentService.getComment(videoId, commentId, timestamp);
 
       if (comment === null) {
         throw new NotFoundError(`Comment not found`);

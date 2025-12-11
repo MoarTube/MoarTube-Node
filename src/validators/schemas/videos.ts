@@ -108,6 +108,15 @@ export const videoCommentDeleteQuerySchema = z.object({
 export type VideoCommentDeleteQuery = z.infer<typeof videoCommentDeleteQuerySchema>;
 
 /**
+ * Video comment get query parameters schema
+ */
+export const videoCommentGetQuerySchema = z.object({
+  timestamp: timestampSchema,
+});
+
+export type VideoCommentGetQuery = z.infer<typeof videoCommentGetQuerySchema>;
+
+/**
  * Video upload query parameters schema
  */
 export const videoUploadQuerySchema = z.object({

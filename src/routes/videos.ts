@@ -28,6 +28,7 @@ import {
   videoReportBodySchema,
   videoPermissionsBodySchema,
   videoMasterManifestBodySchema,
+  videoCommentGetQuerySchema,
 } from '../validators/index.js';
 
 /**
@@ -103,6 +104,7 @@ export function videosRoutes(
       preHandler: [fastify.optionalAuthenticate],
       schema: {
         params: videoCommentIdParamsSchema,
+        querystring: videoCommentGetQuerySchema,
       },
     },
     controller.getComment.bind(controller)

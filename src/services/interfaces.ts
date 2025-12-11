@@ -394,7 +394,7 @@ export interface CreateCommentInput {
  */
 export interface ICommentService {
   /** Get a single comment by ID */
-  getComment(videoId: string, commentId: number): Promise<DrizzleComment | null>;
+  getComment(videoId: string, commentId: number, timestamp: number): Promise<DrizzleComment | null>;
 
   /** Get comments with filtering and pagination */
   getComments(options?: GetCommentsOptions): Promise<DrizzleComment[]>;
