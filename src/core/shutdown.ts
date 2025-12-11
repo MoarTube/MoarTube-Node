@@ -9,16 +9,7 @@ import type { Server as HttpServer } from 'node:http';
 import type { Server as HttpsServer } from 'node:https';
 import { createHttpTerminator, type HttpTerminator } from 'http-terminator';
 import type { WebSocketManager } from '../websocket/websocket-manager.js';
-import { Logger } from '../utils/logger.js';
-
-/**
- * Logger interface for shutdown
- */
-export interface ShutdownLogger {
-  info: (message: string, context?: Record<string, unknown>) => void;
-  warn: (message: string, context?: Record<string, unknown>) => void;
-  error: (message: string, error?: Error, context?: Record<string, unknown>) => void;
-}
+import { Logger, type ILogger } from '../utils/logger.js';
 
 /**
  * Shutdown configuration
@@ -31,30 +22,10 @@ export interface GracefulShutdownConfig {
   /** Cleanup function to run before exit */
   cleanup?: () => Promise<void>;
   /** Logger instance */
-  logger?: ShutdownLogger;
+  logger?: ILogger;
   /** Graceful termination timeout in ms */
   terminationTimeout?: number;
 }
-
-/**
- * Default console logger using Logger utility
- */
-const logger = Logger.getInstance();
-const defaultLogger: ShutdownLogger = {
-  info: (message, context) => {
-    logger.info(`[Shutdown] ${message}`, context !== undefined ? { context } : undefined);
-  },
-  warn: (message, context) => {
-    logger.warn(`[Shutdown] ${message}`, context !== undefined ? { context } : undefined);
-  },
-  error: (message, error, context) => {
-    logger.error(
-      `[Shutdown] ${message}`,
-      error instanceof Error ? error : null,
-      context !== undefined ? { context } : undefined
-    );
-  },
-};
 
 /**
  * Graceful Shutdown Manager
@@ -67,13 +38,13 @@ export class GracefulShutdown {
   private readonly httpTerminator: HttpTerminator;
   private readonly wsManager: WebSocketManager | undefined;
   private readonly cleanup: (() => Promise<void>) | undefined;
-  private readonly logger: ShutdownLogger;
+  private readonly logger: ILogger;
   private readonly terminationTimeout: number;
 
   constructor(config: GracefulShutdownConfig) {
     this.wsManager = config.wsManager;
     this.cleanup = config.cleanup;
-    this.logger = config.logger ?? defaultLogger;
+    this.logger = config.logger ?? Logger.getInstance();
     this.terminationTimeout = config.terminationTimeout ?? 10000;
 
     this.httpTerminator = createHttpTerminator({

@@ -34,5 +34,4 @@ export {
   GracefulShutdown,
   createGracefulShutdown,
   type GracefulShutdownConfig,
-  type ShutdownLogger,
 } from './shutdown.js';

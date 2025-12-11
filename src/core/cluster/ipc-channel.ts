@@ -13,7 +13,7 @@ import type {
   IPCMessageToMaster,
   IPCMessageToWorker,
 } from '../../types/ipc.js';
-import { Logger } from '../../utils/logger.js';
+import { Logger, type ILogger } from '../../utils/logger.js';
 
 /**
  * IPC message handler function type
@@ -26,18 +26,13 @@ export type IPCHandler<T extends IPCMessage = IPCMessage> = (
 /**
  * Logger interface for IPC
  */
-export interface IPCLogger {
-  debug: (message: string, context?: Record<string, unknown>) => void;
-  info: (message: string, context?: Record<string, unknown>) => void;
-  warn: (message: string, context?: Record<string, unknown>) => void;
-  error: (message: string, error?: Error, context?: Record<string, unknown>) => void;
-}
+export type IPCLogger = ILogger;
 
 /**
  * Get default logger (lazy initialization to ensure Config is loaded)
  */
 function getDefaultLogger(): IPCLogger {
-  return new Logger({ prefix: 'IPC' });
+  return Logger.getInstance();
 }
 
 /**

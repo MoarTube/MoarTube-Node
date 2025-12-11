@@ -60,7 +60,7 @@ export interface ClusterMasterOptions {
  * Get default logger (lazy initialization to ensure Config is loaded)
  */
 function getDefaultLogger(): IPCLogger {
-  return new Logger({ prefix: 'Master' });
+  return Logger.getInstance();
 }
 
 /**

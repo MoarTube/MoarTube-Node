@@ -59,7 +59,7 @@ export abstract class BaseController {
 
   constructor(name: string) {
     this.controllerName = name;
-    this.logger = new Logger({ prefix: name });
+    this.logger = Logger.getInstance();
   }
 
   /**

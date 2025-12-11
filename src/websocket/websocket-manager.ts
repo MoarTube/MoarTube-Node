@@ -23,26 +23,16 @@ import { RegisterHandler } from './handlers/register.js';
 import { Logger, type ILogger } from '../utils/logger.js';
 
 /**
- * Logger interface for the WebSocket manager
- */
-export type WebSocketLogger = ILogger;
-
-/**
  * Configuration options for WebSocket Manager
  */
 export interface WebSocketManagerOptions {
   /** Logger instance */
-  logger?: WebSocketLogger;
+  logger?: ILogger;
   /** Heartbeat interval in milliseconds (0 to disable) */
   heartbeatInterval?: number;
   /** Client timeout in milliseconds */
   clientTimeout?: number;
 }
-
-/**
- * Default logger using Logger class with WebSocket prefix
- */
-const defaultLogger: WebSocketLogger = new Logger({ prefix: 'WS' });
 
 /**
  * WebSocket connection manager
@@ -53,14 +43,14 @@ const defaultLogger: WebSocketLogger = new Logger({ prefix: 'WS' });
 export class WebSocketManager {
   private readonly handlers: WebSocketHandler[] = [];
   private readonly clients: Set<ExtendedWebSocket> = new Set();
-  private readonly logger: WebSocketLogger;
+  private readonly logger: ILogger;
   private readonly heartbeatInterval: number;
   private readonly clientTimeout: number;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private clientIdCounter = 0;
 
   constructor(options: WebSocketManagerOptions = {}) {
-    this.logger = options.logger ?? defaultLogger;
+    this.logger = options.logger ?? Logger.getInstance();
     this.heartbeatInterval = options.heartbeatInterval ?? 30000;
     this.clientTimeout = options.clientTimeout ?? 60000;
 

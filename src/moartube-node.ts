@@ -63,6 +63,6 @@ try {
     await startWorker();
   }
 } catch (error) {
-  getLogger().error('Fatal error during startup', error as Error);
+  getLogger().error('Fatal error during startup', error);
   process.exit(1);
 }
