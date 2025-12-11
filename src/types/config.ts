@@ -230,7 +230,7 @@ export interface PathConfig {
  * Environment variables configuration
  */
 export interface EnvConfig {
-  NODE_ENV: 'development' | 'production' | 'test';
+  NODE_ENV: 'development' | 'production';
   IS_DOCKER_ENVIRONMENT: boolean;
   MOARTUBE_DATA_DIR?: string;
   DATABASE_URL?: string;

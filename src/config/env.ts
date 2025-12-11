@@ -9,7 +9,7 @@ import { z } from 'zod';
  * Environment variable schema with validation
  */
 const EnvSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
+  NODE_ENV: z.enum(['development', 'production']).default('production'),
   IS_DOCKER_ENVIRONMENT: z
     .string()
     .optional()
@@ -55,11 +55,6 @@ class Env {
     const result = EnvSchema.safeParse({
       NODE_ENV: process.env['NODE_ENV'],
       IS_DOCKER_ENVIRONMENT: process.env['IS_DOCKER_ENVIRONMENT'],
-      MOARTUBE_DATA_DIR: process.env['MOARTUBE_DATA_DIR'],
-      DATABASE_URL: process.env['DATABASE_URL'],
-      LOG_LEVEL: process.env['LOG_LEVEL'],
-      PORT: process.env['PORT'],
-      HOST: process.env['HOST'],
     });
 
     if (!result.success) {
@@ -88,13 +83,6 @@ class Env {
    */
   get isProduction(): boolean {
     return this.config.NODE_ENV === 'production';
-  }
-
-  /**
-   * Check if running in test mode
-   */
-  get isTest(): boolean {
-    return this.config.NODE_ENV === 'test';
   }
 
   /**

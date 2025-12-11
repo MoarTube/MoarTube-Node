@@ -9,6 +9,9 @@
  *   npm start
  */
 
+// Load environment variables from .env file
+import 'dotenv/config';
+
 import cluster from 'node:cluster';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

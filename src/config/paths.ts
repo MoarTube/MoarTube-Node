@@ -53,15 +53,16 @@ class Paths implements PathConfig {
 
   private constructor(baseDir: string) {
     const env = getEnv();
-    const isDocker = env.isDockerEnvironment;
+
+    const isDockerEnvironment = env.isDockerEnvironment;
 
     // Base directories
     this.publicDirectoryPath = path.join(baseDir, 'public');
     this.viewsDirectoryPath = path.join(this.publicDirectoryPath, 'views');
 
     // Data directory - use environment variable if set, otherwise use default
-    const dataDir = env.dataDirectory ?? path.join(baseDir, 'data');
-    this.dataDirectoryPath = isDocker ? '/data' : dataDir;
+    const dataDir = path.join(baseDir, 'data');
+    this.dataDirectoryPath = isDockerEnvironment ? '/data' : dataDir;
 
     // Data subdirectories
     this.imagesDirectoryPath = path.join(this.dataDirectoryPath, 'images');
