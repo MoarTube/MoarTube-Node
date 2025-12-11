@@ -232,9 +232,4 @@ export interface PathConfig {
 export interface EnvConfig {
   NODE_ENV: 'development' | 'production';
   IS_DOCKER_ENVIRONMENT: boolean;
-  MOARTUBE_DATA_DIR?: string;
-  DATABASE_URL?: string;
-  LOG_LEVEL?: 'error' | 'warn' | 'info' | 'debug' | 'trace';
-  PORT?: number;
-  HOST?: string;
 }
