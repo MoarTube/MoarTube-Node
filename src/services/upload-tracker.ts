@@ -7,7 +7,7 @@
 
 import type { FastifyRequest } from 'fastify';
 import type { IWebSocketService } from './interfaces.js';
-import type { ServiceLogger } from './base.js';
+import type { ILogger } from '../utils/logger.js';
 
 /**
  * Upload tracking state for a single video
@@ -59,15 +59,15 @@ export interface IUploadTrackerService {
 
 export interface UploadTrackerServiceDependencies {
   websocketService?: IWebSocketService | undefined;
-  logger?: ServiceLogger | undefined;
+  logger?: ILogger | undefined;
 }
 
 export class UploadTrackerService implements IUploadTrackerService {
   private readonly tracker = new Map<string, VideoUploadState>();
   private readonly websocketService?: IWebSocketService | undefined;
-  private readonly logger?: ServiceLogger | undefined;
+  private readonly logger?: ILogger | undefined;
 
-  constructor(websocketService?: IWebSocketService, logger?: ServiceLogger) {
+  constructor(websocketService?: IWebSocketService, logger?: ILogger) {
     this.websocketService = websocketService;
     this.logger = logger;
   }

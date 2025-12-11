@@ -111,7 +111,7 @@ export class GracefulShutdown {
       this.logger.info('Shutdown complete');
       process.exit(0);
     } catch (error) {
-      this.logger.error('Error during shutdown', error as Error);
+      this.logger.error('Error during shutdown', error);
       process.exit(1);
     }
   }

@@ -165,7 +165,7 @@ export class IPCChannel {
       process.send(message);
       return true;
     } catch (error) {
-      this.logger.error('Failed to send message to master', error as Error);
+      this.logger.error('Failed to send message to master', error);
       return false;
     }
   }
@@ -189,7 +189,7 @@ export class IPCChannel {
       worker.send(message);
       return true;
     } catch (error) {
-      this.logger.error('Failed to send message to worker', error as Error, {
+      this.logger.error('Failed to send message to worker', error, {
         workerId: worker.id,
       });
       return false;

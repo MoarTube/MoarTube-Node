@@ -1248,8 +1248,12 @@ export class VideosController extends BaseController {
 
       return await this.sendSuccess(reply, result);
     } catch (error) {
-      uploadService.handleUploadError(videoId, error as Error);
+      this.logger.error('Video upload error', error, { videoId });
+
+      uploadService.handleUploadError(videoId);
+
       await videoService.setError(videoId, true);
+
       throw error;
     }
   };

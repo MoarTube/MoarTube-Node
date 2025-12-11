@@ -435,11 +435,11 @@ export class ClusterMaster {
 
           this.logger.debug(`Updated video index: ${video.video_id}`);
         } catch (error) {
-          this.logger.error(`Failed to update index for video: ${video.video_id}`, error as Error);
+          this.logger.error(`Failed to update index for video: ${video.video_id}`, error);
         }
       }
     } catch (error) {
-      this.logger.error('Index update task failed', error as Error);
+      this.logger.error('Index update task failed', error);
     }
   }
 
@@ -455,7 +455,7 @@ export class ClusterMaster {
       await this.options.cloudflare.purgeAllWatchPages();
       await this.options.cloudflare.purgeNodePage();
     } catch (error) {
-      this.logger.error('Cloudflare purge task failed', error as Error);
+      this.logger.error('Cloudflare purge task failed', error);
     }
   }
 }

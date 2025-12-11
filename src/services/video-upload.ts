@@ -11,13 +11,14 @@ import type { MultipartFile } from '@fastify/multipart';
 import type { FastifyRequest } from 'fastify';
 
 import { getConfig } from '../config/index.js';
+import { Logger } from '../utils/logger.js';
 import type {
   IVideoService,
   ICloudflareService,
   IWebSocketService,
   IStorageService,
 } from './interfaces.js';
-import type { ServiceLogger } from './base.js';
+import type { ILogger } from '../utils/logger.js';
 import type { IUploadTrackerService } from './upload-tracker.js';
 
 // ============================================================================
@@ -57,7 +58,7 @@ export interface VideoUploadServiceDependencies {
   cloudflareService?: ICloudflareService | undefined;
   websocketService?: IWebSocketService | undefined;
   storageService?: IStorageService | undefined;
-  logger?: ServiceLogger | undefined;
+  logger?: ILogger | undefined;
 }
 
 // ============================================================================
@@ -137,29 +138,28 @@ export interface IVideoUploadService {
   trackProgress(request: FastifyRequest, videoId: string, format: string, resolution: string): void;
 
   /** Handle video upload error */
-  handleUploadError(videoId: string, error: Error): void;
+  handleUploadError(videoId: string): void;
 }
 
 export class VideoUploadService implements IVideoUploadService {
   private readonly videoService: IVideoService;
   private readonly uploadTrackerService: IUploadTrackerService;
-  private readonly cloudflareService?: ICloudflareService | undefined;
-  private readonly websocketService?: IWebSocketService | undefined;
-  private readonly logger?: ServiceLogger | undefined;
+  private readonly cloudflareService: ICloudflareService | undefined;
+  private readonly websocketService: IWebSocketService | undefined;
+  private readonly logger: ILogger;
 
   constructor(
     videoService: IVideoService,
     uploadTrackerService: IUploadTrackerService,
     cloudflareService?: ICloudflareService,
     websocketService?: IWebSocketService,
-    logger?: ServiceLogger
+    logger?: ILogger
   ) {
     this.videoService = videoService;
     this.uploadTrackerService = uploadTrackerService;
     this.cloudflareService = cloudflareService;
     this.websocketService = websocketService;
-    // storageService reserved for future S3 storage support
-    this.logger = logger;
+    this.logger = logger ?? Logger.getInstance();
   }
 
   /**
@@ -291,7 +291,7 @@ export class VideoUploadService implements IVideoUploadService {
         }
       }
 
-      this.logger?.info('Video upload completed', { videoId, format, resolution });
+      this.logger.info('Video upload completed', { videoId, format, resolution });
 
       return {
         success: true,
@@ -300,7 +300,7 @@ export class VideoUploadService implements IVideoUploadService {
         resolution,
       };
     } catch (error) {
-      this.logger?.error('Video upload completion failed', error as Error, {
+      this.logger.error('Video upload completion failed', error, {
         videoId,
         format,
         resolution,
@@ -322,7 +322,7 @@ export class VideoUploadService implements IVideoUploadService {
   handleStreamUploadComplete(options: StreamUploadOptions): UploadResult {
     const { videoId, format, resolution } = options;
 
-    this.logger?.debug('Stream upload completed', { videoId, format, resolution });
+    this.logger.debug('Stream upload completed', { videoId, format, resolution });
 
     return {
       success: true,
@@ -356,14 +356,14 @@ export class VideoUploadService implements IVideoUploadService {
         }
       }
 
-      this.logger?.info('Image upload completed', { videoId, imageType });
+      this.logger.info('Image upload completed', { videoId, imageType });
 
       return {
         success: true,
         videoId,
       };
     } catch (error) {
-      this.logger?.error('Image upload completion failed', error as Error, {
+      this.logger.error('Image upload completion failed', error, {
         videoId,
         imageType,
       });
@@ -388,7 +388,7 @@ export class VideoUploadService implements IVideoUploadService {
 
     fs.writeFileSync(filePath, buffer);
 
-    this.logger?.debug('Saved uploaded file', { filename: file.filename, path: filePath });
+    this.logger.debug('Saved uploaded file', { filename: file.filename, path: filePath });
   }
 
   /**
@@ -450,15 +450,7 @@ export class VideoUploadService implements IVideoUploadService {
   /**
    * Handle video upload error
    */
-  handleUploadError(videoId: string, error: Error): void {
-    this.logger?.error('Video upload error', error, { videoId });
-
-    // Stop tracking
+  handleUploadError(videoId: string): void {
     this.uploadTrackerService.completeStop(videoId);
-
-    // Mark video as error state
-    // Use videoService to mark error (would need method added)
-    // For now, just log
-    this.logger?.error('Video marked as error due to upload failure', error, { videoId });
   }
 }
