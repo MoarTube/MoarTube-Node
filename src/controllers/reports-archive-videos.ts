@@ -7,7 +7,6 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.js';
 import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
-import { isArchiveIdValid } from '../utils/index.js';
 
 /**
  * Request params for archive operations
@@ -39,10 +38,8 @@ export class ReportsArchiveVideosController extends BaseController {
 
       return await this.sendSuccess(reply, { reports });
     } catch (error) {
-      this.logger.error(
-        'Failed to get all archived video reports',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('Failed to get all archived video reports', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -56,19 +53,14 @@ export class ReportsArchiveVideosController extends BaseController {
     try {
       const { archiveId } = request.params as ArchiveIdParams;
 
-      if (!isArchiveIdValid(archiveId)) {
-        return await this.sendError(reply, 'invalid archive id');
-      }
-
       const archiveIdNum = Number.parseInt(archiveId, 10);
+
       await this.videoReportsArchiveRepository.delete(archiveIdNum);
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error(
-        'Failed to delete archived video report',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('Failed to delete archived video report', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

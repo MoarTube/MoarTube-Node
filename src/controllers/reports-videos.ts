@@ -51,7 +51,8 @@ export class ReportsVideosController extends BaseController {
 
       return await this.sendSuccess(reply, { reports });
     } catch (error) {
-      this.logger.error('Failed to get all video reports', error instanceof Error ? error : null);
+      this.logger.error('Failed to get all video reports', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -65,11 +66,8 @@ export class ReportsVideosController extends BaseController {
     try {
       const { reportId } = request.body as ArchiveReportBody;
 
-      if (!isReportIdValid(reportId)) {
-        return await this.sendError(reply, 'invalid report id');
-      }
-
       const reportIdNum = Number.parseInt(reportId, 10);
+
       const report = await this.videoReportRepository.findById(reportIdNum);
 
       if (!report) {
@@ -92,7 +90,8 @@ export class ReportsVideosController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Failed to archive video report', error instanceof Error ? error : null);
+      this.logger.error('Failed to archive video report', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -111,11 +110,13 @@ export class ReportsVideosController extends BaseController {
       }
 
       const reportIdNum = Number.parseInt(reportId, 10);
+
       await this.videoReportRepository.delete(reportIdNum);
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Failed to delete video report', error instanceof Error ? error : null);
+      this.logger.error('Failed to delete video report', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

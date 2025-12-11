@@ -158,7 +158,7 @@ export class WebSocketManager {
     for (const handler of this.handlers) {
       if (handler.onConnect !== undefined) {
         void Promise.resolve(handler.onConnect(client, context)).catch((error: unknown) => {
-          this.logger.error(`Handler ${handler.name} onConnect error`, error as Error);
+          this.logger.error(`Handler ${handler.name} onConnect error`, error);
         });
       }
     }
@@ -185,7 +185,7 @@ export class WebSocketManager {
     for (const handler of this.handlers) {
       if (handler.onDisconnect !== undefined) {
         void Promise.resolve(handler.onDisconnect(client, context)).catch((error: unknown) => {
-          this.logger.error(`Handler ${handler.name} onDisconnect error`, error as Error);
+          this.logger.error(`Handler ${handler.name} onDisconnect error`, error);
         });
       }
     }
@@ -224,12 +224,12 @@ export class WebSocketManager {
         handled = true;
         try {
           void Promise.resolve(handler.handle(client, message, context)).catch((error: unknown) => {
-            this.logger.error(`Handler ${handler.name} error`, error as Error, {
+            this.logger.error(`Handler ${handler.name} error`, error, {
               eventName: message.eventName,
             });
           });
         } catch (error) {
-          this.logger.error(`Handler ${handler.name} sync error`, error as Error, {
+          this.logger.error(`Handler ${handler.name} sync error`, error, {
             eventName: message.eventName,
           });
         }
@@ -291,7 +291,7 @@ export class WebSocketManager {
       try {
         client.send(messageStr);
       } catch (error) {
-        this.logger.error('Failed to send message to client', error as Error, {
+        this.logger.error('Failed to send message to client', error, {
           clientId: client.clientId,
         });
       }
@@ -317,7 +317,7 @@ export class WebSocketManager {
         try {
           client.send(JSON.stringify(message));
         } catch (error) {
-          this.logger.error('Failed to send to admin', error as Error);
+          this.logger.error('Failed to send to admin', error);
         }
       }
     }
@@ -334,7 +334,7 @@ export class WebSocketManager {
     try {
       client.send(JSON.stringify(message));
     } catch (error) {
-      this.logger.error('Failed to send message', error as Error, {
+      this.logger.error('Failed to send message', error, {
         clientId: client.clientId,
       });
     }

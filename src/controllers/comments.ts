@@ -79,7 +79,7 @@ export class CommentsController extends BaseController {
 
       return await this.sendSuccess(reply, { comments });
     } catch (error) {
-      this.logger.error('Comment search failed', error instanceof Error ? error : null);
+      this.logger.error('Comment search failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
@@ -171,7 +171,7 @@ export class CommentsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Comment report failed', error instanceof Error ? error : null);
+      this.logger.error('Comment report failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }

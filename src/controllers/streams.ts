@@ -127,7 +127,8 @@ export class StreamsController extends BaseController {
 
       return await this.sendSuccess(reply, { videoId: result.videoId });
     } catch (error) {
-      this.logger.error('Start stream failed', error instanceof Error ? error : null);
+      this.logger.error('Start stream failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -145,7 +146,8 @@ export class StreamsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Stop stream failed', error instanceof Error ? error : null);
+      this.logger.error('Stop stream failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -181,7 +183,8 @@ export class StreamsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Remove segment failed', error instanceof Error ? error : null);
+      this.logger.error('Remove segment failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -203,7 +206,8 @@ export class StreamsController extends BaseController {
 
       return await this.sendSuccess(reply, { bandwidth: video.bandwidth });
     } catch (error) {
-      this.logger.error('Get bandwidth failed', error instanceof Error ? error : null);
+      this.logger.error('Get bandwidth failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -253,7 +257,8 @@ export class StreamsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Update chat settings failed', error instanceof Error ? error : null);
+      this.logger.error('Update chat settings failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -271,7 +276,8 @@ export class StreamsController extends BaseController {
 
       return await this.sendSuccess(reply, { chatHistory });
     } catch (error) {
-      this.logger.error('Get chat history failed', error instanceof Error ? error : null);
+      this.logger.error('Get chat history failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

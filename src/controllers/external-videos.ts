@@ -77,11 +77,12 @@ export class ExternalVideosController extends BaseController {
   getBaseUrl = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const config = getConfig();
+
       const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
 
       return await this.sendSuccess(reply, { externalVideosBaseUrl });
     } catch (error) {
-      this.logger.error('Get base URL failed', error instanceof Error ? error : null);
+      this.logger.error('Get base URL failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
@@ -111,10 +112,7 @@ export class ExternalVideosController extends BaseController {
         return await this.sendFile(reply, thumbnailPath, 'image/jpeg');
       }
     } catch (error) {
-      this.logger.error(
-        'ExternalVideosController.getThumbnail failed',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('ExternalVideosController.getThumbnail failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -144,10 +142,7 @@ export class ExternalVideosController extends BaseController {
         return await this.sendFile(reply, previewPath, 'image/jpeg');
       }
     } catch (error) {
-      this.logger.error(
-        'ExternalVideosController.getPreview failed',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('ExternalVideosController.getPreview failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -177,10 +172,7 @@ export class ExternalVideosController extends BaseController {
         return await this.sendFile(reply, posterPath, 'image/jpeg');
       }
     } catch (error) {
-      this.logger.error(
-        'ExternalVideosController.getPoster failed',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('ExternalVideosController.getPoster failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -214,7 +206,7 @@ export class ExternalVideosController extends BaseController {
         return await this.sendFile(reply, manifestPath, 'application/vnd.apple.mpegurl');
       }
     } catch (error) {
-      this.logger.error('Get adaptive manifest failed', error instanceof Error ? error : null);
+      this.logger.error('Get adaptive manifest failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -246,12 +238,12 @@ export class ExternalVideosController extends BaseController {
       if (!fs.existsSync(segmentPath)) {
         return await this.sendError(reply, 'adaptive segment not found', 404);
       } else {
-        // Track bandwidth asynchronously
         this.trackSegmentBandwidth(segmentPath, videoId);
+
         return await this.sendFile(reply, segmentPath, 'video/mp2t');
       }
     } catch (error) {
-      this.logger.error('Get adaptive segment failed', error instanceof Error ? error : null);
+      this.logger.error('Get adaptive segment failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -309,7 +301,7 @@ export class ExternalVideosController extends BaseController {
         }
       }
     } catch (error) {
-      this.logger.error('Get progressive video failed', error instanceof Error ? error : null);
+      this.logger.error('Get progressive video failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }

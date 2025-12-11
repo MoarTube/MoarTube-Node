@@ -87,10 +87,7 @@ export class WatchEmbedController extends VideoControllerBase {
         return await reply.view('embed-video.ejs', { model });
       }
     } catch (error) {
-      this.logger.error(
-        'WatchEmbedController.getEmbedVideo failed',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('WatchEmbedController.getEmbedVideo failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -145,10 +142,7 @@ export class WatchEmbedController extends VideoControllerBase {
 
       return await replyWithView.view('embed-chat', { model });
     } catch (error) {
-      this.logger.error(
-        'WatchEmbedController.getEmbedChat failed',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('WatchEmbedController.getEmbedChat failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }

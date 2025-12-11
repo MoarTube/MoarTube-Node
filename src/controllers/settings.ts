@@ -170,7 +170,8 @@ export class SettingsController extends BaseController {
         },
       });
     } catch (error) {
-      this.logger.error('Error getting settings', error as Error);
+      this.logger.error('Error getting settings', error);
+
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -190,7 +191,7 @@ export class SettingsController extends BaseController {
         return await this.sendFile(reply, avatarFilePath, 'image/png');
       }
     } catch (error) {
-      this.logger.error('Error retrieving avatar', error as Error);
+      this.logger.error('Error retrieving avatar', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -211,7 +212,7 @@ export class SettingsController extends BaseController {
         return await this.sendFile(reply, bannerFilePath, 'image/png');
       }
     } catch (error) {
-      this.logger.error('Error retrieving banner', error as Error);
+      this.logger.error('Error retrieving banner', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -261,8 +262,8 @@ export class SettingsController extends BaseController {
         if (this.cloudflareService !== undefined) {
           try {
             await this.cloudflareService.purgeNodeImages();
-          } catch (purgeError) {
-            this.logger.error('Failed to purge node images from Cloudflare', purgeError as Error);
+          } catch (error) {
+            this.logger.error('Failed to purge node images from Cloudflare', error);
           }
         }
 
@@ -274,7 +275,7 @@ export class SettingsController extends BaseController {
         return await this.sendSuccess(reply);
       }
     } catch (error) {
-      this.logger.error('SettingsController.uploadAvatar failed', error as Error);
+      this.logger.error('SettingsController.uploadAvatar failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -316,15 +317,16 @@ export class SettingsController extends BaseController {
         if (this.cloudflareService !== undefined) {
           try {
             await this.cloudflareService.purgeNodeImages();
-          } catch (purgeError) {
-            this.logger.error('Failed to purge node images from Cloudflare', purgeError as Error);
+          } catch (error) {
+            this.logger.error('Failed to purge node images from Cloudflare', error);
           }
         }
 
         return await this.sendSuccess(reply);
       }
     } catch (error) {
-      this.logger.error('Banner upload error', error as Error);
+      this.logger.error('Banner upload error', error);
+
       return await this.sendError(reply, 'error uploading banner');
     }
   };
@@ -356,7 +358,8 @@ export class SettingsController extends BaseController {
         }
       }
     } catch (error) {
-      this.logger.error('Secure mode configuration error', error as Error);
+      this.logger.error('Secure mode configuration error', error);
+
       return await this.sendError(reply, 'error configuring secure mode');
     }
   };
@@ -387,7 +390,9 @@ export class SettingsController extends BaseController {
     }
 
     this.logger.info('switching node to HTTPS mode');
+
     config.updateNodeSettings({ isSecure: true });
+
     return { success: true };
   }
 
@@ -463,7 +468,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error updating node name', error as Error);
+      this.logger.error('Error updating node name', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -493,7 +499,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error updating node about', error as Error);
+      this.logger.error('Error updating node about', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -523,7 +530,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error updating node ID', error as Error);
+      this.logger.error('Error updating node ID', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -545,7 +553,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error updating account', error as Error);
+      this.logger.error('Error updating account', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -575,7 +584,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error updating internal network settings', error as Error);
+      this.logger.error('Error updating internal network settings', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -615,7 +625,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error updating external network settings', error as Error);
+      this.logger.error('Error updating external network settings', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -719,7 +730,7 @@ export class SettingsController extends BaseController {
       );
       fs.writeFileSync(manifestPath, newManifest, 'utf-8');
     } catch (error) {
-      this.logger.error(`Failed to rewrite manifest: ${manifestPath}`, error as Error);
+      this.logger.error(`Failed to rewrite manifest: ${manifestPath}`, error);
     }
   }
 
@@ -793,7 +804,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Cloudflare configure error', error as Error);
+      this.logger.error('Cloudflare configure error', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -837,7 +849,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Cloudflare clear error', error as Error);
+      this.logger.error('Cloudflare clear error', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -879,7 +892,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error configuring Cloudflare Turnstile', error as Error);
+      this.logger.error('Error configuring Cloudflare Turnstile', error);
+
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -918,7 +932,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error clearing Cloudflare Turnstile', error as Error);
+      this.logger.error('Error clearing Cloudflare Turnstile', error);
+
       this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -941,7 +956,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error toggling comments', error as Error);
+      this.logger.error('Error toggling comments', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -964,7 +980,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error toggling likes', error as Error);
+      this.logger.error('Error toggling likes', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -987,7 +1004,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error toggling dislikes', error as Error);
+      this.logger.error('Error toggling dislikes', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -1010,7 +1028,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error toggling reports', error as Error);
+      this.logger.error('Error toggling reports', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -1033,7 +1052,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Error toggling live chat', error as Error);
+      this.logger.error('Error toggling live chat', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -1128,7 +1148,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Database connection test failed', error as Error);
+      this.logger.error('Database connection test failed', error);
+
       return await this.sendError(
         reply,
         'could not connect to database with provided configuration'
@@ -1204,7 +1225,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Storage config toggle error', error as Error);
+      this.logger.error('Storage config toggle error', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -1295,7 +1317,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply, { database });
     } catch (error) {
-      this.logger.error('Database export error', error as Error);
+      this.logger.error('Database export error', error);
+
       return await this.sendError(reply, 'error exporting database');
     }
   };
@@ -1442,7 +1465,8 @@ export class SettingsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Database import error', error as Error);
+      this.logger.error('Database import error', error);
+
       return await this.sendError(reply, 'error importing database');
     }
   };

@@ -125,7 +125,8 @@ export class NodeController extends BaseController {
       // Render the node page
       return await reply.view('node', { model });
     } catch (error) {
-      this.logger.error('Node page rendering failed', error instanceof Error ? error : null);
+      this.logger.error('Node page rendering failed', error);
+
       return await reply.status(500).send('node page rendering error');
     }
   };
@@ -142,7 +143,8 @@ export class NodeController extends BaseController {
       const data = await this.performSearch(searchTerm, sortTerm, tagTerm);
       return await this.sendSuccess(reply, { searchResults: data.searchResults });
     } catch (error) {
-      this.logger.error('Search failed', error instanceof Error ? error : null);
+      this.logger.error('Search failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -185,7 +187,8 @@ export class NodeController extends BaseController {
         },
       });
     } catch (error) {
-      this.logger.error('Get new content counts failed', error instanceof Error ? error : null);
+      this.logger.error('Get new content counts failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -216,7 +219,8 @@ export class NodeController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Content checked failed', error instanceof Error ? error : null);
+      this.logger.error('Content checked failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

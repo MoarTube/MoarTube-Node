@@ -150,7 +150,7 @@ export class S3StorageClient {
         continuationToken: response.NextContinuationToken,
       };
     } catch (error) {
-      this.logger?.error('Failed to list objects', error as Error, {
+      this.logger?.error('Failed to list objects', error, {
         bucket,
         prefix,
       });
@@ -201,7 +201,7 @@ export class S3StorageClient {
 
       return await this.streamToBuffer(stream);
     } catch (error) {
-      this.logger?.error('Failed to get object', error as Error, {
+      this.logger?.error('Failed to get object', error, {
         bucket,
         key,
       });
@@ -228,7 +228,7 @@ export class S3StorageClient {
       const response = await this.client.send(command);
       return response.Body as Readable;
     } catch (error) {
-      this.logger?.error('Failed to get object stream', error as Error, {
+      this.logger?.error('Failed to get object stream', error, {
         bucket,
         key,
       });
@@ -313,7 +313,7 @@ export class S3StorageClient {
       await this.client.send(command);
       this.logger?.debug(`Uploaded object: ${bucket}/${key}`);
     } catch (error) {
-      this.logger?.error('Failed to put object', error as Error, {
+      this.logger?.error('Failed to put object', error, {
         bucket,
         key,
       });
@@ -344,7 +344,7 @@ export class S3StorageClient {
       await this.client.send(command);
       this.logger?.debug(`Deleted object: ${bucket}/${key}`);
     } catch (error) {
-      this.logger?.error('Failed to delete object', error as Error, {
+      this.logger?.error('Failed to delete object', error, {
         bucket,
         key,
       });
@@ -383,7 +383,7 @@ export class S3StorageClient {
 
       this.logger?.debug(`Deleted ${String(keys.length)} objects from ${bucket}`);
     } catch (error) {
-      this.logger?.error('Failed to delete objects', error as Error, {
+      this.logger?.error('Failed to delete objects', error, {
         bucket,
         count: keys.length,
       });

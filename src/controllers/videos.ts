@@ -185,10 +185,7 @@ export class VideosController extends BaseController {
 
       return await this.sendSuccess(reply, result);
     } catch (error) {
-      this.logger.error(
-        'VideosController.importVideo failed',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('VideosController.importVideo failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -212,10 +209,7 @@ export class VideosController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error(
-        'VideosController.videoImportedFromBody failed',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('VideosController.videoImportedFromBody failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }

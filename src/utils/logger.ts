@@ -40,7 +40,7 @@ export interface ILogger {
   debug(message: string, context?: Record<string, unknown>): void;
   info(message: string, context?: Record<string, unknown>): void;
   warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, error?: Error | null, context?: Record<string, unknown>): void;
+  error(message: string, error?: unknown, context?: Record<string, unknown>): void;
 }
 
 /**
@@ -110,13 +110,41 @@ export class Logger implements ILogger {
   /**
    * Log an error message with optional error object
    */
-  error(message: string, error?: Error | null, context?: Record<string, unknown>): void {
+  error(message: string, error?: unknown, context?: Record<string, unknown>): void {
     const logContext = { ...context };
-    if (error) {
-      logContext['error'] = error.message;
-      logContext['stack'] = error.stack;
+
+    const normalized = this.normalizeError(error);
+
+    if (normalized) {
+      logContext['error'] = normalized.message;
+
+      if (normalized.stack !== undefined) {
+        logContext['stack'] = normalized.stack;
+      }
     }
+
     this.logger.error(logContext, message);
+  }
+
+  /**
+   * Normalize an unknown error to a consistent format
+   */
+  private normalizeError(error: unknown): { message: string; stack?: string } | null {
+    if (error === null || error === undefined) {
+      return null;
+    } else if (error instanceof Error) {
+      const normalized: { message: string; stack?: string } = { message: error.message };
+
+      if (error.stack !== undefined) {
+        normalized.stack = error.stack;
+      }
+
+      return normalized;
+    } else {
+      const message = JSON.stringify(error);
+
+      return { message };
+    }
   }
 
   /**

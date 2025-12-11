@@ -73,7 +73,7 @@ export class AccountController extends BaseController {
         token: result.token,
       });
     } catch (error) {
-      this.logger.error('AccountController.signIn failed', error instanceof Error ? error : null);
+      this.logger.error('AccountController.signIn failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -90,7 +90,7 @@ export class AccountController extends BaseController {
         wasAuthenticated: true,
       });
     } catch (error) {
-      this.logger.error('AccountController.signOut failed', error instanceof Error ? error : null);
+      this.logger.error('AccountController.signOut failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -107,10 +107,7 @@ export class AccountController extends BaseController {
         isAuthenticated: request.isAuthenticated,
       });
     } catch (error) {
-      this.logger.error(
-        'AccountController.authenticated failed',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('AccountController.authenticated failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }

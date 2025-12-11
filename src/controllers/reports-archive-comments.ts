@@ -7,7 +7,6 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.js';
 import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
-import { isArchiveIdValid } from '../utils/index.js';
 
 /**
  * Request params for archive operations
@@ -39,10 +38,8 @@ export class ReportsArchiveCommentsController extends BaseController {
 
       return await this.sendSuccess(reply, { reports });
     } catch (error) {
-      this.logger.error(
-        'Get all archived comment reports failed',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('Get all archived comment reports failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -56,19 +53,14 @@ export class ReportsArchiveCommentsController extends BaseController {
     try {
       const { archiveId } = request.params as CommentArchiveIdParams;
 
-      if (!isArchiveIdValid(archiveId)) {
-        return await this.sendError(reply, 'invalid archive id');
-      }
-
       const archiveIdNum = Number.parseInt(archiveId, 10);
+
       await this.commentReportsArchiveRepository.delete(archiveIdNum);
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error(
-        'Delete archived comment report failed',
-        error instanceof Error ? error : null
-      );
+      this.logger.error('Delete archived comment report failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };

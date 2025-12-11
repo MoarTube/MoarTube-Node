@@ -134,7 +134,7 @@ export class WatchController extends VideoControllerBase {
         return await reply.view('watch.ejs', { model });
       }
     } catch (error) {
-      this.logger.error('Get progressive video failed', error instanceof Error ? error : null);
+      this.logger.error('Get progressive video failed', error);
 
       return await this.sendError(reply, 'that video could not be loaded', 500);
     }

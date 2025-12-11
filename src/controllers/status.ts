@@ -44,27 +44,34 @@ export class StatusController extends BaseController {
    * Returns node information including video count and public settings
    */
   information = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    const config = getConfig();
-    const nodeSettings = config.nodeSettings;
+    try {
+      const config = getConfig();
 
-    // Get video count from repository
-    const videoRepository = this.container.resolve('videoRepository');
-    const videoCount = await videoRepository.getCount({
-      isPublished: true,
-    });
+      const nodeSettings = config.nodeSettings;
 
-    const information: StatusInformation = {
-      nodeVideoCount: videoCount,
-      nodeId: nodeSettings.nodeId,
-      nodeName: nodeSettings.nodeName,
-      nodeAbout: nodeSettings.nodeAbout,
-      publicNodeProtocol: nodeSettings.publicNodeProtocol,
-      publicNodeAddress: nodeSettings.publicNodeAddress,
-      publicNodePort: String(nodeSettings.publicNodePort),
-      cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
-    };
+      const videoRepository = this.container.resolve('videoRepository');
 
-    return await this.sendSuccess(reply, { information });
+      const videoCount = await videoRepository.getCount({
+        isPublished: true,
+      });
+
+      const information: StatusInformation = {
+        nodeVideoCount: videoCount,
+        nodeId: nodeSettings.nodeId,
+        nodeName: nodeSettings.nodeName,
+        nodeAbout: nodeSettings.nodeAbout,
+        publicNodeProtocol: nodeSettings.publicNodeProtocol,
+        publicNodeAddress: nodeSettings.publicNodeAddress,
+        publicNodePort: String(nodeSettings.publicNodePort),
+        cloudflareTurnstileSiteKey: nodeSettings.cloudflareTurnstileSiteKey,
+      };
+
+      return await this.sendSuccess(reply, { information });
+    } catch (error) {
+      this.logger.error('Status information retrieval failed', error);
+
+      return await this.sendError(reply, 'error retrieving status information');
+    }
   };
 
   /**

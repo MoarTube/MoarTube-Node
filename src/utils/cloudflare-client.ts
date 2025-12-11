@@ -653,7 +653,7 @@ export class CloudflareClient {
 
       return response.data.success;
     } catch (error) {
-      this.logger?.error('Turnstile validation failed', error as Error);
+      this.logger?.error('Turnstile validation failed', error);
       return false;
     }
   }

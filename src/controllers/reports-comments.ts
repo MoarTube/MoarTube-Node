@@ -50,7 +50,8 @@ export class ReportsCommentsController extends BaseController {
 
       return await this.sendSuccess(reply, { reports });
     } catch (error) {
-      this.logger.error('Failed to get all comment reports', error instanceof Error ? error : null);
+      this.logger.error('Failed to get all comment reports', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
@@ -65,12 +66,12 @@ export class ReportsCommentsController extends BaseController {
       const { reportId } = request.body as ArchiveCommentReportBody;
 
       const reportIdNum = Number.parseInt(reportId, 10);
+
       const report = await this.commentReportRepository.findById(reportIdNum);
 
       if (!report) {
         return await this.sendError(reply, 'report with id does not exist', 404);
       } else {
-        // Create archive record
         await this.commentReportsArchiveRepository.create({
           report_id: report.report_id,
           timestamp: report.timestamp,
@@ -82,13 +83,12 @@ export class ReportsCommentsController extends BaseController {
           message: report.message,
         });
 
-        // Delete original report
         await this.commentReportRepository.delete(reportIdNum);
 
         return await this.sendSuccess(reply);
       }
     } catch (error) {
-      this.logger.error('Failed to archive comment report', error instanceof Error ? error : null);
+      this.logger.error('Failed to archive comment report', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -108,7 +108,8 @@ export class ReportsCommentsController extends BaseController {
 
       return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Failed to delete comment report', error instanceof Error ? error : null);
+      this.logger.error('Failed to delete comment report', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };

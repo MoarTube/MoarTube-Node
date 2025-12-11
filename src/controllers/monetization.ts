@@ -66,9 +66,11 @@ export class MonetizationController extends BaseController {
   ): Promise<FastifyReply> => {
     try {
       const cryptoWalletAddresses = await this.monetizationRepository.findAll();
+
       return await this.sendSuccess(reply, { cryptoWalletAddresses });
     } catch (error) {
-      this.logger.error('Get all wallet addresses failed', error instanceof Error ? error : null);
+      this.logger.error('Get all wallet addresses failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -102,7 +104,8 @@ export class MonetizationController extends BaseController {
 
       return await this.sendSuccess(reply, { cryptoWalletAddress });
     } catch (error) {
-      this.logger.error('Add wallet address failed', error instanceof Error ? error : null);
+      this.logger.error('Add wallet address failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
@@ -123,15 +126,15 @@ export class MonetizationController extends BaseController {
 
       if (!deleted) {
         return await this.sendError(reply, 'wallet address not found', 404);
+      } else {
+        await this.cloudflareService.purgeAllWatchPages();
+        await this.cloudflareService.purgeNodePage();
+
+        return await this.sendSuccess(reply);
       }
-
-      // Purge Cloudflare cache for node page and watch pages
-      await this.cloudflareService.purgeAllWatchPages();
-      await this.cloudflareService.purgeNodePage();
-
-      return await this.sendSuccess(reply);
     } catch (error) {
-      this.logger.error('Delete wallet address failed', error instanceof Error ? error : null);
+      this.logger.error('Delete wallet address failed', error);
+
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
