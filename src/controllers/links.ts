@@ -48,6 +48,7 @@ export class LinksController extends BaseController {
   getAllLinks = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const links = await this.linkRepository.findAll();
+
       return await this.sendSuccess(reply, { links });
     } catch (error) {
       this.logger.error('Get all links failed', error);

@@ -26,7 +26,7 @@ export const commentReportsArchive = sqliteTable('commentreportsarchives', {
   video_id: text('video_id').notNull(),
 
   // Reference to the reported comment
-  comment_id: text('comment_id').notNull(),
+  comment_id: integer('comment_id').notNull(),
 
   // Reporter's email address
   email: text('email').notNull(),

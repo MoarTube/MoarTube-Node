@@ -12,7 +12,7 @@ import type { ReportsArchiveCommentsRepository } from '../database/repositories/
  * Request params for archive operations
  */
 export interface CommentArchiveIdParams {
-  archiveId: string;
+  archiveId: number;
 }
 
 /**
@@ -53,9 +53,7 @@ export class ReportsArchiveCommentsController extends BaseController {
     try {
       const { archiveId } = request.params as CommentArchiveIdParams;
 
-      const archiveIdNum = Number.parseInt(archiveId, 10);
-
-      await this.commentReportsArchiveRepository.delete(archiveIdNum);
+      await this.commentReportsArchiveRepository.delete(archiveId);
 
       return await this.sendSuccess(reply);
     } catch (error) {

@@ -13,14 +13,14 @@ import type { ReportsArchiveCommentsRepository } from '../database/repositories/
  * Request body for archiving a report
  */
 export interface ArchiveCommentReportBody {
-  reportId: string;
+  reportId: number;
 }
 
 /**
  * Request params for report operations
  */
 export interface CommentReportIdParams {
-  reportId: string;
+  reportId: number;
 }
 
 /**
@@ -65,9 +65,7 @@ export class ReportsCommentsController extends BaseController {
     try {
       const { reportId } = request.body as ArchiveCommentReportBody;
 
-      const reportIdNum = Number.parseInt(reportId, 10);
-
-      const report = await this.commentReportRepository.findById(reportIdNum);
+      const report = await this.commentReportRepository.findById(reportId);
 
       if (!report) {
         return await this.sendError(reply, 'report with id does not exist', 404);
@@ -83,7 +81,7 @@ export class ReportsCommentsController extends BaseController {
           message: report.message,
         });
 
-        await this.commentReportRepository.delete(reportIdNum);
+        await this.commentReportRepository.delete(reportId);
 
         return await this.sendSuccess(reply);
       }
@@ -103,8 +101,7 @@ export class ReportsCommentsController extends BaseController {
     try {
       const { reportId } = request.params as CommentReportIdParams;
 
-      const reportIdNum = Number.parseInt(reportId, 10);
-      await this.commentReportRepository.delete(reportIdNum);
+      await this.commentReportRepository.delete(reportId);
 
       return await this.sendSuccess(reply);
     } catch (error) {

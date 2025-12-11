@@ -51,10 +51,11 @@ export class AccountController extends BaseController {
       });
 
       if (result.isAuthenticated) {
-        // Update node settings if this is first login (empty values)
         const config = getConfig();
+
         const nodeSettings = config.nodeSettings;
 
+        // Update node settings if this is first login (empty values)
         if (
           nodeSettings.publicNodeProtocol === '' &&
           nodeSettings.publicNodeAddress === '' &&

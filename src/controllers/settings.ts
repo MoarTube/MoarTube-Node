@@ -23,19 +23,7 @@ import type { LinksRepository } from '../database/repositories/links.js';
 import type { CloudflareService } from '../services/cloudflare.js';
 import type { WebSocketService } from '../services/websocket.js';
 import { getConfig } from '../config/index.js';
-import {
-  isNodeAboutValid,
-  isNodeIdValid,
-  isUsernameValid,
-  isPasswordValid,
-  isPublicNodeProtocolValid,
-  isPublicNodeAddressValid,
-  isPortValid,
-  isBooleanValid,
-  isDatabaseConfigValid,
-  isStorageConfigValid,
-  isCloudflareCredentialsValid,
-} from '../utils/index.js';
+import { isBooleanValid, isCloudflareCredentialsValid } from '../utils/index.js';
 
 /**
  * Request body interfaces
@@ -227,6 +215,7 @@ export class SettingsController extends BaseController {
   uploadAvatar = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const config = getConfig();
+
       const imagesDir = config.paths.imagesDirectoryPath;
 
       // Ensure images directory exists
@@ -236,6 +225,7 @@ export class SettingsController extends BaseController {
 
       // Parse multipart data
       const parts = request.parts();
+
       let iconFile: MultipartFile | undefined;
       let avatarFile: MultipartFile | undefined;
 
@@ -290,6 +280,7 @@ export class SettingsController extends BaseController {
   uploadBanner = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const config = getConfig();
+
       const imagesDir = config.paths.imagesDirectoryPath;
 
       // Ensure images directory exists
@@ -299,6 +290,7 @@ export class SettingsController extends BaseController {
 
       // Parse multipart data
       const parts = request.parts();
+
       let bannerFile: MultipartFile | undefined;
 
       for await (const part of parts) {
@@ -344,6 +336,7 @@ export class SettingsController extends BaseController {
 
       if (contentType.includes('multipart/form-data')) {
         const result = await this.enableHttpsMode(request);
+
         if (result.success) {
           return await this.sendSuccess(reply);
         } else {
@@ -351,6 +344,7 @@ export class SettingsController extends BaseController {
         }
       } else {
         const result = this.disableHttpsMode(request);
+
         if (result.success) {
           return await this.sendSuccess(reply);
         } else {
@@ -371,6 +365,7 @@ export class SettingsController extends BaseController {
     request: FastifyRequest
   ): Promise<{ success: boolean; error?: string }> {
     const config = getConfig();
+
     const certsDir = config.paths.certificatesDirectoryPath;
 
     // Ensure certificates directory exists
@@ -404,6 +399,7 @@ export class SettingsController extends BaseController {
     certsDir: string
   ): Promise<{ hasKeyFile: boolean; hasCertFile: boolean }> {
     const parts = request.parts();
+
     let hasKeyFile = false;
     let hasCertFile = false;
     let caFileCount = 0;
@@ -416,14 +412,17 @@ export class SettingsController extends BaseController {
       if (part.fieldname === 'keyFile') {
         hasKeyFile = true;
         const keyPath = path.join(certsDir, 'private_key.pem');
+
         await pipeline(part.file, fs.createWriteStream(keyPath));
       } else if (part.fieldname === 'certFile') {
         hasCertFile = true;
         const certPath = path.join(certsDir, 'certificate.pem');
+
         await pipeline(part.file, fs.createWriteStream(certPath));
       } else if (part.fieldname === 'caFiles') {
         caFileCount++;
         const caPath = path.join(certsDir, `ca_${String(caFileCount)}.pem`);
+
         await pipeline(part.file, fs.createWriteStream(caPath));
       }
     }
@@ -440,6 +439,7 @@ export class SettingsController extends BaseController {
     if (!body.isSecure) {
       this.logger.info('switching node to HTTP mode');
       const config = getConfig();
+
       config.updateNodeSettings({ isSecure: false });
       return { success: true };
     } else {
@@ -486,10 +486,6 @@ export class SettingsController extends BaseController {
     try {
       const { nodeAbout } = request.body as PersonalizeNodeAboutBody;
 
-      if (!isNodeAboutValid(nodeAbout)) {
-        return await this.sendError(reply, 'invalid parameters');
-      }
-
       // Check if there are indexed videos to determine if indexer update is needed
       const hasIndexedVideos = this.videoRepository
         ? (await this.videoRepository.findIndexed()).length > 0
@@ -517,10 +513,6 @@ export class SettingsController extends BaseController {
     try {
       const { nodeId } = request.body as PersonalizeNodeIdBody;
 
-      if (!isNodeIdValid(nodeId)) {
-        return await this.sendError(reply, 'invalid parameters');
-      }
-
       // Check if there are indexed videos to determine if indexer update is needed
       const hasIndexedVideos = this.videoRepository
         ? (await this.videoRepository.findIndexed()).length > 0
@@ -544,10 +536,6 @@ export class SettingsController extends BaseController {
   updateAccount = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { username, password } = request.body as AccountBody;
-
-      if (!isUsernameValid(username) || !isPasswordValid(password)) {
-        return await this.sendError(reply, 'invalid username and/or password');
-      }
 
       await this.settingsService.updateCredentials(username, password);
 
@@ -575,11 +563,8 @@ export class SettingsController extends BaseController {
 
       const { listeningNodePort } = request.body as NetworkInternalBody;
 
-      if (!isPortValid(listeningNodePort)) {
-        return await this.sendError(reply, 'invalid parameters');
-      }
-
       const config = getConfig();
+
       config.updateNodeSettings({ nodeListeningPort: Number.parseInt(listeningNodePort, 10) });
 
       return await this.sendSuccess(reply);
@@ -600,14 +585,6 @@ export class SettingsController extends BaseController {
     try {
       const { publicNodeProtocol, publicNodeAddress, publicNodePort } =
         request.body as NetworkExternalBody;
-
-      if (
-        !isPublicNodeProtocolValid(publicNodeProtocol) ||
-        !isPublicNodeAddressValid(publicNodeAddress) ||
-        !isPortValid(publicNodePort)
-      ) {
-        return await this.sendError(reply, 'invalid parameters');
-      }
 
       // Check if there are indexed videos (required for indexer update)
       const hasIndexedVideos = await this.checkHasIndexedVideos();
@@ -638,7 +615,9 @@ export class SettingsController extends BaseController {
     if (this.videoRepository === undefined) {
       return false;
     }
+
     const indexedVideos = await this.videoRepository.findIndexed();
+
     return indexedVideos.length > 0;
   }
 
@@ -647,6 +626,7 @@ export class SettingsController extends BaseController {
    */
   private async rewriteAllManifestUrls(): Promise<void> {
     const config = getConfig();
+
     const nodeSettings = config.nodeSettings;
 
     if (
@@ -760,6 +740,7 @@ export class SettingsController extends BaseController {
 
       // Get current storage config for DNS record setup
       const config = getConfig();
+
       const storageConfig = config.nodeSettings.storageConfig;
 
       if (this.cloudflareService !== undefined) {
@@ -821,6 +802,7 @@ export class SettingsController extends BaseController {
   ): Promise<FastifyReply> => {
     try {
       const config = getConfig();
+
       const nodeSettings = config.nodeSettings;
 
       // Only reset if Cloudflare CDN is currently enabled
@@ -869,6 +851,7 @@ export class SettingsController extends BaseController {
         request.body as CloudflareTurnstileConfigureBody;
 
       const config = getConfig();
+
       config.updateNodeSettings({
         isCloudflareTurnstileEnabled: true,
         cloudflareTurnstileSiteKey,
@@ -909,6 +892,7 @@ export class SettingsController extends BaseController {
   ): Promise<void> => {
     try {
       const config = getConfig();
+
       config.updateNodeSettings({
         isCloudflareTurnstileEnabled: false,
         cloudflareTurnstileSiteKey: '',
@@ -1071,16 +1055,13 @@ export class SettingsController extends BaseController {
     try {
       const { databaseConfig } = request.body as DatabaseConfigBody;
 
-      if (!isDatabaseConfigValid(databaseConfig)) {
-        return await this.sendError(reply, 'invalid parameters');
-      }
-
       const databaseDialect = databaseConfig.databaseDialect;
 
       // Test connection before saving config
       if (databaseDialect === 'sqlite') {
         // Test SQLite connection using better-sqlite3
         const config = getConfig();
+
         const databaseFilePath = config.paths.databaseFilePath;
 
         const Database = (await import('better-sqlite3')).default;
@@ -1169,13 +1150,9 @@ export class SettingsController extends BaseController {
     try {
       const { storageConfig } = request.body as StorageConfigBody;
 
-      // Validate storage configuration
-      if (!isStorageConfigValid(storageConfig)) {
-        return await this.sendError(reply, 'invalid parameters');
-      }
-
       // Update Cloudflare CDN DNS record if CDN is enabled
       const config = getConfig();
+
       const nodeSettings = config.nodeSettings;
 
       if (nodeSettings.isCloudflareCdnEnabled && this.cloudflareService !== undefined) {

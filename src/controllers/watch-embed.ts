@@ -109,6 +109,7 @@ export class WatchEmbedController extends VideoControllerBase {
       }
 
       const config = getConfig();
+
       const nodeSettings = config.nodeSettings;
 
       // Get links and wallet addresses for monetization display

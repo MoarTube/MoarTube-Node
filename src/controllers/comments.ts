@@ -28,7 +28,7 @@ export interface CommentSearchQuery {
  * Request params for comment report
  */
 export interface CommentIdParams {
-  commentId: string;
+  commentId: number;
 }
 
 /**
@@ -103,6 +103,7 @@ export class CommentsController extends BaseController {
       } = request.body as CommentReportBody;
 
       const config = getConfig();
+
       const nodeSettings = config.nodeSettings;
 
       // Check if reports are enabled globally
@@ -130,9 +131,7 @@ export class CommentsController extends BaseController {
         }
       }
 
-      // Verify comment exists
-      const commentIdNum = Number.parseInt(commentId, 10);
-      const comment = await this.commentRepository.findById(commentIdNum);
+      const comment = await this.commentRepository.findById(videoId, commentId);
 
       if (!comment) {
         return await this.sendError(reply, 'this comment no longer exists');
@@ -160,7 +159,7 @@ export class CommentsController extends BaseController {
 
       // Create the report
       await this.commentReportRepository.create({
-        comment_id: String(commentIdNum),
+        comment_id: commentId,
         video_id: videoId,
         comment_timestamp: comment.timestamp,
         email: sanitizedEmail,

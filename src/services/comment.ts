@@ -57,9 +57,9 @@ export class CommentService extends BaseService implements ICommentService {
   /**
    * Get a single comment by ID
    */
-  async getComment(commentId: number): Promise<DrizzleComment | null> {
+  async getComment(videoId: string, commentId: number): Promise<DrizzleComment | null> {
     return this.withErrorLogging('getComment', async () => {
-      return this.commentRepository.findById(commentId);
+      return this.commentRepository.findById(videoId, commentId);
     });
   }
 
@@ -139,10 +139,11 @@ export class CommentService extends BaseService implements ICommentService {
   /**
    * Delete a comment
    */
-  async deleteComment(commentId: number): Promise<boolean> {
+  async deleteComment(videoId: string, commentId: number, timestamp: number): Promise<boolean> {
     return this.withErrorLogging('deleteComment', async () => {
       // Get comment to find video ID
-      const comment = await this.commentRepository.findById(commentId);
+      const comment = await this.commentRepository.findById(videoId, commentId);
+
       if (!comment) {
         return false;
       }
@@ -153,7 +154,7 @@ export class CommentService extends BaseService implements ICommentService {
       });
 
       // Delete the comment
-      const deleted = await this.commentRepository.delete(commentId);
+      const deleted = await this.commentRepository.delete(videoId, commentId, timestamp);
 
       if (deleted && this.videoRepository) {
         // Decrement video comment count

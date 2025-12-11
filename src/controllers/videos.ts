@@ -474,7 +474,7 @@ export class VideosController extends BaseController {
       const publishes = await videoService.getPublishes(videoId);
 
       if (publishes === null) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       return await this.sendSuccess(reply, { publishes });
@@ -522,7 +522,7 @@ export class VideosController extends BaseController {
       const video = await videoService.getVideo(videoId);
 
       if (video === null) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       return await this.sendSuccess(reply, video);
@@ -598,7 +598,7 @@ export class VideosController extends BaseController {
       const video = await videoService.updateVideo(videoId, updateData);
 
       if (video === null) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       return await this.sendSuccess(reply, { video });
@@ -622,7 +622,7 @@ export class VideosController extends BaseController {
       const deleted = await videoService.deleteVideo(videoId);
 
       if (!deleted) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       return await this.sendSuccess(reply, { videoId });
@@ -909,7 +909,7 @@ export class VideosController extends BaseController {
       const video = await videoService.getVideo(videoId);
 
       if (!video) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
       if (!video.is_comments_enabled) {
         throw new BadRequestError('commenting is currently disabled for this video');
@@ -981,18 +981,13 @@ export class VideosController extends BaseController {
       const commentService = this.getCommentService();
       const cloudflareService = this.getCloudflareService();
 
-      const { videoId, commentId } = request.params as VideoIdParams & { commentId: string };
+      const { videoId, commentId } = request.params as VideoIdParams & { commentId: number };
+      const { timestamp } = request.query as { timestamp: number };
 
-      const commentIdNum = Number.parseInt(commentId, 10);
-
-      if (Number.isNaN(commentIdNum)) {
-        throw new BadRequestError('Invalid comment ID');
-      }
-
-      const deleted = await commentService.deleteComment(commentIdNum);
+      const deleted = await commentService.deleteComment(videoId, commentId, timestamp);
 
       if (!deleted) {
-        throw new NotFoundError(`Comment not found: ${commentId}`);
+        throw new NotFoundError(`Comment not found`);
       }
 
       // Purge Cloudflare cache for watch page
@@ -1059,7 +1054,7 @@ export class VideosController extends BaseController {
       const watchData = await videoService.getWatchData(videoId);
 
       if (watchData === null) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       return await this.sendSuccess(reply, { video: watchData });
@@ -1086,7 +1081,7 @@ export class VideosController extends BaseController {
       const permissions = await videoService.getPermissions(videoId);
 
       if (permissions === null) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       return await this.sendSuccess(reply, permissions);
@@ -1110,10 +1105,6 @@ export class VideosController extends BaseController {
 
       const { videoId } = request.params as VideoIdParams;
       const { type, isEnabled } = request.body as { type: string; isEnabled: boolean };
-
-      if (!type || typeof isEnabled !== 'boolean') {
-        throw new BadRequestError('type and isEnabled are required');
-      }
 
       // Map permission type to update field
       const permissionFields: Record<string, keyof UpdateVideoInput> = {
@@ -1153,7 +1144,7 @@ export class VideosController extends BaseController {
       const videoData = await videoService.getVideoData(videoId);
 
       if (videoData === null) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       return await this.sendSuccess(reply, { videoData });
@@ -1193,23 +1184,13 @@ export class VideosController extends BaseController {
     try {
       const commentService = this.getCommentService();
 
-      const { videoId, commentId } = request.params as VideoIdParams & { commentId: string };
+      const { videoId, commentId } = request.params as VideoIdParams & { commentId: number };
+      // timestamp?
 
-      const commentIdNum = Number.parseInt(commentId, 10);
-
-      if (Number.isNaN(commentIdNum)) {
-        throw new BadRequestError('Invalid comment ID');
-      }
-
-      const comment = await commentService.getComment(commentIdNum);
+      const comment = await commentService.getComment(videoId, commentId);
 
       if (comment === null) {
-        throw new NotFoundError(`Comment not found: ${commentId}`);
-      }
-
-      // Verify comment belongs to video
-      if (comment.video_id !== videoId) {
-        throw new NotFoundError(`Comment not found for video: ${videoId}`);
+        throw new NotFoundError(`Comment not found`);
       }
 
       return await this.sendSuccess(reply, { comment });
@@ -1287,7 +1268,7 @@ export class VideosController extends BaseController {
       const video = await videoService.getVideo(videoId);
 
       if (video === null) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       if (!video.is_indexed) {
@@ -1314,10 +1295,6 @@ export class VideosController extends BaseController {
 
       const { videoIds } = request.body as { videoIds: string[] };
 
-      if (!Array.isArray(videoIds) || videoIds.length === 0) {
-        throw new BadRequestError('videoIds array is required');
-      }
-
       const result = await videoService.deleteVideos(videoIds);
 
       return await this.sendSuccess(reply, {
@@ -1340,10 +1317,6 @@ export class VideosController extends BaseController {
       const videoService = this.getVideoService();
 
       const { videoIds } = request.body as { videoIds: string[] };
-
-      if (!Array.isArray(videoIds) || videoIds.length === 0) {
-        throw new BadRequestError('videoIds array is required');
-      }
 
       const result = await videoService.finalizeVideos(videoIds);
 
@@ -1372,10 +1345,6 @@ export class VideosController extends BaseController {
         lengthTimestamp: string;
       };
 
-      if (typeof lengthSeconds !== 'number' || typeof lengthTimestamp !== 'string') {
-        throw new BadRequestError('lengthSeconds and lengthTimestamp are required');
-      }
-
       await videoService.setVideoLength(videoId, lengthSeconds, lengthTimestamp);
 
       return await this.sendSuccess(reply, { videoId });
@@ -1402,7 +1371,7 @@ export class VideosController extends BaseController {
       const video = await videoService.getVideo(videoId);
 
       if (video === null) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       await videoService.markIndexOutdated(videoId);
@@ -1432,7 +1401,7 @@ export class VideosController extends BaseController {
       const video = await videoService.getVideo(videoId);
 
       if (video === null) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       await videoService.writeMasterManifest(videoId, manifestType, masterManifest);
@@ -1468,7 +1437,7 @@ export class VideosController extends BaseController {
       const video = await videoService.getVideo(videoId);
 
       if (!video) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       // Track upload progress
@@ -1551,7 +1520,7 @@ export class VideosController extends BaseController {
       const video = await videoService.getVideo(videoId);
 
       if (!video) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       try {
@@ -1679,7 +1648,7 @@ export class VideosController extends BaseController {
       const video = await videoService.getVideo(videoId);
 
       if (!video) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       // Add to index
@@ -1720,15 +1689,11 @@ export class VideosController extends BaseController {
         cloudflareTurnstileToken: string;
       };
 
-      if (!cloudflareTurnstileToken || typeof cloudflareTurnstileToken !== 'string') {
-        throw new BadRequestError('cloudflareTurnstileToken is required');
-      }
-
       // Validate video exists
       const video = await videoService.getVideo(videoId);
 
       if (!video) {
-        throw new NotFoundError(`Video not found: ${videoId}`);
+        throw new NotFoundError(`Video not found`);
       }
 
       // Remove from index
@@ -1824,7 +1789,7 @@ export class VideosController extends BaseController {
     const video = await videoService.getVideo(videoId);
 
     if (!video) {
-      throw new NotFoundError(`Video not found: ${videoId}`);
+      throw new NotFoundError(`Video not found`);
     }
 
     // Process multipart upload

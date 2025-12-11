@@ -12,7 +12,7 @@ import type { ReportsArchiveVideosRepository } from '../database/repositories/re
  * Request params for archive operations
  */
 export interface ArchiveIdParams {
-  archiveId: string;
+  archiveId: number;
 }
 
 /**
@@ -53,9 +53,7 @@ export class ReportsArchiveVideosController extends BaseController {
     try {
       const { archiveId } = request.params as ArchiveIdParams;
 
-      const archiveIdNum = Number.parseInt(archiveId, 10);
-
-      await this.videoReportsArchiveRepository.delete(archiveIdNum);
+      await this.videoReportsArchiveRepository.delete(archiveId);
 
       return await this.sendSuccess(reply);
     } catch (error) {

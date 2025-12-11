@@ -164,6 +164,7 @@ export class StreamsController extends BaseController {
 
       // Delete the segment file directly
       const config = getConfig();
+
       const segmentPath = path.join(
         config.paths.videosDirectoryPath,
         videoId,

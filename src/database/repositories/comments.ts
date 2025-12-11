@@ -30,11 +30,11 @@ export class CommentsRepository extends BaseRepository {
    * @param id - The database primary key
    * @returns The comment record or null if not found
    */
-  async findById(id: number): Promise<DrizzleComment | null> {
+  async findById(videoId: string, commentId: number): Promise<DrizzleComment | null> {
     const result = await this.db
       .select()
       .from(comments)
-      .where(eq(comments.comment_id, id))
+      .where(and(eq(comments.comment_id, commentId), eq(comments.video_id, videoId)))
       .limit(1);
     return result[0] ?? null;
   }
@@ -149,8 +149,18 @@ export class CommentsRepository extends BaseRepository {
    * @param id - The database primary key
    * @returns true if deleted, false if not found
    */
-  async delete(id: number): Promise<boolean> {
-    const result = await this.db.delete(comments).where(eq(comments.comment_id, id)).returning();
+  async delete(videoId: string, commentId: number, timestamp: number): Promise<boolean> {
+    const result = await this.db
+      .delete(comments)
+      .where(
+        and(
+          eq(comments.comment_id, commentId),
+          eq(comments.video_id, videoId),
+          eq(comments.timestamp, timestamp)
+        )
+      )
+      .returning();
+
     return result.length > 0;
   }
 

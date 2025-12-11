@@ -8,20 +8,19 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base.js';
 import type { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
 import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
-import { isReportIdValid } from '../utils/index.js';
 
 /**
  * Request body for archiving a report
  */
 export interface ArchiveReportBody {
-  reportId: string;
+  reportId: number;
 }
 
 /**
  * Request params for report operations
  */
 export interface ReportIdParams {
-  reportId: string;
+  reportId: number;
 }
 
 /**
@@ -66,9 +65,7 @@ export class ReportsVideosController extends BaseController {
     try {
       const { reportId } = request.body as ArchiveReportBody;
 
-      const reportIdNum = Number.parseInt(reportId, 10);
-
-      const report = await this.videoReportRepository.findById(reportIdNum);
+      const report = await this.videoReportRepository.findById(reportId);
 
       if (!report) {
         return await this.sendError(reply, 'report with id does not exist');
@@ -86,7 +83,7 @@ export class ReportsVideosController extends BaseController {
       });
 
       // Delete original report
-      await this.videoReportRepository.delete(reportIdNum);
+      await this.videoReportRepository.delete(reportId);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -105,13 +102,7 @@ export class ReportsVideosController extends BaseController {
     try {
       const { reportId } = request.params as ReportIdParams;
 
-      if (!isReportIdValid(reportId)) {
-        return await this.sendError(reply, 'invalid report id');
-      }
-
-      const reportIdNum = Number.parseInt(reportId, 10);
-
-      await this.videoReportRepository.delete(reportIdNum);
+      await this.videoReportRepository.delete(reportId);
 
       return await this.sendSuccess(reply);
     } catch (error) {

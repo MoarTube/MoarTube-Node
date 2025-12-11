@@ -81,7 +81,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @returns Array of archived reports for the comment
    */
   async findByCommentId(
-    commentId: string,
+    commentId: number,
     options?: PaginationOptions
   ): Promise<DrizzleCommentReportArchive[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
@@ -154,7 +154,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param commentId - The comment identifier
    * @returns Number of deleted archive records
    */
-  async deleteByCommentId(commentId: string): Promise<number> {
+  async deleteByCommentId(commentId: number): Promise<number> {
     const result = await this.db
       .delete(commentReportsArchive)
       .where(eq(commentReportsArchive.comment_id, commentId))

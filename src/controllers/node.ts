@@ -62,6 +62,7 @@ export class NodeController extends BaseController {
       const { searchTerm, sortTerm, tagTerm } = request.query as NodeQuery;
 
       const config = getConfig();
+
       const nodeSettings = config.nodeSettings;
 
       // Get node information
@@ -95,6 +96,7 @@ export class NodeController extends BaseController {
       });
 
       const tagsSet = new Set<string>();
+
       for (const video of allVideos) {
         const videoTags = video.tags.split(',');
         for (const tag of videoTags) {
@@ -141,6 +143,7 @@ export class NodeController extends BaseController {
       const { searchTerm, sortTerm, tagTerm } = request.query as NodeQuery;
 
       const data = await this.performSearch(searchTerm, sortTerm, tagTerm);
+
       return await this.sendSuccess(reply, { searchResults: data.searchResults });
     } catch (error) {
       this.logger.error('Search failed', error);
@@ -160,6 +163,7 @@ export class NodeController extends BaseController {
   ): Promise<FastifyReply> => {
     try {
       const config = getConfig();
+
       const lastCheckedContentTracker = config.lastCheckedContentTracker;
 
       const lastCheckedCommentsTimestamp = lastCheckedContentTracker.lastCheckedCommentsTimestamp;
@@ -201,6 +205,7 @@ export class NodeController extends BaseController {
   contentChecked = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { contentType } = request.body as ContentCheckedBody;
+
       const config = getConfig();
 
       const timestamp = Date.now();
@@ -256,6 +261,7 @@ export class NodeController extends BaseController {
     const liveVideos = await this.videoRepository.findStreaming();
 
     const videoMap = new Map<string, DrizzleVideo>();
+
     for (const video of videos) {
       videoMap.set(video.video_id, video);
     }
@@ -292,6 +298,7 @@ export class NodeController extends BaseController {
     if (tagTerm !== undefined && tagTerm.length > 0) {
       return this.filterBySpecificTag(videos, tagTerm);
     }
+
     return this.filterWithTagLimit(videos);
   }
 
@@ -349,6 +356,7 @@ export class NodeController extends BaseController {
       }
 
       const currentCount = tagLimitCounter[trimmedTag] ?? 0;
+
       if (currentCount < tagLimit) {
         tagLimitCounter[trimmedTag] = currentCount + 1;
         return true;

@@ -394,7 +394,7 @@ export interface CreateCommentInput {
  */
 export interface ICommentService {
   /** Get a single comment by ID */
-  getComment(commentId: number): Promise<DrizzleComment | null>;
+  getComment(videoId: string, commentId: number): Promise<DrizzleComment | null>;
 
   /** Get comments with filtering and pagination */
   getComments(options?: GetCommentsOptions): Promise<DrizzleComment[]>;
@@ -411,7 +411,7 @@ export interface ICommentService {
   createComment(data: CreateCommentInput): Promise<DrizzleComment>;
 
   /** Delete a comment */
-  deleteComment(commentId: number): Promise<boolean>;
+  deleteComment(videoId: string, commentId: number, timestamp: number): Promise<boolean>;
 
   /** Delete all comments for a video */
   deleteCommentsForVideo(videoId: string): Promise<number>;
@@ -788,7 +788,7 @@ export interface CreateVideoReportInput {
  */
 export interface CreateCommentReportInput {
   videoId: string;
-  commentId: string;
+  commentId: number;
   commentTimestamp: number;
   email: string;
   type: ReportType;
