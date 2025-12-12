@@ -8,15 +8,10 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import { VideoControllerBase, type VideoSource } from './video-controller-base.js';
 import type { CommentsRepository } from '../database/repositories/comments.js';
 import type { LinksRepository } from '../database/repositories/links.js';
-import type { WatchPageProps } from '../components/WatchPage.js';
 import type { MonetizationRepository } from '../database/repositories/monetization.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { DrizzleVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
-
-// React SSR
-import React from 'react';
-import { renderToString } from 'react-dom/server';
 
 /**
  * Query parameters for watch page
@@ -136,28 +131,7 @@ export class WatchController extends VideoControllerBase {
       } else {
         const model = await this.buildPageData(video);
 
-        let watchPage: React.ComponentType<WatchPageProps>;
-
-        // In development, use cache busting for page reloads during development
-        if (process.env['NODE_ENV'] === 'development') {
-          const cacheBust = `?update=${String(Date.now())}`;
-
-          const module = (await import(`../components/WatchPage.js${cacheBust}`)) as {
-            WatchPage: React.ComponentType<WatchPageProps>;
-          };
-
-          watchPage = module.WatchPage;
-        } else {
-          const module = (await import('../components/WatchPage.js')) as {
-            WatchPage: React.ComponentType<WatchPageProps>;
-          };
-
-          watchPage = module.WatchPage;
-        }
-
-        const html = renderToString(React.createElement(watchPage, { model }));
-
-        return await reply.type('text/html').send(html);
+        return await reply.view('watch.ejs', { model });
       }
     } catch (error) {
       this.logger.error('Get progressive video failed', error);

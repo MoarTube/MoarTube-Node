@@ -34,7 +34,6 @@
     "declarationMap": true,
     "sourceMap": true,
     "removeComments": false,
-    "jsx": "react-jsx",
 
     // Interop
     "esModuleInterop": true,
