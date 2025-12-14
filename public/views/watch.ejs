@@ -1340,6 +1340,11 @@ class MoarTubeWatch {
       $('#comment-input-form-dynamic').remove();
       $(this).parent().parent().parent().find('textarea').val('');
     });
+
+    // Comment form submission
+    $(document).off('submit', '.comment-input-form').on('submit', '.comment-input-form', (event) => {
+      this.handleCommentSubmit(event, event.target);
+    });
   }
 
   loadInformation(information) {
@@ -2831,29 +2836,9 @@ class MoarTubeWatch {
 
 const moarTubeWatch = new MoarTubeWatch();
 
-window.moarTubeWatch = moarTubeWatch;
-
 $(document).ready(function () {
   moarTubeWatch.init();
 });
-
-$(document).on('submit', '.comment-input-form', function (event) {
-  moarTubeWatch.handleCommentSubmit(event, this);
-});
-
-window.donateVideo = () => moarTubeWatch.donateVideo();
-window.likeVideo = () => moarTubeWatch.likeVideo();
-window.dislikeVideo = () => moarTubeWatch.dislikeVideo();
-window.shareVideo = () => moarTubeWatch.shareVideo();
-window.downloadVideo = () => moarTubeWatch.downloadVideo();
-window.showSettings = () => moarTubeWatch.showSettings();
-window.updateComments = () => moarTubeWatch.updateComments();
-window.openCommentSection = () => moarTubeWatch.openCommentSection();
-window.closeCommentSection = () => moarTubeWatch.closeCommentSection();
-window.showCommentReportModal = (commentId, timestamp) => moarTubeWatch.showCommentReportModal(commentId, timestamp);
-window.showVideoReportModal = () => moarTubeWatch.showVideoReportModal();
-window.quote = (commentId) => moarTubeWatch.quote(commentId);
-window.setClipboard = (text) => moarTubeWatch.setClipboard(text);
 </script>
 </body>
 
