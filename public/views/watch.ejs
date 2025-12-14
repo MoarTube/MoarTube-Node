@@ -539,6 +539,10 @@
 			cursor: pointer;
 		}
 
+		.share-icon-button:hover {
+			background-color: #f0f0f0;
+		}
+
 		.share-icon-svg {
 			height: 60px;
 			width: 60px;
@@ -559,6 +563,12 @@
 			font-size: 14px;
 			line-height: 1.8rem;
 			font-weight: 400;
+		}
+
+		.share-modal-content {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
 		}
 
 		.input-group,
@@ -868,6 +878,22 @@ body {
 	display: block !important;
 }
 
+.share-icon-title {
+	color: white !important;
+}
+
+.share-icon-button:hover {
+	background-color: #3a3a3a !important;
+}
+
+#donate-modal p {
+	color: white !important;
+}
+
+#settingsModal .form-check-label {
+	color: white !important;
+}
+
 .new-comment-highlight {
 	background-color: black !important;
 }
@@ -1148,7 +1174,7 @@ body {
 										placeholder="...connecting..." maxlength=500 disabled autocomplete="off">
 									<button id="send-chat-message-button" class="btn btn-outline-primary w-100 mt-1"
 										disabled>Send</button>
-									<button id="send-chat-message-button" class="btn btn-outline-primary w-100 mt-1"
+									<button id="donate-button" class="btn btn-outline-primary w-100 mt-1"
 										onclick="donateVideo()">
 										<span class="align-items-center d-inline-flex fst-italic">Donate <svg
 												xmlns="http://www.w3.org/2000/svg" width="16" height="16"
@@ -1206,2364 +1232,1560 @@ body {
 	<script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/keen-slider-6.8.5.min.js"></script>
 
 	<script>
-		const INCOMING_PARAMETERS = <%- JSON.stringify(model) %>;
-
-		let VIDEO_ID;
-		let VIEW_COUNT;
-		let TIME_PARAMETER;
-
-		let HASH_VALUE = '';
-
-		let NODE_ID;
-		let NODE_NAME;
-		let NODE_PROTOCOL;
-		let NODE_ADDRESS;
-		let NODE_PORT;
-		let NODE_BASE_URL;
-
-		let CLOUDFLARE_TURNSTILE_SITE_KEY;
-
-		const COMMENT_ELEMENT_CACHE = {};
-
-		const RECOMMENDED_VIDEOS_TAGS_CACHE = { '': [] };
-
-		let DOWNLOADABLE_SOURCES = [];
-
-		let MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP = 0;
-
-		let CURRENT_VIDEO_RESOLUTION;
-		let CURRENT_VIDEO_FORMAT;
-
-		let TIMESTAMP_UPDATE_TRACKER = [];
-
-		let CRYPTO_WALLET_ADDRESSES = [];
-
-		let EXTERNAL_VIDEOS_BASE_URL;
-		let EXTERNAL_RESOURCES_BASE_URL;
-
-		const COMMENT_INPUT_FORM_DYNAMIC = $('\
-			<form id="comment-input-form-dynamic" class="comment-input-form" role="form" method="POST" data-commentformtype="dynamic" style="background: #cb0c9f12;padding: 5px 5px 5px 5px;">\
-				<textarea class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area" rows="1" placeholder="Add a comment..." maxlength="500" name="commentPlainText"></textarea>\
-				<div class="text-end mt-1">\
-					<div id="comment-input-form-dynamic-submit-container">\
-						<button id="comment-input-form-dynamic-cancel-button-inner" class="btn btn-outline-primary" type="button" data-commentformtype="dynamic" onclick="$(\'#comment-input-form-dynamic\').remove();$(this).parent().parent().parent().find(\'textarea\').val(\'\');">cancel</button>\
-						<button class="btn btn-outline-primary" type="submit">submit</button>\
-						<div id="comment-input-form-dynamic-error-message"></div>\
-					</div>\
-				</div>\
-			</form>');
-
-		$(document).ready(function () {
-			const params = new URL(window.location.href).searchParams;
-
-			VIDEO_ID = params.get('v');
-
-			if (VIDEO_ID != null) {
-				HASH_VALUE = window.location.hash;
-
-				TIME_PARAMETER = params.get('t');
-
-				if (TIME_PARAMETER != null) {
-					TIME_PARAMETER = Number(TIME_PARAMETER);
-
-					if (Number.isNaN(TIME_PARAMETER)) {
-						TIME_PARAMETER = null;
-					}
-				}
-
-				EXTERNAL_VIDEOS_BASE_URL = INCOMING_PARAMETERS.externalVideosBaseUrl;
-				EXTERNAL_RESOURCES_BASE_URL = INCOMING_PARAMETERS.externalResourcesBaseUrl;
-
-				loadInformation(INCOMING_PARAMETERS.informationData.information);
-				loadLinks(INCOMING_PARAMETERS.linksData.links);
-				loadCryptoWalletAddresses(INCOMING_PARAMETERS.cryptoWalletAddressesData.cryptoWalletAddresses);
-				loadVideo(INCOMING_PARAMETERS.videoData.video);
-				loadTags(INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos);
-				loadRecommendedVideos(INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos, true);
-				loadComments(INCOMING_PARAMETERS.commentsData.comments, false);
-
-				$('#video-poster').attr('src', EXTERNAL_VIDEOS_BASE_URL + '/external/videos/' + VIDEO_ID + '/images/poster.jpg');
-
-				if (HASH_VALUE !== '') {
-					if ($(HASH_VALUE + ' .postNum a:first-child').length) {
-						$(HASH_VALUE + ' .postNum a:first-child')[0].click();
-					}
-				}
-
-				refreshTextAreas();
-			}
-
-			if (window.ethereum != null) {
-				console.log('EIP-1193 compatible crypto wallet detected.');
-			}
-			else {
-				console.log('EIP-1193 compatible crypto wallet not detected!');
-			}
-		});
-
-		function loadInformation(information) {
-			const nodeId = information.nodeId;
-			const nodeName = information.nodeName;
-			const publicNodeProtocol = information.publicNodeProtocol;
-			const publicNodeAddress = information.publicNodeAddress;
-			const publicNodePort = information.publicNodePort;
-			const cloudflareTurnstileSiteKey = information.cloudflareTurnstileSiteKey;
-
-			NODE_ID = nodeId;
-
-			NODE_NAME = nodeName;
-
-			NODE_PROTOCOL = publicNodeProtocol;
-			NODE_ADDRESS = publicNodeAddress;
-			NODE_PORT = publicNodePort;
-
-			let port;
-
-			if (NODE_PROTOCOL === 'http') {
-				port = NODE_PORT == 80 ? '' : ':' + NODE_PORT;
-			}
-			else if (NODE_PROTOCOL === 'https') {
-				port = NODE_PORT == 443 ? '' : ':' + NODE_PORT;
-			}
-
-			NODE_BASE_URL = NODE_PROTOCOL + '://' + NODE_ADDRESS + port;
-
-			CLOUDFLARE_TURNSTILE_SITE_KEY = cloudflareTurnstileSiteKey;
-		}
-
-		function loadLinks(links) {
-			for (let i = links.length - 1; i >= 0; i--) {
-				const link = links[i];
-
-				const url = link.url;
-				const svgGraphic = link.svg_graphic;
-
-				const html = '\
-					<a href="' + url + '" target="_blank" class="navbar-settings-button navbar-brand" role="button">' + svgGraphic + '</a>';
-
-				$('#navbar-settings-buttons').prepend(html);
-			}
-		}
-
-		function loadCryptoWalletAddresses(cryptoWalletAddresses) {
-			CRYPTO_WALLET_ADDRESSES = cryptoWalletAddresses;
-		}
-
-		function loadTags(recommendedVideos) {
-			const tags = [];
-
-			recommendedVideos.forEach(function (recommendedVideo) {
-				const tagsArray = recommendedVideo.tags.split(',');
-
-				tagsArray.forEach(function (tag) {
-					if (!tags.includes(tag)) {
-						tags.push(tag);
-					}
-				});
-			});
-
-			tags.forEach(function (tag) {
-				$('#recommended-videos-tag-slider').append('<div class="keen-slider__slide number-slide2"><button type="button" class="btn btn-outline-primary recommendation-category-button" data-tagterm="' + tag + '" style="white-space: nowrap;">' + tag + '</button></div>');
-			});
-
-			const recommendationsSlider = new KeenSlider("#recommended-videos-tag-slider", {
-				loop: false,
-				mode: "free",
-				rtl: false,
-				slides: {
-					perView: "auto",
-					spacing: 5
-				},
-			});
-
-			let recommendationCategoryButtonOffsetLeft;
-			$(".recommendation-category-button").on("mouseup", function (e) {
-				const movementDifference = Math.abs(recommendationCategoryButtonOffsetLeft - $(this).offset().left);
-
-				if (movementDifference < 10) {
-					$('.recommendation-category-button').removeClass('recommendation-category-button-selected');
-					$(this).addClass('recommendation-category-button-selected');
-				}
-			});
-
-			$(".recommendation-category-button").on("mousedown", function (e) {
-				recommendationCategoryButtonOffsetLeft = $(this).offset().left;
-			});
-
-			$(".recommendation-category-button").on("click", function (e) {
-				//e.preventDefault();
-
-				const tagTerm = $(this).data('tagterm').toString();
-
-				$('#recommended-videos-list').empty();
-
-				loadRecommendedVideos(RECOMMENDED_VIDEOS_TAGS_CACHE[tagTerm], false);
-			});
-		}
-
-		function loadRecommendedVideos(recommendedVideos, updateCache) {
-			clearTimestampUpdateTracker();
-
-			recommendedVideos.forEach(function (recommendedVideo) {
-				if (updateCache) {
-					const tagsArray = recommendedVideo.tags.split(',');
-
-					tagsArray.forEach(function (tag) {
-						if (!RECOMMENDED_VIDEOS_TAGS_CACHE.hasOwnProperty(tag)) {
-							RECOMMENDED_VIDEOS_TAGS_CACHE[tag] = [recommendedVideo];
-						}
-						else {
-							RECOMMENDED_VIDEOS_TAGS_CACHE[tag].push(recommendedVideo);
-						}
-
-						if (!RECOMMENDED_VIDEOS_TAGS_CACHE[''].includes(recommendedVideo)) {
-							RECOMMENDED_VIDEOS_TAGS_CACHE[''].push(recommendedVideo);
-						}
-					});
-				}
-
-				loadRecommendedVideo(recommendedVideo);
-			});
-		}
-
-		function loadRecommendedVideo(recommendedVideo) {
-			const videoId = recommendedVideo.videoId;
-			const title = recommendedVideo.title;
-			const views = (videoId === VIDEO_ID ? VIEW_COUNT != null ? VIEW_COUNT : '...' : recommendedVideo.views);
-			const isLive = recommendedVideo.isLive;
-			const isStreaming = recommendedVideo.isStreaming;
-			const lengthSeconds = recommendedVideo.lengthSeconds;
-			const creationTimestamp = recommendedVideo.creationTimestamp;
-			const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
-			const viewsFormatted = getViewsFormatted(views);
-
-			let liveStreamInidcator = '';
-
-			if (isLive) {
-				if (isStreaming) {
-					liveStreamInidcator = '<i style="position: absolute; left: 5px; bottom: 5px; background-color: #cb0c9f; color: white; border-radius: 4px; padding: 3px; font-size: 10px; font-weight: 500;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-broadcast" viewBox="0 0 16 16"><path d="M3.05 3.05a7 7 0 0 0 0 9.9.5.5 0 0 1-.707.707 8 8 0 0 1 0-11.314.5.5 0 0 1 .707.707zm2.122 2.122a4 4 0 0 0 0 5.656.5.5 0 1 1-.708.708 5 5 0 0 1 0-7.072.5.5 0 0 1 .708.708zm5.656-.708a.5.5 0 0 1 .708 0 5 5 0 0 1 0 7.072.5.5 0 1 1-.708-.708 4 4 0 0 0 0-5.656.5.5 0 0 1 0-.708zm2.122-2.12a.5.5 0 0 1 .707 0 8 8 0 0 1 0 11.313.5.5 0 0 1-.707-.707 7 7 0 0 0 0-9.9.5.5 0 0 1 0-.707zM10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>&nbspLIVE</i>';
-				}
-				else {
-					liveStreamInidcator = '<i style="position: absolute; left: 5px; bottom: 5px; background-color: #cb0c9f; color: white; border-radius: 4px; padding: 3px; font-size: 10px; font-weight: 500;">STREAMED</i>';
-				}
-			}
-
-			const element = $('\
-                    <li class="list-group-item ps-0 pe-0 mt-2 video-recommendation-card border-0">\
-                        <a href="/watch?v=' + videoId + '" class="text-decoration-none">\
-                            <div class="card video-recommendation-card border-0">\
-                                <div class="row g-0 position-relative">\
-                                    <div class="col-6 position-relative">\
-                                        <div class="position-relative">\
-                                            <img src="' + EXTERNAL_VIDEOS_BASE_URL + '/external/videos/' + videoId + '/images/preview.jpg" class="rounded ratio ratio-16x9" alt="..."/>\
-                                            <i class="video-streaming-timestamp">' + durationFormatted + '</i>\
-                                            ' + liveStreamInidcator + '\
-                                        </div>\
-                                    </div>\
-                                    <div class="col-6">\
-                                        <div class="h-100 ms-1">\
-                                            <span class="video-recommendation-card-text" style="overflow: hidden;text-overflow: ellipsis;white-space: normal;-webkit-line-clamp: 2;display: -webkit-box;-webkit-box-orient: vertical;font-weight: 500;font-family: &quot;Roboto&quot;,&quot;Arial&quot;,sans-serif;">' + title + '</span>\
-                                            <small class="video-recommendation-card-text"><span id="recommended-video-info-views-' + videoId + '">' + viewsFormatted + '</span> &#x2022 <span class="video-info-timestamp"></span></small>\
-                                        </div>\
-                                    </div>\
-                                </div>\
-                            </div>\
-                        </a>\
-                    </li>\
-                ');
-
-			$('#recommended-videos-list').append(element);
-
-			applyTimestampUpdateTrackerToVideo(element, creationTimestamp, isStreaming);
-		}
-
-		function applyTimestampUpdateTrackerToVideo(element, creationTimestamp, isStreaming) {
-			function updateCreationTimestamp() {
-				const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
-
-				$(element).find('.video-info-timestamp').text(creationTimestampFormatted);
-
-				if (isStreaming) {
-					const lengthSeconds = Math.floor((Date.now() - creationTimestamp) / 1000);
-					const durationFormatted = convertSecondsToDurationFormatted(lengthSeconds);
-
-					$(element).find('.video-streaming-timestamp').text(durationFormatted);
-				}
-			}
-
-			updateCreationTimestamp();
-
-			const interval = setInterval(function () {
-				updateCreationTimestamp();
-			}, 1000);
-		}
-
-		function clearTimestampUpdateTracker() {
-			TIMESTAMP_UPDATE_TRACKER.forEach(function (interval) {
-				clearInterval(interval);
-			});
-		}
-
-		function setClipboard(value) {
-			try {
-				navigator.clipboard.writeText(value)
-					.then(function () {
-						// text copied to clipboard success
-					})
-					.catch(function (error) {
-						// text copied to clipboard fail, so using native DOM API fallback
-
-						fallback(value);
-					});
-			}
-			catch (error) {
-				// text copied to clipboard fail, so using native DOM API fallback
-
-				fallback(value);
-			}
-
-			function fallback() {
-				let tempInput = document.createElement("input");
-				tempInput.style = "position: absolute; left: -1000px; top: -1000px";
-				tempInput.value = value;
-				document.body.appendChild(tempInput);
-				tempInput.select();
-				document.execCommand("copy");
-				document.body.removeChild(tempInput);
-			}
-		}
-
-		function refreshClickTooltips() {
-			$(function () {
-				$('.click-tooltip[data-bs-toggle="tooltip"]').tooltip({
-					trigger: 'click',
-					container: '.swal2-html-container'
-				});
-
-				$('.click-tooltip[data-bs-toggle="tooltip"]').on('click', function () {
-					setTimeout(() => {
-						$(this).tooltip('hide');
-					}, 500);
-				});
-			});
-		}
-
-		function refreshTextAreas() {
-			$("textarea").each(function () {
-				if (this.scrollHeight > 0) {
-					this.setAttribute("style", "height:" + (this.scrollHeight) + "px;overflow-y:hidden;resize:none;");
-				}
-				else {
-					this.setAttribute("style", "height:30px;overflow-y:hidden;resize:none;");
-				}
-			}).on("input", function () {
-				this.style.height = 0;
-				this.style.height = (this.scrollHeight) + "px";
-			});
-		}
-
-		function loadVideo(video) {
-			const title = video.title;
-			const description = video.description;
-			const likes = video.likes;
-			const dislikes = video.dislikes;
-			const comments = video.comments;
-			const isPublished = video.isPublished;
-			const isPublishing = video.isPublishing;
-			const isLive = video.isLive;
-			const isStreaming = video.isStreaming;
-			const isStreamed = video.isStreamed;
-			const creationTimestamp = video.creationTimestamp;
-
-			const adaptiveSources = video.adaptiveSources;
-			const progressiveSources = video.progressiveSources;
-			const sourcesFormatsAndResolutions = video.sourcesFormatsAndResolutions;
-
-			DOWNLOADABLE_SOURCES = progressiveSources;
-
-			if (isStreaming) {
-				connectWebsocket();
-			}
-
-			document.title = title + ' - MoarTube';
-
-			$('#node-name').text(NODE_NAME);
-
-			$('#video-like-count').text(likes);
-			$('#video-dislike-count').text(dislikes);
-
-			$('#video-title').text(title);
-
-			(async function () {
-				try {
-					const views = await incrementViews();
-
-					VIEW_COUNT = views;
-
-					const viewsFormatted = getViewsFormatted(views);
-
-					if (!isStreaming) {
-						$('#video-information-views').text(viewsFormatted);
-					}
-
-					$('#recommended-video-info-views-' + VIDEO_ID).text(viewsFormatted);
-				} catch (error) {
-					console.error(error.message);
-				}
-			})();
-
-			(function updateCreationTimestamp() {
-				const creationTimestampFormatted = getCreationTimestampFormatted(creationTimestamp);
-
-				if (isLive) {
-					if (isStreaming) {
-						$('#video-information-date').text('Started streaming ' + creationTimestampFormatted);
-					}
-					else {
-						$('#video-information-date').text('Streamed live ' + creationTimestampFormatted);
-					}
-				}
-				else {
-					$('#video-information-date').text(creationTimestampFormatted);
-				}
-
-				setTimeout(updateCreationTimestamp, 1000);
-			})();
-
-			$('#video-information-description').text(description);
-
-			let message = '';
-
-			if (adaptiveSources.length > 0 || progressiveSources.length > 0) {
-				if (isPublished || isStreaming) {
-					initializeVideoJsPlayer();
-				}
-				else if (isStreamed) {
-					message = 'this live stream has ended and has not been published';
-				}
-				else {
-					message = 'this video is unavailable';
-				}
-			}
-			else {
-				if (isPublishing) {
-					message = 'this video is currently publishing, please check back later';
-				}
-				else if (isStreaming) {
-					message = 'this live stream has not started yet';
-				}
-				else if (isStreamed) {
-					message = 'this live stream has ended and has not been published';
-				}
-				else {
-					message = 'this video is unavailable';
-				}
-			}
-
-			if (message != '') {
-				$('#mtp-video-overlay').remove();
-				$('#video-player-container').append('<div class="d-flex align-items-center justify-content-center">' + message + '</div>');
-			}
-
-			async function incrementViews() {
-				try {
-					const data = await $.ajax({ type: 'GET', url: '/videos/' + VIDEO_ID + '/views/increment' });
-
-					if (data.isError) {
-						throw new Error(data.message);
-					}
-
-					return data.views;
-				}
-				catch (error) {
-					throw new Error('unable to communicate with node');
-				}
-			}
-
-			function initializeVideoJsPlayer() {
-				window.videojs.log.level("off");
-
-				$("#video-player").attr("controls", true);
-
-				const sources = adaptiveSources.concat(progressiveSources);
-
-				let player = videojs('video-player', {
-					sources: sources,
-					html5: {
-						vhs: {
-							overrideNative: !videojs.browser.IS_SAFARI,
-							llhls: true
-						},
-						nativeAudioTracks: false,
-						nativeVideoTracks: false
-					},
-					liveui: true,
-					errorDisplay: false,
-					liveTracker: {
-						trackingThreshold: 0
-					},
-					preload: "auto",
-					disablePictureInPicture: true,
-					controlBar: {
-						pictureInPictureToggle: false
-					}
-				});
-
-				player.landscapeFullscreen();
-
-				/*
-				// supposedly iOS does not support headers
-				videojs.Vhs.xhr.beforeRequest = (options) => {
-					options.headers = options.headers || {};
-
-					options.headers['is-live-manifest'] = 'true-or-false';
-					
-					return options;
-				};
-				*/
-
-				configurePlayerButtons();
-				configurePlayerEvents();
-				configurePlayerContextMenu();
-
-				function configurePlayerButtons() {
-					const handleTechClickDefaultFunction = player.player_.handleTechClick_;
-
-					const MATERIAL_NAVIGATE_NEXT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z" fill="#fff"/></svg>';
-					const MATERIAL_NAVIGATE_BEFORE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z" fill="#fff"/></svg>';
-					const MATERIAL_DONE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z" fill="#fff"/></svg>';
-
-					if (isLive && isStreaming) {
-						// streamer mode
-						let isShowingStreamerMode = false;
-						const streamerModeButton = player.getChild('ControlBar').addChild('button', {
-							clickHandler: function (event) {
-								event[0].stopPropagation();
-
-								if (isShowingStreamerMode) {
-									isShowingStreamerMode = false;
-
-									streamerModeButton.el().innerHTML = '<svg width="20" height="20" fill="#fff" class="bi bi-aspect-ratio" viewBox="0 0 16 16"><path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z"/><path d="M2 4.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H3v2.5a.5.5 0 0 1-1 0zm12 7a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H13V8.5a.5.5 0 0 1 1 0z"/></svg>';
-
-									$('#main-container').removeClass('w-100');
-								}
-								else {
-									isShowingStreamerMode = true;
-
-									streamerModeButton.el().innerHTML = '<svg width="20" height="20" fill="#fff" class="bi bi-aspect-ratio" viewBox="0 0 16 16"><path d="M0 12.5v-9A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5M2.5 4a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 1 0V5h2.5a.5.5 0 0 0 0-1zm11 8a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-1 0V11h-2.5a.5.5 0 0 0 0 1z"/></svg>';
-
-									$('#main-container').addClass('w-100');
-								}
-							}
-						});
-						streamerModeButton.el().classList.add('video-js-streamer-button');
-						streamerModeButton.el().innerHTML = '<svg width="20" height="20" fill="#fff" class="bi bi-aspect-ratio" viewBox="0 0 16 16"><path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z"/><path d="M2 4.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H3v2.5a.5.5 0 0 1-1 0zm12 7a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H13V8.5a.5.5 0 0 1 1 0z"/></svg>';
-						streamerModeButton.el().style.cursor = "pointer";
-					}
-
-					// theater button
-					let isShowingTheaterMode = false;
-					const theaterModeButton = player.getChild('ControlBar').addChild('button', {
-						clickHandler: function (event) {
-							event[0].stopPropagation();
-
-							const videoPlayerContainer = $('#video-player-container');
-							const videoPlayer = $('#video-player');
-
-							if (isShowingTheaterMode) {
-								isShowingTheaterMode = false;
-
-								theaterModeButton.el().innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-
-								$(videoPlayerContainer).addClass('ratio').removeClass('position-relative');
-								$(videoPlayer).removeClass('video-player-theater-mode').removeClass('vjs-fluid');
-								$(videoPlayerContainer).prependTo("#video-comments-inner");
-							}
-							else {
-								isShowingTheaterMode = true;
-
-								theaterModeButton.el().innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 26,13 0,10 -16,0 0,-10 z m -14,2 12,0 0,6 -12,0 0,-6 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-
-								$(videoPlayerContainer).removeClass('ratio').addClass('position-relative');
-								$(videoPlayer).addClass('video-player-theater-mode').addClass('vjs-fluid');
-								$(videoPlayerContainer).appendTo("#theater-container");
-							}
-						}
-					});
-					theaterModeButton.el().classList.add('video-js-theater-button');
-					theaterModeButton.el().innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
-					theaterModeButton.el().style.cursor = "pointer";
-
-					// overflow button
-					const overflowButton = player.getChild('ControlBar').addChild('button', {
-						clickHandler: function (event) {
-							event[0].stopPropagation();
-
-							if ($('#video-player .vjs-control-bar .video-js-overflow-menu').length === 0) {
-								player.player_.handleTechClick_ = function (event) { }
-
-								$('body').on('click', function (event) {
-									$('body').off('click');
-
-									$('.video-player .vjs-control-bar .video-js-overflow-menu').remove();
-
-									player.player_.handleTechClick_ = handleTechClickDefaultFunction;
-								});
-
-								showVideoJsOverflowMenuHtml(player);
-							}
-							else {
-								removeOverflowMenuHtml();
-
-								player.player_.handleTechClick_ = handleTechClickDefaultFunction;
-							}
-						}
-					});
-					overflowButton.el().innerHTML = '<svg height="24" viewBox="0 -960 960 960" width="100%"><path d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z" fill="#fff"/></svg>';
-					overflowButton.el().style.order = "10";
-					overflowButton.el().style.cursor = "pointer";
-
-					function showVideoJsOverflowMenuHtml(player) {
-						const currentPlaybackRate = player.playbackRate();
-
-						player.on(["playing"], function (e) {
-							// can only set a playback rate when the player is actually playing; setting before "playing" has no effect
-							player.playbackRate(currentPlaybackRate);
-						});
-
-						if (CURRENT_VIDEO_RESOLUTION == null && CURRENT_VIDEO_FORMAT == null) {
-							const currentSource = player.currentSrc();
-							const segments = currentSource.split('/');
-
-							CURRENT_VIDEO_RESOLUTION = segments[segments.length - 1];
-							CURRENT_VIDEO_FORMAT = segments[segments.length - 2];
-
-							if (CURRENT_VIDEO_FORMAT !== 'mp4' && CURRENT_VIDEO_FORMAT !== 'webm' && CURRENT_VIDEO_FORMAT !== 'ogv') {
-								CURRENT_VIDEO_FORMAT = 'm3u8';
-								CURRENT_VIDEO_RESOLUTION = 'auto';
-							}
-						}
-
-						showOverflowMenuMain();
-
-						function showOverflowMenuMain() {
-							const html = '\
-								<div class="video-js-overflow-menu">\
-									<button type="button" class="video-js-overflow-format-button"><label class="video-js-overflow-button-label"><span>Quality</span><span class="video-js-current-selection-span">' + CURRENT_VIDEO_FORMAT + ' ' + CURRENT_VIDEO_RESOLUTION + MATERIAL_NAVIGATE_NEXT_SVG + '</span></label></button>\
-									<button type="button" class="video-js-overflow-playback-speed-button"><label class="video-js-overflow-button-label"><span>Playback speed</span><span class="video-js-current-selection-span">' + currentPlaybackRate + 'x' + MATERIAL_NAVIGATE_NEXT_SVG + '</span></label></button>\
-								</div>';
-
-							if ($("#video-player .vjs-control-bar .video-js-overflow-menu").length) {
-								$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
-							}
-							else {
-								$("#video-player .vjs-control-bar").append(html);
-							}
-
-							$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-button').click(function (event) {
-								event.stopPropagation();
-
-								showOverflowMenuFormats();
-							});
-
-							$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-playback-speed-button').click(function (event) {
-								event.stopPropagation();
-
-								showPlayRateMenu();
-							});
-						}
-
-						function showOverflowMenuFormats() {
-							// find the (available) formats that actually have sources; not empty array
-							const availableFormats = Object.keys(sourcesFormatsAndResolutions).filter(key => Array.isArray(sourcesFormatsAndResolutions[key]) && sourcesFormatsAndResolutions[key].length > 0);
-
-							let html = '<div class="video-js-overflow-menu">\
-								<button type="button" class="video-js-back-to-overflow-main-button"><span>Format</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
-
-							availableFormats.forEach(function (availableFormat) {
-								if (CURRENT_VIDEO_FORMAT === availableFormat) {
-									html += '<button type="button" class="video-js-overflow-format-explicit-button video-js-overflow-explicit-selected-button" data-format="' + availableFormat + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + availableFormat + '</span></button>';
-								}
-								else {
-									html += '<button type="button" class="video-js-overflow-format-explicit-button" data-format="' + availableFormat + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + availableFormat + '</span></button>';
-								}
-							});
-
-							html += '</div>';
-
-							$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
-
-							$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-explicit-button').click(function (event) {
-								event.stopPropagation();
-
-								const selectedVideoFormat = $(this).data('format');
-
-								showOverflowMenuResolutions(selectedVideoFormat);
-							});
-
-							// back from formats menu to main menu
-							$('.video-js-back-to-overflow-main-button').click(function (event) {
-								event.stopPropagation();
-
-								showOverflowMenuMain();
-							});
-						}
-
-						function showOverflowMenuResolutions(selectedVideoFormat) {
-							const resolutions = sourcesFormatsAndResolutions[selectedVideoFormat];
-
-							let html = '<div class="video-js-overflow-menu">\
-								<button type="button" class="video-js-back-to-overflow-formats-button"><span>Resolution</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
-
-							resolutions.forEach(function (resolution) {
-								if (selectedVideoFormat === CURRENT_VIDEO_FORMAT && CURRENT_VIDEO_RESOLUTION === resolution) {
-									html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button video-js-overflow-explicit-selected-button" data-resolution="' + resolution + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + resolution + '</span></button>';
-								}
-								else {
-									html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button" data-resolution="' + resolution + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + resolution + '</span></button>';
-								}
-							});
-
-							if (selectedVideoFormat === 'm3u8') {
-								if (CURRENT_VIDEO_RESOLUTION === 'auto') {
-									html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button video-js-overflow-explicit-selected-button" data-resolution="auto"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>auto</span></button>';
-								}
-								else {
-									html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button" data-resolution="auto"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>auto</span></button>';
-								}
-							}
-
-							html += '</div>';
-
-							$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
-
-							// back from resolutions menu to formats menu
-							$('.video-js-back-to-overflow-formats-button').click(function (event) {
-								event.stopPropagation();
-
-								showOverflowMenuFormats();
-							});
-
-							$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button').click(function (event) {
-								event.stopPropagation();
-
-								CURRENT_VIDEO_FORMAT = selectedVideoFormat;
-								CURRENT_VIDEO_RESOLUTION = $(this).data('resolution');
-
-								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button .video-js-chosen-item').addClass('hidden-elem');
-								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
-
-								$(this).addClass('video-js-overflow-explicit-selected-button');
-								$(this).find('.video-js-chosen-item').removeClass('hidden-elem');
-
-								let source;
-
-								if (CURRENT_VIDEO_FORMAT === 'm3u8') {
-									if (CURRENT_VIDEO_RESOLUTION === 'auto') {
-										source = { src: adaptiveSources[0].src, type: adaptiveSources[0].type };
-									}
-									else {
-										for (const adaptiveSource of adaptiveSources) {
-											const segments = adaptiveSource.src.split('/');
-											const adaptiveSourceResolution = segments[segments.length - 1];
-
-											if (adaptiveSourceResolution === ('manifest-' + CURRENT_VIDEO_RESOLUTION + '.' + CURRENT_VIDEO_FORMAT)) {
-												source = { src: adaptiveSource.src, type: adaptiveSource.type };
-											}
-										}
-									}
-								}
-								else {
-									for (const progressiveSource of progressiveSources) {
-										const segments = progressiveSource.src.split('/');
-
-										const progressiveSourceResolution = segments[segments.length - 1];
-										const progressiveSourceFormat = segments[segments.length - 2];
-
-										if (CURRENT_VIDEO_RESOLUTION === progressiveSourceResolution.split('.')[0] && CURRENT_VIDEO_FORMAT === progressiveSourceFormat) {
-											source = { src: progressiveSource.src, type: progressiveSource.type };
-										}
-									}
-								}
-
-								const currentTime = player.currentTime();
-
-								player.src(source);
-								player.currentTime(currentTime);
-
-								player.play()
-									.then(function () {
-										// do nothing
-									})
-									.catch(function (error) {
-										console.log(error);
-									});
-							});
-						}
-
-						function showPlayRateMenu() {
-							const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
-
-							let html = '<div class="video-js-overflow-menu">\
-								<button type="button" class="video-js-back-to-overflow-main-button"><span>Playback speed</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
-
-							playbackRates.forEach(function (playbackRate) {
-								if (playbackRate === currentPlaybackRate) {
-									html += '<button type="button" class="video-js-overflow-explicit-button video-js-overflow-explicit-selected-button" data-playbackrate="' + playbackRate + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + playbackRate + '</span></button>';
-								}
-								else {
-									html += '<button type="button" class="video-js-overflow-explicit-button" data-playbackrate="' + playbackRate + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + playbackRate + '</span></button>';
-								}
-							});
-
-							html += '</div>';
-
-							$("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
-
-							$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click(function (event) {
-								event.stopPropagation();
-
-								const selectedPlaybackRate = $(this).data('playbackrate');
-
-								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
-								$('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
-
-								$(this).addClass('video-js-overflow-explicit-selected-button');
-								$(this).find('.video-js-chosen-item').removeClass('hidden-elem');
-
-								player.playbackRate(selectedPlaybackRate);
-							});
-
-							$('.video-js-back-to-overflow-main-button').click(function (event) {
-								event.stopPropagation();
-
-								showOverflowMenuMain();
-							});
-						}
-					}
-
-					function removeOverflowMenuHtml() {
-						$('#video-player .vjs-control-bar .video-js-overflow-menu').remove();
-					}
-				}
-
-				function configurePlayerEvents() {
-					player.on(["loadstart", "firstplay", "pause", "ended", "adplay", "adplaying", "adfirstplay", "adpause", "adended", "contentplay", "contentplaying", "contentfirstplay", "contentpause", "contentended", "contentupdate"], function (e) {
-						//console.log(e);
-					});
-
-					player.on(["fullscreenchange"], function (e) {
-						if (player.isFullscreen()) {
-							theaterModeButton.el().classList.add('hidden-elem');
-						}
-						else {
-							theaterModeButton.el().classList.remove('hidden-elem');
-						}
-					});
-
-					player.on("loadedmetadata", function () {
-						console.log('loadedmetadata');
-
-						player.play()
-							.then(function () {
-								jumpToUrlTimeParameter();
-							})
-							.catch(function (error) {
-								console.log(error);
-
-								$('#mtp-video-overlay').removeClass('hidden-elem');
-							});
-					});
-
-					player.on("playing", function () {
-						console.log('playing');
-
-						$('#mtp-video-overlay').remove();
-					});
-
-					player.on("waiting", function () {
-						console.log('waiting');
-					});
-
-					player.on("ready", function () {
-						console.log('video player ready');
-
-						player.play()
-							.then(function () {
-								jumpToUrlTimeParameter();
-							})
-							.catch(function (error) {
-								console.log(error);
-
-								$('#mtp-video-overlay').removeClass('hidden-elem');
-							});
-					});
-
-					$('#big-play-button-poster-container').click(async function (event) {
-						$('#mtp-video-overlay').remove();
-
-						player.play()
-							.then(function () {
-								jumpToUrlTimeParameter();
-							})
-							.catch(function (error) {
-								console.log(error);
-							});
-					});
-				}
-
-				function configurePlayerContextMenu() {
-					player.el().addEventListener('contextmenu', function (event) {
-						event.preventDefault();
-
-						showCustomContextMenu(event.pageX, event.pageY);
-					}, false);
-
-					function showCustomContextMenu(x, y) {
-						let menu = $('#video-player-context-menu');
-
-						if ($(menu).length === 0) {
-							menu = $('<div id="video-player-context-menu" class="list-group"></div>');
-
-							$(menu).append('<a id="copy-video-url" class="list-group-item list-group-item-action p-1 hand bg-dark text-light">copy video url</a>');
-
-							if (!isStreaming) {
-								$(menu).append('<a id="copy-video-url-at-current-time" class="list-group-item list-group-item-action p-1 hand bg-dark text-light">copy video url at current time</a>');
-							}
-
-							$(menu).css({
-								position: 'absolute'
-							});
-
-							$(menu).appendTo('body');
-
-							$('#copy-video-url').click(function (event) {
-								event.stopPropagation();
-
-								const videoUrl = window.location.origin + '/watch?v=' + VIDEO_ID;
-								setClipboard(videoUrl);
-
-								$(menu).remove();
-							});
-
-							$('#copy-video-url-at-current-time').click(function (event) {
-								event.stopPropagation();
-
-								const videoUrlAtCurrentTime = window.location.origin + '/watch?v=' + VIDEO_ID + '&t=' + Math.floor(player.currentTime());
-								setClipboard(videoUrlAtCurrentTime);
-
-								$(menu).remove();
-							});
-						}
-
-						$(menu).css({
-							left: x + 'px',
-							top: y + 'px',
-							display: 'block'
-						});
-
-						$(document).click(function () {
-							$(menu).remove();
-						});
-					}
-				}
-
-				function jumpToUrlTimeParameter() {
-					if (TIME_PARAMETER != null) {
-						player.currentTime(TIME_PARAMETER);
-					}
-				}
-			}
-		}
-
-		function connectWebsocket() {
-			let connectWebsocketClient = function () {
-				try {
-					let LIVE_CHAT_USERNAME;
-					let LIVE_CHAT_USERNAME_COLOR_CODE;
-
-					$('#live-stream-chat-container').removeClass('hidden-elem');
-
-					const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-					const hostname = window.location.hostname;
-					const port = window.location.port;
-
-					let ws = new WebSocket(protocol + '//' + hostname + ':' + port);
-
-					ws.onopen = () => {
-						ws.send(JSON.stringify({ eventName: 'register', socketType: 'node_peer' }));
-					};
-
-					ws.onclose = () => {
-						setTimeout(() => {
-							connectWebsocketClient();
-						}, 3000);
-					};
-
-					ws.onmessage = (message) => {
-						const data = JSON.parse(message.data);
-
-						if (data.eventName === 'registered') {
-							ws.send(JSON.stringify({ eventName: 'chat', type: 'join', videoId: VIDEO_ID }));
-						}
-						else if (data.eventName === 'joined') {
-							LIVE_CHAT_USERNAME = data.liveChatUsername;
-							LIVE_CHAT_USERNAME_COLOR_CODE = data.liveChatUsernameColorCode;
-
-							$('#send-chat-message-input').prop('placeholder', 'Type your message');
-							$('#send-chat-message-input').prop('disabled', false);
-							$('#send-chat-message-button').prop('disabled', false);
-
-							$('#send-chat-message-button').off('click').on('click', function (event) {
-								broadcastChatMessageContent();
-							});
-
-							$('#send-chat-message-input').off('keypress').on('keypress', function (event) {
-								if (event.keyCode === 13) {
-									broadcastChatMessageContent();
-								}
-							});
-
-							function broadcastChatMessageContent() {
-								if (ws.readyState === WebSocket.OPEN) {
-									const chatMessageContent = $('#send-chat-message-input').val();
-
-									if (chatMessageContent.length > 0) {
-										$('#send-chat-message-input').prop('disabled', true);
-										$('#send-chat-message-button').prop('disabled', true);
-
-										$('#send-chat-message-button').text('...please wait...');
-
-										const sentTimestamp = Date.now();
-
-										const chatMessageElement = appendMessageAndConditionallyScroll(chatMessageContent, LIVE_CHAT_USERNAME, LIVE_CHAT_USERNAME_COLOR_CODE, sentTimestamp, true);
-
-										getCloudflareTurnstileToken()
-											.then(function (cloudflareTurnstileToken) {
-												ws.send(JSON.stringify({ eventName: 'chat', type: 'message', videoId: VIDEO_ID, chatMessageContent: chatMessageContent, sentTimestamp: sentTimestamp, cloudflareTurnstileToken: cloudflareTurnstileToken }));
-											})
-											.catch(function (error) {
-												showAlert(true, error);
-
-												$(chatMessageElement).remove();
-											});
-									}
-								}
-							}
-
-							$.ajax({ type: 'GET', url: '/streams/' + VIDEO_ID + '/chat/history' })
-								.done(function (data) {
-									if (data.isError) {
-										console.log(data.message);
-									}
-									else {
-										const chatHistory = data.chatHistory;
-
-										$("#chat-messages").empty();
-
-										for (const chatMessage of chatHistory) {
-											const chatMessageContent = chatMessage.chat_message;
-											const liveChatUsername = chatMessage.username;
-											const liveChatUsernameColorCode = chatMessage.username_color_hex_code;
-
-											appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, true);
-										}
-									}
-								})
-								.fail(function () {
-									console.log('unable to communicate with node');
-								});
-						}
-						else if (data.eventName === 'message') {
-							const chatMessageContent = data.chatMessageContent;
-							const liveChatUsername = data.liveChatUsername;
-							const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
-							const sentTimestamp = data.sentTimestamp;
-
-							if (liveChatUsername !== LIVE_CHAT_USERNAME && liveChatUsernameColorCode !== LIVE_CHAT_USERNAME_COLOR_CODE) {
-								appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, false);
-							}
-							else {
-								$('#send-chat-message-input').val('');
-
-								$('#send-chat-message-input').prop('disabled', false);
-								$('#send-chat-message-button').prop('disabled', false);
-
-								$('#send-chat-message-button').text('Send');
-
-								const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
-								$('#' + chatMessageElementId).removeClass('pending-chat-message');
-							}
-						}
-						else if (data.eventName === 'live_stream_stats') {
-							const watchingCount = data.watchingCount;
-
-							$('#video-information-views').text(watchingCount + ' watching now');
-						}
-						else if (data.eventName === 'limited') {
-							let rateLimitSeconds = data.rateLimitSeconds;
-
-							$('#send-chat-message-input').prop('disabled', true);
-							$('#send-chat-message-button').prop('disabled', true);
-
-							$('#send-chat-message-button').text('Send (' + rateLimitSeconds + ')');
-
-							const interval = setInterval(function () {
-								rateLimitSeconds--;
-
-								$('#send-chat-message-button').text('Send (' + rateLimitSeconds + ')');
-
-								if (rateLimitSeconds === 0) {
-									clearInterval(interval);
-
-									$('#send-chat-message-button').text('Send');
-
-									$('#send-chat-message-input').prop('disabled', false);
-									$('#send-chat-message-button').prop('disabled', false);
-								}
-							}, 1000);
-						}
-						else if (data.eventName === 'error') {
-							const errorType = data.errorType;
-
-							if (errorType === 'register') {
-								$('#send-chat-message-input').prop('disabled', true);
-								$('#send-chat-message-button').prop('disabled', true);
-							}
-							else if (errorType === 'join') {
-								$('#send-chat-message-input').prop('disabled', true);
-								$('#send-chat-message-button').prop('disabled', true);
-							}
-							else if (errorType === 'message') {
-								const liveChatUsername = data.liveChatUsername;
-								const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
-								const sentTimestamp = data.sentTimestamp;
-
-								const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
-								$('#' + chatMessageElementId).remove();
-
-								$('#send-chat-message-input').prop('disabled', false);
-								$('#send-chat-message-button').prop('disabled', false);
-
-								$('#send-chat-message-button').text('Send');
-							}
-
-							showAlert(true, data.message);
-						}
-						else if (data.eventName === 'information') {
-							const cloudflareTurnstileSiteKey = data.cloudflareTurnstileSiteKey;
-
-							CLOUDFLARE_TURNSTILE_SITE_KEY = cloudflareTurnstileSiteKey;
-						}
-					};
-
-					function appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, sentTimestamp, forceScrollBottom) {
-						const chatMessagesContainer = $("#chat-messages-container");
-						const chatMessages = $("#chat-messages");
-
-						const chatMessageElement = $('<div class="chat-message pb-2"><div class="flex-shrink-1 rounded px-2"><b style="color:#' + liveChatUsernameColorCode + ';font-size:0.8em;">' + liveChatUsername + '</b>: <span class="live-chat-text-color">' + chatMessageContent + '</span></div></div>');
-
-						if (sentTimestamp != null) {
-							const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
-
-							$(chatMessageElement).attr('id', chatMessageElementId);
-							$(chatMessageElement).addClass('pending-chat-message');
-						}
-
-						const scrollheight = $(chatMessagesContainer)[0].scrollHeight;
-						const scrollTop = $(chatMessagesContainer).scrollTop();
-						const outerheight = $(chatMessagesContainer).outerHeight();
-
-						const isScrolledBottom = (scrollheight - scrollTop - outerheight) <= 100;
-
-						$(chatMessages).append(chatMessageElement);
-
-						if (isScrolledBottom || forceScrollBottom) {
-							$(chatMessagesContainer).scrollTop(scrollheight);
-						}
-
-						return chatMessageElement;
-					}
-				}
-				catch (error) {
-
-				}
-			};
-
-			connectWebsocketClient();
-		}
-
-		$(document).on('submit', '.comment-input-form', async function (event) {
-			event.preventDefault();
-
-			const form = $(this);
-
-			const commentFormType = form.data('commentformtype');
-
-			const commentPlainText = form.find('textarea[name="commentPlainText"]').val();
-
-			if (commentPlainText !== '') {
-				disableFormInputs(form, '...please wait...');
-
-				getCloudflareTurnstileToken()
-					.then(function (cloudflareTurnstileToken) {
-						$.post('/videos/' + VIDEO_ID + '/comments/comment', { commentPlainText: commentPlainText, timestamp: MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP, cloudflareTurnstileToken: cloudflareTurnstileToken })
-							.done(function (data) {
-								if (data.isError) {
-									showAlert(true, data.message);
-								}
-								else {
-									if (commentFormType === 'dynamic') {
-										form.remove();
-									}
-									else if (commentFormType === 'static') {
-										form.find('textarea[name="commentPlainText"]').val('');
-									}
-
-									const commentId = data.commentId;
-									const comments = data.comments;
-
-									loadComments(comments, true);
-								}
-
-								enableFormInputs(form, 'submit');
-							})
-							.fail(function () {
-								showAlert(true, 'unable to submit comment, please try again later');
-
-								enableFormInputs(form, 'submit');
-							});
-					})
-					.catch(function (error) {
-						console.log(error);
-
-						showAlert(true, error);
-
-						enableFormInputs(form, 'submit');
-					});
-			}
-
-			function disableFormInputs(form, buttonText) {
-				form.find(':submit').prop('disabled', true);
-				form.find('textarea[name="commentPlainText"]').prop('disabled', true);
-
-				form.find(':submit').html(buttonText);
-			}
-
-			function enableFormInputs(form, buttonText) {
-				form.find(':submit').prop('disabled', false);
-				form.find('textarea[name="commentPlainText"]').prop('disabled', false);
-
-				form.find(':submit').html(buttonText);
-			}
-		});
-
-		function loadComments(comments, highlight) {
-			const commentsContainer = $('#comments-container');
-
-			commentsContainer.find('.post.reply').removeClass('new-comment-highlight');
-
-			if (comments.length > 0) {
-				$('.comments-navigation-button').removeClass('hidden-elem');
-
-				const commentSectionCounter = $('#comment-section-counter');
-				const commentSectionCounterDescriptor = $('#comment-section-counter-descriptor');
-				const expandCommentSectionCounter = $('#expand-comment-section-counter');
-				const expandCommentSectionCounterDescriptor = $('#expand-comment-section-counter-descriptor');
-
-				commentSectionCounter.text(parseInt($(commentSectionCounter).text()) + comments.length);
-				expandCommentSectionCounter.text(parseInt($(expandCommentSectionCounter).text()) + comments.length);
-
-				if (parseInt($(commentSectionCounter).text()) === 1) {
-					commentSectionCounterDescriptor.text('Comment');
-				}
-				else {
-					commentSectionCounterDescriptor.text('Comments');
-				}
-
-				if (parseInt($(expandCommentSectionCounter).text()) === 1) {
-					expandCommentSectionCounterDescriptor.html('Comment');
-				}
-				else {
-					expandCommentSectionCounterDescriptor.html('Comments');
-				}
-
-				comments.forEach(function (comment) {
-					const commentId = comment.commentId;
-					const commentPlainTextSanitized = comment.commentPlainTextSanitized;
-					const timestamp = comment.timestamp;
-
-					if (timestamp > MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP) {
-						MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP = timestamp;
-					}
-
-					const formattedDate = getCreationTimestampFormatted(timestamp);
-					const commentTextHtml = convertCommentToHTML(commentPlainTextSanitized);
-					const replyToCommentIds = extractReplyToCommentIds(commentPlainTextSanitized);
-
-					const commentElement = generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, highlight);
-
-					// cache comments in memory for efficient access
-					COMMENT_ELEMENT_CACHE[commentId] = commentElement;
-
-					// append links to backlinks of comments that reference the comments being prepended to the comments
-					for (const replyToCommentId of replyToCommentIds) {
-						if (COMMENT_ELEMENT_CACHE.hasOwnProperty(replyToCommentId)) {
-							$(COMMENT_ELEMENT_CACHE[replyToCommentId]).find('#bl_' + replyToCommentId).append('<a href="#p' + commentId + '" class="quotelink">&gt;&gt;' + commentId + '</a> ');
-
-							attachQuotelinkListeners(COMMENT_ELEMENT_CACHE[replyToCommentId]);
-						}
-					}
-
-					$(commentsContainer).prepend(commentElement);
-
-					attachQuotelinkListeners(commentElement);
-				});
-			}
-
-			function generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, highlight) {
-				const commentElement = $('\
-					<div class="postContainer replyContainer" id="pc' + commentId + '" data-timestamp="' + timestamp + '">\
-					  <div id="p' + commentId + '" class="post reply">\
-						<div class="postInfoM mobile" id="pim' + commentId + '">\
-						  <span class="nameBlock">\
-							<span class="name">Anonymous</span>\
-							<br>\
-						  </span>\
-						  <span class="dateTime postNum">(' + formattedDate + ')\
-							<a href="#p' + commentId + '" title="Link to this post">No.</a>\
-							<a href="javascript:quote(\'' + commentId + '\');" title="Reply to this post">' + commentId + '</a>\
-						  </span>\
-						</div>\
-						<div class="postInfo desktop" id="pi' + commentId + '">\
-						  <span class="nameBlock">\
-							<span class="name">Anonymous</span>\
-						  </span>\
-						  <span class="dateTime">(' + formattedDate + ')</span>\
-						  <span class="postNum desktop">\
-							<a class="tests" href="#p' + commentId + '" title="Link to this post">No.</a>\
-							<a href="javascript:quote(\'' + commentId + '\');" title="Reply to this post">' + commentId + '</a>\
-						  </span>\
-						  <a class="postMenuBtn" title="Post menu" role="button" data-cmd="post-menu" data-bs-toggle="dropdown" aria-expanded="false" id="comment-' + commentId + '-dropdown-button">&#x25B6;</a>\
-						  <ul class="dropdown-menu" aria-labelledby="comment-' + commentId + '-dropdown-button"><li><a class="dropdown-item" role="button" onclick="showCommentReportModal(\'' + commentId + '\', ' + timestamp + ');">Report</a></li></ul>\
-						  <div id="bl_' + commentId + '" class="backlink"></div>\
-						</div>\
-						<blockquote class="postMessage text-break" id="m' + commentId + '">' + commentTextHtml + '</blockquote>\
-					  </div>\
-					</div>');
-
-				if (highlight) {
-					commentElement.find('.post.reply').addClass('new-comment-highlight');
-				}
-
-				return commentElement;
-			}
-
-			function showQuotePreview(quotePreview, quotelink) {
-				quotePreview.id = 'quote-preview';
-
-				const targetElement = quotePreview.querySelector('.post.reply');
-
-				if (targetElement != null) {
-					targetElement.classList.remove('highlight-anti');
-					targetElement.classList.add('highlight');
-				}
-
-				$('#quote-preview').remove();
-				$('body').append(quotePreview);
-
-				const quotelinkWidth = quotelink.offsetWidth;
-				const quotelinkHeight = quotelink.offsetHeight;
-				const targetElementHeight = quotePreview.offsetHeight;
-				const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-
-				quotePreview.style.position = 'absolute';
-				quotePreview.style.left = quotelink.getBoundingClientRect().left + quotelinkWidth + 5;
-				quotePreview.style.top = scrollY + quotelink.getBoundingClientRect().top - (targetElementHeight / 2) + (quotelinkHeight / 2);
-			}
-
-			function convertCommentToHTML(commentPlainTextSanitized) {
-				const lines = commentPlainTextSanitized.trim().split('\n');
-
-				const html = lines.map(line => {
-					const trimmedLine = line.trim();
-					if (trimmedLine.startsWith('&gt;&gt;')) {
-						const commentId = trimmedLine.substr(8);
-						const quoteLink = '<a href="#p' + commentId + '" class="quotelink">' + trimmedLine + '</a>';
-						return quoteLink;
-					} else if (trimmedLine.startsWith('&gt;&gt;')) {
-						const quotedText = '<span class="quote">' + trimmedLine + '</span>';
-						return quotedText;
-					} else {
-						return trimmedLine;
-					}
-				}).join('<br>');
-
-				return html;
-			}
-
-			function extractReplyToCommentIds(commentPlainTextSanitized) {
-				const regex = /&gt;&gt;(\d+)/g;
-				const matches = [];
-				let match;
-
-				while ((match = regex.exec(commentPlainTextSanitized)) !== null) {
-					matches.push(parseInt(match[1]));
-				}
-
-				return matches;
-			}
-
-			function attachQuotelinkListeners(commentElement) {
-				$(commentElement).find('.quotelink').mouseenter(function () {
-					const quotelink = this;
-
-					const commentId = $(this).text().match(/\d+/g)[0];
-					const comment = $('#p' + commentId);
-
-					const div = document.getElementById('pc' + commentId);
-
-					if (div == null) {
-						const quotingTimestamp = $(quotelink).closest('.postContainer').data('timestamp');
-						$.ajax({ type: 'GET', url: '/videos/' + VIDEO_ID + '/comments/' + commentId, data: { timestamp: quotingTimestamp } })
-							.done(function (data, textStatus, xhr) {
-								if (data.isError) {
-									console.log(data.message);
-								}
-								else {
-									const comment = data.comment;
-
-									if (comment == null) {
-										$(quotelink).addClass('deadlink');
-									}
-									else {
-										const commentId = comment.commentId;
-										const commentPlainTextSanitized = comment.commentPlainTextSanitized;
-										const timestamp = comment.timestamp;
-
-										const formattedDate = getCreationTimestampFormatted(timestamp);
-										const commentTextHtml = convertCommentToHTML(commentPlainTextSanitized);
-
-										const commentElement = generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, false)[0];
-
-										showQuotePreview(commentElement, quotelink);
-									}
-								}
-							})
-							.fail(function () {
-								console.log('unable to communicate with node');
-							});
-					}
-					else {
-						// couldn't get the following to work via JQuery's bounding box API, so using native DOM approach because I can do what I want
-
-						const divOffset = div.getBoundingClientRect();
-						const divHeight = div.offsetHeight;
-						const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-
-						const topLeftCornerAboveScreen = divOffset.top < 0;
-						const topRightCornerAboveScreen = (divOffset.top < 0) && ((divOffset.left + div.offsetWidth) > window.innerWidth || document.documentElement.clientWidth);
-						const bottomLeftCornerBelowScreen = (divOffset.top + divHeight) > windowHeight;
-						const bottomRightCornerBelowScreen = ((divOffset.top + divHeight) > windowHeight) && ((divOffset.left + div.offsetWidth) > window.innerWidth || document.documentElement.clientWidth);
-
-						if (topLeftCornerAboveScreen || topRightCornerAboveScreen || bottomLeftCornerBelowScreen || bottomRightCornerBelowScreen) {
-							const clonedElement = div.cloneNode(true);
-
-							showQuotePreview(clonedElement, quotelink);
-						}
-						else {
-							if (comment.length) {
-								if (comment.is(':target')) {
-									$(comment).addClass('highlight-anti');
-								}
-								else {
-									$(comment).addClass('highlight');
-								}
-							}
-							else {
-								$(quotelink).addClass('deadlink');
-							}
-						}
-					}
-				});
-
-				$(commentElement).find('.quotelink').mouseleave(function () {
-					$('#quote-preview').remove();
-
-					const commentId = $(this).text().match(/\d+/g)[0];
-					const comment = $('#p' + commentId);
-
-					if (comment.is(':target')) {
-						$(comment).removeClass('highlight-anti');
-					}
-					else {
-						$(comment).removeClass('highlight');
-					}
-				});
-
-				$(commentElement).find('.quotelink').click(function () {
-					$('#quote-preview').remove();
-
-					const commentId = $(this).text().match(/\d+/g)[0];
-					const comment = $('#p' + commentId);
-
-					HASH_VALUE = '#p' + commentId;
-
-					$('.post').removeClass('highlight');
-
-					if (comment.is(':target')) {
-						$(comment).removeClass('highlight-anti');
-					}
-					else {
-						$(comment).removeClass('highlight');
-					}
-				});
-			}
-		}
-
-		async function updateComments() {
-			$('#update-comments-button').addClass('hidden-elem');
-			$('#update-comments-button-spinner').removeClass('hidden-elem');
-
-			const previousCommentCount = parseInt($('#comment-section-counter').text());
-
-			$.ajax({ type: 'GET', url: '/videos/' + VIDEO_ID + '/comments', data: { timestamp: MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP, type: 'after', sort: 'ascending' } })
-				.done(function (data, textStatus, xhr) {
-					if (data.isError) {
-						console.log(data.message);
-					}
-					else {
-						const comments = data.comments;
-
-						loadComments(comments, true);
-
-						const newCommentCount = parseInt($('#comment-section-counter').text());
-
-						$('#update-comments-button').removeClass('hidden-elem');
-						$('#update-comments-button-spinner').addClass('hidden-elem');
-
-						let commentCountDifference = newCommentCount - previousCommentCount;
-
-						if (commentCountDifference === 1) {
-							$('#comment-section-update-descriptor').text('1 new comment');
-						}
-						else {
-							$('#comment-section-update-descriptor').text(commentCountDifference + ' new comments');
-						}
-
-						setTimeout(function () {
-							$('#comment-section-update-descriptor').text('');
-						}, 3000);
-					}
-				})
-				.fail(function () {
-					console.log('unable to communicate with node');
-				});
-		}
-
-		function openCommentSection() {
-			$('#recommended-videos-list-container').css('display', 'none');
-			$('#expand-comment-section').css('display', 'none');
-			$('#comment-section').css('display', 'block');
-			$('#comment-section-back-button-container').removeClass('hidden-elem');
-
-			refreshTextAreas();
-		}
-
-		function closeCommentSection() {
-			$('#comment-section-back-button-container').addClass('hidden-elem');
-			$('#comment-section').css('display', 'none');
-			$('#expand-comment-section').css('display', 'block');
-			$('#recommended-videos-list-container').css('display', 'block');
-		}
-
-		function downloadVideo() {
-			if (DOWNLOADABLE_SOURCES.length > 0) {
-				let html = '';
-
-				for (const downloadableSource of DOWNLOADABLE_SOURCES) {
-					const segments = downloadableSource.src.split('/');
-					const downloadLink = downloadableSource.src;
-
-					html += '<a href="' + downloadLink + '"><button type="button" class="btn btn-link">' + segments[7] + '-' + segments[8] + '</button></a><br>';
-				}
-
-				Swal.fire({
-					title: 'Download Video',
-					html: html,
-					showCloseButton: true,
-					showConfirmButton: false
-				});
-			}
-			else {
-				Swal.fire({
-					icon: 'info',
-					html: '<p>this video doesn\'t have an available format for download<br>(mp4, webm, ogv)</p>',
-					showCloseButton: true,
-					showConfirmButton: false
-				});
-			}
-		}
-
-		function shareVideo() {
-			const videoId = VIDEO_ID;
-
-			const nodeVideoUrl = NODE_BASE_URL + '/watch?v=' + videoId;
-
-			const embedUrl = NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0';
-
-			const embedHtml_1 = '<iframe class="w-100" src="' + NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0" style="aspect-ratio: 16/9;" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="clipboard-write"></iframe>';
-			const embedHtml_2 = '<iframe src="' + NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="clipboard-write"></iframe>';
-
-			const embedSVG = '<svg viewBox="0 0 36 36" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><circle cx="18" cy="18" r="17.5" stroke="#E7E7E7" fill="#F4F4F4" stroke-width=".5"></circle><path d="m21.41,23.29l-0.71,-0.71l4.59,-4.58l-4.59,-4.59l0.71,-0.71l5.3,5.3l-5.3,5.29zm-6.12,-0.7l-4.58,-4.59l4.59,-4.59l-0.71,-0.7l-5.3,5.29l5.29,5.29l0.71,-0.7z" fill="#606060"></path></svg>';
-			const twitterSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.486325 59.969298c-6.636404-.569063-11.56302-2.326956-16.321973-5.823932C4.443764 48.472116 0 39.646792 0 29.986934 0 15.11156 10.506778 2.798388 25.274412.36718c6.028107-.992411 12.703853.049265 18.28794 2.85363 13.576275 6.818095 19.7813 22.541053 14.64267 37.103159-3.527955 9.997705-12.789708 17.617785-23.391072 19.244938-2.085625.320112-5.065149.508645-6.327625.400391z" fill="#1DA1F2" fill-rule="nonzero"></path><path d="M45.089067 17.577067c-.929778.595555-3.064534 1.460977-4.117334 1.460977v.001778C39.7696 17.784 38.077156 17 36.200178 17c-3.645511 0-6.6016 2.956089-6.6016 6.600178 0 .50631.058666 1.000178.16711 1.473778h-.001066c-4.945066-.129778-10.353422-2.608356-13.609244-6.85049-2.001778 3.46489-.269511 7.3184 2.002133 8.72249-.7776.058666-2.209067-.0896-2.882844-.747023-.045156 2.299734 1.060622 5.346845 5.092622 6.452267-.776533.417778-2.151111.297956-2.7488.209067.209778 1.941333 2.928355 4.479289 5.901155 4.479289C22.46009 38.565156 18.4736 40.788089 14 40.080889 17.038222 41.929422 20.5792 43 24.327111 43c10.650667 0 18.921956-8.631822 18.4768-19.280356-.001778-.011733-.001778-.023466-.002844-.036266.001066-.027378.002844-.054756.002844-.0832 0-.033067-.002844-.064356-.003911-.096356.9696-.66311 2.270578-1.836089 3.2-3.37991-.539022.296888-2.156089.891377-3.6608 1.038932.965689-.521244 2.396444-2.228266 2.749867-3.585777" fill="#FFF"></path></g></svg>';
-			const redditSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill-rule="nonzero" fill="none"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#FF4500"></path><path d="M34.1335847 43.9991814c1.6336774-.3831682 2.81654-.7939438 3.9781753-1.3815065 3.6153903-1.8286959 5.8788354-4.8645264 5.8788354-7.8849481 0-.9131088.0196207-.9556355.780668-1.6923265.6040409-.5847092.8404012-.962515 1.044679-1.6698428.2433185-.8425206.2441028-.9826228.0100139-1.7878614-.6566532-2.2588075-3.0054252-3.2764371-5.1075029-2.212882l-.8124519.4110627-.837264-.5151716c-1.6101652-.9907471-4.473974-1.96108051-6.3205111-2.14155924-.5059537-.04945042-1.143803-.1235464-1.4174535-.16465815l-.4975382-.07474783.2136595-1.06953332c.1175125-.5882423.3623778-1.7491883.5441475-2.57987956.181767-.83069153.4095191-1.95749071.5061138-2.50399817.1396137-.78991765.2348596-.99365031.4645331-.99365031.1589005 0 1.2955101.21462853 2.5257988.4769522 1.2302915.26232367 2.2622022.47695193 2.293134.47695193.0309345 0 .1003234.23497925.154203.52217616.1363137.72661143.4902897 1.17780487 1.2134714 1.54674469 1.7356128.8854428 3.6891485-.29431302 3.6891485-2.22790474 0-2.3956262-2.9538443-3.44186625-4.4550019-1.57794377-.2901205.36022881-.4356746.42625561-.7154284.32453216-.1931649-.07023833-1.5202546-.3669593-2.9490951-.65938053-1.8923676-.38728585-2.6686067-.48706487-2.8582979-.36740978-.2896185.1826864-.2522224.047706-1.0501419 3.79055007-.9490696 4.45187338-1.0064011 4.70400786-1.0882029 4.78580828-.0432388.04324046-.729551.14596475-1.5251367.22827402-2.413687.24971784-5.06621906 1.10194849-6.8544721 2.20227189l-.8268564.5087695-.81204644-.4046587c-2.11972653-1.0563058-4.47243958-.0382468-5.1287215 2.2192841-.23408885.8052386-.23330375.9453408.0100166 1.7878614.20427624.7073278.44063816 1.0851336 1.04467744 1.6698428.76105187.736691.78066878.7792177.78066878 1.6923265 0 4.172347 4.28816886 8.1540991 10.01599352 9.3002929 1.8975637.3797217 2.0263168.3894072 4.4515526.3349143 1.5849893-.0356103 2.7274992-.1508298 3.6566327-.3687526zm-6.6864685-3.0300366c-1.3154638-.2961613-2.8032079-.9569232-3.2391341-1.4386156-.34760429-.384099-.198986-.9659493.246724-.9659493.1736296 0 .5801788.1805458.9034441.4012095 2.1828306 1.4900284 7.1085991 1.484628 9.2987021-.0101767.7054363-.4814861 1.2827246-.468194 1.3538857.0311679.0334854.234998-.1164569.4687666-.4771278.7438635-1.7511846 1.3356924-5.2646974 1.8738181-8.086494 1.2385197v-.000019zm-4.01196195-5.9075609c-.81902983-.4443886-1.22403999-1.1532958-1.22477787-2.143771-.000787-1.135302.52653614-1.8699603 1.59778946-2.2257735.76240766-.253232.85344696-.2532238 1.51689516.0001492 1.785415.6818561 2.1507834 2.909296.6724678 4.0996229-.7705198.6204159-1.7299516.7214286-2.56237455.2697724zm11.09588945.0732995c-.7590038-.3947507-1.1832989-.8746601-1.3628596-1.5414995-.3321829-1.2336253.2931784-2.4377233 1.5067529-2.9011953.6634485-.253373.754488-.2533812 1.5168976-.0001492 1.0712525.3558132 1.5986343 1.0904715 1.5977903 2.2257735-.0008141 1.0085002-.4138259 1.7116813-1.2587076 2.1427072-.7599699.3877084-1.3548626.4098285-1.9998736.0743633z" fill="#FDFDFD"></path></g></svg>';
-			const facebookSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#3B5998" fill-rule="nonzero"></path><path d="M25.7305108 45h5.4583577V30.0073333h4.0947673l.8098295-4.6846666h-4.9045968V21.928c0-1.0943333.7076019-2.2433333 1.7188899-2.2433333h2.7874519V15h-3.4161354v.021c-5.3451414.194-6.4433395 3.2896667-6.5385744 6.5413333h-.0099897v3.7603334H23v4.6846666h2.7305108V45z" fill="#FFF"></path></g></svg>';
-
-			const html = $('<div class="share-icon-container"><a id="share-twitter-link" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + twitterSVG + '</div><div class="share-icon-title">Twitter</div></button></a></div>\
-				<div class="share-icon-container"><a id="share-reddit-link" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + redditSVG + '</div><div class="share-icon-title">Reddit</div></button></a></div>\
-				<div class="share-icon-container"><a id="share-facebook-link" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + facebookSVG + '</div><div class="share-icon-title">Facebook</div></button></a></div>\
-				<div>' + embedHtml_1 + '</div>\
-				<div class="input-group mt-1"><input id="node-video-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="node-video-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
-				<div class="input-group mt-1"><input id="moartube-video-alias-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="moartube-video-alias-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
-				<div class="input-group mt-1"><input id="video-alias-embed-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="video-alias-embed-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
-				<div class="input-group mt-1"><input id="video-alias-embed-code-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="video-alias-embed-code-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>');
-
-			Swal.fire({
-				title: 'share',
-				html: html,
-				showConfirmButton: false,
-				showCloseButton: true,
-				showCancelButton: false,
-				didOpen: () => {
-					Swal.showLoading();
-
-					$.ajax({ type: 'GET', url: '/videos/' + videoId + '/data' })
-						.done(async function (data, textStatus, xhr) {
-							if (data.isError) {
-								showAlert(true, data.message);
-							}
-							else {
-								Swal.hideLoading();
-
-								const videoData = data.videoData;
-
-								const title = videoData.title;
-								const videoAliasUrl = videoData.videoAliasUrl;
-
-								let twitterLink;
-								let redditLink;
-								let facebookLink;
-
-								if (videoAliasUrl === 'MoarTube Aliaser link unavailable (video not indexed)') {
-									twitterLink = 'https://twitter.com/intent/tweet?url=' + nodeVideoUrl + '&text=' + title + '&via=MoarTubes&related=MoarTubes';
-									redditLink = 'https://www.reddit.com/submit?url=' + nodeVideoUrl + '&title=' + title;
-									facebookLink = 'https://www.facebook.com/dialog/share?app_id=246871938290679&href=' + nodeVideoUrl + '&display=popup';
-								}
-								else {
-									twitterLink = 'https://twitter.com/intent/tweet?url=' + videoAliasUrl + '&text=' + title + '&via=MoarTubes&related=MoarTubes';
-									redditLink = 'https://www.reddit.com/submit?url=' + videoAliasUrl + '&title=' + title;
-									facebookLink = 'https://www.facebook.com/dialog/share?app_id=246871938290679&href=' + videoAliasUrl + '&display=popup';
-								}
-
-								$('#share-twitter-link').attr('href', twitterLink);
-								$('#share-reddit-link').attr('href', redditLink);
-								$('#share-facebook-link').attr('href', facebookLink);
-
-								$('#node-video-url-input').val(nodeVideoUrl);
-								$('#moartube-video-alias-url-input').val(videoAliasUrl);
-								$('#video-alias-embed-url-input').val(embedUrl);
-								$('#video-alias-embed-code-input').val(embedHtml_2);
-
-								$('#video-alias-embed-url-copy-button').click(function (event) {
-									const value = $('#video-alias-embed-url-input').val();
-
-									setClipboard(value);
-								});
-
-								$('#video-alias-embed-code-copy-button').click(function (event) {
-									const value = $('#video-alias-embed-code-input').val();
-
-									setClipboard(value);
-								});
-
-								$('#moartube-video-alias-url-copy-button').click(function (event) {
-									const value = $('#moartube-video-alias-url-input').val();
-
-									setClipboard(value);
-								});
-
-								$('#node-video-url-copy-button').click(function (event) {
-									const value = $('#node-video-url-input').val();
-
-									setClipboard(value);
-								});
-
-								refreshClickTooltips();
-							}
-						})
-						.fail(function () {
-							console.log('unable to communicate with node');
-						});
-				}
-			});
-		}
-
-		function donateVideo() {
-			if (window.ethereum) {
-				let selectedCryptoWalletAddress;
-				let selectedChainId;
-
-				let optionsHtml = '<option selected disabled>Donate to crypto address...</option>';
-
-				CRYPTO_WALLET_ADDRESSES.forEach(function (cryptoWalletAddress) {
-					const walletAddressId = cryptoWalletAddress.wallet_address_id;
-					const walletAddress = cryptoWalletAddress.wallet_address;
-					const chain = cryptoWalletAddress.chain;
-
-					optionsHtml += '<option value="' + walletAddressId + '">' + walletAddress + ' (' + chain + ')</option>';
-				});
-
-				const html = $('\
-						<div id="donate-modal" class="multisteps-form__content">\
-							<div class="text-center">\
-								<image class="img-fluid" src="' + EXTERNAL_RESOURCES_BASE_URL + '/external/resources/images/donate.jpg" style="max-width: 500px;"/>\
-							</div>\
-							<div class="row mt-3">\
-								<div class="col-12">\
-									<select id="wallet-address-select" class="multisteps-form__select form-control">' + optionsHtml + '</select>\
-								</div>\
-							</div>\
-							<div class="mt-3">\
-								<input id="donation-amount-input" class="multisteps-form__input form-control text-center" type="number" placeholder="donation amount" disabled>\
-							</div>\
-						</div>\
-					');
-
-				Swal.fire({
-					title: 'Donate to Creator',
-					html: html,
-					width: 'auto',
-					showConfirmButton: true,
-					confirmButtonText: 'Continue',
-					showCloseButton: true,
-					showCancelButton: true,
-					willOpen: () => {
-						$(swal.getConfirmButton()).prop('disabled', true)
-					},
-					didOpen: () => {
-						$('#wallet-address-select').on('change', function () {
-							const walletAddressId = Number(this.value);
-
-							for (const cryptoWalletAddress of CRYPTO_WALLET_ADDRESSES) {
-								if (cryptoWalletAddress.wallet_address_id === walletAddressId) {
-									selectedCryptoWalletAddress = cryptoWalletAddress;
-
-									$('#donation-amount-input').attr('placeholder', 'donation amount (' + cryptoWalletAddress.currency + ')');
-									$('#donation-amount-input').removeAttr('disabled');
-
-									break;
-								}
-							}
-						});
-
-						$('#donation-amount-input').on('input', function () {
-							const donationAmount = this.value;
-
-							if (donationAmount.length === 0) {
-								$(swal.getConfirmButton()).prop('disabled', true)
-							}
-							else {
-								$(swal.getConfirmButton()).prop('disabled', false)
-							}
-						});
-					}
-				})
-					.then((result) => {
-						if (result.isConfirmed) {
-							const walletAddress = selectedCryptoWalletAddress.wallet_address;
-							const chain = selectedCryptoWalletAddress.chain;
-							const chainId = selectedCryptoWalletAddress.chain_id;
-							const donationAmount = $('#donation-amount-input').val();
-
-							openCryptoClient(walletAddress, chain, chainId, donationAmount);
-						}
-					});
-			}
-			else {
-				Swal.fire({
-					title: 'Missing Crypto Wallet',
-					html: 'Your browser doesn\'t have a supported crypto wallet installed.<br>MoarTube supports crypto wallets that conform to the EIP-1193 standard.<br>Would you like to be directed to a supported crypto wallet? ',
-					width: 'auto',
-					icon: "info",
-					showConfirmButton: true,
-					confirmButtonText: '<a href="https://metamask.io/download" target="_blank" style="text-decoration: none; color: white;">Continue</a>',
-					cancelButtonText: 'Cancel',
-					showCloseButton: true,
-					showCancelButton: true
-				});
-			}
-		}
-
-
-
-		/*
-		like/dislike logic:
-			MoarTube does not conduct node or client like/dislike tracking of its users.
-			MoarTube Node only keeps track of like/dislike counters.
-		*/
-		async function likeVideo() {
-			const videoLikeButton = $('#video-like-button');
-
-			if (!$(videoLikeButton).hasClass('btn-primary')) {
-				const videoDislikeButton = $('#video-dislike-button');
-
-				disableLikeDislikeButtons();
-
-				$(videoLikeButton).blur();
-
-				$(videoLikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
-				$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
-
-				(async function () {
-					try {
-						await performLike();
-
-						const likeCount = $('#video-like-count').text();
-						let likeCountParsed = parseInt(likeCount);
-						likeCountParsed++;
-						$('#video-like-count').text(likeCountParsed);
-					}
-					catch (error) {
-						$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
-
-						showAlert(true, error.message || error);
-					}
-					finally {
-						enableLikeDislikeButtons();
-					}
-				})();
-			}
-		}
-
-		async function dislikeVideo() {
-			const videoDislikeButton = $('#video-dislike-button');
-
-			if (!$(videoDislikeButton).hasClass('btn-primary')) {
-				const videoLikeButton = $('#video-like-button');
-
-				disableLikeDislikeButtons();
-
-				$(videoDislikeButton).blur();
-
-				$(videoDislikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
-				$(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
-
-				(async function () {
-					try {
-						await performDislike();
-
-						const dislikeCount = $('#video-dislike-count').text();
-						let dislikeCountParsed = parseInt(dislikeCount);
-						dislikeCountParsed++;
-						$('#video-dislike-count').text(dislikeCountParsed);
-					}
-					catch (error) {
-						$(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
-
-						showAlert(true, error.message || error);
-					}
-					finally {
-						enableLikeDislikeButtons();
-					}
-				})();
-			}
-		}
-
-		function disableLikeDislikeButtons() {
-			const videoLikeButton = $('#video-like-button');
-			const videoDislikeButton = $('#video-dislike-button');
-
-			$(videoLikeButton).prop('disabled', true);
-			$(videoDislikeButton).prop('disabled', true);
-		}
-
-		function enableLikeDislikeButtons() {
-			const videoLikeButton = $('#video-like-button');
-			const videoDislikeButton = $('#video-dislike-button');
-
-			$(videoLikeButton).prop('disabled', false);
-			$(videoDislikeButton).prop('disabled', false);
-		}
-
-		async function performLike() {
-			try {
-				const cloudflareTurnstileToken = await getCloudflareTurnstileToken();
-
-				const data = await $.ajax({
-					type: 'POST',
-					url: '/videos/' + VIDEO_ID + '/like',
-					data: JSON.stringify({ cloudflareTurnstileToken }),
-					contentType: 'application/json; charset=utf-8',
-				});
-
-				if (data.isError) {
-					throw new Error(data.message);
-				}
-				else {
-					Swal.close();
-				}
-			}
-			catch (error) {
-				throw error;
-			}
-		}
-
-		async function performDislike() {
-			try {
-				const cloudflareTurnstileToken = await getCloudflareTurnstileToken();
-
-				const data = await $.ajax({
-					type: 'POST',
-					url: '/videos/' + VIDEO_ID + '/dislike',
-					data: JSON.stringify({ cloudflareTurnstileToken }),
-					contentType: 'application/json; charset=utf-8',
-				});
-
-				if (data.isError) {
-					throw new Error(data.message);
-				}
-				else {
-					Swal.close();
-				}
-			}
-			catch (error) {
-				throw error;
-			}
-		}
-
-		function incrementLikeCount() {
-			const likeCount = $('#video-like-count').text();
-			let likeCountParsed = parseInt(likeCount);
-			likeCountParsed++;
-			$('#video-like-count').text(likeCountParsed);
-		}
-
-		function decrementLikeCount() {
-			const likeCount = $('#video-like-count').text();
-			let likeCountParsed = parseInt(likeCount);
-			likeCountParsed--;
-			$('#video-like-count').text(likeCountParsed);
-		}
-
-		function incrementDislikeCount() {
-			const dislikeCount = $('#video-dislike-count').text();
-			let dislikeCountParsed = parseInt(dislikeCount);
-			dislikeCountParsed++;
-			$('#video-dislike-count').text(dislikeCountParsed);
-		}
-
-		function decrementDislikeCount() {
-			const dislikeCount = $('#video-dislike-count').text();
-			let dislikeCountParsed = parseInt(dislikeCount);
-			dislikeCountParsed--;
-			$('#video-dislike-count').text(dislikeCountParsed);
-		}
-
-		function showVideoReportModal() {
-			const html = '\
-					<div class="input-group mb-3"><textarea id="report-message-textarea" class="swal2-textarea" placeholder="Type your report here..." maxlength="1000"></textarea></div>\
-					<div class="input-group mb-3"><input id="report-email-input" class="swal2-input" placeholder="email (optional)" maxlength="100"></div>\
-					<div class="input-group mb-3"> \
-						<div class="input-group justify-content-center">\
-							<div class="form-check"> \
-							  <label class="custom-control-label" for="report-complaint">complaint&nbsp&nbsp&nbsp</label>\
-							  <input id="report-complaint" class="form-check-input" type="radio" name="reportTypeRadioButton" value="complaint">\
-							</div>\
-							<div class="form-check">\
-							  <label class="custom-control-label" for="report-copyright">copyright&nbsp&nbsp&nbsp</label>\
-							  <input id="report-copyright" class="form-check-input" type="radio" name="reportTypeRadioButton" value="copyright">\
-							</div>\
-							<div class="form-check">\
-							  <label class="custom-control-label" for="report-other">other&nbsp&nbsp&nbsp</label>\
-							  <input id="report-other" class="form-check-input" type="radio" name="reportTypeRadioButton" value="other">\
-							</div>\
-						</div>\
-					</div>';
-
-			Swal.fire({
-				title: 'report video',
-				html: html,
-				showCloseButton: true,
-				confirmButtonText: 'submit',
-				focusConfirm: false,
-				preConfirm: async () => {
-					Swal.showLoading();
-
-					const message = Swal.getHtmlContainer().querySelector('#report-message-textarea').value;
-					const email = Swal.getHtmlContainer().querySelector('#report-email-input').value;
-
-					let reportType = '';
-					const reportTypeRadioButtons = Swal.getHtmlContainer().querySelectorAll('input[name="reportTypeRadioButton"]');
-					reportTypeRadioButtons.forEach(reportTypeButton => {
-						if (reportTypeButton.checked) {
-							reportType = reportTypeButton.value;
-						}
-					});
-
-					try {
-						const cloudflareTurnstileToken = await getCloudflareTurnstileToken();
-
-						const data = { message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken };
-
-						$.ajax({ type: 'POST', url: '/videos/' + VIDEO_ID + '/report', data: JSON.stringify(data), contentType: 'application/json; charset=utf-8' })
-							.done(function (data) {
-								if (data.isError) {
-									showAlert(true, data.message);
-								}
-								else {
-									Swal.close();
-								}
-							})
-							.fail(function (xhr, status, error) {
-								console.error('Error submitting the report:', status, error);
-
-								showAlert(true, 'An error occurred while submitting your report. Please try again.');
-							});
-					}
-					catch (error) {
-						showAlert(true, error);
-					}
-				}
-			});
-		}
-
-		function showCommentReportModal(commentId, timestamp) {
-			const html = '\
-					<div class="input-group mb-3"><textarea id="report-message-textarea" class="swal2-textarea" placeholder="Type your report here..." maxlength="1000"></textarea></div>\
-					<div class="input-group mb-3"><input id="report-email-input" class="swal2-input" placeholder="email (optional)" maxlength="100"></div>\
-					<div class="input-group mb-3"> \
-						<div class="input-group justify-content-center">\
-							<div class="form-check"> \
-							  <label class="custom-control-label" for="report-complaint">complaint&nbsp&nbsp&nbsp</label>\
-							  <input id="report-complaint" class="form-check-input" type="radio" name="reportTypeRadioButton" value="complaint">\
-							</div>\
-							<div class="form-check">\
-							  <label class="custom-control-label" for="report-copyright">copyright&nbsp&nbsp&nbsp</label>\
-							  <input id="report-copyright" class="form-check-input" type="radio" name="reportTypeRadioButton" value="copyright">\
-							</div>\
-							<div class="form-check">\
-							  <label class="custom-control-label" for="report-other">other&nbsp&nbsp&nbsp</label>\
-							  <input id="report-other" class="form-check-input" type="radio" name="reportTypeRadioButton" value="other">\
-							</div>\
-						</div>\
-					</div>';
-
-			Swal.fire({
-				title: 'report comment',
-				html: html,
-				showCloseButton: true,
-				confirmButtonText: 'submit',
-				focusConfirm: false,
-				preConfirm: async () => {
-					Swal.showLoading();
-
-					const message = Swal.getHtmlContainer().querySelector('#report-message-textarea').value;
-					const email = Swal.getHtmlContainer().querySelector('#report-email-input').value;
-
-					let reportType = '';
-					const reportTypeRadioButtons = Swal.getHtmlContainer().querySelectorAll('input[name="reportTypeRadioButton"]');
-					reportTypeRadioButtons.forEach(reportTypeButton => {
-						if (reportTypeButton.checked) {
-							reportType = reportTypeButton.value;
-						}
-					});
-
-					try {
-						const cloudflareTurnstileToken = await getCloudflareTurnstileToken();
-
-						const data = { message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken, videoId: VIDEO_ID, timestamp: timestamp };
-
-						$.ajax({ type: 'POST', url: '/comments/' + commentId + '/report', data: JSON.stringify(data), contentType: 'application/json; charset=utf-8' })
-							.done(function (data) {
-								if (data.isError) {
-									showAlert(true, data.message);
-								}
-								else {
-									Swal.close();
-								}
-							})
-							.fail(function (xhr, status, error) {
-								console.error('Error submitting the report:', status, error);
-
-								showAlert(true, 'An error occurred while submitting your report. Please try again.');
-							});
-					}
-					catch (error) {
-						showAlert(true, error);
-					}
-				}
-			});
-		}
-
-		function showSettings() {
-			if (typeof (Storage) != null) {
-				let value = localStorage.getItem('dark-mode-enabled') === 'true';
-
-				if (value) {
-					$('#darkModeSwitch').prop('checked', true);
-				}
-				else {
-					$('#darkModeSwitch').prop('checked', false);
-				}
-
-				$('#darkModeSwitch').off('change');
-				$('#darkModeSwitch').change(async function () {
-					IS_DARK_MODE_ENABLED = $('#darkModeSwitch').prop('checked');
-
-					if (IS_DARK_MODE_ENABLED) {
-						$('#dark-mode-style').prop('disabled', false);
-					}
-					else {
-						$('#dark-mode-style').prop('disabled', true);
-					}
-
-					if (typeof (Storage) != null) {
-						localStorage.setItem('dark-mode-enabled', IS_DARK_MODE_ENABLED);
-					}
-					else {
-						console.log('localStorage is not supported in this browser.');
-					}
-				});
-			}
-			else {
-				console.log('localStorage is not supported in this browser.');
-			}
-		}
-
-		function getViewsFormatted(views) {
-			let totalViews = '';
-
-			if (views === 1) {
-				totalViews = 1 + ' view';
-			}
-			else {
-				totalViews = views + ' views';
-			}
-
-			return totalViews;
-		}
-
-		function getCreationTimestampFormatted(creationTimestamp) {
-			let timeElapsed = '';
-
-			const currentTimestamp = Date.now();
-			const timeDifference = currentTimestamp - creationTimestamp;
-
-			if (timeDifference < 60000) {
-				timeElapsed = "just now"
-			} else if (timeDifference < 3600000) {
-				const minutes = Math.floor(timeDifference / 60000);
-				if (minutes === 1) {
-					timeElapsed = "1 minute ago"
-				} else if (minutes === 0 || minutes > 1) {
-					timeElapsed = minutes + " minutes ago"
-				}
-			} else if (timeDifference < 86400000) {
-				const hours = Math.floor(timeDifference / 3600000);
-				if (hours === 1) {
-					timeElapsed = "1 hour ago"
-				} else if (hours === 0 || hours > 1) {
-					timeElapsed = hours + " hours ago"
-				}
-			} else if (timeDifference < 2592000000) {
-				const days = Math.floor(timeDifference / 86400000);
-				if (days === 1) {
-					timeElapsed = "1 day ago"
-				} else if (days === 0 || days > 1) {
-					timeElapsed = days + " days ago"
-				}
-			} else if (timeDifference < 31536000000) {
-				const months = Math.floor(timeDifference / 2592000000);
-				if (months === 1) {
-					timeElapsed = "1 month ago"
-				} else if (months === 0 || months > 1) {
-					timeElapsed = months + " months ago"
-				}
-			} else {
-				const years = Math.floor(timeDifference / 31536000000);
-				if (years === 1) {
-					timeElapsed = "1 year ago"
-				} else if (years === 0 || years > 1) {
-					timeElapsed = years + " years ago"
-				}
-			}
-
-			return timeElapsed;
-		}
-
-		function quote(commentId) {
-			$(COMMENT_INPUT_FORM_DYNAMIC).remove();
-
-			let textarea = $(COMMENT_INPUT_FORM_DYNAMIC).find('textarea');
-
-			let start_position = $(textarea)[0].selectionStart;
-			let end_position = $(textarea)[0].selectionEnd;
-
-			$(textarea).val(function (index, value) {
-				return value.substring(0, start_position) + '>>' + commentId + '\n' + value.substring(end_position);
-			});
-
-			$('#p' + commentId).append(COMMENT_INPUT_FORM_DYNAMIC);
-
-			$(textarea).each(function () {
-				this.setAttribute("style", "height:" + (this.scrollHeight) + "px;overflow-y:hidden;resize:none;");
-			}).on("input", function () {
-				this.style.height = 0;
-				this.style.height = (this.scrollHeight) + "px";
-			});
-
-			$(textarea).focus();
-		}
-
-		function convertSecondsToDurationFormatted(seconds) {
-			seconds = Math.floor(seconds);
-
-			const years = Math.floor(seconds / (3600 * 24 * 365));
-
-			seconds -= years * (3600 * 24 * 365);
-
-			const days = Math.floor(seconds / (3600 * 24));
-
-			seconds -= days * (3600 * 24);
-
-			const hours = Math.floor(seconds / 3600);
-
-			seconds -= hours * 3600;
-
-			const minutes = Math.floor(seconds / 60);
-
-			seconds -= minutes * 60;
-
-			let durationFormatted = '';
-
-			if (years > 0) {
-				durationFormatted += years + ' years, ';
-			}
-
-			if (days > 0) {
-				durationFormatted += days + ' days, ';
-			}
-
-			if (hours > 0 || years > 0 || days > 0) {
-				durationFormatted += hours + ':';
-			}
-
-			if (minutes < 10 && (hours > 0 || years > 0 || days > 0)) {
-				durationFormatted += '0';
-			}
-
-			durationFormatted += minutes + ':';
-
-			if (seconds < 10) {
-				durationFormatted += '0';
-			}
-
-			durationFormatted += seconds;
-
-			return durationFormatted;
-		}
-
-		function showAlert(isError, message) {
-			if (isError) {
-				Swal.fire({
-					html: message,
-					icon: 'warning',
-					confirmButtonColor: '#3085d6',
-					confirmButtonText: 'Ok'
-				});
-			}
-			else {
-				if (message === '') {
-					Swal.fire({
-						icon: 'success',
-						showConfirmButton: false,
-						timer: 1500
-					});
-				}
-				else {
-					Swal.fire({
-						icon: 'success',
-						html: message
-					});
-				}
-			}
-		}
-
-		async function getCloudflareTurnstileToken() {
-			if (CLOUDFLARE_TURNSTILE_SITE_KEY === '') {
-				return '';
-			}
-
-			return new Promise((resolve, reject) => {
-				turnstile.render('#captcha-container', {
-					sitekey: CLOUDFLARE_TURNSTILE_SITE_KEY,
-					callback: (token) => {
-						resolve(token);
-					},
-					'unsupported-callback': () => {
-						reject('Unable to activate that feature');
-					},
-					'timeout-callback': () => {
-						reject('Human verification was unsuccessful');
-					},
-					'error-callback': () => {
-						reject('Human verification encountered an error');
-					},
-					'refresh-expired': 'never',
-					retry: 'never',
-				});
-			});
-		}
-
-		async function openCryptoClient(walletAddress, chain, chainId, donationAmount) {
-			if (window.ethereum) {
-				try {
-					await ethereum.request({
-						method: 'wallet_switchEthereumChain',
-						params: [{ chainId: chainId }]
-					});
-
-					console.log('Crypto wallet changed to Mainnet ' + chain);
-
-					const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-
-					if (accounts) {
-						const web3 = new Web3(ethereum);
-
-						const weiAmount = web3.utils.toWei(donationAmount, 'ether');
-						const weiAmountHex = web3.utils.toHex(BigInt(weiAmount));
-
-						const transactionParams = {
-							to: walletAddress,
-							from: accounts[0],
-							value: weiAmountHex
-						};
-
-						await ethereum.request({
-							method: 'eth_sendTransaction',
-							params: [transactionParams]
-						});
-
-						console.log('Crypto wallet transaction initiated');
-					}
-				}
-				catch (error) {
-					console.error(error);
-				}
-			}
-		}
-	</script>
+const INCOMING_PARAMETERS = <%- JSON.stringify(model) %>;
+
+class MoarTubeWatch {
+  constructor() {
+    this.INCOMING_PARAMETERS = INCOMING_PARAMETERS;
+    this.VIDEO_ID = null;
+    this.VIEW_COUNT = null;
+    this.TIME_PARAMETER = null;
+    this.HASH_VALUE = '';
+    this.NODE_ID = null;
+    this.NODE_NAME = null;
+    this.NODE_PROTOCOL = null;
+    this.NODE_ADDRESS = null;
+    this.NODE_PORT = null;
+    this.NODE_BASE_URL = null;
+    this.CLOUDFLARE_TURNSTILE_SITE_KEY = null;
+    this.COMMENT_ELEMENT_CACHE = {};
+    this.RECOMMENDED_VIDEOS_TAGS_CACHE = { '': [] };
+    this.DOWNLOADABLE_SOURCES = [];
+    this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP = 0;
+    this.CURRENT_VIDEO_RESOLUTION = null;
+    this.CURRENT_VIDEO_FORMAT = null;
+    this.TIMESTAMP_UPDATE_TRACKER = [];
+    this.CRYPTO_WALLET_ADDRESSES = [];
+    this.EXTERNAL_VIDEOS_BASE_URL = null;
+    this.EXTERNAL_RESOURCES_BASE_URL = null;
+    this.THEATER_MODE_BUTTON = null;
+    this.COMMENT_INPUT_FORM_DYNAMIC = $('\
+      <form id="comment-input-form-dynamic" class="comment-input-form" role="form" method="POST" data-commentformtype="dynamic" style="background: #cb0c9f12;padding: 5px 5px 5px 5px;">\
+        <textarea class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area" rows="1" placeholder="Add a comment..." maxlength="500" name="commentPlainText"></textarea>\
+        <div class="text-end mt-1">\
+          <div id="comment-input-form-dynamic-submit-container">\
+            <button id="comment-input-form-dynamic-cancel-button-inner" class="btn btn-outline-primary" type="button" data-commentformtype="dynamic" onclick="$(\'#comment-input-form-dynamic\').remove();$(this).parent().parent().parent().find(\'textarea\').val(\'\');">cancel</button>\
+            <button class="btn btn-outline-primary" type="submit">submit</button>\
+            <div id="comment-input-form-dynamic-error-message"></div>\
+          </div>\
+        </div>\
+      </form>');
+  }
+
+  init() {
+    const params = new URL(window.location.href).searchParams;
+    this.VIDEO_ID = params.get('v');
+    if (this.VIDEO_ID != null) {
+      this.HASH_VALUE = window.location.hash;
+      this.TIME_PARAMETER = params.get('t');
+      if (this.TIME_PARAMETER != null) {
+        this.TIME_PARAMETER = Number(this.TIME_PARAMETER);
+        if (Number.isNaN(this.TIME_PARAMETER)) {
+          this.TIME_PARAMETER = null;
+        }
+      }
+      this.EXTERNAL_VIDEOS_BASE_URL = this.INCOMING_PARAMETERS.externalVideosBaseUrl;
+      this.EXTERNAL_RESOURCES_BASE_URL = this.INCOMING_PARAMETERS.externalResourcesBaseUrl;
+      this.loadInformation(this.INCOMING_PARAMETERS.informationData.information);
+      this.loadLinks(this.INCOMING_PARAMETERS.linksData.links);
+      this.loadCryptoWalletAddresses(this.INCOMING_PARAMETERS.cryptoWalletAddressesData.cryptoWalletAddresses);
+      this.loadVideo(this.INCOMING_PARAMETERS.videoData.video);
+      this.loadTags(this.INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos);
+      this.loadRecommendedVideos(this.INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos, true);
+      this.loadComments(this.INCOMING_PARAMETERS.commentsData.comments, false);
+      $('#video-poster').attr('src', this.EXTERNAL_VIDEOS_BASE_URL + '/external/videos/' + this.VIDEO_ID + '/images/poster.jpg');
+      if (this.HASH_VALUE !== '') {
+        if ($(this.HASH_VALUE + ' .postNum a:first-child').length) {
+          $(this.HASH_VALUE + ' .postNum a:first-child')[0].click();
+        }
+      }
+      this.refreshTextAreas();
+    }
+    if (window.ethereum != null) {
+      console.log('EIP-1193 compatible crypto wallet detected.');
+    } else {
+      console.log('EIP-1193 compatible crypto wallet not detected!');
+    }
+  }
+
+  loadInformation(information) {
+    this.NODE_ID = information.nodeId;
+    this.NODE_NAME = information.nodeName;
+    this.NODE_PROTOCOL = information.publicNodeProtocol;
+    this.NODE_ADDRESS = information.publicNodeAddress;
+    this.NODE_PORT = information.publicNodePort;
+    let port;
+    if (this.NODE_PROTOCOL === 'http') {
+      port = this.NODE_PORT == 80 ? '' : ':' + this.NODE_PORT;
+    } else if (this.NODE_PROTOCOL === 'https') {
+      port = this.NODE_PORT == 443 ? '' : ':' + this.NODE_PORT;
+    }
+    this.NODE_BASE_URL = this.NODE_PROTOCOL + '://' + this.NODE_ADDRESS + port;
+    this.CLOUDFLARE_TURNSTILE_SITE_KEY = information.cloudflareTurnstileSiteKey;
+  }
+
+  loadLinks(links) {
+    for (let i = links.length - 1; i >= 0; i--) {
+      const link = links[i];
+      const url = link.url;
+      const svgGraphic = link.svg_graphic;
+      const html = '\
+        <a href="' + url + '" target="_blank" class="navbar-settings-button navbar-brand" role="button">' + svgGraphic + '</a>';
+      $('#navbar-settings-buttons').prepend(html);
+    }
+  }
+
+  loadCryptoWalletAddresses(cryptoWalletAddresses) {
+    this.CRYPTO_WALLET_ADDRESSES = cryptoWalletAddresses;
+  }
+
+  loadTags(recommendedVideos) {
+    const tags = [];
+    recommendedVideos.forEach(recommendedVideo => {
+      const tagsArray = recommendedVideo.tags.split(',');
+      tagsArray.forEach(tag => {
+        if (!tags.includes(tag)) {
+          tags.push(tag);
+        }
+      });
+    });
+    tags.forEach(tag => {
+      $('#recommended-videos-tag-slider').append('<div class="keen-slider__slide number-slide2"><button type="button" class="btn btn-outline-primary recommendation-category-button" data-tagterm="' + tag + '" style="white-space: nowrap;">' + tag + '</button></div>');
+    });
+    const recommendationsSlider = new KeenSlider("#recommended-videos-tag-slider", {
+      loop: false,
+      mode: "free",
+      rtl: false,
+      slides: { perView: "auto", spacing: 5 }
+    });
+    let recommendationCategoryButtonOffsetLeft;
+    $(".recommendation-category-button").on("mouseup", function (e) {
+      const movementDifference = Math.abs(recommendationCategoryButtonOffsetLeft - $(this).offset().left);
+      if (movementDifference < 10) {
+        $('.recommendation-category-button').removeClass('recommendation-category-button-selected');
+        $(this).addClass('recommendation-category-button-selected');
+      }
+    });
+    $(".recommendation-category-button").on("mousedown", function (e) {
+      recommendationCategoryButtonOffsetLeft = $(this).offset().left;
+    });
+    $(".recommendation-category-button").on("click", (e) => {
+      const tagTerm = $(e.target).data('tagterm').toString();
+      $('#recommended-videos-list').empty();
+      this.loadRecommendedVideos(this.RECOMMENDED_VIDEOS_TAGS_CACHE[tagTerm], false);
+    });
+  }
+
+  loadRecommendedVideos(recommendedVideos, updateCache) {
+    this.clearTimestampUpdateTracker();
+    recommendedVideos.forEach(recommendedVideo => {
+      if (updateCache) {
+        const tagsArray = recommendedVideo.tags.split(',');
+        tagsArray.forEach(tag => {
+          if (!this.RECOMMENDED_VIDEOS_TAGS_CACHE.hasOwnProperty(tag)) {
+            this.RECOMMENDED_VIDEOS_TAGS_CACHE[tag] = [recommendedVideo];
+          } else {
+            this.RECOMMENDED_VIDEOS_TAGS_CACHE[tag].push(recommendedVideo);
+          }
+          if (!this.RECOMMENDED_VIDEOS_TAGS_CACHE[''].includes(recommendedVideo)) {
+            this.RECOMMENDED_VIDEOS_TAGS_CACHE[''].push(recommendedVideo);
+          }
+        });
+      }
+      this.loadRecommendedVideo(recommendedVideo);
+    });
+  }
+
+  loadRecommendedVideo(recommendedVideo) {
+    const videoId = recommendedVideo.videoId;
+    const title = recommendedVideo.title;
+    const views = (videoId === this.VIDEO_ID ? this.VIEW_COUNT != null ? this.VIEW_COUNT : '...' : recommendedVideo.views);
+    const isLive = recommendedVideo.isLive;
+    const isStreaming = recommendedVideo.isStreaming;
+    const lengthSeconds = recommendedVideo.lengthSeconds;
+    const creationTimestamp = recommendedVideo.creationTimestamp;
+    const durationFormatted = this.convertSecondsToDurationFormatted(lengthSeconds);
+    const viewsFormatted = this.getViewsFormatted(views);
+    let liveStreamIndicator = '';
+    if (isLive) {
+      if (isStreaming) {
+        liveStreamIndicator = '<i style="position: absolute; left: 5px; bottom: 5px; background-color: #cb0c9f; color: white; border-radius: 4px; padding: 3px; font-size: 10px; font-weight: 500;"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-broadcast" viewBox="0 0 16 16"><path d="M3.05 3.05a7 7 0 0 0 0 9.9.5.5 0 1 1-.707.707 8 8 0 0 1 0-11.314.5.5 0 0 1 .707.707zm2.122 2.122a4 4 0 0 0 0 5.656.5.5 0 1 1-.708.708 5 5 0 0 1 0-7.072.5.5 0 0 1 .708.708zm5.656-.708a.5.5 0 0 1 .708 0 5 5 0 0 1 0 7.072.5.5 0 1 1-.708-.708 4 4 0 0 0 0-5.656.5.5 0 0 1 0-.708zm2.122-2.12a.5.5 0 0 1 .707 0 8 8 0 0 1 0 11.313.5.5 0 0 1-.707-.707 7 7 0 0 0 0-9.9.5.5 0 0 1 0-.707zM10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></svg>&nbspLIVE</i>';
+      } else {
+        liveStreamIndicator = '<i style="position: absolute; left: 5px; bottom: 5px; background-color: #cb0c9f; color: white; border-radius: 4px; padding: 3px; font-size: 10px; font-weight: 500;">STREAMED</i>';
+      }
+    }
+    const element = $('\
+      <li class="list-group-item ps-0 pe-0 mt-2 video-recommendation-card border-0">\
+        <a href="/watch?v=' + videoId + '" class="text-decoration-none">\
+          <div class="card video-recommendation-card border-0">\
+            <div class="row g-0 position-relative">\
+              <div class="col-6 position-relative">\
+                <div class="position-relative">\
+                  <img src="' + this.EXTERNAL_VIDEOS_BASE_URL + '/external/videos/' + videoId + '/images/preview.jpg" class="rounded ratio ratio-16x9" alt="..."/>\
+                  <i class="video-streaming-timestamp">' + durationFormatted + '</i>\
+                  ' + liveStreamIndicator + '\
+                </div>\
+              </div>\
+              <div class="col-6">\
+                <div class="h-100 ms-1">\
+                  <span class="video-recommendation-card-text" style="overflow: hidden;text-overflow: ellipsis;white-space: normal;-webkit-line-clamp: 2;display: -webkit-box;-webkit-box-orient: vertical;font-weight: 500;font-family: &quot;Roboto&quot;,&quot;Arial&quot;,sans-serif;">' + title + '</span>\
+                  <small class="video-recommendation-card-text"><span id="recommended-video-info-views-' + videoId + '">' + viewsFormatted + '</span> &#x2022 <span class="video-info-timestamp"></span></small>\
+                </div>\
+              </div>\
+            </div>\
+          </div>\
+        </a>\
+      </li>');
+    $('#recommended-videos-list').append(element);
+    this.applyTimestampUpdateTrackerToVideo(element, creationTimestamp, isStreaming);
+  }
+
+  applyTimestampUpdateTrackerToVideo(element, creationTimestamp, isStreaming) {
+    const updateCreationTimestamp = () => {
+      const creationTimestampFormatted = this.getCreationTimestampFormatted(creationTimestamp);
+      $(element).find('.video-info-timestamp').text(creationTimestampFormatted);
+      if (isStreaming) {
+        const lengthSeconds = Math.floor((Date.now() - creationTimestamp) / 1000);
+        const durationFormatted = this.convertSecondsToDurationFormatted(lengthSeconds);
+        $(element).find('.video-streaming-timestamp').text(durationFormatted);
+      }
+    };
+    updateCreationTimestamp();
+    const interval = setInterval(updateCreationTimestamp, 1000);
+    this.TIMESTAMP_UPDATE_TRACKER.push(interval);
+  }
+
+  clearTimestampUpdateTracker() {
+    this.TIMESTAMP_UPDATE_TRACKER.forEach(interval => clearInterval(interval));
+    this.TIMESTAMP_UPDATE_TRACKER = [];
+  }
+
+  setClipboard(value) {
+    try {
+      navigator.clipboard.writeText(value).then(() => {}).catch(() => this.fallback(value));
+    } catch (error) {
+      this.fallback(value);
+    }
+  }
+
+  fallback(value) {
+    const tempInput = document.createElement("input");
+    tempInput.style = "position: absolute; left: -1000px; top: -1000px";
+    tempInput.value = value;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand("copy");
+    document.body.removeChild(tempInput);
+  }
+
+  refreshClickTooltips() {
+    $('.click-tooltip[data-bs-toggle="tooltip"]').tooltip({ trigger: 'click', container: '.swal2-html-container' });
+    $('.click-tooltip[data-bs-toggle="tooltip"]').on('click', function () {
+      setTimeout(() => $(this).tooltip('hide'), 500);
+    });
+  }
+
+  refreshTextAreas() {
+    $("textarea").each(function () {
+      if (this.scrollHeight > 0) {
+        this.setAttribute("style", "height:" + (this.scrollHeight) + "px;overflow-y:hidden;resize:none;");
+      } else {
+        this.setAttribute("style", "height:30px;overflow-y:hidden;resize:none;");
+      }
+    }).on("input", function () {
+      this.style.height = 0;
+      this.style.height = (this.scrollHeight) + "px";
+    });
+  }
+
+  loadVideo(video) {
+    const title = video.title;
+    const description = video.description;
+    const likes = video.likes;
+    const dislikes = video.dislikes;
+    const comments = video.comments;
+    const isPublished = video.isPublished;
+    const isPublishing = video.isPublishing;
+    const isLive = video.isLive;
+    const isStreaming = video.isStreaming;
+    const isStreamed = video.isStreamed;
+    const creationTimestamp = video.creationTimestamp;
+    const adaptiveSources = video.adaptiveSources;
+    const progressiveSources = video.progressiveSources;
+    const sourcesFormatsAndResolutions = video.sourcesFormatsAndResolutions;
+    this.DOWNLOADABLE_SOURCES = progressiveSources;
+    if (isStreaming) {
+      this.connectWebsocket();
+    }
+    document.title = title + ' - MoarTube';
+    $('#node-name').text(this.NODE_NAME);
+    $('#video-like-count').text(likes);
+    $('#video-dislike-count').text(dislikes);
+    $('#video-title').text(title);
+    (async () => {
+      try {
+        const views = await this.incrementViews();
+        this.VIEW_COUNT = views;
+        const viewsFormatted = this.getViewsFormatted(views);
+        if (!isStreaming) {
+          $('#video-information-views').text(viewsFormatted);
+        }
+        $('#recommended-video-info-views-' + this.VIDEO_ID).text(viewsFormatted);
+      } catch (error) {
+        console.error(error.message);
+      }
+    })();
+    (() => {
+      const updateCreationTimestamp = () => {
+        const creationTimestampFormatted = this.getCreationTimestampFormatted(creationTimestamp);
+        if (isLive) {
+          if (isStreaming) {
+            $('#video-information-date').text('Started streaming ' + creationTimestampFormatted);
+          } else {
+            $('#video-information-date').text('Streamed live ' + creationTimestampFormatted);
+          }
+        } else {
+          $('#video-information-date').text(creationTimestampFormatted);
+        }
+        setTimeout(updateCreationTimestamp, 1000);
+      };
+      updateCreationTimestamp();
+    })();
+    $('#video-information-description').text(description);
+    let message = '';
+    if (adaptiveSources.length > 0 || progressiveSources.length > 0) {
+      if (isPublished || isStreaming) {
+        this.initializeVideoJsPlayer(adaptiveSources, progressiveSources, sourcesFormatsAndResolutions, isStreaming);
+      } else if (isStreamed) {
+        message = 'this live stream has ended and has not been published';
+      } else {
+        message = 'this video is unavailable';
+      }
+    } else {
+      if (isPublishing) {
+        message = 'this video is currently publishing, please check back later';
+      } else if (isStreaming) {
+        message = 'this live stream has not started yet';
+      } else if (isStreamed) {
+        message = 'this live stream has ended and has not been published';
+      } else {
+        message = 'this video is unavailable';
+      }
+    }
+    if (message != '') {
+      $('#mtp-video-overlay').remove();
+      $('#video-player-container').append('<div class="d-flex align-items-center justify-content-center">' + message + '</div>');
+    }
+  }
+
+  async incrementViews() {
+    try {
+      const data = await $.ajax({ type: 'GET', url: '/videos/' + this.VIDEO_ID + '/views/increment' });
+      if (data.isError) throw new Error(data.message);
+      return data.views;
+    } catch (error) {
+      throw new Error('unable to communicate with node');
+    }
+  }
+
+  initializeVideoJsPlayer(adaptiveSources, progressiveSources, sourcesFormatsAndResolutions, isStreaming) {
+    window.videojs.log.level("off");
+    $("#video-player").attr("controls", true);
+    const sources = adaptiveSources.concat(progressiveSources);
+    let player = videojs('video-player', {
+      sources: sources,
+      html5: { vhs: { overrideNative: !videojs.browser.IS_SAFARI, llhls: true }, nativeAudioTracks: false, nativeVideoTracks: false },
+      liveui: true,
+      errorDisplay: false,
+      liveTracker: { trackingThreshold: 0 },
+      preload: "auto",
+      disablePictureInPicture: true,
+      controlBar: { pictureInPictureToggle: false }
+    });
+    player.landscapeFullscreen();
+    this.configurePlayerButtons(player, adaptiveSources, progressiveSources, sourcesFormatsAndResolutions, isStreaming);
+    this.configurePlayerEvents(player);
+    this.configurePlayerContextMenu(player);
+    player.on("loadedmetadata", () => {
+      player.play().then(() => this.jumpToUrlTimeParameter(player)).catch(() => $('#mtp-video-overlay').removeClass('hidden-elem'));
+    });
+    player.on("playing", () => $('#mtp-video-overlay').remove());
+    $('#big-play-button-poster-container').click(async () => {
+      $('#mtp-video-overlay').remove();
+      player.play().then(() => this.jumpToUrlTimeParameter(player)).catch(() => {});
+    });
+  }
+
+  configurePlayerButtons(player, adaptiveSources, progressiveSources, sourcesFormatsAndResolutions, isStreaming) {
+    const handleTechClickDefaultFunction = player.player_.handleTechClick_;
+
+    const MATERIAL_NAVIGATE_NEXT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M504-480 320-664l56-56 240 240-240 240-56 56 184-184Z" fill="#fff"/></svg>';
+    const MATERIAL_NAVIGATE_BEFORE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z" fill="#fff"/></svg>';
+    const MATERIAL_DONE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z" fill="#fff"/></svg>';
+
+    if (isStreaming) {
+      let isShowingStreamerMode = false;
+      const streamerModeButton = player.getChild('ControlBar').addChild('button', {
+        clickHandler: function (event) {
+          event[0].stopPropagation();
+          if (isShowingStreamerMode) {
+            isShowingStreamerMode = false;
+            streamerModeButton.el().innerHTML = '<svg width="20" height="20" fill="#fff" class="bi bi-aspect-ratio" viewBox="0 0 16 16"><path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z"/><path d="M2 4.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H3v2.5a.5.5 0 0 1-1 0zm12 7a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H13V8.5a.5.5 0 0 1 1 0z"/></svg>';
+            $('#main-container').removeClass('w-100');
+          } else {
+            isShowingStreamerMode = true;
+            streamerModeButton.el().innerHTML = '<svg width="20" height="20" fill="#fff" class="bi bi-aspect-ratio" viewBox="0 0 16 16"><path d="M0 12.5v-9A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5M2.5 4a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 1 0V5h2.5a.5.5 0 0 0 0-1zm11 8a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-1 0V11h-2.5a.5.5 0 0 0 0 1z"/></svg>';
+            $('#main-container').addClass('w-100');
+          }
+        }
+      });
+      streamerModeButton.el().classList.add('video-js-streamer-button');
+      streamerModeButton.el().innerHTML = '<svg width="20" height="20" fill="#fff" class="bi bi-aspect-ratio" viewBox="0 0 16 16"><path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z"/><path d="M2 4.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H3v2.5a.5.5 0 0 1-1 0zm12 7a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H13V8.5a.5.5 0 0 1 1 0z"/></svg>';
+      streamerModeButton.el().style.cursor = "pointer";
+    }
+
+    let isShowingTheaterMode = false;
+    const theaterModeButton = player.getChild('ControlBar').addChild('button', {
+      clickHandler: function (event) {
+        event[0].stopPropagation();
+        const videoPlayerContainer = $('#video-player-container');
+        const videoPlayer = $('#video-player');
+        if (isShowingTheaterMode) {
+          isShowingTheaterMode = false;
+          theaterModeButton.el().innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
+          $(videoPlayerContainer).addClass('ratio').removeClass('position-relative');
+          $(videoPlayer).removeClass('video-player-theater-mode').removeClass('vjs-fluid');
+          $(videoPlayerContainer).prependTo("#video-comments-inner");
+        } else {
+          isShowingTheaterMode = true;
+          theaterModeButton.el().innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 26,13 0,10 -16,0 0,-10 z m -14,2 12,0 0,6 -12,0 0,-6 z" fill="#fff" fill-rule="evenodd"></path></svg>';
+          $(videoPlayerContainer).removeClass('ratio').addClass('position-relative');
+          $(videoPlayer).addClass('video-player-theater-mode').addClass('vjs-fluid');
+          $(videoPlayerContainer).appendTo("#theater-container");
+        }
+      }
+    });
+    theaterModeButton.el().classList.add('video-js-theater-button');
+    theaterModeButton.el().innerHTML = '<svg height="100%" version="1.1" viewBox="0 0 36 36" width="100%"><path d="m 28,11 0,14 -20,0 0,-14 z m -18,2 16,0 0,10 -16,0 0,-10 z" fill="#fff" fill-rule="evenodd"></path></svg>';
+    theaterModeButton.el().style.cursor = "pointer";
+    this.THEATER_MODE_BUTTON = theaterModeButton;
+
+    const overflowButton = player.getChild('ControlBar').addChild('button', {
+      clickHandler: (event) => {
+        event[0].stopPropagation();
+        if ($('#video-player .vjs-control-bar .video-js-overflow-menu').length === 0) {
+          player.player_.handleTechClick_ = function (event) { }
+          $('body').on('click', function (event) {
+            $('body').off('click');
+            $('.video-player .vjs-control-bar .video-js-overflow-menu').remove();
+            player.player_.handleTechClick_ = handleTechClickDefaultFunction;
+          });
+          this.showVideoJsOverflowMenuHtml(player, adaptiveSources, progressiveSources, sourcesFormatsAndResolutions);
+        } else {
+          this.removeOverflowMenuHtml();
+          player.player_.handleTechClick_ = handleTechClickDefaultFunction;
+        }
+      }
+    });
+    overflowButton.el().innerHTML = '<svg height="24" viewBox="0 -960 960 960" width="100%"><path d="M480-160q-33 0-56.5-23.5T400-240q0-33 23.5-56.5T480-320q33 0 56.5 23.5T560-240q0 33-23.5 56.5T480-160Zm0-240q-33 0-56.5-23.5T400-480q0-33 23.5-56.5T480-560q33 0 56.5 23.5T560-480q0 33-23.5 56.5T480-400Zm0-240q-33 0-56.5-23.5T400-720q0-33 23.5-56.5T480-800q33 0 56.5 23.5T560-720q0 33-23.5 56.5T480-640Z" fill="#fff"/></svg>';
+    overflowButton.el().style.order = "10";
+    overflowButton.el().style.cursor = "pointer";
+  }
+
+  configurePlayerEvents(player) {
+    player.on(["loadstart", "firstplay", "pause", "ended", "adplay", "adplaying", "adfirstplay", "adpause", "adended", "contentplay", "contentplaying", "contentfirstplay", "contentpause", "contentended", "contentupdate"], function (e) {});
+    player.on(["fullscreenchange"], function (e) {
+      if (player.isFullscreen()) {
+        this.THEATER_MODE_BUTTON.el().classList.add('hidden-elem');
+      } else {
+        this.THEATER_MODE_BUTTON.el().classList.remove('hidden-elem');
+      }
+    });
+    player.on("loadedmetadata", () => {
+      console.log('loadedmetadata');
+      player.play().then(() => {
+        this.jumpToUrlTimeParameter(player);
+      }).catch((error) => {
+        console.log(error);
+        $('#mtp-video-overlay').removeClass('hidden-elem');
+      });
+    });
+    player.on("playing", function () {
+      console.log('playing');
+      $('#mtp-video-overlay').remove();
+    });
+    player.on("waiting", function () {
+      console.log('waiting');
+    });
+    player.on("ready", () => {
+      console.log('video player ready');
+      player.play().then(() => {
+        this.jumpToUrlTimeParameter(player);
+      }).catch((error) => {
+        console.log(error);
+        $('#mtp-video-overlay').removeClass('hidden-elem');
+      });
+    });
+  }
+
+  configurePlayerContextMenu(player) {
+    player.el().addEventListener('contextmenu', (event) => {
+      event.preventDefault();
+      this.showCustomContextMenu(event.pageX, event.pageY);
+    }, false);
+  }
+
+  jumpToUrlTimeParameter(player) {
+    if (this.TIME_PARAMETER != null) player.currentTime(this.TIME_PARAMETER);
+  }
+
+  connectWebsocket() {
+    let connectWebsocketClient = () => {
+      try {
+        let LIVE_CHAT_USERNAME;
+        let LIVE_CHAT_USERNAME_COLOR_CODE;
+        $('#live-stream-chat-container').removeClass('hidden-elem');
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const hostname = window.location.hostname;
+        const port = window.location.port;
+        let ws = new WebSocket(protocol + '//' + hostname + ':' + port);
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ eventName: 'register', socketType: 'node_peer' }));
+        };
+        ws.onclose = () => {
+          setTimeout(() => {
+            connectWebsocketClient();
+          }, 3000);
+        };
+        ws.onmessage = (message) => {
+          const data = JSON.parse(message.data);
+          if (data.eventName === 'registered') {
+            ws.send(JSON.stringify({ eventName: 'chat', type: 'join', videoId: this.VIDEO_ID }));
+          } else if (data.eventName === 'joined') {
+            LIVE_CHAT_USERNAME = data.liveChatUsername;
+            LIVE_CHAT_USERNAME_COLOR_CODE = data.liveChatUsernameColorCode;
+            $('#send-chat-message-input').prop('placeholder', 'Type your message');
+            $('#send-chat-message-input').prop('disabled', false);
+            $('#send-chat-message-button').prop('disabled', false);
+            $('#send-chat-message-button').off('click').on('click', (event) => {
+              this.broadcastChatMessageContent(ws, LIVE_CHAT_USERNAME, LIVE_CHAT_USERNAME_COLOR_CODE);
+            });
+            $('#send-chat-message-input').off('keypress').on('keypress', (event) => {
+              if (event.keyCode === 13) {
+                this.broadcastChatMessageContent(ws, LIVE_CHAT_USERNAME, LIVE_CHAT_USERNAME_COLOR_CODE);
+              }
+            });
+            $.ajax({ type: 'GET', url: '/streams/' + this.VIDEO_ID + '/chat/history' })
+              .done((data) => {
+                if (data.isError) {
+                  console.log(data.message);
+                } else {
+                  const chatHistory = data.chatHistory;
+                  $("#chat-messages").empty();
+                  for (const chatMessage of chatHistory) {
+                    const chatMessageContent = chatMessage.chat_message;
+                    const liveChatUsername = chatMessage.username;
+                    const liveChatUsernameColorCode = chatMessage.username_color_hex_code;
+                    this.appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, true);
+                  }
+                }
+              })
+              .fail(function () {
+                console.log('unable to communicate with node');
+              });
+          } else if (data.eventName === 'message') {
+            const chatMessageContent = data.chatMessageContent;
+            const liveChatUsername = data.liveChatUsername;
+            const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
+            const sentTimestamp = data.sentTimestamp;
+            if (liveChatUsername !== LIVE_CHAT_USERNAME && liveChatUsernameColorCode !== LIVE_CHAT_USERNAME_COLOR_CODE) {
+              this.appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, false);
+            } else {
+              $('#send-chat-message-input').val('');
+              $('#send-chat-message-input').prop('disabled', false);
+              $('#send-chat-message-button').prop('disabled', false);
+              $('#send-chat-message-button').text('Send');
+              const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+              $('#' + chatMessageElementId).removeClass('pending-chat-message');
+            }
+          } else if (data.eventName === 'live_stream_stats') {
+            const watchingCount = data.watchingCount;
+            $('#video-information-views').text(watchingCount + ' watching now');
+          } else if (data.eventName === 'limited') {
+            let rateLimitSeconds = data.rateLimitSeconds;
+            $('#send-chat-message-input').prop('disabled', true);
+            $('#send-chat-message-button').prop('disabled', true);
+            $('#send-chat-message-button').text('Send (' + rateLimitSeconds + ')');
+            const interval = setInterval(function () {
+              rateLimitSeconds--;
+              $('#send-chat-message-button').text('Send (' + rateLimitSeconds + ')');
+              if (rateLimitSeconds === 0) {
+                clearInterval(interval);
+                $('#send-chat-message-button').text('Send');
+                $('#send-chat-message-input').prop('disabled', false);
+                $('#send-chat-message-button').prop('disabled', false);
+              }
+            }, 1000);
+          } else if (data.eventName === 'error') {
+            const errorType = data.errorType;
+            if (errorType === 'register') {
+              $('#send-chat-message-input').prop('disabled', true);
+              $('#send-chat-message-button').prop('disabled', true);
+            } else if (errorType === 'join') {
+              $('#send-chat-message-input').prop('disabled', true);
+              $('#send-chat-message-button').prop('disabled', true);
+            } else if (errorType === 'message') {
+              const liveChatUsername = data.liveChatUsername;
+              const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
+              const sentTimestamp = data.sentTimestamp;
+              const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+              $('#' + chatMessageElementId).remove();
+              $('#send-chat-message-input').prop('disabled', false);
+              $('#send-chat-message-button').prop('disabled', false);
+              $('#send-chat-message-button').text('Send');
+            }
+            this.showAlert(true, data.message);
+          } else if (data.eventName === 'information') {
+            const cloudflareTurnstileSiteKey = data.cloudflareTurnstileSiteKey;
+            this.CLOUDFLARE_TURNSTILE_SITE_KEY = cloudflareTurnstileSiteKey;
+          }
+        };
+      } catch (error) {}
+    };
+    connectWebsocketClient();
+  }
+
+  appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, sentTimestamp, forceScrollBottom) {
+    const chatMessagesContainer = $("#chat-messages-container");
+    const chatMessages = $("#chat-messages");
+    const chatMessageElement = $('<div class="chat-message pb-2"><div class="flex-shrink-1 rounded px-2"><b style="color:#' + liveChatUsernameColorCode + ';font-size:0.8em;">' + liveChatUsername + '</b>: <span class="live-chat-text-color">' + chatMessageContent + '</span></div></div>');
+    if (sentTimestamp != null) {
+      const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+      $(chatMessageElement).attr('id', chatMessageElementId);
+      $(chatMessageElement).addClass('pending-chat-message');
+    }
+    const scrollheight = $(chatMessagesContainer)[0].scrollHeight;
+    const scrollTop = $(chatMessagesContainer).scrollTop();
+    const outerheight = $(chatMessagesContainer).outerHeight();
+    const isScrolledBottom = (scrollheight - scrollTop - outerheight) <= 100;
+    $(chatMessages).append(chatMessageElement);
+    if (isScrolledBottom || forceScrollBottom) {
+      $(chatMessagesContainer).scrollTop(scrollheight);
+    }
+    return chatMessageElement;
+  }
+
+  handleCommentSubmit(event, form) {
+    event.preventDefault();
+    const commentFormType = $(form).data('commentformtype');
+    const commentPlainText = $(form).find('textarea[name="commentPlainText"]').val();
+    if (commentPlainText !== '') {
+      this.disableFormInputs($(form), '...please wait...');
+      this.getCloudflareTurnstileToken().then(cloudflareTurnstileToken => {
+        $.ajax({
+          type: 'POST',
+          url: '/videos/' + this.VIDEO_ID + '/comments/comment',
+          data: JSON.stringify({ commentPlainText: commentPlainText, timestamp: this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP, cloudflareTurnstileToken: cloudflareTurnstileToken }),
+          contentType: 'application/json; charset=utf-8',
+        })
+          .done(data => {
+            if (data.isError) {
+              this.showAlert(true, data.message);
+            } else {
+              if (commentFormType === 'dynamic') {
+                $(form).remove();
+              } else if (commentFormType === 'static') {
+                $(form).find('textarea[name="commentPlainText"]').val('');
+              }
+              const commentId = data.commentId;
+              const comments = data.comments;
+              this.loadComments(comments, true);
+            }
+            this.enableFormInputs($(form), 'submit');
+          })
+          .fail(() => {
+            this.showAlert(true, 'unable to submit comment, please try again later');
+            this.enableFormInputs($(form), 'submit');
+          });
+      }).catch(error => {
+        console.log(error);
+        this.showAlert(true, 'Human verification failed. Please try again.');
+        this.enableFormInputs($(form), 'submit');
+      });
+    }
+  }
+
+  disableFormInputs(form, buttonText) {
+    form.find(':submit').prop('disabled', true);
+    form.find('textarea[name="commentPlainText"]').prop('disabled', true);
+    form.find(':submit').html(buttonText);
+  }
+
+  enableFormInputs(form, buttonText) {
+    form.find(':submit').prop('disabled', false);
+    form.find('textarea[name="commentPlainText"]').prop('disabled', false);
+    form.find(':submit').html(buttonText);
+  }
+
+  loadComments(comments, highlight) {
+    const commentsContainer = $('#comments-container');
+    commentsContainer.find('.post.reply').removeClass('new-comment-highlight');
+    if (comments.length > 0) {
+      $('.comments-navigation-button').removeClass('hidden-elem');
+      const commentSectionCounter = $('#comment-section-counter');
+      const commentSectionCounterDescriptor = $('#comment-section-counter-descriptor');
+      const expandCommentSectionCounter = $('#expand-comment-section-counter');
+      const expandCommentSectionCounterDescriptor = $('#expand-comment-section-counter-descriptor');
+      commentSectionCounter.text(parseInt($(commentSectionCounter).text()) + comments.length);
+      expandCommentSectionCounter.text(parseInt($(expandCommentSectionCounter).text()) + comments.length);
+      if (parseInt($(commentSectionCounter).text()) === 1) {
+        commentSectionCounterDescriptor.text('Comment');
+      } else {
+        commentSectionCounterDescriptor.text('Comments');
+      }
+      if (parseInt($(expandCommentSectionCounter).text()) === 1) {
+        expandCommentSectionCounterDescriptor.html('Comment');
+      } else {
+        expandCommentSectionCounterDescriptor.html('Comments');
+      }
+      comments.forEach((comment) => {
+        const commentId = comment.commentId;
+        const commentPlainTextSanitized = comment.commentPlainTextSanitized;
+        const timestamp = comment.timestamp;
+        if (timestamp > this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP) {
+          this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP = timestamp;
+        }
+        const formattedDate = this.getCreationTimestampFormatted(timestamp);
+        const commentTextHtml = this.convertCommentToHTML(commentPlainTextSanitized);
+        const replyToCommentIds = this.extractReplyToCommentIds(commentPlainTextSanitized);
+        const commentElement = this.generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, highlight);
+        this.COMMENT_ELEMENT_CACHE[commentId] = commentElement;
+        for (const replyToCommentId of replyToCommentIds) {
+          if (this.COMMENT_ELEMENT_CACHE.hasOwnProperty(replyToCommentId)) {
+            $(this.COMMENT_ELEMENT_CACHE[replyToCommentId]).find('#bl_' + replyToCommentId).append('<a href="#p' + commentId + '" class="quotelink">&gt;&gt;' + commentId + '</a> ');
+            this.attachQuotelinkListeners(this.COMMENT_ELEMENT_CACHE[replyToCommentId]);
+          }
+        }
+        $(commentsContainer).prepend(commentElement);
+        this.attachQuotelinkListeners(commentElement);
+      });
+    }
+  }
+
+  generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, highlight) {
+    const commentElement = $('\
+      <div class="postContainer replyContainer" id="pc' + commentId + '" data-timestamp="' + timestamp + '">\
+        <div id="p' + commentId + '" class="post reply">\
+          <div class="postInfoM mobile" id="pim' + commentId + '">\
+            <span class="nameBlock">\
+              <span class="name">Anonymous</span>\
+              <br>\
+            </span>\
+            <span class="dateTime postNum">(' + formattedDate + ')\
+              <a href="#p' + commentId + '" title="Link to this post">No.</a>\
+              <a href="javascript:quote(\'' + commentId + '\');" title="Reply to this post">' + commentId + '</a>\
+            </span>\
+          </div>\
+          <div class="postInfo desktop" id="pi' + commentId + '">\
+            <span class="nameBlock">\
+              <span class="name">Anonymous</span>\
+            </span>\
+            <span class="dateTime">(' + formattedDate + ')</span>\
+            <span class="postNum desktop">\
+              <a class="tests" href="#p' + commentId + '" title="Link to this post">No.</a>\
+              <a href="javascript:quote(\'' + commentId + '\');" title="Reply to this post">' + commentId + '</a>\
+            </span>\
+            <a class="postMenuBtn" title="Post menu" role="button" data-cmd="post-menu" data-bs-toggle="dropdown" aria-expanded="false" id="comment-' + commentId + '-dropdown-button">&#x25B6;</a>\
+            <ul class="dropdown-menu" aria-labelledby="comment-' + commentId + '-dropdown-button"><li><a class="dropdown-item" role="button" onclick="showCommentReportModal(\'' + commentId + '\', ' + timestamp + ');">Report</a></li></ul>\
+            <div id="bl_' + commentId + '" class="backlink"></div>\
+          </div>\
+          <blockquote class="postMessage text-break" id="m' + commentId + '">' + commentTextHtml + '</blockquote>\
+        </div>\
+      </div>');
+    if (highlight) {
+      commentElement.find('.post.reply').addClass('new-comment-highlight');
+    }
+    return commentElement;
+  }
+
+  convertCommentToHTML(commentPlainTextSanitized) {
+    const lines = commentPlainTextSanitized.trim().split('\n');
+    const html = lines.map(line => {
+      const trimmedLine = line.trim();
+      if (trimmedLine.startsWith('&gt;&gt;')) {
+        const commentId = trimmedLine.substr(8);
+        const quoteLink = '<a href="#p' + commentId + '" class="quotelink">' + trimmedLine + '</a>';
+        return quoteLink;
+      } else if (trimmedLine.startsWith('&gt;')) {
+        const quotedText = '<span class="quote">' + trimmedLine + '</span>';
+        return quotedText;
+      } else {
+        return trimmedLine;
+      }
+    }).join('<br>');
+    return html;
+  }
+
+  extractReplyToCommentIds(commentPlainTextSanitized) {
+    const regex = /&gt;&gt;(\d+)/g;
+    const matches = [];
+    let match;
+    while ((match = regex.exec(commentPlainTextSanitized)) !== null) {
+      matches.push(parseInt(match[1]));
+    }
+    return matches;
+  }
+
+  attachQuotelinkListeners(commentElement) {
+    $(commentElement).find('.quotelink').mouseenter((event) => {
+      const quotelink = event.target;
+      const commentId = $(quotelink).text().match(/\d+/g)[0];
+      const commentElement = $('#p' + commentId);
+      const div = document.getElementById('pc' + commentId);
+      if (div == null) {
+        const quotingTimestamp = $(quotelink).closest('.postContainer').data('timestamp');
+        $.ajax({ type: 'GET', url: '/videos/' + this.VIDEO_ID + '/comments/' + commentId, data: { timestamp: quotingTimestamp } })
+          .done((data, textStatus, xhr) => {
+            if (data.isError) {
+              console.log(data.message);
+            } else {
+              const commentData = data.comment;
+              if (commentData == null) {
+                $(quotelink).addClass('deadlink');
+              } else {
+                const commentId = commentData.commentId;
+                const commentPlainTextSanitized = commentData.commentPlainTextSanitized;
+                const timestamp = commentData.timestamp;
+                const formattedDate = this.getCreationTimestampFormatted(timestamp);
+                const commentTextHtml = this.convertCommentToHTML(commentPlainTextSanitized);
+                const commentElement = this.generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, false)[0];
+                this.showQuotePreview(commentElement, quotelink);
+              }
+            }
+          })
+          .fail(function () {
+            console.log('unable to communicate with node');
+          });
+      } else {
+        const divOffset = div.getBoundingClientRect();
+        const divHeight = div.offsetHeight;
+        const windowHeight = window.innerHeight || document.documentElement.clientHeight;
+        const topLeftCornerAboveScreen = divOffset.top < 0;
+        const topRightCornerAboveScreen = (divOffset.top < 0) && ((divOffset.left + div.offsetWidth) > window.innerWidth || document.documentElement.clientWidth);
+        const bottomLeftCornerBelowScreen = (divOffset.top + divHeight) > windowHeight;
+        const bottomRightCornerBelowScreen = ((divOffset.top + divHeight) > windowHeight) && ((divOffset.left + div.offsetWidth) > window.innerWidth || document.documentElement.clientWidth);
+        if (topLeftCornerAboveScreen || topRightCornerAboveScreen || bottomLeftCornerBelowScreen || bottomRightCornerBelowScreen) {
+          const clonedElement = div.cloneNode(true);
+          this.showQuotePreview(clonedElement, quotelink);
+        } else {
+          if (commentElement.length) {
+            if (commentElement.is(':target')) {
+              $(commentElement).addClass('highlight-anti');
+            } else {
+              $(commentElement).addClass('highlight');
+            }
+          } else {
+            $(quotelink).addClass('deadlink');
+          }
+        }
+      }
+    });
+    $(commentElement).find('.quotelink').mouseleave(function () {
+      $('#quote-preview').remove();
+      const commentId = $(this).text().match(/\d+/g)[0];
+      const comment = $('#p' + commentId);
+      if (comment.is(':target')) {
+        $(comment).removeClass('highlight-anti');
+      } else {
+        $(comment).removeClass('highlight');
+      }
+    });
+    $(commentElement).find('.quotelink').click((event) => {
+      $('#quote-preview').remove();
+      const commentId = $(event.target).text().match(/\d+/g)[0];
+      const comment = $('#p' + commentId);
+      this.HASH_VALUE = '#p' + commentId;
+      $('.post').removeClass('highlight');
+      if (comment.is(':target')) {
+        $(comment).removeClass('highlight-anti');
+      } else {
+        $(comment).removeClass('highlight');
+      }
+    });
+  }
+
+  showQuotePreview(quotePreview, quotelink) {
+    quotePreview.id = 'quote-preview';
+    const targetElement = quotePreview.querySelector('.post.reply');
+    if (targetElement != null) {
+      targetElement.classList.remove('highlight-anti');
+      targetElement.classList.add('highlight');
+    }
+    $('#quote-preview').remove();
+    $('body').append(quotePreview);
+    const quotelinkWidth = quotelink.offsetWidth;
+    const quotelinkHeight = quotelink.offsetHeight;
+    const targetElementHeight = quotePreview.offsetHeight;
+    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+    quotePreview.style.position = 'absolute';
+    quotePreview.style.left = quotelink.getBoundingClientRect().left + quotelinkWidth + 5;
+    quotePreview.style.top = scrollY + quotelink.getBoundingClientRect().top - (targetElementHeight / 2) + (quotelinkHeight / 2);
+  }
+
+  updateComments() {
+    $('#update-comments-button').addClass('hidden-elem');
+    $('#update-comments-button-spinner').removeClass('hidden-elem');
+    const previousCommentCount = parseInt($('#comment-section-counter').text());
+    $.ajax({ type: 'GET', url: '/videos/' + this.VIDEO_ID + '/comments', data: { timestamp: this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP, type: 'after', sort: 'ascending' } })
+      .done(data => {
+        if (data.isError) {
+          console.log(data.message);
+        } else {
+          const comments = data.comments;
+          this.loadComments(comments, true);
+          const newCommentCount = parseInt($('#comment-section-counter').text());
+          $('#update-comments-button').removeClass('hidden-elem');
+          $('#update-comments-button-spinner').addClass('hidden-elem');
+          let commentCountDifference = newCommentCount - previousCommentCount;
+          if (commentCountDifference === 1) {
+            $('#comment-section-update-descriptor').text('1 new comment');
+          } else {
+            $('#comment-section-update-descriptor').text(commentCountDifference + ' new comments');
+          }
+          setTimeout(() => $('#comment-section-update-descriptor').text(''), 3000);
+        }
+      })
+      .fail(() => console.log('unable to communicate with node'));
+  }
+
+  openCommentSection() {
+    $('#recommended-videos-list-container').css('display', 'none');
+    $('#expand-comment-section').css('display', 'none');
+    $('#comment-section').css('display', 'block');
+    $('#comment-section-back-button-container').removeClass('hidden-elem');
+    this.refreshTextAreas();
+  }
+
+  closeCommentSection() {
+    $('#comment-section-back-button-container').addClass('hidden-elem');
+    $('#comment-section').css('display', 'none');
+    $('#expand-comment-section').css('display', 'block');
+    $('#recommended-videos-list-container').css('display', 'block');
+  }
+
+  downloadVideo() {
+    if (this.DOWNLOADABLE_SOURCES.length > 0) {
+      let html = '';
+      for (const downloadableSource of this.DOWNLOADABLE_SOURCES) {
+        const segments = downloadableSource.src.split('/');
+        const downloadLink = downloadableSource.src;
+        html += '<a href="' + downloadLink + '"><button type="button" class="btn btn-link">' + segments[7] + '-' + segments[8] + '</button></a><br>';
+      }
+      Swal.fire({ title: 'Download Video', html: html, showCloseButton: true, showConfirmButton: false });
+    } else {
+      Swal.fire({ icon: 'info', html: '<p>this video doesn\'t have an available format for download<br>(mp4, webm, ogv)</p>', showCloseButton: true, showConfirmButton: false });
+    }
+  }
+
+  shareVideo() {
+    const videoId = this.VIDEO_ID;
+    const nodeVideoUrl = this.NODE_BASE_URL + '/watch?v=' + videoId;
+    const embedUrl = this.NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0';
+    const embedHtml_1 = '<iframe class="w-100" src="' + this.NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0" style="aspect-ratio: 16/9;" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="clipboard-write"></iframe>';
+    const embedHtml_2 = '<iframe src="' + this.NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="clipboard-write"></iframe>';
+
+    const embedSVG = '<svg viewBox="0 0 36 36" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><circle cx="18" cy="18" r="17.5" stroke="#E7E7E7" fill="#F4F4F4" stroke-width=".5"></circle><path d="m21.41,23.29l-0.71,-0.71l4.59,-4.58l-4.59,-4.59l0.71,-0.71l5.3,5.3l-5.3,5.29zm-6.12,-0.7l-4.58,-4.59l4.59,-4.59l-0.71,-0.7l-5.3,5.29l5.29,5.29l0.71,-0.7z" fill="#606060"></path></svg>';
+    const twitterSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.486325 59.969298c-6.636404-.569063-11.56302-2.326956-16.321973-5.823932C4.443764 48.472116 0 39.646792 0 29.986934 0 15.11156 10.506778 2.798388 25.274412.36718c6.028107-.992411 12.703853.049265 18.28794 2.85363 13.576275 6.818095 19.7813 22.541053 14.64267 37.103159-3.527955 9.997705-12.789708 17.617785-23.391072 19.244938-2.085625.320112-5.065149.508645-6.327625.400391z" fill="#1DA1F2" fill-rule="nonzero"></path><path d="M45.089067 17.577067c-.929778.595555-3.064534 1.460977-4.117334 1.460977v.001778C39.7696 17.784 38.077156 17 36.200178 17c-3.645511 0-6.6016 2.956089-6.6016 6.600178 0 .50631.058666 1.000178.16711 1.473778h-.001066c-4.945066-.129778-10.353422-2.608356-13.609244-6.85049-2.001778 3.46489-.269511 7.3184 2.002133 8.72249-.7776.058666-2.209067-.0896-2.882844-.747023-.045156 2.299734 1.060622 5.346845 5.092622 6.452267-.776533.417778-2.151111.297956-2.7488.209067.209778 1.941333 2.928355 4.479289 5.901155 4.479289C22.46009 38.565156 18.4736 40.788089 14 40.080889 17.038222 41.929422 20.5792 43 24.327111 43c10.650667 0 18.921956-8.631822 18.4768-19.280356-.001778-.011733-.001778-.023466-.002844-.036266.001066-.027378.002844-.054756.002844-.0832 0-.033067-.002844-.064356-.003911-.096356.9696-.66311 2.270578-1.836089 3.2-3.37991-.539022.296888-2.156089.891377-3.6608 1.038932.965689-.521244 2.396444-2.228266 2.749867-3.585777" fill="#FFF"></path></g></svg>';
+    const redditSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill-rule="nonzero" fill="none"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#FF4500"></path><path d="M34.1335847 43.9991814c1.6336774-.3831682 2.81654-.7939438 3.9781753-1.3815065 3.6153903-1.8286959 5.8788354-4.8645264 5.8788354-7.8849481 0-.9131088.0196207-.9556355.780668-1.6923265.6040409-.5847092.8404012-.962515 1.044679-1.6698428.2433185-.8425206.2441028-.9826228.0100139-1.7878614-.6566532-2.2588075-3.0054252-3.2764371-5.1075029-2.212882l-.8124519.4110627-.837264-.5151716c-1.6101652-.9907471-4.473974-1.96108051-6.3205111-2.14155924-.5059537-.04945042-1.143803-.1235464-1.4174535-.16465815l-.4975382-.07474783.2136595-1.06953332c.1175125-.5882423.3623778-1.7491883.5441475-2.57987956.181767-.83069153.4095191-1.95749071.5061138-2.50399817.1396137-.78991765.2348596-.99365031.4645331-.99365031.1589005 0 1.2955101.21462853 2.5257988.4769522 1.2302915.26232367 2.2622022.47695193 2.293134.47695193.0309345 0 .1003234.23497925.154203.52217616.1363137.72661143.4902897 1.17780487 1.2134714 1.54674469 1.7356128.8854428 3.6891485-.29431302 3.6891485-2.22790474 0-2.3956262-2.9538443-3.44186625-4.4550019-1.57794377-.2901205.36022881-.4356746.42625561-.7154284.32453216-.1931649-.07023833-1.5202546-.3669593-2.9490951-.65938053-1.8923676-.38728585-2.6686067-.48706487-2.8582979-.36740978-.2896185.1826864-.2522224.047706-1.0501419 3.79055007-.9490696 4.45187338-1.0064011 4.70400786-1.0882029 4.78580828-.0432388.04324046-.729551.14596475-1.5251367.22827402-2.413687.24971784-5.06621906 1.10194849-6.8544721 2.20227189l-.8268564.5087695-.81204644-.4046587c-2.11972653-1.0563058-4.47243958-.0382468-5.1287215 2.2192841-.23408885.8052386-.23330375.9453408.0100166 1.7878614.20427624.7073278.44063816 1.0851336 1.04467744 1.6698428.76105187.736691.78066878.7792177.78066878 1.6923265 0 4.172347 4.28816886 8.1540991 10.01599352 9.3002929 1.8975637.3797217 2.0263168.3894072 4.4515526.3349143 1.5849893-.0356103 2.7274992-.1508298 3.6566327-.3687526zm-6.6864685-3.0300366c-1.3154638-.2961613-2.8032079-.9569232-3.2391341-1.4386156-.34760429-.384099-.198986-.9659493.246724-.9659493.1736296 0 .5801788.1805458.9034441.4012095 2.1828306 1.4900284 7.1085991 1.484628 9.2987021-.0101767.7054363-.4814861 1.2827246-.468194 1.3538857.0311679.0334854.234998-.1164569.4687666-.4771278.7438635-1.7511846 1.3356924-5.2646974 1.8738181-8.086494 1.2385197v-.000019zm-4.01196195-5.9075609c-.81902983-.4443886-1.22403999-1.1532958-1.22477787-2.143771-.000787-1.135302.52653614-1.8699603 1.59778946-2.2257735.76240766-.253232.85344696-.2532238 1.51689516.0001492 1.785415.6818561 2.1507834 2.909296.6724678 4.0996229-.7705198.6204159-1.7299516.7214286-2.56237455.2697724zm11.09588945.0732995c-.7590038-.3947507-1.1832989-.8746601-1.3628596-1.5414995-.3321829-1.2336253.2931784-2.4377233 1.5067529-2.9011953.6634485-.253373.754488-.2533812 1.5168976-.0001492 1.0712525.3558132 1.5986343 1.0904715 1.5977903 2.2257735-.0008141 1.0085002-.4138259 1.7116813-1.2587076 2.1427072-.7599699.3877084-1.3548626.4098285-1.9998736.0743633z" fill="#FDFDFD"></path></g></svg>';
+    const facebookSVG = '<svg viewBox="0 0 60 60" focusable="false" style="pointer-events: none; display: block; width: 100%; height: 100%;"><g fill="none" fill-rule="evenodd"><path d="M28.4863253 59.9692983c-6.6364044-.569063-11.5630204-2.3269561-16.3219736-5.8239327C4.44376366 48.4721168 3e-7 39.6467924 3e-7 29.9869344c0-14.8753747 10.506778-27.18854591 25.2744118-29.61975392 6.0281072-.9924119 12.7038532.04926445 18.2879399 2.85362966C57.1386273 10.0389054 63.3436516 25.7618627 58.2050229 40.3239688 54.677067 50.3216743 45.4153135 57.9417536 34.81395 59.5689067c-2.0856252.3201125-5.0651487.5086456-6.3276247.4003916z" fill="#3B5998" fill-rule="nonzero"></path><path d="M25.7305108 45h5.4583577V30.0073333h4.0947673l.8098295-4.6846666h-4.9045968V21.928c0-1.0943333.7076019-2.2433333 1.7188899-2.2433333h2.7874519V15h-3.4161354v.021c-5.3451414.194-6.4433395 3.2896667-6.5385744 6.5413333h-.0099897v3.7603334H23v4.6846666h2.7305108V45z" fill="#FFF"></path></g></svg>';
+
+    const html = $('<div class="share-icon-container"><a id="share-twitter-link" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + twitterSVG + '</div><div class="share-icon-title">Twitter</div></button></a></div>\
+      <div class="share-icon-container"><a id="share-reddit-link" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + redditSVG + '</div><div class="share-icon-title">Reddit</div></button></a></div>\
+      <div class="share-icon-container"><a id="share-facebook-link" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + facebookSVG + '</div><div class="share-icon-title">Facebook</div></button></a></div>\
+      <div>' + embedHtml_1 + '</div>\
+      <div class="input-group mt-1"><input id="node-video-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="node-video-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
+      <div class="input-group mt-1"><input id="moartube-video-alias-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="moartube-video-alias-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
+      <div class="input-group mt-1"><input id="video-alias-embed-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="video-alias-embed-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
+      <div class="input-group mt-1"><input id="video-alias-embed-code-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="video-alias-embed-code-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>');
+
+    Swal.fire({
+      title: 'share',
+      html: html,
+      showConfirmButton: false,
+      showCloseButton: true,
+      showCancelButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+
+        $.ajax({ type: 'GET', url: '/videos/' + videoId + '/data' })
+          .done((data, textStatus, xhr) => {
+            if (data.isError) {
+              this.showAlert(true, data.message);
+            } else {
+              Swal.hideLoading();
+
+              const videoData = data.videoData;
+              const title = videoData.title;
+              const videoAliasUrl = videoData.videoAliasUrl;
+
+              let twitterLink;
+              let redditLink;
+              let facebookLink;
+
+              if (videoAliasUrl === 'MoarTube Aliaser link unavailable (video not indexed)') {
+                twitterLink = 'https://twitter.com/intent/tweet?url=' + nodeVideoUrl + '&text=' + title + '&via=MoarTubes&related=MoarTubes';
+                redditLink = 'https://www.reddit.com/submit?url=' + nodeVideoUrl + '&title=' + title;
+                facebookLink = 'https://www.facebook.com/dialog/share?app_id=246871938290679&href=' + nodeVideoUrl + '&display=popup';
+              } else {
+                twitterLink = 'https://twitter.com/intent/tweet?url=' + videoAliasUrl + '&text=' + title + '&via=MoarTubes&related=MoarTubes';
+                redditLink = 'https://www.reddit.com/submit?url=' + videoAliasUrl + '&title=' + title;
+                facebookLink = 'https://www.facebook.com/dialog/share?app_id=246871938290679&href=' + videoAliasUrl + '&display=popup';
+              }
+
+              $('#share-twitter-link').attr('href', twitterLink);
+              $('#share-reddit-link').attr('href', redditLink);
+              $('#share-facebook-link').attr('href', facebookLink);
+
+              $('#node-video-url-input').val(nodeVideoUrl);
+              $('#moartube-video-alias-url-input').val(videoAliasUrl);
+              $('#video-alias-embed-url-input').val(embedUrl);
+              $('#video-alias-embed-code-input').val(embedHtml_2);
+
+              $('#video-alias-embed-url-copy-button').click((event) => {
+                const value = $('#video-alias-embed-url-input').val();
+                this.setClipboard(value);
+              });
+
+              $('#video-alias-embed-code-copy-button').click((event) => {
+                const value = $('#video-alias-embed-code-input').val();
+                this.setClipboard(value);
+              });
+
+              $('#moartube-video-alias-url-copy-button').click((event) => {
+                const value = $('#moartube-video-alias-url-input').val();
+                this.setClipboard(value);
+              });
+
+              $('#node-video-url-copy-button').click((event) => {
+                const value = $('#node-video-url-input').val();
+                this.setClipboard(value);
+              });
+
+              this.refreshClickTooltips();
+            }
+          })
+          .fail(function () {
+            console.log('unable to communicate with node');
+          });
+      }
+    });
+  }
+
+  showSettings() {
+    $('#settingsModal').modal('show');
+  }
+
+  showCommentReportModal(commentId, timestamp) {
+    const html = '\
+      <div class="input-group mb-3"><textarea id="report-message-textarea" class="swal2-textarea" placeholder="Type your report here..." maxlength="1000"></textarea></div>\
+      <div class="input-group mb-3"><input id="report-email-input" class="swal2-input" placeholder="email (optional)" maxlength="100"></div>\
+      <div class="input-group mb-3"> \
+        <div class="input-group justify-content-center">\
+          <div class="form-check"> \
+            <label class="custom-control-label" for="report-complaint">complaint&nbsp&nbsp&nbsp</label>\
+            <input id="report-complaint" class="form-check-input" type="radio" name="reportTypeRadioButton" value="complaint">\
+          </div>\
+          <div class="form-check">\
+            <label class="custom-control-label" for="report-copyright">copyright&nbsp&nbsp&nbsp</label>\
+            <input id="report-copyright" class="form-check-input" type="radio" name="reportTypeRadioButton" value="copyright">\
+          </div>\
+          <div class="form-check">\
+            <label class="custom-control-label" for="report-other">other&nbsp&nbsp&nbsp</label>\
+            <input id="report-other" class="form-check-input" type="radio" name="reportTypeRadioButton" value="other">\
+          </div>\
+        </div>\
+      </div>';
+
+    Swal.fire({
+      title: 'report comment',
+      html: html,
+      showCloseButton: true,
+      confirmButtonText: 'submit',
+      focusConfirm: false,
+      preConfirm: async () => {
+        Swal.showLoading();
+
+        const message = Swal.getHtmlContainer().querySelector('#report-message-textarea').value;
+        const email = Swal.getHtmlContainer().querySelector('#report-email-input').value;
+
+        let reportType = '';
+        const reportTypeRadioButtons = Swal.getHtmlContainer().querySelectorAll('input[name="reportTypeRadioButton"]');
+        reportTypeRadioButtons.forEach(reportTypeButton => {
+          if (reportTypeButton.checked) {
+            reportType = reportTypeButton.value;
+          }
+        });
+
+        try {
+          const cloudflareTurnstileToken = await this.getCloudflareTurnstileToken();
+
+          const data = { message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken, videoId: this.VIDEO_ID, timestamp: timestamp };
+
+          const result = await $.ajax({ type: 'POST', url: '/comments/' + commentId + '/report', data: JSON.stringify(data), contentType: 'application/json; charset=utf-8' });
+
+          if (result.isError) {
+            this.showAlert(true, result.message);
+          }
+          else {
+            Swal.close();
+          }
+        }
+        catch (error) {
+          console.error('Error submitting the report:', error);
+          this.showAlert(true, 'An error occurred while submitting your report. Please try again.');
+        }
+      }
+    });
+  }
+
+  showVideoReportModal() {
+    const html = '\
+      <div class="input-group mb-3"><textarea id="report-message-textarea" class="swal2-textarea" placeholder="Type your report here..." maxlength="1000"></textarea></div>\
+      <div class="input-group mb-3"><input id="report-email-input" class="swal2-input" placeholder="email (optional)" maxlength="100"></div>\
+      <div class="input-group mb-3"> \
+        <div class="input-group justify-content-center">\
+          <div class="form-check"> \
+            <label class="custom-control-label" for="report-complaint">complaint&nbsp&nbsp&nbsp</label>\
+            <input id="report-complaint" class="form-check-input" type="radio" name="reportTypeRadioButton" value="complaint">\
+          </div>\
+          <div class="form-check">\
+            <label class="custom-control-label" for="report-copyright">copyright&nbsp&nbsp&nbsp</label>\
+            <input id="report-copyright" class="form-check-input" type="radio" name="reportTypeRadioButton" value="copyright">\
+          </div>\
+          <div class="form-check">\
+            <label class="custom-control-label" for="report-other">other&nbsp&nbsp&nbsp</label>\
+            <input id="report-other" class="form-check-input" type="radio" name="reportTypeRadioButton" value="other">\
+          </div>\
+        </div>\
+      </div>';
+
+    Swal.fire({
+      title: 'report video',
+      html: html,
+      showCloseButton: true,
+      confirmButtonText: 'submit',
+      focusConfirm: false,
+      preConfirm: async () => {
+        Swal.showLoading();
+
+        const message = Swal.getHtmlContainer().querySelector('#report-message-textarea').value;
+        const email = Swal.getHtmlContainer().querySelector('#report-email-input').value;
+
+        let reportType = '';
+        const reportTypeRadioButtons = Swal.getHtmlContainer().querySelectorAll('input[name="reportTypeRadioButton"]');
+        reportTypeRadioButtons.forEach(reportTypeButton => {
+          if (reportTypeButton.checked) {
+            reportType = reportTypeButton.value;
+          }
+        });
+
+        try {
+          const cloudflareTurnstileToken = await this.getCloudflareTurnstileToken();
+
+          const data = { message: message, email: email, reportType: reportType, cloudflareTurnstileToken: cloudflareTurnstileToken };
+
+          const result = await $.ajax({ type: 'POST', url: '/videos/' + this.VIDEO_ID + '/report', data: JSON.stringify(data), contentType: 'application/json; charset=utf-8' });
+
+          if (result.isError) {
+            this.showAlert(true, result.message);
+          }
+          else {
+            Swal.close();
+          }
+        }
+        catch (error) {
+          console.error('Error submitting the report:', error);
+          this.showAlert(true, 'An error occurred while submitting your report. Please try again.');
+        }
+      }
+    });
+  }
+
+  quote(commentId) {
+    const commentElement = $('#p' + commentId);
+    if (commentElement.length) {
+      const commentText = commentElement.find('.postMessage').text();
+      const quotedText = '>>' + commentId + '\n' + commentText.replace(/^/gm, '>') + '\n';
+      const textarea = $('#comment-input-form-static textarea');
+      textarea.val(textarea.val() + quotedText);
+      textarea[0].scrollTop = textarea[0].scrollHeight;
+      this.refreshTextAreas();
+      $('#comment-section').scrollTop($('#comment-section')[0].scrollHeight);
+    }
+  }
+
+  likeVideo() {
+    const videoLikeButton = $('#video-like-button');
+
+    if (!$(videoLikeButton).hasClass('btn-primary')) {
+      const videoDislikeButton = $('#video-dislike-button');
+
+      this.disableLikeDislikeButtons();
+
+      $(videoLikeButton).blur();
+
+      $(videoLikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
+      $(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+
+      (async () => {
+        try {
+          await this.performLike();
+
+          const likeCount = $('#video-like-count').text();
+          let likeCountParsed = parseInt(likeCount);
+          likeCountParsed++;
+          $('#video-like-count').text(likeCountParsed);
+        }
+        catch (error) {
+          $(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+
+          this.showAlert(true, error.message || error);
+        }
+        finally {
+          this.enableLikeDislikeButtons();
+        }
+      })();
+    }
+  }
+
+  dislikeVideo() {
+    const videoDislikeButton = $('#video-dislike-button');
+
+    if (!$(videoDislikeButton).hasClass('btn-primary')) {
+      const videoLikeButton = $('#video-like-button');
+
+      this.disableLikeDislikeButtons();
+
+      $(videoDislikeButton).blur();
+
+      $(videoDislikeButton).addClass('btn-primary').removeClass('btn-outline-primary');
+      $(videoLikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+
+      (async () => {
+        try {
+          await this.performDislike();
+
+          const dislikeCount = $('#video-dislike-count').text();
+          let dislikeCountParsed = parseInt(dislikeCount);
+          dislikeCountParsed++;
+          $('#video-dislike-count').text(dislikeCountParsed);
+        }
+        catch (error) {
+          $(videoDislikeButton).addClass('btn-outline-primary').removeClass('btn-primary');
+
+          this.showAlert(true, error.message || error);
+        }
+        finally {
+          this.enableLikeDislikeButtons();
+        }
+      })();
+    }
+  }
+
+  disableLikeDislikeButtons() {
+    const videoLikeButton = $('#video-like-button');
+    const videoDislikeButton = $('#video-dislike-button');
+
+    $(videoLikeButton).prop('disabled', true);
+    $(videoDislikeButton).prop('disabled', true);
+  }
+
+  enableLikeDislikeButtons() {
+    const videoLikeButton = $('#video-like-button');
+    const videoDislikeButton = $('#video-dislike-button');
+
+    $(videoLikeButton).prop('disabled', false);
+    $(videoDislikeButton).prop('disabled', false);
+  }
+
+  async performLike() {
+    const cloudflareTurnstileToken = await this.getCloudflareTurnstileToken();
+
+    const data = await $.ajax({
+      type: 'POST',
+      url: '/videos/' + this.VIDEO_ID + '/like',
+      data: JSON.stringify({ cloudflareTurnstileToken }),
+      contentType: 'application/json; charset=utf-8',
+    });
+
+    if (data.isError) {
+      throw new Error(data.message);
+    }
+  }
+
+  async performDislike() {
+    const cloudflareTurnstileToken = await this.getCloudflareTurnstileToken();
+
+    const data = await $.ajax({
+      type: 'POST',
+      url: '/videos/' + this.VIDEO_ID + '/dislike',
+      data: JSON.stringify({ cloudflareTurnstileToken }),
+      contentType: 'application/json; charset=utf-8',
+    });
+
+    if (data.isError) {
+      throw new Error(data.message);
+    }
+  }
+
+  donateVideo() {
+    if (window.ethereum) {
+      let selectedCryptoWalletAddress;
+      let selectedChainId;
+
+      let optionsHtml = '<option selected disabled>Donate to crypto address...</option>';
+
+      this.CRYPTO_WALLET_ADDRESSES.forEach(function (cryptoWalletAddress) {
+        const walletAddressId = cryptoWalletAddress.wallet_address_id;
+        const walletAddress = cryptoWalletAddress.wallet_address;
+        const chain = cryptoWalletAddress.chain;
+
+        optionsHtml += '<option value="' + walletAddressId + '">' + walletAddress + ' (' + chain + ')</option>';
+      });
+
+      const html = $(
+        '<div id="donate-modal" class="multisteps-form__content">' +
+          '<div class="text-center">' +
+            '<image class="img-fluid" src="' + this.EXTERNAL_RESOURCES_BASE_URL + '/external/resources/images/donate.jpg" style="max-width: 500px;"/>' +
+          '</div>' +
+          '<div class="row mt-3">' +
+            '<div class="col-12">' +
+              '<select id="wallet-address-select" class="multisteps-form__select form-control">' + optionsHtml + '</select>' +
+            '</div>' +
+          '</div>' +
+          '<div class="mt-3">' +
+            '<input id="donation-amount-input" class="multisteps-form__input form-control text-center" type="number" placeholder="donation amount" disabled>' +
+          '</div>' +
+        '</div>'
+      );
+
+      Swal.fire({
+        title: 'Donate to Creator',
+        html: html,
+        width: 'auto',
+        showConfirmButton: true,
+        confirmButtonText: 'Continue',
+        showCloseButton: true,
+        showCancelButton: true,
+        willOpen: () => {
+          $(Swal.getConfirmButton()).prop('disabled', true);
+        },
+        didOpen: () => {
+          $('#wallet-address-select').on('change', (event) => {
+            const walletAddressId = Number($(event.target).val());
+
+            for (const cryptoWalletAddress of this.CRYPTO_WALLET_ADDRESSES) {
+              if (cryptoWalletAddress.wallet_address_id === walletAddressId) {
+                selectedCryptoWalletAddress = cryptoWalletAddress;
+
+                $('#donation-amount-input').attr('placeholder', 'donation amount (' + cryptoWalletAddress.currency + ')');
+                $('#donation-amount-input').removeAttr('disabled');
+
+                break;
+              }
+            }
+          });
+
+          $('#donation-amount-input').on('input', function () {
+            const donationAmount = $(this).val();
+
+            if (donationAmount.length === 0) {
+              $(Swal.getConfirmButton()).prop('disabled', true);
+            } else {
+              $(Swal.getConfirmButton()).prop('disabled', false);
+            }
+          });
+        }
+      })
+        .then((result) => {
+          if (result.isConfirmed) {
+            const walletAddress = selectedCryptoWalletAddress.wallet_address;
+            const chain = selectedCryptoWalletAddress.chain;
+            const chainId = selectedCryptoWalletAddress.chain_id;
+            const donationAmount = $('#donation-amount-input').val();
+
+            this.openCryptoClient(walletAddress, chain, chainId, donationAmount);
+          }
+        });
+    } else {
+      Swal.fire({
+        title: 'Missing Crypto Wallet',
+        html: 'Your browser doesn\'t have a supported crypto wallet installed.<br>MoarTube supports crypto wallets that conform to the EIP-1193 standard.<br>Would you like to be directed to a supported crypto wallet? ',
+        width: 'auto',
+        icon: 'info',
+        showConfirmButton: true,
+        confirmButtonText: '<a href="https://metamask.io/download" target="_blank" style="text-decoration: none; color: white;">Continue</a>',
+        cancelButtonText: 'Cancel',
+        showCloseButton: true,
+        showCancelButton: true
+      });
+    }
+  }
+
+  showAlert(isError, message) {
+    if (isError) {
+      Swal.fire({ icon: 'error', text: message });
+    } else {
+      Swal.fire({ icon: 'success', text: message });
+    }
+  }
+
+  getCloudflareTurnstileToken() {
+    return new Promise((resolve, reject) => {
+      if (!this.CLOUDFLARE_TURNSTILE_SITE_KEY || this.CLOUDFLARE_TURNSTILE_SITE_KEY === '') {
+        resolve('');
+        return;
+      }
+
+      if (!window.turnstile) {
+        reject('Cloudflare Turnstile not loaded');
+        return;
+      }
+
+      turnstile.render('#captcha-container', {
+        sitekey: this.CLOUDFLARE_TURNSTILE_SITE_KEY,
+        callback: (token) => {
+          resolve(token);
+        },
+        'unsupported-callback': () => {
+          reject('Unable to activate that feature');
+        },
+        'timeout-callback': () => {
+          reject('Human verification was unsuccessful');
+        },
+        'error-callback': () => {
+          reject('Human verification encountered an error');
+        },
+        'refresh-expired': 'never',
+        retry: 'never',
+      });
+    });
+  }
+
+  getCreationTimestampFormatted(creationTimestamp) {
+    const now = Date.now();
+    const diffMs = now - creationTimestamp;
+    const diffSeconds = Math.floor(diffMs / 1000);
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
+    if (diffYears > 0) {
+      return diffYears + ' year' + (diffYears > 1 ? 's' : '') + ' ago';
+    } else if (diffMonths > 0) {
+      return diffMonths + ' month' + (diffMonths > 1 ? 's' : '') + ' ago';
+    } else if (diffWeeks > 0) {
+      return diffWeeks + ' week' + (diffWeeks > 1 ? 's' : '') + ' ago';
+    } else if (diffDays > 0) {
+      return diffDays + ' day' + (diffDays > 1 ? 's' : '') + ' ago';
+    } else if (diffHours > 0) {
+      return diffHours + ' hour' + (diffHours > 1 ? 's' : '') + ' ago';
+    } else if (diffMinutes > 0) {
+      return diffMinutes + ' minute' + (diffMinutes > 1 ? 's' : '') + ' ago';
+    } else {
+      return 'just now';
+    }
+  }
+
+  convertSecondsToDurationFormatted(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    let duration = '';
+    if (hours > 0) {
+      duration += hours + ':';
+    }
+    duration += (minutes < 10 && hours > 0 ? '0' : '') + minutes + ':';
+    duration += (remainingSeconds < 10 ? '0' : '') + remainingSeconds;
+    return duration;
+  }
+
+  getViewsFormatted(views) {
+    if (views >= 1000000) {
+      return (views / 1000000).toFixed(1) + 'M';
+    } else if (views >= 1000) {
+      return (views / 1000).toFixed(1) + 'K';
+    } else {
+      return views.toString();
+    }
+  }
+
+  async openCryptoClient(walletAddress, chain, chainId, donationAmount) {
+    if (window.ethereum) {
+      try {
+        await ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: chainId }]
+        });
+
+        console.log('Crypto wallet changed to Mainnet ' + chain);
+
+        const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+
+        if (accounts) {
+          const web3 = new Web3(ethereum);
+
+          const weiAmount = web3.utils.toWei(donationAmount, 'ether');
+          const weiAmountHex = web3.utils.toHex(BigInt(weiAmount));
+
+          const transactionParams = {
+            to: walletAddress,
+            from: accounts[0],
+            value: weiAmountHex
+          };
+
+          await ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [transactionParams]
+          });
+
+          console.log('Crypto wallet transaction initiated');
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    }
+  }
+}
+
+const moarTubeWatch = new MoarTubeWatch();
+
+window.moarTubeWatch = moarTubeWatch;
+
+$(document).ready(function () {
+  moarTubeWatch.init();
+});
+
+$(document).on('submit', '.comment-input-form', function (event) {
+  moarTubeWatch.handleCommentSubmit(event, this);
+});
+
+window.donateVideo = () => moarTubeWatch.donateVideo();
+window.likeVideo = () => moarTubeWatch.likeVideo();
+window.dislikeVideo = () => moarTubeWatch.dislikeVideo();
+window.shareVideo = () => moarTubeWatch.shareVideo();
+window.downloadVideo = () => moarTubeWatch.downloadVideo();
+window.showSettings = () => moarTubeWatch.showSettings();
+window.updateComments = () => moarTubeWatch.updateComments();
+window.openCommentSection = () => moarTubeWatch.openCommentSection();
+window.closeCommentSection = () => moarTubeWatch.closeCommentSection();
+window.showCommentReportModal = (commentId, timestamp) => moarTubeWatch.showCommentReportModal(commentId, timestamp);
+window.showVideoReportModal = () => moarTubeWatch.showVideoReportModal();
+window.quote = (commentId) => moarTubeWatch.quote(commentId);
+window.setClipboard = (text) => moarTubeWatch.setClipboard(text);
+</script>
 </body>
 
 </html>
