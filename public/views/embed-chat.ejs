@@ -630,27 +630,31 @@
 	</div>
 
 	<script>
-		let VIDEO_ID;
-
-		let CLOUDFLARE_TURNSTILE_SITE_KEY;
-
-		$(document).ready(function () {
-			const pathname = window.location.pathname;
-			const pathnameArray = pathname.split('/');
-
-			VIDEO_ID = pathnameArray[pathnameArray.length - 1];
-
-			if (VIDEO_ID != null) {
-				connectWebsocket();
+		class MoarTubeEmbedChat {
+			constructor() {
+				this.VIDEO_ID = null;
+				this.CLOUDFLARE_TURNSTILE_SITE_KEY = '';
+				this.LIVE_CHAT_USERNAME = null;
+				this.LIVE_CHAT_USERNAME_COLOR_CODE = null;
 			}
-		});
 
-		function connectWebsocket() {
-			let connectWebsocketClient = function () {
+			init() {
+				const pathname = window.location.pathname;
+				const pathnameArray = pathname.split('/');
+
+				this.VIDEO_ID = pathnameArray[pathnameArray.length - 1];
+
+				if (this.VIDEO_ID != null) {
+					this.connectWebsocket();
+				}
+			}
+
+			connectWebsocket() {
+				this.connectWebsocketClient();
+			}
+
+			connectWebsocketClient() {
 				try {
-					let LIVE_CHAT_USERNAME;
-					let LIVE_CHAT_USERNAME_COLOR_CODE;
-
 					$('#live-stream-chat-container').removeClass('hidden-elem');
 
 					const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -665,228 +669,248 @@
 
 					ws.onclose = () => {
 						setTimeout(() => {
-							connectWebsocketClient();
+							this.connectWebsocketClient();
 						}, 3000);
 					};
 
 					ws.onmessage = (message) => {
-						const data = JSON.parse(message.data);
-
-						if (data.eventName === 'registered') {
-							ws.send(JSON.stringify({ eventName: 'chat', type: 'join', videoId: VIDEO_ID }));
-						}
-						else if (data.eventName === 'joined') {
-							LIVE_CHAT_USERNAME = data.liveChatUsername;
-							LIVE_CHAT_USERNAME_COLOR_CODE = data.liveChatUsernameColorCode;
-
-							$('#send-chat-message-input').prop('placeholder', 'Type your message');
-							$('#send-chat-message-input').prop('disabled', false);
-							$('#send-chat-message-button').prop('disabled', false);
-
-							$('#send-chat-message-button').off('click').on('click', function (event) {
-								broadcastChatMessageContent();
-							});
-
-							$('#send-chat-message-input').off('keypress').on('keypress', function (event) {
-								if (event.keyCode === 13) {
-									broadcastChatMessageContent();
-								}
-							});
-
-							function broadcastChatMessageContent() {
-								if (ws.readyState === WebSocket.OPEN) {
-									const chatMessageContent = $('#send-chat-message-input').val();
-
-									if (chatMessageContent.length > 0) {
-										$('#send-chat-message-input').prop('disabled', true);
-										$('#send-chat-message-button').prop('disabled', true);
-
-										$('#send-chat-message-button').text('...please wait...');
-
-										const sentTimestamp = Date.now();
-
-										const chatMessageElement = appendMessageAndConditionallyScroll(chatMessageContent, LIVE_CHAT_USERNAME, LIVE_CHAT_USERNAME_COLOR_CODE, sentTimestamp, true);
-
-										getCloudflareTurnstileToken()
-											.then(function (cloudflareTurnstileToken) {
-												ws.send(JSON.stringify({ eventName: 'chat', type: 'message', videoId: VIDEO_ID, chatMessageContent: chatMessageContent, sentTimestamp: sentTimestamp, cloudflareTurnstileToken: cloudflareTurnstileToken }));
-											})
-											.catch(function (error) {
-												showAlert(true, error);
-
-												$(chatMessageElement).remove();
-											});
-									}
-								}
-							}
-
-							$.ajax({ type: 'GET', url: '/streams/' + VIDEO_ID + '/chat/history' })
-								.done(function (data) {
-									if (data.isError) {
-										console.log(data.message);
-									}
-									else {
-										const chatHistory = data.chatHistory;
-
-										$("#chat-messages").empty();
-
-										for (const chatMessage of chatHistory) {
-											const chatMessageContent = chatMessage.chat_message;
-											const liveChatUsername = chatMessage.username;
-											const liveChatUsernameColorCode = chatMessage.username_color_hex_code;
-
-											appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, true);
-										}
-									}
-								})
-								.fail(function () {
-									console.log('unable to communicate with node');
-								});
-						}
-						else if (data.eventName === 'message') {
-							const chatMessageContent = data.chatMessageContent;
-							const liveChatUsername = data.liveChatUsername;
-							const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
-							const sentTimestamp = data.sentTimestamp;
-
-							if (liveChatUsername !== LIVE_CHAT_USERNAME && liveChatUsernameColorCode !== LIVE_CHAT_USERNAME_COLOR_CODE) {
-								appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, false);
-							}
-							else {
-								$('#send-chat-message-input').val('');
-
-								$('#send-chat-message-input').prop('disabled', false);
-								$('#send-chat-message-button').prop('disabled', false);
-
-								$('#send-chat-message-button').text('Send');
-
-								const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
-								$('#' + chatMessageElementId).removeClass('pending-chat-message');
-							}
-						}
-						else if (data.eventName === 'live_stream_stats') {
-							const watchingCount = data.watchingCount;
-
-							$('#video-information-views').text(watchingCount + ' watching now');
-						}
-						else if (data.eventName === 'limited') {
-							let rateLimitSeconds = data.rateLimitSeconds;
-
-							$('#send-chat-message-input').prop('disabled', true);
-							$('#send-chat-message-button').prop('disabled', true);
-
-							$('#send-chat-message-button').text('Send (' + rateLimitSeconds + ')');
-
-							const interval = setInterval(function () {
-								rateLimitSeconds--;
-
-								$('#send-chat-message-button').text('Send (' + rateLimitSeconds + ')');
-
-								if (rateLimitSeconds === 0) {
-									clearInterval(interval);
-
-									$('#send-chat-message-button').text('Send');
-
-									$('#send-chat-message-input').prop('disabled', false);
-									$('#send-chat-message-button').prop('disabled', false);
-								}
-							}, 1000);
-						}
-						else if (data.eventName === 'error') {
-							const errorType = data.errorType;
-
-							if (errorType === 'register') {
-								$('#send-chat-message-input').prop('disabled', true);
-								$('#send-chat-message-button').prop('disabled', true);
-							}
-							else if (errorType === 'join') {
-								$('#send-chat-message-input').prop('disabled', true);
-								$('#send-chat-message-button').prop('disabled', true);
-							}
-							else if (errorType === 'message') {
-								const liveChatUsername = data.liveChatUsername;
-								const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
-								const sentTimestamp = data.sentTimestamp;
-
-								const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
-								$('#' + chatMessageElementId).remove();
-
-								$('#send-chat-message-input').prop('disabled', false);
-								$('#send-chat-message-button').prop('disabled', false);
-
-								$('#send-chat-message-button').text('Send');
-							}
-
-							showAlert(true, data.message);
-						}
-						else if (data.eventName === 'information') {
-							const cloudflareTurnstileSiteKey = data.cloudflareTurnstileSiteKey;
-
-							CLOUDFLARE_TURNSTILE_SITE_KEY = cloudflareTurnstileSiteKey;
-						}
+						this.handleWebSocketMessage(message, ws);
 					};
-
-					function appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, sentTimestamp, forceScrollBottom) {
-						const chatMessagesContainer = $("#chat-messages-container");
-						const chatMessages = $("#chat-messages");
-
-						const chatMessageElement = $('<div class="chat-message pb-2"><div class="flex-shrink-1 rounded px-2" style=" font-family: sans-serif; font-weight: 600; font-size: 4vw; "><b style="color:#' + liveChatUsernameColorCode + ';font-size:0.8em;">' + liveChatUsername + '</b>: <span class="live-chat-text-color">' + chatMessageContent + '</span></div></div>');
-
-						if (sentTimestamp != null) {
-							const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
-
-							$(chatMessageElement).attr('id', chatMessageElementId);
-							$(chatMessageElement).addClass('pending-chat-message');
-						}
-
-						const scrollheight = $(chatMessagesContainer)[0].scrollHeight;
-						const scrollTop = $(chatMessagesContainer).scrollTop();
-						const outerheight = $(chatMessagesContainer).outerHeight();
-
-						const isScrolledBottom = (scrollheight - scrollTop - outerheight) <= 100;
-
-						$(chatMessages).append(chatMessageElement);
-
-						if (isScrolledBottom || forceScrollBottom) {
-							$(chatMessagesContainer).scrollTop(scrollheight);
-						}
-
-						return chatMessageElement;
-					}
 				}
 				catch (error) {
 
 				}
-			};
-
-			connectWebsocketClient();
-		}
-
-		async function getCloudflareTurnstileToken() {
-			if (CLOUDFLARE_TURNSTILE_SITE_KEY === '') {
-				return '';
 			}
 
-			return new Promise((resolve, reject) => {
-				turnstile.render('#captcha-container', {
-					sitekey: CLOUDFLARE_TURNSTILE_SITE_KEY,
-					callback: (token) => {
-						resolve(token);
-					},
-					'unsupported-callback': () => {
-						reject('Unable to activate that feature');
-					},
-					'timeout-callback': () => {
-						reject('Human verification was unsuccessful');
-					},
-					'error-callback': () => {
-						reject('Human verification encountered an error');
-					},
-					'refresh-expired': 'never',
-					retry: 'never',
+			handleWebSocketMessage(message, ws) {
+				const data = JSON.parse(message.data);
+
+				if (data.eventName === 'registered') {
+					ws.send(JSON.stringify({ eventName: 'chat', type: 'join', videoId: this.VIDEO_ID }));
+				}
+				else if (data.eventName === 'joined') {
+					this.LIVE_CHAT_USERNAME = data.liveChatUsername;
+					this.LIVE_CHAT_USERNAME_COLOR_CODE = data.liveChatUsernameColorCode;
+
+					$('#send-chat-message-input').prop('placeholder', 'Type your message');
+					$('#send-chat-message-input').prop('disabled', false);
+					$('#send-chat-message-button').prop('disabled', false);
+
+					$('#send-chat-message-button').off('click').on('click', (event) => {
+						this.broadcastChatMessageContent(ws);
+					});
+
+					$('#send-chat-message-input').off('keypress').on('keypress', (event) => {
+						if (event.keyCode === 13) {
+							this.broadcastChatMessageContent(ws);
+						}
+					});
+
+					this.loadChatHistory();
+				}
+				else if (data.eventName === 'message') {
+					this.handleIncomingMessage(data);
+				}
+				else if (data.eventName === 'live_stream_stats') {
+					const watchingCount = data.watchingCount;
+					$('#video-information-views').text(watchingCount + ' watching now');
+				}
+				else if (data.eventName === 'limited') {
+					this.handleRateLimit(data.rateLimitSeconds);
+				}
+				else if (data.eventName === 'error') {
+					this.handleWebSocketError(data);
+				}
+				else if (data.eventName === 'information') {
+					this.CLOUDFLARE_TURNSTILE_SITE_KEY = data.cloudflareTurnstileSiteKey;
+				}
+			}
+
+			loadChatHistory() {
+				$.ajax({ type: 'GET', url: '/streams/' + this.VIDEO_ID + '/chat/history' })
+					.done((data) => {
+						if (data.isError) {
+							console.log(data.message);
+						}
+						else {
+							const chatHistory = data.chatHistory;
+
+							$("#chat-messages").empty();
+
+							for (const chatMessage of chatHistory) {
+								const chatMessageContent = chatMessage.chat_message;
+								const liveChatUsername = chatMessage.username;
+								const liveChatUsernameColorCode = chatMessage.username_color_hex_code;
+
+								this.appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, true);
+							}
+						}
+					})
+					.fail(function () {
+						console.log('unable to communicate with node');
+					});
+			}
+
+			broadcastChatMessageContent(ws) {
+				if (ws.readyState === WebSocket.OPEN) {
+					const chatMessageContent = $('#send-chat-message-input').val();
+
+					if (chatMessageContent.length > 0) {
+						$('#send-chat-message-input').prop('disabled', true);
+						$('#send-chat-message-button').prop('disabled', true);
+
+						$('#send-chat-message-button').text('...please wait...');
+
+						const sentTimestamp = Date.now();
+
+						const chatMessageElement = this.appendMessageAndConditionallyScroll(chatMessageContent, this.LIVE_CHAT_USERNAME, this.LIVE_CHAT_USERNAME_COLOR_CODE, sentTimestamp, true);
+
+						this.getCloudflareTurnstileToken()
+							.then((cloudflareTurnstileToken) => {
+								ws.send(JSON.stringify({ eventName: 'chat', type: 'message', videoId: this.VIDEO_ID, chatMessageContent: chatMessageContent, sentTimestamp: sentTimestamp, cloudflareTurnstileToken: cloudflareTurnstileToken }));
+							})
+							.catch((error) => {
+								showAlert(true, error);
+								$(chatMessageElement).remove();
+							});
+					}
+				}
+			}
+
+			handleIncomingMessage(data) {
+				const chatMessageContent = data.chatMessageContent;
+				const liveChatUsername = data.liveChatUsername;
+				const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
+				const sentTimestamp = data.sentTimestamp;
+
+				if (liveChatUsername !== this.LIVE_CHAT_USERNAME && liveChatUsernameColorCode !== this.LIVE_CHAT_USERNAME_COLOR_CODE) {
+					this.appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, false);
+				}
+				else {
+					$('#send-chat-message-input').val('');
+
+					$('#send-chat-message-input').prop('disabled', false);
+					$('#send-chat-message-button').prop('disabled', false);
+
+					$('#send-chat-message-button').text('Send');
+
+					const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+					$('#' + chatMessageElementId).removeClass('pending-chat-message');
+				}
+			}
+
+			handleRateLimit(rateLimitSeconds) {
+				let currentRateLimitSeconds = rateLimitSeconds;
+
+				$('#send-chat-message-input').prop('disabled', true);
+				$('#send-chat-message-button').prop('disabled', true);
+
+				$('#send-chat-message-button').text('Send (' + currentRateLimitSeconds + ')');
+
+				const interval = setInterval(() => {
+					currentRateLimitSeconds--;
+
+					$('#send-chat-message-button').text('Send (' + currentRateLimitSeconds + ')');
+
+					if (currentRateLimitSeconds === 0) {
+						clearInterval(interval);
+
+						$('#send-chat-message-button').text('Send');
+
+						$('#send-chat-message-input').prop('disabled', false);
+						$('#send-chat-message-button').prop('disabled', false);
+					}
+				}, 1000);
+			}
+
+			handleWebSocketError(data) {
+				const errorType = data.errorType;
+
+				if (errorType === 'register') {
+					$('#send-chat-message-input').prop('disabled', true);
+					$('#send-chat-message-button').prop('disabled', true);
+				}
+				else if (errorType === 'join') {
+					$('#send-chat-message-input').prop('disabled', true);
+					$('#send-chat-message-button').prop('disabled', true);
+				}
+				else if (errorType === 'message') {
+					const liveChatUsername = data.liveChatUsername;
+					const liveChatUsernameColorCode = data.liveChatUsernameColorCode;
+					const sentTimestamp = data.sentTimestamp;
+
+					const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+					$('#' + chatMessageElementId).remove();
+
+					$('#send-chat-message-input').prop('disabled', false);
+					$('#send-chat-message-button').prop('disabled', false);
+
+					$('#send-chat-message-button').text('Send');
+				}
+
+				showAlert(true, data.message);
+			}
+
+			appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, sentTimestamp, forceScrollBottom) {
+				const chatMessagesContainer = $("#chat-messages-container");
+				const chatMessages = $("#chat-messages");
+
+				const chatMessageElement = $('<div class="chat-message pb-2"><div class="flex-shrink-1 rounded px-2" style=" font-family: sans-serif; font-weight: 600; font-size: 4vw; "><b style="color:#' + liveChatUsernameColorCode + ';font-size:0.8em;">' + liveChatUsername + '</b>: <span class="live-chat-text-color">' + chatMessageContent + '</span></div></div>');
+
+				if (sentTimestamp != null) {
+					const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
+
+					$(chatMessageElement).attr('id', chatMessageElementId);
+					$(chatMessageElement).addClass('pending-chat-message');
+				}
+
+				const scrollheight = $(chatMessagesContainer)[0].scrollHeight;
+				const scrollTop = $(chatMessagesContainer).scrollTop();
+				const outerheight = $(chatMessagesContainer).outerHeight();
+
+				const isScrolledBottom = (scrollheight - scrollTop - outerheight) <= 100;
+
+				$(chatMessages).append(chatMessageElement);
+
+				if (isScrolledBottom || forceScrollBottom) {
+					$(chatMessagesContainer).scrollTop(scrollheight);
+				}
+
+				return chatMessageElement;
+			}
+
+			async getCloudflareTurnstileToken() {
+				if (this.CLOUDFLARE_TURNSTILE_SITE_KEY === '') {
+					return '';
+				}
+
+				return new Promise((resolve, reject) => {
+					turnstile.render('#captcha-container', {
+						sitekey: this.CLOUDFLARE_TURNSTILE_SITE_KEY,
+						callback: (token) => {
+							resolve(token);
+						},
+						'unsupported-callback': () => {
+							reject('Unable to activate that feature');
+						},
+						'timeout-callback': () => {
+							reject('Human verification was unsuccessful');
+						},
+						'error-callback': () => {
+							reject('Human verification encountered an error');
+						},
+						'refresh-expired': 'never',
+						retry: 'never',
+					});
 				});
-			});
+			}
 		}
+
+		const moarTubeEmbedChat = new MoarTubeEmbedChat();
+
+		$(document).ready(function () {
+			moarTubeEmbedChat.init();
+		});
 	</script>
 </body>
 
