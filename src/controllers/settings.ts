@@ -23,7 +23,7 @@ import type { LinksRepository } from '../database/repositories/links.js';
 import type { CloudflareService } from '../services/cloudflare.js';
 import type { WebSocketService } from '../services/websocket.js';
 import { getConfig } from '../config/index.js';
-import { isBooleanValid, isCloudflareCredentialsValid } from '../utils/index.js';
+import { isCloudflareCredentialsValid } from '../utils/index.js';
 
 /**
  * Request body interfaces
@@ -67,11 +67,7 @@ export interface CloudflareTurnstileConfigureBody {
 }
 
 export interface ToggleBooleanBody {
-  isCommentsEnabled?: boolean;
-  isLikesEnabled?: boolean;
-  isDislikesEnabled?: boolean;
-  isReportsEnabled?: boolean;
-  isLiveChatEnabled?: boolean;
+  isEnabled: boolean;
 }
 
 export interface DatabaseConfigBody {
@@ -929,14 +925,11 @@ export class SettingsController extends BaseController {
    */
   commentsToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const { isCommentsEnabled } = request.body as ToggleBooleanBody;
-
-      if (!isBooleanValid(isCommentsEnabled)) {
-        return await this.sendError(reply, 'invalid parameters');
-      }
+      const { isEnabled } = request.body as ToggleBooleanBody;
 
       const config = getConfig();
-      config.updateNodeSettings({ isCommentsEnabled });
+
+      config.updateNodeSettings({ isCommentsEnabled: isEnabled });
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -953,14 +946,11 @@ export class SettingsController extends BaseController {
    */
   likesToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const { isLikesEnabled } = request.body as ToggleBooleanBody;
-
-      if (!isBooleanValid(isLikesEnabled)) {
-        return await this.sendError(reply, 'invalid parameters');
-      }
+      const { isEnabled } = request.body as ToggleBooleanBody;
 
       const config = getConfig();
-      config.updateNodeSettings({ isLikesEnabled });
+
+      config.updateNodeSettings({ isLikesEnabled: isEnabled });
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -977,14 +967,11 @@ export class SettingsController extends BaseController {
    */
   dislikesToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const { isDislikesEnabled } = request.body as ToggleBooleanBody;
-
-      if (!isBooleanValid(isDislikesEnabled)) {
-        return await this.sendError(reply, 'invalid parameters');
-      }
+      const { isEnabled } = request.body as ToggleBooleanBody;
 
       const config = getConfig();
-      config.updateNodeSettings({ isDislikesEnabled });
+
+      config.updateNodeSettings({ isDislikesEnabled: isEnabled });
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1001,14 +988,11 @@ export class SettingsController extends BaseController {
    */
   reportsToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const { isReportsEnabled } = request.body as ToggleBooleanBody;
-
-      if (!isBooleanValid(isReportsEnabled)) {
-        return await this.sendError(reply, 'invalid parameters');
-      }
+      const { isEnabled } = request.body as ToggleBooleanBody;
 
       const config = getConfig();
-      config.updateNodeSettings({ isReportsEnabled });
+
+      config.updateNodeSettings({ isReportsEnabled: isEnabled });
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1025,14 +1009,11 @@ export class SettingsController extends BaseController {
    */
   liveChatToggle = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const { isLiveChatEnabled } = request.body as ToggleBooleanBody;
-
-      if (!isBooleanValid(isLiveChatEnabled)) {
-        return await this.sendError(reply, 'invalid parameters');
-      }
+      const { isEnabled } = request.body as ToggleBooleanBody;
 
       const config = getConfig();
-      config.updateNodeSettings({ isLiveChatEnabled });
+
+      config.updateNodeSettings({ isLiveChatEnabled: isEnabled });
 
       return await this.sendSuccess(reply);
     } catch (error) {
