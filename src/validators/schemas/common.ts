@@ -220,7 +220,7 @@ export const reportMessageSchema = z
 /**
  * Cloudflare Turnstile token schema (optional - can be empty if turnstile not enabled)
  */
-export const cloudflareTurnstileTokenSchema = z.string().optional().default('');
+export const cloudflareTurnstileTokenSchema = z.string();
 
 // ============================================================================
 // Video Permission Schemas

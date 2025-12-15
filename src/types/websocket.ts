@@ -21,6 +21,10 @@ export type WebSocketEventName =
   // Chat events
   | 'chat_message'
   | 'chat_history'
+  | 'joined'
+  | 'message'
+  | 'limited'
+  | 'error'
   // Video events
   | 'video_status'
   | 'video_data'
@@ -61,6 +65,19 @@ export interface ExtendedWebSocket extends WebSocket {
   clientId?: string;
   /** Last activity timestamp */
   lastActivity?: number;
+  /** Live chat username */
+  liveChatUsername?: string;
+  /** Live chat username color code */
+  liveChatUsernameColorCode?: string;
+  /** Rate limiter state */
+  rateLimiter?: {
+    timestamps: number[];
+    rateLimitTimestamp: number;
+    rateLimitLevel: number;
+    isRateLimited: boolean;
+  };
+  /** Client IP address */
+  ip?: string;
 }
 
 // ============================================
@@ -106,6 +123,47 @@ export interface ChatHistoryMessage extends WebSocketMessageBase {
     chatMessage: string;
     timestamp: number;
   }>;
+}
+
+/**
+ * Chat joined message
+ */
+export interface ChatJoinedMessage extends WebSocketMessageBase {
+  eventName: 'joined';
+  liveChatUsername: string;
+  liveChatUsernameColorCode: string;
+}
+
+/**
+ * Chat message broadcast
+ */
+export interface ChatBroadcastMessage extends WebSocketMessageBase {
+  eventName: 'message';
+  videoId: string;
+  chatMessageContent: string;
+  sentTimestamp: number;
+  liveChatUsername: string;
+  liveChatUsernameColorCode: string;
+}
+
+/**
+ * Chat rate limit message
+ */
+export interface ChatLimitedMessage extends WebSocketMessageBase {
+  eventName: 'limited';
+  rateLimitSeconds: number;
+}
+
+/**
+ * Chat error message
+ */
+export interface ChatErrorMessage extends WebSocketMessageBase {
+  eventName: 'error';
+  errorType: 'register' | 'join' | 'message';
+  message: string;
+  sentTimestamp?: number;
+  liveChatUsername?: string;
+  liveChatUsernameColorCode?: string;
 }
 
 /**
@@ -175,6 +233,10 @@ export type WebSocketMessage =
   | LiveStreamStatsMessage
   | ChatMessage
   | ChatHistoryMessage
+  | ChatJoinedMessage
+  | ChatBroadcastMessage
+  | ChatLimitedMessage
+  | ChatErrorMessage
   | VideoStatusMessage
   | VideoDataMessage
   | EchoMessage
@@ -192,8 +254,7 @@ export type WebSocketMessage =
  */
 export interface IncomingWebSocketMessage {
   eventName: string;
-  videoId?: string;
-  [key: string]: unknown;
+  type?: string;
 }
 
 /**

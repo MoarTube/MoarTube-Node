@@ -13,7 +13,6 @@ export {
   WebSocketHandler,
   type HandlerContext,
   ChatMessageHandler,
-  LiveStreamHandler,
   VideoStatusHandler,
   EchoHandler,
 } from './handlers/index.js';

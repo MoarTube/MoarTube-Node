@@ -20,3 +20,4 @@ export * from './settings.js';
 export * from './streams.js';
 export * from './videos.js';
 export * from './watch.js';
+export * from './websocket.js';

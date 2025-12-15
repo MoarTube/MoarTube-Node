@@ -20,11 +20,13 @@ export type {
   IWebSocketService,
   IReportService,
   ISettingsService,
+  ILiveChatService,
   GetVideosOptions,
   GetCommentsOptions,
   CreateVideoInput,
   UpdateVideoInput,
   CreateCommentInput,
+  CreateChatMessageInput,
   StreamConfig,
   SignInInput,
   SignInResult,
@@ -42,6 +44,7 @@ export type {
 // Service implementations
 export { VideosService, type VideosServiceDependencies } from './videos.js';
 export { CommentService, type CommentServiceDependencies } from './comment.js';
+export { LiveChatService, type LiveChatServiceDependencies } from './chat.js';
 export {
   StreamService,
   type StreamServiceDependencies,

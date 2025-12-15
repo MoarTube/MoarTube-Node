@@ -5,8 +5,8 @@
  */
 
 export { WebSocketHandler, type HandlerContext } from './base.js';
-export { ChatMessageHandler } from './chat.js';
-export { LiveStreamHandler } from './stream.js';
+export { ChatJoinHandler } from './chat-join.js';
+export { ChatMessageHandler } from './chat-message.js';
 export { VideoStatusHandler } from './video-status.js';
 export { EchoHandler } from './echo.js';
 export { RegisterHandler } from './register.js';

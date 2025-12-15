@@ -66,6 +66,20 @@ export abstract class WebSocketHandler {
   ): void | Promise<void>;
 
   /**
+   * Process the validated message
+   * Called by handle() after message validation
+   *
+   * @param client - The WebSocket client that sent the message
+   * @param validatedMessage - The validated message data
+   * @param context - Handler context with utilities
+   */
+  protected abstract processMessage(
+    client: ExtendedWebSocket,
+    validatedMessage: unknown,
+    context: HandlerContext
+  ): void | Promise<void>;
+
+  /**
    * Called when a client connects
    * Override in subclasses if needed
    */

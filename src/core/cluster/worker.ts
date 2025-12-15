@@ -13,6 +13,7 @@ import type { LiveStreamWatchingCountsTracker, LiveStreamWatchingCounts } from '
 import type { LiveStreamStatsMessage, WebSocketMessage } from '../../types/websocket.js';
 import { IPCChannel, type IPCLogger } from './ipc-channel.js';
 import { WebSocketManager } from '../../websocket/websocket-manager.js';
+import { getContainer } from '../container.js';
 import { Logger } from '../../utils/logger.js';
 import { getConfig } from '../../config/index.js';
 import { createDatabase, initializeDatabaseSchema } from '../../database/index.js';
@@ -50,6 +51,8 @@ export class ClusterWorker {
   constructor(options: ClusterWorkerOptions = {}) {
     this.logger = options.logger ?? getDefaultLogger();
     this.ipc = new IPCChannel(this.logger);
+
+    // Create WebSocketManager (container will be provided later)
     this.wsManager = new WebSocketManager({ logger: this.logger });
   }
 
@@ -76,6 +79,10 @@ export class ClusterWorker {
     // Initialize Fastify app
     const { createFastifyApp } = await import('../../plugins/index.js');
     this.app = await createFastifyApp();
+
+    // Set container on WebSocketManager now that it's available
+    const container = getContainer();
+    this.wsManager.setContainer(container);
 
     // Set up IPC handlers
     this.setupIPCHandlers();
@@ -121,11 +128,18 @@ export class ClusterWorker {
     });
 
     // Handle WebSocket connections
-    this.wss.on('connection', (ws) => {
+    this.wss.on('connection', (ws, request) => {
       this.logger.debug('WebSocket client connected');
+
+      // Extract IP address
+      let ip = request.headers['cf-connecting-ip'] as string;
+      if (!ip) {
+        ip = (request.socket.remoteAddress ?? '').replace(/^::ffff:/, '');
+      }
 
       // Add client to WebSocket manager
       const client = this.wsManager.addClient(ws, 'viewer', false);
+      client.ip = ip;
 
       // Handle client disconnection
       ws.on('close', () => {

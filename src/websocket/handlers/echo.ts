@@ -11,6 +11,8 @@ import type {
   EchoMessage,
 } from '../../types/websocket.js';
 import { WebSocketHandler, type HandlerContext } from './base.js';
+import { echoEventSchema, type EchoEvent } from '../../validators/schemas/index.js';
+import { ZodError } from 'zod';
 
 /**
  * Handler for echo/broadcast events
@@ -43,18 +45,33 @@ export class EchoHandler extends WebSocketHandler {
       return;
     }
 
-    const echoMessage = message as unknown as EchoMessage;
-
-    if (!echoMessage.data.eventName) {
-      context.log.warn('Invalid echo message format', { clientId: client.clientId });
-      return;
+    try {
+      const echoMessage = echoEventSchema.parse(message);
+      this.processMessage(echoMessage, context);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        context.log.warn('Invalid echo message format', {
+          errors: error.issues,
+          clientId: client.clientId,
+        });
+      } else {
+        context.log.error('Error parsing echo message', error, { clientId: client.clientId });
+      }
     }
+  }
+
+  /**
+   * Process validated echo message
+   */
+  protected processMessage(validatedMessage: unknown, context: HandlerContext): void {
+    const echoMessage = validatedMessage as EchoEvent;
+    const { data } = echoMessage;
 
     context.log.debug('Broadcasting echo message', {
-      eventName: echoMessage.data.eventName,
+      eventName: data.eventName,
     });
 
     // Broadcast to all clients
-    context.broadcast(echoMessage);
+    context.broadcast(echoMessage as EchoMessage);
   }
 }

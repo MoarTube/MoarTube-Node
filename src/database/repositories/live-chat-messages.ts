@@ -3,7 +3,7 @@
  *
  * Provides data access methods for live chat message records using Drizzle ORM.
  */
-import { eq, desc, and, gte, count, lt } from 'drizzle-orm';
+import { eq, and, gte, count, lt, asc } from 'drizzle-orm';
 import type { DrizzleLiveChatMessage, DrizzleNewLiveChatMessage } from '../schemas/index.js';
 import { liveChatMessages } from '../schemas/index.js';
 import { BaseRepository } from './base.js';
@@ -45,7 +45,7 @@ export class LiveChatMessageRepository extends BaseRepository {
       .select()
       .from(liveChatMessages)
       .where(eq(liveChatMessages.video_id, videoId))
-      .orderBy(desc(liveChatMessages.timestamp))
+      .orderBy(asc(liveChatMessages.timestamp))
       .limit(limit);
   }
 
@@ -64,7 +64,7 @@ export class LiveChatMessageRepository extends BaseRepository {
       .select()
       .from(liveChatMessages)
       .where(eq(liveChatMessages.video_id, videoId))
-      .orderBy(desc(liveChatMessages.timestamp))
+      .orderBy(asc(liveChatMessages.timestamp))
       .limit(count);
 
     // Reverse to get oldest to newest order for display
@@ -90,7 +90,7 @@ export class LiveChatMessageRepository extends BaseRepository {
       .where(
         and(eq(liveChatMessages.video_id, videoId), gte(liveChatMessages.timestamp, afterTimestamp))
       )
-      .orderBy(liveChatMessages.timestamp)
+      .orderBy(asc(liveChatMessages.timestamp))
       .limit(limit);
   }
 
@@ -182,7 +182,7 @@ export class LiveChatMessageRepository extends BaseRepository {
       .select({ timestamp: liveChatMessages.timestamp })
       .from(liveChatMessages)
       .where(eq(liveChatMessages.video_id, videoId))
-      .orderBy(desc(liveChatMessages.timestamp))
+      .orderBy(asc(liveChatMessages.timestamp))
       .limit(keepCount);
 
     if (recentMessages.length < keepCount) {
@@ -190,12 +190,12 @@ export class LiveChatMessageRepository extends BaseRepository {
       return 0;
     }
 
-    const lastMessage = recentMessages.at(-1);
-    if (!lastMessage) {
+    const oldestKeptMessage = recentMessages.at(0);
+    if (!oldestKeptMessage) {
       // Should not happen given the length check above, but satisfies TypeScript
       return 0;
     }
-    const cutoffTimestamp = lastMessage.timestamp;
+    const cutoffTimestamp = oldestKeptMessage.timestamp;
 
     // Delete messages older than the cutoff
     const result = await this.db

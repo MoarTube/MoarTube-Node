@@ -8,15 +8,8 @@ import type { ExtendedWebSocket, IncomingWebSocketMessage } from '../../types/we
 import { WebSocketHandler, type HandlerContext } from './base.js';
 import jwt from 'jsonwebtoken';
 import { getConfig } from '../../config/index.js';
-
-/**
- * Register message interface
- */
-interface RegisterMessage extends IncomingWebSocketMessage {
-  eventName: 'register';
-  socketType: 'moartube_client' | 'admin' | 'viewer' | 'node_peer';
-  jwtToken?: string;
-}
+import { registerEventSchema, type RegisterEvent } from '../../validators/schemas/index.js';
+import { ZodError } from 'zod';
 
 /**
  * Handler for client registration
@@ -39,21 +32,37 @@ export class RegisterHandler extends WebSocketHandler {
     message: IncomingWebSocketMessage,
     context: HandlerContext
   ): void {
-    const registerMessage = message as RegisterMessage;
-
-    // Validate required fields
-    const socketType = registerMessage.socketType;
-    if (typeof socketType !== 'string' || socketType.trim() === '') {
-      context.log.warn('Register message missing socketType', { clientId: client.clientId });
-      return;
+    try {
+      const registerMessage = registerEventSchema.parse(message);
+      this.processMessage(client, registerMessage, context);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        context.log.warn('Invalid register event format', {
+          errors: error.issues,
+          clientId: client.clientId,
+        });
+      } else {
+        context.log.error('Error parsing register event', error, { clientId: client.clientId });
+      }
     }
+  }
+
+  /**
+   * Process validated registration message
+   */
+  protected processMessage(
+    client: ExtendedWebSocket,
+    validatedMessage: unknown,
+    context: HandlerContext
+  ): void {
+    const registerMessage = validatedMessage as RegisterEvent;
+    const { socketType, jwtToken } = registerMessage;
 
     // Set client properties
     client.socketType = socketType;
 
     // For authenticated clients, verify JWT token if provided
-    const jwtToken = registerMessage.jwtToken;
-    if (typeof jwtToken === 'string' && jwtToken.trim() !== '') {
+    if (jwtToken !== undefined && jwtToken.length > 0) {
       try {
         const config = getConfig();
         jwt.verify(jwtToken, config.jwtSecret);

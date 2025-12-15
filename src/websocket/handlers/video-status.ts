@@ -12,6 +12,8 @@ import type {
   WebSocketMessage,
 } from '../../types/websocket.js';
 import { type HandlerContext, WebSocketHandler } from './base.js';
+import { videoStatusEventSchema, type VideoStatusEvent } from '../../validators/schemas/index.js';
+import { ZodError } from 'zod';
 
 /**
  * Handler for video status events
@@ -48,15 +50,27 @@ export class VideoStatusHandler extends WebSocketHandler {
     message: IncomingWebSocketMessage,
     context: HandlerContext
   ): void {
-    const { videoId } = message;
-
-    if (videoId === undefined || videoId === '') {
-      context.log.warn('Video status event without videoId', {
-        eventName: message.eventName,
-        clientId: client.clientId,
-      });
-      return;
+    try {
+      const statusEvent = videoStatusEventSchema.parse(message);
+      this.processMessage(statusEvent, context);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        context.log.warn('Invalid video status event format', {
+          errors: error.issues,
+          clientId: client.clientId,
+        });
+      } else {
+        context.log.error('Error parsing video status event', error, { clientId: client.clientId });
+      }
     }
+  }
+
+  /**
+   * Process validated video status message
+   */
+  protected processMessage(validatedMessage: unknown, context: HandlerContext): void {
+    const statusEvent = validatedMessage as VideoStatusEvent;
+    const { eventName, videoId } = statusEvent;
 
     // Map event names to status values
     const statusMap: Record<string, VideoStatusMessage['status']> = {
@@ -68,9 +82,9 @@ export class VideoStatusHandler extends WebSocketHandler {
       video_finalized: 'finalized',
     };
 
-    const status = statusMap[message.eventName];
+    const status = statusMap[eventName];
 
-    if (status !== undefined) {
+    if (status !== undefined && videoId !== undefined) {
       const statusMessage: VideoStatusMessage = {
         eventName: 'video_status',
         videoId,
@@ -84,14 +98,14 @@ export class VideoStatusHandler extends WebSocketHandler {
 
       // Broadcast to all admin clients
       this.broadcastToAdmins(statusMessage, context);
-    } else if (message.eventName === 'video_status' || message.eventName === 'video_data') {
+    } else if (eventName === 'video_status' || eventName === 'video_data') {
       // Forward the message as-is
       context.log.debug('Forwarding video event', {
-        eventName: message.eventName,
+        eventName,
         videoId,
       });
 
-      this.broadcastToAdmins(message as WebSocketMessage, context);
+      this.broadcastToAdmins(statusEvent as WebSocketMessage, context);
     }
   }
 

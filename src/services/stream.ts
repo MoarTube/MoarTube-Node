@@ -126,7 +126,7 @@ export class StreamService extends BaseService implements IStreamService {
 
       await this.videoRepository.update(videoId, {
         is_streaming: false,
-        is_live: false,
+        is_live: true,
         is_streamed: true,
       });
 

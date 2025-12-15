@@ -15,12 +15,18 @@ import type {
   LiveStreamWatchingCounts,
 } from '../types/websocket.js';
 import type { HandlerContext, WebSocketHandler } from './handlers/base.js';
-import { ChatMessageHandler } from './handlers/chat.js';
-import { LiveStreamHandler } from './handlers/stream.js';
+import { ChatJoinHandler } from './handlers/chat-join.js';
+import { ChatMessageHandler } from './handlers/chat-message.js';
 import { VideoStatusHandler } from './handlers/video-status.js';
 import { EchoHandler } from './handlers/echo.js';
 import { RegisterHandler } from './handlers/register.js';
 import { Logger, type ILogger } from '../utils/logger.js';
+import type { Container } from '../core/container.js';
+import type {
+  IVideoService,
+  ILiveChatService,
+  ICloudflareService,
+} from '../services/interfaces.js';
 
 /**
  * Configuration options for WebSocket Manager
@@ -32,6 +38,8 @@ export interface WebSocketManagerOptions {
   heartbeatInterval?: number;
   /** Client timeout in milliseconds */
   clientTimeout?: number;
+  /** DI container for service resolution */
+  container?: Container;
 }
 
 /**
@@ -46,6 +54,7 @@ export class WebSocketManager {
   private readonly logger: ILogger;
   private readonly heartbeatInterval: number;
   private readonly clientTimeout: number;
+  private container: Container | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private clientIdCounter = 0;
 
@@ -53,20 +62,87 @@ export class WebSocketManager {
     this.logger = options.logger ?? Logger.getInstance();
     this.heartbeatInterval = options.heartbeatInterval ?? 30000;
     this.clientTimeout = options.clientTimeout ?? 60000;
+    this.container = options.container ?? null;
 
-    // Register default handlers
-    this.registerDefaultHandlers();
+    // Register handlers (services will be resolved when needed)
+    this.registerHandlers();
   }
 
   /**
-   * Register default message handlers
+   * Register handlers based on available services
    */
-  private registerDefaultHandlers(): void {
-    this.registerHandler(new ChatMessageHandler());
-    this.registerHandler(new LiveStreamHandler());
+  private registerHandlers(): void {
+    // Register handlers that don't need services
     this.registerHandler(new VideoStatusHandler());
     this.registerHandler(new EchoHandler());
     this.registerHandler(new RegisterHandler());
+
+    // Service-dependent handlers will be registered when container is set
+  }
+
+  /**
+   * Get video service from container
+   */
+  private getVideoService(): IVideoService {
+    if (!this.container) {
+      throw new Error(
+        'Container not available. WebSocketManager must be initialized with a container.'
+      );
+    }
+    return this.container.resolve('videoService');
+  }
+
+  /**
+   * Get live chat service from container
+   */
+  private getLiveChatService(): ILiveChatService {
+    if (!this.container) {
+      throw new Error(
+        'Container not available. WebSocketManager must be initialized with a container.'
+      );
+    }
+    return this.container.resolve('liveChatService');
+  }
+
+  /**
+   * Get Cloudflare service from container
+   */
+  private getCloudflareService(): ICloudflareService {
+    if (!this.container) {
+      throw new Error(
+        'Container not available. WebSocketManager must be initialized with a container.'
+      );
+    }
+    return this.container.resolve('cloudflareService');
+  }
+
+  /**
+   * Set the DI container for service resolution
+   */
+  setContainer(container: Container): void {
+    if (this.container) {
+      throw new Error('Container already set');
+    }
+    this.container = container;
+
+    // Register service-dependent handlers now that container is available
+    this.registerServiceHandlers();
+  }
+
+  /**
+   * Register handlers that require services
+   */
+  private registerServiceHandlers(): void {
+    if (!this.container) {
+      return; // Container not available yet
+    }
+
+    const videoService = this.getVideoService();
+    const liveChatService = this.getLiveChatService();
+    const cloudflareService = this.getCloudflareService();
+
+    this.registerHandler(new ChatJoinHandler(videoService));
+    this.registerHandler(new ChatMessageHandler(videoService, liveChatService, cloudflareService));
   }
 
   /**

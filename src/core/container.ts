@@ -37,6 +37,7 @@ import { ReportService } from '../services/report.js';
 import { SettingsService } from '../services/settings.js';
 import { UploadTrackerService } from '../services/upload-tracker.js';
 import { VideoUploadService } from '../services/video-upload.js';
+import { LiveChatService } from '../services/chat.js';
 
 /**
  * Container cradle type - defines all registered dependencies
@@ -73,6 +74,7 @@ export interface ContainerCradle {
   settingsService: SettingsService;
   uploadTrackerService: UploadTrackerService;
   videoUploadService: VideoUploadService;
+  liveChatService: LiveChatService;
 }
 
 /**
@@ -139,6 +141,7 @@ export function createAppContainer(db: DatabaseClient): Container {
     settingsService: asClass(SettingsService).singleton(),
     uploadTrackerService: asClass(UploadTrackerService).singleton(),
     videoUploadService: asClass(VideoUploadService).singleton(),
+    liveChatService: asClass(LiveChatService).singleton(),
   });
 
   // Store globally

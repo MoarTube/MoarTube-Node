@@ -2060,11 +2060,7 @@ body {
                   const sentTimestamp = data.sentTimestamp;
                   if (liveChatUsername !== LIVE_CHAT_USERNAME && liveChatUsernameColorCode !== LIVE_CHAT_USERNAME_COLOR_CODE) {
                     this.appendMessageAndConditionallyScroll(chatMessageContent, liveChatUsername, liveChatUsernameColorCode, null, false);
-                  } else {
-                    $('#send-chat-message-input').val('');
-                    $('#send-chat-message-input').prop('disabled', false);
-                    $('#send-chat-message-button').prop('disabled', false);
-                    $('#send-chat-message-button').text('Send');
+                  } else if (liveChatUsername === LIVE_CHAT_USERNAME && liveChatUsernameColorCode === LIVE_CHAT_USERNAME_COLOR_CODE) {
                     const chatMessageElementId = `${liveChatUsername}-${liveChatUsernameColorCode}-${sentTimestamp}`;
                     $('#' + chatMessageElementId).removeClass('pending-chat-message');
                   }
@@ -2133,6 +2129,44 @@ body {
             $(chatMessagesContainer).scrollTop(scrollheight);
           }
           return chatMessageElement;
+        }
+
+        broadcastChatMessageContent(ws, liveChatUsername, liveChatUsernameColorCode) {
+          if (ws.readyState === WebSocket.OPEN) {
+            const chatMessageContent = $('#send-chat-message-input').val();
+
+            if (chatMessageContent.length > 0) {
+              $('#send-chat-message-input').val('');
+
+              const sentTimestamp = Date.now();
+
+              const chatMessageElement = this.appendMessageAndConditionallyScroll(
+                chatMessageContent,
+                liveChatUsername,
+                liveChatUsernameColorCode,
+                sentTimestamp,
+                true
+              );
+
+              this.getCloudflareTurnstileToken()
+                .then((cloudflareTurnstileToken) => {
+                  ws.send(
+                    JSON.stringify({
+                      eventName: 'chat',
+                      type: 'message',
+                      videoId: this.VIDEO_ID,
+                      chatMessageContent: chatMessageContent,
+                      sentTimestamp: sentTimestamp,
+                      cloudflareTurnstileToken: cloudflareTurnstileToken,
+                    })
+                  );
+                })
+                .catch((error) => {
+                  this.showAlert(true, error);
+                  $(chatMessageElement).remove();
+                });
+            }
+          }
         }
 
         handleCommentSubmit(event, form) {
@@ -3003,7 +3037,7 @@ body {
           duration += (remainingSeconds < 10 ? '0' : '') + remainingSeconds;
           return duration;
         }
-        
+
         getViewsFormatted(views) {
           let totalViews = '';
 
