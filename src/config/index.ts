@@ -56,6 +56,7 @@ class Config {
   private _nodeIdentification: NodeIdentification | null = null;
   private _lastCheckedContentTracker: LastCheckedContentTracker;
   private readonly _runtime: RuntimeConfig;
+  private _settingsWatcher: fs.FSWatcher | null = null;
 
   private constructor(baseDir: string, configFileName: string) {
     // Initialize environment first
@@ -88,6 +89,20 @@ class Config {
       isDockerEnvironment: this._env.isDockerEnvironment,
       isDeveloperMode: this._appConfig.isDeveloperMode,
     };
+
+    // Set up file watching for settings file
+    this.setupSettingsFileWatcher();
+  }
+
+  /**
+   * Set up file watcher for automatic settings reload
+   */
+  private setupSettingsFileWatcher(): void {
+    this._settingsWatcher = fs.watch(this._paths.nodeSettingsPath, (eventType) => {
+      if (eventType === 'change') {
+        this.reloadNodeSettings();
+      }
+    });
   }
 
   /**
@@ -227,6 +242,24 @@ class Config {
     const merged = { ...this._nodeSettings, ...updates };
     this._nodeSettings = validateNodeSettings(merged);
     this.persistNodeSettings();
+  }
+
+  /**
+   * Reload node settings from disk
+   * Useful when settings file has been manually edited
+   */
+  reloadNodeSettings(): void {
+    this._nodeSettings = this.loadNodeSettings();
+  }
+
+  /**
+   * Clean up resources (file watchers, etc.)
+   */
+  cleanup(): void {
+    if (this._settingsWatcher) {
+      this._settingsWatcher.close();
+      this._settingsWatcher = null;
+    }
   }
 
   private persistNodeSettings(): void {
