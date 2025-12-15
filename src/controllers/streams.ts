@@ -20,7 +20,7 @@ export interface StartStreamBody {
   title: string;
   description: string;
   tags: string;
-  rtmpPort: string;
+  rtmpPort: number;
   uuid: string;
   isRecordingStreamRemotely: boolean;
   isRecordingStreamLocally: boolean;
@@ -95,7 +95,7 @@ export class StreamsController extends BaseController {
         isRecordingStreamLocally,
         networkAddress,
         resolution,
-        videoId = '',
+        videoId,
       } = request.body as StartStreamBody;
 
       const options: {
@@ -112,14 +112,14 @@ export class StreamsController extends BaseController {
         title,
         description,
         tags,
-        rtmpPort: Number.parseInt(rtmpPort, 10),
+        rtmpPort: rtmpPort,
         isRecordingStreamRemotely,
         isRecordingStreamLocally,
         networkAddress,
         resolution,
       };
 
-      if (videoId.length > 0) {
+      if (videoId !== undefined) {
         options.existingVideoId = videoId;
       }
 

@@ -30,7 +30,7 @@ export const networkAddressSchema = z
 /**
  * UUID schema
  */
-export const uuidSchema = z.uuid();
+export const uuidSchema = z.union([z.uuid(), z.literal('moartube')]);
 
 /**
  * HLS segment name schema

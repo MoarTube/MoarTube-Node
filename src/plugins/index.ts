@@ -7,6 +7,7 @@
 import Fastify, { type FastifyInstance, type FastifyLoggerOptions } from 'fastify';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyFormbody from '@fastify/formbody';
+import fastifyCors from '@fastify/cors';
 import fastifyView from '@fastify/view';
 import {
   serializerCompiler,
@@ -61,6 +62,11 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: getLoggerConfig(),
     trustProxy: true,
+  });
+
+  // Register CORS to allow any origin
+  await app.register(fastifyCors, {
+    origin: true, // Allow any origin
   });
 
   // Set up Zod validation and serialization

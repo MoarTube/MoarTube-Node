@@ -188,10 +188,11 @@ export class StreamService extends BaseService implements IStreamService {
   async startNewStream(options: StartStreamOptions): Promise<{ videoId: string }> {
     return this.withErrorLogging('startNewStream', async () => {
       let videoId = options.existingVideoId;
-      const isResumingStream = videoId !== undefined && videoId !== '';
+
+      const isResumingStream = videoId !== undefined;
 
       // Generate new video ID if not resuming
-      if (videoId === undefined || videoId === '') {
+      if (videoId === undefined) {
         videoId = this.generateId(11);
         // Keep generating until unique
         while (await this.videoRepository.findById(videoId)) {
@@ -301,19 +302,37 @@ export class StreamService extends BaseService implements IStreamService {
         };
 
         await this.videoRepository.create(videoData);
+
         this.logger.info('New stream created', { videoId });
       }
 
-      // Broadcast stream creation
-      this.broadcastStreamEvent('stream_data', {
+      this.broadcastStreamEvent('video_data', {
         videoId,
+        thumbnail: '',
         title: options.title,
         description: options.description,
         tags: tagsSanitized,
-        isStreaming: true,
-        isLive: true,
-        resolution: options.resolution,
-        creationTimestamp: timestamp,
+        lengthSeconds: 0,
+        lengthTimestamp: '',
+        views: 0,
+        comments: 0,
+        likes: 0,
+        dislikes: 0,
+        bandwidth: 0,
+        isImporting: 1,
+        isImported: 0,
+        isPublishing: 0,
+        isPublished: 0,
+        isLive: 1,
+        isStreaming: 1,
+        isStreamed: 0,
+        isStreamRecordedRemotely: options.isRecordingStreamRemotely,
+        isStreamRecordedLocally: options.isRecordingStreamLocally,
+        isIndexed: 0,
+        isIndexing: 0,
+        isIndexOutdated: 0,
+        isError: 0,
+        isFinalized: 0,
       });
 
       return { videoId };
