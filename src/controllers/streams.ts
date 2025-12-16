@@ -8,9 +8,9 @@ import path from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.js';
-import type { VideosRepository } from '../database/repositories/videos.js';
-import type { LiveChatMessagesRepository } from '../database/repositories/live-chat-messages.js';
 import type { StreamsService } from '../services/streams.js';
+import type { VideosService } from '../services/videos.js';
+import type { LiveChatService } from '../services/chat.js';
 import { getConfig } from '../config/index.js';
 
 /**
@@ -72,8 +72,8 @@ export interface ChatSettingsBody {
  */
 export class StreamsController extends BaseController {
   constructor(
-    private readonly videosRepository: VideosRepository,
-    private readonly liveChatMessageRepository: LiveChatMessagesRepository,
+    private readonly videosService: VideosService,
+    private readonly liveChatService: LiveChatService,
     private readonly streamService: StreamsService
   ) {
     super('StreamsController');
@@ -199,7 +199,7 @@ export class StreamsController extends BaseController {
     try {
       const { videoId } = request.params as VideoIdParams;
 
-      const video = await this.videosRepository.findById(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (video === null) {
         return await this.sendError(reply, 'that video does not exist');
@@ -226,7 +226,7 @@ export class StreamsController extends BaseController {
       const { videoId } = request.params as VideoIdParams;
       const { isChatHistoryEnabled, chatHistoryLimit } = request.body as ChatSettingsBody;
 
-      const video = await this.videosRepository.findById(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (video === null) {
         return await this.sendError(reply, 'that video does not exist');
@@ -247,13 +247,13 @@ export class StreamsController extends BaseController {
       chatSettings['chatHistoryLimit'] = chatHistoryLimit;
       meta['chatSettings'] = chatSettings;
 
-      await this.videosRepository.update(videoId, { meta: JSON.stringify(meta) });
+      await this.videosService.updateVideoMeta(videoId, meta);
 
       // Clean up chat history if disabled or limited
       if (!isChatHistoryEnabled) {
-        await this.liveChatMessageRepository.deleteByVideoId(videoId);
+        await this.liveChatService.deleteMessagesForVideo(videoId);
       } else if (chatHistoryLimit > 0) {
-        await this.liveChatMessageRepository.pruneOldMessages(videoId, chatHistoryLimit);
+        await this.liveChatService.pruneOldMessages(videoId, chatHistoryLimit);
       }
 
       return await this.sendSuccess(reply);
@@ -273,7 +273,7 @@ export class StreamsController extends BaseController {
     try {
       const { videoId } = request.params as VideoIdParams;
 
-      const chatHistory = await this.liveChatMessageRepository.findByVideoId(videoId);
+      const chatHistory = await this.liveChatService.getRecentMessages(videoId);
 
       return await this.sendSuccess(reply, { chatHistory });
     } catch (error) {

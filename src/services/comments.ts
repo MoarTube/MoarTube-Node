@@ -175,6 +175,13 @@ export class CommentsService extends BaseService implements ICommentService {
   }
 
   /**
+   * Count comments newer than timestamp
+   */
+  async countCommentsNewerThan(timestamp: number): Promise<number> {
+    return this.commentsRepository.countNewerThan(timestamp);
+  }
+
+  /**
    * Search comments across all videos
    *
    * @param searchTerm - Text to search for in comments

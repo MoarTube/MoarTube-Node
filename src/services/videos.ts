@@ -115,10 +115,10 @@ export class VideosService extends BaseService implements IVideoService {
       if (options?.isPublished !== undefined) {
         queryOptions.isPublished = options.isPublished;
       }
-      if (options?.isStreaming !== undefined) {
+      if (options && 'isStreaming' in options) {
         queryOptions.isStreaming = options.isStreaming;
       }
-      if (options?.isFinalized !== undefined) {
+      if (options && 'isFinalized' in options) {
         queryOptions.isFinalized = options.isFinalized;
       }
       if (options?.search !== undefined) {
@@ -146,10 +146,10 @@ export class VideosService extends BaseService implements IVideoService {
       if (options?.isPublished !== undefined) {
         countOptions.isPublished = options.isPublished;
       }
-      if (options?.isStreaming !== undefined) {
+      if (options && 'isStreaming' in options) {
         countOptions.isStreaming = options.isStreaming;
       }
-      if (options?.isFinalized !== undefined) {
+      if (options && 'isFinalized' in options) {
         countOptions.isFinalized = options.isFinalized;
       }
       if (options?.search !== undefined) {
@@ -169,6 +169,40 @@ export class VideosService extends BaseService implements IVideoService {
         limit,
         hasMore: videos.length === limit,
       };
+    });
+  }
+
+  /**
+   * Count videos with filtering
+   */
+  async countVideos(options?: GetVideosOptions): Promise<number> {
+    return this.withErrorLogging('countVideos', async () => {
+      // Build count options, omitting undefined values
+      const countOptions: {
+        isPublished?: boolean;
+        isStreaming?: boolean;
+        isFinalized?: boolean;
+        search?: string;
+        tagTerm?: string;
+      } = {};
+
+      if (options?.isPublished !== undefined) {
+        countOptions.isPublished = options.isPublished;
+      }
+      if (options && 'isStreaming' in options) {
+        countOptions.isStreaming = options.isStreaming;
+      }
+      if (options && 'isFinalized' in options) {
+        countOptions.isFinalized = options.isFinalized;
+      }
+      if (options && 'search' in options) {
+        countOptions.search = options.search;
+      }
+      if (options && 'tagTerm' in options) {
+        countOptions.tagTerm = options.tagTerm;
+      }
+
+      return this.videoRepository.getCount(countOptions);
     });
   }
 
@@ -298,6 +332,41 @@ export class VideosService extends BaseService implements IVideoService {
           await this.cloudflareService.purgeNodePage();
         } catch (error) {
           this.logger.warn('Failed to purge Cloudflare cache after video update', {
+            videoId,
+            error,
+          });
+        }
+      }
+
+      return updatedVideo;
+    });
+  }
+
+  /**
+   * Update video meta field
+   */
+  async updateVideoMeta(
+    videoId: string,
+    meta: Record<string, unknown>
+  ): Promise<DrizzleVideo | null> {
+    return this.withErrorLogging('updateVideoMeta', async () => {
+      const existingVideo = await this.videoRepository.findById(videoId);
+      if (!existingVideo) {
+        return null;
+      }
+
+      const metaString = JSON.stringify(meta);
+
+      const updatedVideo = await this.videoRepository.update(videoId, { meta: metaString });
+
+      // Purge Cloudflare cache after update
+      if (this.cloudflareService) {
+        try {
+          await this.cloudflareService.purgeEmbedVideoPages([videoId]);
+          await this.cloudflareService.purgeWatchPages([videoId]);
+          await this.cloudflareService.purgeNodePage();
+        } catch (error) {
+          this.logger.warn('Failed to purge Cloudflare cache after video meta update', {
             videoId,
             error,
           });

@@ -128,20 +128,20 @@ export interface IVideoUploadService {
 }
 
 export class VideoUploadService implements IVideoUploadService {
-  private readonly videoService: IVideoService;
+  private readonly videosService: IVideoService;
   private readonly uploadTrackerService: IUploadTrackerService;
   private readonly cloudflareService: ICloudflareService | undefined;
   private readonly websocketService: IWebSocketService | undefined;
   private readonly logger: ILogger;
 
   constructor(
-    videoService: IVideoService,
+    videosService: IVideoService,
     uploadTrackerService: IUploadTrackerService,
     cloudflareService?: ICloudflareService,
     websocketService?: IWebSocketService,
     logger?: ILogger
   ) {
-    this.videoService = videoService;
+    this.videosService = videosService;
     this.uploadTrackerService = uploadTrackerService;
     this.cloudflareService = cloudflareService;
     this.websocketService = websocketService;
@@ -333,7 +333,7 @@ export class VideoUploadService implements IVideoUploadService {
             break;
           case 'preview':
             // Mark index as outdated since preview is used in search results
-            await this.videoService.markIndexOutdated(videoId);
+            await this.videosService.markIndexOutdated(videoId);
             await this.cloudflareService.purgeVideoPreviewImages([videoId]);
             break;
           case 'poster':

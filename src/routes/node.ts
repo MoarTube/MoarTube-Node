@@ -4,7 +4,6 @@
  * Routes for the main node page and related endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-
 import { NodeController } from '../controllers/node.js';
 import type { Container } from '../core/container.js';
 import { nodeSearchQuerySchema, contentCheckedBodySchema } from '../validators/index.js';
@@ -19,20 +18,20 @@ export function nodeRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videosRepository = container.resolve('videosRepository');
-  const commentsRepository = container.resolve('commentsRepository');
-  const reportsVideosRepository = container.resolve('reportsVideosRepository');
-  const reportsCommentsRepository = container.resolve('reportsCommentsRepository');
-  const linksRepository = container.resolve('linksRepository');
-  const monetizationRepository = container.resolve('monetizationRepository');
+  const videosService = container.resolve('videosService');
+  const linksService = container.resolve('linksService');
+  const monetizationService = container.resolve('monetizationService');
+  const streamsService = container.resolve('streamsService');
+  const commentsService = container.resolve('commentsService');
+  const reportsService = container.resolve('reportsService');
 
   const controller = new NodeController(
-    videosRepository,
-    commentsRepository,
-    reportsVideosRepository,
-    reportsCommentsRepository,
-    linksRepository,
-    monetizationRepository
+    videosService,
+    linksService,
+    monetizationService,
+    streamsService,
+    commentsService,
+    reportsService
   );
 
   // Node page - public (no auth required)

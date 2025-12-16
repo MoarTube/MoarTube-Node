@@ -4,7 +4,6 @@
  * Routes for node settings and configuration endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-
 import type { Container } from '../core/container.js';
 import { SettingsController } from '../controllers/index.js';
 import {
@@ -33,16 +32,10 @@ export function settingsRoutes(
   container: Container
 ): void {
   const settingsService = container.resolve('settingsService');
-  const videosRepository = container.resolve('videosRepository');
   const cloudflareService = container.resolve('cloudflareService');
   const websocketService = container.resolve('websocketService');
 
-  const controller = new SettingsController(
-    settingsService,
-    videosRepository,
-    cloudflareService,
-    websocketService
-  );
+  const controller = new SettingsController(settingsService, cloudflareService, websocketService);
 
   // ============================================================================
   // Settings Root

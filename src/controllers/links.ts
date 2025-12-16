@@ -5,9 +5,8 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base.js';
-import type { LinksRepository } from '../database/repositories/links.js';
+import type { LinksService } from '../services/links.js';
 import type { CloudflareService } from '../services/cloudflare.js';
-import { getCurrentUnixTimestamp } from '../utils/index.js';
 
 /**
  * Request body for adding a link
@@ -34,7 +33,7 @@ export interface DeleteLinkBody {
  */
 export class LinksController extends BaseController {
   constructor(
-    private readonly linkRepository: LinksRepository,
+    private readonly linksService: LinksService,
     private readonly cloudflareService: CloudflareService
   ) {
     super('LinksController');
@@ -47,7 +46,7 @@ export class LinksController extends BaseController {
    */
   getAllLinks = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const links = await this.linkRepository.findAll();
+      const links = await this.linksService.getAllLinks();
 
       return await this.sendSuccess(reply, { links });
     } catch (error) {
@@ -66,12 +65,9 @@ export class LinksController extends BaseController {
     try {
       const { url, svgGraphic } = request.body as AddLinkBody;
 
-      const timestamp = getCurrentUnixTimestamp();
-
-      const link = await this.linkRepository.create({
+      const link = await this.linksService.createLink({
         url,
-        svg_graphic: svgGraphic,
-        timestamp,
+        svgGraphic,
       });
 
       // Purge Cloudflare cache for node page and watch pages
@@ -95,7 +91,7 @@ export class LinksController extends BaseController {
     try {
       const { linkId } = request.body as DeleteLinkBody;
 
-      const deleted = await this.linkRepository.delete(linkId);
+      const deleted = await this.linksService.deleteLink(linkId);
 
       if (!deleted) {
         return await this.sendError(reply, 'link not found', 404);

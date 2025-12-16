@@ -18,9 +18,9 @@ export function monetizationRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const monetizationRepository = container.resolve('monetizationRepository');
+  const monetizationService = container.resolve('monetizationService');
   const cloudflareService = container.resolve('cloudflareService');
-  const controller = new MonetizationController(monetizationRepository, cloudflareService);
+  const controller = new MonetizationController(monetizationService, cloudflareService);
 
   // Get all wallet addresses - public (no auth required)
   fastify.get(

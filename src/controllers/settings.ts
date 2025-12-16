@@ -11,15 +11,6 @@ import { pipeline } from 'node:stream/promises';
 
 import { BaseController } from './base.js';
 import type { SettingsService } from '../services/settings.js';
-import type { VideosRepository } from '../database/repositories/videos.js';
-import type { CommentsRepository } from '../database/repositories/comments.js';
-import type { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
-import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
-import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
-import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
-import type { LiveChatMessagesRepository } from '../database/repositories/live-chat-messages.js';
-import type { MonetizationRepository } from '../database/repositories/monetization.js';
-import type { LinksRepository } from '../database/repositories/links.js';
 import type { CloudflareService } from '../services/cloudflare.js';
 import type { WebSocketService } from '../services/websocket.js';
 import { getConfig } from '../config/index.js';
@@ -122,17 +113,8 @@ export interface SecureBody {
 export class SettingsController extends BaseController {
   constructor(
     private readonly settingsService: SettingsService,
-    private readonly videoRepository?: VideosRepository,
     private readonly cloudflareService?: CloudflareService,
-    private readonly websocketService?: WebSocketService,
-    private readonly commentsRepository?: CommentsRepository,
-    private readonly reportsVideosRepository?: ReportsVideosRepository,
-    private readonly reportsCommentsRepository?: ReportsCommentsRepository,
-    private readonly reportsArchiveVideosRepository?: ReportsArchiveVideosRepository,
-    private readonly reportsArchiveCommentsRepository?: ReportsArchiveCommentsRepository,
-    private readonly liveChatMessageRepository?: LiveChatMessagesRepository,
-    private readonly monetizationRepository?: MonetizationRepository,
-    private readonly linksRepository?: LinksRepository
+    private readonly websocketService?: WebSocketService
   ) {
     super('SettingsController');
   }
@@ -254,9 +236,7 @@ export class SettingsController extends BaseController {
         }
 
         // Mark all indexed videos as outdated
-        if (this.videoRepository !== undefined) {
-          await this.videoRepository.markAllIndexedAsOutdated();
-        }
+        await this.settingsService.markAllVideosAsNotIndexed();
 
         return await this.sendSuccess(reply);
       }
@@ -456,9 +436,8 @@ export class SettingsController extends BaseController {
       const { nodeName } = request.body as PersonalizeNodeNameBody;
 
       // Check if there are indexed videos to determine if indexer update is needed
-      const hasIndexedVideos = this.videoRepository
-        ? (await this.videoRepository.findIndexed()).length > 0
-        : false;
+      const indexedVideos = await this.settingsService.getIndexedVideos();
+      const hasIndexedVideos = indexedVideos.length > 0;
 
       await this.settingsService.updateNodeName(nodeName, hasIndexedVideos);
 
@@ -483,9 +462,8 @@ export class SettingsController extends BaseController {
       const { nodeAbout } = request.body as PersonalizeNodeAboutBody;
 
       // Check if there are indexed videos to determine if indexer update is needed
-      const hasIndexedVideos = this.videoRepository
-        ? (await this.videoRepository.findIndexed()).length > 0
-        : false;
+      const indexedVideos = await this.settingsService.getIndexedVideos();
+      const hasIndexedVideos = indexedVideos.length > 0;
 
       await this.settingsService.updateNodeAbout(nodeAbout, hasIndexedVideos);
 
@@ -510,9 +488,8 @@ export class SettingsController extends BaseController {
       const { nodeId } = request.body as PersonalizeNodeIdBody;
 
       // Check if there are indexed videos to determine if indexer update is needed
-      const hasIndexedVideos = this.videoRepository
-        ? (await this.videoRepository.findIndexed()).length > 0
-        : false;
+      const indexedVideos = await this.settingsService.getIndexedVideos();
+      const hasIndexedVideos = indexedVideos.length > 0;
 
       await this.settingsService.updateNodeId(nodeId, hasIndexedVideos);
 
@@ -608,12 +585,7 @@ export class SettingsController extends BaseController {
    * Check if there are any indexed videos
    */
   private async checkHasIndexedVideos(): Promise<boolean> {
-    if (this.videoRepository === undefined) {
-      return false;
-    }
-
-    const indexedVideos = await this.videoRepository.findIndexed();
-
+    const indexedVideos = await this.settingsService.getIndexedVideos();
     return indexedVideos.length > 0;
   }
 
@@ -625,16 +597,13 @@ export class SettingsController extends BaseController {
 
     const nodeSettings = config.nodeSettings;
 
-    if (
-      nodeSettings.storageConfig.storageMode !== 'filesystem' ||
-      this.videoRepository === undefined
-    ) {
+    if (nodeSettings.storageConfig.storageMode !== 'filesystem') {
       return;
     }
 
     const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
     const videosDirectoryPath = config.paths.videosDirectoryPath;
-    const videos = await this.videoRepository.findAll({});
+    const videos = await this.settingsService.getIndexedVideos();
 
     for (const video of videos) {
       this.rewriteVideoManifests(video, videosDirectoryPath, externalVideosBaseUrl);
@@ -1198,55 +1167,29 @@ export class SettingsController extends BaseController {
    */
   exportDatabase = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      // Check if all required repositories are available
-      if (
-        this.videoRepository === undefined ||
-        this.commentsRepository === undefined ||
-        this.reportsVideosRepository === undefined ||
-        this.reportsCommentsRepository === undefined ||
-        this.reportsArchiveVideosRepository === undefined ||
-        this.reportsArchiveCommentsRepository === undefined ||
-        this.liveChatMessageRepository === undefined ||
-        this.monetizationRepository === undefined ||
-        this.linksRepository === undefined
-      ) {
-        return await this.sendError(
-          reply,
-          'database export requires all repositories to be configured'
-        );
-      }
-
-      // Fetch all data from all tables (no limit = return all)
-      const videos = await this.videoRepository.findAll();
-      const comments = await this.commentsRepository.findAll();
-      const videoReports = await this.reportsVideosRepository.findAll();
-      const commentReports = await this.reportsCommentsRepository.findAll();
-      const videoReportsArchives = await this.reportsArchiveVideosRepository.findAll();
-      const commentReportsArchives = await this.reportsArchiveCommentsRepository.findAll();
-      const liveChatMessages = await this.liveChatMessageRepository.findAll();
-      const cryptoWalletAddresses = await this.monetizationRepository.findAll();
-      const links = await this.linksRepository.findAll();
+      // Fetch all data using the settings service
+      const data = await this.settingsService.exportAllData();
 
       // Build database export structure
       const database = [
-        { rows: videos as Record<string, unknown>[], tableName: 'videos' },
-        { rows: comments as Record<string, unknown>[], tableName: 'comments' },
-        { rows: videoReports as Record<string, unknown>[], tableName: 'videoreports' },
-        { rows: commentReports as Record<string, unknown>[], tableName: 'commentreports' },
+        { rows: data.videos as Record<string, unknown>[], tableName: 'videos' },
+        { rows: data.comments as Record<string, unknown>[], tableName: 'comments' },
+        { rows: data.videoReports as Record<string, unknown>[], tableName: 'videoreports' },
+        { rows: data.commentReports as Record<string, unknown>[], tableName: 'commentreports' },
         {
-          rows: videoReportsArchives as Record<string, unknown>[],
+          rows: data.videoReportsArchives as Record<string, unknown>[],
           tableName: 'videoreportsarchives',
         },
         {
-          rows: commentReportsArchives as Record<string, unknown>[],
+          rows: data.commentReportsArchives as Record<string, unknown>[],
           tableName: 'commentreportsarchives',
         },
-        { rows: liveChatMessages as Record<string, unknown>[], tableName: 'livechatmessages' },
+        { rows: data.liveChatMessages as Record<string, unknown>[], tableName: 'livechatmessages' },
         {
-          rows: cryptoWalletAddresses as Record<string, unknown>[],
+          rows: data.cryptoWalletAddresses as Record<string, unknown>[],
           tableName: 'cryptowalletaddresses',
         },
-        { rows: links as Record<string, unknown>[], tableName: 'links' },
+        { rows: data.links as Record<string, unknown>[], tableName: 'links' },
       ];
 
       /*
@@ -1290,24 +1233,6 @@ export class SettingsController extends BaseController {
    */
   importDatabase = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      // Check if all required repositories are available
-      if (
-        this.videoRepository === undefined ||
-        this.commentsRepository === undefined ||
-        this.reportsVideosRepository === undefined ||
-        this.reportsCommentsRepository === undefined ||
-        this.reportsArchiveVideosRepository === undefined ||
-        this.reportsArchiveCommentsRepository === undefined ||
-        this.liveChatMessageRepository === undefined ||
-        this.monetizationRepository === undefined ||
-        this.linksRepository === undefined
-      ) {
-        return await this.sendError(
-          reply,
-          'database import requires all repositories to be configured'
-        );
-      }
-
       // Parse multipart data
       const parts = request.parts();
       let databaseFileContent: string | undefined;
@@ -1324,100 +1249,7 @@ export class SettingsController extends BaseController {
         return await this.sendError(reply, 'database file is missing');
       }
 
-      // Parse the JSON database
-      interface DatabaseTable {
-        rows: Record<string, unknown>[];
-        tableName: string;
-      }
-      const database: DatabaseTable[] = JSON.parse(databaseFileContent) as DatabaseTable[];
-
-      // Helper to convert snake_case to camelCase
-      // This allows importing database exports from the original JS version
-      const snakeToCamel = (str: string): string =>
-        str.replaceAll(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-
-      // Transform all rows: convert snake_case keys to camelCase for Drizzle compatibility
-      for (const table of database) {
-        table.rows = table.rows.map((row) => {
-          const transformedRow: Record<string, unknown> = {};
-          for (const key of Object.keys(row)) {
-            const camelKey = snakeToCamel(key);
-            transformedRow[camelKey] = row[key];
-          }
-          return transformedRow;
-        });
-      }
-
-      // Clear all tables first (order matters due to potential foreign keys)
-      await this.commentsRepository.deleteAll();
-      await this.liveChatMessageRepository.deleteAll();
-      await this.reportsCommentsRepository.deleteAll();
-      await this.reportsVideosRepository.deleteAll();
-      await this.reportsArchiveCommentsRepository.deleteAll();
-      await this.reportsArchiveVideosRepository.deleteAll();
-      await this.monetizationRepository.deleteAll();
-      await this.linksRepository.deleteAll();
-      await this.videoRepository.deleteAll();
-
-      // Import each table
-      for (const table of database) {
-        const { rows, tableName } = table;
-
-        if (rows.length === 0) {
-          continue;
-        }
-
-        // Map table names to repository createMany calls
-        switch (tableName) {
-          case 'videos':
-            await this.videoRepository.createMany(
-              rows as Parameters<typeof this.videoRepository.createMany>[0]
-            );
-            break;
-          case 'comments':
-            await this.commentsRepository.createMany(
-              rows as Parameters<typeof this.commentsRepository.createMany>[0]
-            );
-            break;
-          case 'videoreports':
-            await this.reportsVideosRepository.createMany(
-              rows as Parameters<typeof this.reportsVideosRepository.createMany>[0]
-            );
-            break;
-          case 'commentreports':
-            await this.reportsCommentsRepository.createMany(
-              rows as Parameters<typeof this.reportsCommentsRepository.createMany>[0]
-            );
-            break;
-          case 'videoreportsarchives':
-            await this.reportsArchiveVideosRepository.createMany(
-              rows as Parameters<typeof this.reportsArchiveVideosRepository.createMany>[0]
-            );
-            break;
-          case 'commentreportsarchives':
-            await this.reportsArchiveCommentsRepository.createMany(
-              rows as Parameters<typeof this.reportsArchiveCommentsRepository.createMany>[0]
-            );
-            break;
-          case 'livechatmessages':
-            await this.liveChatMessageRepository.createMany(
-              rows as Parameters<typeof this.liveChatMessageRepository.createMany>[0]
-            );
-            break;
-          case 'cryptowalletaddresses':
-            await this.monetizationRepository.createMany(
-              rows as Parameters<typeof this.monetizationRepository.createMany>[0]
-            );
-            break;
-          case 'links':
-            await this.linksRepository.createMany(
-              rows as Parameters<typeof this.linksRepository.createMany>[0]
-            );
-            break;
-          default:
-            this.logger.warn(`Unknown table name during import: ${tableName}`);
-        }
-      }
+      await this.settingsService.importDatabase(databaseFileContent);
 
       this.logger.info('database imported successfully');
 

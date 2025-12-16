@@ -6,7 +6,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.js';
-import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
+import type { ReportsService } from '../services/reports.js';
 
 /**
  * Request params for archive operations
@@ -23,7 +23,7 @@ export interface ArchiveIdParams {
  * - Delete an archived video report
  */
 export class ReportsArchiveVideosController extends BaseController {
-  constructor(private readonly videoReportsArchiveRepository: ReportsArchiveVideosRepository) {
+  constructor(private readonly reportsService: ReportsService) {
     super('ReportsArchiveVideosController');
   }
 
@@ -34,7 +34,7 @@ export class ReportsArchiveVideosController extends BaseController {
    */
   getAllArchives = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const reports = await this.videoReportsArchiveRepository.findAll();
+      const reports = await this.reportsService.getArchivedVideoReports();
 
       return await this.sendSuccess(reply, { reports });
     } catch (error) {
@@ -53,7 +53,7 @@ export class ReportsArchiveVideosController extends BaseController {
     try {
       const { archiveId } = request.params as ArchiveIdParams;
 
-      await this.videoReportsArchiveRepository.delete(archiveId);
+      await this.reportsService.deleteArchivedVideoReport(archiveId);
 
       return await this.sendSuccess(reply);
     } catch (error) {

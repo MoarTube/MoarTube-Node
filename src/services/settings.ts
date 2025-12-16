@@ -19,6 +19,26 @@ import type {
 } from './interfaces.js';
 import { getConfig } from '../config/index.js';
 import type { DatabaseConfig, StorageConfig } from '../types/index.js';
+import type { VideosRepository } from '../database/repositories/videos.js';
+import type { CommentsRepository } from '../database/repositories/comments.js';
+import type { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
+import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
+import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
+import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
+import type { LiveChatMessagesRepository } from '../database/repositories/live-chat-messages.js';
+import type { MonetizationRepository } from '../database/repositories/monetization.js';
+import type { LinksRepository } from '../database/repositories/links.js';
+import type {
+  DrizzleVideo,
+  DrizzleComment,
+  DrizzleVideoReport,
+  DrizzleCommentReport,
+  DrizzleVideoReportArchive,
+  DrizzleCommentReportArchive,
+  DrizzleLiveChatMessage,
+  DrizzleCryptoWalletAddress,
+  DrizzleLink,
+} from '../database/schemas/index.js';
 
 /**
  * SettingsService class
@@ -33,13 +53,40 @@ import type { DatabaseConfig, StorageConfig } from '../types/index.js';
 export class SettingsService extends BaseService implements ISettingsService {
   private readonly indexerService: IIndexerService | undefined;
   private readonly cloudflareService: ICloudflareService | undefined;
+  private readonly videosRepository: VideosRepository;
+  private readonly commentsRepository: CommentsRepository;
+  private readonly reportsVideosRepository: ReportsVideosRepository;
+  private readonly reportsCommentsRepository: ReportsCommentsRepository;
+  private readonly reportsArchiveVideosRepository: ReportsArchiveVideosRepository;
+  private readonly reportsArchiveCommentsRepository: ReportsArchiveCommentsRepository;
+  private readonly liveChatMessagesRepository: LiveChatMessagesRepository;
+  private readonly monetizationRepository: MonetizationRepository;
+  private readonly linksRepository: LinksRepository;
 
   constructor(
     logger: ILogger,
+    videosRepository: VideosRepository,
+    commentsRepository: CommentsRepository,
+    reportsVideosRepository: ReportsVideosRepository,
+    reportsCommentsRepository: ReportsCommentsRepository,
+    reportsArchiveVideosRepository: ReportsArchiveVideosRepository,
+    reportsArchiveCommentsRepository: ReportsArchiveCommentsRepository,
+    liveChatMessagesRepository: LiveChatMessagesRepository,
+    monetizationRepository: MonetizationRepository,
+    linksRepository: LinksRepository,
     indexerService?: IIndexerService,
     cloudflareService?: ICloudflareService
   ) {
     super('SettingsService', logger);
+    this.videosRepository = videosRepository;
+    this.commentsRepository = commentsRepository;
+    this.reportsVideosRepository = reportsVideosRepository;
+    this.reportsCommentsRepository = reportsCommentsRepository;
+    this.reportsArchiveVideosRepository = reportsArchiveVideosRepository;
+    this.reportsArchiveCommentsRepository = reportsArchiveCommentsRepository;
+    this.liveChatMessagesRepository = liveChatMessagesRepository;
+    this.monetizationRepository = monetizationRepository;
+    this.linksRepository = linksRepository;
     this.indexerService = indexerService;
     this.cloudflareService = cloudflareService;
   }
@@ -581,5 +628,192 @@ export class SettingsService extends BaseService implements ISettingsService {
     } catch {
       return '';
     }
+  }
+
+  /**
+   * Mark all videos as not indexed
+   */
+  async markAllVideosAsNotIndexed(): Promise<void> {
+    return this.withErrorLogging('markAllVideosAsNotIndexed', async () => {
+      await this.videosRepository.markAllIndexedAsOutdated();
+    });
+  }
+
+  /**
+   * Get all indexed videos
+   */
+  async getIndexedVideos(): Promise<DrizzleVideo[]> {
+    return this.withErrorLogging('getIndexedVideos', async () => {
+      return this.videosRepository.findIndexed();
+    });
+  }
+
+  /**
+   * Export all application data
+   */
+  async exportAllData(): Promise<{
+    videos: DrizzleVideo[];
+    comments: DrizzleComment[];
+    videoReports: DrizzleVideoReport[];
+    commentReports: DrizzleCommentReport[];
+    videoReportsArchives: DrizzleVideoReportArchive[];
+    commentReportsArchives: DrizzleCommentReportArchive[];
+    liveChatMessages: DrizzleLiveChatMessage[];
+    cryptoWalletAddresses: DrizzleCryptoWalletAddress[];
+    links: DrizzleLink[];
+  }> {
+    return this.withErrorLogging('exportAllData', async () => {
+      const [
+        videos,
+        comments,
+        videoReports,
+        commentReports,
+        videoReportsArchives,
+        commentReportsArchives,
+        liveChatMessages,
+        cryptoWalletAddresses,
+        links,
+      ] = await Promise.all([
+        this.videosRepository.findAll(),
+        this.commentsRepository.findAll(),
+        this.reportsVideosRepository.findAll(),
+        this.reportsCommentsRepository.findAll(),
+        this.reportsArchiveVideosRepository.findAll(),
+        this.reportsArchiveCommentsRepository.findAll(),
+        this.liveChatMessagesRepository.findAll(),
+        this.monetizationRepository.findAll(),
+        this.linksRepository.findAll(),
+      ]);
+
+      return {
+        videos,
+        comments,
+        videoReports,
+        commentReports,
+        videoReportsArchives,
+        commentReportsArchives,
+        liveChatMessages,
+        cryptoWalletAddresses,
+        links,
+      };
+    });
+  }
+
+  /**
+   * Delete all application data
+   */
+  async deleteAllData(): Promise<void> {
+    return this.withErrorLogging('deleteAllData', async () => {
+      await Promise.all([
+        this.commentsRepository.deleteAll(),
+        this.liveChatMessagesRepository.deleteAll(),
+        this.reportsCommentsRepository.deleteAll(),
+        this.reportsVideosRepository.deleteAll(),
+        this.reportsArchiveCommentsRepository.deleteAll(),
+        this.reportsArchiveVideosRepository.deleteAll(),
+      ]);
+    });
+  }
+
+  /**
+   * Import database from JSON file
+   */
+  async importDatabase(databaseFileContent: string): Promise<void> {
+    return this.withErrorLogging('importDatabase', async () => {
+      // Parse the JSON database
+      interface DatabaseTable {
+        rows: Record<string, unknown>[];
+        tableName: string;
+      }
+      const database: DatabaseTable[] = JSON.parse(databaseFileContent) as DatabaseTable[];
+
+      // Helper to convert snake_case to camelCase
+      // This allows importing database exports from the original JS version
+      const snakeToCamel = (str: string): string =>
+        str.replaceAll(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+
+      // Transform all rows: convert snake_case keys to camelCase for Drizzle compatibility
+      for (const table of database) {
+        table.rows = table.rows.map((row) => {
+          const transformedRow: Record<string, unknown> = {};
+          for (const key of Object.keys(row)) {
+            const camelKey = snakeToCamel(key);
+            transformedRow[camelKey] = row[key];
+          }
+          return transformedRow;
+        });
+      }
+
+      // Clear all tables first (order matters due to potential foreign keys)
+      await this.commentsRepository.deleteAll();
+      await this.liveChatMessagesRepository.deleteAll();
+      await this.reportsCommentsRepository.deleteAll();
+      await this.reportsVideosRepository.deleteAll();
+      await this.reportsArchiveCommentsRepository.deleteAll();
+      await this.reportsArchiveVideosRepository.deleteAll();
+      await this.monetizationRepository.deleteAll();
+      await this.linksRepository.deleteAll();
+      await this.videosRepository.deleteAll();
+
+      // Import each table
+      for (const table of database) {
+        const { rows, tableName } = table;
+
+        if (rows.length === 0) {
+          continue;
+        }
+
+        // Map table names to repository createMany calls
+        switch (tableName) {
+          case 'videos':
+            await this.videosRepository.createMany(
+              rows as Parameters<typeof this.videosRepository.createMany>[0]
+            );
+            break;
+          case 'comments':
+            await this.commentsRepository.createMany(
+              rows as Parameters<typeof this.commentsRepository.createMany>[0]
+            );
+            break;
+          case 'videoreports':
+            await this.reportsVideosRepository.createMany(
+              rows as Parameters<typeof this.reportsVideosRepository.createMany>[0]
+            );
+            break;
+          case 'commentreports':
+            await this.reportsCommentsRepository.createMany(
+              rows as Parameters<typeof this.reportsCommentsRepository.createMany>[0]
+            );
+            break;
+          case 'videoreportsarchives':
+            await this.reportsArchiveVideosRepository.createMany(
+              rows as Parameters<typeof this.reportsArchiveVideosRepository.createMany>[0]
+            );
+            break;
+          case 'commentreportsarchives':
+            await this.reportsArchiveCommentsRepository.createMany(
+              rows as Parameters<typeof this.reportsArchiveCommentsRepository.createMany>[0]
+            );
+            break;
+          case 'livechatmessages':
+            await this.liveChatMessagesRepository.createMany(
+              rows as Parameters<typeof this.liveChatMessagesRepository.createMany>[0]
+            );
+            break;
+          case 'cryptowalletaddresses':
+            await this.monetizationRepository.createMany(
+              rows as Parameters<typeof this.monetizationRepository.createMany>[0]
+            );
+            break;
+          case 'links':
+            await this.linksRepository.createMany(
+              rows as Parameters<typeof this.linksRepository.createMany>[0]
+            );
+            break;
+          default:
+            this.logger.warn(`Unknown table name during import: ${tableName}`);
+        }
+      }
+    });
   }
 }

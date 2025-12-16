@@ -4,7 +4,6 @@
  * Routes for comment report management.
  */
 import type { FastifyInstance } from 'fastify';
-
 import { ReportsCommentsController } from '../controllers/reports-comments.js';
 import type { Container } from '../core/container.js';
 import {
@@ -23,13 +22,9 @@ export function reportsCommentsRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const reportsCommentsRepository = container.resolve('reportsCommentsRepository');
-  const reportsArchiveCommentsRepository = container.resolve('reportsArchiveCommentsRepository');
+  const reportsService = container.resolve('reportsService');
 
-  const controller = new ReportsCommentsController(
-    reportsCommentsRepository,
-    reportsArchiveCommentsRepository
-  );
+  const controller = new ReportsCommentsController(reportsService);
 
   // Get all comment reports - authenticated
   fastify.get(

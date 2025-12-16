@@ -4,6 +4,7 @@
  * Routes for video-related endpoints.
  */
 import type { FastifyInstance } from 'fastify';
+import type { Container } from '../core/container.js';
 import { VideosController } from '../controllers/index.js';
 import {
   videoIdParamsSchema,
@@ -35,11 +36,25 @@ import {
  * Register videos routes
  *
  * @param fastify - Fastify instance with Zod type provider
+ * @param container - DI container
  */
 export function videosRoutes(
-  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
 ): void {
-  const controller = new VideosController();
+  const videosService = container.resolve('videosService');
+  const commentsService = container.resolve('commentsService');
+  const videoUploadService = container.resolve('videoUploadService');
+  const cloudflareService = container.resolve('cloudflareService');
+  const reportsService = container.resolve('reportsService');
+
+  const controller = new VideosController(
+    videosService,
+    commentsService,
+    videoUploadService,
+    cloudflareService,
+    reportsService
+  );
 
   // ============================================================================
   // Public Endpoints

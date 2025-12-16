@@ -6,9 +6,10 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { VideoControllerBase, type VideoSource } from './video-controller-base.js';
+import type { IVideoService } from '../services/interfaces.js';
+import type { ILinksService } from '../services/interfaces.js';
+import type { IMonetizationService } from '../services/interfaces.js';
 import type { CommentsRepository } from '../database/repositories/comments.js';
-import type { LinksRepository } from '../database/repositories/links.js';
-import type { MonetizationRepository } from '../database/repositories/monetization.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { DrizzleVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
@@ -108,9 +109,10 @@ interface WatchPageData {
 export class WatchController extends VideoControllerBase {
   constructor(
     videoRepository: VideosRepository,
-    private readonly commentRepository: CommentsRepository,
-    private readonly linkRepository: LinksRepository,
-    private readonly monetizationRepository: MonetizationRepository
+    private readonly videosService: IVideoService,
+    private readonly linksService: ILinksService,
+    private readonly monetizationService: IMonetizationService,
+    private readonly commentRepository: CommentsRepository
   ) {
     super('WatchController', videoRepository);
   }
@@ -124,7 +126,7 @@ export class WatchController extends VideoControllerBase {
     try {
       const { v: videoId } = request.query as WatchQuery;
 
-      const video = await this.videoRepository.findById(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         return await this.sendError(reply, 'that video could not be loaded', 404);
@@ -152,23 +154,26 @@ export class WatchController extends VideoControllerBase {
     const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
 
     // Fetch all data in parallel
-    const [videoCount, links, walletAddresses, recommendedVideos, comments] = await Promise.all([
-      this.videoRepository.getCount({ isPublished: true }),
-      this.linkRepository.findAll(),
-      this.monetizationRepository.findAll(),
-      this.videoRepository.findAll({
-        isPublished: true,
-        limit: 10,
-        sortBy: 'creation_timestamp',
-        sortDirection: 'desc',
-      }),
-      this.commentRepository.findByVideoIdWithTimestampFilter(
-        video.video_id,
-        'before',
-        'ascending',
-        Date.now()
-      ),
-    ]);
+    const [videoCount, links, walletAddresses, recommendedVideosResult, comments] =
+      await Promise.all([
+        this.videosService.countVideos({ isPublished: true }),
+        this.linksService.getAllLinks(),
+        this.monetizationService.getWalletAddresses(),
+        this.videosService.getVideos({
+          isPublished: true,
+          limit: 10,
+          sortBy: 'creation_timestamp',
+          sortDirection: 'desc',
+        }),
+        this.commentRepository.findByVideoIdWithTimestampFilter(
+          video.video_id,
+          'before',
+          'ascending',
+          Date.now()
+        ),
+      ]);
+
+    const recommendedVideos = recommendedVideosResult.data;
 
     const { adaptiveSources, progressiveSources, sourcesFormatsAndResolutions } =
       this.buildVideoSources(video, externalVideosBaseUrl);

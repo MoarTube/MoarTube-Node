@@ -6,12 +6,12 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.js';
-import type { VideosRepository } from '../database/repositories/videos.js';
-import type { CommentsRepository } from '../database/repositories/comments.js';
-import type { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
-import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
-import type { LinksRepository } from '../database/repositories/links.js';
-import type { MonetizationRepository } from '../database/repositories/monetization.js';
+import type { VideosService } from '../services/videos.js';
+import type { LinksService } from '../services/links.js';
+import type { MonetizationService } from '../services/monetization.js';
+import type { StreamsService } from '../services/streams.js';
+import type { CommentsService } from '../services/comments.js';
+import type { ReportsService } from '../services/reports.js';
 import type { DrizzleVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
 
@@ -42,12 +42,12 @@ export interface ContentCheckedBody {
  */
 export class NodeController extends BaseController {
   constructor(
-    private readonly videoRepository: VideosRepository,
-    private readonly commentRepository: CommentsRepository,
-    private readonly videoReportRepository: ReportsVideosRepository,
-    private readonly commentReportRepository: ReportsCommentsRepository,
-    private readonly linkRepository: LinksRepository,
-    private readonly monetizationRepository: MonetizationRepository
+    private readonly videosService: VideosService,
+    private readonly linksService: LinksService,
+    private readonly monetizationService: MonetizationService,
+    private readonly streamsService: StreamsService,
+    private readonly commentsService: CommentsService,
+    private readonly reportsService: ReportsService
   ) {
     super('NodeController');
   }
@@ -66,7 +66,7 @@ export class NodeController extends BaseController {
       const nodeSettings = config.nodeSettings;
 
       // Get node information
-      const videoCount = await this.videoRepository.getCount({ isPublished: true });
+      const videoCount = await this.videosService.countVideos({ isPublished: true });
 
       const informationData = {
         isError: false,
@@ -83,17 +83,18 @@ export class NodeController extends BaseController {
       };
 
       // Get links
-      const links = await this.linkRepository.findAll();
+      const links = await this.linksService.getAllLinks();
       const linksData = { isError: false, links };
 
       // Get crypto wallet addresses
-      const walletAddresses = await this.monetizationRepository.findAll();
+      const walletAddresses = await this.monetizationService.getWalletAddresses();
       const cryptoWalletAddressesData = { isError: false, cryptoWalletAddresses: walletAddresses };
 
       // Get all unique tags
-      const allVideos = await this.videoRepository.findAll({
+      const videosResult = await this.videosService.getVideos({
         isPublished: true,
       });
+      const allVideos = videosResult.data;
 
       const tagsSet = new Set<string>();
 
@@ -173,13 +174,13 @@ export class NodeController extends BaseController {
         lastCheckedContentTracker.lastCheckedCommentReportsTimestamp;
 
       // Count new content since last check
-      const newCommentsCount = await this.commentRepository.countNewerThan(
+      const newCommentsCount = await this.commentsService.countCommentsNewerThan(
         lastCheckedCommentsTimestamp
       );
-      const newVideoReportsCount = await this.videoReportRepository.countNewerThan(
+      const newVideoReportsCount = await this.reportsService.countVideoReportsNewerThan(
         lastCheckedVideoReportsTimestamp
       );
-      const newCommentReportsCount = await this.commentReportRepository.countNewerThan(
+      const newCommentReportsCount = await this.reportsService.countCommentReportsNewerThan(
         lastCheckedCommentReportsTimestamp
       );
 
@@ -257,8 +258,9 @@ export class NodeController extends BaseController {
       queryOptions.search = searchTerm;
     }
 
-    const videos = await this.videoRepository.findAll(queryOptions);
-    const liveVideos = await this.videoRepository.findStreaming();
+    const videosResult = await this.videosService.getVideos(queryOptions);
+    const videos = videosResult.data;
+    const liveVideos = await this.streamsService.getActiveStreams();
 
     const videoMap = new Map<string, DrizzleVideo>();
 

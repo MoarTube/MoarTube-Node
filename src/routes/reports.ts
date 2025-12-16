@@ -4,7 +4,6 @@
  * Routes for report count endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-
 import { ReportsController } from '../controllers/reports.js';
 import type { Container } from '../core/container.js';
 
@@ -18,10 +17,9 @@ export function reportsRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const reportsVideosRepository = container.resolve('reportsVideosRepository');
-  const reportsCommentsRepository = container.resolve('reportsCommentsRepository');
+  const reportsService = container.resolve('reportsService');
 
-  const controller = new ReportsController(reportsVideosRepository, reportsCommentsRepository);
+  const controller = new ReportsController(reportsService);
 
   // Get report counts - authenticated
   fastify.get(

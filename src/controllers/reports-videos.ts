@@ -6,8 +6,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.js';
-import type { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
-import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
+import type { ReportsService } from '../services/reports.js';
 
 /**
  * Request body for archiving a report
@@ -32,10 +31,7 @@ export interface ReportIdParams {
  * - Delete a video report
  */
 export class ReportsVideosController extends BaseController {
-  constructor(
-    private readonly videoReportRepository: ReportsVideosRepository,
-    private readonly videoReportsArchiveRepository: ReportsArchiveVideosRepository
-  ) {
+  constructor(private readonly reportsService: ReportsService) {
     super('ReportsVideosController');
   }
 
@@ -46,7 +42,7 @@ export class ReportsVideosController extends BaseController {
    */
   getAllReports = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const reports = await this.videoReportRepository.findAll();
+      const reports = await this.reportsService.getVideoReports();
 
       return await this.sendSuccess(reply, { reports });
     } catch (error) {
@@ -65,25 +61,7 @@ export class ReportsVideosController extends BaseController {
     try {
       const { reportId } = request.body as ArchiveReportBody;
 
-      const report = await this.videoReportRepository.findById(reportId);
-
-      if (!report) {
-        return await this.sendError(reply, 'report with id does not exist');
-      }
-
-      // Create archive record
-      await this.videoReportsArchiveRepository.create({
-        report_id: report.report_id,
-        timestamp: report.timestamp,
-        video_timestamp: report.video_timestamp,
-        video_id: report.video_id,
-        email: report.email,
-        type: report.type,
-        message: report.message,
-      });
-
-      // Delete original report
-      await this.videoReportRepository.delete(reportId);
+      await this.reportsService.archiveVideoReport(reportId);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -102,7 +80,7 @@ export class ReportsVideosController extends BaseController {
     try {
       const { reportId } = request.params as ReportIdParams;
 
-      await this.videoReportRepository.delete(reportId);
+      await this.reportsService.deleteVideoReport(reportId);
 
       return await this.sendSuccess(reply);
     } catch (error) {

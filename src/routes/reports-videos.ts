@@ -4,7 +4,6 @@
  * Routes for video report management.
  */
 import type { FastifyInstance } from 'fastify';
-
 import { ReportsVideosController } from '../controllers/reports-videos.js';
 import type { Container } from '../core/container.js';
 import {
@@ -23,13 +22,9 @@ export function reportsVideosRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const reportsVideosRepository = container.resolve('reportsVideosRepository');
-  const reportsArchiveVideosRepository = container.resolve('reportsArchiveVideosRepository');
+  const reportsService = container.resolve('reportsService');
 
-  const controller = new ReportsVideosController(
-    reportsVideosRepository,
-    reportsArchiveVideosRepository
-  );
+  const controller = new ReportsVideosController(reportsService);
 
   // Get all video reports - authenticated
   fastify.get(

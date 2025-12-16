@@ -4,7 +4,6 @@
  * Routes for comment search and reporting.
  */
 import type { FastifyInstance } from 'fastify';
-
 import { CommentsController } from '../controllers/comments.js';
 import type { Container } from '../core/container.js';
 import {
@@ -23,15 +22,15 @@ export function commentsRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const commentsRepository = container.resolve('commentsRepository');
-  const reportsCommentsRepository = container.resolve('reportsCommentsRepository');
-  const videosRepository = container.resolve('videosRepository');
+  const commentsService = container.resolve('commentsService');
+  const reportsService = container.resolve('reportsService');
+  const videosService = container.resolve('videosService');
   const cloudflareService = container.resolve('cloudflareService');
 
   const controller = new CommentsController(
-    commentsRepository,
-    reportsCommentsRepository,
-    videosRepository,
+    commentsService,
+    reportsService,
+    videosService,
     cloudflareService
   );
 

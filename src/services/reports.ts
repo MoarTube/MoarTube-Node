@@ -37,23 +37,23 @@ import type { PaginationOptions } from '../types/models.js';
  * - Report statistics
  */
 export class ReportsService extends BaseService implements IReportService {
-  private readonly videoReportRepository: ReportsVideosRepository;
-  private readonly commentReportRepository: ReportsCommentsRepository;
-  private readonly videoReportsArchiveRepository: ReportsArchiveVideosRepository;
-  private readonly commentReportsArchiveRepository: ReportsArchiveCommentsRepository;
+  private readonly reportsVideosRepository: ReportsVideosRepository;
+  private readonly reportsCommentsRepository: ReportsCommentsRepository;
+  private readonly reportsArchiveVideosRepository: ReportsArchiveVideosRepository;
+  private readonly reportsArchiveCommentsRepository: ReportsArchiveCommentsRepository;
 
   constructor(
     logger: ILogger,
-    videoReportRepository: ReportsVideosRepository,
-    commentReportRepository: ReportsCommentsRepository,
-    videoReportsArchiveRepository: ReportsArchiveVideosRepository,
-    commentReportsArchiveRepository: ReportsArchiveCommentsRepository
+    reportsVideosRepository: ReportsVideosRepository,
+    reportsCommentsRepository: ReportsCommentsRepository,
+    reportsArchiveVideosRepository: ReportsArchiveVideosRepository,
+    reportsArchiveCommentsRepository: ReportsArchiveCommentsRepository
   ) {
-    super('ReportService', logger);
-    this.videoReportRepository = videoReportRepository;
-    this.commentReportRepository = commentReportRepository;
-    this.videoReportsArchiveRepository = videoReportsArchiveRepository;
-    this.commentReportsArchiveRepository = commentReportsArchiveRepository;
+    super('ReportsService', logger);
+    this.reportsVideosRepository = reportsVideosRepository;
+    this.reportsCommentsRepository = reportsCommentsRepository;
+    this.reportsArchiveVideosRepository = reportsArchiveVideosRepository;
+    this.reportsArchiveCommentsRepository = reportsArchiveCommentsRepository;
   }
 
   /**
@@ -77,7 +77,7 @@ export class ReportsService extends BaseService implements IReportService {
         type: data.type,
       });
 
-      return this.videoReportRepository.create(reportData);
+      return this.reportsVideosRepository.create(reportData);
     });
   }
 
@@ -104,7 +104,7 @@ export class ReportsService extends BaseService implements IReportService {
         type: data.type,
       });
 
-      return this.commentReportRepository.create(reportData);
+      return this.reportsCommentsRepository.create(reportData);
     });
   }
 
@@ -112,28 +112,28 @@ export class ReportsService extends BaseService implements IReportService {
    * Get all video reports
    */
   async getVideoReports(options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
-    return this.videoReportRepository.findAll(options);
+    return this.reportsVideosRepository.findAll(options);
   }
 
   /**
    * Get all comment reports
    */
   async getCommentReports(options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
-    return this.commentReportRepository.findAll(options);
+    return this.reportsCommentsRepository.findAll(options);
   }
 
   /**
    * Get video reports for a specific video
    */
   async getVideoReportsForVideo(videoId: string): Promise<DrizzleVideoReport[]> {
-    return this.videoReportRepository.findByVideoId(videoId);
+    return this.reportsVideosRepository.findByVideoId(videoId);
   }
 
   /**
    * Get comment reports for a specific video
    */
   async getCommentReportsForVideo(videoId: string): Promise<DrizzleCommentReport[]> {
-    return this.commentReportRepository.findByVideoId(videoId);
+    return this.reportsCommentsRepository.findByVideoId(videoId);
   }
 
   /**
@@ -141,7 +141,7 @@ export class ReportsService extends BaseService implements IReportService {
    */
   async archiveVideoReport(reportId: number): Promise<DrizzleVideoReportArchive> {
     return this.withErrorLogging('archiveVideoReport', async () => {
-      const report = await this.videoReportRepository.findById(reportId);
+      const report = await this.reportsVideosRepository.findById(reportId);
       if (!report) {
         throw new Error(`Video report not found: ${String(reportId)}`);
       }
@@ -157,10 +157,10 @@ export class ReportsService extends BaseService implements IReportService {
         message: report.message,
       };
 
-      const archived = await this.videoReportsArchiveRepository.create(archiveData);
+      const archived = await this.reportsArchiveVideosRepository.create(archiveData);
 
       // Delete original report
-      await this.videoReportRepository.delete(reportId);
+      await this.reportsVideosRepository.delete(reportId);
 
       this.logger.info('Video report archived', { reportId, videoId: report.video_id });
 
@@ -173,7 +173,7 @@ export class ReportsService extends BaseService implements IReportService {
    */
   async archiveCommentReport(reportId: number): Promise<DrizzleCommentReportArchive> {
     return this.withErrorLogging('archiveCommentReport', async () => {
-      const report = await this.commentReportRepository.findById(reportId);
+      const report = await this.reportsCommentsRepository.findById(reportId);
       if (!report) {
         throw new Error(`Comment report not found: ${String(reportId)}`);
       }
@@ -190,10 +190,10 @@ export class ReportsService extends BaseService implements IReportService {
         message: report.message,
       };
 
-      const archived = await this.commentReportsArchiveRepository.create(archiveData);
+      const archived = await this.reportsArchiveCommentsRepository.create(archiveData);
 
       // Delete original report
-      await this.commentReportRepository.delete(reportId);
+      await this.reportsCommentsRepository.delete(reportId);
 
       this.logger.info('Comment report archived', {
         reportId,
@@ -209,21 +209,21 @@ export class ReportsService extends BaseService implements IReportService {
    * Delete a video report
    */
   async deleteVideoReport(reportId: number): Promise<boolean> {
-    return this.videoReportRepository.delete(reportId);
+    return this.reportsVideosRepository.delete(reportId);
   }
 
   /**
    * Delete a comment report
    */
   async deleteCommentReport(reportId: number): Promise<boolean> {
-    return this.commentReportRepository.delete(reportId);
+    return this.reportsCommentsRepository.delete(reportId);
   }
 
   /**
    * Get archived video reports
    */
   async getArchivedVideoReports(options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]> {
-    return this.videoReportsArchiveRepository.findAll(options);
+    return this.reportsArchiveVideosRepository.findAll(options);
   }
 
   /**
@@ -232,35 +232,49 @@ export class ReportsService extends BaseService implements IReportService {
   async getArchivedCommentReports(
     options?: PaginationOptions
   ): Promise<DrizzleCommentReportArchive[]> {
-    return this.commentReportsArchiveRepository.findAll(options);
+    return this.reportsArchiveCommentsRepository.findAll(options);
   }
 
   /**
    * Delete archived video report
    */
   async deleteArchivedVideoReport(archiveId: number): Promise<boolean> {
-    return this.videoReportsArchiveRepository.delete(archiveId);
+    return this.reportsArchiveVideosRepository.delete(archiveId);
   }
 
   /**
    * Delete archived comment report
    */
   async deleteArchivedCommentReport(archiveId: number): Promise<boolean> {
-    return this.commentReportsArchiveRepository.delete(archiveId);
+    return this.reportsArchiveCommentsRepository.delete(archiveId);
   }
 
   /**
    * Count total video reports
    */
   async countVideoReports(): Promise<number> {
-    return this.videoReportRepository.getCount();
+    return this.reportsVideosRepository.getCount();
   }
 
   /**
    * Count total comment reports
    */
   async countCommentReports(): Promise<number> {
-    return this.commentReportRepository.getCount();
+    return this.reportsCommentsRepository.getCount();
+  }
+
+  /**
+   * Count video reports newer than timestamp
+   */
+  async countVideoReportsNewerThan(timestamp: number): Promise<number> {
+    return this.reportsVideosRepository.countNewerThan(timestamp);
+  }
+
+  /**
+   * Count comment reports newer than timestamp
+   */
+  async countCommentReportsNewerThan(timestamp: number): Promise<number> {
+    return this.reportsCommentsRepository.countNewerThan(timestamp);
   }
 
   /**
@@ -276,8 +290,8 @@ export class ReportsService extends BaseService implements IReportService {
       await Promise.all([
         this.countVideoReports(),
         this.countCommentReports(),
-        this.videoReportsArchiveRepository.getCount(),
-        this.commentReportsArchiveRepository.getCount(),
+        this.reportsArchiveVideosRepository.getCount(),
+        this.reportsArchiveCommentsRepository.getCount(),
       ]);
 
     return {

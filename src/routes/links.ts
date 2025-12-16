@@ -18,9 +18,9 @@ export function linksRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const linksRepository = container.resolve('linksRepository');
+  const linksService = container.resolve('linksService');
   const cloudflareService = container.resolve('cloudflareService');
-  const controller = new LinksController(linksRepository, cloudflareService);
+  const controller = new LinksController(linksService, cloudflareService);
 
   // Get all links - public (no auth required)
   fastify.get(

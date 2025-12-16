@@ -8,21 +8,18 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base.js';
+import type { IVideoService, UpdateVideoInput, ReportType } from '../services/interfaces.js';
 import type {
-  IVideoService,
-  ICommentService,
-  ICloudflareService,
-  IReportService,
-  UpdateVideoInput,
-  ReportType,
-} from '../services/interfaces.js';
-import type { IVideoUploadService } from '../services/index.js';
+  CloudflareService,
+  CommentsService,
+  IVideoUploadService,
+  ReportsService,
+} from '../services/index.js';
 import {
   type VideoMasterManifestBody,
   type VideoAdaptiveManifestParams,
 } from '../validators/schemas/videos.js';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../errors/index.js';
-import { resolve } from '../core/container.js';
 import { getConfig } from '../config/index.js';
 
 /**
@@ -102,7 +99,13 @@ type ImageType = 'thumbnail' | 'preview' | 'poster';
  * - Video import/export workflow
  */
 export class VideosController extends BaseController {
-  constructor() {
+  constructor(
+    private readonly videosService: IVideoService,
+    private readonly commentsService: CommentsService,
+    private readonly videoUploadService: IVideoUploadService,
+    private readonly cloudflareService: CloudflareService,
+    private readonly reportsService: ReportsService
+  ) {
     super('VideosController');
   }
 
@@ -112,11 +115,9 @@ export class VideosController extends BaseController {
    */
   importVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { title, description, tags } = request.body as VideoImportBody;
 
-      const result = await videoService.createVideo({ title, description, tags });
+      const result = await this.videosService.createVideo({ title, description, tags });
 
       return await this.sendSuccess(reply, result);
     } catch (error) {
@@ -137,11 +138,9 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.body as { videoId: string };
 
-      await videoService.setImported(videoId);
+      await this.videosService.setImported(videoId);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -162,11 +161,9 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.body as { videoId: string };
 
-      await videoService.setPublishing(videoId, true);
+      await this.videosService.setPublishing(videoId, true);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -187,12 +184,10 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.body as { videoId: string };
 
-      await videoService.setPublishing(videoId, false);
-      await videoService.publishVideo(videoId);
+      await this.videosService.setPublishing(videoId, false);
+      await this.videosService.publishVideo(videoId);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -208,11 +203,9 @@ export class VideosController extends BaseController {
    */
   videoImported = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      await videoService.setImported(videoId);
+      await this.videosService.setImported(videoId);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -228,11 +221,9 @@ export class VideosController extends BaseController {
    */
   stopImporting = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      await videoService.setImporting(videoId, false);
+      await this.videosService.setImporting(videoId, false);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -248,11 +239,9 @@ export class VideosController extends BaseController {
    */
   startPublishing = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      await videoService.setPublishing(videoId, true);
+      await this.videosService.setPublishing(videoId, true);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -268,12 +257,10 @@ export class VideosController extends BaseController {
    */
   videoPublished = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      await videoService.setPublishing(videoId, false);
-      await videoService.publishVideo(videoId);
+      await this.videosService.setPublishing(videoId, false);
+      await this.videosService.publishVideo(videoId);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -292,12 +279,10 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
       const { format, resolution } = request.body as FormatResolutionBody;
 
-      await videoService.markFormatResolutionPublished(videoId, format, resolution);
+      await this.videosService.markFormatResolutionPublished(videoId, format, resolution);
 
       return await this.sendSuccess(reply, { videoId, format, resolution });
     } catch (error) {
@@ -313,11 +298,9 @@ export class VideosController extends BaseController {
    */
   stopPublishing = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      await videoService.setPublishing(videoId, false);
+      await this.videosService.setPublishing(videoId, false);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -333,12 +316,10 @@ export class VideosController extends BaseController {
    */
   videoUploaded = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
       const { format, resolution } = request.body as FormatResolutionBody;
 
-      await videoService.notifyUploadComplete(videoId, format, resolution);
+      await this.videosService.notifyUploadComplete(videoId, format, resolution);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -354,12 +335,10 @@ export class VideosController extends BaseController {
    */
   videoStreamed = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
       const { format, resolution } = request.body as FormatResolutionBody;
 
-      await videoService.notifyStreamComplete(videoId, format, resolution);
+      await this.videosService.notifyStreamComplete(videoId, format, resolution);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -375,11 +354,9 @@ export class VideosController extends BaseController {
    */
   videoError = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      await videoService.setError(videoId, true);
+      await this.videosService.setError(videoId, true);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -400,11 +377,9 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.body as { videoId: string };
 
-      await videoService.setError(videoId, true);
+      await this.videosService.setError(videoId, true);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -423,12 +398,10 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
       const { sourceFileExtension } = request.body as SourceFileExtensionBody;
 
-      await videoService.setSourceFileExtension(videoId, sourceFileExtension);
+      await this.videosService.setSourceFileExtension(videoId, sourceFileExtension);
 
       return await this.sendSuccess(reply, { videoId, sourceFileExtension });
     } catch (error) {
@@ -447,11 +420,9 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      const sourceFileExtension = await videoService.getSourceFileExtension(videoId);
+      const sourceFileExtension = await this.videosService.getSourceFileExtension(videoId);
 
       return await this.sendSuccess(reply, { sourceFileExtension });
     } catch (error) {
@@ -467,11 +438,9 @@ export class VideosController extends BaseController {
    */
   getPublishes = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      const publishes = await videoService.getPublishes(videoId);
+      const publishes = await this.videosService.getPublishes(videoId);
 
       if (publishes === null) {
         throw new NotFoundError(`Video not found`);
@@ -494,12 +463,10 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
       const { format, resolution } = request.body as FormatResolutionBody;
 
-      await videoService.unpublishFormatResolution(videoId, format, resolution);
+      await this.videosService.unpublishFormatResolution(videoId, format, resolution);
 
       return await this.sendSuccess(reply, { videoId, format, resolution });
     } catch (error) {
@@ -515,11 +482,9 @@ export class VideosController extends BaseController {
    */
   getVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (video === null) {
         throw new NotFoundError(`Video not found`);
@@ -539,8 +504,6 @@ export class VideosController extends BaseController {
    */
   searchVideos = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { searchTerm, sortTerm, tagTerm, tagLimit, timestamp } =
         request.query as VideoSearchQuery;
 
@@ -564,7 +527,7 @@ export class VideosController extends BaseController {
         ...(tagTerm !== undefined ? { tagTerm } : {}),
       };
 
-      const result = await videoService.getVideos(options);
+      const result = await this.videosService.getVideos(options);
 
       return await this.sendSuccess(reply, {
         videos: result.data,
@@ -583,8 +546,6 @@ export class VideosController extends BaseController {
    */
   updateVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
       const { title, description, tags } = request.body as VideoUpdateBody;
 
@@ -595,7 +556,7 @@ export class VideosController extends BaseController {
         ...(tags !== undefined ? { tags } : {}),
       };
 
-      const video = await videoService.updateVideo(videoId, updateData);
+      const video = await this.videosService.updateVideo(videoId, updateData);
 
       if (video === null) {
         throw new NotFoundError(`Video not found`);
@@ -615,11 +576,9 @@ export class VideosController extends BaseController {
    */
   deleteVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      const deleted = await videoService.deleteVideo(videoId);
+      const deleted = await this.videosService.deleteVideo(videoId);
 
       if (!deleted) {
         throw new NotFoundError(`Video not found`);
@@ -639,11 +598,9 @@ export class VideosController extends BaseController {
    */
   finalizeVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      await videoService.finalizeVideo(videoId);
+      await this.videosService.finalizeVideo(videoId);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -661,12 +618,10 @@ export class VideosController extends BaseController {
    */
   incrementViews = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
       // Get current view count including pending
-      const result = await videoService.incrementViewsDebounced(videoId);
+      const result = await this.videosService.incrementViewsDebounced(videoId);
 
       return await this.sendSuccess(reply, { views: result.views });
     } catch (error) {
@@ -684,9 +639,6 @@ export class VideosController extends BaseController {
    */
   likeVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-      const cloudflareService = this.getCloudflareService();
-
       const { videoId } = request.params as VideoIdParams;
       const { cloudflareTurnstileToken } = (request.body ?? {}) as LikeDislikeBody;
 
@@ -701,7 +653,7 @@ export class VideosController extends BaseController {
       await this.validateTurnstileIfEnabled(request, cloudflareTurnstileToken);
 
       // Check video exists and video-level setting
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         throw new NotFoundError('Video not found');
@@ -712,13 +664,13 @@ export class VideosController extends BaseController {
       }
 
       // Increment like count
-      await videoService.incrementLikes(videoId);
+      await this.videosService.incrementLikes(videoId);
 
       // Purge cache
-      await cloudflareService.purgeWatchPages([videoId]);
+      await this.cloudflareService.purgeWatchPages([videoId]);
 
       // Return updated counts
-      const updatedVideo = await videoService.getVideo(videoId);
+      const updatedVideo = await this.videosService.getVideo(videoId);
       return await this.sendSuccess(reply, {
         likes: updatedVideo?.likes ?? 0,
         dislikes: updatedVideo?.dislikes ?? 0,
@@ -738,9 +690,6 @@ export class VideosController extends BaseController {
    */
   dislikeVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-      const cloudflareService = this.getCloudflareService();
-
       const { videoId } = request.params as VideoIdParams;
       const { cloudflareTurnstileToken } = (request.body ?? {}) as LikeDislikeBody;
 
@@ -755,7 +704,7 @@ export class VideosController extends BaseController {
       await this.validateTurnstileIfEnabled(request, cloudflareTurnstileToken);
 
       // Check video exists and video-level setting
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         throw new NotFoundError('Video not found');
@@ -766,13 +715,13 @@ export class VideosController extends BaseController {
       }
 
       // Increment dislike count
-      await videoService.incrementDislikes(videoId);
+      await this.videosService.incrementDislikes(videoId);
 
       // Purge cache
-      await cloudflareService.purgeWatchPages([videoId]);
+      await this.cloudflareService.purgeWatchPages([videoId]);
 
       // Return updated counts
-      const updatedVideo = await videoService.getVideo(videoId);
+      const updatedVideo = await this.videosService.getVideo(videoId);
       return await this.sendSuccess(reply, {
         likes: updatedVideo?.likes ?? 0,
         dislikes: updatedVideo?.dislikes ?? 0,
@@ -792,9 +741,6 @@ export class VideosController extends BaseController {
    */
   reportVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-      const reportService = this.getReportService();
-
       const { videoId } = request.params as VideoIdParams;
       const { email, reportType, message, cloudflareTurnstileToken } = request.body as ReportBody;
 
@@ -808,7 +754,7 @@ export class VideosController extends BaseController {
       }
 
       // Check video exists and video-level reports enabled
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         throw new NotFoundError('this video no longer exists');
@@ -824,9 +770,8 @@ export class VideosController extends BaseController {
             'human verification was enabled on this MoarTube Node, please refresh your browser'
           );
         }
-        const cloudflareService = this.getCloudflareService();
         const clientIp = (request.headers['cf-connecting-ip'] as string) || request.ip;
-        const isValid = await cloudflareService.validateTurnstileToken(
+        const isValid = await this.cloudflareService.validateTurnstileToken(
           cloudflareTurnstileToken,
           clientIp
         );
@@ -836,7 +781,7 @@ export class VideosController extends BaseController {
       }
 
       // Create the video report
-      await reportService.createVideoReport({
+      await this.reportsService.createVideoReport({
         videoId,
         videoTimestamp: video.creation_timestamp,
         email,
@@ -858,12 +803,15 @@ export class VideosController extends BaseController {
    */
   getComments = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const commentService = this.getCommentService();
-
       const { videoId } = request.params as VideoIdParams;
       const { type, sort, timestamp } = request.query as VideoCommentsQuery;
 
-      const comments = await commentService.getCommentsForVideo(videoId, type, sort, timestamp);
+      const comments = await this.commentsService.getCommentsForVideo(
+        videoId,
+        type,
+        sort,
+        timestamp
+      );
 
       // Map comments to expected format
       const formattedComments = comments.map((comment) => ({
@@ -889,10 +837,6 @@ export class VideosController extends BaseController {
    */
   addComment = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-      const commentService = this.getCommentService();
-      const cloudflareService = this.getCloudflareService();
-
       const { videoId } = request.params as VideoIdParams;
       const { commentPlainText, timestamp, cloudflareTurnstileToken } = request.body as CommentBody;
 
@@ -906,7 +850,7 @@ export class VideosController extends BaseController {
       }
 
       // Check video exists and video-level comments enabled
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         throw new NotFoundError(`Video not found`);
@@ -923,7 +867,7 @@ export class VideosController extends BaseController {
           );
         }
         const clientIp = (request.headers['cf-connecting-ip'] as string) || request.ip;
-        const isValid = await cloudflareService.validateTurnstileToken(
+        const isValid = await this.cloudflareService.validateTurnstileToken(
           cloudflareTurnstileToken,
           clientIp
         );
@@ -938,13 +882,13 @@ export class VideosController extends BaseController {
       }
 
       // Create the comment (service handles sanitization and incrementing video count)
-      const comment = await commentService.createComment({
+      const comment = await this.commentsService.createComment({
         videoId,
         commentPlainText,
       });
 
       // Get all comments (limited to recent ones for response)
-      const comments = await commentService.getCommentsForVideo(
+      const comments = await this.commentsService.getCommentsForVideo(
         videoId,
         'after',
         'ascending',
@@ -959,7 +903,7 @@ export class VideosController extends BaseController {
       }));
 
       // Purge Cloudflare cache
-      await cloudflareService.purgeWatchPages([videoId]);
+      await this.cloudflareService.purgeWatchPages([videoId]);
 
       return await this.sendSuccess(reply, {
         commentId: comment.comment_id,
@@ -978,20 +922,17 @@ export class VideosController extends BaseController {
    */
   deleteComment = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const commentService = this.getCommentService();
-      const cloudflareService = this.getCloudflareService();
-
       const { videoId, commentId } = request.params as VideoIdParams & { commentId: number };
       const { timestamp } = request.query as { timestamp: number };
 
-      const deleted = await commentService.deleteComment(videoId, commentId, timestamp);
+      const deleted = await this.commentsService.deleteComment(videoId, commentId, timestamp);
 
       if (!deleted) {
         throw new NotFoundError(`Comment not found`);
       }
 
       // Purge Cloudflare cache for watch page
-      await cloudflareService.purgeWatchPages([videoId]);
+      await this.cloudflareService.purgeWatchPages([videoId]);
 
       return await this.sendSuccess(reply, { commentId });
     } catch (error) {
@@ -1007,11 +948,9 @@ export class VideosController extends BaseController {
    */
   publishVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      await videoService.publishVideo(videoId);
+      await this.videosService.publishVideo(videoId);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -1027,11 +966,9 @@ export class VideosController extends BaseController {
    */
   unpublishVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      await videoService.unpublishVideo(videoId);
+      await this.videosService.unpublishVideo(videoId);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -1047,11 +984,9 @@ export class VideosController extends BaseController {
    */
   getWatchData = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      const watchData = await videoService.getWatchData(videoId);
+      const watchData = await this.videosService.getWatchData(videoId);
 
       if (watchData === null) {
         throw new NotFoundError(`Video not found`);
@@ -1074,11 +1009,9 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      const permissions = await videoService.getPermissions(videoId);
+      const permissions = await this.videosService.getPermissions(videoId);
 
       if (permissions === null) {
         throw new NotFoundError(`Video not found`);
@@ -1101,8 +1034,6 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
       const { type, isEnabled } = request.body as { type: string; isEnabled: boolean };
 
@@ -1121,7 +1052,7 @@ export class VideosController extends BaseController {
         throw new BadRequestError(`Invalid permission type: ${type}`);
       }
 
-      await videoService.updateVideo(videoId, { [field]: isEnabled });
+      await this.videosService.updateVideo(videoId, { [field]: isEnabled });
 
       return await this.sendSuccess(reply, { videoId, type, isEnabled });
     } catch (error) {
@@ -1137,11 +1068,9 @@ export class VideosController extends BaseController {
    */
   getVideoData = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      const videoData = await videoService.getVideoData(videoId);
+      const videoData = await this.videosService.getVideoData(videoId);
 
       if (videoData === null) {
         throw new NotFoundError(`Video not found`);
@@ -1164,9 +1093,7 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
-      const videosData = await videoService.getAllVideosData();
+      const videosData = await this.videosService.getAllVideosData();
 
       return await this.sendSuccess(reply, { videosData });
     } catch (error) {
@@ -1182,12 +1109,10 @@ export class VideosController extends BaseController {
    */
   getComment = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const commentService = this.getCommentService();
-
       const { videoId, commentId } = request.params as VideoIdParams & { commentId: number };
       const { timestamp } = request.query as { timestamp: number };
 
-      const comment = await commentService.getComment(videoId, commentId, timestamp);
+      const comment = await this.commentsService.getComment(videoId, commentId, timestamp);
 
       if (comment === null) {
         throw new NotFoundError(`Comment not found`);
@@ -1207,9 +1132,7 @@ export class VideosController extends BaseController {
    */
   getRecommended = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
-      const recommendedVideos = await videoService.getRecommendedVideos();
+      const recommendedVideos = await this.videosService.getRecommendedVideos();
 
       return await this.sendSuccess(reply, { recommendedVideos });
     } catch (error) {
@@ -1225,9 +1148,7 @@ export class VideosController extends BaseController {
    */
   getTags = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
-      const tags = await videoService.getPublishedTags();
+      const tags = await this.videosService.getPublishedTags();
 
       return await this.sendSuccess(reply, { tags });
     } catch (error) {
@@ -1243,9 +1164,7 @@ export class VideosController extends BaseController {
    */
   getAllTags = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
-      const tags = await videoService.getAllTags();
+      const tags = await this.videosService.getAllTags();
 
       return await this.sendSuccess(reply, { tags });
     } catch (error) {
@@ -1261,11 +1180,9 @@ export class VideosController extends BaseController {
    */
   getAlias = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (video === null) {
         throw new NotFoundError(`Video not found`);
@@ -1275,7 +1192,7 @@ export class VideosController extends BaseController {
         throw new BadRequestError('Video is not indexed');
       }
 
-      const videoAliasUrl = await videoService.getAliasUrl(videoId);
+      const videoAliasUrl = await this.videosService.getAliasUrl(videoId);
 
       return await this.sendSuccess(reply, { videoAliasUrl });
     } catch (error) {
@@ -1291,11 +1208,9 @@ export class VideosController extends BaseController {
    */
   batchDelete = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoIds } = request.body as { videoIds: string[] };
 
-      const result = await videoService.deleteVideos(videoIds);
+      const result = await this.videosService.deleteVideos(videoIds);
 
       return await this.sendSuccess(reply, {
         deletedVideoIds: result.deletedVideoIds,
@@ -1314,11 +1229,9 @@ export class VideosController extends BaseController {
    */
   batchFinalize = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoIds } = request.body as { videoIds: string[] };
 
-      const result = await videoService.finalizeVideos(videoIds);
+      const result = await this.videosService.finalizeVideos(videoIds);
 
       return await this.sendSuccess(reply, {
         finalizedVideoIds: result.finalizedVideoIds,
@@ -1337,15 +1250,13 @@ export class VideosController extends BaseController {
    */
   setVideoLengths = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
       const { lengthSeconds, lengthTimestamp } = request.body as {
         lengthSeconds: number;
         lengthTimestamp: string;
       };
 
-      await videoService.setVideoLength(videoId, lengthSeconds, lengthTimestamp);
+      await this.videosService.setVideoLength(videoId, lengthSeconds, lengthTimestamp);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -1364,17 +1275,15 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
 
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (video === null) {
         throw new NotFoundError(`Video not found`);
       }
 
-      await videoService.markIndexOutdated(videoId);
+      await this.videosService.markIndexOutdated(videoId);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -1393,18 +1302,16 @@ export class VideosController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId, manifestType } = request.params as VideoAdaptiveManifestParams;
       const { masterManifest } = request.body as VideoMasterManifestBody;
 
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (video === null) {
         throw new NotFoundError(`Video not found`);
       }
 
-      await videoService.writeMasterManifest(videoId, manifestType, masterManifest);
+      await this.videosService.writeMasterManifest(videoId, manifestType, masterManifest);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -1420,28 +1327,25 @@ export class VideosController extends BaseController {
    */
   uploadVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-      const uploadService = this.getVideoUploadService();
-
       const { videoId } = request.params as VideoIdParams;
       const { format, resolution } = request.query as UploadQueryParams;
 
       // Validate parameters
-      if (!uploadService.validateVideoUploadParams(format, resolution)) {
-        await videoService.setError(videoId, true);
+      if (!this.videoUploadService.validateVideoUploadParams(format, resolution)) {
+        await this.videosService.setError(videoId, true);
 
         throw new BadRequestError('Invalid format or resolution');
       }
 
       // Validate video exists
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         throw new NotFoundError(`Video not found`);
       }
 
       // Track upload progress
-      uploadService.trackProgress(request, videoId, format, resolution);
+      this.videoUploadService.trackProgress(request, videoId, format, resolution);
 
       try {
         // Process multipart upload
@@ -1452,12 +1356,12 @@ export class VideosController extends BaseController {
             const file = part;
 
             // Validate mime type
-            if (!uploadService.isValidVideoMimeType(file.mimetype)) {
+            if (!this.videoUploadService.isValidVideoMimeType(file.mimetype)) {
               throw new BadRequestError(`Unsupported file type: ${file.mimetype}`);
             }
 
             // Get destination path
-            const destPath = uploadService.getVideoDestinationPath(
+            const destPath = this.videoUploadService.getVideoDestinationPath(
               videoId,
               format,
               resolution,
@@ -1469,12 +1373,12 @@ export class VideosController extends BaseController {
             }
 
             // Save file
-            await uploadService.saveUploadedFile(file, destPath);
+            await this.videoUploadService.saveUploadedFile(file, destPath);
           }
         }
 
         // Handle upload completion
-        const result = await uploadService.handleVideoUploadComplete({
+        const result = await this.videoUploadService.handleVideoUploadComplete({
           videoId,
           format,
           resolution,
@@ -1484,9 +1388,9 @@ export class VideosController extends BaseController {
       } catch (error) {
         this.logger.error('Video upload error', error, { videoId });
 
-        uploadService.handleUploadError(videoId);
+        this.videoUploadService.handleUploadError(videoId);
 
-        await videoService.setError(videoId, true);
+        await this.videosService.setError(videoId, true);
 
         throw error;
       }
@@ -1503,21 +1407,18 @@ export class VideosController extends BaseController {
    */
   uploadStream = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-      const uploadService = this.getVideoUploadService();
-
       const { videoId } = request.params as VideoIdParams;
       const { format, resolution } = request.query as UploadQueryParams;
 
       // Validate parameters
-      if (!uploadService.validateVideoUploadParams(format, resolution)) {
-        await videoService.setError(videoId, true);
+      if (!this.videoUploadService.validateVideoUploadParams(format, resolution)) {
+        await this.videosService.setError(videoId, true);
 
         throw new BadRequestError('Invalid format or resolution');
       }
 
       // Validate video exists
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         throw new NotFoundError(`Video not found`);
@@ -1532,12 +1433,12 @@ export class VideosController extends BaseController {
             const file = part;
 
             // Validate mime type (only m3u8 and ts for streams)
-            if (!uploadService.isValidStreamMimeType(file.mimetype)) {
+            if (!this.videoUploadService.isValidStreamMimeType(file.mimetype)) {
               throw new BadRequestError(`Unsupported stream file type: ${file.mimetype}`);
             }
 
             // Get destination path
-            const destPath = uploadService.getStreamDestinationPath(
+            const destPath = this.videoUploadService.getStreamDestinationPath(
               videoId,
               format,
               resolution,
@@ -1549,12 +1450,12 @@ export class VideosController extends BaseController {
             }
 
             // Save file
-            await uploadService.saveUploadedFile(file, destPath);
+            await this.videoUploadService.saveUploadedFile(file, destPath);
           }
         }
 
         // Handle stream upload completion
-        const result = uploadService.handleStreamUploadComplete({
+        const result = this.videoUploadService.handleStreamUploadComplete({
           videoId,
           format,
           resolution,
@@ -1562,7 +1463,7 @@ export class VideosController extends BaseController {
 
         return await this.sendSuccess(reply, result);
       } catch (error) {
-        await videoService.setError(videoId, true);
+        await this.videosService.setError(videoId, true);
 
         throw error;
       }
@@ -1621,8 +1522,6 @@ export class VideosController extends BaseController {
    */
   addToIndex = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
       const { containsAdultContent, termsOfServiceAgreed, cloudflareTurnstileToken } =
         request.body as {
@@ -1645,14 +1544,14 @@ export class VideosController extends BaseController {
       }
 
       // Validate video exists
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         throw new NotFoundError(`Video not found`);
       }
 
       // Add to index
-      const result = await videoService.addToIndex(videoId, {
+      const result = await this.videosService.addToIndex(videoId, {
         containsAdultContent,
         termsOfServiceAgreed,
         cloudflareTurnstileToken,
@@ -1682,22 +1581,20 @@ export class VideosController extends BaseController {
    */
   removeFromIndex = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const videoService = this.getVideoService();
-
       const { videoId } = request.params as VideoIdParams;
       const { cloudflareTurnstileToken } = request.body as {
         cloudflareTurnstileToken: string;
       };
 
       // Validate video exists
-      const video = await videoService.getVideo(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         throw new NotFoundError(`Video not found`);
       }
 
       // Remove from index
-      await videoService.removeFromIndex(videoId, cloudflareTurnstileToken);
+      await this.videosService.removeFromIndex(videoId, cloudflareTurnstileToken);
 
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
@@ -1706,41 +1603,6 @@ export class VideosController extends BaseController {
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };
-
-  /**
-   * Get video service from DI container
-   */
-  private getVideoService(): IVideoService {
-    return resolve('videosService');
-  }
-
-  /**
-   * Get comment service from DI container
-   */
-  private getCommentService(): ICommentService {
-    return resolve('commentsService');
-  }
-
-  /**
-   * Get video upload service from DI container
-   */
-  private getVideoUploadService(): IVideoUploadService {
-    return resolve('videoUploadService');
-  }
-
-  /**
-   * Get Cloudflare service from DI container
-   */
-  private getCloudflareService(): ICloudflareService {
-    return resolve('cloudflareService');
-  }
-
-  /**
-   * Get report service from DI container
-   */
-  private getReportService(): IReportService {
-    return resolve('reportsService');
-  }
 
   /**
    * Validate Cloudflare Turnstile token if enabled
@@ -1760,11 +1622,9 @@ export class VideosController extends BaseController {
       );
     }
 
-    const cloudflareService = this.getCloudflareService();
-
     const clientIp = request.ip || '';
 
-    const isValid = await cloudflareService.validateTurnstileToken(token, clientIp);
+    const isValid = await this.cloudflareService.validateTurnstileToken(token, clientIp);
 
     if (!isValid) {
       throw new ForbiddenError('Human verification failed');
@@ -1780,13 +1640,10 @@ export class VideosController extends BaseController {
     imageType: ImageType,
     fieldName: string
   ): Promise<FastifyReply> => {
-    const videoService = this.getVideoService();
-    const uploadService = this.getVideoUploadService();
-
     const { videoId } = request.params as VideoIdParams;
 
     // Validate video exists
-    const video = await videoService.getVideo(videoId);
+    const video = await this.videosService.getVideo(videoId);
 
     if (!video) {
       throw new NotFoundError(`Video not found`);
@@ -1800,14 +1657,14 @@ export class VideosController extends BaseController {
         const file = part;
 
         // Validate mime type
-        if (!uploadService.isValidImageMimeType(file.mimetype)) {
+        if (!this.videoUploadService.isValidImageMimeType(file.mimetype)) {
           throw new BadRequestError(
             `Unsupported image type: ${file.mimetype}. Only JPEG is supported.`
           );
         }
 
         // Get destination path
-        const destPath = uploadService.getImageDestinationPath(videoId, imageType);
+        const destPath = this.videoUploadService.getImageDestinationPath(videoId, imageType);
 
         // Ensure directory exists
         fs.mkdirSync(destPath, { recursive: true });
@@ -1821,7 +1678,7 @@ export class VideosController extends BaseController {
     }
 
     // Handle upload completion
-    const result = await uploadService.handleImageUploadComplete({
+    const result = await this.videoUploadService.handleImageUploadComplete({
       videoId,
       imageType,
     });

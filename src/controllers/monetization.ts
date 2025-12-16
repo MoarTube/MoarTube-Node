@@ -5,9 +5,8 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base.js';
-import type { MonetizationRepository } from '../database/repositories/monetization.js';
+import type { MonetizationService } from '../services/monetization.js';
 import type { CloudflareService } from '../services/cloudflare.js';
-import { getCurrentUnixTimestamp } from '../utils/index.js';
 
 /**
  * Request body for adding a wallet address
@@ -49,7 +48,7 @@ function getChainId(chain: string): string {
  */
 export class MonetizationController extends BaseController {
   constructor(
-    private readonly monetizationRepository: MonetizationRepository,
+    private readonly monetizationService: MonetizationService,
     private readonly cloudflareService: CloudflareService
   ) {
     super('MonetizationController');
@@ -65,7 +64,7 @@ export class MonetizationController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const cryptoWalletAddresses = await this.monetizationRepository.findAll();
+      const cryptoWalletAddresses = await this.monetizationService.getWalletAddresses();
 
       return await this.sendSuccess(reply, { cryptoWalletAddresses });
     } catch (error) {
@@ -87,15 +86,13 @@ export class MonetizationController extends BaseController {
     try {
       const { walletAddress, chain, currency } = request.body as AddWalletAddressBody;
 
-      const timestamp = getCurrentUnixTimestamp();
       const chainId = getChainId(chain);
 
-      const cryptoWalletAddress = await this.monetizationRepository.create({
-        wallet_address: walletAddress,
+      const cryptoWalletAddress = await this.monetizationService.createWalletAddress({
+        walletAddress,
         chain,
-        chain_id: chainId,
+        chainId,
         currency,
-        timestamp,
       });
 
       // Purge Cloudflare cache for node page and watch pages
@@ -122,7 +119,7 @@ export class MonetizationController extends BaseController {
     try {
       const { cryptoWalletAddressId } = request.body as DeleteWalletAddressBody;
 
-      const deleted = await this.monetizationRepository.delete(cryptoWalletAddressId);
+      const deleted = await this.monetizationService.deleteWalletAddress(cryptoWalletAddressId);
 
       if (!deleted) {
         return await this.sendError(reply, 'wallet address not found', 404);

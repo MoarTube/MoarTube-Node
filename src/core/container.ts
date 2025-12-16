@@ -35,6 +35,8 @@ import { SettingsService } from '../services/settings.js';
 import { UploadTrackerService } from '../services/upload-tracker.js';
 import { VideoUploadService } from '../services/video-upload.js';
 import { LiveChatService } from '../services/chat.js';
+import { LinksService } from '../services/links.js';
+import { MonetizationService } from '../services/monetization.js';
 
 /**
  * Container cradle type - defines all registered dependencies
@@ -71,6 +73,8 @@ export interface ContainerCradle {
   uploadTrackerService: UploadTrackerService;
   videoUploadService: VideoUploadService;
   liveChatService: LiveChatService;
+  linksService: LinksService;
+  monetizationService: MonetizationService;
 }
 
 /**
@@ -129,10 +133,29 @@ export function createAppContainer(db: DatabaseClient): Container {
     commentsService: asClass(CommentsService).singleton(),
     streamsService: asClass(StreamsService).singleton(),
     reportsService: asClass(ReportsService).singleton(),
-    settingsService: asClass(SettingsService).singleton(),
+    settingsService: asClass(SettingsService)
+      .singleton()
+      .inject(() => [
+        'logger',
+        'videosRepository',
+        'commentsRepository',
+        'reportsVideosRepository',
+        'reportsCommentsRepository',
+        'reportsArchiveVideosRepository',
+        'reportsArchiveCommentsRepository',
+        'liveChatMessagesRepository',
+        'monetizationRepository',
+        'linksRepository',
+        'indexerService',
+        'cloudflareService',
+      ]),
     uploadTrackerService: asClass(UploadTrackerService).singleton(),
-    videoUploadService: asClass(VideoUploadService).singleton(),
+    videoUploadService: asClass(VideoUploadService)
+      .singleton()
+      .inject(() => ['videosService']),
     liveChatService: asClass(LiveChatService).singleton(),
+    linksService: asClass(LinksService).singleton(),
+    monetizationService: asClass(MonetizationService).singleton(),
   });
 
   // Store globally

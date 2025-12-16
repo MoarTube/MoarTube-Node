@@ -7,10 +7,11 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import sanitizeHtml from 'sanitize-html';
 
 import { BaseController } from './base.js';
-import type { CommentsRepository } from '../database/repositories/comments.js';
-import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
-import type { VideosRepository } from '../database/repositories/videos.js';
+import type { CommentsService } from '../services/comments.js';
+import type { ReportsService } from '../services/reports.js';
+import type { VideosService } from '../services/videos.js';
 import type { CloudflareService } from '../services/cloudflare.js';
+import type { ReportType } from '../services/interfaces.js';
 import { getConfig } from '../config/index.js';
 
 /**
@@ -52,9 +53,9 @@ export interface CommentReportBody {
  */
 export class CommentsController extends BaseController {
   constructor(
-    private readonly commentsRepository: CommentsRepository,
-    private readonly reportsCommentsRepository: ReportsCommentsRepository,
-    private readonly videosRepository: VideosRepository,
+    private readonly commentsService: CommentsService,
+    private readonly reportsService: ReportsService,
+    private readonly videosService: VideosService,
     private readonly cloudflareService: CloudflareService
   ) {
     super('CommentsController');
@@ -75,7 +76,9 @@ export class CommentsController extends BaseController {
         timestamp: number;
       } = request.query as CommentSearchQuery;
 
-      const comments = await this.commentsRepository.search(searchOptions);
+      const comments = this.commentsService.searchComments(searchOptions.searchTerm ?? '', {
+        limit: searchOptions.limit,
+      });
 
       return await this.sendSuccess(reply, { comments });
     } catch (error) {
@@ -131,14 +134,14 @@ export class CommentsController extends BaseController {
         }
       }
 
-      const comment = await this.commentsRepository.findById(videoId, commentId, timestamp);
+      const comment = await this.commentsService.getComment(videoId, commentId, timestamp);
 
       if (!comment) {
         return await this.sendError(reply, 'this comment no longer exists');
       }
 
       // Check if video exists and has reports enabled
-      const video = await this.videosRepository.findById(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         return await this.sendError(reply, 'this video no longer exists');
@@ -153,14 +156,13 @@ export class CommentsController extends BaseController {
       const sanitizedMessage = sanitizeHtml(message, { allowedTags: [], allowedAttributes: {} });
 
       // Create the report
-      await this.reportsCommentsRepository.create({
-        comment_id: commentId,
-        video_id: videoId,
-        comment_timestamp: comment.timestamp,
+      await this.reportsService.createCommentReport({
+        videoId,
+        commentId,
+        commentTimestamp: comment.timestamp,
         email: sanitizedEmail,
-        type: reportType,
+        type: reportType as ReportType,
         message: sanitizedMessage,
-        timestamp: Date.now(),
       });
 
       return await this.sendSuccess(reply);

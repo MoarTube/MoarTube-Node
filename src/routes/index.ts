@@ -83,7 +83,7 @@ export function registerRoutes(fastify: FastifyInstance, container: Container): 
   // Videos routes (/videos/*)
   fastify.register(
     (instance) => {
-      videosRoutes(instance.withTypeProvider<ZodTypeProvider>());
+      videosRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
     },
     { prefix: '/videos' }
   );

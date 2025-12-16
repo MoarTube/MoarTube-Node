@@ -6,7 +6,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.js';
-import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
+import type { ReportsService } from '../services/reports.js';
 
 /**
  * Request params for archive operations
@@ -23,7 +23,7 @@ export interface CommentArchiveIdParams {
  * - Delete an archived comment report
  */
 export class ReportsArchiveCommentsController extends BaseController {
-  constructor(private readonly commentReportsArchiveRepository: ReportsArchiveCommentsRepository) {
+  constructor(private readonly reportsService: ReportsService) {
     super('ReportsArchiveCommentsController');
   }
 
@@ -34,7 +34,7 @@ export class ReportsArchiveCommentsController extends BaseController {
    */
   getAllArchives = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const reports = await this.commentReportsArchiveRepository.findAll();
+      const reports = await this.reportsService.getArchivedCommentReports();
 
       return await this.sendSuccess(reply, { reports });
     } catch (error) {
@@ -53,7 +53,7 @@ export class ReportsArchiveCommentsController extends BaseController {
     try {
       const { archiveId } = request.params as CommentArchiveIdParams;
 
-      await this.commentReportsArchiveRepository.delete(archiveId);
+      await this.reportsService.deleteArchivedCommentReport(archiveId);
 
       return await this.sendSuccess(reply);
     } catch (error) {

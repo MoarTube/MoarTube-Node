@@ -25,8 +25,8 @@ export function externalVideosRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videosRepository = container.resolve('videosRepository');
-  const controller = new ExternalVideosController(videosRepository);
+  const videosService = container.resolve('videosService');
+  const controller = new ExternalVideosController(videosService);
 
   // Get base URL - authenticated
   fastify.get(

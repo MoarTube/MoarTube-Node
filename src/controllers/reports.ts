@@ -6,8 +6,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from './base.js';
-import type { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
-import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
+import type { ReportsService } from '../services/reports.js';
 
 /**
  * ReportsController class
@@ -16,10 +15,7 @@ import type { ReportsCommentsRepository } from '../database/repositories/reports
  * - Get report counts
  */
 export class ReportsController extends BaseController {
-  constructor(
-    private readonly videoReportRepository: ReportsVideosRepository,
-    private readonly commentReportRepository: ReportsCommentsRepository
-  ) {
+  constructor(private readonly reportsService: ReportsService) {
     super('ReportsController');
   }
 
@@ -33,8 +29,8 @@ export class ReportsController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videoReportCount = await this.videoReportRepository.getCount();
-      const commentReportCount = await this.commentReportRepository.getCount();
+      const videoReportCount = await this.reportsService.countVideoReports();
+      const commentReportCount = await this.reportsService.countCommentReports();
       const totalReportCount = videoReportCount + commentReportCount;
 
       return await this.sendSuccess(reply, {

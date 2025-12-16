@@ -4,7 +4,6 @@
  * Routes for live streaming endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-
 import type { Container } from '../core/container.js';
 import { StreamsController } from '../controllers/index.js';
 import {
@@ -26,15 +25,11 @@ export function streamsRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videosRepository = container.resolve('videosRepository');
-  const liveChatMessagesRepository = container.resolve('liveChatMessagesRepository');
+  const videosService = container.resolve('videosService');
+  const liveChatService = container.resolve('liveChatService');
   const streamsService = container.resolve('streamsService');
 
-  const controller = new StreamsController(
-    videosRepository,
-    liveChatMessagesRepository,
-    streamsService
-  );
+  const controller = new StreamsController(videosService, liveChatService, streamsService);
 
   // ============================================================================
   // Stream Lifecycle

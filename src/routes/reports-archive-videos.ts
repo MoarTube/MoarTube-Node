@@ -4,7 +4,6 @@
  * Routes for archived video report management.
  */
 import type { FastifyInstance } from 'fastify';
-
 import { ReportsArchiveVideosController } from '../controllers/reports-archive-videos.js';
 import type { Container } from '../core/container.js';
 import { archiveIdParamsSchema, reportsQuerySchema } from '../validators/index.js';
@@ -19,9 +18,9 @@ export function reportsArchiveVideosRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const reportsArchiveVideosRepository = container.resolve('reportsArchiveVideosRepository');
+  const reportsService = container.resolve('reportsService');
 
-  const controller = new ReportsArchiveVideosController(reportsArchiveVideosRepository);
+  const controller = new ReportsArchiveVideosController(reportsService);
 
   // Get all archived video reports - authenticated
   fastify.get(

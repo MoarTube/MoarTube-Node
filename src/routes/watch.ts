@@ -4,7 +4,6 @@
  * Routes for the main video watch page.
  */
 import type { FastifyInstance } from 'fastify';
-
 import { WatchController } from '../controllers/watch.js';
 import type { Container } from '../core/container.js';
 import { watchQuerySchema } from '../validators/index.js';
@@ -20,15 +19,17 @@ export function watchRoutes(
   container: Container
 ): void {
   const videosRepository = container.resolve('videosRepository');
+  const videosService = container.resolve('videosService');
+  const linksService = container.resolve('linksService');
+  const monetizationService = container.resolve('monetizationService');
   const commentsRepository = container.resolve('commentsRepository');
-  const linksRepository = container.resolve('linksRepository');
-  const monetizationRepository = container.resolve('monetizationRepository');
 
   const controller = new WatchController(
     videosRepository,
-    commentsRepository,
-    linksRepository,
-    monetizationRepository
+    videosService,
+    linksService,
+    monetizationService,
+    commentsRepository
   );
 
   // Watch page - public (no auth required)

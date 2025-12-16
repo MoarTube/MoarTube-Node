@@ -7,7 +7,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
 import { BaseController } from './base.js';
-import type { VideosRepository } from '../database/repositories/videos.js';
+import type { VideosService } from '../services/videos.js';
 import { getConfig } from '../config/index.js';
 
 /**
@@ -65,7 +65,7 @@ export class ExternalVideosController extends BaseController {
   private progressiveBandwidthCounter = 0;
   private progressiveBandwidthTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private readonly videoRepository: VideosRepository) {
+  constructor(private readonly videosService: VideosService) {
     super('ExternalVideosController');
   }
 
@@ -327,7 +327,7 @@ export class ExternalVideosController extends BaseController {
         this.segmentBandwidthCounter = 0;
 
         // Update bandwidth in database
-        void this.videoRepository.updateBandwidth(videoId, bandwidth);
+        void this.videosService.updateBandwidth(videoId, bandwidth);
       }, 100);
     });
   }
@@ -347,7 +347,7 @@ export class ExternalVideosController extends BaseController {
       this.progressiveBandwidthCounter = 0;
 
       // Update bandwidth in database
-      void this.videoRepository.updateBandwidth(videoId, bandwidth);
+      void this.videosService.updateBandwidth(videoId, bandwidth);
     }, 100);
   }
 }

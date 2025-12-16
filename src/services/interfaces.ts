@@ -165,11 +165,17 @@ export interface IVideoService {
   /** Get videos with filtering and pagination */
   getVideos(options?: GetVideosOptions): Promise<PaginatedResult<DrizzleVideo>>;
 
+  /** Count videos with filtering */
+  countVideos(options?: GetVideosOptions): Promise<number>;
+
   /** Create a new video (import) */
   createVideo(data: CreateVideoInput): Promise<{ videoId: string }>;
 
   /** Update video metadata */
   updateVideo(videoId: string, data: UpdateVideoInput): Promise<DrizzleVideo | null>;
+
+  /** Update video meta field */
+  updateVideoMeta(videoId: string, meta: Record<string, unknown>): Promise<DrizzleVideo | null>;
 
   /** Delete a video and all associated data */
   deleteVideo(videoId: string): Promise<boolean>;
@@ -212,6 +218,9 @@ export interface IVideoService {
 
   /** Mark video as indexed */
   setIndexed(videoId: string, isIndexed: boolean): Promise<void>;
+
+  /** Update video bandwidth */
+  updateBandwidth(videoId: string, bandwidth: number): Promise<void>;
 
   /** Mark video index as outdated */
   setIndexOutdated(videoId: string): Promise<void>;
@@ -412,6 +421,9 @@ export interface ICommentService {
 
   /** Count comments for a video */
   countCommentsForVideo(videoId: string): Promise<number>;
+
+  /** Count comments newer than timestamp */
+  countCommentsNewerThan(timestamp: number): Promise<number>;
 }
 
 // ============================================================================
@@ -764,7 +776,14 @@ export interface IWebSocketService {
 /**
  * Report type enum
  */
-export type ReportType = 'spam' | 'harassment' | 'violence' | 'copyright' | 'other';
+export type ReportType =
+  | 'spam'
+  | 'harassment'
+  | 'violence'
+  | 'copyright'
+  | 'inappropriate'
+  | 'misinformation'
+  | 'other';
 
 /**
  * Input for creating a video report
@@ -840,6 +859,12 @@ export interface IReportService {
 
   /** Count total comment reports */
   countCommentReports(): Promise<number>;
+
+  /** Count video reports newer than timestamp */
+  countVideoReportsNewerThan(timestamp: number): Promise<number>;
+
+  /** Count comment reports newer than timestamp */
+  countCommentReportsNewerThan(timestamp: number): Promise<number>;
 }
 
 // ============================================================================
@@ -956,6 +981,31 @@ export interface ISettingsService {
 
   /** Check if running in Docker */
   isDockerEnvironment(): boolean;
+
+  /** Mark all videos as not indexed */
+  markAllVideosAsNotIndexed(): Promise<void>;
+
+  /** Get all indexed videos */
+  getIndexedVideos(): Promise<DrizzleVideo[]>;
+
+  /** Export all application data */
+  exportAllData(): Promise<{
+    videos: DrizzleVideo[];
+    comments: DrizzleComment[];
+    videoReports: DrizzleVideoReport[];
+    commentReports: DrizzleCommentReport[];
+    videoReportsArchives: DrizzleVideoReportArchive[];
+    commentReportsArchives: DrizzleCommentReportArchive[];
+    liveChatMessages: DrizzleLiveChatMessage[];
+    cryptoWalletAddresses: DrizzleCryptoWalletAddress[];
+    links: DrizzleLink[];
+  }>;
+
+  /** Delete all application data */
+  deleteAllData(): Promise<void>;
+
+  /** Import database from JSON file */
+  importDatabase(databaseFileContent: string): Promise<void>;
 }
 
 // ============================================================================
@@ -1078,4 +1128,26 @@ export interface IMonetizationService {
 
   /** Count total wallet addresses */
   countWalletAddresses(): Promise<number>;
+}
+
+/**
+ * Links Service Interface
+ */
+export interface ILinksService {
+  /** Get all links */
+  getAllLinks(): Promise<DrizzleLink[]>;
+
+  /** Create a new link */
+  createLink(data: CreateLinkInput): Promise<DrizzleLink>;
+
+  /** Delete a link */
+  deleteLink(linkId: number): Promise<boolean>;
+}
+
+/**
+ * Create Link Input
+ */
+export interface CreateLinkInput {
+  url: string;
+  svgGraphic: string;
 }

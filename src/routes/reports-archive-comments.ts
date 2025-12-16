@@ -4,7 +4,6 @@
  * Routes for archived comment report management.
  */
 import type { FastifyInstance } from 'fastify';
-
 import { ReportsArchiveCommentsController } from '../controllers/reports-archive-comments.js';
 import type { Container } from '../core/container.js';
 import { archiveIdParamsSchema, reportsQuerySchema } from '../validators/index.js';
@@ -19,9 +18,9 @@ export function reportsArchiveCommentsRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const reportsArchiveCommentsRepository = container.resolve('reportsArchiveCommentsRepository');
+  const reportsService = container.resolve('reportsService');
 
-  const controller = new ReportsArchiveCommentsController(reportsArchiveCommentsRepository);
+  const controller = new ReportsArchiveCommentsController(reportsService);
 
   // Get all archived comment reports - authenticated
   fastify.get(
