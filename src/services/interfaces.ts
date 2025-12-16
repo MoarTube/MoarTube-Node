@@ -965,6 +965,28 @@ export interface ISettingsService {
 }
 
 // ============================================================================
+// Account Service
+// ============================================================================
+
+export interface JwtPayload {
+  username: string;
+}
+
+export interface SignInInput {
+  username: string;
+  password: string;
+  moarTubeNodeHttpProtocol: string;
+  moarTubeNodeIp: string;
+  moarTubeNodePort: number;
+  rememberMe: boolean;
+}
+
+export interface SignInResult {
+  isAuthenticated: boolean;
+  token?: string;
+}
+
+// ============================================================================
 // Live Chat Service
 // ============================================================================
 
@@ -976,36 +998,6 @@ export interface CreateChatMessageInput {
   username: string;
   usernameColorHexCode: string;
   chatMessage: string;
-}
-
-/**
- * Live chat service interface
- */
-export interface ILiveChatService {
-  /** Get recent chat messages for a video */
-  getRecentMessages(videoId: string, count?: number): Promise<DrizzleLiveChatMessage[]>;
-
-  /** Get messages after a timestamp */
-  getMessagesAfter(
-    videoId: string,
-    afterTimestamp: number,
-    limit?: number
-  ): Promise<DrizzleLiveChatMessage[]>;
-
-  /** Create a new chat message */
-  createMessage(data: CreateChatMessageInput): Promise<DrizzleLiveChatMessage>;
-
-  /** Delete a chat message */
-  deleteMessage(messageId: number): Promise<boolean>;
-
-  /** Delete all messages for a video */
-  deleteMessagesForVideo(videoId: string): Promise<number>;
-
-  /** Prune old messages (keep last N) */
-  pruneOldMessages(videoId: string, keepCount: number): Promise<number>;
-
-  /** Count messages for a video */
-  countMessagesForVideo(videoId: string): Promise<number>;
 }
 
 // ============================================================================

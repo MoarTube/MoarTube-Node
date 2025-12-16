@@ -34,7 +34,7 @@ import { ReportsService } from '../services/reports.js';
 import { SettingsService } from '../services/settings.js';
 import { UploadTrackerService } from '../services/upload-tracker.js';
 import { VideoUploadService } from '../services/video-upload.js';
-import { LiveChatService } from '../services/chat.js';
+import { LiveChatService } from '../services/live-chat.js';
 import { LinksService } from '../services/links.js';
 import { MonetizationService } from '../services/monetization.js';
 

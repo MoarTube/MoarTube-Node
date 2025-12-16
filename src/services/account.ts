@@ -10,24 +10,7 @@ import jwt from 'jsonwebtoken';
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
 import { getConfig } from '../config/index.js';
-
-export interface JwtPayload {
-  username: string;
-}
-
-export interface SignInInput {
-  username: string;
-  password: string;
-  moarTubeNodeHttpProtocol: string;
-  moarTubeNodeIp: string;
-  moarTubeNodePort: number;
-  rememberMe: boolean;
-}
-
-export interface SignInResult {
-  isAuthenticated: boolean;
-  token?: string;
-}
+import type { JwtPayload, SignInInput, SignInResult } from './interfaces.js';
 
 /**
  * AccountService class

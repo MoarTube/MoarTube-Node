@@ -22,11 +22,8 @@ import { EchoHandler } from './handlers/echo.js';
 import { RegisterHandler } from './handlers/register.js';
 import { Logger, type Logger as LoggerType } from '../utils/logger.js';
 import type { Container } from '../core/container.js';
-import type {
-  IVideoService,
-  ILiveChatService,
-  ICloudflareService,
-} from '../services/interfaces.js';
+import type { IVideoService, ICloudflareService } from '../services/interfaces.js';
+import type { LiveChatService } from '../services/live-chat.js';
 
 /**
  * Configuration options for WebSocket Manager
@@ -95,7 +92,7 @@ export class WebSocketManager {
   /**
    * Get live chat service from container
    */
-  private getLiveChatService(): ILiveChatService {
+  private getLiveChatService(): LiveChatService {
     if (!this.container) {
       throw new Error(
         'Container not available. WebSocketManager must be initialized with a container.'

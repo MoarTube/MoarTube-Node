@@ -19,7 +19,6 @@ export type {
   IWebSocketService,
   IReportService,
   ISettingsService,
-  ILiveChatService,
   GetVideosOptions,
   GetCommentsOptions,
   CreateVideoInput,
@@ -41,9 +40,9 @@ export type {
 // Service implementations
 export { VideosService } from './videos.js';
 export { CommentsService } from './comments.js';
-export { LiveChatService } from './chat.js';
+export { LiveChatService } from './live-chat.js';
 export { StreamsService, type StreamMeta, type StartStreamOptions } from './streams.js';
-export { AccountService, type JwtPayload } from './account.js';
+export { AccountService } from './account.js';
 export { StorageService, type S3Config } from './storage.js';
 export { IndexerService } from './indexer.js';
 export { CloudflareService } from './cloudflare.js';
