@@ -102,7 +102,9 @@ export function ensureDirectorySync(dirPath: string): void {
  */
 export async function deleteDirectory(dirPath: string): Promise<void> {
   try {
-    await fsRm(dirPath, { recursive: true, force: true });
+    if (fs.existsSync(dirPath)) {
+      await fsRm(dirPath, { recursive: true, force: true });
+    }
   } catch (error) {
     const fsError = error as NodeJS.ErrnoException;
     throw new FilesystemError(

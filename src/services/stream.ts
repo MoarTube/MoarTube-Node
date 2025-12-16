@@ -388,10 +388,7 @@ export class StreamService extends BaseService implements IStreamService {
         const publicDir = config.paths.publicDirectoryPath;
         const videoDir = path.join(videosDir, videoId);
 
-        // Delete existing directory and all contents if it exists
-        if (fs.existsSync(videoDir)) {
-          await deleteDirectory(videoDir);
-        }
+        await deleteDirectory(videoDir);
 
         // Create directories
         fs.mkdirSync(path.join(videoDir, 'images'), { recursive: true });
