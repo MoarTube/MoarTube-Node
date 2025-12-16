@@ -20,7 +20,7 @@ export function watchRoutes(
   container: Container
 ): void {
   const videoRepository = container.resolve('videoRepository');
-  const commentRepository = container.resolve('commentRepository');
+  const commentRepository = container.resolve('commentsRepository');
   const linkRepository = container.resolve('linkRepository');
   const monetizationRepository = container.resolve('monetizationRepository');
 

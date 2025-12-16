@@ -352,17 +352,11 @@ export interface IStreamService {
   /** Stop an active live stream */
   stopStream(videoId: string): Promise<void>;
 
-  /** Set stream as live */
-  setLive(videoId: string, isLive: boolean): Promise<void>;
-
   /** Get all currently streaming videos */
   getActiveStreams(): Promise<DrizzleVideo[]>;
 
   /** Check if a video is currently streaming */
   isStreaming(videoId: string): Promise<boolean>;
-
-  /** Mark stream as streamed (completed) */
-  setStreamed(videoId: string): Promise<void>;
 }
 
 // ============================================================================

@@ -23,7 +23,7 @@ export function commentsRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const commentRepository = container.resolve('commentRepository');
+  const commentRepository = container.resolve('commentsRepository');
   const commentReportRepository = container.resolve('commentReportRepository');
   const videoRepository = container.resolve('videoRepository');
   const cloudflareService = container.resolve('cloudflareService');

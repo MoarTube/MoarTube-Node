@@ -20,7 +20,7 @@ export function nodeRoutes(
   container: Container
 ): void {
   const videoRepository = container.resolve('videoRepository');
-  const commentRepository = container.resolve('commentRepository');
+  const commentRepository = container.resolve('commentsRepository');
   const videoReportRepository = container.resolve('videoReportRepository');
   const commentReportRepository = container.resolve('commentReportRepository');
   const linkRepository = container.resolve('linkRepository');

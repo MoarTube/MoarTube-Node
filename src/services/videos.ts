@@ -37,7 +37,7 @@ import { getConfig } from '../config/index.js';
  */
 export interface VideosServiceDependencies {
   videoRepository: VideosRepository;
-  commentRepository?: CommentsRepository;
+  commentsRepository?: CommentsRepository;
   storageService?: IStorageService;
   websocketService?: IWebSocketService;
   cloudflareService?: ICloudflareService;
@@ -56,7 +56,7 @@ export interface VideosServiceDependencies {
  */
 export class VideosService extends BaseService implements IVideoService {
   private readonly videoRepository: VideosRepository;
-  private readonly commentRepository: CommentsRepository | undefined;
+  private readonly commentsRepository: CommentsRepository | undefined;
   private readonly storageService: IStorageService | undefined;
   private readonly websocketService: IWebSocketService | undefined;
   private readonly cloudflareService: ICloudflareService | undefined;
@@ -69,7 +69,7 @@ export class VideosService extends BaseService implements IVideoService {
 
   constructor(
     videoRepository: VideosRepository,
-    commentRepository?: CommentsRepository,
+    commentsRepository?: CommentsRepository,
     storageService?: IStorageService,
     websocketService?: IWebSocketService,
     cloudflareService?: ICloudflareService,
@@ -78,7 +78,7 @@ export class VideosService extends BaseService implements IVideoService {
   ) {
     super('VideosService', options);
     this.videoRepository = videoRepository;
-    this.commentRepository = commentRepository;
+    this.commentsRepository = commentsRepository;
     this.storageService = storageService;
     this.websocketService = websocketService;
     this.cloudflareService = cloudflareService;
@@ -332,8 +332,8 @@ export class VideosService extends BaseService implements IVideoService {
       this.logger.info('Deleting video', { videoId });
 
       // Delete comments for the video
-      if (this.commentRepository) {
-        await this.commentRepository.deleteByVideoId(videoId);
+      if (this.commentsRepository) {
+        await this.commentsRepository.deleteByVideoId(videoId);
       }
 
       // Delete storage directories

@@ -22,7 +22,7 @@ import sanitizeHtml from 'sanitize-html';
  * Comment service dependencies
  */
 export interface CommentServiceDependencies {
-  commentRepository: CommentsRepository;
+  commentsRepository: CommentsRepository;
   videoRepository?: VideosRepository;
   websocketService?: IWebSocketService;
 }
@@ -36,18 +36,18 @@ export interface CommentServiceDependencies {
  * - Comment search functionality
  */
 export class CommentService extends BaseService implements ICommentService {
-  private readonly commentRepository: CommentsRepository;
+  private readonly commentsRepository: CommentsRepository;
   private readonly videoRepository: VideosRepository | undefined;
   private readonly websocketService: IWebSocketService | undefined;
 
   constructor(
-    commentRepository: CommentsRepository,
+    commentsRepository: CommentsRepository,
     videoRepository?: VideosRepository,
     websocketService?: IWebSocketService,
     options?: ServiceOptions
   ) {
     super('CommentService', options);
-    this.commentRepository = commentRepository;
+    this.commentsRepository = commentsRepository;
     this.videoRepository = videoRepository;
     this.websocketService = websocketService;
     // Prevent unused variable warning - websocketService will be used for real-time comment updates
@@ -63,7 +63,7 @@ export class CommentService extends BaseService implements ICommentService {
     timestamp: number
   ): Promise<DrizzleComment | null> {
     return this.withErrorLogging('getComment', async () => {
-      return this.commentRepository.findById(videoId, commentId, timestamp);
+      return this.commentsRepository.findById(videoId, commentId, timestamp);
     });
   }
 
@@ -73,7 +73,7 @@ export class CommentService extends BaseService implements ICommentService {
   async getComments(options?: GetCommentsOptions): Promise<DrizzleComment[]> {
     return this.withErrorLogging('getComments', async () => {
       if (options?.videoId !== undefined && options.videoId !== '') {
-        return this.commentRepository.findByVideoId(options.videoId);
+        return this.commentsRepository.findByVideoId(options.videoId);
       }
 
       // For now, return comments by video if specified, otherwise empty
@@ -100,7 +100,7 @@ export class CommentService extends BaseService implements ICommentService {
         throw new Error('Sort must be "ascending" or "descending"');
       }
 
-      return this.commentRepository.findByVideoIdWithTimestampFilter(
+      return this.commentsRepository.findByVideoIdWithTimestampFilter(
         videoId,
         type,
         sort,
@@ -129,7 +129,7 @@ export class CommentService extends BaseService implements ICommentService {
       };
 
       // Create the comment
-      const comment = await this.commentRepository.create(commentData);
+      const comment = await this.commentsRepository.create(commentData);
 
       // Increment video comment count
       if (this.videoRepository) {
@@ -146,7 +146,7 @@ export class CommentService extends BaseService implements ICommentService {
   async deleteComment(videoId: string, commentId: number, timestamp: number): Promise<boolean> {
     return this.withErrorLogging('deleteComment', async () => {
       // Get comment to find video ID
-      const comment = await this.commentRepository.findById(videoId, commentId, timestamp);
+      const comment = await this.commentsRepository.findById(videoId, commentId, timestamp);
 
       if (!comment) {
         return false;
@@ -158,7 +158,7 @@ export class CommentService extends BaseService implements ICommentService {
       });
 
       // Delete the comment
-      const deleted = await this.commentRepository.delete(videoId, commentId, timestamp);
+      const deleted = await this.commentsRepository.delete(videoId, commentId, timestamp);
 
       if (deleted && this.videoRepository) {
         // Decrement video comment count
@@ -176,7 +176,7 @@ export class CommentService extends BaseService implements ICommentService {
     return this.withErrorLogging('deleteCommentsForVideo', async () => {
       this.logger.info('Deleting all comments for video', { videoId });
 
-      const deletedCount = await this.commentRepository.deleteByVideoId(videoId);
+      const deletedCount = await this.commentsRepository.deleteByVideoId(videoId);
 
       // Reset video comment count to 0 (handled by video deletion usually)
       // No need to decrement one by one
@@ -189,7 +189,7 @@ export class CommentService extends BaseService implements ICommentService {
    * Count comments for a video
    */
   async countCommentsForVideo(videoId: string): Promise<number> {
-    return this.commentRepository.countByVideoId(videoId);
+    return this.commentsRepository.countByVideoId(videoId);
   }
 
   /**
@@ -220,7 +220,7 @@ export class CommentService extends BaseService implements ICommentService {
     limit: number = 50
   ): Promise<DrizzleComment[]> {
     // Would need repository method - for now filter in memory
-    const comments = await this.commentRepository.findByVideoId(videoId);
+    const comments = await this.commentsRepository.findByVideoId(videoId);
     return comments.filter((c) => c.timestamp > afterTimestamp).slice(0, limit);
   }
 }

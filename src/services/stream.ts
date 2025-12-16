@@ -11,8 +11,10 @@ import { BaseService, type ServiceOptions } from './base.js';
 import type { IStreamService, StreamConfig, IWebSocketService } from './interfaces.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
+import type { CommentsRepository } from '../database/repositories/comments.js';
 import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
+import { deleteDirectory } from '../utils/filesystem.js';
 
 /**
  * Stream service dependencies
@@ -20,6 +22,7 @@ import { getConfig } from '../config/index.js';
 export interface StreamServiceDependencies {
   videoRepository: VideosRepository;
   liveChatMessageRepository?: LiveChatMessageRepository;
+  commentsRepository?: CommentsRepository;
   websocketService?: IWebSocketService;
 }
 
@@ -66,18 +69,21 @@ export interface StartStreamOptions {
  */
 export class StreamService extends BaseService implements IStreamService {
   private readonly videoRepository: VideosRepository;
-  private readonly liveChatMessageRepository: LiveChatMessageRepository | undefined;
-  private readonly websocketService: IWebSocketService | undefined;
+  private readonly liveChatMessageRepository: LiveChatMessageRepository;
+  private readonly commentsRepository: CommentsRepository;
+  private readonly websocketService: IWebSocketService;
 
   constructor(
     videoRepository: VideosRepository,
     liveChatMessageRepository: LiveChatMessageRepository,
-    websocketService?: IWebSocketService,
-    options?: ServiceOptions
+    commentsRepository: CommentsRepository,
+    websocketService: IWebSocketService,
+    options: ServiceOptions
   ) {
     super('StreamService', options);
     this.videoRepository = videoRepository;
     this.liveChatMessageRepository = liveChatMessageRepository;
+    this.commentsRepository = commentsRepository;
     this.websocketService = websocketService;
   }
 
@@ -97,7 +103,6 @@ export class StreamService extends BaseService implements IStreamService {
       await this.videoRepository.update(videoId, {
         is_streaming: true,
         is_streamed: false,
-        is_live: true,
         is_stream_recorded_remotely: isRecordedRemotely,
         is_stream_recorded_locally: isRecordedLocally,
         is_error: false,
@@ -126,9 +131,11 @@ export class StreamService extends BaseService implements IStreamService {
 
       await this.videoRepository.update(videoId, {
         is_streaming: false,
-        is_live: true,
         is_streamed: true,
       });
+
+      const deletedCount = await this.liveChatMessageRepository.deleteByVideoId(videoId);
+      this.logger.debug('Deleted live chat messages on stream stop', { videoId, deletedCount });
 
       this.logger.info('Stream stopped', { videoId });
 
@@ -139,18 +146,6 @@ export class StreamService extends BaseService implements IStreamService {
         isStreaming: false,
         isStreamed: true,
       });
-    });
-  }
-
-  /**
-   * Set stream as live (receiving data)
-   */
-  async setLive(videoId: string, isLive: boolean): Promise<void> {
-    await this.videoRepository.update(videoId, { is_live: isLive });
-
-    this.broadcastStreamEvent('stream_live_status', {
-      videoId,
-      isLive,
     });
   }
 
@@ -167,19 +162,6 @@ export class StreamService extends BaseService implements IStreamService {
   async isStreaming(videoId: string): Promise<boolean> {
     const video = await this.videoRepository.findById(videoId);
     return video?.is_streaming ?? false;
-  }
-
-  /**
-   * Mark stream as streamed (completed)
-   */
-  async setStreamed(videoId: string): Promise<void> {
-    await this.videoRepository.update(videoId, {
-      is_streaming: false,
-      is_streamed: true,
-      is_live: false,
-    });
-
-    this.logger.info('Stream marked as completed', { videoId });
   }
 
   /**
@@ -202,8 +184,8 @@ export class StreamService extends BaseService implements IStreamService {
 
       const tagsSanitized = this.sanitizeWhitespace(options.tags);
 
-      // Create storage directories
-      this.createStreamStorageDirectories(videoId, options.resolution);
+      // Create storage directories (remove if already present)
+      await this.createStreamStorageDirectories(videoId, options.resolution);
 
       const outputs = JSON.stringify({
         m3u8: [options.resolution],
@@ -246,17 +228,20 @@ export class StreamService extends BaseService implements IStreamService {
           is_streamed: false,
           is_stream_recorded_remotely: options.isRecordingStreamRemotely,
           is_stream_recorded_locally: options.isRecordingStreamLocally,
-          is_live: true,
           is_error: false,
           outputs,
           meta: JSON.stringify(meta),
           creation_timestamp: timestamp,
         });
 
-        // Clear previous comments for resumed stream
-        if (this.liveChatMessageRepository) {
-          // Would clear chat messages here
-        }
+        const deletedComments = await this.commentsRepository.deleteByVideoId(videoId);
+        this.logger.debug('Deleted comments on stream resume', { videoId, deletedComments });
+
+        const deletedChatMessages = await this.liveChatMessageRepository.deleteByVideoId(videoId);
+        this.logger.debug('Deleted live chat messages on stream resume', {
+          videoId,
+          deletedChatMessages,
+        });
 
         this.logger.info('Stream resumed', { videoId });
       } else {
@@ -393,7 +378,7 @@ export class StreamService extends BaseService implements IStreamService {
   /**
    * Create storage directories for a stream
    */
-  private createStreamStorageDirectories(videoId: string, resolution: string): void {
+  private async createStreamStorageDirectories(videoId: string, resolution: string): Promise<void> {
     try {
       const config = getConfig();
       const storageMode = config.nodeSettings.storageConfig.storageMode;
@@ -402,6 +387,11 @@ export class StreamService extends BaseService implements IStreamService {
         const videosDir = config.paths.videosDirectoryPath;
         const publicDir = config.paths.publicDirectoryPath;
         const videoDir = path.join(videosDir, videoId);
+
+        // Delete existing directory and all contents if it exists
+        if (fs.existsSync(videoDir)) {
+          await deleteDirectory(videoDir);
+        }
 
         // Create directories
         fs.mkdirSync(path.join(videoDir, 'images'), { recursive: true });
@@ -455,14 +445,12 @@ export class StreamService extends BaseService implements IStreamService {
    * Broadcast stream event via WebSocket
    */
   private broadcastStreamEvent(eventName: string, payload: Record<string, unknown>): void {
-    if (this.websocketService) {
-      this.websocketService.broadcastToNodes({
-        eventName: 'echo',
-        data: {
-          eventName,
-          payload,
-        },
-      });
-    }
+    this.websocketService.broadcastToNodes({
+      eventName: 'echo',
+      data: {
+        eventName,
+        payload,
+      },
+    });
   }
 }

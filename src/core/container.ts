@@ -52,7 +52,7 @@ export interface ContainerCradle {
 
   // Repositories
   videoRepository: VideosRepository;
-  commentRepository: CommentsRepository;
+  commentsRepository: CommentsRepository;
   videoReportRepository: ReportsVideosRepository;
   commentReportRepository: ReportsCommentsRepository;
   videoReportsArchiveRepository: ReportsArchiveVideosRepository;
@@ -117,7 +117,7 @@ export function createAppContainer(db: DatabaseClient): Container {
   // Register repositories (they need db in constructor)
   appContainer.register({
     videoRepository: asClass(VideosRepository).singleton(),
-    commentRepository: asClass(CommentsRepository).singleton(),
+    commentsRepository: asClass(CommentsRepository).singleton(),
     videoReportRepository: asClass(ReportsVideosRepository).singleton(),
     commentReportRepository: asClass(ReportsCommentsRepository).singleton(),
     videoReportsArchiveRepository: asClass(ReportsArchiveVideosRepository).singleton(),
