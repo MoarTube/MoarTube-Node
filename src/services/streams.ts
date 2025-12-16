@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { BaseService } from './base.js';
-import type { ILogger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger.js';
 import type { IStreamService, StreamConfig, IWebSocketService } from './interfaces.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { LiveChatMessagesRepository } from '../database/repositories/live-chat-messages.js';
@@ -16,6 +16,7 @@ import type { CommentsRepository } from '../database/repositories/comments.js';
 import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/index.js';
 import { getConfig } from '../config/index.js';
 import { deleteDirectory } from '../utils/filesystem.js';
+import { type WebSocketService } from './websocket.js';
 
 /**
  * Stream metadata stored in video meta field
@@ -65,11 +66,11 @@ export class StreamsService extends BaseService implements IStreamService {
   private readonly websocketService: IWebSocketService;
 
   constructor(
-    logger: ILogger,
+    logger: Logger,
     videosRepository: VideosRepository,
     liveChatMessagesRepository: LiveChatMessagesRepository,
     commentsRepository: CommentsRepository,
-    websocketService: IWebSocketService
+    websocketService: WebSocketService
   ) {
     super('StreamService', logger);
     this.videoRepository = videosRepository;

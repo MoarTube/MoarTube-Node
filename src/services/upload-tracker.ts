@@ -6,8 +6,8 @@
  */
 
 import type { FastifyRequest } from 'fastify';
-import type { IWebSocketService } from './interfaces.js';
-import type { ILogger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger.js';
+import { type WebSocketService } from './websocket.js';
 
 /**
  * Upload tracking state for a single video
@@ -59,10 +59,10 @@ export interface IUploadTrackerService {
 
 export class UploadTrackerService implements IUploadTrackerService {
   private readonly tracker = new Map<string, VideoUploadState>();
-  private readonly websocketService?: IWebSocketService | undefined;
-  private readonly logger?: ILogger | undefined;
+  private readonly websocketService: WebSocketService;
+  private readonly logger: Logger;
 
-  constructor(websocketService?: IWebSocketService, logger?: ILogger) {
+  constructor(websocketService: WebSocketService, logger: Logger) {
     this.websocketService = websocketService;
     this.logger = logger;
   }
@@ -80,7 +80,7 @@ export class UploadTrackerService implements IUploadTrackerService {
         resolution,
       });
 
-      this.logger?.debug('Started tracking upload', { videoId, format, resolution });
+      this.logger.debug('Started tracking upload', { videoId, format, resolution });
     }
   }
 
@@ -133,7 +133,7 @@ export class UploadTrackerService implements IUploadTrackerService {
     if (state) {
       state.stopping = true;
 
-      this.logger?.info('Upload stop signaled', { videoId });
+      this.logger.info('Upload stop signaled', { videoId });
 
       // Broadcast stopping event
       this.broadcastUploadEvent(videoId, 'stopping', state);
@@ -157,7 +157,7 @@ export class UploadTrackerService implements IUploadTrackerService {
 
       this.tracker.delete(videoId);
 
-      this.logger?.info('Upload stopped', { videoId });
+      this.logger.info('Upload stopped', { videoId });
 
       // Broadcast stopped event
       this.broadcastUploadEvent(videoId, 'stopped', state);
@@ -172,7 +172,7 @@ export class UploadTrackerService implements IUploadTrackerService {
       const state = this.tracker.get(videoId);
       this.tracker.delete(videoId);
 
-      this.logger?.debug('Stopped tracking upload', { videoId });
+      this.logger.debug('Stopped tracking upload', { videoId });
 
       // Broadcast completed event
       if (state) {
@@ -196,20 +196,18 @@ export class UploadTrackerService implements IUploadTrackerService {
     type: 'publishing' | 'stopping' | 'stopped' | 'completed',
     state: VideoUploadState
   ): void {
-    if (this.websocketService) {
-      this.websocketService.broadcastToNodes({
-        eventName: 'echo',
-        data: {
-          eventName: 'video_status',
-          payload: {
-            type,
-            videoId,
-            format: state.format,
-            resolution: state.resolution,
-            progress: state.progress,
-          },
+    this.websocketService.broadcastToNodes({
+      eventName: 'echo',
+      data: {
+        eventName: 'video_status',
+        payload: {
+          type,
+          videoId,
+          format: state.format,
+          resolution: state.resolution,
+          progress: state.progress,
         },
-      });
-    }
+      },
+    });
   }
 }

@@ -7,7 +7,7 @@
 import axios, { type AxiosInstance } from 'axios';
 
 import { BaseService } from './base.js';
-import type { ILogger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger.js';
 import type { ICloudflareService } from './interfaces.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import { getConfig } from '../config/index.js';
@@ -30,7 +30,7 @@ export class CloudflareService extends BaseService implements ICloudflareService
   private readonly videosRepository: VideosRepository;
   private httpClient: AxiosInstance | null = null;
 
-  constructor(logger: ILogger, videosRepository: VideosRepository) {
+  constructor(logger: Logger, videosRepository: VideosRepository) {
     super('CloudflareService', logger);
     this.videosRepository = videosRepository;
     this.initializeHttpClient();

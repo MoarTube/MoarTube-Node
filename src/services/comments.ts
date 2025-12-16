@@ -6,7 +6,7 @@
  */
 
 import { BaseService } from './base.js';
-import type { ILogger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger.js';
 import type { ICommentService, GetCommentsOptions, CreateCommentInput } from './interfaces.js';
 import type { CommentsRepository } from '../database/repositories/comments.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
@@ -27,7 +27,7 @@ export class CommentsService extends BaseService implements ICommentService {
   private readonly videoRepository: VideosRepository | undefined;
 
   constructor(
-    logger: ILogger,
+    logger: Logger,
     commentsRepository: CommentsRepository,
     videosRepository: VideosRepository
   ) {

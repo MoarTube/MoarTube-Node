@@ -5,7 +5,7 @@
  * Handles video and comment reports, archiving, and moderation workflows.
  */
 import { BaseService } from './base.js';
-import type { ILogger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger.js';
 import type {
   IReportService,
   CreateVideoReportInput,
@@ -43,7 +43,7 @@ export class ReportsService extends BaseService implements IReportService {
   private readonly reportsArchiveCommentsRepository: ReportsArchiveCommentsRepository;
 
   constructor(
-    logger: ILogger,
+    logger: Logger,
     reportsVideosRepository: ReportsVideosRepository,
     reportsCommentsRepository: ReportsCommentsRepository,
     reportsArchiveVideosRepository: ReportsArchiveVideosRepository,

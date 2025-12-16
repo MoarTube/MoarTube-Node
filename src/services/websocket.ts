@@ -5,7 +5,7 @@
  * Provides abstraction over the cluster-aware WebSocket system.
  */
 import { BaseService } from './base.js';
-import type { ILogger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger.js';
 import type { IWebSocketService, WebSocketMessage, WebSocketEventName } from './interfaces.js';
 
 /**
@@ -29,7 +29,7 @@ export class WebSocketService extends BaseService implements IWebSocketService {
   private readonly nodeClientCount: number = 0;
   private readonly chatClientCounts: Map<string, number> = new Map();
 
-  constructor(logger: ILogger) {
+  constructor(logger: Logger) {
     super('WebSocketService', logger);
   }
 

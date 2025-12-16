@@ -11,10 +11,11 @@ import type { MultipartFile } from '@fastify/multipart';
 import type { FastifyRequest } from 'fastify';
 
 import { getConfig } from '../config/index.js';
-import { Logger } from '../utils/logger.js';
+import { type Logger } from '../utils/logger.js';
 import type { IVideoService, ICloudflareService, IWebSocketService } from './interfaces.js';
-import type { ILogger } from '../utils/logger.js';
 import type { IUploadTrackerService } from './upload-tracker.js';
+import { type CloudflareService } from './cloudflare.js';
+import { type WebSocketService } from './websocket.js';
 
 // ============================================================================
 // Types
@@ -130,22 +131,22 @@ export interface IVideoUploadService {
 export class VideoUploadService implements IVideoUploadService {
   private readonly videosService: IVideoService;
   private readonly uploadTrackerService: IUploadTrackerService;
-  private readonly cloudflareService: ICloudflareService | undefined;
-  private readonly websocketService: IWebSocketService | undefined;
-  private readonly logger: ILogger;
+  private readonly cloudflareService: ICloudflareService;
+  private readonly websocketService: IWebSocketService;
+  private readonly logger: Logger;
 
   constructor(
     videosService: IVideoService,
     uploadTrackerService: IUploadTrackerService,
-    cloudflareService?: ICloudflareService,
-    websocketService?: IWebSocketService,
-    logger?: ILogger
+    cloudflareService: CloudflareService,
+    websocketService: WebSocketService,
+    logger: Logger
   ) {
     this.videosService = videosService;
     this.uploadTrackerService = uploadTrackerService;
     this.cloudflareService = cloudflareService;
     this.websocketService = websocketService;
-    this.logger = logger ?? Logger.getInstance();
+    this.logger = logger;
   }
 
   /**
@@ -265,16 +266,14 @@ export class VideoUploadService implements IVideoUploadService {
       this.uploadTrackerService.stopTracking(videoId);
 
       // Purge Cloudflare cache
-      if (this.cloudflareService) {
-        await this.cloudflareService.purgeNodePage();
-        await this.cloudflareService.purgeAllWatchPages();
+      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeAllWatchPages();
 
-        // Format-specific purge
-        if (format === 'm3u8') {
-          await this.cloudflareService.purgeAdaptiveVideos(videoId);
-        } else {
-          await this.cloudflareService.purgeProgressiveVideos(videoId);
-        }
+      // Format-specific purge
+      if (format === 'm3u8') {
+        await this.cloudflareService.purgeAdaptiveVideos(videoId);
+      } else {
+        await this.cloudflareService.purgeProgressiveVideos(videoId);
       }
 
       this.logger.info('Video upload completed', { videoId, format, resolution });
@@ -326,20 +325,18 @@ export class VideoUploadService implements IVideoUploadService {
 
     try {
       // Purge Cloudflare cache based on image type
-      if (this.cloudflareService) {
-        switch (imageType) {
-          case 'thumbnail':
-            await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
-            break;
-          case 'preview':
-            // Mark index as outdated since preview is used in search results
-            await this.videosService.markIndexOutdated(videoId);
-            await this.cloudflareService.purgeVideoPreviewImages([videoId]);
-            break;
-          case 'poster':
-            await this.cloudflareService.purgeVideoPosterImages([videoId]);
-            break;
-        }
+      switch (imageType) {
+        case 'thumbnail':
+          await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
+          break;
+        case 'preview':
+          // Mark index as outdated since preview is used in search results
+          await this.videosService.markIndexOutdated(videoId);
+          await this.cloudflareService.purgeVideoPreviewImages([videoId]);
+          break;
+        case 'poster':
+          await this.cloudflareService.purgeVideoPosterImages([videoId]);
+          break;
       }
 
       this.logger.info('Image upload completed', { videoId, imageType });
@@ -416,7 +413,7 @@ export class VideoUploadService implements IVideoUploadService {
       if (now - lastBroadcastTime > 1000 || uploadProgress === 100) {
         lastBroadcastTime = now;
 
-        this.websocketService?.broadcastToNodes({
+        this.websocketService.broadcastToNodes({
           eventName: 'echo',
           data: {
             eventName: 'video_status',

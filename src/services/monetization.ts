@@ -4,7 +4,7 @@
  * Service layer for crypto wallet address operations including CRUD operations.
  */
 import { BaseService } from './base.js';
-import type { ILogger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger.js';
 import type { IMonetizationService, CreateWalletAddressInput } from './interfaces.js';
 import type { MonetizationRepository } from '../database/repositories/monetization.js';
 import type { DrizzleCryptoWalletAddress } from '../database/schemas/index.js';
@@ -18,7 +18,7 @@ import type { DrizzleCryptoWalletAddress } from '../database/schemas/index.js';
 export class MonetizationService extends BaseService implements IMonetizationService {
   private readonly monetizationRepository: MonetizationRepository;
 
-  constructor(logger: ILogger, monetizationRepository: MonetizationRepository) {
+  constructor(logger: Logger, monetizationRepository: MonetizationRepository) {
     super('MonetizationService', logger);
     this.monetizationRepository = monetizationRepository;
   }

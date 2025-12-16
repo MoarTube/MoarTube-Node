@@ -5,7 +5,7 @@
  * history management, and pruning functionality.
  */
 import { BaseService } from './base.js';
-import type { ILogger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger.js';
 import type { ILiveChatService, CreateChatMessageInput } from './interfaces.js';
 import type { LiveChatMessagesRepository } from '../database/repositories/live-chat-messages.js';
 import type { DrizzleLiveChatMessage } from '../database/schemas/index.js';
@@ -21,7 +21,7 @@ import type { DrizzleLiveChatMessage } from '../database/schemas/index.js';
 export class LiveChatService extends BaseService implements ILiveChatService {
   private readonly liveChatMessageRepository: LiveChatMessagesRepository;
 
-  constructor(logger: ILogger, liveChatMessagesRepository: LiveChatMessagesRepository) {
+  constructor(logger: Logger, liveChatMessagesRepository: LiveChatMessagesRepository) {
     super('LiveChatService', logger);
     this.liveChatMessageRepository = liveChatMessagesRepository;
   }

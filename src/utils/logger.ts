@@ -34,21 +34,11 @@ export interface LoggerConfig {
 }
 
 /**
- * Logger interface for dependency injection
- */
-export interface ILogger {
-  debug(message: string, context?: Record<string, unknown>): void;
-  info(message: string, context?: Record<string, unknown>): void;
-  warn(message: string, context?: Record<string, unknown>): void;
-  error(message: string, error?: unknown, context?: Record<string, unknown>): void;
-}
-
-/**
  * Logger class using Pino with pino-pretty
  *
  * Provides structured logging with configurable levels and pretty formatting.
  */
-export class Logger implements ILogger {
+export class Logger {
   private static instance: Logger | null = null;
   private readonly logger: pino.Logger;
 

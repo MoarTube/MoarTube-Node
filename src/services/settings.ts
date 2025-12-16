@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { BaseService } from './base.js';
-import type { ILogger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger.js';
 import type {
   ISettingsService,
   UpdateNodeSettingsInput,
@@ -64,7 +64,7 @@ export class SettingsService extends BaseService implements ISettingsService {
   private readonly linksRepository: LinksRepository;
 
   constructor(
-    logger: ILogger,
+    logger: Logger,
     videosRepository: VideosRepository,
     commentsRepository: CommentsRepository,
     reportsVideosRepository: ReportsVideosRepository,

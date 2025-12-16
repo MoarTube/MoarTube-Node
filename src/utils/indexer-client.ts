@@ -6,7 +6,7 @@
  */
 
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
-import type { ILogger } from './logger.js';
+import type { Logger } from './logger.js';
 
 /**
  * Indexer API error
@@ -29,7 +29,7 @@ export interface IndexerClientConfig {
   /** Base URL of the MoarTube indexer */
   indexerUrl: string;
   /** Optional logger */
-  logger?: ILogger;
+  logger?: Logger;
   /** Request timeout in ms */
   timeout?: number;
 }
@@ -73,7 +73,7 @@ export interface VideoIndexData {
  */
 export class IndexerClient {
   private readonly client: AxiosInstance;
-  private readonly logger: ILogger | undefined;
+  private readonly logger: Logger | undefined;
 
   constructor(config: IndexerClientConfig) {
     this.logger = config.logger;

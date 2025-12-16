@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { BaseService } from './base.js';
-import type { ILogger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger.js';
 import type {
   IVideoService,
   GetVideosOptions,
@@ -57,7 +57,7 @@ export class VideosService extends BaseService implements IVideoService {
   private static readonly VIEW_DEBOUNCE_MS = 500;
 
   constructor(
-    logger: ILogger,
+    logger: Logger,
     videosRepository: VideosRepository,
     commentsRepository?: CommentsRepository,
     storageService?: IStorageService,

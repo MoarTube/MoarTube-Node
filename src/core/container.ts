@@ -7,7 +7,7 @@
 import { createContainer, asClass, asValue, InjectionMode, type AwilixContainer } from 'awilix';
 
 // Logger
-import { Logger, type ILogger } from '../utils/logger.js';
+import { Logger } from '../utils/logger.js';
 
 // Database layer
 import type { DatabaseClient } from '../database/connection.js';
@@ -43,7 +43,7 @@ import { MonetizationService } from '../services/monetization.js';
  */
 export interface ContainerCradle {
   // Core utilities
-  logger: ILogger;
+  logger: Logger;
 
   // Database
   db: DatabaseClient;

@@ -9,7 +9,7 @@ import type { Server as HttpServer } from 'node:http';
 import type { Server as HttpsServer } from 'node:https';
 import { createHttpTerminator, type HttpTerminator } from 'http-terminator';
 import type { WebSocketManager } from '../websocket/websocket-manager.js';
-import { Logger, type ILogger } from '../utils/logger.js';
+import { type Logger } from '../utils/logger.js';
 
 /**
  * Shutdown configuration
@@ -22,7 +22,7 @@ export interface GracefulShutdownConfig {
   /** Cleanup function to run before exit */
   cleanup?: () => Promise<void>;
   /** Logger instance */
-  logger?: ILogger;
+  logger: Logger;
   /** Graceful termination timeout in ms */
   terminationTimeout?: number;
 }
@@ -38,13 +38,13 @@ export class GracefulShutdown {
   private readonly httpTerminator: HttpTerminator;
   private readonly wsManager: WebSocketManager | undefined;
   private readonly cleanup: (() => Promise<void>) | undefined;
-  private readonly logger: ILogger;
+  private readonly logger: Logger;
   private readonly terminationTimeout: number;
 
   constructor(config: GracefulShutdownConfig) {
     this.wsManager = config.wsManager;
     this.cleanup = config.cleanup;
-    this.logger = config.logger ?? Logger.getInstance();
+    this.logger = config.logger;
     this.terminationTimeout = config.terminationTimeout ?? 10000;
 
     this.httpTerminator = createHttpTerminator({

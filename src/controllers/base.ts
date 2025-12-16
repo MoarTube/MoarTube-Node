@@ -6,7 +6,7 @@
  */
 import type { FastifyReply } from 'fastify';
 import fs from 'node:fs';
-import { Logger, type ILogger } from '../utils/logger.js';
+import { Logger } from '../utils/logger.js';
 
 /**
  * Standard API success response
@@ -55,7 +55,7 @@ export abstract class BaseController {
   /**
    * Logger instance for the controller
    */
-  protected readonly logger: ILogger;
+  protected readonly logger: Logger;
 
   constructor(name: string) {
     this.controllerName = name;

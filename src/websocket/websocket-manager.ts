@@ -20,7 +20,7 @@ import { ChatMessageHandler } from './handlers/chat-message.js';
 import { VideoStatusHandler } from './handlers/video-status.js';
 import { EchoHandler } from './handlers/echo.js';
 import { RegisterHandler } from './handlers/register.js';
-import { Logger, type ILogger } from '../utils/logger.js';
+import { Logger, type Logger as LoggerType } from '../utils/logger.js';
 import type { Container } from '../core/container.js';
 import type {
   IVideoService,
@@ -33,7 +33,7 @@ import type {
  */
 export interface WebSocketManagerOptions {
   /** Logger instance */
-  logger?: ILogger;
+  logger?: LoggerType;
   /** Heartbeat interval in milliseconds (0 to disable) */
   heartbeatInterval?: number;
   /** Client timeout in milliseconds */
@@ -51,7 +51,7 @@ export interface WebSocketManagerOptions {
 export class WebSocketManager {
   private readonly handlers: WebSocketHandler[] = [];
   private readonly clients: Set<ExtendedWebSocket> = new Set();
-  private readonly logger: ILogger;
+  private readonly logger: LoggerType;
   private readonly heartbeatInterval: number;
   private readonly clientTimeout: number;
   private container: Container | null = null;

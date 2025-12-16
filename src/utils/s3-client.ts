@@ -17,7 +17,7 @@ import {
   type _Object,
 } from '@aws-sdk/client-s3';
 import type { Readable } from 'node:stream';
-import type { ILogger } from './logger.js';
+import type { Logger } from './logger.js';
 
 /**
  * S3 storage error
@@ -48,7 +48,7 @@ export interface S3StorageClientConfig {
   /** Force path style (required for some S3-compatible services) */
   forcePathStyle?: boolean;
   /** Optional logger */
-  logger?: ILogger;
+  logger?: Logger;
 }
 
 /**
@@ -86,7 +86,7 @@ export interface S3UploadOptions {
  */
 export class S3StorageClient {
   private readonly client: S3Client;
-  private readonly logger: ILogger | undefined;
+  private readonly logger: Logger | undefined;
 
   constructor(config: S3StorageClientConfig) {
     this.logger = config.logger;

@@ -6,7 +6,7 @@
  */
 
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
-import type { ILogger } from './logger.js';
+import type { Logger } from './logger.js';
 
 /**
  * Cloudflare API error
@@ -36,7 +36,7 @@ export interface CloudflareCredentials {
  */
 export interface CloudflareClientConfig {
   credentials: CloudflareCredentials;
-  logger?: ILogger;
+  logger?: Logger;
 }
 
 /**
@@ -90,7 +90,7 @@ export interface DnsRecord {
 export class CloudflareClient {
   private readonly client: AxiosInstance;
   private readonly credentials: CloudflareCredentials;
-  private readonly logger: ILogger | undefined;
+  private readonly logger: Logger | undefined;
 
   constructor(config: CloudflareClientConfig) {
     this.credentials = config.credentials;

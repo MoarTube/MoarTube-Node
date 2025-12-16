@@ -5,7 +5,7 @@
  */
 
 // Logger
-export { Logger, LogLevel, type ILogger, type LoggerConfig, createLogger } from './logger.js';
+export { Logger, LogLevel, type LoggerConfig, createLogger } from './logger.js';
 
 // Validators
 export {

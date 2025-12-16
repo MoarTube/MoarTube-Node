@@ -8,7 +8,7 @@ import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 import { BaseService } from './base.js';
-import type { ILogger } from '../utils/logger.js';
+import type { Logger } from '../utils/logger.js';
 import type { IAuthService, SignInInput, SignInResult } from './interfaces.js';
 import { getConfig } from '../config/index.js';
 
@@ -30,7 +30,7 @@ export interface JwtPayload {
  * - Password management
  */
 export class AuthService extends BaseService implements IAuthService {
-  constructor(logger: ILogger) {
+  constructor(logger: Logger) {
     super('AuthService', logger);
   }
 

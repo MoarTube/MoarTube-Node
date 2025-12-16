@@ -12,7 +12,7 @@ import type {
   VideosService,
   CloudflareService,
   CommentsService,
-  IVideoUploadService,
+  VideoUploadService,
   ReportsService,
 } from '../services/index.js';
 import {
@@ -119,14 +119,14 @@ type ImageType = 'thumbnail' | 'preview' | 'poster';
 export class VideosController extends BaseController {
   private readonly videosService: VideosService;
   private readonly commentsService: CommentsService;
-  private readonly videoUploadService: IVideoUploadService;
+  private readonly videoUploadService: VideoUploadService;
   private readonly cloudflareService: CloudflareService;
   private readonly reportsService: ReportsService;
 
   constructor(
     videosService: VideosService,
     commentsService: CommentsService,
-    videoUploadService: IVideoUploadService,
+    videoUploadService: VideoUploadService,
     cloudflareService: CloudflareService,
     reportsService: ReportsService
   ) {
