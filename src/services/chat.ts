@@ -11,13 +11,6 @@ import type { LiveChatMessagesRepository } from '../database/repositories/live-c
 import type { DrizzleLiveChatMessage } from '../database/schemas/index.js';
 
 /**
- * LiveChatService dependencies
- */
-export interface LiveChatServiceDependencies {
-  liveChatMessagesRepository: LiveChatMessagesRepository;
-}
-
-/**
  * LiveChatService class
  *
  * Handles all live chat message-related business logic including:

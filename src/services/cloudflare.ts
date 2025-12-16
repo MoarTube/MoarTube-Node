@@ -19,13 +19,6 @@ const CLOUDFLARE_API_BASE = 'https://api.cloudflare.com/client/v4';
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
 /**
- * Cloudflare service dependencies
- */
-export interface CloudflareServiceDependencies {
-  videosRepository?: VideosRepository;
-}
-
-/**
  * CloudflareService class
  *
  * Handles all Cloudflare-related functionality:

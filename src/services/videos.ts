@@ -34,18 +34,6 @@ import type { PaginatedResult } from '../types/models.js';
 import { getConfig } from '../config/index.js';
 
 /**
- * Videos service dependencies
- */
-export interface VideosServiceDependencies {
-  videoRepository: VideosRepository;
-  commentsRepository?: CommentsRepository;
-  storageService?: IStorageService;
-  websocketService?: IWebSocketService;
-  cloudflareService?: ICloudflareService;
-  indexerService?: IIndexerService;
-}
-
-/**
  * VideosService class
  *
  * Handles all video-related business logic including:

@@ -57,11 +57,6 @@ export interface IUploadTrackerService {
   getActiveUploads(): string[];
 }
 
-export interface UploadTrackerServiceDependencies {
-  websocketService?: IWebSocketService | undefined;
-  logger?: ILogger | undefined;
-}
-
 export class UploadTrackerService implements IUploadTrackerService {
   private readonly tracker = new Map<string, VideoUploadState>();
   private readonly websocketService?: IWebSocketService | undefined;

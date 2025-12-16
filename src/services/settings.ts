@@ -21,14 +21,6 @@ import { getConfig } from '../config/index.js';
 import type { DatabaseConfig, StorageConfig } from '../types/index.js';
 
 /**
- * Settings service dependencies
- */
-export interface SettingsServiceDependencies {
-  indexerService?: IIndexerService;
-  cloudflareService?: ICloudflareService;
-}
-
-/**
  * SettingsService class
  *
  * Handles all node settings and configuration management:

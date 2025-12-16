@@ -28,16 +28,6 @@ import type {
 import type { PaginationOptions } from '../types/models.js';
 
 /**
- * Report service dependencies
- */
-export interface ReportServiceDependencies {
-  videoReportRepository: ReportsVideosRepository;
-  commentReportRepository: ReportsCommentsRepository;
-  videoReportsArchiveRepository: ReportsArchiveVideosRepository;
-  commentReportsArchiveRepository: ReportsArchiveCommentsRepository;
-}
-
-/**
  * ReportService class
  *
  * Handles all content reporting and moderation:

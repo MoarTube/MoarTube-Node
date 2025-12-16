@@ -12,12 +12,7 @@ import type { FastifyRequest } from 'fastify';
 
 import { getConfig } from '../config/index.js';
 import { Logger } from '../utils/logger.js';
-import type {
-  IVideoService,
-  ICloudflareService,
-  IWebSocketService,
-  IStorageService,
-} from './interfaces.js';
+import type { IVideoService, ICloudflareService, IWebSocketService } from './interfaces.js';
 import type { ILogger } from '../utils/logger.js';
 import type { IUploadTrackerService } from './upload-tracker.js';
 
@@ -50,15 +45,6 @@ export interface StreamUploadOptions {
 export interface ImageUploadOptions {
   videoId: string;
   imageType: ImageType;
-}
-
-export interface VideoUploadServiceDependencies {
-  videoService: IVideoService;
-  uploadTrackerService: IUploadTrackerService;
-  cloudflareService?: ICloudflareService | undefined;
-  websocketService?: IWebSocketService | undefined;
-  storageService?: IStorageService | undefined;
-  logger?: ILogger | undefined;
 }
 
 // ============================================================================

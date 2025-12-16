@@ -18,16 +18,6 @@ import { getConfig } from '../config/index.js';
 import { deleteDirectory } from '../utils/filesystem.js';
 
 /**
- * Stream service dependencies
- */
-export interface StreamServiceDependencies {
-  videosRepository: VideosRepository;
-  liveChatMessagesRepository?: LiveChatMessagesRepository;
-  commentsRepository?: CommentsRepository;
-  websocketService?: IWebSocketService;
-}
-
-/**
  * Stream metadata stored in video meta field
  */
 export interface StreamMeta {
