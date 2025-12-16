@@ -19,9 +19,9 @@ export function reportsArchiveVideosRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videoReportsArchiveRepository = container.resolve('videoReportsArchiveRepository');
+  const reportsArchiveVideosRepository = container.resolve('reportsArchiveVideosRepository');
 
-  const controller = new ReportsArchiveVideosController(videoReportsArchiveRepository);
+  const controller = new ReportsArchiveVideosController(reportsArchiveVideosRepository);
 
   // Get all archived video reports - authenticated
   fastify.get(

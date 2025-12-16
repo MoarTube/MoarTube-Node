@@ -26,14 +26,14 @@ export function streamsRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videoRepository = container.resolve('videoRepository');
-  const liveChatMessageRepository = container.resolve('liveChatMessageRepository');
-  const streamService = container.resolve('streamService');
+  const videosRepository = container.resolve('videosRepository');
+  const liveChatMessagesRepository = container.resolve('liveChatMessagesRepository');
+  const streamsService = container.resolve('streamsService');
 
   const controller = new StreamsController(
-    videoRepository,
-    liveChatMessageRepository,
-    streamService
+    videosRepository,
+    liveChatMessagesRepository,
+    streamsService
   );
 
   // ============================================================================

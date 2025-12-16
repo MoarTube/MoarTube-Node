@@ -19,9 +19,9 @@ export function reportsArchiveCommentsRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const commentReportsArchiveRepository = container.resolve('commentReportsArchiveRepository');
+  const reportsArchiveCommentsRepository = container.resolve('reportsArchiveCommentsRepository');
 
-  const controller = new ReportsArchiveCommentsController(commentReportsArchiveRepository);
+  const controller = new ReportsArchiveCommentsController(reportsArchiveCommentsRepository);
 
   // Get all archived comment reports - authenticated
   fastify.get(

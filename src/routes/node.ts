@@ -19,19 +19,19 @@ export function nodeRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videoRepository = container.resolve('videoRepository');
-  const commentRepository = container.resolve('commentsRepository');
-  const videoReportRepository = container.resolve('videoReportRepository');
-  const commentReportRepository = container.resolve('commentReportRepository');
-  const linkRepository = container.resolve('linkRepository');
+  const videosRepository = container.resolve('videosRepository');
+  const commentsRepository = container.resolve('commentsRepository');
+  const reportsVideosRepository = container.resolve('reportsVideosRepository');
+  const reportsCommentsRepository = container.resolve('reportsCommentsRepository');
+  const linksRepository = container.resolve('linksRepository');
   const monetizationRepository = container.resolve('monetizationRepository');
 
   const controller = new NodeController(
-    videoRepository,
-    commentRepository,
-    videoReportRepository,
-    commentReportRepository,
-    linkRepository,
+    videosRepository,
+    commentsRepository,
+    reportsVideosRepository,
+    reportsCommentsRepository,
+    linksRepository,
     monetizationRepository
   );
 

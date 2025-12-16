@@ -17,20 +17,20 @@ import { ReportsVideosRepository } from '../database/repositories/reports-videos
 import { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
 import { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
 import { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
-import { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
+import { LiveChatMessagesRepository } from '../database/repositories/live-chat-messages.js';
 import { MonetizationRepository } from '../database/repositories/monetization.js';
 import { LinksRepository } from '../database/repositories/links.js';
 
 // Services
 import { VideosService } from '../services/videos.js';
-import { CommentService } from '../services/comment.js';
-import { StreamService } from '../services/stream.js';
+import { CommentsService } from '../services/comments.js';
+import { StreamsService } from '../services/streams.js';
 import { AuthService } from '../services/auth.js';
 import { StorageService } from '../services/storage.js';
 import { IndexerService } from '../services/indexer.js';
 import { CloudflareService } from '../services/cloudflare.js';
 import { WebSocketService } from '../services/websocket.js';
-import { ReportService } from '../services/report.js';
+import { ReportsService } from '../services/reports.js';
 import { SettingsService } from '../services/settings.js';
 import { UploadTrackerService } from '../services/upload-tracker.js';
 import { VideoUploadService } from '../services/video-upload.js';
@@ -47,26 +47,26 @@ export interface ContainerCradle {
   db: DatabaseClient;
 
   // Repositories
-  videoRepository: VideosRepository;
+  videosRepository: VideosRepository;
   commentsRepository: CommentsRepository;
-  videoReportRepository: ReportsVideosRepository;
-  commentReportRepository: ReportsCommentsRepository;
-  videoReportsArchiveRepository: ReportsArchiveVideosRepository;
-  commentReportsArchiveRepository: ReportsArchiveCommentsRepository;
-  liveChatMessageRepository: LiveChatMessageRepository;
+  reportsVideosRepository: ReportsVideosRepository;
+  reportsCommentsRepository: ReportsCommentsRepository;
+  reportsArchiveVideosRepository: ReportsArchiveVideosRepository;
+  reportsArchiveCommentsRepository: ReportsArchiveCommentsRepository;
+  liveChatMessagesRepository: LiveChatMessagesRepository;
   monetizationRepository: MonetizationRepository;
-  linkRepository: LinksRepository;
+  linksRepository: LinksRepository;
 
   // Services
-  videoService: VideosService;
-  commentService: CommentService;
-  streamService: StreamService;
+  videosService: VideosService;
+  commentsService: CommentsService;
+  streamsService: StreamsService;
   authService: AuthService;
   storageService: StorageService;
   indexerService: IndexerService;
   cloudflareService: CloudflareService;
   websocketService: WebSocketService;
-  reportService: ReportService;
+  reportsService: ReportsService;
   settingsService: SettingsService;
   uploadTrackerService: UploadTrackerService;
   videoUploadService: VideoUploadService;
@@ -107,15 +107,15 @@ export function createAppContainer(db: DatabaseClient): Container {
 
   // Register repositories (they need db in constructor)
   appContainer.register({
-    videoRepository: asClass(VideosRepository).singleton(),
+    videosRepository: asClass(VideosRepository).singleton(),
     commentsRepository: asClass(CommentsRepository).singleton(),
-    videoReportRepository: asClass(ReportsVideosRepository).singleton(),
-    commentReportRepository: asClass(ReportsCommentsRepository).singleton(),
-    videoReportsArchiveRepository: asClass(ReportsArchiveVideosRepository).singleton(),
-    commentReportsArchiveRepository: asClass(ReportsArchiveCommentsRepository).singleton(),
-    liveChatMessageRepository: asClass(LiveChatMessageRepository).singleton(),
+    reportsVideosRepository: asClass(ReportsVideosRepository).singleton(),
+    reportsCommentsRepository: asClass(ReportsCommentsRepository).singleton(),
+    reportsArchiveVideosRepository: asClass(ReportsArchiveVideosRepository).singleton(),
+    reportsArchiveCommentsRepository: asClass(ReportsArchiveCommentsRepository).singleton(),
+    liveChatMessagesRepository: asClass(LiveChatMessagesRepository).singleton(),
     monetizationRepository: asClass(MonetizationRepository).singleton(),
-    linkRepository: asClass(LinksRepository).singleton(),
+    linksRepository: asClass(LinksRepository).singleton(),
   });
 
   // Register services (singletons for shared state)
@@ -125,10 +125,10 @@ export function createAppContainer(db: DatabaseClient): Container {
     indexerService: asClass(IndexerService).singleton(),
     websocketService: asClass(WebSocketService).singleton(),
     cloudflareService: asClass(CloudflareService).singleton(),
-    videoService: asClass(VideosService).singleton(),
-    commentService: asClass(CommentService).singleton(),
-    streamService: asClass(StreamService).singleton(),
-    reportService: asClass(ReportService).singleton(),
+    videosService: asClass(VideosService).singleton(),
+    commentsService: asClass(CommentsService).singleton(),
+    streamsService: asClass(StreamsService).singleton(),
+    reportsService: asClass(ReportsService).singleton(),
     settingsService: asClass(SettingsService).singleton(),
     uploadTrackerService: asClass(UploadTrackerService).singleton(),
     videoUploadService: asClass(VideoUploadService).singleton(),

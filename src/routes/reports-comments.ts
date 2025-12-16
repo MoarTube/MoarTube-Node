@@ -23,12 +23,12 @@ export function reportsCommentsRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const commentReportRepository = container.resolve('commentReportRepository');
-  const commentReportsArchiveRepository = container.resolve('commentReportsArchiveRepository');
+  const reportsCommentsRepository = container.resolve('reportsCommentsRepository');
+  const reportsArchiveCommentsRepository = container.resolve('reportsArchiveCommentsRepository');
 
   const controller = new ReportsCommentsController(
-    commentReportRepository,
-    commentReportsArchiveRepository
+    reportsCommentsRepository,
+    reportsArchiveCommentsRepository
   );
 
   // Get all comment reports - authenticated

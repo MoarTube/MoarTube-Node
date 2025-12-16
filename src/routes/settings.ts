@@ -33,13 +33,13 @@ export function settingsRoutes(
   container: Container
 ): void {
   const settingsService = container.resolve('settingsService');
-  const videoRepository = container.resolve('videoRepository');
+  const videosRepository = container.resolve('videosRepository');
   const cloudflareService = container.resolve('cloudflareService');
   const websocketService = container.resolve('websocketService');
 
   const controller = new SettingsController(
     settingsService,
-    videoRepository,
+    videosRepository,
     cloudflareService,
     websocketService
   );

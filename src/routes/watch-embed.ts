@@ -18,13 +18,13 @@ export function watchEmbedRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videoRepository = container.resolve('videoRepository');
-  const linkRepository = container.resolve('linkRepository');
+  const videosRepository = container.resolve('videosRepository');
+  const linksRepository = container.resolve('linksRepository');
   const monetizationRepository = container.resolve('monetizationRepository');
 
   const controller = new WatchEmbedController(
-    videoRepository,
-    linkRepository,
+    videosRepository,
+    linksRepository,
     monetizationRepository
   );
 

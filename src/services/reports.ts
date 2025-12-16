@@ -46,7 +46,7 @@ export interface ReportServiceDependencies {
  * - Archiving handled reports
  * - Report statistics
  */
-export class ReportService extends BaseService implements IReportService {
+export class ReportsService extends BaseService implements IReportService {
   private readonly videoReportRepository: ReportsVideosRepository;
   private readonly commentReportRepository: ReportsCommentsRepository;
   private readonly videoReportsArchiveRepository: ReportsArchiveVideosRepository;

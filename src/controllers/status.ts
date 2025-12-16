@@ -49,9 +49,9 @@ export class StatusController extends BaseController {
 
       const nodeSettings = config.nodeSettings;
 
-      const videoRepository = this.container.resolve('videoRepository');
+      const videosRepository = this.container.resolve('videosRepository');
 
-      const videoCount = await videoRepository.getCount({
+      const videoCount = await videosRepository.getCount({
         isPublished: true,
       });
 

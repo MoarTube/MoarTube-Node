@@ -19,15 +19,15 @@ export function watchRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videoRepository = container.resolve('videoRepository');
-  const commentRepository = container.resolve('commentsRepository');
-  const linkRepository = container.resolve('linkRepository');
+  const videosRepository = container.resolve('videosRepository');
+  const commentsRepository = container.resolve('commentsRepository');
+  const linksRepository = container.resolve('linksRepository');
   const monetizationRepository = container.resolve('monetizationRepository');
 
   const controller = new WatchController(
-    videoRepository,
-    commentRepository,
-    linkRepository,
+    videosRepository,
+    commentsRepository,
+    linksRepository,
     monetizationRepository
   );
 

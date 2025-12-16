@@ -52,9 +52,9 @@ export interface CommentReportBody {
  */
 export class CommentsController extends BaseController {
   constructor(
-    private readonly commentRepository: CommentsRepository,
-    private readonly commentReportRepository: ReportsCommentsRepository,
-    private readonly videoRepository: VideosRepository,
+    private readonly commentsRepository: CommentsRepository,
+    private readonly reportsCommentsRepository: ReportsCommentsRepository,
+    private readonly videosRepository: VideosRepository,
     private readonly cloudflareService: CloudflareService
   ) {
     super('CommentsController');
@@ -75,7 +75,7 @@ export class CommentsController extends BaseController {
         timestamp: number;
       } = request.query as CommentSearchQuery;
 
-      const comments = await this.commentRepository.search(searchOptions);
+      const comments = await this.commentsRepository.search(searchOptions);
 
       return await this.sendSuccess(reply, { comments });
     } catch (error) {
@@ -131,14 +131,14 @@ export class CommentsController extends BaseController {
         }
       }
 
-      const comment = await this.commentRepository.findById(videoId, commentId, timestamp);
+      const comment = await this.commentsRepository.findById(videoId, commentId, timestamp);
 
       if (!comment) {
         return await this.sendError(reply, 'this comment no longer exists');
       }
 
       // Check if video exists and has reports enabled
-      const video = await this.videoRepository.findById(videoId);
+      const video = await this.videosRepository.findById(videoId);
 
       if (!video) {
         return await this.sendError(reply, 'this video no longer exists');
@@ -153,7 +153,7 @@ export class CommentsController extends BaseController {
       const sanitizedMessage = sanitizeHtml(message, { allowedTags: [], allowedAttributes: {} });
 
       // Create the report
-      await this.commentReportRepository.create({
+      await this.reportsCommentsRepository.create({
         comment_id: commentId,
         video_id: videoId,
         comment_timestamp: comment.timestamp,

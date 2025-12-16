@@ -70,7 +70,7 @@ export class VideosService extends BaseService implements IVideoService {
 
   constructor(
     logger: ILogger,
-    videoRepository: VideosRepository,
+    videosRepository: VideosRepository,
     commentsRepository?: CommentsRepository,
     storageService?: IStorageService,
     websocketService?: IWebSocketService,
@@ -78,7 +78,7 @@ export class VideosService extends BaseService implements IVideoService {
     indexerService?: IIndexerService
   ) {
     super('VideosService', logger);
-    this.videoRepository = videoRepository;
+    this.videoRepository = videosRepository;
     this.commentsRepository = commentsRepository;
     this.storageService = storageService;
     this.websocketService = websocketService;

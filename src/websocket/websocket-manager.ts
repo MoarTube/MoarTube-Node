@@ -89,7 +89,7 @@ export class WebSocketManager {
         'Container not available. WebSocketManager must be initialized with a container.'
       );
     }
-    return this.container.resolve('videoService');
+    return this.container.resolve('videosService');
   }
 
   /**

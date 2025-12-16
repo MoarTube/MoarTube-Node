@@ -70,7 +70,7 @@ export interface StartStreamOptions {
  */
 export class StreamsService extends BaseService implements IStreamService {
   private readonly videoRepository: VideosRepository;
-  private readonly liveChatMessagesRepository: LiveChatMessagesRepository;
+  private readonly liveChatMessageRepository: LiveChatMessagesRepository;
   private readonly commentsRepository: CommentsRepository;
   private readonly websocketService: IWebSocketService;
 
@@ -83,7 +83,7 @@ export class StreamsService extends BaseService implements IStreamService {
   ) {
     super('StreamService', logger);
     this.videoRepository = videosRepository;
-    this.liveChatMessagesRepository = liveChatMessagesRepository;
+    this.liveChatMessageRepository = liveChatMessagesRepository;
     this.commentsRepository = commentsRepository;
     this.websocketService = websocketService;
   }
@@ -135,7 +135,7 @@ export class StreamsService extends BaseService implements IStreamService {
         is_streamed: true,
       });
 
-      const deletedCount = await this.liveChatMessagesRepository.deleteByVideoId(videoId);
+      const deletedCount = await this.liveChatMessageRepository.deleteByVideoId(videoId);
       this.logger.debug('Deleted live chat messages on stream stop', { videoId, deletedCount });
 
       this.logger.info('Stream stopped', { videoId });
@@ -238,7 +238,7 @@ export class StreamsService extends BaseService implements IStreamService {
         const deletedComments = await this.commentsRepository.deleteByVideoId(videoId);
         this.logger.debug('Deleted comments on stream resume', { videoId, deletedComments });
 
-        const deletedChatMessages = await this.liveChatMessagesRepository.deleteByVideoId(videoId);
+        const deletedChatMessages = await this.liveChatMessageRepository.deleteByVideoId(videoId);
         this.logger.debug('Deleted live chat messages on stream resume', {
           videoId,
           deletedChatMessages,

@@ -12,7 +12,7 @@ import type { PaginationOptions } from '../../types/models.js';
 /**
  * LiveChatMessageRepository class for live chat message CRUD operations
  */
-export class LiveChatMessageRepository extends BaseRepository {
+export class LiveChatMessagesRepository extends BaseRepository {
   /**
    * Finds a live chat message by its chat_message_id
    *

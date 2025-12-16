@@ -7,14 +7,14 @@
 import { BaseService } from './base.js';
 import type { ILogger } from '../utils/logger.js';
 import type { ILiveChatService, CreateChatMessageInput } from './interfaces.js';
-import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
+import type { LiveChatMessagesRepository } from '../database/repositories/live-chat-messages.js';
 import type { DrizzleLiveChatMessage } from '../database/schemas/index.js';
 
 /**
  * LiveChatService dependencies
  */
 export interface LiveChatServiceDependencies {
-  liveChatMessageRepository: LiveChatMessageRepository;
+  liveChatMessagesRepository: LiveChatMessagesRepository;
 }
 
 /**
@@ -26,11 +26,11 @@ export interface LiveChatServiceDependencies {
  * - Message pruning based on limits
  */
 export class LiveChatService extends BaseService implements ILiveChatService {
-  private readonly liveChatMessageRepository: LiveChatMessageRepository;
+  private readonly liveChatMessageRepository: LiveChatMessagesRepository;
 
-  constructor(logger: ILogger, liveChatMessageRepository: LiveChatMessageRepository) {
+  constructor(logger: ILogger, liveChatMessagesRepository: LiveChatMessagesRepository) {
     super('LiveChatService', logger);
-    this.liveChatMessageRepository = liveChatMessageRepository;
+    this.liveChatMessageRepository = liveChatMessagesRepository;
   }
 
   /**

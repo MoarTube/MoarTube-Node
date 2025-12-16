@@ -36,18 +36,18 @@ export interface CommentServiceDependencies {
  * - Video comment count management
  * - Comment search functionality
  */
-export class CommentService extends BaseService implements ICommentService {
+export class CommentsService extends BaseService implements ICommentService {
   private readonly commentsRepository: CommentsRepository;
   private readonly videoRepository: VideosRepository | undefined;
 
   constructor(
     logger: ILogger,
     commentsRepository: CommentsRepository,
-    videoRepository: VideosRepository
+    videosRepository: VideosRepository
   ) {
     super('CommentService', logger);
     this.commentsRepository = commentsRepository;
-    this.videoRepository = videoRepository;
+    this.videoRepository = videosRepository;
   }
 
   /**

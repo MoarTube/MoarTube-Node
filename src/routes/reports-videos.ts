@@ -23,12 +23,12 @@ export function reportsVideosRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videoReportRepository = container.resolve('videoReportRepository');
-  const videoReportsArchiveRepository = container.resolve('videoReportsArchiveRepository');
+  const reportsVideosRepository = container.resolve('reportsVideosRepository');
+  const reportsArchiveVideosRepository = container.resolve('reportsArchiveVideosRepository');
 
   const controller = new ReportsVideosController(
-    videoReportRepository,
-    videoReportsArchiveRepository
+    reportsVideosRepository,
+    reportsArchiveVideosRepository
   );
 
   // Get all video reports - authenticated

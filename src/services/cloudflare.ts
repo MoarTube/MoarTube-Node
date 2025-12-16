@@ -22,7 +22,7 @@ const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/sit
  * Cloudflare service dependencies
  */
 export interface CloudflareServiceDependencies {
-  videoRepository?: VideosRepository;
+  videosRepository?: VideosRepository;
 }
 
 /**
@@ -34,12 +34,12 @@ export interface CloudflareServiceDependencies {
  * - CDN configuration management
  */
 export class CloudflareService extends BaseService implements ICloudflareService {
-  private readonly videoRepository: VideosRepository | undefined;
+  private readonly videosRepository: VideosRepository;
   private httpClient: AxiosInstance | null = null;
 
-  constructor(logger: ILogger, videoRepository?: VideosRepository) {
+  constructor(logger: ILogger, videosRepository: VideosRepository) {
     super('CloudflareService', logger);
-    this.videoRepository = videoRepository;
+    this.videosRepository = videosRepository;
     this.initializeHttpClient();
   }
 
@@ -115,9 +115,9 @@ export class CloudflareService extends BaseService implements ICloudflareService
       const nodeBaseUrl = config.getNodeBaseUrl();
 
       const ids = videoIds ?? [];
-      if (ids.length === 0 && this.videoRepository) {
+      if (ids.length === 0) {
         // Get all videos if none specified
-        const videos = await this.videoRepository.findAll({ limit: 10000 });
+        const videos = await this.videosRepository.findAll({ limit: 10000 });
         ids.push(...videos.map((v) => v.video_id));
       }
 
@@ -148,8 +148,8 @@ export class CloudflareService extends BaseService implements ICloudflareService
       const nodeBaseUrl = config.getNodeBaseUrl();
 
       const ids = videoIds ?? [];
-      if (ids.length === 0 && this.videoRepository) {
-        const videos = await this.videoRepository.findAll({ limit: 10000 });
+      if (ids.length === 0) {
+        const videos = await this.videosRepository.findAll({ limit: 10000 });
         ids.push(...videos.map((v) => v.video_id));
       }
 

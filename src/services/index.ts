@@ -43,20 +43,20 @@ export type {
 
 // Service implementations
 export { VideosService, type VideosServiceDependencies } from './videos.js';
-export { CommentService, type CommentServiceDependencies } from './comment.js';
+export { CommentsService as CommentService, type CommentServiceDependencies } from './comments.js';
 export { LiveChatService, type LiveChatServiceDependencies } from './chat.js';
 export {
-  StreamService,
+  StreamsService as StreamService,
   type StreamServiceDependencies,
   type StreamMeta,
   type StartStreamOptions,
-} from './stream.js';
+} from './streams.js';
 export { AuthService, type JwtPayload } from './auth.js';
 export { StorageService, type S3Config } from './storage.js';
 export { IndexerService } from './indexer.js';
 export { CloudflareService, type CloudflareServiceDependencies } from './cloudflare.js';
 export { WebSocketService, type WebSocketClient } from './websocket.js';
-export { ReportService, type ReportServiceDependencies } from './report.js';
+export { ReportsService as ReportService, type ReportServiceDependencies } from './reports.js';
 export { SettingsService, type SettingsServiceDependencies } from './settings.js';
 export {
   UploadTrackerService,

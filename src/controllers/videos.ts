@@ -1711,14 +1711,14 @@ export class VideosController extends BaseController {
    * Get video service from DI container
    */
   private getVideoService(): IVideoService {
-    return resolve('videoService');
+    return resolve('videosService');
   }
 
   /**
    * Get comment service from DI container
    */
   private getCommentService(): ICommentService {
-    return resolve('commentService');
+    return resolve('commentsService');
   }
 
   /**
@@ -1739,7 +1739,7 @@ export class VideosController extends BaseController {
    * Get report service from DI container
    */
   private getReportService(): IReportService {
-    return resolve('reportService');
+    return resolve('reportsService');
   }
 
   /**

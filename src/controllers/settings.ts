@@ -17,7 +17,7 @@ import type { ReportsVideosRepository } from '../database/repositories/reports-v
 import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
 import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
 import type { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
-import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
+import type { LiveChatMessagesRepository } from '../database/repositories/live-chat-messages.js';
 import type { MonetizationRepository } from '../database/repositories/monetization.js';
 import type { LinksRepository } from '../database/repositories/links.js';
 import type { CloudflareService } from '../services/cloudflare.js';
@@ -130,7 +130,7 @@ export class SettingsController extends BaseController {
     private readonly reportsCommentsRepository?: ReportsCommentsRepository,
     private readonly reportsArchiveVideosRepository?: ReportsArchiveVideosRepository,
     private readonly reportsArchiveCommentsRepository?: ReportsArchiveCommentsRepository,
-    private readonly liveChatMessageRepository?: LiveChatMessageRepository,
+    private readonly liveChatMessageRepository?: LiveChatMessagesRepository,
     private readonly monetizationRepository?: MonetizationRepository,
     private readonly linksRepository?: LinksRepository
   ) {

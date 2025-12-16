@@ -18,10 +18,10 @@ export function reportsRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videoReportRepository = container.resolve('videoReportRepository');
-  const commentReportRepository = container.resolve('commentReportRepository');
+  const reportsVideosRepository = container.resolve('reportsVideosRepository');
+  const reportsCommentsRepository = container.resolve('reportsCommentsRepository');
 
-  const controller = new ReportsController(videoReportRepository, commentReportRepository);
+  const controller = new ReportsController(reportsVideosRepository, reportsCommentsRepository);
 
   // Get report counts - authenticated
   fastify.get(
