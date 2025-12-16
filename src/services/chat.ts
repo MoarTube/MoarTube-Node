@@ -4,7 +4,8 @@
  * Service layer for live chat message operations including CRUD operations,
  * history management, and pruning functionality.
  */
-import { BaseService, type ServiceOptions } from './base.js';
+import { BaseService } from './base.js';
+import type { ILogger } from '../utils/logger.js';
 import type { ILiveChatService, CreateChatMessageInput } from './interfaces.js';
 import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
 import type { DrizzleLiveChatMessage } from '../database/schemas/index.js';
@@ -27,8 +28,8 @@ export interface LiveChatServiceDependencies {
 export class LiveChatService extends BaseService implements ILiveChatService {
   private readonly liveChatMessageRepository: LiveChatMessageRepository;
 
-  constructor(liveChatMessageRepository: LiveChatMessageRepository, options?: ServiceOptions) {
-    super('LiveChatService', options);
+  constructor(logger: ILogger, liveChatMessageRepository: LiveChatMessageRepository) {
+    super('LiveChatService', logger);
     this.liveChatMessageRepository = liveChatMessageRepository;
   }
 

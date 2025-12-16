@@ -7,7 +7,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { BaseService, type ServiceOptions } from './base.js';
+import { BaseService } from './base.js';
+import type { ILogger } from '../utils/logger.js';
 import type { IStreamService, StreamConfig, IWebSocketService } from './interfaces.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { LiveChatMessageRepository } from '../database/repositories/live-chat-messages.js';
@@ -74,13 +75,13 @@ export class StreamService extends BaseService implements IStreamService {
   private readonly websocketService: IWebSocketService;
 
   constructor(
+    logger: ILogger,
     videoRepository: VideosRepository,
     liveChatMessageRepository: LiveChatMessageRepository,
     commentsRepository: CommentsRepository,
-    websocketService: IWebSocketService,
-    options: ServiceOptions
+    websocketService: IWebSocketService
   ) {
-    super('StreamService', options);
+    super('StreamService', logger);
     this.videoRepository = videoRepository;
     this.liveChatMessageRepository = liveChatMessageRepository;
     this.commentsRepository = commentsRepository;

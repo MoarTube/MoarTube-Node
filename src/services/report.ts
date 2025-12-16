@@ -4,7 +4,8 @@
  * Service layer for content reporting and moderation functionality.
  * Handles video and comment reports, archiving, and moderation workflows.
  */
-import { BaseService, type ServiceOptions } from './base.js';
+import { BaseService } from './base.js';
+import type { ILogger } from '../utils/logger.js';
 import type {
   IReportService,
   CreateVideoReportInput,
@@ -52,13 +53,13 @@ export class ReportService extends BaseService implements IReportService {
   private readonly commentReportsArchiveRepository: ReportsArchiveCommentsRepository;
 
   constructor(
+    logger: ILogger,
     videoReportRepository: ReportsVideosRepository,
     commentReportRepository: ReportsCommentsRepository,
     videoReportsArchiveRepository: ReportsArchiveVideosRepository,
-    commentReportsArchiveRepository: ReportsArchiveCommentsRepository,
-    options?: ServiceOptions
+    commentReportsArchiveRepository: ReportsArchiveCommentsRepository
   ) {
-    super('ReportService', options);
+    super('ReportService', logger);
     this.videoReportRepository = videoReportRepository;
     this.commentReportRepository = commentReportRepository;
     this.videoReportsArchiveRepository = videoReportsArchiveRepository;

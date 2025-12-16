@@ -6,7 +6,7 @@
  */
 
 // Base service
-export { BaseService, type ServiceOptions } from './base.js';
+export { BaseService } from './base.js';
 
 // Service interfaces
 export type {

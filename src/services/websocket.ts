@@ -4,7 +4,8 @@
  * Service layer for WebSocket message broadcasting and client management.
  * Provides abstraction over the cluster-aware WebSocket system.
  */
-import { BaseService, type ServiceOptions } from './base.js';
+import { BaseService } from './base.js';
+import type { ILogger } from '../utils/logger.js';
 import type { IWebSocketService, WebSocketMessage, WebSocketEventName } from './interfaces.js';
 
 /**
@@ -28,8 +29,8 @@ export class WebSocketService extends BaseService implements IWebSocketService {
   private readonly nodeClientCount: number = 0;
   private readonly chatClientCounts: Map<string, number> = new Map();
 
-  constructor(options?: ServiceOptions) {
-    super('WebSocketService', options);
+  constructor(logger: ILogger) {
+    super('WebSocketService', logger);
   }
 
   /**

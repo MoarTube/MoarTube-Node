@@ -21,7 +21,8 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-import { BaseService, type ServiceOptions } from './base.js';
+import { BaseService } from './base.js';
+import type { ILogger } from '../utils/logger.js';
 import type { IStorageService, StorageMode, FileMetadata } from './interfaces.js';
 import { getConfig } from '../config/index.js';
 
@@ -44,8 +45,8 @@ export class StorageService extends BaseService implements IStorageService {
   private s3Client: S3Client | null = null;
   private s3Config: S3Config | null = null;
 
-  constructor(options?: ServiceOptions) {
-    super('StorageService', options);
+  constructor(logger: ILogger) {
+    super('StorageService', logger);
     this.initializeS3Client();
   }
 

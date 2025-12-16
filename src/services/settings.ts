@@ -7,7 +7,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { BaseService, type ServiceOptions } from './base.js';
+import { BaseService } from './base.js';
+import type { ILogger } from '../utils/logger.js';
 import type {
   ISettingsService,
   UpdateNodeSettingsInput,
@@ -42,11 +43,11 @@ export class SettingsService extends BaseService implements ISettingsService {
   private readonly cloudflareService: ICloudflareService | undefined;
 
   constructor(
+    logger: ILogger,
     indexerService?: IIndexerService,
-    cloudflareService?: ICloudflareService,
-    options?: ServiceOptions
+    cloudflareService?: ICloudflareService
   ) {
-    super('SettingsService', options);
+    super('SettingsService', logger);
     this.indexerService = indexerService;
     this.cloudflareService = cloudflareService;
   }

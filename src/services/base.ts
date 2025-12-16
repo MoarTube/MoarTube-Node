@@ -5,14 +5,7 @@
  * Services should extend this class to inherit common utilities and patterns.
  */
 
-import { Logger, type ILogger } from '../utils/logger.js';
-
-/**
- * Service initialization options
- */
-export interface ServiceOptions {
-  logger?: ILogger;
-}
+import type { ILogger } from '../utils/logger.js';
 
 /**
  * Abstract base service class
@@ -25,8 +18,8 @@ export interface ServiceOptions {
 export abstract class BaseService {
   protected readonly logger: ILogger;
 
-  constructor(_serviceName: string, options?: ServiceOptions) {
-    this.logger = options?.logger ?? Logger.getInstance();
+  constructor(_serviceName: string, logger: ILogger) {
+    this.logger = logger;
   }
 
   /**

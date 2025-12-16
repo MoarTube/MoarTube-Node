@@ -5,7 +5,8 @@
  * and integration with video comment counts.
  */
 
-import { BaseService, type ServiceOptions } from './base.js';
+import { BaseService } from './base.js';
+import type { ILogger } from '../utils/logger.js';
 import type {
   ICommentService,
   GetCommentsOptions,
@@ -38,20 +39,15 @@ export interface CommentServiceDependencies {
 export class CommentService extends BaseService implements ICommentService {
   private readonly commentsRepository: CommentsRepository;
   private readonly videoRepository: VideosRepository | undefined;
-  private readonly websocketService: IWebSocketService | undefined;
 
   constructor(
+    logger: ILogger,
     commentsRepository: CommentsRepository,
-    videoRepository?: VideosRepository,
-    websocketService?: IWebSocketService,
-    options?: ServiceOptions
+    videoRepository: VideosRepository
   ) {
-    super('CommentService', options);
+    super('CommentService', logger);
     this.commentsRepository = commentsRepository;
     this.videoRepository = videoRepository;
-    this.websocketService = websocketService;
-    // Prevent unused variable warning - websocketService will be used for real-time comment updates
-    void this.websocketService;
   }
 
   /**

@@ -6,7 +6,8 @@
  */
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
 
-import { BaseService, type ServiceOptions } from './base.js';
+import { BaseService } from './base.js';
+import type { ILogger } from '../utils/logger.js';
 import type {
   IIndexerService,
   VideoIndexData,
@@ -37,8 +38,8 @@ export class IndexerService extends BaseService implements IIndexerService {
   private readonly httpClient: AxiosInstance;
   private readonly indexerUrl: string;
 
-  constructor(options?: ServiceOptions) {
-    super('IndexerService', options);
+  constructor(logger: ILogger) {
+    super('IndexerService', logger);
 
     const config = getConfig();
     const indexerConfig = config.appConfig.indexerConfig;
