@@ -25,7 +25,7 @@ import { LinksRepository } from '../database/repositories/links.js';
 import { VideosService } from '../services/videos.js';
 import { CommentsService } from '../services/comments.js';
 import { StreamsService } from '../services/streams.js';
-import { AuthService } from '../services/auth.js';
+import { AccountService } from '../services/account.js';
 import { StorageService } from '../services/storage.js';
 import { IndexerService } from '../services/indexer.js';
 import { CloudflareService } from '../services/cloudflare.js';
@@ -63,7 +63,7 @@ export interface ContainerCradle {
   videosService: VideosService;
   commentsService: CommentsService;
   streamsService: StreamsService;
-  authService: AuthService;
+  accountService: AccountService;
   storageService: StorageService;
   indexerService: IndexerService;
   cloudflareService: CloudflareService;
@@ -124,7 +124,7 @@ export function createAppContainer(db: DatabaseClient): Container {
 
   // Register services (singletons for shared state)
   appContainer.register({
-    authService: asClass(AuthService).singleton(),
+    accountService: asClass(AccountService).singleton(),
     storageService: asClass(StorageService).singleton(),
     indexerService: asClass(IndexerService).singleton(),
     websocketService: asClass(WebSocketService).singleton(),

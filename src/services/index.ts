@@ -13,7 +13,6 @@ export type {
   IVideoService,
   ICommentService,
   IStreamService,
-  IAuthService,
   IStorageService,
   IIndexerService,
   ICloudflareService,
@@ -28,8 +27,6 @@ export type {
   CreateCommentInput,
   CreateChatMessageInput,
   StreamConfig,
-  SignInInput,
-  SignInResult,
   StorageMode,
   FileMetadata,
   WebSocketMessage,
@@ -46,7 +43,7 @@ export { VideosService } from './videos.js';
 export { CommentsService } from './comments.js';
 export { LiveChatService } from './chat.js';
 export { StreamsService, type StreamMeta, type StartStreamOptions } from './streams.js';
-export { AuthService, type JwtPayload } from './auth.js';
+export { AccountService, type JwtPayload } from './account.js';
 export { StorageService, type S3Config } from './storage.js';
 export { IndexerService } from './indexer.js';
 export { CloudflareService } from './cloudflare.js';

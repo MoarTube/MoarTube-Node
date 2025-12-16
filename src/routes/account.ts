@@ -18,8 +18,8 @@ export function accountRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const authService = container.resolve('authService');
-  const controller = new AccountController(authService);
+  const accountService = container.resolve('accountService');
+  const controller = new AccountController(accountService);
 
   // Sign in - public endpoint
   fastify.post(

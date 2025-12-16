@@ -272,6 +272,7 @@ export class SettingsService extends BaseService implements ISettingsService {
       );
 
       const config = getConfig();
+
       config.updateNodeSettings({
         username: encodedUsername,
         password: encodedPassword,

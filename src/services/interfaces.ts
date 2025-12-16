@@ -427,50 +427,6 @@ export interface ICommentService {
 }
 
 // ============================================================================
-// Auth Service
-// ============================================================================
-
-/**
- * Sign-in request data
- */
-export interface SignInInput {
-  username: string;
-  password: string;
-  moarTubeNodeHttpProtocol: string;
-  moarTubeNodeIp: string;
-  moarTubeNodePort: number;
-  rememberMe?: boolean;
-}
-
-/**
- * Sign-in result
- */
-export interface SignInResult {
-  isAuthenticated: boolean;
-  token?: string;
-}
-
-/**
- * Auth service interface
- */
-export interface IAuthService {
-  /** Sign in with credentials */
-  signIn(data: SignInInput): Promise<SignInResult>;
-
-  /** Verify a JWT token */
-  verifyToken(token: string): { valid: boolean; username?: string };
-
-  /** Change password */
-  changePassword(currentPassword: string, newPassword: string): Promise<boolean>;
-
-  /** Get the JWT secret */
-  getJwtSecret(): string;
-
-  /** Validate admin credentials */
-  validateCredentials(username: string, password: string): boolean;
-}
-
-// ============================================================================
 // Storage Service
 // ============================================================================
 

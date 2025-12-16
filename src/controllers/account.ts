@@ -5,7 +5,7 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base.js';
-import type { AuthService } from '../services/index.js';
+import type { AccountService } from '../services/index.js';
 import type { SignInBody } from '../validators/index.js';
 import { getConfig } from '../config/index.js';
 
@@ -18,11 +18,11 @@ import { getConfig } from '../config/index.js';
  * - Authentication status check
  */
 export class AccountController extends BaseController {
-  private readonly authService: AuthService;
+  private readonly accountService: AccountService;
 
-  constructor(authService: AuthService) {
+  constructor(accountService: AccountService) {
     super('AccountController');
-    this.authService = authService;
+    this.accountService = accountService;
   }
 
   /**
@@ -41,7 +41,7 @@ export class AccountController extends BaseController {
         rememberMe,
       } = request.body as SignInBody;
 
-      const result = await this.authService.signIn({
+      const result = await this.accountService.signIn({
         username,
         password,
         moarTubeNodeHttpProtocol,
