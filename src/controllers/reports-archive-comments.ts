@@ -23,8 +23,11 @@ export interface CommentArchiveIdParams {
  * - Delete an archived comment report
  */
 export class ReportsArchiveCommentsController extends BaseController {
-  constructor(private readonly reportsService: ReportsService) {
+  private readonly reportsService: ReportsService;
+
+  constructor(reportsService: ReportsService) {
     super('ReportsArchiveCommentsController');
+    this.reportsService = reportsService;
   }
 
   /**

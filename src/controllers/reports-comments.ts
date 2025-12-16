@@ -31,8 +31,11 @@ export interface CommentReportIdParams {
  * - Delete a comment report
  */
 export class ReportsCommentsController extends BaseController {
-  constructor(private readonly reportsService: ReportsService) {
+  private readonly reportsService: ReportsService;
+
+  constructor(reportsService: ReportsService) {
     super('ReportsCommentsController');
+    this.reportsService = reportsService;
   }
 
   /**

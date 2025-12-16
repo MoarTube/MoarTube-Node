@@ -23,8 +23,11 @@ export interface ArchiveIdParams {
  * - Delete an archived video report
  */
 export class ReportsArchiveVideosController extends BaseController {
-  constructor(private readonly reportsService: ReportsService) {
+  private readonly reportsService: ReportsService;
+
+  constructor(reportsService: ReportsService) {
     super('ReportsArchiveVideosController');
+    this.reportsService = reportsService;
   }
 
   /**

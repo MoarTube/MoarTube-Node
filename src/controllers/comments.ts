@@ -52,13 +52,22 @@ export interface CommentReportBody {
  * - Comment reporting
  */
 export class CommentsController extends BaseController {
+  private readonly commentsService: CommentsService;
+  private readonly reportsService: ReportsService;
+  private readonly videosService: VideosService;
+  private readonly cloudflareService: CloudflareService;
+
   constructor(
-    private readonly commentsService: CommentsService,
-    private readonly reportsService: ReportsService,
-    private readonly videosService: VideosService,
-    private readonly cloudflareService: CloudflareService
+    commentsService: CommentsService,
+    reportsService: ReportsService,
+    videosService: VideosService,
+    cloudflareService: CloudflareService
   ) {
     super('CommentsController');
+    this.commentsService = commentsService;
+    this.reportsService = reportsService;
+    this.videosService = videosService;
+    this.cloudflareService = cloudflareService;
   }
 
   /**

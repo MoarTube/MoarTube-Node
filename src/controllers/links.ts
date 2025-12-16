@@ -32,11 +32,13 @@ export interface DeleteLinkBody {
  * - Delete social link
  */
 export class LinksController extends BaseController {
-  constructor(
-    private readonly linksService: LinksService,
-    private readonly cloudflareService: CloudflareService
-  ) {
+  private readonly linksService: LinksService;
+  private readonly cloudflareService: CloudflareService;
+
+  constructor(linksService: LinksService, cloudflareService: CloudflareService) {
     super('LinksController');
+    this.linksService = linksService;
+    this.cloudflareService = cloudflareService;
   }
 
   /**

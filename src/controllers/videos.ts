@@ -8,8 +8,8 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base.js';
-import type { IVideoService, UpdateVideoInput, ReportType } from '../services/interfaces.js';
 import type {
+  VideosService,
   CloudflareService,
   CommentsService,
   IVideoUploadService,
@@ -21,6 +21,24 @@ import {
 } from '../validators/schemas/videos.js';
 import { NotFoundError, BadRequestError, ForbiddenError } from '../errors/index.js';
 import { getConfig } from '../config/index.js';
+
+// Local type definitions
+interface UpdateVideoInput {
+  title?: string;
+  description?: string;
+  tags?: string;
+  isPublished?: boolean;
+  isHidden?: boolean;
+  isPassworded?: boolean;
+  password?: string;
+  isCommentsEnabled?: boolean;
+  isLikesEnabled?: boolean;
+  isDislikesEnabled?: boolean;
+  isReportsEnabled?: boolean;
+  isLiveChatEnabled?: boolean;
+}
+
+type ReportType = 'inappropriate' | 'copyright' | 'spam' | 'other';
 
 /**
  * Request body/query/params type definitions
@@ -99,14 +117,25 @@ type ImageType = 'thumbnail' | 'preview' | 'poster';
  * - Video import/export workflow
  */
 export class VideosController extends BaseController {
+  private readonly videosService: VideosService;
+  private readonly commentsService: CommentsService;
+  private readonly videoUploadService: IVideoUploadService;
+  private readonly cloudflareService: CloudflareService;
+  private readonly reportsService: ReportsService;
+
   constructor(
-    private readonly videosService: IVideoService,
-    private readonly commentsService: CommentsService,
-    private readonly videoUploadService: IVideoUploadService,
-    private readonly cloudflareService: CloudflareService,
-    private readonly reportsService: ReportsService
+    videosService: VideosService,
+    commentsService: CommentsService,
+    videoUploadService: IVideoUploadService,
+    cloudflareService: CloudflareService,
+    reportsService: ReportsService
   ) {
     super('VideosController');
+    this.videosService = videosService;
+    this.commentsService = commentsService;
+    this.videoUploadService = videoUploadService;
+    this.cloudflareService = cloudflareService;
+    this.reportsService = reportsService;
   }
 
   /**

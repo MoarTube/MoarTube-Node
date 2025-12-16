@@ -15,8 +15,11 @@ import type { ReportsService } from '../services/reports.js';
  * - Get report counts
  */
 export class ReportsController extends BaseController {
-  constructor(private readonly reportsService: ReportsService) {
+  private readonly reportsService: ReportsService;
+
+  constructor(reportsService: ReportsService) {
     super('ReportsController');
+    this.reportsService = reportsService;
   }
 
   /**

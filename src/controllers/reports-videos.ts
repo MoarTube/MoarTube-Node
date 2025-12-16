@@ -31,8 +31,11 @@ export interface ReportIdParams {
  * - Delete a video report
  */
 export class ReportsVideosController extends BaseController {
-  constructor(private readonly reportsService: ReportsService) {
+  private readonly reportsService: ReportsService;
+
+  constructor(reportsService: ReportsService) {
     super('ReportsVideosController');
+    this.reportsService = reportsService;
   }
 
   /**

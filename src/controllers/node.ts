@@ -41,15 +41,28 @@ export interface ContentCheckedBody {
  * - Content check marking
  */
 export class NodeController extends BaseController {
+  private readonly videosService: VideosService;
+  private readonly linksService: LinksService;
+  private readonly monetizationService: MonetizationService;
+  private readonly streamsService: StreamsService;
+  private readonly commentsService: CommentsService;
+  private readonly reportsService: ReportsService;
+
   constructor(
-    private readonly videosService: VideosService,
-    private readonly linksService: LinksService,
-    private readonly monetizationService: MonetizationService,
-    private readonly streamsService: StreamsService,
-    private readonly commentsService: CommentsService,
-    private readonly reportsService: ReportsService
+    videosService: VideosService,
+    linksService: LinksService,
+    monetizationService: MonetizationService,
+    streamsService: StreamsService,
+    commentsService: CommentsService,
+    reportsService: ReportsService
   ) {
     super('NodeController');
+    this.videosService = videosService;
+    this.linksService = linksService;
+    this.monetizationService = monetizationService;
+    this.streamsService = streamsService;
+    this.commentsService = commentsService;
+    this.reportsService = reportsService;
   }
 
   /**

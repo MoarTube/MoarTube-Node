@@ -6,9 +6,9 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { VideoControllerBase, type VideoSource } from './video-controller-base.js';
-import type { IVideoService } from '../services/interfaces.js';
-import type { ILinksService } from '../services/interfaces.js';
-import type { IMonetizationService } from '../services/interfaces.js';
+import type { VideosService } from '../services/videos.js';
+import type { LinksService } from '../services/links.js';
+import type { MonetizationService } from '../services/monetization.js';
 import type { CommentsRepository } from '../database/repositories/comments.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { DrizzleVideo } from '../database/schemas/index.js';
@@ -107,14 +107,23 @@ interface WatchPageData {
  * - Main video watch page rendering
  */
 export class WatchController extends VideoControllerBase {
+  private readonly videosService: VideosService;
+  private readonly linksService: LinksService;
+  private readonly monetizationService: MonetizationService;
+  private readonly commentRepository: CommentsRepository;
+
   constructor(
     videoRepository: VideosRepository,
-    private readonly videosService: IVideoService,
-    private readonly linksService: ILinksService,
-    private readonly monetizationService: IMonetizationService,
-    private readonly commentRepository: CommentsRepository
+    videosService: VideosService,
+    linksService: LinksService,
+    monetizationService: MonetizationService,
+    commentRepository: CommentsRepository
   ) {
     super('WatchController', videoRepository);
+    this.videosService = videosService;
+    this.linksService = linksService;
+    this.monetizationService = monetizationService;
+    this.commentRepository = commentRepository;
   }
 
   /**

@@ -133,26 +133,9 @@ export function createAppContainer(db: DatabaseClient): Container {
     commentsService: asClass(CommentsService).singleton(),
     streamsService: asClass(StreamsService).singleton(),
     reportsService: asClass(ReportsService).singleton(),
-    settingsService: asClass(SettingsService)
-      .singleton()
-      .inject(() => [
-        'logger',
-        'videosRepository',
-        'commentsRepository',
-        'reportsVideosRepository',
-        'reportsCommentsRepository',
-        'reportsArchiveVideosRepository',
-        'reportsArchiveCommentsRepository',
-        'liveChatMessagesRepository',
-        'monetizationRepository',
-        'linksRepository',
-        'indexerService',
-        'cloudflareService',
-      ]),
+    settingsService: asClass(SettingsService).singleton(),
+    videoUploadService: asClass(VideoUploadService).singleton(),
     uploadTrackerService: asClass(UploadTrackerService).singleton(),
-    videoUploadService: asClass(VideoUploadService)
-      .singleton()
-      .inject(() => ['videosService']),
     liveChatService: asClass(LiveChatService).singleton(),
     linksService: asClass(LinksService).singleton(),
     monetizationService: asClass(MonetizationService).singleton(),

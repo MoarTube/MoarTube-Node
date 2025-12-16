@@ -64,9 +64,11 @@ export class ExternalVideosController extends BaseController {
   private segmentBandwidthTimer: ReturnType<typeof setTimeout> | null = null;
   private progressiveBandwidthCounter = 0;
   private progressiveBandwidthTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly videosService: VideosService;
 
-  constructor(private readonly videosService: VideosService) {
+  constructor(videosService: VideosService) {
     super('ExternalVideosController');
+    this.videosService = videosService;
   }
 
   /**
