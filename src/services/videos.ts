@@ -10,13 +10,9 @@ import path from 'node:path';
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
 import type {
-  IVideoService,
   GetVideosOptions,
   CreateVideoInput,
   UpdateVideoInput,
-  IStorageService,
-  IWebSocketService,
-  IIndexerService,
   VideoWatchData,
   VideoSource,
   SourcesFormatsAndResolutions,
@@ -32,6 +28,9 @@ import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/index.js
 import type { PaginatedResult } from '../types/models.js';
 import { getConfig } from '../config/index.js';
 import type { CloudflareService } from './cloudflare.js';
+import type { StorageService } from './storage.js';
+import type { WebSocketService } from './websocket.js';
+import type { IndexerService } from './indexer.js';
 
 /**
  * VideosService class
@@ -43,13 +42,13 @@ import type { CloudflareService } from './cloudflare.js';
  * - View/like/dislike tracking
  * - Index management
  */
-export class VideosService extends BaseService implements IVideoService {
+export class VideosService extends BaseService {
   private readonly videoRepository: VideosRepository;
-  private readonly commentsRepository: CommentsRepository | undefined;
-  private readonly storageService: IStorageService | undefined;
-  private readonly websocketService: IWebSocketService | undefined;
+  private readonly commentsRepository: CommentsRepository;
+  private readonly storageService: StorageService;
+  private readonly websocketService: WebSocketService;
   private readonly cloudflareService: CloudflareService;
-  private readonly indexerService: IIndexerService | undefined;
+  private readonly indexerService: IndexerService;
 
   // Debounced view counter - tracks pending views per video
   private readonly pendingViews: Map<string, number> = new Map();
@@ -60,10 +59,10 @@ export class VideosService extends BaseService implements IVideoService {
     logger: Logger,
     videosRepository: VideosRepository,
     commentsRepository: CommentsRepository,
-    storageService: IStorageService,
-    websocketService: IWebSocketService,
+    storageService: StorageService,
+    websocketService: WebSocketService,
     cloudflareService: CloudflareService,
-    indexerService?: IIndexerService
+    indexerService: IndexerService
   ) {
     super('VideosService', logger);
     this.videoRepository = videosRepository;
@@ -384,9 +383,7 @@ export class VideosService extends BaseService implements IVideoService {
       this.logger.info('Deleting video', { videoId });
 
       // Delete comments for the video
-      if (this.commentsRepository) {
-        await this.commentsRepository.deleteByVideoId(videoId);
-      }
+      await this.commentsRepository.deleteByVideoId(videoId);
 
       // Delete storage directories
       await this.deleteVideoStorageDirectories(videoId);
@@ -1371,7 +1368,7 @@ export class VideosService extends BaseService implements IVideoService {
           manifestType,
           path: manifestPath,
         });
-      } else if (this.storageService) {
+      } else {
         const key = `external/videos/${videoId}/adaptive/m3u8/manifest-master.m3u8`;
         await this.storageService.saveFile(key, Buffer.from(content), 'application/x-mpegURL');
 
@@ -1449,11 +1446,6 @@ export class VideosService extends BaseService implements IVideoService {
 
         return fs.readFileSync(previewPath).toString('base64');
       } else {
-        // Use storage service for S3
-        if (!this.storageService) {
-          throw new Error('Storage service not available for S3 mode');
-        }
-
         const key = `external/videos/${videoId}/images/preview.jpg`;
         const buffer = await this.storageService.getFile(key);
         return buffer.toString('base64');
@@ -1469,10 +1461,6 @@ export class VideosService extends BaseService implements IVideoService {
    */
   async addToIndex(videoId: string, options: AddToIndexOptions): Promise<AddToIndexResult> {
     return this.withErrorLogging('addToIndex', async () => {
-      if (!this.indexerService) {
-        throw new Error('Indexer service not available');
-      }
-
       // Validate terms of service agreement
       if (!options.termsOfServiceAgreed) {
         throw new Error('Terms of service must be agreed to');
@@ -1575,10 +1563,6 @@ export class VideosService extends BaseService implements IVideoService {
    */
   async removeFromIndex(videoId: string, cloudflareTurnstileToken: string): Promise<void> {
     return this.withErrorLogging('removeFromIndex', async () => {
-      if (!this.indexerService) {
-        throw new Error('Indexer service not available');
-      }
-
       // Get video and validate
       const video = await this.videoRepository.findById(videoId);
       if (!video) {
@@ -1682,7 +1666,7 @@ export class VideosService extends BaseService implements IVideoService {
           fs.rmSync(videoDir, { recursive: true, force: true });
           this.logger.debug('Deleted video directories', { videoId });
         }
-      } else if (this.storageService) {
+      } else {
         // Delete from S3
         await this.storageService.deleteDirectory(`external/videos/${videoId}`);
         this.logger.debug('Deleted video from S3', { videoId });
@@ -1697,15 +1681,13 @@ export class VideosService extends BaseService implements IVideoService {
    * Broadcast video event via WebSocket
    */
   private broadcastVideoEvent(eventName: string, payload: Record<string, unknown>): void {
-    if (this.websocketService) {
-      this.websocketService.broadcastToNodes({
-        eventName: 'echo',
-        data: {
-          eventName,
-          payload,
-        },
-      });
-    }
+    this.websocketService.broadcastToNodes({
+      eventName: 'echo',
+      data: {
+        eventName,
+        payload,
+      },
+    });
   }
 
   /**

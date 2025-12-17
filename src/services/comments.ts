@@ -7,7 +7,7 @@
 
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
-import type { ICommentService, GetCommentsOptions, CreateCommentInput } from './interfaces.js';
+import type { CreateCommentInput } from './interfaces.js';
 import type { CommentsRepository } from '../database/repositories/comments.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { DrizzleComment, DrizzleNewComment } from '../database/schemas/index.js';
@@ -21,9 +21,9 @@ import sanitizeHtml from 'sanitize-html';
  * - Video comment count management
  * - Comment search functionality
  */
-export class CommentsService extends BaseService implements ICommentService {
+export class CommentsService extends BaseService {
   private readonly commentsRepository: CommentsRepository;
-  private readonly videoRepository: VideosRepository | undefined;
+  private readonly videoRepository: VideosRepository;
 
   constructor(
     logger: Logger,
@@ -45,21 +45,6 @@ export class CommentsService extends BaseService implements ICommentService {
   ): Promise<DrizzleComment | null> {
     return this.withErrorLogging('getComment', async () => {
       return this.commentsRepository.findById(videoId, commentId, timestamp);
-    });
-  }
-
-  /**
-   * Get comments with filtering and pagination
-   */
-  async getComments(options?: GetCommentsOptions): Promise<DrizzleComment[]> {
-    return this.withErrorLogging('getComments', async () => {
-      if (options?.videoId !== undefined && options.videoId !== '') {
-        return this.commentsRepository.findByVideoId(options.videoId);
-      }
-
-      // For now, return comments by video if specified, otherwise empty
-      // In future could add global comment search
-      return [];
     });
   }
 
@@ -113,9 +98,7 @@ export class CommentsService extends BaseService implements ICommentService {
       const comment = await this.commentsRepository.create(commentData);
 
       // Increment video comment count
-      if (this.videoRepository) {
-        await this.videoRepository.incrementComments(data.videoId);
-      }
+      await this.videoRepository.incrementComments(data.videoId);
 
       return comment;
     });
@@ -136,9 +119,7 @@ export class CommentsService extends BaseService implements ICommentService {
       // Delete the comment
       const deleted = await this.commentsRepository.delete(videoId, commentId, timestamp);
 
-      if (deleted && this.videoRepository) {
-        await this.videoRepository.decrementComments(comment.video_id);
-      }
+      await this.videoRepository.decrementComments(comment.video_id);
 
       return deleted;
     });

@@ -6,11 +6,7 @@
  */
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
-import type {
-  IReportService,
-  CreateVideoReportInput,
-  CreateCommentReportInput,
-} from './interfaces.js';
+import type { CreateVideoReportInput, CreateCommentReportInput } from './interfaces.js';
 import type { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
 import type { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
 import type { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
@@ -36,7 +32,7 @@ import type { PaginationOptions } from '../types/models.js';
  * - Archiving handled reports
  * - Report statistics
  */
-export class ReportsService extends BaseService implements IReportService {
+export class ReportsService extends BaseService {
   private readonly reportsVideosRepository: ReportsVideosRepository;
   private readonly reportsCommentsRepository: ReportsCommentsRepository;
   private readonly reportsArchiveVideosRepository: ReportsArchiveVideosRepository;

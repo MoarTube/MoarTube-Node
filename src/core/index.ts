@@ -12,7 +12,6 @@ export {
   isContainerInitialized,
   resolve,
   disposeContainer,
-  createScope,
   type Container,
   type ContainerCradle,
 } from './container.js';

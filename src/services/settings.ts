@@ -10,11 +10,9 @@ import path from 'node:path';
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
 import type {
-  ISettingsService,
   UpdateNodeSettingsInput,
   DatabaseConfigInput,
   StorageConfigInput,
-  IIndexerService,
 } from './interfaces.js';
 import { getConfig } from '../config/index.js';
 import type { DatabaseConfig, StorageConfig } from '../types/index.js';
@@ -39,6 +37,7 @@ import type {
   DrizzleLink,
 } from '../database/schemas/index.js';
 import type { CloudflareService } from './cloudflare.js';
+import type { IndexerService } from './indexer.js';
 
 /**
  * SettingsService class
@@ -50,8 +49,8 @@ import type { CloudflareService } from './cloudflare.js';
  * - Cloudflare integration settings
  * - Node identification with MoarTube network
  */
-export class SettingsService extends BaseService implements ISettingsService {
-  private readonly indexerService: IIndexerService | undefined;
+export class SettingsService extends BaseService {
+  private readonly indexerService: IndexerService;
   private readonly cloudflareService: CloudflareService;
   private readonly videosRepository: VideosRepository;
   private readonly commentsRepository: CommentsRepository;
@@ -74,7 +73,7 @@ export class SettingsService extends BaseService implements ISettingsService {
     liveChatMessagesRepository: LiveChatMessagesRepository,
     monetizationRepository: MonetizationRepository,
     linksRepository: LinksRepository,
-    indexerService: IIndexerService,
+    indexerService: IndexerService,
     cloudflareService: CloudflareService
   ) {
     super('SettingsService', logger);
@@ -173,7 +172,7 @@ export class SettingsService extends BaseService implements ISettingsService {
     config.updateNodeSettings({ nodeName: name });
 
     // Update in indexer if there are indexed videos
-    if (hasIndexedVideos && this.indexerService) {
+    if (hasIndexedVideos) {
       try {
         // Perform node identification before updating indexer
         await this.indexerService.performNodeIdentification();
@@ -201,7 +200,7 @@ export class SettingsService extends BaseService implements ISettingsService {
     config.updateNodeSettings({ nodeAbout: about });
 
     // Update in indexer if there are indexed videos
-    if (hasIndexedVideos && this.indexerService) {
+    if (hasIndexedVideos) {
       try {
         // Perform node identification before updating indexer
         await this.indexerService.performNodeIdentification();
@@ -227,7 +226,7 @@ export class SettingsService extends BaseService implements ISettingsService {
    */
   async updateNodeId(nodeId: string, hasIndexedVideos: boolean = false): Promise<void> {
     // Update in indexer first if there are indexed videos
-    if (hasIndexedVideos && this.indexerService) {
+    if (hasIndexedVideos) {
       try {
         // Perform node identification before updating indexer
         await this.indexerService.performNodeIdentification();
@@ -293,7 +292,7 @@ export class SettingsService extends BaseService implements ISettingsService {
     hasIndexedVideos: boolean = false
   ): Promise<void> {
     // Update in indexer first if there are indexed videos
-    if (hasIndexedVideos && this.indexerService) {
+    if (hasIndexedVideos) {
       try {
         // Perform node identification before updating indexer
         await this.indexerService.performNodeIdentification();
@@ -537,11 +536,7 @@ export class SettingsService extends BaseService implements ISettingsService {
    * Perform node identification
    */
   async performNodeIdentification(): Promise<void> {
-    if (this.indexerService) {
-      await this.indexerService.performNodeIdentification();
-    } else {
-      this.logger.warn('Indexer service not available for node identification');
-    }
+    await this.indexerService.performNodeIdentification();
   }
 
   /**

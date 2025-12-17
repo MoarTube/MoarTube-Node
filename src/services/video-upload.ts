@@ -12,10 +12,10 @@ import type { FastifyRequest } from 'fastify';
 
 import { getConfig } from '../config/index.js';
 import { type Logger } from '../utils/logger.js';
-import type { IVideoService, IWebSocketService } from './interfaces.js';
-import type { IUploadTrackerService } from './upload-tracker.js';
+import type { VideosService } from './videos.js';
+import type { WebSocketService } from './websocket.js';
+import type { UploadTrackerService } from './upload-tracker.js';
 import { type CloudflareService } from './cloudflare.js';
-import { type WebSocketService } from './websocket.js';
 
 // ============================================================================
 // Types
@@ -74,70 +74,16 @@ const VALID_RESOLUTIONS = new Set(['2160p', '1440p', '1080p', '720p', '480p', '3
 // Service
 // ============================================================================
 
-export interface IVideoUploadService {
-  /** Validate video upload parameters */
-  validateVideoUploadParams(format: string, resolution: string): boolean;
-
-  /** Get destination path for a video upload */
-  getVideoDestinationPath(
-    videoId: string,
-    format: string,
-    resolution: string,
-    filename: string
-  ): string | null;
-
-  /** Get destination path for a stream upload */
-  getStreamDestinationPath(
-    videoId: string,
-    format: string,
-    resolution: string,
-    filename: string
-  ): string | null;
-
-  /** Get destination path for an image upload */
-  getImageDestinationPath(videoId: string, imageType: ImageType): string;
-
-  /** Validate video file mime type */
-  isValidVideoMimeType(mimeType: string): boolean;
-
-  /** Validate stream file mime type */
-  isValidStreamMimeType(mimeType: string): boolean;
-
-  /** Validate image file mime type */
-  isValidImageMimeType(mimeType: string): boolean;
-
-  /** Validate segment filename (e.g., segment-0001.ts) */
-  isValidSegmentName(filename: string): boolean;
-
-  /** Handle video upload completion */
-  handleVideoUploadComplete(options: VideoUploadOptions): Promise<UploadResult>;
-
-  /** Handle stream upload completion */
-  handleStreamUploadComplete(options: StreamUploadOptions): UploadResult;
-
-  /** Handle image upload completion */
-  handleImageUploadComplete(options: ImageUploadOptions): Promise<UploadResult>;
-
-  /** Save uploaded file to disk */
-  saveUploadedFile(file: MultipartFile, destinationPath: string): Promise<void>;
-
-  /** Track upload progress */
-  trackProgress(request: FastifyRequest, videoId: string, format: string, resolution: string): void;
-
-  /** Handle video upload error */
-  handleUploadError(videoId: string): void;
-}
-
-export class VideoUploadService implements IVideoUploadService {
-  private readonly videosService: IVideoService;
-  private readonly uploadTrackerService: IUploadTrackerService;
+export class VideoUploadService {
+  private readonly videosService: VideosService;
+  private readonly uploadTrackerService: UploadTrackerService;
   private readonly cloudflareService: CloudflareService;
-  private readonly websocketService: IWebSocketService;
+  private readonly websocketService: WebSocketService;
   private readonly logger: Logger;
 
   constructor(
-    videosService: IVideoService,
-    uploadTrackerService: IUploadTrackerService,
+    videosService: VideosService,
+    uploadTrackerService: UploadTrackerService,
     cloudflareService: CloudflareService,
     websocketService: WebSocketService,
     logger: Logger

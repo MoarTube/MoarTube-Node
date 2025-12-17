@@ -6,7 +6,7 @@
 
 import type { ExtendedWebSocket, IncomingWebSocketMessage } from '../../types/websocket.js';
 import { WebSocketHandler, type HandlerContext } from './base.js';
-import type { IVideoService } from '../../services/interfaces.js';
+import type { VideosService } from '../../services/videos.js';
 import { chatJoinEventSchema, type ChatJoinEvent } from '../../validators/schemas/index.js';
 
 /**
@@ -14,9 +14,9 @@ import { chatJoinEventSchema, type ChatJoinEvent } from '../../validators/schema
  */
 export class ChatJoinHandler extends WebSocketHandler {
   readonly name = 'ChatJoinHandler';
-  private readonly videoService: IVideoService;
+  private readonly videoService: VideosService;
 
-  constructor(videoService: IVideoService) {
+  constructor(videoService: VideosService) {
     super();
     this.videoService = videoService;
   }

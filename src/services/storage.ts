@@ -23,7 +23,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
-import type { IStorageService, StorageMode, FileMetadata } from './interfaces.js';
+import type { StorageMode, FileMetadata } from './interfaces.js';
 import { getConfig } from '../config/index.js';
 
 /**
@@ -41,7 +41,7 @@ export interface S3Config {
  * - Filesystem storage (local disk)
  * - S3-compatible storage (AWS S3, MinIO, DigitalOcean Spaces, etc.)
  */
-export class StorageService extends BaseService implements IStorageService {
+export class StorageService extends BaseService {
   private s3Client: S3Client | null = null;
   private s3Config: S3Config | null = null;
 

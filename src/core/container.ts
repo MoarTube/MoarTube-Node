@@ -186,13 +186,3 @@ export async function disposeContainer(): Promise<void> {
     container = null;
   }
 }
-
-/**
- * Create a scoped container for request handling
- *
- * Scoped containers share singletons with the parent but can have
- * request-scoped dependencies.
- */
-export function createScope(): AwilixContainer<ContainerCradle> {
-  return getContainer().createScope();
-}

@@ -9,7 +9,7 @@ import path from 'node:path';
 
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
-import type { IStreamService, StreamConfig, IWebSocketService } from './interfaces.js';
+import type { StreamConfig } from './interfaces.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { LiveChatMessagesRepository } from '../database/repositories/live-chat-messages.js';
 import type { CommentsRepository } from '../database/repositories/comments.js';
@@ -59,11 +59,11 @@ export interface StartStreamOptions {
  * - Stream state management
  * - Integration with video records
  */
-export class StreamsService extends BaseService implements IStreamService {
+export class StreamsService extends BaseService {
   private readonly videoRepository: VideosRepository;
   private readonly liveChatMessageRepository: LiveChatMessagesRepository;
   private readonly commentsRepository: CommentsRepository;
-  private readonly websocketService: IWebSocketService;
+  private readonly websocketService: WebSocketService;
 
   constructor(
     logger: Logger,

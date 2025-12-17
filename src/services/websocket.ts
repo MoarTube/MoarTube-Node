@@ -6,7 +6,7 @@
  */
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
-import type { IWebSocketService, WebSocketMessage, WebSocketEventName } from './interfaces.js';
+import type { WebSocketMessage, WebSocketEventName } from './interfaces.js';
 
 /**
  * WebSocket client connection info
@@ -24,7 +24,7 @@ export interface WebSocketClient {
  * Handles WebSocket message broadcasting through the cluster process system.
  * Messages are sent to the master process which distributes them to workers.
  */
-export class WebSocketService extends BaseService implements IWebSocketService {
+export class WebSocketService extends BaseService {
   // Track client counts (in actual implementation these would be managed by master process)
   private readonly nodeClientCount: number = 0;
   private readonly chatClientCounts: Map<string, number> = new Map();

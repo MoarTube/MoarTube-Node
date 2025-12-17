@@ -6,19 +6,6 @@
  * external APIs, and other services.
  */
 
-import type {
-  DrizzleVideo,
-  DrizzleComment,
-  DrizzleVideoReport,
-  DrizzleCommentReport,
-  DrizzleVideoReportArchive,
-  DrizzleCommentReportArchive,
-  DrizzleLiveChatMessage,
-  DrizzleCryptoWalletAddress,
-  DrizzleLink,
-} from '../database/schemas/index.js';
-import type { PaginationOptions, PaginatedResult } from '../types/models.js';
-
 // ============================================================================
 // Video Service
 // ============================================================================
@@ -26,7 +13,7 @@ import type { PaginationOptions, PaginatedResult } from '../types/models.js';
 /**
  * Options for filtering video queries
  */
-export interface GetVideosOptions extends PaginationOptions {
+export interface GetVideosOptions {
   /** Sort field */
   sortBy?: 'creation_timestamp' | 'views' | 'likes' | 'title';
   /** Sort direction */
@@ -43,6 +30,8 @@ export interface GetVideosOptions extends PaginationOptions {
   tagTerm?: string;
   /** Timestamp for pagination */
   timestamp?: number;
+  /** Pagination options */
+  limit?: number;
 }
 
 /**
@@ -70,13 +59,6 @@ export interface UpdateVideoInput {
   isDislikesEnabled?: boolean;
   isReportsEnabled?: boolean;
   isLiveChatEnabled?: boolean;
-}
-
-/**
- * Video with additional computed metadata
- */
-export interface VideoWithMeta extends DrizzleVideo {
-  thumbnailBase64?: string;
 }
 
 /**
@@ -156,166 +138,6 @@ export interface VideoData {
 }
 
 /**
- * Video service interface
- */
-export interface IVideoService {
-  /** Get a single video by ID */
-  getVideo(videoId: string): Promise<DrizzleVideo | null>;
-
-  /** Get videos with filtering and pagination */
-  getVideos(options?: GetVideosOptions): Promise<PaginatedResult<DrizzleVideo>>;
-
-  /** Count videos with filtering */
-  countVideos(options?: GetVideosOptions): Promise<number>;
-
-  /** Create a new video (import) */
-  createVideo(data: CreateVideoInput): Promise<{ videoId: string }>;
-
-  /** Update video metadata */
-  updateVideo(videoId: string, data: UpdateVideoInput): Promise<DrizzleVideo | null>;
-
-  /** Update video meta field */
-  updateVideoMeta(videoId: string, meta: Record<string, unknown>): Promise<DrizzleVideo | null>;
-
-  /** Delete a video and all associated data */
-  deleteVideo(videoId: string): Promise<boolean>;
-
-  /** Mark video as importing */
-  setImporting(videoId: string, isImporting: boolean): Promise<void>;
-
-  /** Mark video as imported */
-  setImported(videoId: string): Promise<void>;
-
-  /** Mark video as publishing */
-  setPublishing(videoId: string, isPublishing: boolean): Promise<void>;
-
-  /** Publish a video */
-  publishVideo(videoId: string): Promise<void>;
-
-  /** Unpublish a video */
-  unpublishVideo(videoId: string): Promise<void>;
-
-  /** Increment view count */
-  incrementViews(videoId: string): Promise<void>;
-
-  /** Increment view count with debouncing for batched DB writes */
-  incrementViewsDebounced(videoId: string): Promise<{ views: number }>;
-
-  /** Increment like count */
-  incrementLikes(videoId: string): Promise<void>;
-
-  /** Increment dislike count */
-  incrementDislikes(videoId: string): Promise<void>;
-
-  /** Finalize a video */
-  finalizeVideo(videoId: string): Promise<void>;
-
-  /** Set video error state */
-  setError(videoId: string, isError: boolean): Promise<void>;
-
-  /** Get videos pending indexing */
-  getVideosNeedingIndexing(): Promise<DrizzleVideo[]>;
-
-  /** Mark video as indexed */
-  setIndexed(videoId: string, isIndexed: boolean): Promise<void>;
-
-  /** Update video bandwidth */
-  updateBandwidth(videoId: string, bandwidth: number): Promise<void>;
-
-  /** Mark video index as outdated */
-  setIndexOutdated(videoId: string): Promise<void>;
-
-  /** Set video length (seconds and timestamp) */
-  setVideoLength(videoId: string, lengthSeconds: number, lengthTimestamp: string): Promise<void>;
-
-  /** Add a resolution to video outputs */
-  addOutputResolution(videoId: string, format: string, resolution: string): Promise<void>;
-
-  /** Mark specific format/resolution as published */
-  markFormatResolutionPublished(videoId: string, format: string, resolution: string): Promise<void>;
-
-  /** Notify upload complete for a format/resolution */
-  notifyUploadComplete(videoId: string, format: string, resolution: string): Promise<void>;
-
-  /** Notify stream complete for a format/resolution */
-  notifyStreamComplete(videoId: string, format: string, resolution: string): Promise<void>;
-
-  /** Set source file extension */
-  setSourceFileExtension(videoId: string, extension: string): Promise<void>;
-
-  /** Get source file extension */
-  getSourceFileExtension(videoId: string): Promise<string | null>;
-
-  /** Get all publish statuses for video formats/resolutions */
-  getPublishes(
-    videoId: string
-  ): Promise<Array<{ format: string; resolution: string; isPublished: boolean }> | null>;
-
-  /** Unpublish a specific format/resolution */
-  unpublishFormatResolution(videoId: string, format: string, resolution: string): Promise<void>;
-
-  /** Get video watch data for media player */
-  getWatchData(videoId: string): Promise<VideoWatchData | null>;
-
-  /** Get video permissions */
-  getPermissions(videoId: string): Promise<VideoPermissions | null>;
-
-  /** Get video data with formatted fields */
-  getVideoData(videoId: string): Promise<VideoData | null>;
-
-  /** Get all videos data with formatted fields */
-  getAllVideosData(): Promise<VideoData[]>;
-
-  /** Get recommended videos (published or live) */
-  getRecommendedVideos(): Promise<DrizzleVideo[]>;
-
-  /** Get unique tags from published/live videos */
-  getPublishedTags(): Promise<string[]>;
-
-  /** Get unique tags from all videos */
-  getAllTags(): Promise<string[]>;
-
-  /** Get video alias URL for indexed videos */
-  getAliasUrl(videoId: string): Promise<string | null>;
-
-  /** Batch delete videos with safety filters */
-  deleteVideos(
-    videoIds: string[],
-    force?: boolean
-  ): Promise<{ deletedVideoIds: string[]; nonDeletedVideoIds: string[] }>;
-
-  /** Batch finalize videos with safety filters */
-  finalizeVideos(
-    videoIds: string[],
-    force?: boolean
-  ): Promise<{ finalizedVideoIds: string[]; nonFinalizedVideoIds: string[] }>;
-
-  /** Write HLS master manifest for adaptive streaming */
-  writeMasterManifest(videoId: string, manifestType: string, content: string): Promise<void>;
-
-  /** Mark video index as outdated with Cloudflare cache purge */
-  markIndexOutdated(videoId: string): Promise<void>;
-
-  /** Purge Cloudflare cache for video images */
-  purgeVideoImageCache(videoId: string): Promise<void>;
-
-  /** Add video to MoarTube index */
-  addToIndex(videoId: string, options: AddToIndexOptions): Promise<AddToIndexResult>;
-
-  /** Remove video from MoarTube index */
-  removeFromIndex(videoId: string, cloudflareTurnstileToken: string): Promise<void>;
-
-  /** Get node icon as base64 encoded PNG */
-  getNodeIconPngBase64(): string;
-
-  /** Get node avatar as base64 encoded PNG */
-  getNodeAvatarPngBase64(): string;
-
-  /** Get video preview image as base64 encoded JPG */
-  getVideoPreviewJpgBase64(videoId: string): Promise<string>;
-}
-
-/**
  * Options for adding a video to the MoarTube index
  */
 export interface AddToIndexOptions {
@@ -354,35 +176,9 @@ export interface StreamConfig {
 /**
  * Stream service interface
  */
-export interface IStreamService {
-  /** Start a new live stream */
-  startStream(videoId: string, config?: StreamConfig): Promise<void>;
-
-  /** Stop an active live stream */
-  stopStream(videoId: string): Promise<void>;
-
-  /** Get all currently streaming videos */
-  getActiveStreams(): Promise<DrizzleVideo[]>;
-
-  /** Check if a video is currently streaming */
-  isStreaming(videoId: string): Promise<boolean>;
-}
-
 // ============================================================================
 // Comment Service
 // ============================================================================
-
-/**
- * Options for filtering comment queries
- */
-export interface GetCommentsOptions extends PaginationOptions {
-  /** Filter by video ID */
-  videoId?: string;
-  /** Search in comment text */
-  search?: string;
-  /** Get comments before this timestamp */
-  beforeTimestamp?: number;
-}
 
 /**
  * Input for creating a new comment
@@ -390,40 +186,6 @@ export interface GetCommentsOptions extends PaginationOptions {
 export interface CreateCommentInput {
   videoId: string;
   commentPlainText: string;
-}
-
-/**
- * Comment service interface
- */
-export interface ICommentService {
-  /** Get a single comment by ID */
-  getComment(videoId: string, commentId: number, timestamp: number): Promise<DrizzleComment | null>;
-
-  /** Get comments with filtering and pagination */
-  getComments(options?: GetCommentsOptions): Promise<DrizzleComment[]>;
-
-  /** Get comments for a specific video */
-  getCommentsForVideo(
-    videoId: string,
-    type: string,
-    sort: string,
-    timestamp: number
-  ): Promise<DrizzleComment[]>;
-
-  /** Create a new comment */
-  createComment(data: CreateCommentInput): Promise<DrizzleComment>;
-
-  /** Delete a comment */
-  deleteComment(videoId: string, commentId: number, timestamp: number): Promise<boolean>;
-
-  /** Delete all comments for a video */
-  deleteCommentsForVideo(videoId: string): Promise<number>;
-
-  /** Count comments for a video */
-  countCommentsForVideo(videoId: string): Promise<number>;
-
-  /** Count comments newer than timestamp */
-  countCommentsNewerThan(timestamp: number): Promise<number>;
 }
 
 // ============================================================================
@@ -445,83 +207,9 @@ export interface FileMetadata {
   contentType?: string;
 }
 
-/**
- * Storage service interface
- */
-export interface IStorageService {
-  /** Get current storage mode */
-  getStorageMode(): StorageMode;
-
-  /** Save a file to storage */
-  saveFile(key: string, data: Buffer, contentType?: string): Promise<void>;
-
-  /** Get a file from storage */
-  getFile(key: string): Promise<Buffer>;
-
-  /** Get a file stream from storage */
-  getFileStream(key: string): Promise<NodeJS.ReadableStream>;
-
-  /** Delete a file from storage */
-  deleteFile(key: string): Promise<boolean>;
-
-  /** Check if a file exists */
-  fileExists(key: string): Promise<boolean>;
-
-  /** Get file metadata */
-  getFileMetadata(key: string): Promise<FileMetadata | null>;
-
-  /** List files in a directory/prefix */
-  listFiles(prefix: string): Promise<FileMetadata[]>;
-
-  /** Delete a directory recursively */
-  deleteDirectory(prefix: string): Promise<number>;
-
-  /** Copy a file */
-  copyFile(sourceKey: string, destKey: string): Promise<void>;
-
-  /** Get presigned URL for direct access (S3 only) */
-  getPresignedUrl?(key: string, expiresIn?: number): Promise<string>;
-}
-
 // ============================================================================
 // Indexer Service
 // ============================================================================
-
-/**
- * Indexer service interface for MoarTube Indexer communication
- */
-export interface IIndexerService {
-  /** Add a video to the index */
-  addVideoToIndex(videoId: string): void;
-
-  /** Submit full video data to index */
-  submitVideoToIndex(data: VideoIndexData): Promise<IndexerSubmitResult>;
-
-  /** Remove a video from the index */
-  removeVideoFromIndex(data: RemoveFromIndexData): Promise<void>;
-
-  /** Update node personalization (name) */
-  updateNodeName(name: string): Promise<void>;
-
-  /** Update node personalization (about) */
-  updateNodeAbout(about: string): Promise<void>;
-
-  /** Update node personalization (ID) */
-  updateNodeId(nodeId: string): Promise<void>;
-
-  /** Update external network configuration */
-  updateExternalNetwork(
-    publicNodeProtocol: string,
-    publicNodeAddress: string,
-    publicNodePort: string
-  ): Promise<void>;
-
-  /** Perform node identification */
-  performNodeIdentification(): Promise<void>;
-
-  /** Check indexer health/connectivity */
-  checkHealth(): Promise<boolean>;
-}
 
 /**
  * Video index data for submission to indexer
@@ -600,29 +288,6 @@ export interface WebSocketMessage {
   videoId?: string;
 }
 
-/**
- * WebSocket service interface
- */
-export interface IWebSocketService {
-  /** Broadcast message to all node clients */
-  broadcastToNodes(message: WebSocketMessage): void;
-
-  /** Broadcast message to chat clients for a specific video */
-  broadcastToChat(videoId: string, message: WebSocketMessage): void;
-
-  /** Broadcast message to all connected clients */
-  broadcastToAll(message: WebSocketMessage): void;
-
-  /** Send message to specific client */
-  sendToClient(clientId: string, message: WebSocketMessage): void;
-
-  /** Get count of connected clients */
-  getConnectedCount(): number;
-
-  /** Get count of chat clients for a video */
-  getChatClientCount(videoId: string): number;
-}
-
 // ============================================================================
 // Report Service
 // ============================================================================
@@ -660,65 +325,6 @@ export interface CreateCommentReportInput {
   email: string;
   type: ReportType;
   message: string;
-}
-
-/**
- * Report service interface
- */
-export interface IReportService {
-  /** Create a video report */
-  createVideoReport(data: CreateVideoReportInput): Promise<DrizzleVideoReport>;
-
-  /** Create a comment report */
-  createCommentReport(data: CreateCommentReportInput): Promise<DrizzleCommentReport>;
-
-  /** Get all video reports */
-  getVideoReports(options?: PaginationOptions): Promise<DrizzleVideoReport[]>;
-
-  /** Get all comment reports */
-  getCommentReports(options?: PaginationOptions): Promise<DrizzleCommentReport[]>;
-
-  /** Get video reports for a specific video */
-  getVideoReportsForVideo(videoId: string): Promise<DrizzleVideoReport[]>;
-
-  /** Get comment reports for a specific video */
-  getCommentReportsForVideo(videoId: string): Promise<DrizzleCommentReport[]>;
-
-  /** Archive a video report (mark as handled) */
-  archiveVideoReport(reportId: number): Promise<DrizzleVideoReportArchive>;
-
-  /** Archive a comment report (mark as handled) */
-  archiveCommentReport(reportId: number): Promise<DrizzleCommentReportArchive>;
-
-  /** Delete a video report */
-  deleteVideoReport(reportId: number): Promise<boolean>;
-
-  /** Delete a comment report */
-  deleteCommentReport(reportId: number): Promise<boolean>;
-
-  /** Get archived video reports */
-  getArchivedVideoReports(options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]>;
-
-  /** Get archived comment reports */
-  getArchivedCommentReports(options?: PaginationOptions): Promise<DrizzleCommentReportArchive[]>;
-
-  /** Delete archived video report */
-  deleteArchivedVideoReport(archiveId: number): Promise<boolean>;
-
-  /** Delete archived comment report */
-  deleteArchivedCommentReport(archiveId: number): Promise<boolean>;
-
-  /** Count total video reports */
-  countVideoReports(): Promise<number>;
-
-  /** Count total comment reports */
-  countCommentReports(): Promise<number>;
-
-  /** Count video reports newer than timestamp */
-  countVideoReportsNewerThan(timestamp: number): Promise<number>;
-
-  /** Count comment reports newer than timestamp */
-  countCommentReportsNewerThan(timestamp: number): Promise<number>;
 }
 
 // ============================================================================
@@ -764,102 +370,6 @@ export interface StorageConfigInput {
   s3AccessKeyId?: string;
   s3SecretAccessKey?: string;
   s3Region?: string;
-}
-
-/**
- * Settings service interface
- */
-export interface ISettingsService {
-  /** Get all node settings */
-  getNodeSettings(): Record<string, unknown>;
-
-  /** Get node version */
-  getVersion(): string;
-
-  /** Update node settings */
-  updateNodeSettings(data: UpdateNodeSettingsInput): void;
-
-  /** Update node name */
-  updateNodeName(name: string): Promise<void>;
-
-  /** Update node about */
-  updateNodeAbout(about: string): Promise<void>;
-
-  /** Update node ID */
-  updateNodeId(nodeId: string): Promise<void>;
-
-  /** Update account credentials */
-  updateCredentials(username: string, password: string): Promise<void>;
-
-  /** Update network settings */
-  updateNetworkSettings(protocol: string, address: string, port: string): Promise<void>;
-
-  /** Update database configuration */
-  updateDatabaseConfig(config: DatabaseConfigInput): void;
-
-  /** Update storage configuration */
-  updateStorageConfig(config: StorageConfigInput): void;
-
-  /** Update Cloudflare configuration */
-  updateCloudflareConfig(
-    emailAddress: string,
-    authenticationKey: string,
-    accountId: string,
-    zoneId: string,
-    zoneName: string
-  ): void;
-
-  /** Clear Cloudflare configuration */
-  clearCloudflareConfig(): void;
-
-  /** Get avatar image file path */
-  getAvatarFilePath(): string | null;
-
-  /** Update avatar and icon */
-  updateAvatar(iconFile: string, avatarFile: string): Promise<void>;
-
-  /** Get banner image file path */
-  getBannerFilePath(): string | null;
-
-  /** Update banner */
-  updateBanner(bannerFile: string): Promise<void>;
-
-  /** Perform node identification */
-  performNodeIdentification(): Promise<void>;
-
-  /** Get node identification */
-  getNodeIdentification(): Record<string, unknown>;
-
-  /** Check if node is in developer mode */
-  isDeveloperMode(): boolean;
-
-  /** Check if running in Docker */
-  isDockerEnvironment(): boolean;
-
-  /** Mark all videos as not indexed */
-  markAllVideosAsNotIndexed(): Promise<void>;
-
-  /** Get all indexed videos */
-  getIndexedVideos(): Promise<DrizzleVideo[]>;
-
-  /** Export all application data */
-  exportAllData(): Promise<{
-    videos: DrizzleVideo[];
-    comments: DrizzleComment[];
-    videoReports: DrizzleVideoReport[];
-    commentReports: DrizzleCommentReport[];
-    videoReportsArchives: DrizzleVideoReportArchive[];
-    commentReportsArchives: DrizzleCommentReportArchive[];
-    liveChatMessages: DrizzleLiveChatMessage[];
-    cryptoWalletAddresses: DrizzleCryptoWalletAddress[];
-    links: DrizzleLink[];
-  }>;
-
-  /** Delete all application data */
-  deleteAllData(): Promise<void>;
-
-  /** Import database from JSON file */
-  importDatabase(databaseFileContent: string): Promise<void>;
 }
 
 // ============================================================================
@@ -910,29 +420,6 @@ export interface CreateLinkInput {
   svgGraphic: string;
 }
 
-/**
- * Link service interface
- */
-export interface ILinkService {
-  /** Get all links */
-  getLinks(): Promise<DrizzleLink[]>;
-
-  /** Get a link by ID */
-  getLink(linkId: number): Promise<DrizzleLink | null>;
-
-  /** Create a new link */
-  createLink(data: CreateLinkInput): Promise<DrizzleLink>;
-
-  /** Update a link */
-  updateLink(linkId: number, data: Partial<CreateLinkInput>): Promise<DrizzleLink | null>;
-
-  /** Delete a link */
-  deleteLink(linkId: number): Promise<boolean>;
-
-  /** Count total links */
-  countLinks(): Promise<number>;
-}
-
 // ============================================================================
 // Monetization Service
 // ============================================================================
@@ -945,49 +432,6 @@ export interface CreateWalletAddressInput {
   chain: string;
   chainId: string;
   currency: string;
-}
-
-/**
- * Monetization service interface
- */
-export interface IMonetizationService {
-  /** Get all wallet addresses */
-  getWalletAddresses(): Promise<DrizzleCryptoWalletAddress[]>;
-
-  /** Get a wallet address by ID */
-  getWalletAddress(walletAddressId: number): Promise<DrizzleCryptoWalletAddress | null>;
-
-  /** Get wallet addresses by chain */
-  getWalletAddressesByChain(chain: string): Promise<DrizzleCryptoWalletAddress[]>;
-
-  /** Create a new wallet address */
-  createWalletAddress(data: CreateWalletAddressInput): Promise<DrizzleCryptoWalletAddress>;
-
-  /** Update a wallet address */
-  updateWalletAddress(
-    walletAddressId: number,
-    data: Partial<CreateWalletAddressInput>
-  ): Promise<DrizzleCryptoWalletAddress | null>;
-
-  /** Delete a wallet address */
-  deleteWalletAddress(walletAddressId: number): Promise<boolean>;
-
-  /** Count total wallet addresses */
-  countWalletAddresses(): Promise<number>;
-}
-
-/**
- * Links Service Interface
- */
-export interface ILinksService {
-  /** Get all links */
-  getAllLinks(): Promise<DrizzleLink[]>;
-
-  /** Create a new link */
-  createLink(data: CreateLinkInput): Promise<DrizzleLink>;
-
-  /** Delete a link */
-  deleteLink(linkId: number): Promise<boolean>;
 }
 
 /**

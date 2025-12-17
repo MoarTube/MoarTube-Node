@@ -113,8 +113,8 @@ export interface SecureBody {
 export class SettingsController extends BaseController {
   constructor(
     private readonly settingsService: SettingsService,
-    private readonly cloudflareService?: CloudflareService,
-    private readonly websocketService?: WebSocketService
+    private readonly cloudflareService: CloudflareService,
+    private readonly websocketService: WebSocketService
   ) {
     super('SettingsController');
   }
@@ -204,42 +204,28 @@ export class SettingsController extends BaseController {
       // Parse multipart data
       const parts = request.parts();
 
-      let iconFile: MultipartFile | undefined;
-      let avatarFile: MultipartFile | undefined;
-
       for await (const part of parts) {
         if (part.type === 'file') {
           if (part.fieldname === 'iconFile') {
-            iconFile = part;
-            // Save icon file
             const iconPath = path.join(imagesDir, 'icon.png');
             await pipeline(part.file, fs.createWriteStream(iconPath));
           } else if (part.fieldname === 'avatarFile') {
-            avatarFile = part;
-            // Save avatar file
             const avatarPath = path.join(imagesDir, 'avatar.png');
             await pipeline(part.file, fs.createWriteStream(avatarPath));
           }
         }
       }
 
-      if (iconFile === undefined || avatarFile === undefined) {
-        return await this.sendError(reply, 'both iconFile and avatarFile are required', 400);
-      } else {
-        // Purge Cloudflare cache if enabled
-        if (this.cloudflareService !== undefined) {
-          try {
-            await this.cloudflareService.purgeNodeImages();
-          } catch (error) {
-            this.logger.error('Failed to purge node images from Cloudflare', error);
-          }
-        }
-
-        // Mark all indexed videos as outdated
-        await this.settingsService.markAllVideosAsNotIndexed();
-
-        return await this.sendSuccess(reply);
+      try {
+        await this.cloudflareService.purgeNodeImages();
+      } catch (error) {
+        this.logger.error('Failed to purge node images from Cloudflare', error);
       }
+
+      // Mark all indexed videos as outdated
+      await this.settingsService.markAllVideosAsNotIndexed();
+
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('SettingsController.uploadAvatar failed', error);
 
@@ -282,13 +268,7 @@ export class SettingsController extends BaseController {
         return await this.sendError(reply, 'bannerFile is required');
       } else {
         // Purge Cloudflare cache if enabled
-        if (this.cloudflareService !== undefined) {
-          try {
-            await this.cloudflareService.purgeNodeImages();
-          } catch (error) {
-            this.logger.error('Failed to purge node images from Cloudflare', error);
-          }
-        }
+        await this.cloudflareService.purgeNodeImages();
 
         return await this.sendSuccess(reply);
       }
@@ -708,36 +688,34 @@ export class SettingsController extends BaseController {
 
       const storageConfig = config.nodeSettings.storageConfig;
 
-      if (this.cloudflareService !== undefined) {
-        // Reset any existing CDN configuration
-        await this.cloudflareService.resetCdn(
-          cloudflareEmailAddress,
-          cloudflareZoneId,
-          cloudflareGlobalApiKey
-        );
+      // Reset any existing CDN configuration
+      await this.cloudflareService.resetCdn(
+        cloudflareEmailAddress,
+        cloudflareZoneId,
+        cloudflareGlobalApiKey
+      );
 
-        // Set new CDN configuration
-        await this.cloudflareService.setCdnConfiguration(
-          cloudflareEmailAddress,
-          cloudflareZoneId,
-          cloudflareGlobalApiKey
-        );
+      // Set new CDN configuration
+      await this.cloudflareService.setCdnConfiguration(
+        cloudflareEmailAddress,
+        cloudflareZoneId,
+        cloudflareGlobalApiKey
+      );
 
-        // Add CDN DNS record based on storage config
-        await this.cloudflareService.addCdnDnsRecord(
-          cloudflareEmailAddress,
-          cloudflareZoneId,
-          cloudflareGlobalApiKey,
-          storageConfig
-        );
+      // Add CDN DNS record based on storage config
+      await this.cloudflareService.addCdnDnsRecord(
+        cloudflareEmailAddress,
+        cloudflareZoneId,
+        cloudflareGlobalApiKey,
+        storageConfig
+      );
 
-        // Purge entire cache
-        await this.cloudflareService.purgeEntireCacheWithCredentials(
-          cloudflareEmailAddress,
-          cloudflareZoneId,
-          cloudflareGlobalApiKey
-        );
-      }
+      // Purge entire cache
+      await this.cloudflareService.purgeEntireCacheWithCredentials(
+        cloudflareEmailAddress,
+        cloudflareZoneId,
+        cloudflareGlobalApiKey
+      );
 
       // Update Cloudflare configuration in settings
       this.settingsService.updateCloudflareConfig(
@@ -771,7 +749,7 @@ export class SettingsController extends BaseController {
       const nodeSettings = config.nodeSettings;
 
       // Only reset if Cloudflare CDN is currently enabled
-      if (nodeSettings.isCloudflareCdnEnabled && this.cloudflareService !== undefined) {
+      if (nodeSettings.isCloudflareCdnEnabled) {
         const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
         const cloudflareZoneId = nodeSettings.cloudflareZoneId;
         const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
@@ -824,19 +802,14 @@ export class SettingsController extends BaseController {
       });
 
       // Broadcast to chat clients so they know Turnstile is now enabled
-      if (this.websocketService !== undefined) {
-        this.websocketService.broadcastToChat('all', {
-          eventName: 'information',
-          data: {
-            cloudflareTurnstileSiteKey,
-          },
-        });
-      }
+      this.websocketService.broadcastToChat('all', {
+        eventName: 'information',
+        data: {
+          cloudflareTurnstileSiteKey,
+        },
+      });
 
-      // Purge all watch pages from Cloudflare cache
-      if (this.cloudflareService !== undefined) {
-        await this.cloudflareService.purgeAllWatchPages();
-      }
+      await this.cloudflareService.purgeAllWatchPages();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -865,19 +838,15 @@ export class SettingsController extends BaseController {
       });
 
       // Broadcast to chat clients so they know Turnstile is now disabled
-      if (this.websocketService !== undefined) {
-        this.websocketService.broadcastToChat('all', {
-          eventName: 'information',
-          data: {
-            cloudflareTurnstileSiteKey: '',
-          },
-        });
-      }
+      this.websocketService.broadcastToChat('all', {
+        eventName: 'information',
+        data: {
+          cloudflareTurnstileSiteKey: '',
+        },
+      });
 
       // Purge all watch pages from Cloudflare cache
-      if (this.cloudflareService !== undefined) {
-        await this.cloudflareService.purgeAllWatchPages();
-      }
+      await this.cloudflareService.purgeAllWatchPages();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1105,7 +1074,7 @@ export class SettingsController extends BaseController {
 
       const nodeSettings = config.nodeSettings;
 
-      if (nodeSettings.isCloudflareCdnEnabled && this.cloudflareService !== undefined) {
+      if (nodeSettings.isCloudflareCdnEnabled) {
         const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
         const cloudflareZoneId = nodeSettings.cloudflareZoneId;
         const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;

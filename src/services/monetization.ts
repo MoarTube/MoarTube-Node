@@ -5,7 +5,7 @@
  */
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
-import type { IMonetizationService, CreateWalletAddressInput } from './interfaces.js';
+import type { CreateWalletAddressInput } from './interfaces.js';
 import type { MonetizationRepository } from '../database/repositories/monetization.js';
 import type { DrizzleCryptoWalletAddress } from '../database/schemas/index.js';
 
@@ -15,7 +15,7 @@ import type { DrizzleCryptoWalletAddress } from '../database/schemas/index.js';
  * Handles all crypto wallet address-related business logic including:
  * - Wallet address CRUD operations
  */
-export class MonetizationService extends BaseService implements IMonetizationService {
+export class MonetizationService extends BaseService {
   private readonly monetizationRepository: MonetizationRepository;
 
   constructor(logger: Logger, monetizationRepository: MonetizationRepository) {

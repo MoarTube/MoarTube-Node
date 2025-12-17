@@ -8,12 +8,7 @@ import axios, { type AxiosInstance, type AxiosError } from 'axios';
 
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
-import type {
-  IIndexerService,
-  VideoIndexData,
-  RemoveFromIndexData,
-  IndexerSubmitResult,
-} from './interfaces.js';
+import type { VideoIndexData, RemoveFromIndexData, IndexerSubmitResult } from './interfaces.js';
 import { getConfig } from '../config/index.js';
 
 /**
@@ -34,7 +29,7 @@ interface IndexerResponse {
  * - Node personalization updates
  * - Network configuration updates
  */
-export class IndexerService extends BaseService implements IIndexerService {
+export class IndexerService extends BaseService {
   private readonly httpClient: AxiosInstance;
   private readonly indexerUrl: string;
 

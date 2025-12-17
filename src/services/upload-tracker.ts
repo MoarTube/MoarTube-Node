@@ -25,39 +25,7 @@ interface VideoUploadState {
   resolution?: string | undefined;
 }
 
-export interface IUploadTrackerService {
-  /** Start tracking an upload for a video */
-  startTracking(videoId: string, format?: string, resolution?: string): void;
-
-  /** Add a request to the tracking */
-  addRequest(videoId: string, request: FastifyRequest): void;
-
-  /** Check if upload is being stopped */
-  isStopping(videoId: string): boolean;
-
-  /** Check if video has active upload */
-  isTracking(videoId: string): boolean;
-
-  /** Update upload progress */
-  updateProgress(videoId: string, progress: number): void;
-
-  /** Get upload progress */
-  getProgress(videoId: string): number;
-
-  /** Signal upload should stop */
-  signalStop(videoId: string): void;
-
-  /** Complete stopping and clean up */
-  completeStop(videoId: string): void;
-
-  /** Stop tracking (upload completed) */
-  stopTracking(videoId: string): void;
-
-  /** Get all active uploads */
-  getActiveUploads(): string[];
-}
-
-export class UploadTrackerService implements IUploadTrackerService {
+export class UploadTrackerService {
   private readonly tracker = new Map<string, VideoUploadState>();
   private readonly websocketService: WebSocketService;
   private readonly logger: Logger;

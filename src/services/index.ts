@@ -10,16 +10,7 @@ export { BaseService } from './base.js';
 
 // Service interfaces
 export type {
-  IVideoService,
-  ICommentService,
-  IStreamService,
-  IStorageService,
-  IIndexerService,
-  IWebSocketService,
-  IReportService,
-  ISettingsService,
   GetVideosOptions,
-  GetCommentsOptions,
   CreateVideoInput,
   UpdateVideoInput,
   CreateCommentInput,
@@ -48,10 +39,9 @@ export { CloudflareService } from './cloudflare.js';
 export { WebSocketService, type WebSocketClient } from './websocket.js';
 export { ReportsService } from './reports.js';
 export { SettingsService } from './settings.js';
-export { UploadTrackerService, type IUploadTrackerService } from './upload-tracker.js';
+export { UploadTrackerService } from './upload-tracker.js';
 export {
   VideoUploadService,
-  type IVideoUploadService,
   type UploadResult,
   type VideoUploadOptions,
   type StreamUploadOptions,

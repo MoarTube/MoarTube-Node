@@ -6,7 +6,7 @@
 
 import type { ExtendedWebSocket, IncomingWebSocketMessage } from '../../types/websocket.js';
 import { WebSocketHandler, type HandlerContext } from './base.js';
-import type { IVideoService } from '../../services/interfaces.js';
+import type { VideosService } from '../../services/videos.js';
 import { getConfig } from '../../config/index.js';
 import sanitizeHtml from 'sanitize-html';
 import { chatMessageEventSchema, type ChatMessageEvent } from '../../validators/schemas/index.js';
@@ -19,12 +19,12 @@ import type { CloudflareService } from '../../services/cloudflare.js';
  */
 export class ChatMessageHandler extends WebSocketHandler {
   readonly name = 'ChatMessageHandler';
-  private readonly videoService: IVideoService;
+  private readonly videoService: VideosService;
   private readonly liveChatService: LiveChatService;
   private readonly cloudflareService: CloudflareService;
 
   constructor(
-    videoService: IVideoService,
+    videoService: VideosService,
     liveChatService: LiveChatService,
     cloudflareService: CloudflareService
   ) {

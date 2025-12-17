@@ -46,7 +46,7 @@ export interface RuntimeConfig {
  * Coordinates all configuration subsystems and provides unified access
  */
 class Config {
-  private static instance: Config | undefined;
+  private static instance: Config;
 
   private readonly _env: Env;
   private readonly _paths: Paths;
@@ -109,7 +109,8 @@ class Config {
    * Initialize the configuration system
    */
   static initialize(baseDir: string, configFileName: string): Config {
-    Config.instance ??= new Config(baseDir, configFileName);
+    Config.instance = new Config(baseDir, configFileName);
+
     return Config.instance;
   }
 
@@ -117,17 +118,7 @@ class Config {
    * Get the singleton instance
    */
   static getInstance(): Config {
-    if (Config.instance === undefined) {
-      throw new Error('Config not initialized. Call Config.initialize(baseDir) first.');
-    }
     return Config.instance;
-  }
-
-  /**
-   * Check if config has been initialized
-   */
-  static isInitialized(): boolean {
-    return Config.instance !== undefined;
   }
 
   // ============================================

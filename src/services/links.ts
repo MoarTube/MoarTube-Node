@@ -5,7 +5,7 @@
  */
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
-import type { ILinksService, CreateLinkInput } from './interfaces.js';
+import type { CreateLinkInput } from './interfaces.js';
 import type { LinksRepository } from '../database/repositories/links.js';
 import type { DrizzleLink } from '../database/schemas/index.js';
 
@@ -15,7 +15,7 @@ import type { DrizzleLink } from '../database/schemas/index.js';
  * Handles all social link-related business logic including:
  * - Link CRUD operations
  */
-export class LinksService extends BaseService implements ILinksService {
+export class LinksService extends BaseService {
   private readonly linksRepository: LinksRepository;
 
   constructor(logger: Logger, linksRepository: LinksRepository) {
