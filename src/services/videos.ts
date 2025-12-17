@@ -16,7 +16,6 @@ import type {
   UpdateVideoInput,
   IStorageService,
   IWebSocketService,
-  ICloudflareService,
   IIndexerService,
   VideoWatchData,
   VideoSource,
@@ -32,6 +31,7 @@ import type { CommentsRepository } from '../database/repositories/comments.js';
 import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/index.js';
 import type { PaginatedResult } from '../types/models.js';
 import { getConfig } from '../config/index.js';
+import type { CloudflareService } from './cloudflare.js';
 
 /**
  * VideosService class
@@ -48,7 +48,7 @@ export class VideosService extends BaseService implements IVideoService {
   private readonly commentsRepository: CommentsRepository | undefined;
   private readonly storageService: IStorageService | undefined;
   private readonly websocketService: IWebSocketService | undefined;
-  private readonly cloudflareService: ICloudflareService | undefined;
+  private readonly cloudflareService: CloudflareService;
   private readonly indexerService: IIndexerService | undefined;
 
   // Debounced view counter - tracks pending views per video
@@ -59,10 +59,10 @@ export class VideosService extends BaseService implements IVideoService {
   constructor(
     logger: Logger,
     videosRepository: VideosRepository,
-    commentsRepository?: CommentsRepository,
-    storageService?: IStorageService,
-    websocketService?: IWebSocketService,
-    cloudflareService?: ICloudflareService,
+    commentsRepository: CommentsRepository,
+    storageService: IStorageService,
+    websocketService: IWebSocketService,
+    cloudflareService: CloudflareService,
     indexerService?: IIndexerService
   ) {
     super('VideosService', logger);
@@ -324,18 +324,15 @@ export class VideosService extends BaseService implements IVideoService {
 
       const updatedVideo = await this.videoRepository.update(videoId, updates);
 
-      // Purge Cloudflare cache after update
-      if (this.cloudflareService) {
-        try {
-          await this.cloudflareService.purgeEmbedVideoPages([videoId]);
-          await this.cloudflareService.purgeWatchPages([videoId]);
-          await this.cloudflareService.purgeNodePage();
-        } catch (error) {
-          this.logger.warn('Failed to purge Cloudflare cache after video update', {
-            videoId,
-            error,
-          });
-        }
+      try {
+        await this.cloudflareService.purgeEmbedVideoPages([videoId]);
+        await this.cloudflareService.purgeWatchPages([videoId]);
+        await this.cloudflareService.purgeNodePage();
+      } catch (error) {
+        this.logger.warn('Failed to purge Cloudflare cache after video update', {
+          videoId,
+          error,
+        });
       }
 
       return updatedVideo;
@@ -359,18 +356,15 @@ export class VideosService extends BaseService implements IVideoService {
 
       const updatedVideo = await this.videoRepository.update(videoId, { meta: metaString });
 
-      // Purge Cloudflare cache after update
-      if (this.cloudflareService) {
-        try {
-          await this.cloudflareService.purgeEmbedVideoPages([videoId]);
-          await this.cloudflareService.purgeWatchPages([videoId]);
-          await this.cloudflareService.purgeNodePage();
-        } catch (error) {
-          this.logger.warn('Failed to purge Cloudflare cache after video meta update', {
-            videoId,
-            error,
-          });
-        }
+      try {
+        await this.cloudflareService.purgeEmbedVideoPages([videoId]);
+        await this.cloudflareService.purgeWatchPages([videoId]);
+        await this.cloudflareService.purgeNodePage();
+      } catch (error) {
+        this.logger.warn('Failed to purge Cloudflare cache after video meta update', {
+          videoId,
+          error,
+        });
       }
 
       return updatedVideo;
@@ -397,23 +391,20 @@ export class VideosService extends BaseService implements IVideoService {
       // Delete storage directories
       await this.deleteVideoStorageDirectories(videoId);
 
-      // Purge Cloudflare cache before deletion
-      if (this.cloudflareService) {
-        try {
-          await this.cloudflareService.purgeNodePage();
-          await this.cloudflareService.purgeEmbedVideoPages([videoId]);
-          await this.cloudflareService.purgeAdaptiveVideos(videoId);
-          await this.cloudflareService.purgeProgressiveVideos(videoId);
-          await this.cloudflareService.purgeAllWatchPages();
-          await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
-          await this.cloudflareService.purgeVideoPreviewImages([videoId]);
-          await this.cloudflareService.purgeVideoPosterImages([videoId]);
-        } catch (error) {
-          this.logger.warn('Failed to purge Cloudflare cache during video deletion', {
-            videoId,
-            error,
-          });
-        }
+      try {
+        await this.cloudflareService.purgeNodePage();
+        await this.cloudflareService.purgeEmbedVideoPages([videoId]);
+        await this.cloudflareService.purgeAdaptiveVideos(videoId);
+        await this.cloudflareService.purgeProgressiveVideos(videoId);
+        await this.cloudflareService.purgeAllWatchPages();
+        await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
+        await this.cloudflareService.purgeVideoPreviewImages([videoId]);
+        await this.cloudflareService.purgeVideoPosterImages([videoId]);
+      } catch (error) {
+        this.logger.warn('Failed to purge Cloudflare cache during video deletion', {
+          videoId,
+          error,
+        });
       }
 
       // Delete video record
@@ -454,15 +445,12 @@ export class VideosService extends BaseService implements IVideoService {
       is_published: true,
     });
 
-    // Purge Cloudflare cache after publishing
-    if (this.cloudflareService) {
-      try {
-        await this.cloudflareService.purgeNodePage();
-        await this.cloudflareService.purgeWatchPages([videoId]);
-        await this.cloudflareService.purgeEmbedVideoPages([videoId]);
-      } catch (error) {
-        this.logger.warn('Failed to purge Cloudflare cache after publishing', { videoId, error });
-      }
+    try {
+      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeWatchPages([videoId]);
+      await this.cloudflareService.purgeEmbedVideoPages([videoId]);
+    } catch (error) {
+      this.logger.warn('Failed to purge Cloudflare cache after publishing', { videoId, error });
     }
 
     this.logger.info('Video published', { videoId });
@@ -476,15 +464,12 @@ export class VideosService extends BaseService implements IVideoService {
       is_published: false,
     });
 
-    // Purge Cloudflare cache after unpublishing
-    if (this.cloudflareService) {
-      try {
-        await this.cloudflareService.purgeAllEmbedVideoPages();
-        await this.cloudflareService.purgeAllWatchPages();
-        await this.cloudflareService.purgeVideo(videoId);
-      } catch (error) {
-        this.logger.warn('Failed to purge Cloudflare cache after unpublishing', { videoId, error });
-      }
+    try {
+      await this.cloudflareService.purgeAllEmbedVideoPages();
+      await this.cloudflareService.purgeAllWatchPages();
+      await this.cloudflareService.purgeVideo(videoId);
+    } catch (error) {
+      this.logger.warn('Failed to purge Cloudflare cache after unpublishing', { videoId, error });
     }
 
     this.logger.info('Video unpublished', { videoId });
@@ -632,12 +617,9 @@ export class VideosService extends BaseService implements IVideoService {
           is_index_outdated: true,
         });
 
-        // Purge Cloudflare cache for images
-        if (this.cloudflareService) {
-          await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
-          await this.cloudflareService.purgeVideoPreviewImages([videoId]);
-          await this.cloudflareService.purgeVideoPosterImages([videoId]);
-        }
+        await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
+        await this.cloudflareService.purgeVideoPreviewImages([videoId]);
+        await this.cloudflareService.purgeVideoPosterImages([videoId]);
       }
     });
   }
@@ -1406,11 +1388,9 @@ export class VideosService extends BaseService implements IVideoService {
    * Purge Cloudflare cache for video images
    */
   async purgeVideoImageCache(videoId: string): Promise<void> {
-    if (this.cloudflareService) {
-      await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
-      await this.cloudflareService.purgeVideoPreviewImages([videoId]);
-      await this.cloudflareService.purgeVideoPosterImages([videoId]);
-    }
+    await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
+    await this.cloudflareService.purgeVideoPreviewImages([videoId]);
+    await this.cloudflareService.purgeVideoPosterImages([videoId]);
   }
 
   /**

@@ -12,7 +12,7 @@ import type { FastifyRequest } from 'fastify';
 
 import { getConfig } from '../config/index.js';
 import { type Logger } from '../utils/logger.js';
-import type { IVideoService, ICloudflareService, IWebSocketService } from './interfaces.js';
+import type { IVideoService, IWebSocketService } from './interfaces.js';
 import type { IUploadTrackerService } from './upload-tracker.js';
 import { type CloudflareService } from './cloudflare.js';
 import { type WebSocketService } from './websocket.js';
@@ -131,7 +131,7 @@ export interface IVideoUploadService {
 export class VideoUploadService implements IVideoUploadService {
   private readonly videosService: IVideoService;
   private readonly uploadTrackerService: IUploadTrackerService;
-  private readonly cloudflareService: ICloudflareService;
+  private readonly cloudflareService: CloudflareService;
   private readonly websocketService: IWebSocketService;
   private readonly logger: Logger;
 

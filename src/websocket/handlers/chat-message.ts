@@ -6,12 +6,13 @@
 
 import type { ExtendedWebSocket, IncomingWebSocketMessage } from '../../types/websocket.js';
 import { WebSocketHandler, type HandlerContext } from './base.js';
-import type { IVideoService, ICloudflareService } from '../../services/interfaces.js';
+import type { IVideoService } from '../../services/interfaces.js';
 import { getConfig } from '../../config/index.js';
 import sanitizeHtml from 'sanitize-html';
 import { chatMessageEventSchema, type ChatMessageEvent } from '../../validators/schemas/index.js';
 import { ZodError } from 'zod';
 import type { LiveChatService } from '../../services/live-chat.js';
+import type { CloudflareService } from '../../services/cloudflare.js';
 
 /**
  * Handler for live chat messages
@@ -20,12 +21,12 @@ export class ChatMessageHandler extends WebSocketHandler {
   readonly name = 'ChatMessageHandler';
   private readonly videoService: IVideoService;
   private readonly liveChatService: LiveChatService;
-  private readonly cloudflareService: ICloudflareService;
+  private readonly cloudflareService: CloudflareService;
 
   constructor(
     videoService: IVideoService,
     liveChatService: LiveChatService,
-    cloudflareService: ICloudflareService
+    cloudflareService: CloudflareService
   ) {
     super();
     this.videoService = videoService;

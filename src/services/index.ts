@@ -15,7 +15,6 @@ export type {
   IStreamService,
   IStorageService,
   IIndexerService,
-  ICloudflareService,
   IWebSocketService,
   IReportService,
   ISettingsService,

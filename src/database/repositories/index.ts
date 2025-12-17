@@ -11,7 +11,7 @@ export { BaseRepository } from './base.js';
 export { VideosRepository, type VideoQueryOptions } from './videos.js';
 
 // Comments repository
-export { CommentsRepository, type CommentSearchOptions } from './comments.js';
+export { CommentsRepository } from './comments.js';
 
 // Report repositories
 export { ReportsVideosRepository } from './reports-videos.js';

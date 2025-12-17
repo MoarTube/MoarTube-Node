@@ -27,7 +27,7 @@ export { ExternalResourcesController } from './external-resources.js';
 export { ExternalVideosController } from './external-videos.js';
 export {
   CommentsController,
-  type CommentSearchQuery,
+  type CommentSearchInput as CommentSearchQuery,
   type CommentIdParams,
   type CommentReportBody,
 } from './comments.js';

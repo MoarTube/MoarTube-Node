@@ -7,18 +7,6 @@ import { eq, desc, and, gt, lt, like, count } from 'drizzle-orm';
 import type { DrizzleComment, DrizzleNewComment } from '../schemas/index.js';
 import { comments } from '../schemas/index.js';
 import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../types/models.js';
-
-/**
- * Options for comment search
- */
-export interface CommentSearchOptions extends PaginationOptions {
-  videoId?: string;
-  searchTerm?: string;
-  timestamp?: number;
-  sortBy?: 'timestamp';
-  sortDirection?: string;
-}
 
 /**
  * CommentsRepository class for comment CRUD operations
@@ -110,14 +98,8 @@ export class CommentsRepository extends BaseRepository {
    * @param options - Pagination options (optional limit)
    * @returns Array of all comments
    */
-  async findAll(options?: PaginationOptions): Promise<DrizzleComment[]> {
-    const { limit } = this.getPaginationParams(options);
-
+  async findAll(): Promise<DrizzleComment[]> {
     const query = this.db.select().from(comments);
-
-    if (limit !== undefined) {
-      return query.limit(limit);
-    }
 
     return query;
   }
@@ -234,10 +216,13 @@ export class CommentsRepository extends BaseRepository {
    * @param options - Search options including videoId, searchTerm, beforeTimestamp
    * @returns Array of matching comments
    */
-  async search(options: CommentSearchOptions = {}): Promise<DrizzleComment[]> {
-    const { limit } = this.getPaginationParamsWithDefault(options);
-    const { videoId, searchTerm, timestamp, sortDirection = 'desc' } = options;
-
+  async search(
+    limit: number,
+    sortDirection: string,
+    timestamp: number,
+    videoId?: string,
+    searchTerm?: string
+  ): Promise<DrizzleComment[]> {
     // Build conditions array
     const conditions = [];
 
@@ -249,9 +234,7 @@ export class CommentsRepository extends BaseRepository {
       conditions.push(like(comments.comment_plain_text_sanitized, `%${searchTerm}%`));
     }
 
-    if (timestamp !== undefined) {
-      conditions.push(lt(comments.timestamp, timestamp));
-    }
+    conditions.push(lt(comments.timestamp, timestamp));
 
     // Build query
     let query = this.db.select().from(comments);

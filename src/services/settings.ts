@@ -15,7 +15,6 @@ import type {
   DatabaseConfigInput,
   StorageConfigInput,
   IIndexerService,
-  ICloudflareService,
 } from './interfaces.js';
 import { getConfig } from '../config/index.js';
 import type { DatabaseConfig, StorageConfig } from '../types/index.js';
@@ -39,6 +38,7 @@ import type {
   DrizzleCryptoWalletAddress,
   DrizzleLink,
 } from '../database/schemas/index.js';
+import type { CloudflareService } from './cloudflare.js';
 
 /**
  * SettingsService class
@@ -52,7 +52,7 @@ import type {
  */
 export class SettingsService extends BaseService implements ISettingsService {
   private readonly indexerService: IIndexerService | undefined;
-  private readonly cloudflareService: ICloudflareService | undefined;
+  private readonly cloudflareService: CloudflareService;
   private readonly videosRepository: VideosRepository;
   private readonly commentsRepository: CommentsRepository;
   private readonly reportsVideosRepository: ReportsVideosRepository;
@@ -74,8 +74,8 @@ export class SettingsService extends BaseService implements ISettingsService {
     liveChatMessagesRepository: LiveChatMessagesRepository,
     monetizationRepository: MonetizationRepository,
     linksRepository: LinksRepository,
-    indexerService?: IIndexerService,
-    cloudflareService?: ICloudflareService
+    indexerService: IIndexerService,
+    cloudflareService: CloudflareService
   ) {
     super('SettingsService', logger);
     this.videosRepository = videosRepository;
@@ -180,7 +180,7 @@ export class SettingsService extends BaseService implements ISettingsService {
         await this.indexerService.updateNodeName(name);
 
         // Purge node page from Cloudflare cache
-        if (this.cloudflareService?.isEnabled() === true) {
+        if (this.cloudflareService.isEnabled()) {
           await this.cloudflareService.purgeNodePage();
         }
       } catch (error) {
@@ -208,7 +208,7 @@ export class SettingsService extends BaseService implements ISettingsService {
         await this.indexerService.updateNodeAbout(about);
 
         // Purge node page from Cloudflare cache
-        if (this.cloudflareService?.isEnabled() === true) {
+        if (this.cloudflareService.isEnabled()) {
           await this.cloudflareService.purgeNodePage();
         }
       } catch (error) {
@@ -234,7 +234,7 @@ export class SettingsService extends BaseService implements ISettingsService {
         await this.indexerService.updateNodeId(nodeId);
 
         // Purge node page from Cloudflare cache
-        if (this.cloudflareService?.isEnabled() === true) {
+        if (this.cloudflareService.isEnabled()) {
           await this.cloudflareService.purgeNodePage();
         }
       } catch (error) {
@@ -475,7 +475,7 @@ export class SettingsService extends BaseService implements ISettingsService {
       }
 
       // Purge cache if Cloudflare enabled
-      if (this.cloudflareService?.isEnabled() === true) {
+      if (this.cloudflareService.isEnabled()) {
         await this.cloudflareService.purgeNodeImages();
       }
 
@@ -525,7 +525,7 @@ export class SettingsService extends BaseService implements ISettingsService {
       }
 
       // Purge cache if Cloudflare enabled
-      if (this.cloudflareService?.isEnabled() === true) {
+      if (this.cloudflareService.isEnabled()) {
         await this.cloudflareService.purgeNodeImages();
       }
 

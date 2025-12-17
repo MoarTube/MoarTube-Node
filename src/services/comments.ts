@@ -11,7 +11,6 @@ import type { ICommentService, GetCommentsOptions, CreateCommentInput } from './
 import type { CommentsRepository } from '../database/repositories/comments.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import type { DrizzleComment, DrizzleNewComment } from '../database/schemas/index.js';
-import type { PaginationOptions } from '../types/models.js';
 import sanitizeHtml from 'sanitize-html';
 
 /**
@@ -134,16 +133,10 @@ export class CommentsService extends BaseService implements ICommentService {
         return false;
       }
 
-      this.logger.debug('Deleting comment', {
-        commentId,
-        videoId: comment.video_id,
-      });
-
       // Delete the comment
       const deleted = await this.commentsRepository.delete(videoId, commentId, timestamp);
 
       if (deleted && this.videoRepository) {
-        // Decrement video comment count
         await this.videoRepository.decrementComments(comment.video_id);
       }
 
@@ -188,28 +181,19 @@ export class CommentsService extends BaseService implements ICommentService {
    * @param options - Pagination options
    * @returns Array of matching comments
    */
-  searchComments(searchTerm: string, _options?: PaginationOptions): DrizzleComment[] {
-    // This would need a new repository method with LIKE query
-    // For now, returning empty array - to be implemented when needed
-    this.logger.debug('Comment search requested', { searchTerm });
-    return [];
-  }
-
-  /**
-   * Get comments created after a specific timestamp
-   *
-   * @param videoId - Video to get comments for
-   * @param afterTimestamp - Only return comments after this timestamp
-   * @param limit - Maximum number of comments to return
-   * @returns Array of comments
-   */
-  async getNewComments(
-    videoId: string,
-    afterTimestamp: number,
-    limit: number = 50
+  async search(
+    limit: number,
+    sortDirection: string,
+    timestamp: number,
+    videoId?: string,
+    searchTerm?: string
   ): Promise<DrizzleComment[]> {
-    // Would need repository method - for now filter in memory
-    const comments = await this.commentsRepository.findByVideoId(videoId);
-    return comments.filter((c) => c.timestamp > afterTimestamp).slice(0, limit);
+    return await this.commentsRepository.search(
+      limit,
+      sortDirection,
+      timestamp,
+      videoId,
+      searchTerm
+    );
   }
 }

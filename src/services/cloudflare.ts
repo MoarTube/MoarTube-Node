@@ -8,7 +8,6 @@ import axios, { type AxiosInstance } from 'axios';
 
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
-import type { ICloudflareService } from './interfaces.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
 import { getConfig } from '../config/index.js';
 
@@ -26,7 +25,7 @@ const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/sit
  * - Turnstile CAPTCHA verification
  * - CDN configuration management
  */
-export class CloudflareService extends BaseService implements ICloudflareService {
+export class CloudflareService extends BaseService {
   private readonly videosRepository: VideosRepository;
   private httpClient: AxiosInstance | null = null;
 

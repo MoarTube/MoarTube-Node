@@ -17,12 +17,12 @@ import { getConfig } from '../config/index.js';
 /**
  * Query parameters for comment search
  */
-export interface CommentSearchQuery {
+export interface CommentSearchInput {
+  limit: number;
+  sortDirection: string;
+  timestamp: number;
   videoId?: string;
   searchTerm?: string;
-  limit: number;
-  timestamp: number;
-  sortDirection: string;
 }
 
 /**
@@ -77,17 +77,16 @@ export class CommentsController extends BaseController {
    */
   search = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const searchOptions: {
-        videoId?: string;
-        searchTerm?: string;
-        limit: number;
-        sortDirection: string;
-        timestamp: number;
-      } = request.query as CommentSearchQuery;
+      const { limit, sortDirection, timestamp, videoId, searchTerm } =
+        request.query as CommentSearchInput;
 
-      const comments = this.commentsService.searchComments(searchOptions.searchTerm ?? '', {
-        limit: searchOptions.limit,
-      });
+      const comments = await this.commentsService.search(
+        limit,
+        sortDirection,
+        timestamp,
+        videoId,
+        searchTerm
+      );
 
       return await this.sendSuccess(reply, { comments });
     } catch (error) {
