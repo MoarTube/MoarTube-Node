@@ -9,11 +9,7 @@ import path from 'node:path';
 
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
-import type {
-  UpdateNodeSettingsInput,
-  DatabaseConfigInput,
-  StorageConfigInput,
-} from './interfaces.js';
+import type { UpdateNodeSettingsInput, StorageConfigInput } from './interfaces.js';
 import { getConfig } from '../config/index.js';
 import type { DatabaseConfig, StorageConfig } from '../types/index.js';
 import type { VideosRepository } from '../database/repositories/videos.js';
@@ -318,30 +314,64 @@ export class SettingsService extends BaseService {
   /**
    * Update database configuration
    */
-  updateDatabaseConfig(dbConfig: DatabaseConfigInput): void {
-    const config = getConfig();
+  async updateDatabaseConfig(databaseConfig: DatabaseConfig): Promise<void> {
+    const databaseDialect = databaseConfig.databaseDialect;
 
-    const databaseConfig: DatabaseConfig = {
-      databaseDialect: dbConfig.dialect,
-    };
+    // Test connection before saving config
+    if (databaseDialect === 'sqlite') {
+      // Test SQLite connection using better-sqlite3
+      const config = getConfig();
 
-    if (
-      dbConfig.dialect === 'postgres' &&
-      dbConfig.postgresHost !== undefined &&
-      dbConfig.postgresHost !== ''
-    ) {
-      databaseConfig.postgresConfig = {
-        host: dbConfig.postgresHost,
-        port: dbConfig.postgresPort ?? 5432,
-        databaseName: dbConfig.postgresDatabase ?? '',
-        username: dbConfig.postgresUser ?? '',
-        password: dbConfig.postgresPassword ?? '',
-      };
+      const databaseFilePath = config.paths.databaseFilePath;
+
+      const Database = (await import('better-sqlite3')).default;
+
+      const db = new Database(databaseFilePath, { readonly: true, fileMustExist: false });
+
+      try {
+        // Test connection with a simple query
+        db.prepare('SELECT 1').get();
+      } finally {
+        db.close();
+      }
+    } else {
+      // Test PostgreSQL connection using postgres driver
+      const postgresConfig = databaseConfig.postgresConfig;
+
+      if (postgresConfig === undefined) {
+        throw new Error('postgres configuration is required');
+      }
+
+      const postgres = (await import('postgres')).default;
+
+      const sql = postgres({
+        database: postgresConfig.databaseName,
+        username: postgresConfig.username,
+        password: postgresConfig.password,
+        host: postgresConfig.host,
+        port: postgresConfig.port,
+        max: 1,
+        connect_timeout: 10,
+      });
+
+      try {
+        // Test connection with a simple query
+        await sql`SELECT 1`;
+      } finally {
+        await sql.end();
+      }
     }
+
+    const config = getConfig();
 
     config.updateNodeSettings({ databaseConfig });
 
-    this.logger.info('Database configuration updated', { dialect: dbConfig.dialect });
+    // Signal to restart database with new configuration
+    if (process.send !== undefined) {
+      process.send({ cmd: 'restart_database', databaseDialect: databaseConfig.databaseDialect });
+    }
+
+    this.logger.info('Database configuration updated', { databaseConfig });
   }
 
   /**

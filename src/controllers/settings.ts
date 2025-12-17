@@ -974,77 +974,7 @@ export class SettingsController extends BaseController {
     try {
       const { databaseConfig } = request.body as DatabaseConfigBody;
 
-      const databaseDialect = databaseConfig.databaseDialect;
-
-      // Test connection before saving config
-      if (databaseDialect === 'sqlite') {
-        // Test SQLite connection using better-sqlite3
-        const config = getConfig();
-
-        const databaseFilePath = config.paths.databaseFilePath;
-
-        const Database = (await import('better-sqlite3')).default;
-        const db = new Database(databaseFilePath, { readonly: true, fileMustExist: false });
-
-        try {
-          // Test connection with a simple query
-          db.prepare('SELECT 1').get();
-        } finally {
-          db.close();
-        }
-      } else {
-        // Test PostgreSQL connection using postgres driver
-        const postgresConfig = databaseConfig.postgresConfig;
-
-        if (postgresConfig === undefined) {
-          return await this.sendError(reply, 'postgres configuration is required');
-        }
-
-        const postgres = (await import('postgres')).default;
-        const sql = postgres({
-          host: postgresConfig.host,
-          port: postgresConfig.port,
-          database: postgresConfig.databaseName,
-          username: postgresConfig.username,
-          password: postgresConfig.password,
-          max: 1,
-          connect_timeout: 10,
-        });
-
-        try {
-          // Test connection with a simple query
-          await sql`SELECT 1`;
-        } finally {
-          await sql.end();
-        }
-      }
-
-      // Connection test passed - update config
-      const input: {
-        dialect: 'sqlite' | 'postgres';
-        postgresHost?: string;
-        postgresPort?: number;
-        postgresDatabase?: string;
-        postgresUser?: string;
-        postgresPassword?: string;
-      } = {
-        dialect: databaseDialect,
-      };
-
-      if (databaseConfig.postgresConfig !== undefined) {
-        input.postgresHost = databaseConfig.postgresConfig.host;
-        input.postgresPort = databaseConfig.postgresConfig.port;
-        input.postgresDatabase = databaseConfig.postgresConfig.databaseName;
-        input.postgresUser = databaseConfig.postgresConfig.username;
-        input.postgresPassword = databaseConfig.postgresConfig.password;
-      }
-
-      this.settingsService.updateDatabaseConfig(input);
-
-      // Signal to restart database with new configuration
-      if (process.send !== undefined) {
-        process.send({ cmd: 'restart_database', databaseDialect: databaseDialect });
-      }
+      await this.settingsService.updateDatabaseConfig(databaseConfig);
 
       return await this.sendSuccess(reply);
     } catch (error) {

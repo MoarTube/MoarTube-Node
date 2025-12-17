@@ -171,25 +171,25 @@ export class ClusterMaster {
    */
   private initializeDatabase(): void {
     const config = getConfig();
+
     const dbConfig = config.nodeSettings.databaseConfig;
     const dbDialect = dbConfig.databaseDialect;
 
-    if (dbDialect === 'postgres') {
-      const pgConfig = dbConfig as {
-        postgresUser?: string;
-        postgresPassword?: string;
-        postgresHost?: string;
-        postgresPort?: number;
-        postgresDatabase?: string;
-      };
-      createDatabase({
-        dialect: 'postgres',
-        connectionString: `postgres://${pgConfig.postgresUser ?? 'postgres'}:${pgConfig.postgresPassword ?? ''}@${pgConfig.postgresHost ?? 'localhost'}:${String(pgConfig.postgresPort ?? 5432)}/${pgConfig.postgresDatabase ?? 'moartube'}`,
-      });
-    } else {
+    if (dbDialect === 'sqlite') {
       createDatabase({
         dialect: 'sqlite',
         filepath: config.paths.databaseFilePath,
+      });
+    } else {
+      const pgConfig = dbConfig.postgresConfig;
+
+      if (pgConfig === undefined) {
+        throw new Error('Postgres configuration is required for postgres database dialect');
+      }
+
+      createDatabase({
+        dialect: 'postgres',
+        connectionString: `postgres://${pgConfig.username}:${pgConfig.password}@${pgConfig.host}:${String(pgConfig.port)}/${pgConfig.databaseName}`,
       });
     }
 

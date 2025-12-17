@@ -62,11 +62,15 @@ export function createDatabase(config: DatabaseConfig): DatabaseClient {
 
     sqliteDb = new Database(config.filepath);
 
+    sqliteDb.exec('VACUUM');
+
     // Enable WAL mode for better concurrent performance
-    sqliteDb.pragma('journal_mode = WAL');
+    // sqliteDb.pragma('journal_mode = WAL');
 
     drizzleDb = drizzle(sqliteDb, { schema });
+
     currentDialect = 'sqlite';
+
     return drizzleDb;
   } else {
     // PostgreSQL support will be implemented in a future phase

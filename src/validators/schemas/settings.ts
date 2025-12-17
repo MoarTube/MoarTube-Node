@@ -163,12 +163,18 @@ export type FeatureToggleBody = z.infer<typeof featureToggleBodySchema>;
  * Database configuration toggle request body schema
  */
 export const databaseConfigToggleBodySchema = z.object({
-  databaseDialect: databaseDialectSchema,
-  postgresHost: z.string().optional(),
-  postgresPort: portSchema.optional(),
-  postgresDatabase: z.string().optional(),
-  postgresUser: z.string().optional(),
-  postgresPassword: z.string().optional(),
+  databaseConfig: z.object({
+    databaseDialect: databaseDialectSchema,
+    postgresConfig: z
+      .object({
+        databaseName: z.string().min(1, 'Database name is required'),
+        username: z.string().min(1, 'Username is required'),
+        password: z.string().min(1, 'Password is required'),
+        host: z.string().min(1, 'Host is required'),
+        port: portSchema,
+      })
+      .optional(),
+  }),
 });
 
 export type DatabaseConfigToggleBody = z.infer<typeof databaseConfigToggleBodySchema>;
