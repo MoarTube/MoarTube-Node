@@ -12,7 +12,7 @@ import type { MonetizationService } from '../services/monetization.js';
 import type { StreamsService } from '../services/streams.js';
 import type { CommentsService } from '../services/comments.js';
 import type { ReportsService } from '../services/reports.js';
-import type { DrizzleVideo } from '../database/schemas/index.js';
+import type { DrizzleVideo } from '../database/schemas/sqlite/index.js';
 import { getConfig } from '../config/index.js';
 
 /**

@@ -6,8 +6,8 @@
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
 import type { CreateLinkInput } from './interfaces.js';
-import type { LinksRepository } from '../database/repositories/links.js';
-import type { DrizzleLink } from '../database/schemas/index.js';
+import type { LinksRepository } from '../database/repositories/sqlite/links.js';
+import type { DrizzleLink } from '../database/schemas/sqlite/index.js';
 
 /**
  * LinksService class

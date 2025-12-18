@@ -16,7 +16,7 @@ import { WebSocketManager } from '../../websocket/websocket-manager.js';
 import { getContainer } from '../container.js';
 import { Logger } from '../../utils/logger.js';
 import { getConfig } from '../../config/index.js';
-import { createDatabase, initializeDatabaseSchema } from '../../database/index.js';
+import { createDatabase } from '../../database/index.js';
 
 /**
  * Optional worker configuration for advanced use cases
@@ -73,8 +73,8 @@ export class ClusterWorker {
 
     this.logger.info('Starting worker');
 
-    // Initialize database connection
-    this.initializeDatabase();
+    // Connect to database
+    this.connectDatabase();
 
     // Initialize Fastify app
     const { createFastifyApp } = await import('../../plugins/index.js');
@@ -214,34 +214,31 @@ export class ClusterWorker {
   }
 
   /**
-   * Initialize database connection
+   * Connect to database
    */
-  private initializeDatabase(): void {
+  private connectDatabase(): void {
     const config = getConfig();
+
     const dbConfig = config.nodeSettings.databaseConfig;
     const dbDialect = dbConfig.databaseDialect;
 
-    if (dbDialect === 'postgres') {
-      const pgConfig = dbConfig as {
-        postgresUser?: string;
-        postgresPassword?: string;
-        postgresHost?: string;
-        postgresPort?: number;
-        postgresDatabase?: string;
-      };
-      createDatabase({
-        dialect: 'postgres',
-        connectionString: `postgres://${pgConfig.postgresUser ?? 'postgres'}:${pgConfig.postgresPassword ?? ''}@${pgConfig.postgresHost ?? 'localhost'}:${String(pgConfig.postgresPort ?? 5432)}/${pgConfig.postgresDatabase ?? 'moartube'}`,
-      });
-    } else {
+    if (dbDialect === 'sqlite') {
       createDatabase({
         dialect: 'sqlite',
         filepath: config.paths.databaseFilePath,
       });
-    }
+    } else {
+      const pgConfig = dbConfig.postgresConfig;
 
-    // Initialize database schema
-    initializeDatabaseSchema();
+      if (pgConfig === undefined) {
+        throw new Error('Postgres configuration is required for postgres database dialect');
+      }
+
+      createDatabase({
+        dialect: 'postgres',
+        connectionString: `postgres://${pgConfig.username}:${pgConfig.password}@${pgConfig.host}:${String(pgConfig.port)}/${pgConfig.databaseName}`,
+      });
+    }
   }
 
   /**
@@ -334,7 +331,7 @@ export class ClusterWorker {
     // Database restart response
     this.ipc.on('restart_database_response', () => {
       this.logger.info('Received database restart request');
-      this.initializeDatabase();
+      this.connectDatabase();
     });
 
     // Node name update response

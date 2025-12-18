@@ -30,12 +30,12 @@ export interface VideoMeta {
 export interface Video {
   id: number;
   video_id: string;
-  source_file_extension: string;
+  source_file_extension: string | null;
   title: string;
   description: string;
   tags: string;
   length_seconds: number;
-  length_timestamp: string;
+  length_timestamp: string | null;
   views: number;
   comments: number;
   likes: number;

@@ -20,7 +20,7 @@ import type { WebSocketMessage } from '../../types/websocket.js';
 import { IPCChannel, type IPCLogger } from './ipc-channel.js';
 import { Logger } from '../../utils/logger.js';
 import { getConfig } from '../../config/index.js';
-import { createDatabase, initializeDatabaseSchema, getDatabase } from '../../database/index.js';
+import { createDatabase, initializeDatabaseSchema, getDatabase } from '../../database/connection.js';
 
 /**
  * Indexer operations interface
@@ -88,7 +88,7 @@ export class ClusterMaster {
   /**
    * Start the cluster master
    */
-  start(): void {
+  async start(): Promise<void> {
     if (this.isRunning) {
       return;
     }
@@ -105,7 +105,7 @@ export class ClusterMaster {
     this.setupErrorHandlers();
 
     // Initialize database
-    this.initializeDatabase();
+    await this.initializeDatabase();
 
     // Ensure node has an ID
     this.ensureNodeId();
@@ -169,7 +169,7 @@ export class ClusterMaster {
   /**
    * Initialize database connection
    */
-  private initializeDatabase(): void {
+  private async initializeDatabase(): Promise<void> {
     const config = getConfig();
 
     const dbConfig = config.nodeSettings.databaseConfig;
@@ -194,7 +194,7 @@ export class ClusterMaster {
     }
 
     // Initialize database schema
-    initializeDatabaseSchema();
+    await initializeDatabaseSchema();
 
     this.logger.debug('Database initialized');
   }
@@ -300,9 +300,9 @@ export class ClusterMaster {
     });
 
     // Database restart request
-    this.ipc.on<RestartDatabaseMessage>('restart_database', (message) => {
+    this.ipc.on<RestartDatabaseMessage>('restart_database', async (message) => {
       this.logger.info(`Changing database configuration to: ${message.databaseDialect}`);
-      this.initializeDatabase();
+      await this.initializeDatabase();
       this.ipc.broadcast({ cmd: 'restart_database_response' });
     });
   }

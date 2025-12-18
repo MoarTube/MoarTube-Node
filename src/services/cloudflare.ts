@@ -8,7 +8,7 @@ import axios, { type AxiosInstance } from 'axios';
 
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
-import type { VideosRepository } from '../database/repositories/videos.js';
+import type { VideosRepository } from '../database/repositories/sqlite/videos.js';
 import { getConfig } from '../config/index.js';
 
 /**

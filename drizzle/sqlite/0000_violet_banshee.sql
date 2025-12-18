@@ -3,7 +3,7 @@ CREATE TABLE `commentreports` (
 	`timestamp` integer NOT NULL,
 	`comment_timestamp` integer NOT NULL,
 	`video_id` text NOT NULL,
-	`comment_id` text NOT NULL,
+	`comment_id` integer NOT NULL,
 	`email` text NOT NULL,
 	`type` text NOT NULL,
 	`message` text NOT NULL
@@ -15,14 +15,14 @@ CREATE TABLE `commentreportsarchives` (
 	`timestamp` integer NOT NULL,
 	`comment_timestamp` integer NOT NULL,
 	`video_id` text NOT NULL,
-	`comment_id` text NOT NULL,
+	`comment_id` integer NOT NULL,
 	`email` text NOT NULL,
 	`type` text NOT NULL,
 	`message` text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `comments` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`comment_id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`video_id` text NOT NULL,
 	`comment_plain_text_sanitized` text NOT NULL,
 	`timestamp` integer NOT NULL
@@ -77,12 +77,12 @@ CREATE TABLE `videoreportsarchives` (
 CREATE TABLE `videos` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`video_id` text NOT NULL,
-	`source_file_extension` text NOT NULL,
+	`source_file_extension` text,
 	`title` text NOT NULL,
 	`description` text NOT NULL,
 	`tags` text NOT NULL,
 	`length_seconds` integer NOT NULL,
-	`length_timestamp` text NOT NULL,
+	`length_timestamp` text,
 	`views` integer DEFAULT 0 NOT NULL,
 	`comments` integer DEFAULT 0 NOT NULL,
 	`likes` integer DEFAULT 0 NOT NULL,

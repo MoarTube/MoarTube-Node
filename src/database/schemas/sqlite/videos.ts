@@ -17,7 +17,7 @@ export const videos = sqliteTable('videos', {
   video_id: text('video_id').notNull(),
 
   // Source file information
-  source_file_extension: text('source_file_extension').notNull(),
+  source_file_extension: text('source_file_extension'),
 
   // Content metadata
   title: text('title').notNull(),
@@ -26,7 +26,7 @@ export const videos = sqliteTable('videos', {
 
   // Duration
   length_seconds: integer('length_seconds').notNull(),
-  length_timestamp: text('length_timestamp').notNull(),
+  length_timestamp: text('length_timestamp'),
 
   // Statistics
   views: integer('views').notNull().default(0),

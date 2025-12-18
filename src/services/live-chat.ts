@@ -7,8 +7,8 @@
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
 import type { CreateChatMessageInput } from './interfaces.js';
-import type { LiveChatMessagesRepository } from '../database/repositories/live-chat-messages.js';
-import type { DrizzleLiveChatMessage } from '../database/schemas/index.js';
+import type { LiveChatMessagesRepository } from '../database/repositories/sqlite/live-chat-messages.js';
+import type { DrizzleLiveChatMessage } from '../database/schemas/sqlite/index.js';
 
 /**
  * LiveChatService class

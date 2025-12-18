@@ -11,15 +11,7 @@ import { Logger } from '../utils/logger.js';
 
 // Database layer
 import type { DatabaseClient } from '../database/connection.js';
-import { VideosRepository } from '../database/repositories/videos.js';
-import { CommentsRepository } from '../database/repositories/comments.js';
-import { ReportsVideosRepository } from '../database/repositories/reports-videos.js';
-import { ReportsCommentsRepository } from '../database/repositories/reports-comments.js';
-import { ReportsArchiveVideosRepository } from '../database/repositories/reports-archive-videos.js';
-import { ReportsArchiveCommentsRepository } from '../database/repositories/reports-archive-comments.js';
-import { LiveChatMessagesRepository } from '../database/repositories/live-chat-messages.js';
-import { MonetizationRepository } from '../database/repositories/monetization.js';
-import { LinksRepository } from '../database/repositories/links.js';
+import { getConfig } from '../config/index.js';
 
 // Services
 import { VideosService } from '../services/videos.js';
@@ -49,15 +41,15 @@ export interface ContainerCradle {
   db: DatabaseClient;
 
   // Repositories
-  videosRepository: VideosRepository;
-  commentsRepository: CommentsRepository;
-  reportsVideosRepository: ReportsVideosRepository;
-  reportsCommentsRepository: ReportsCommentsRepository;
-  reportsArchiveVideosRepository: ReportsArchiveVideosRepository;
-  reportsArchiveCommentsRepository: ReportsArchiveCommentsRepository;
-  liveChatMessagesRepository: LiveChatMessagesRepository;
-  monetizationRepository: MonetizationRepository;
-  linksRepository: LinksRepository;
+  videosRepository: any;
+  commentsRepository: any;
+  reportsVideosRepository: any;
+  reportsCommentsRepository: any;
+  reportsArchiveVideosRepository: any;
+  reportsArchiveCommentsRepository: any;
+  liveChatMessagesRepository: any;
+  monetizationRepository: any;
+  linksRepository: any;
 
   // Services
   videosService: VideosService;
@@ -93,11 +85,30 @@ let container: Container | null = null;
  * @param db - Database client instance
  * @returns Configured Awilix container
  */
-export function createAppContainer(db: DatabaseClient): Container {
+export async function createAppContainer(db: DatabaseClient): Promise<Container> {
   const appContainer = createContainer<ContainerCradle>({
     injectionMode: InjectionMode.CLASSIC,
     strict: true,
   });
+
+  // Get database dialect to determine which repositories to use
+  const config = getConfig();
+  const dbDialect = config.nodeSettings.databaseConfig.databaseDialect;
+
+  // Dynamically import repositories based on dialect
+  const {
+    VideosRepository,
+    CommentsRepository,
+    ReportsVideosRepository,
+    ReportsCommentsRepository,
+    ReportsArchiveVideosRepository,
+    ReportsArchiveCommentsRepository,
+    LiveChatMessagesRepository,
+    MonetizationRepository,
+    LinksRepository,
+  } = await (dbDialect === 'postgres'
+    ? import('../database/repositories/postgres/index.js')
+    : import('../database/repositories/sqlite/index.js'));
 
   // Register database client
   appContainer.register({
@@ -111,15 +122,15 @@ export function createAppContainer(db: DatabaseClient): Container {
 
   // Register repositories (they need db in constructor)
   appContainer.register({
-    videosRepository: asClass(VideosRepository).singleton(),
-    commentsRepository: asClass(CommentsRepository).singleton(),
-    reportsVideosRepository: asClass(ReportsVideosRepository).singleton(),
-    reportsCommentsRepository: asClass(ReportsCommentsRepository).singleton(),
-    reportsArchiveVideosRepository: asClass(ReportsArchiveVideosRepository).singleton(),
-    reportsArchiveCommentsRepository: asClass(ReportsArchiveCommentsRepository).singleton(),
-    liveChatMessagesRepository: asClass(LiveChatMessagesRepository).singleton(),
-    monetizationRepository: asClass(MonetizationRepository).singleton(),
-    linksRepository: asClass(LinksRepository).singleton(),
+    videosRepository: asClass(VideosRepository as any).singleton(),
+    commentsRepository: asClass(CommentsRepository as any).singleton(),
+    reportsVideosRepository: asClass(ReportsVideosRepository as any).singleton(),
+    reportsCommentsRepository: asClass(ReportsCommentsRepository as any).singleton(),
+    reportsArchiveVideosRepository: asClass(ReportsArchiveVideosRepository as any).singleton(),
+    reportsArchiveCommentsRepository: asClass(ReportsArchiveCommentsRepository as any).singleton(),
+    liveChatMessagesRepository: asClass(LiveChatMessagesRepository as any).singleton(),
+    monetizationRepository: asClass(MonetizationRepository as any).singleton(),
+    linksRepository: asClass(LinksRepository as any).singleton(),
   });
 
   // Register services (singletons for shared state)

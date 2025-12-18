@@ -4,8 +4,8 @@
  * Provides data access methods for comment records using Drizzle ORM.
  */
 import { eq, desc, and, gt, lt, like, count } from 'drizzle-orm';
-import type { DrizzleComment, DrizzleNewComment } from '../schemas/index.js';
-import { comments } from '../schemas/index.js';
+import type { DrizzleComment, DrizzleNewComment } from '../../schemas/sqlite/index.js';
+import { comments } from '../../schemas/sqlite/index.js';
 import { BaseRepository } from './base.js';
 
 /**

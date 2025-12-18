@@ -4,11 +4,28 @@
  * Supports both SQLite (via better-sqlite3) and PostgreSQL (via postgres.js).
  * The connection type is determined by the database configuration.
  */
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import * as schema from './schemas/index.js';
+
+import {
+  createDatabase as createSqliteDatabase,
+  initializeDatabaseSchema as initializeSqliteDatabaseSchema,
+  getDatabase as getSqliteDatabase,
+  isDatabaseInitialized as isSqliteDatabaseInitialized,
+  getRawClient as getRawSqliteDbInternal,
+  closeDatabase as closeSqliteDatabase,
+  type DatabaseConfig as SqliteDatabaseConfig,
+  type DatabaseClient as SqliteDatabaseClient
+} from './sqlite-connection.js';
+
+import {
+  createDatabase as createPostgresDatabase,
+  initializeDatabaseSchema as initializePostgresDatabaseSchema,
+  getDatabase as getPostgresDatabase,
+  isDatabaseInitialized as isPostgresDatabaseInitialized,
+  getRawClient as getRawPostgresClientInternal,
+  closeDatabase as closePostgresDatabase,
+  type DatabaseConfig as PostgresDatabaseConfig,
+  type DatabaseClient as PostgresDatabaseClient
+} from './postgres-connection.js';
 
 /**
  * Database configuration interface
@@ -23,20 +40,9 @@ export interface DatabaseConfig {
 }
 
 /**
- * Database client type - currently SQLite only
- * PostgreSQL support will be added in a future phase
+ * Database client type
  */
-export type DatabaseClient = BetterSQLite3Database<typeof schema>;
-
-/**
- * SQLite database connection instance
- */
-let sqliteDb: Database.Database | null = null;
-
-/**
- * Drizzle database instance
- */
-let drizzleDb: DatabaseClient | null = null;
+export type DatabaseClient = SqliteDatabaseClient | PostgresDatabaseClient;
 
 /**
  * Current database dialect
@@ -49,36 +55,16 @@ let currentDialect: 'sqlite' | 'postgres' | null = null;
  * @param config - Database configuration specifying dialect and connection details
  * @returns Drizzle ORM database instance
  * @throws Error if configuration is invalid or connection fails
- *
- * @example
- * // SQLite connection
- * const db = createDatabase({ dialect: 'sqlite', filepath: './data/db/node_db.sqlite' });
  */
 export function createDatabase(config: DatabaseConfig): DatabaseClient {
   if (config.dialect === 'sqlite') {
-    if (config.filepath === undefined || config.filepath === '') {
-      throw new Error('SQLite filepath is required');
-    }
-
-    sqliteDb = new Database(config.filepath);
-
-    sqliteDb.exec('VACUUM');
-
-    // Enable WAL mode for better concurrent performance
-    // sqliteDb.pragma('journal_mode = WAL');
-
-    drizzleDb = drizzle(sqliteDb, { schema });
-
     currentDialect = 'sqlite';
-
-    return drizzleDb;
+    return createSqliteDatabase(config as SqliteDatabaseConfig);
+  } else if (config.dialect === 'postgres') {
+    currentDialect = 'postgres';
+    return createPostgresDatabase(config as PostgresDatabaseConfig);
   } else {
-    // PostgreSQL support will be implemented in a future phase
-    // For now, throw an error indicating it's not yet supported
-    throw new Error(
-      'PostgreSQL support is not yet implemented. ' +
-        'Please use SQLite for now. PostgreSQL will be added in a future phase.'
-    );
+    throw new Error(`Unsupported database dialect: ${config.dialect}`);
   }
 }
 
@@ -90,20 +76,15 @@ export function createDatabase(config: DatabaseConfig): DatabaseClient {
  *
  * @throws Error if database is not initialized or migration fails
  */
-export function initializeDatabaseSchema(): void {
-  if (!drizzleDb) {
-    throw new Error('Database not initialized. Call createDatabase() first.');
+export async function initializeDatabaseSchema(): Promise<void> {
+  if (!currentDialect) {
+    throw new Error('Database dialect not set. Call createDatabase() first.');
   }
 
-  if (currentDialect !== 'sqlite') {
-    throw new Error('Schema initialization only supported for SQLite currently');
-  }
-
-  try {
-    // Run migrations from the drizzle directory
-    migrate(drizzleDb, { migrationsFolder: './drizzle' });
-  } catch (error) {
-    throw new Error(`Failed to initialize database schema: ${String(error)}`);
+  if (currentDialect === 'sqlite') {
+    initializeSqliteDatabaseSchema();
+  } else {
+    await initializePostgresDatabaseSchema();
   }
 }
 
@@ -114,10 +95,13 @@ export function initializeDatabaseSchema(): void {
  * @throws Error if database has not been initialized
  */
 export function getDatabase(): DatabaseClient {
-  if (!drizzleDb) {
+  if (currentDialect === 'sqlite') {
+    return getSqliteDatabase();
+  } else if (currentDialect === 'postgres') {
+    return getPostgresDatabase();
+  } else {
     throw new Error('Database not initialized. Call createDatabase() first.');
   }
-  return drizzleDb;
 }
 
 /**
@@ -126,7 +110,12 @@ export function getDatabase(): DatabaseClient {
  * @returns true if database is initialized, false otherwise
  */
 export function isDatabaseInitialized(): boolean {
-  return drizzleDb !== null;
+  if (currentDialect === 'sqlite') {
+    return isSqliteDatabaseInitialized();
+  } else if (currentDialect === 'postgres') {
+    return isPostgresDatabaseInitialized();
+  }
+  return false;
 }
 
 /**
@@ -139,49 +128,57 @@ export function getCurrentDialect(): 'sqlite' | 'postgres' | null {
 }
 
 /**
- * Closes the database connection and cleans up resources
+ * Gets the raw SQLite database instance (only works for SQLite)
  *
- * Should be called during application shutdown for graceful cleanup.
+ * @returns The raw better-sqlite3 database instance
+ * @throws Error if not using SQLite or database not initialized
  */
-export function closeDatabase(): void {
-  if (sqliteDb) {
-    sqliteDb.close();
-    sqliteDb = null;
+export function getRawSqliteDb(): any {
+  if (currentDialect !== 'sqlite') {
+    throw new Error('Raw SQLite database access only available when using SQLite dialect');
   }
-
-  drizzleDb = null;
-  currentDialect = null;
+  return getRawSqliteDbInternal();
 }
 
 /**
- * Gets the raw SQLite database instance for direct access
+ * Gets the raw PostgreSQL client instance (only works for PostgreSQL)
  *
- * @returns The raw better-sqlite3 Database instance, or null if not using SQLite
+ * @returns The raw postgres.js client instance
+ * @throws Error if not using PostgreSQL or database not initialized
  */
-export function getRawSqliteDb(): Database.Database | null {
-  return sqliteDb;
+export function getRawPostgresClient(): any {
+  if (currentDialect !== 'postgres') {
+    throw new Error('Raw PostgreSQL client access only available when using PostgreSQL dialect');
+  }
+  return getRawPostgresClientInternal();
 }
 
 /**
- * Gets the raw PostgreSQL client for direct access
+ * Checks if the current database is SQLite
  *
- * @returns null - PostgreSQL not yet supported
- * @deprecated PostgreSQL support coming in future phase
- */
-export function getRawPostgresClient(): null {
-  return null;
-}
-
-/**
- * Type guard to check if the database client is SQLite
+ * @returns true if using SQLite, false otherwise
  */
 export function isSqliteDb(): boolean {
   return currentDialect === 'sqlite';
 }
 
 /**
- * Type guard to check if the database client is PostgreSQL
+ * Checks if the current database is PostgreSQL
+ *
+ * @returns true if using PostgreSQL, false otherwise
  */
 export function isPostgresDb(): boolean {
   return currentDialect === 'postgres';
+}
+
+/**
+ * Closes the database connection
+ */
+export function closeDatabase(): void {
+  if (currentDialect === 'sqlite') {
+    closeSqliteDatabase();
+  } else if (currentDialect === 'postgres') {
+    closePostgresDatabase();
+  }
+  currentDialect = null;
 }

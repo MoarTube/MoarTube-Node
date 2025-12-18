@@ -22,15 +22,15 @@ import type {
   AddToIndexResult,
   VideoIndexData,
 } from './interfaces.js';
-import type { VideosRepository } from '../database/repositories/videos.js';
-import type { CommentsRepository } from '../database/repositories/comments.js';
-import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/index.js';
-import type { PaginatedResult } from '../types/models.js';
+import type { VideosRepository } from '../database/repositories/sqlite/videos.js';
+import type { CommentsRepository } from '../database/repositories/sqlite/comments.js';
+import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/sqlite/index.js';
 import { getConfig } from '../config/index.js';
 import type { CloudflareService } from './cloudflare.js';
 import type { StorageService } from './storage.js';
 import type { WebSocketService } from './websocket.js';
 import type { IndexerService } from './indexer.js';
+import type { PaginatedResult } from '../types/models.js';
 
 /**
  * VideosService class
@@ -310,7 +310,7 @@ export class VideosService extends BaseService {
   /**
    * Update video metadata
    */
-  async updateVideo(videoId: string, data: UpdateVideoInput): Promise<DrizzleVideo | null> {
+  async updateVideo(videoId: string, data: UpdateVideoInput): Promise<DrizzleVideo| null> {
     return this.withErrorLogging('updateVideo', async () => {
       const existingVideo = await this.videoRepository.findById(videoId);
       if (!existingVideo) {
@@ -989,7 +989,7 @@ export class VideosService extends BaseService {
       isFinalized: video.is_finalized,
       isStreamRecordedRemotely: video.is_stream_recorded_remotely,
       timestamp: video.creation_timestamp,
-      videoAliasUrl,
+     videoAliasUrl,
       outputs,
       meta,
     };

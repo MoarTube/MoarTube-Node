@@ -7,10 +7,10 @@ import { eq, desc, count } from 'drizzle-orm';
 import type {
   DrizzleCommentReportArchive,
   DrizzleNewCommentReportArchive,
-} from '../schemas/index.js';
-import { commentReportsArchive } from '../schemas/index.js';
+} from '../../schemas/sqlite/index.js';
+import { commentReportsArchive } from '../../schemas/sqlite/index.js';
 import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../types/models.js';
+import type { PaginationOptions } from '../../../types/models.js';
 
 /**
  * ReportsArchiveCommentsRepository class for archived comment report CRUD operations

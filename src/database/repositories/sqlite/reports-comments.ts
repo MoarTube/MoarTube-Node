@@ -4,10 +4,10 @@
  * Provides data access methods for comment report records using Drizzle ORM.
  */
 import { eq, desc, count, gt } from 'drizzle-orm';
-import type { DrizzleCommentReport, DrizzleNewCommentReport } from '../schemas/index.js';
-import { commentReports } from '../schemas/index.js';
+import type { DrizzleCommentReport, DrizzleNewCommentReport } from '../../schemas/sqlite/index.js';
+import { commentReports } from '../../schemas/sqlite/index.js';
 import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../types/models.js';
+import type { PaginationOptions } from '../../../types/models.js';
 
 /**
  * ReportsCommentsRepository class for comment report CRUD operations

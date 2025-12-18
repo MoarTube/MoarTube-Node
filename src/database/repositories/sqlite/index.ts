@@ -22,6 +22,6 @@ export { ReportsArchiveVideosRepository } from './reports-archive-videos.js';
 export { ReportsArchiveCommentsRepository } from './reports-archive-comments.js';
 
 // Other repositories
-export { LiveChatMessagesRepository as LiveChatMessageRepository } from './live-chat-messages.js';
+export { LiveChatMessagesRepository } from './live-chat-messages.js';
 export { MonetizationRepository } from './monetization.js';
 export { LinksRepository } from './links.js';

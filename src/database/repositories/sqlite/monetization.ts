@@ -7,10 +7,10 @@ import { eq, desc, count } from 'drizzle-orm';
 import type {
   DrizzleCryptoWalletAddress,
   DrizzleNewCryptoWalletAddress,
-} from '../schemas/index.js';
-import { cryptoWalletAddresses } from '../schemas/index.js';
+} from '../../schemas/sqlite/index.js';
+import { cryptoWalletAddresses } from '../../schemas/sqlite/index.js';
 import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../types/models.js';
+import type { PaginationOptions } from '../../../types/models.js';
 
 /**
  * MonetizationRepository class for crypto wallet CRUD operations

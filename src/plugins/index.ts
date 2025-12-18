@@ -97,7 +97,7 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
 
   // Create DI container with database
   const db = getDatabase();
-  const container = createAppContainer(db);
+  const container = await createAppContainer(db);
 
   // Register routes with Zod type provider
   registerRoutes(app.withTypeProvider<ZodTypeProvider>(), container);

@@ -4,10 +4,10 @@
  * Provides data access methods for archived video report records using Drizzle ORM.
  */
 import { eq, desc, count } from 'drizzle-orm';
-import type { DrizzleVideoReportArchive, DrizzleNewVideoReportArchive } from '../schemas/index.js';
-import { videoReportsArchive } from '../schemas/index.js';
+import type { DrizzleVideoReportArchive, DrizzleNewVideoReportArchive } from '../../schemas/postgres/index.js';
+import { videoReportsArchive } from '../../schemas/postgres/index.js';
 import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../types/models.js';
+import type { PaginationOptions } from '../../../types/models.js';
 
 /**
  * ReportsArchiveVideosRepository class for archived video report CRUD operations

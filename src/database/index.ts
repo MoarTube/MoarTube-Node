@@ -11,10 +11,6 @@ export {
   getDatabase,
   isDatabaseInitialized,
   getCurrentDialect,
-  closeDatabase,
-  getRawSqliteDb,
-  isSqliteDb,
-  isPostgresDb,
   type DatabaseConfig,
   type DatabaseClient,
 } from './connection.js';
@@ -37,7 +33,7 @@ export {
 } from './write-queue.js';
 
 // Schema exports
-export * from './schemas/index.js';
+export * from './schemas/sqlite/index.js';
 
-// Repository exports
-export * from './repositories/index.js';
+// Repository exports - removed as repositories are now dialect-specific
+// export * from './repositories/index.js';

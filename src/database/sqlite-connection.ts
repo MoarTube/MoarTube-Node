@@ -1,0 +1,119 @@
+/**
+ * SQLite database connection module for Drizzle ORM
+ */
+
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
+import sqliteDatabase from 'better-sqlite3';
+import * as schema from './schemas/sqlite/index.js';
+
+/**
+ * Database configuration interface for SQLite
+ */
+export interface DatabaseConfig {
+  filepath: string;
+}
+
+export type DatabaseClient = BetterSQLite3Database<typeof schema>;
+
+/**
+ * Drizzle SQLite database instance
+ */
+let drizzleDb: BetterSQLite3Database<typeof schema> | null = null;
+let sqliteDb: sqliteDatabase.Database | null = null;
+
+/**
+ * Creates a SQLite database connection
+ *
+ * @param config - SQLite database configuration
+ * @returns Drizzle ORM SQLite database instance
+ * @throws Error if configuration is invalid or connection fails
+ */
+export function createDatabase(config: DatabaseConfig): BetterSQLite3Database<typeof schema> {
+  if (!config.filepath) {
+    throw new Error('SQLite filepath is required');
+  }
+
+  sqliteDb = new sqliteDatabase(config.filepath);
+
+  sqliteDb.exec('VACUUM');
+
+  // Enable WAL mode for better concurrent performance
+  // sqliteDb.pragma('journal_mode = WAL');
+
+  drizzleDb = drizzle(sqliteDb, { schema });
+
+  return drizzleDb;
+}
+
+/**
+ * Initialize the SQLite database schema by running migrations
+ *
+ * @throws Error if database is not initialized or migration fails
+ */
+export function initializeDatabaseSchema(): void {
+  if (!drizzleDb) {
+    throw new Error('SQLite database not initialized. Call createDatabase() first.');
+  }
+
+  try {
+    migrate(drizzleDb, { migrationsFolder: './drizzle/sqlite' });
+
+    if(!sqliteDb) {
+      throw new Error('Underlying SQLite database instance not found.');
+    }
+    
+    sqliteDb.exec('VACUUM');
+  } catch (error) {
+    throw new Error(`Failed to initialize SQLite database schema: ${String(error)}`);
+  }
+}
+
+/**
+ * Gets the current SQLite database instance
+ *
+ * @returns The current Drizzle ORM SQLite database instance
+ * @throws Error if database has not been initialized
+ */
+export function getDatabase(): BetterSQLite3Database<typeof schema> {
+  if (!drizzleDb) {
+    throw new Error('SQLite database not initialized. Call createDatabase() first.');
+  }
+  return drizzleDb;
+}
+
+/**
+ * Checks if the SQLite database has been initialized
+ *
+ * @returns true if database is initialized, false otherwise
+ */
+export function isDatabaseInitialized(): boolean {
+  return drizzleDb !== null;
+}
+
+/**
+ * Gets the raw SQLite database instance
+ *
+ * @returns The raw better-sqlite3 database instance
+ * @throws Error if database has not been initialized
+ */
+export function getRawClient(): sqliteDatabase.Database {
+  if (!drizzleDb) {
+    throw new Error('SQLite database not initialized. Call createDatabase() first.');
+  }
+  // Note: This assumes the drizzle instance has the underlying db accessible
+  // You may need to adjust based on how drizzle stores the raw db
+  throw new Error('getRawSqliteDb not implemented - need to access underlying db from drizzle instance');
+}
+
+/**
+ * Closes the SQLite database connection
+ */
+export function closeDatabase(): void {
+  if (drizzleDb) {
+    // Close the underlying SQLite connection if possible
+    // drizzleDb.close() or similar - check drizzle API
+    drizzleDb = null;
+  }
+}

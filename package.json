@@ -41,6 +41,7 @@
     "test:coverage": "vitest run --coverage",
     "prepare": "husky install",
     "db:push": "tsx node_modules/drizzle-kit/bin.cjs push",
+    "db:generate": "tsx node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "tsx node_modules/drizzle-kit/bin.cjs migrate"
   },
   "lint-staged": {
