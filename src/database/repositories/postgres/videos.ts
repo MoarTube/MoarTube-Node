@@ -185,7 +185,7 @@ export class VideosRepository extends BaseRepository {
       .set({
         views: sql`${videos.views} + ${count}`,
         // Mark index as outdated if video is indexed (matches JS behavior)
-        is_index_outdated: sql`CASE WHEN ${videos.is_indexed} = 1 THEN 1 ELSE ${videos.is_index_outdated} END`,
+        is_index_outdated: sql`CASE WHEN ${videos.is_indexed} = true THEN true ELSE ${videos.is_index_outdated} END`,
       })
       .where(eq(videos.video_id, videoId));
   }

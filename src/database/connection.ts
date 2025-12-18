@@ -60,11 +60,9 @@ export function createDatabase(config: DatabaseConfig): DatabaseClient {
   if (config.dialect === 'sqlite') {
     currentDialect = 'sqlite';
     return createSqliteDatabase(config as SqliteDatabaseConfig);
-  } else if (config.dialect === 'postgres') {
+  } else {
     currentDialect = 'postgres';
     return createPostgresDatabase(config as PostgresDatabaseConfig);
-  } else {
-    throw new Error(`Unsupported database dialect: ${config.dialect}`);
   }
 }
 
@@ -133,7 +131,7 @@ export function getCurrentDialect(): 'sqlite' | 'postgres' | null {
  * @returns The raw better-sqlite3 database instance
  * @throws Error if not using SQLite or database not initialized
  */
-export function getRawSqliteDb(): any {
+export function getRawSqliteDb(): unknown {
   if (currentDialect !== 'sqlite') {
     throw new Error('Raw SQLite database access only available when using SQLite dialect');
   }
@@ -146,7 +144,7 @@ export function getRawSqliteDb(): any {
  * @returns The raw postgres.js client instance
  * @throws Error if not using PostgreSQL or database not initialized
  */
-export function getRawPostgresClient(): any {
+export function getRawPostgresClient(): unknown {
   if (currentDialect !== 'postgres') {
     throw new Error('Raw PostgreSQL client access only available when using PostgreSQL dialect');
   }
@@ -174,11 +172,11 @@ export function isPostgresDb(): boolean {
 /**
  * Closes the database connection
  */
-export function closeDatabase(): void {
+export async function closeDatabase(): Promise<void> {
   if (currentDialect === 'sqlite') {
     closeSqliteDatabase();
   } else if (currentDialect === 'postgres') {
-    closePostgresDatabase();
+    await closePostgresDatabase();
   }
   currentDialect = null;
 }

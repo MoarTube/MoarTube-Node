@@ -56,9 +56,9 @@ export async function initializeDatabaseSchema(): Promise<void> {
     // This may fail if the user doesn't have CREATE SCHEMA permission, but that's OK if the schema already exists
     try {
       await databaseClient`CREATE SCHEMA IF NOT EXISTS drizzle`;
-    } catch (schemaError) {
+    } catch {
       // Schema creation failed - this is OK if the schema already exists
-      console.warn('Warning: Could not create drizzle schema, assuming it already exists:', String(schemaError));
+      // Warning: Could not create drizzle schema, assuming it already exists
     }
 
     await migrate(drizzleDb, { migrationsFolder: './drizzle/postgres' });

@@ -42,7 +42,7 @@ function loadConfig(): void {
 function startMaster(): void {
   const master = new ClusterMaster();
 
-  master.start();
+  void master.start();
 }
 
 /**

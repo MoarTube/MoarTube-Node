@@ -185,7 +185,7 @@ export function isContainerInitialized(): boolean {
  * @returns The resolved dependency
  */
 export function resolve<K extends keyof ContainerCradle>(name: K): ContainerCradle[K] {
-  return getContainer().resolve(name);
+  return getContainer().resolve(name) as ContainerCradle[K];
 }
 
 /**
