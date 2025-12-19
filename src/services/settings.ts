@@ -755,23 +755,6 @@ export class SettingsService extends BaseService {
       }
       const database: DatabaseTable[] = JSON.parse(databaseFileContent) as DatabaseTable[];
 
-      // Helper to convert snake_case to camelCase
-      // This allows importing database exports from the original JS version
-      const snakeToCamel = (str: string): string =>
-        str.replaceAll(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
-
-      // Transform all rows: convert snake_case keys to camelCase for Drizzle compatibility
-      for (const table of database) {
-        table.rows = table.rows.map((row) => {
-          const transformedRow: Record<string, unknown> = {};
-          for (const key of Object.keys(row)) {
-            const camelKey = snakeToCamel(key);
-            transformedRow[camelKey] = row[key];
-          }
-          return transformedRow;
-        });
-      }
-
       // Clear all tables first (order matters due to potential foreign keys)
       await this.commentsRepository.deleteAll();
       await this.liveChatMessagesRepository.deleteAll();

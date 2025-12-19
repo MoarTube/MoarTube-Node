@@ -1104,13 +1104,6 @@ export class SettingsController extends BaseController {
         table.rows = table.rows.map((row) => {
           Reflect.deleteProperty(row, 'id');
 
-          // Convert 1/0 to true/false for boolean columns
-          for (const column in row) {
-            if (column.startsWith('is') && (row[column] === 0 || row[column] === 1)) {
-              row[column] = Boolean(row[column]);
-            }
-          }
-
           return row;
         });
       }
