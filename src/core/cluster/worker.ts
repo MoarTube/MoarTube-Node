@@ -269,18 +269,6 @@ export class ClusterWorker {
       this.wsManager.broadcastToVideo(wsMessage.videoId, wsMessage);
     });
 
-    // Database write job result
-    this.ipc.on('database_write_job_result', (message) => {
-      const { databaseWriteJobId, error } = message as {
-        databaseWriteJobId: string;
-        error?: Error | string;
-      };
-
-      // This would be handled by the write queue in the database module
-      // For now, we emit an event that can be listened to
-      this.logger.debug('Database write job completed', { databaseWriteJobId, error });
-    });
-
     // Live stream stats request
     this.ipc.on('live_stream_worker_stats_request', () => {
       const liveStreamWatchingCounts = this.wsManager.getLiveStreamWatchingCounts();

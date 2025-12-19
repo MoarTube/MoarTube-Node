@@ -24,7 +24,6 @@ export type IPCCommandToMaster =
   | 'update_node_name'
   | 'websocket_broadcast'
   | 'websocket_broadcast_chat'
-  | 'database_write_job'
   | 'live_stream_worker_stats_response'
   | 'restart_server'
   | 'restart_database';
@@ -37,7 +36,6 @@ export type IPCCommandToWorker =
   | 'update_node_name_response'
   | 'websocket_broadcast_response'
   | 'websocket_broadcast_chat_response'
-  | 'database_write_job_result'
   | 'live_stream_worker_stats_request'
   | 'live_stream_worker_stats_update'
   | 'restart_server_response'
@@ -92,16 +90,6 @@ export interface WebSocketBroadcastMessage extends IPCMessageBase {
 export interface WebSocketBroadcastChatMessage extends IPCMessageBase {
   cmd: 'websocket_broadcast_chat';
   message: WebSocketMessage & { videoId: string };
-}
-
-/**
- * Submit database write job to master (for mutex protection)
- */
-export interface DatabaseWriteJobMessage extends IPCMessageBase {
-  cmd: 'database_write_job';
-  query: string;
-  parameters: unknown[];
-  databaseWriteJobId: string;
 }
 
 /**
@@ -165,15 +153,6 @@ export interface WebSocketBroadcastChatResponseMessage extends IPCMessageBase {
 }
 
 /**
- * Database write job result
- */
-export interface DatabaseWriteJobResultMessage extends IPCMessageBase {
-  cmd: 'database_write_job_result';
-  databaseWriteJobId: string;
-  error?: Error | string;
-}
-
-/**
  * Request live stream stats from worker
  */
 export interface LiveStreamWorkerStatsRequestMessage extends IPCMessageBase {
@@ -214,7 +193,6 @@ export type IPCMessageToMaster =
   | UpdateNodeNameMessage
   | WebSocketBroadcastMessage
   | WebSocketBroadcastChatMessage
-  | DatabaseWriteJobMessage
   | LiveStreamWorkerStatsResponseMessage
   | RestartServerMessage
   | RestartDatabaseMessage;
@@ -227,7 +205,6 @@ export type IPCMessageToWorker =
   | UpdateNodeNameResponseMessage
   | WebSocketBroadcastResponseMessage
   | WebSocketBroadcastChatResponseMessage
-  | DatabaseWriteJobResultMessage
   | LiveStreamWorkerStatsRequestMessage
   | LiveStreamWorkerStatsUpdateMessage
   | RestartServerResponseMessage

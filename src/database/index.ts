@@ -15,25 +15,5 @@ export {
   type DatabaseClient,
 } from './connection.js';
 
-// Cluster wrapper
-export {
-  ClusterDatabaseWrapper,
-  getClusterDatabaseWrapper,
-  createClusterDatabaseWrapper,
-  resetClusterDatabaseWrapper,
-} from './cluster-wrapper.js';
-
-// Write queue
-export {
-  WriteQueue,
-  getWriteQueue,
-  resetWriteQueue,
-  type DatabaseWriteJobMessage,
-  type DatabaseWriteJobResultMessage,
-} from './write-queue.js';
-
 // Schema exports
 export * from './schemas/sqlite/index.js';
-
-// Repository exports - removed as repositories are now dialect-specific
-// export * from './repositories/index.js';

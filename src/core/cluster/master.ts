@@ -8,10 +8,8 @@
 import cluster from 'node:cluster';
 import os from 'node:os';
 import crypto from 'node:crypto';
-import { Mutex } from 'async-mutex';
 import { v4 as uuidv4 } from 'uuid';
 import type {
-  DatabaseWriteJobMessage,
   LiveStreamWorkerStatsResponseMessage,
   RestartDatabaseMessage,
   LiveStreamWatchingCountsTracker,
@@ -76,7 +74,6 @@ export class ClusterMaster {
   private readonly ipc: IPCChannel;
   private readonly logger: IPCLogger;
   private readonly options: ClusterMasterOptions;
-  private readonly mutex = new Mutex();
   private readonly jwtSecret: string;
   private liveStreamWatchingCountsTracker: LiveStreamWatchingCountsTracker = {};
   private intervalHandles: NodeJS.Timeout[] = [];
@@ -256,38 +253,6 @@ export class ClusterMaster {
         cmd: 'websocket_broadcast_chat_response',
         message: wsMessage as WebSocketMessage & { videoId: string },
       });
-    });
-
-    // Database write job
-    this.ipc.on<DatabaseWriteJobMessage>('database_write_job', async (message, worker) => {
-      const release = await this.mutex.acquire();
-
-      try {
-        const db = getDatabase();
-        if ('run' in db) {
-          (db as { run: (sql: string, ...params: unknown[]) => void }).run(
-            message.query,
-            ...message.parameters
-          );
-        }
-
-        if (worker !== undefined) {
-          this.ipc.sendToWorker(worker, {
-            cmd: 'database_write_job_result',
-            databaseWriteJobId: message.databaseWriteJobId,
-          });
-        }
-      } catch (error) {
-        if (worker !== undefined) {
-          this.ipc.sendToWorker(worker, {
-            cmd: 'database_write_job_result',
-            databaseWriteJobId: message.databaseWriteJobId,
-            error: error as Error,
-          });
-        }
-      } finally {
-        release();
-      }
     });
 
     // Live stream stats response from worker
