@@ -368,7 +368,7 @@ export class SettingsService extends BaseService {
 
     // Signal to restart database with new configuration
     if (process.send !== undefined) {
-      process.send({ cmd: 'restart_database', databaseDialect: databaseConfig.databaseDialect });
+      process.send({ cmd: 'restart_server' });
     }
 
     this.logger.info('Database configuration updated', { databaseConfig });

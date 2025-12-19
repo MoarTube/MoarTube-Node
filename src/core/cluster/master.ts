@@ -20,7 +20,11 @@ import type { WebSocketMessage } from '../../types/websocket.js';
 import { IPCChannel, type IPCLogger } from './ipc-channel.js';
 import { Logger } from '../../utils/logger.js';
 import { getConfig } from '../../config/index.js';
-import { createDatabase, initializeDatabaseSchema, getDatabase } from '../../database/connection.js';
+import {
+  createDatabase,
+  initializeDatabaseSchema,
+  getDatabase,
+} from '../../database/connection.js';
 
 /**
  * Indexer operations interface
@@ -296,7 +300,10 @@ export class ClusterMaster {
 
     // Server restart request
     this.ipc.on('restart_server', () => {
-      this.ipc.broadcast({ cmd: 'restart_server_response' });
+      this.logger.info('Restarting all workers');
+      for (const worker of this.ipc.getWorkers()) {
+        worker.kill('SIGTERM');
+      }
     });
 
     // Database restart request
