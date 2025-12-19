@@ -10,9 +10,11 @@ import path from 'node:path';
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
 import type { StreamConfig } from './interfaces.js';
-import type { VideosRepository } from '../database/repositories/sqlite/videos.js';
-import type { LiveChatMessagesRepository } from '../database/repositories/sqlite/live-chat-messages.js';
-import type { CommentsRepository } from '../database/repositories/sqlite/comments.js';
+import type {
+  VideosRepository,
+  LiveChatMessagesRepository,
+  CommentsRepository
+} from '../database/repositories/index.js';
 import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/sqlite/index.js';
 import { getConfig } from '../config/index.js';
 import { deleteDirectory } from '../utils/filesystem.js';

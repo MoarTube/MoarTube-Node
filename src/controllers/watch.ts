@@ -9,8 +9,7 @@ import { VideoControllerBase, type VideoSource } from './video-controller-base.j
 import type { VideosService } from '../services/videos.js';
 import type { LinksService } from '../services/links.js';
 import type { MonetizationService } from '../services/monetization.js';
-import type { CommentsRepository } from '../database/repositories/sqlite/comments.js';
-import type { VideosRepository } from '../database/repositories/sqlite/videos.js';
+import type { CommentsRepository, VideosRepository } from '../database/repositories/index.js';
 import type { DrizzleVideo } from '../database/schemas/sqlite/index.js';
 import { getConfig } from '../config/index.js';
 

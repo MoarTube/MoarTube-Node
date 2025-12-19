@@ -3,14 +3,13 @@
  *
  * All repository classes extend this base class to share common functionality.
  */
-import type { DatabaseClient } from '../../sqlite-connection.js';
-import type { PaginationOptions } from '../../../types/models.js';
+import type { PaginationOptions } from '../../types/models.js';
 
 /**
  * Base repository with common operations
  */
 export abstract class BaseRepository {
-  constructor(protected readonly db: DatabaseClient) {}
+  constructor(protected readonly db: any) {}
 
   /**
    * Generates pagination SQL parameters for queries that should return all results by default.

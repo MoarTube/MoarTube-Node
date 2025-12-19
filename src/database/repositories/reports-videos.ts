@@ -4,26 +4,27 @@
  * Provides data access methods for video report records using Drizzle ORM.
  */
 import { eq, desc, count, gt } from 'drizzle-orm';
-import type { DrizzleVideoReport, DrizzleNewVideoReport } from '../../schemas/postgres/index.js';
-import { videoReports } from '../../schemas/postgres/index.js';
 import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../../types/models.js';
+import type { PaginationOptions } from '../../types/models.js';
 
 /**
  * ReportsVideosRepository class for video report CRUD operations
  */
 export class ReportsVideosRepository extends BaseRepository {
+  constructor(db: any, private readonly videoReportsTable: any) {
+    super(db);
+  }
   /**
    * Finds a video report by its report_id
    *
    * @param reportId - The report primary key
    * @returns The report record or null if not found
    */
-  async findById(reportId: number): Promise<DrizzleVideoReport | null> {
+  async findById(reportId: number): Promise<any | null> {
     const result = await this.db
       .select()
-      .from(videoReports)
-      .where(eq(videoReports.report_id, reportId))
+      .from(this.videoReportsTable)
+      .where(eq(this.videoReportsTable.report_id, reportId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -34,10 +35,10 @@ export class ReportsVideosRepository extends BaseRepository {
    * @param options - Pagination options (optional limit)
    * @returns Array of video reports
    */
-  async findAll(options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
+  async findAll(options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParams(options);
 
-    const query = this.db.select().from(videoReports).orderBy(desc(videoReports.timestamp));
+    const query = this.db.select().from(this.videoReportsTable).orderBy(desc(this.videoReportsTable.timestamp));
 
     if (limit !== undefined) {
       return query.limit(limit);
@@ -53,14 +54,14 @@ export class ReportsVideosRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of reports for the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
-      .from(videoReports)
-      .where(eq(videoReports.video_id, videoId))
-      .orderBy(desc(videoReports.timestamp))
+      .from(this.videoReportsTable)
+      .where(eq(this.videoReportsTable.video_id, videoId))
+      .orderBy(desc(this.videoReportsTable.timestamp))
       .limit(limit);
   }
 
@@ -70,7 +71,7 @@ export class ReportsVideosRepository extends BaseRepository {
    * @returns Total count of video reports
    */
   async getCount(): Promise<number> {
-    const result = await this.db.select({ count: count() }).from(videoReports);
+    const result = await this.db.select({ count: count() }).from(this.videoReportsTable);
     return result[0]?.count ?? 0;
   }
 
@@ -81,8 +82,8 @@ export class ReportsVideosRepository extends BaseRepository {
    * @returns The created report record
    * @throws Error if insert fails to return a record
    */
-  async create(data: DrizzleNewVideoReport): Promise<DrizzleVideoReport> {
-    const result = await this.db.insert(videoReports).values(data).returning();
+  async create(data: any): Promise<any> {
+    const result = await this.db.insert(this.videoReportsTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create video report record');
     }
@@ -97,8 +98,8 @@ export class ReportsVideosRepository extends BaseRepository {
    */
   async delete(reportId: number): Promise<boolean> {
     const result = await this.db
-      .delete(videoReports)
-      .where(eq(videoReports.report_id, reportId))
+      .delete(this.videoReportsTable)
+      .where(eq(this.videoReportsTable.report_id, reportId))
       .returning();
     return result.length > 0;
   }
@@ -111,8 +112,8 @@ export class ReportsVideosRepository extends BaseRepository {
    */
   async deleteByVideoId(videoId: string): Promise<number> {
     const result = await this.db
-      .delete(videoReports)
-      .where(eq(videoReports.video_id, videoId))
+      .delete(this.videoReportsTable)
+      .where(eq(this.videoReportsTable.video_id, videoId))
       .returning();
     return result.length;
   }
@@ -126,8 +127,8 @@ export class ReportsVideosRepository extends BaseRepository {
   async countNewerThan(timestamp: number): Promise<number> {
     const result = await this.db
       .select({ count: count() })
-      .from(videoReports)
-      .where(gt(videoReports.timestamp, timestamp));
+      .from(this.videoReportsTable)
+      .where(gt(this.videoReportsTable.timestamp, timestamp));
     return result[0]?.count ?? 0;
   }
 
@@ -137,7 +138,7 @@ export class ReportsVideosRepository extends BaseRepository {
    * @returns Number of deleted reports
    */
   async deleteAll(): Promise<number> {
-    const result = await this.db.delete(videoReports).returning();
+    const result = await this.db.delete(this.videoReportsTable).returning();
     return result.length;
   }
 
@@ -147,10 +148,10 @@ export class ReportsVideosRepository extends BaseRepository {
    * @param data - Array of report data for insertion
    * @returns Array of created report records
    */
-  async createMany(data: DrizzleNewVideoReport[]): Promise<DrizzleVideoReport[]> {
+  async createMany(data: any[]): Promise<any[]> {
     if (data.length === 0) {
       return [];
     }
-    return this.db.insert(videoReports).values(data).returning();
+    return this.db.insert(this.videoReportsTable).values(data).returning();
   }
 }

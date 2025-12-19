@@ -91,11 +91,15 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
     strict: true,
   });
 
-  // Get database dialect to determine which repositories to use
+  // Get database dialect to determine which schemas to use
   const config = getConfig();
   const dbDialect = config.nodeSettings.databaseConfig.databaseDialect;
 
-  // Dynamically import repositories based on dialect
+  // Dynamically import schemas and repositories based on dialect
+  const schemas = await (dbDialect === 'postgres'
+    ? import('../database/schemas/postgres/index.js')
+    : import('../database/schemas/sqlite/index.js'));
+
   const {
     VideosRepository,
     CommentsRepository,
@@ -106,9 +110,7 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
     LiveChatMessagesRepository,
     MonetizationRepository,
     LinksRepository,
-  } = await (dbDialect === 'postgres'
-    ? import('../database/repositories/postgres/index.js')
-    : import('../database/repositories/sqlite/index.js'));
+  } = await import('../database/repositories/index.js');
 
   // Register database client
   appContainer.register({
@@ -120,17 +122,17 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
     logger: asValue(Logger.getInstance()),
   });
 
-  // Register repositories (they need db in constructor)
+  // Register repositories (they need db and table in constructor)
   appContainer.register({
-    videosRepository: asClass(VideosRepository as any).singleton(),
-    commentsRepository: asClass(CommentsRepository as any).singleton(),
-    reportsVideosRepository: asClass(ReportsVideosRepository as any).singleton(),
-    reportsCommentsRepository: asClass(ReportsCommentsRepository as any).singleton(),
-    reportsArchiveVideosRepository: asClass(ReportsArchiveVideosRepository as any).singleton(),
-    reportsArchiveCommentsRepository: asClass(ReportsArchiveCommentsRepository as any).singleton(),
-    liveChatMessagesRepository: asClass(LiveChatMessagesRepository as any).singleton(),
-    monetizationRepository: asClass(MonetizationRepository as any).singleton(),
-    linksRepository: asClass(LinksRepository as any).singleton(),
+    videosRepository: asClass(VideosRepository as any).singleton().inject(() => ({ videosTable: schemas.videos })),
+    commentsRepository: asClass(CommentsRepository as any).singleton().inject(() => ({ commentsTable: schemas.comments })),
+    reportsVideosRepository: asClass(ReportsVideosRepository as any).singleton().inject(() => ({ videoReportsTable: schemas.videoReports })),
+    reportsCommentsRepository: asClass(ReportsCommentsRepository as any).singleton().inject(() => ({ commentReportsTable: schemas.commentReports })),
+    reportsArchiveVideosRepository: asClass(ReportsArchiveVideosRepository as any).singleton().inject(() => ({ videoReportsArchiveTable: schemas.videoReportsArchive })),
+    reportsArchiveCommentsRepository: asClass(ReportsArchiveCommentsRepository as any).singleton().inject(() => ({ commentReportsArchiveTable: schemas.commentReportsArchive })),
+    liveChatMessagesRepository: asClass(LiveChatMessagesRepository as any).singleton().inject(() => ({ liveChatMessagesTable: schemas.liveChatMessages })),
+    monetizationRepository: asClass(MonetizationRepository as any).singleton().inject(() => ({ cryptoWalletAddressesTable: schemas.cryptoWalletAddresses })),
+    linksRepository: asClass(LinksRepository as any).singleton().inject(() => ({ linksTable: schemas.links })),
   });
 
   // Register services (singletons for shared state)

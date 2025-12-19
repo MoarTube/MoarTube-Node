@@ -7,10 +7,12 @@
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
 import type { CreateVideoReportInput, CreateCommentReportInput } from './interfaces.js';
-import type { ReportsVideosRepository } from '../database/repositories/sqlite/reports-videos.js';
-import type { ReportsCommentsRepository } from '../database/repositories/sqlite/reports-comments.js';
-import type { ReportsArchiveVideosRepository } from '../database/repositories/sqlite/reports-archive-videos.js';
-import type { ReportsArchiveCommentsRepository } from '../database/repositories/sqlite/reports-archive-comments.js';
+import type {
+  ReportsVideosRepository,
+  ReportsCommentsRepository,
+  ReportsArchiveVideosRepository,
+  ReportsArchiveCommentsRepository
+} from '../database/repositories/index.js';
 import type {
   DrizzleVideoReport,
   DrizzleCommentReport,

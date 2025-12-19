@@ -4,29 +4,27 @@
  * Provides data access methods for archived comment report records using Drizzle ORM.
  */
 import { eq, desc, count } from 'drizzle-orm';
-import type {
-  DrizzleCommentReportArchive,
-  DrizzleNewCommentReportArchive,
-} from '../../schemas/sqlite/index.js';
-import { commentReportsArchive } from '../../schemas/sqlite/index.js';
 import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../../types/models.js';
+import type { PaginationOptions } from '../../types/models.js';
 
 /**
  * ReportsArchiveCommentsRepository class for archived comment report CRUD operations
  */
 export class ReportsArchiveCommentsRepository extends BaseRepository {
+  constructor(db: any, private readonly commentReportsArchiveTable: any) {
+    super(db);
+  }
   /**
    * Finds an archived comment report by its archive_id
    *
    * @param archiveId - The archive primary key
    * @returns The archive record or null if not found
    */
-  async findById(archiveId: number): Promise<DrizzleCommentReportArchive | null> {
+  async findById(archiveId: number): Promise<any | null> {
     const result = await this.db
       .select()
-      .from(commentReportsArchive)
-      .where(eq(commentReportsArchive.archive_id, archiveId))
+      .from(this.commentReportsArchiveTable)
+      .where(eq(this.commentReportsArchiveTable.archive_id, archiveId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -37,13 +35,13 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param options - Pagination options (optional limit)
    * @returns Array of archived comment reports
    */
-  async findAll(options?: PaginationOptions): Promise<DrizzleCommentReportArchive[]> {
+  async findAll(options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParams(options);
 
     const query = this.db
       .select()
-      .from(commentReportsArchive)
-      .orderBy(desc(commentReportsArchive.timestamp));
+      .from(this.commentReportsArchiveTable)
+      .orderBy(desc(this.commentReportsArchiveTable.timestamp));
 
     if (limit !== undefined) {
       return query.limit(limit);
@@ -62,14 +60,14 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
   async findByVideoId(
     videoId: string,
     options?: PaginationOptions
-  ): Promise<DrizzleCommentReportArchive[]> {
+  ): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
-      .from(commentReportsArchive)
-      .where(eq(commentReportsArchive.video_id, videoId))
-      .orderBy(desc(commentReportsArchive.timestamp))
+      .from(this.commentReportsArchiveTable)
+      .where(eq(this.commentReportsArchiveTable.video_id, videoId))
+      .orderBy(desc(this.commentReportsArchiveTable.timestamp))
       .limit(limit);
   }
 
@@ -83,14 +81,14 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
   async findByCommentId(
     commentId: number,
     options?: PaginationOptions
-  ): Promise<DrizzleCommentReportArchive[]> {
+  ): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
-      .from(commentReportsArchive)
-      .where(eq(commentReportsArchive.comment_id, commentId))
-      .orderBy(desc(commentReportsArchive.timestamp))
+      .from(this.commentReportsArchiveTable)
+      .where(eq(this.commentReportsArchiveTable.comment_id, commentId))
+      .orderBy(desc(this.commentReportsArchiveTable.timestamp))
       .limit(limit);
   }
 
@@ -100,11 +98,11 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param reportId - The original report ID
    * @returns The archive record or null if not found
    */
-  async findByReportId(reportId: number): Promise<DrizzleCommentReportArchive | null> {
+  async findByReportId(reportId: number): Promise<any | null> {
     const result = await this.db
       .select()
-      .from(commentReportsArchive)
-      .where(eq(commentReportsArchive.report_id, reportId))
+      .from(this.commentReportsArchiveTable)
+      .where(eq(this.commentReportsArchiveTable.report_id, reportId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -115,7 +113,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @returns Total count of archived comment reports
    */
   async getCount(): Promise<number> {
-    const result = await this.db.select({ count: count() }).from(commentReportsArchive);
+    const result = await this.db.select({ count: count() }).from(this.commentReportsArchiveTable);
     return result[0]?.count ?? 0;
   }
 
@@ -126,8 +124,8 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @returns The created archive record
    * @throws Error if insert fails to return a record
    */
-  async create(data: DrizzleNewCommentReportArchive): Promise<DrizzleCommentReportArchive> {
-    const result = await this.db.insert(commentReportsArchive).values(data).returning();
+  async create(data: any): Promise<any> {
+    const result = await this.db.insert(this.commentReportsArchiveTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create comment report archive record');
     }
@@ -142,8 +140,8 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    */
   async delete(archiveId: number): Promise<boolean> {
     const result = await this.db
-      .delete(commentReportsArchive)
-      .where(eq(commentReportsArchive.archive_id, archiveId))
+      .delete(this.commentReportsArchiveTable)
+      .where(eq(this.commentReportsArchiveTable.archive_id, archiveId))
       .returning();
     return result.length > 0;
   }
@@ -156,8 +154,8 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    */
   async deleteByCommentId(commentId: number): Promise<number> {
     const result = await this.db
-      .delete(commentReportsArchive)
-      .where(eq(commentReportsArchive.comment_id, commentId))
+      .delete(this.commentReportsArchiveTable)
+      .where(eq(this.commentReportsArchiveTable.comment_id, commentId))
       .returning();
     return result.length;
   }
@@ -170,8 +168,8 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    */
   async deleteByVideoId(videoId: string): Promise<number> {
     const result = await this.db
-      .delete(commentReportsArchive)
-      .where(eq(commentReportsArchive.video_id, videoId))
+      .delete(this.commentReportsArchiveTable)
+      .where(eq(this.commentReportsArchiveTable.video_id, videoId))
       .returning();
     return result.length;
   }
@@ -182,7 +180,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @returns Number of deleted archive records
    */
   async deleteAll(): Promise<number> {
-    const result = await this.db.delete(commentReportsArchive).returning();
+    const result = await this.db.delete(this.commentReportsArchiveTable).returning();
     return result.length;
   }
 
@@ -192,10 +190,10 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param data - Array of archive data for insertion
    * @returns Array of created archive records
    */
-  async createMany(data: DrizzleNewCommentReportArchive[]): Promise<DrizzleCommentReportArchive[]> {
+  async createMany(data: any[]): Promise<any[]> {
     if (data.length === 0) {
       return [];
     }
-    return this.db.insert(commentReportsArchive).values(data).returning();
+    return this.db.insert(this.commentReportsArchiveTable).values(data).returning();
   }
 }

@@ -8,8 +8,7 @@
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
 import type { CreateCommentInput } from './interfaces.js';
-import type { CommentsRepository } from '../database/repositories/sqlite/comments.js';
-import type { VideosRepository } from '../database/repositories/sqlite/videos.js';
+import type { CommentsRepository, VideosRepository } from '../database/repositories/index.js';
 import type { DrizzleComment, DrizzleNewComment } from '../database/schemas/sqlite/index.js';
 import sanitizeHtml from 'sanitize-html';
 

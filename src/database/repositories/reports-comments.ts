@@ -4,26 +4,27 @@
  * Provides data access methods for comment report records using Drizzle ORM.
  */
 import { eq, desc, count, gt } from 'drizzle-orm';
-import type { DrizzleCommentReport, DrizzleNewCommentReport } from '../../schemas/sqlite/index.js';
-import { commentReports } from '../../schemas/sqlite/index.js';
 import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../../types/models.js';
+import type { PaginationOptions } from '../../types/models.js';
 
 /**
  * ReportsCommentsRepository class for comment report CRUD operations
  */
 export class ReportsCommentsRepository extends BaseRepository {
+  constructor(db: any, private readonly commentReportsTable: any) {
+    super(db);
+  }
   /**
    * Finds a comment report by its report_id
    *
    * @param reportId - The report primary key
    * @returns The report record or null if not found
    */
-  async findById(reportId: number): Promise<DrizzleCommentReport | null> {
+  async findById(reportId: number): Promise<any | null> {
     const result = await this.db
       .select()
-      .from(commentReports)
-      .where(eq(commentReports.report_id, reportId))
+      .from(this.commentReportsTable)
+      .where(eq(this.commentReportsTable.report_id, reportId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -34,10 +35,10 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @param options - Pagination options (optional limit)
    * @returns Array of comment reports
    */
-  async findAll(options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
+  async findAll(options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParams(options);
 
-    const query = this.db.select().from(commentReports).orderBy(desc(commentReports.timestamp));
+    const query = this.db.select().from(this.commentReportsTable).orderBy(desc(this.commentReportsTable.timestamp));
 
     if (limit !== undefined) {
       return query.limit(limit);
@@ -56,14 +57,14 @@ export class ReportsCommentsRepository extends BaseRepository {
   async findByVideoId(
     videoId: string,
     options?: PaginationOptions
-  ): Promise<DrizzleCommentReport[]> {
+  ): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
-      .from(commentReports)
-      .where(eq(commentReports.video_id, videoId))
-      .orderBy(desc(commentReports.timestamp))
+      .from(this.commentReportsTable)
+      .where(eq(this.commentReportsTable.video_id, videoId))
+      .orderBy(desc(this.commentReportsTable.timestamp))
       .limit(limit);
   }
 
@@ -77,14 +78,14 @@ export class ReportsCommentsRepository extends BaseRepository {
   async findByCommentId(
     commentId: number,
     options?: PaginationOptions
-  ): Promise<DrizzleCommentReport[]> {
+  ): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
-      .from(commentReports)
-      .where(eq(commentReports.comment_id, commentId))
-      .orderBy(desc(commentReports.timestamp))
+      .from(this.commentReportsTable)
+      .where(eq(this.commentReportsTable.comment_id, commentId))
+      .orderBy(desc(this.commentReportsTable.timestamp))
       .limit(limit);
   }
 
@@ -94,7 +95,7 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @returns Total count of comment reports
    */
   async getCount(): Promise<number> {
-    const result = await this.db.select({ count: count() }).from(commentReports);
+    const result = await this.db.select({ count: count() }).from(this.commentReportsTable);
     return result[0]?.count ?? 0;
   }
 
@@ -105,8 +106,8 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @returns The created report record
    * @throws Error if insert fails to return a record
    */
-  async create(data: DrizzleNewCommentReport): Promise<DrizzleCommentReport> {
-    const result = await this.db.insert(commentReports).values(data).returning();
+  async create(data: any): Promise<any> {
+    const result = await this.db.insert(this.commentReportsTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create comment report record');
     }
@@ -121,8 +122,8 @@ export class ReportsCommentsRepository extends BaseRepository {
    */
   async delete(reportId: number): Promise<boolean> {
     const result = await this.db
-      .delete(commentReports)
-      .where(eq(commentReports.report_id, reportId))
+      .delete(this.commentReportsTable)
+      .where(eq(this.commentReportsTable.report_id, reportId))
       .returning();
     return result.length > 0;
   }
@@ -135,8 +136,8 @@ export class ReportsCommentsRepository extends BaseRepository {
    */
   async deleteByCommentId(commentId: number): Promise<number> {
     const result = await this.db
-      .delete(commentReports)
-      .where(eq(commentReports.comment_id, commentId))
+      .delete(this.commentReportsTable)
+      .where(eq(this.commentReportsTable.comment_id, commentId))
       .returning();
     return result.length;
   }
@@ -149,8 +150,8 @@ export class ReportsCommentsRepository extends BaseRepository {
    */
   async deleteByVideoId(videoId: string): Promise<number> {
     const result = await this.db
-      .delete(commentReports)
-      .where(eq(commentReports.video_id, videoId))
+      .delete(this.commentReportsTable)
+      .where(eq(this.commentReportsTable.video_id, videoId))
       .returning();
     return result.length;
   }
@@ -164,8 +165,8 @@ export class ReportsCommentsRepository extends BaseRepository {
   async countNewerThan(timestamp: number): Promise<number> {
     const result = await this.db
       .select({ count: count() })
-      .from(commentReports)
-      .where(gt(commentReports.timestamp, timestamp));
+      .from(this.commentReportsTable)
+      .where(gt(this.commentReportsTable.timestamp, timestamp));
     return result[0]?.count ?? 0;
   }
 
@@ -175,7 +176,7 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @returns Number of deleted reports
    */
   async deleteAll(): Promise<number> {
-    const result = await this.db.delete(commentReports).returning();
+    const result = await this.db.delete(this.commentReportsTable).returning();
     return result.length;
   }
 
@@ -185,10 +186,10 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @param data - Array of report data for insertion
    * @returns Array of created report records
    */
-  async createMany(data: DrizzleNewCommentReport[]): Promise<DrizzleCommentReport[]> {
+  async createMany(data: any[]): Promise<any[]> {
     if (data.length === 0) {
       return [];
     }
-    return this.db.insert(commentReports).values(data).returning();
+    return this.db.insert(this.commentReportsTable).values(data).returning();
   }
 }

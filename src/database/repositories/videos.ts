@@ -1,16 +1,14 @@
 /**
- * Videos Repository
+ * this.videosTable Repository
  *
  * Provides data access methods for video records using Drizzle ORM.
  */
 import { eq, desc, asc, sql, and, or, like, count, lt, type SQL } from 'drizzle-orm';
-import type { DrizzleVideo, DrizzleNewVideo } from '../../schemas/sqlite/index.js';
-import { videos } from '../../schemas/sqlite/index.js';
 import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../../types/models.js';
+import type { PaginationOptions } from '../../types/models.js';
 
 /**
- * Options for querying videos
+ * Options for querying this.videosTable
  */
 export interface VideoQueryOptions extends PaginationOptions {
   /** Sort field */
@@ -35,14 +33,17 @@ export interface VideoQueryOptions extends PaginationOptions {
  * VideosRepository class for video CRUD operations
  */
 export class VideosRepository extends BaseRepository {
+  constructor(db: any, private readonly videosTable: any) {
+    super(db);
+  }
   /**
    * Finds a video by its unique video_id
    *
    * @param videoId - The unique video identifier
    * @returns The video record or null if not found
    */
-  async findById(videoId: string): Promise<DrizzleVideo | null> {
-    const result = await this.db.select().from(videos).where(eq(videos.video_id, videoId)).limit(1);
+  async findById(videoId: string): Promise<any> {
+    const result = await this.db.select().from(this.videosTable).where(eq(this.videosTable.video_id, videoId)).limit(1);
     return result[0] ?? null;
   }
 
@@ -52,44 +53,44 @@ export class VideosRepository extends BaseRepository {
    * @param id - The database primary key
    * @returns The video record or null if not found
    */
-  async findByDbId(id: number): Promise<DrizzleVideo | null> {
-    const result = await this.db.select().from(videos).where(eq(videos.id, id)).limit(1);
+  async findByDbId(id: number): Promise<any> {
+    const result = await this.db.select().from(this.videosTable).where(eq(this.videosTable.id, id)).limit(1);
     return result[0] ?? null;
   }
 
   /**
-   * Finds all published videos with pagination
+   * Finds all published this.videosTable with pagination
    *
    * @param options - Query options for pagination and sorting
-   * @returns Array of published videos
+   * @returns Array of published this.videosTable
    */
-  async findPublished(options?: VideoQueryOptions): Promise<DrizzleVideo[]> {
+  async findPublished(options?: VideoQueryOptions): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
     const sortDir = options?.sortDirection === 'asc' ? asc : desc;
     const sortField = this.getSortField(options?.sortBy ?? 'creation_timestamp');
 
     return this.db
       .select()
-      .from(videos)
-      .where(eq(videos.is_published, true))
+      .from(this.videosTable)
+      .where(eq(this.videosTable.is_published, true))
       .orderBy(sortDir(sortField))
       .limit(limit);
   }
 
   /**
-   * Finds all videos with optional filters and pagination
+   * Finds all this.videosTable with optional filters and pagination
    *
    * @param options - Query options including optional limit
-   * @returns Array of videos matching the criteria
+   * @returns Array of this.videosTable matching the criteria
    */
-  async findAll(options?: VideoQueryOptions): Promise<DrizzleVideo[]> {
+  async findAll(options?: VideoQueryOptions): Promise<any[]> {
     const { limit } = this.getPaginationParams(options);
     const sortDir = options?.sortDirection === 'asc' ? asc : desc;
     const sortField = this.getSortField(options?.sortBy ?? 'creation_timestamp');
 
     const conditions = this.buildWhereConditions(options);
 
-    let query = this.db.select().from(videos).orderBy(sortDir(sortField));
+    let query = this.db.select().from(this.videosTable).orderBy(sortDir(sortField));
 
     if (conditions) {
       query = query.where(conditions) as typeof query;
@@ -103,15 +104,15 @@ export class VideosRepository extends BaseRepository {
   }
 
   /**
-   * Counts total videos matching the criteria
+   * Counts total this.videosTable matching the criteria
    *
    * @param options - Query options for filtering
-   * @returns Total count of matching videos
+   * @returns Total count of matching this.videosTable
    */
   async getCount(options?: VideoQueryOptions): Promise<number> {
     const conditions = this.buildWhereConditions(options);
 
-    const query = this.db.select({ count: count() }).from(videos);
+    const query = this.db.select({ count: count() }).from(this.videosTable);
 
     const result = conditions ? await query.where(conditions) : await query;
 
@@ -125,8 +126,8 @@ export class VideosRepository extends BaseRepository {
    * @returns The created video record
    * @throws Error if insert fails to return a record
    */
-  async create(data: DrizzleNewVideo): Promise<DrizzleVideo> {
-    const result = await this.db.insert(videos).values(data).returning();
+  async create(data: any): Promise<any> {
+    const result = await this.db.insert(this.videosTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create video record');
     }
@@ -140,11 +141,11 @@ export class VideosRepository extends BaseRepository {
    * @param data - Partial video data to update
    * @returns The updated video record or null if not found
    */
-  async update(videoId: string, data: Partial<DrizzleNewVideo>): Promise<DrizzleVideo | null> {
+  async update(videoId: string, data: Partial<any>): Promise<any | null> {
     const result = await this.db
-      .update(videos)
+      .update(this.videosTable)
       .set(data)
-      .where(eq(videos.video_id, videoId))
+      .where(eq(this.videosTable.video_id, videoId))
       .returning();
     return result[0] ?? null;
   }
@@ -156,7 +157,7 @@ export class VideosRepository extends BaseRepository {
    * @returns true if deleted, false if not found
    */
   async delete(videoId: string): Promise<boolean> {
-    const result = await this.db.delete(videos).where(eq(videos.video_id, videoId)).returning();
+    const result = await this.db.delete(this.videosTable).where(eq(this.videosTable.video_id, videoId)).returning();
     return result.length > 0;
   }
 
@@ -167,9 +168,9 @@ export class VideosRepository extends BaseRepository {
    */
   async incrementViews(videoId: string): Promise<void> {
     await this.db
-      .update(videos)
-      .set({ views: sql`${videos.views} + 1` })
-      .where(eq(videos.video_id, videoId));
+      .update(this.videosTable)
+      .set({ views: sql`${this.videosTable.views} + 1` })
+      .where(eq(this.videosTable.video_id, videoId));
   }
 
   /**
@@ -181,13 +182,13 @@ export class VideosRepository extends BaseRepository {
    */
   async incrementViewsBy(videoId: string, count: number): Promise<void> {
     await this.db
-      .update(videos)
+      .update(this.videosTable)
       .set({
-        views: sql`${videos.views} + ${count}`,
+        views: sql`${this.videosTable.views} + ${count}`,
         // Mark index as outdated if video is indexed (matches JS behavior)
-        is_index_outdated: sql`CASE WHEN ${videos.is_indexed} = true THEN true ELSE ${videos.is_index_outdated} END`,
+        is_index_outdated: sql`CASE WHEN ${this.videosTable.is_indexed} = true THEN true ELSE ${this.videosTable.is_index_outdated} END`,
       })
-      .where(eq(videos.video_id, videoId));
+      .where(eq(this.videosTable.video_id, videoId));
   }
 
   /**
@@ -197,9 +198,9 @@ export class VideosRepository extends BaseRepository {
    */
   async incrementLikes(videoId: string): Promise<void> {
     await this.db
-      .update(videos)
-      .set({ likes: sql`${videos.likes} + 1` })
-      .where(eq(videos.video_id, videoId));
+      .update(this.videosTable)
+      .set({ likes: sql`${this.videosTable.likes} + 1` })
+      .where(eq(this.videosTable.video_id, videoId));
   }
 
   /**
@@ -209,9 +210,9 @@ export class VideosRepository extends BaseRepository {
    */
   async incrementDislikes(videoId: string): Promise<void> {
     await this.db
-      .update(videos)
-      .set({ dislikes: sql`${videos.dislikes} + 1` })
-      .where(eq(videos.video_id, videoId));
+      .update(this.videosTable)
+      .set({ dislikes: sql`${this.videosTable.dislikes} + 1` })
+      .where(eq(this.videosTable.video_id, videoId));
   }
 
   /**
@@ -221,9 +222,9 @@ export class VideosRepository extends BaseRepository {
    */
   async incrementComments(videoId: string): Promise<void> {
     await this.db
-      .update(videos)
-      .set({ comments: sql`${videos.comments} + 1` })
-      .where(eq(videos.video_id, videoId));
+      .update(this.videosTable)
+      .set({ comments: sql`${this.videosTable.comments} + 1` })
+      .where(eq(this.videosTable.video_id, videoId));
   }
 
   /**
@@ -233,9 +234,9 @@ export class VideosRepository extends BaseRepository {
    */
   async decrementComments(videoId: string): Promise<void> {
     await this.db
-      .update(videos)
-      .set({ comments: sql`${videos.comments} - 1` })
-      .where(eq(videos.video_id, videoId));
+      .update(this.videosTable)
+      .set({ comments: sql`${this.videosTable.comments} - 1` })
+      .where(eq(this.videosTable.video_id, videoId));
   }
 
   /**
@@ -245,63 +246,63 @@ export class VideosRepository extends BaseRepository {
    * @param bandwidth - The new bandwidth value
    */
   async updateBandwidth(videoId: string, bandwidth: number): Promise<void> {
-    await this.db.update(videos).set({ bandwidth }).where(eq(videos.video_id, videoId));
+    await this.db.update(this.videosTable).set({ bandwidth }).where(eq(this.videosTable.video_id, videoId));
   }
 
   /**
-   * Finds all currently streaming videos
+   * Finds all currently streaming this.videosTable
    *
-   * @returns Array of streaming videos
+   * @returns Array of streaming this.videosTable
    */
-  async findStreaming(): Promise<DrizzleVideo[]> {
+  async findStreaming(): Promise<any[]> {
     return this.db
       .select()
-      .from(videos)
-      .where(eq(videos.is_streaming, true))
-      .orderBy(desc(videos.creation_timestamp));
+      .from(this.videosTable)
+      .where(eq(this.videosTable.is_streaming, true))
+      .orderBy(desc(this.videosTable.creation_timestamp));
   }
 
   /**
-   * Finds all indexed videos
+   * Finds all indexed this.videosTable
    *
-   * @returns Array of indexed videos
+   * @returns Array of indexed this.videosTable
    */
-  async findIndexed(): Promise<DrizzleVideo[]> {
+  async findIndexed(): Promise<any[]> {
     return this.db
       .select()
-      .from(videos)
-      .where(eq(videos.is_indexed, true))
-      .orderBy(desc(videos.creation_timestamp));
+      .from(this.videosTable)
+      .where(eq(this.videosTable.is_indexed, true))
+      .orderBy(desc(this.videosTable.creation_timestamp));
   }
 
   /**
-   * Finds all videos that need indexing
+   * Finds all this.videosTable that need indexing
    *
-   * @returns Array of videos pending indexing
+   * @returns Array of this.videosTable pending indexing
    */
-  async findPendingIndexing(): Promise<DrizzleVideo[]> {
+  async findPendingIndexing(): Promise<any[]> {
     return this.db
       .select()
-      .from(videos)
+      .from(this.videosTable)
       .where(
         and(
-          eq(videos.is_published, true),
-          or(eq(videos.is_indexed, false), eq(videos.is_index_outdated, true))
+          eq(this.videosTable.is_published, true),
+          or(eq(this.videosTable.is_indexed, false), eq(this.videosTable.is_index_outdated, true))
         )
       );
   }
 
   /**
-   * Marks all indexed videos as outdated
+   * Marks all indexed this.videosTable as outdated
    *
    * This is used when node settings change (e.g., avatar update)
-   * to signal that indexed videos need to be re-indexed.
+   * to signal that indexed this.videosTable need to be re-indexed.
    */
   async markAllIndexedAsOutdated(): Promise<void> {
     await this.db
-      .update(videos)
+      .update(this.videosTable)
       .set({ is_index_outdated: true })
-      .where(eq(videos.is_indexed, true));
+      .where(eq(this.videosTable.is_indexed, true));
   }
 
   /**
@@ -310,20 +311,20 @@ export class VideosRepository extends BaseRepository {
   private getSortField(
     sortBy: string
   ):
-    | typeof videos.views
-    | typeof videos.likes
-    | typeof videos.title
-    | typeof videos.creation_timestamp {
+    | typeof this.videosTable.views
+    | typeof this.videosTable.likes
+    | typeof this.videosTable.title
+    | typeof this.videosTable.creation_timestamp {
     switch (sortBy) {
       case 'views':
-        return videos.views;
+        return this.videosTable.views;
       case 'likes':
-        return videos.likes;
+        return this.videosTable.likes;
       case 'title':
-        return videos.title;
+        return this.videosTable.title;
       case 'creation_timestamp':
       default:
-        return videos.creation_timestamp;
+        return this.videosTable.creation_timestamp;
     }
   }
 
@@ -338,35 +339,35 @@ export class VideosRepository extends BaseRepository {
     const conditions = [];
 
     if (options.isPublished !== undefined) {
-      conditions.push(eq(videos.is_published, options.isPublished));
+      conditions.push(eq(this.videosTable.is_published, options.isPublished));
     }
 
     if (options.isStreaming !== undefined) {
-      conditions.push(eq(videos.is_streaming, options.isStreaming));
+      conditions.push(eq(this.videosTable.is_streaming, options.isStreaming));
     }
 
     if (options.isFinalized !== undefined) {
-      conditions.push(eq(videos.is_finalized, options.isFinalized));
+      conditions.push(eq(this.videosTable.is_finalized, options.isFinalized));
     }
 
     if (options.search !== undefined && options.search !== '') {
       const searchPattern = `%${options.search}%`;
       conditions.push(
         or(
-          like(videos.title, searchPattern),
-          like(videos.description, searchPattern),
-          like(videos.tags, searchPattern)
+          like(this.videosTable.title, searchPattern),
+          like(this.videosTable.description, searchPattern),
+          like(this.videosTable.tags, searchPattern)
         )
       );
     }
 
     if (options.tagTerm !== undefined && options.tagTerm !== '') {
       const tagPattern = `%${options.tagTerm}%`;
-      conditions.push(like(videos.tags, tagPattern));
+      conditions.push(like(this.videosTable.tags, tagPattern));
     }
 
     if (options.timestamp !== undefined) {
-      conditions.push(lt(videos.creation_timestamp, options.timestamp));
+      conditions.push(lt(this.videosTable.creation_timestamp, options.timestamp));
     }
 
     if (conditions.length === 0) {
@@ -381,10 +382,10 @@ export class VideosRepository extends BaseRepository {
   /**
    * Deletes all video records
    *
-   * @returns Number of deleted videos
+   * @returns Number of deleted this.videosTable
    */
   async deleteAll(): Promise<number> {
-    const result = await this.db.delete(videos).returning();
+    const result = await this.db.delete(this.videosTable).returning();
     return result.length;
   }
 
@@ -394,10 +395,10 @@ export class VideosRepository extends BaseRepository {
    * @param data - Array of video data for insertion
    * @returns Array of created video records
    */
-  async createMany(data: DrizzleNewVideo[]): Promise<DrizzleVideo[]> {
+  async createMany(data: any[]): Promise<any[]> {
     if (data.length === 0) {
       return [];
     }
-    return this.db.insert(videos).values(data).returning();
+    return this.db.insert(this.videosTable).values(data).returning();
   }
 }

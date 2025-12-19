@@ -22,8 +22,7 @@ import type {
   AddToIndexResult,
   VideoIndexData,
 } from './interfaces.js';
-import type { VideosRepository } from '../database/repositories/sqlite/videos.js';
-import type { CommentsRepository } from '../database/repositories/sqlite/comments.js';
+import type { VideosRepository, CommentsRepository } from '../database/repositories/index.js';
 import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/sqlite/index.js';
 import { getConfig } from '../config/index.js';
 import type { CloudflareService } from './cloudflare.js';

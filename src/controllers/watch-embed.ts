@@ -9,9 +9,11 @@ import {
   type FastifyReplyWithView,
   type VideoSource,
 } from './video-controller-base.js';
-import type { LinksRepository } from '../database/repositories/sqlite/links.js';
-import type { MonetizationRepository } from '../database/repositories/sqlite/monetization.js';
-import type { VideosRepository } from '../database/repositories/sqlite/videos.js';
+import type {
+  LinksRepository,
+  MonetizationRepository,
+  VideosRepository
+} from '../database/repositories/index.js';
 import type { DrizzleVideo } from '../database/schemas/sqlite/index.js';
 import { getConfig } from '../config/index.js';
 

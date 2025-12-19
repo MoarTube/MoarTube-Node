@@ -6,7 +6,7 @@
 import { BaseService } from './base.js';
 import type { Logger } from '../utils/logger.js';
 import type { CreateWalletAddressInput } from './interfaces.js';
-import type { MonetizationRepository } from '../database/repositories/sqlite/monetization.js';
+import type { MonetizationRepository } from '../database/repositories/index.js';
 import type { DrizzleCryptoWalletAddress } from '../database/schemas/sqlite/index.js';
 
 /**

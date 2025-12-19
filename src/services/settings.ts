@@ -12,15 +12,17 @@ import type { Logger } from '../utils/logger.js';
 import type { UpdateNodeSettingsInput, StorageConfigInput } from './interfaces.js';
 import { getConfig } from '../config/index.js';
 import type { DatabaseConfig, StorageConfig } from '../types/index.js';
-import type { VideosRepository } from '../database/repositories/sqlite/videos.js';
-import type { CommentsRepository } from '../database/repositories/sqlite/comments.js';
-import type { ReportsVideosRepository } from '../database/repositories/sqlite/reports-videos.js';
-import type { ReportsCommentsRepository } from '../database/repositories/sqlite/reports-comments.js';
-import type { ReportsArchiveVideosRepository } from '../database/repositories/sqlite/reports-archive-videos.js';
-import type { ReportsArchiveCommentsRepository } from '../database/repositories/sqlite/reports-archive-comments.js';
-import type { LiveChatMessagesRepository } from '../database/repositories/sqlite/live-chat-messages.js';
-import type { MonetizationRepository } from '../database/repositories/sqlite/monetization.js';
-import type { LinksRepository } from '../database/repositories/sqlite/links.js';
+import type {
+  VideosRepository,
+  CommentsRepository,
+  ReportsVideosRepository,
+  ReportsCommentsRepository,
+  ReportsArchiveVideosRepository,
+  ReportsArchiveCommentsRepository,
+  LiveChatMessagesRepository,
+  MonetizationRepository,
+  LinksRepository
+} from '../database/repositories/index.js';
 import type {
   DrizzleVideo,
   DrizzleComment,

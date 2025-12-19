@@ -4,29 +4,27 @@
  * Provides data access methods for crypto wallet address records using Drizzle ORM.
  */
 import { eq, desc, count } from 'drizzle-orm';
-import type {
-  DrizzleCryptoWalletAddress,
-  DrizzleNewCryptoWalletAddress,
-} from '../../schemas/sqlite/index.js';
-import { cryptoWalletAddresses } from '../../schemas/sqlite/index.js';
 import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../../types/models.js';
+import type { PaginationOptions } from '../../types/models.js';
 
 /**
- * MonetizationRepository class for crypto wallet CRUD operations
+ * MonetizationRepository class for crypto wallet address CRUD operations
  */
 export class MonetizationRepository extends BaseRepository {
+  constructor(db: any, private readonly cryptoWalletAddressesTable: any) {
+    super(db);
+  }
   /**
    * Finds a wallet address by its wallet_address_id
    *
    * @param walletAddressId - The wallet address primary key
    * @returns The wallet record or null if not found
    */
-  async findById(walletAddressId: number): Promise<DrizzleCryptoWalletAddress | null> {
+  async findById(walletAddressId: number): Promise<any | null> {
     const result = await this.db
       .select()
-      .from(cryptoWalletAddresses)
-      .where(eq(cryptoWalletAddresses.wallet_address_id, walletAddressId))
+      .from(this.cryptoWalletAddressesTable)
+      .where(eq(this.cryptoWalletAddressesTable.wallet_address_id, walletAddressId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -37,13 +35,13 @@ export class MonetizationRepository extends BaseRepository {
    * @param options - Pagination options (optional limit/offset)
    * @returns Array of wallet addresses
    */
-  async findAll(options?: PaginationOptions): Promise<DrizzleCryptoWalletAddress[]> {
+  async findAll(options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParams(options);
 
     const query = this.db
       .select()
-      .from(cryptoWalletAddresses)
-      .orderBy(desc(cryptoWalletAddresses.timestamp));
+      .from(this.cryptoWalletAddressesTable)
+      .orderBy(desc(this.cryptoWalletAddressesTable.timestamp));
 
     if (limit !== undefined) {
       return query.limit(limit);
@@ -62,14 +60,14 @@ export class MonetizationRepository extends BaseRepository {
   async findByChain(
     chain: string,
     options?: PaginationOptions
-  ): Promise<DrizzleCryptoWalletAddress[]> {
+  ): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
       .select()
-      .from(cryptoWalletAddresses)
-      .where(eq(cryptoWalletAddresses.chain, chain))
-      .orderBy(desc(cryptoWalletAddresses.timestamp))
+      .from(this.cryptoWalletAddressesTable)
+      .where(eq(this.cryptoWalletAddressesTable.chain, chain))
+      .orderBy(desc(this.cryptoWalletAddressesTable.timestamp))
       .limit(limit);
   }
 
@@ -79,11 +77,11 @@ export class MonetizationRepository extends BaseRepository {
    * @param walletAddress - The wallet address string
    * @returns The wallet record or null if not found
    */
-  async findByAddress(walletAddress: string): Promise<DrizzleCryptoWalletAddress | null> {
+  async findByAddress(walletAddress: string): Promise<any | null> {
     const result = await this.db
       .select()
-      .from(cryptoWalletAddresses)
-      .where(eq(cryptoWalletAddresses.wallet_address, walletAddress))
+      .from(this.cryptoWalletAddressesTable)
+      .where(eq(this.cryptoWalletAddressesTable.wallet_address, walletAddress))
       .limit(1);
     return result[0] ?? null;
   }
@@ -94,7 +92,7 @@ export class MonetizationRepository extends BaseRepository {
    * @returns Total count of wallet addresses
    */
   async getCount(): Promise<number> {
-    const result = await this.db.select({ count: count() }).from(cryptoWalletAddresses);
+    const result = await this.db.select({ count: count() }).from(this.cryptoWalletAddressesTable);
     return result[0]?.count ?? 0;
   }
 
@@ -105,8 +103,8 @@ export class MonetizationRepository extends BaseRepository {
    * @returns The created wallet record
    * @throws Error if insert fails to return a record
    */
-  async create(data: DrizzleNewCryptoWalletAddress): Promise<DrizzleCryptoWalletAddress> {
-    const result = await this.db.insert(cryptoWalletAddresses).values(data).returning();
+  async create(data: any): Promise<any> {
+    const result = await this.db.insert(this.cryptoWalletAddressesTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create crypto wallet address record');
     }
@@ -122,12 +120,12 @@ export class MonetizationRepository extends BaseRepository {
    */
   async update(
     walletAddressId: number,
-    data: Partial<DrizzleNewCryptoWalletAddress>
-  ): Promise<DrizzleCryptoWalletAddress | null> {
+    data: Partial<any>
+  ): Promise<any | null> {
     const result = await this.db
-      .update(cryptoWalletAddresses)
+      .update(this.cryptoWalletAddressesTable)
       .set(data)
-      .where(eq(cryptoWalletAddresses.wallet_address_id, walletAddressId))
+      .where(eq(this.cryptoWalletAddressesTable.wallet_address_id, walletAddressId))
       .returning();
     return result[0] ?? null;
   }
@@ -140,8 +138,8 @@ export class MonetizationRepository extends BaseRepository {
    */
   async delete(walletAddressId: number): Promise<boolean> {
     const result = await this.db
-      .delete(cryptoWalletAddresses)
-      .where(eq(cryptoWalletAddresses.wallet_address_id, walletAddressId))
+      .delete(this.cryptoWalletAddressesTable)
+      .where(eq(this.cryptoWalletAddressesTable.wallet_address_id, walletAddressId))
       .returning();
     return result.length > 0;
   }
@@ -154,8 +152,8 @@ export class MonetizationRepository extends BaseRepository {
    */
   async deleteByChain(chain: string): Promise<number> {
     const result = await this.db
-      .delete(cryptoWalletAddresses)
-      .where(eq(cryptoWalletAddresses.chain, chain))
+      .delete(this.cryptoWalletAddressesTable)
+      .where(eq(this.cryptoWalletAddressesTable.chain, chain))
       .returning();
     return result.length;
   }
@@ -169,8 +167,8 @@ export class MonetizationRepository extends BaseRepository {
   async exists(walletAddress: string): Promise<boolean> {
     const result = await this.db
       .select({ count: count() })
-      .from(cryptoWalletAddresses)
-      .where(eq(cryptoWalletAddresses.wallet_address, walletAddress));
+      .from(this.cryptoWalletAddressesTable)
+      .where(eq(this.cryptoWalletAddressesTable.wallet_address, walletAddress));
     return (result[0]?.count ?? 0) > 0;
   }
 
@@ -180,7 +178,7 @@ export class MonetizationRepository extends BaseRepository {
    * @returns Number of deleted wallet addresses
    */
   async deleteAll(): Promise<number> {
-    const result = await this.db.delete(cryptoWalletAddresses).returning();
+    const result = await this.db.delete(this.cryptoWalletAddressesTable).returning();
     return result.length;
   }
 
@@ -190,10 +188,10 @@ export class MonetizationRepository extends BaseRepository {
    * @param data - Array of wallet address data for insertion
    * @returns Array of created wallet address records
    */
-  async createMany(data: DrizzleNewCryptoWalletAddress[]): Promise<DrizzleCryptoWalletAddress[]> {
+  async createMany(data: any[]): Promise<any[]> {
     if (data.length === 0) {
       return [];
     }
-    return this.db.insert(cryptoWalletAddresses).values(data).returning();
+    return this.db.insert(this.cryptoWalletAddressesTable).values(data).returning();
   }
 }

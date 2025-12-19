@@ -1,39 +1,40 @@
 /**
- * Links Repository
+ * this.linksTable Repository
  *
  * Provides data access methods for social link records using Drizzle ORM.
  */
 import { eq, desc, count } from 'drizzle-orm';
-import type { DrizzleLink, DrizzleNewLink } from '../../schemas/sqlite/index.js';
-import { links } from '../../schemas/sqlite/index.js';
 import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../../types/models.js';
+import type { PaginationOptions } from '../../types/models.js';
 
 /**
  * LinksRepository class for link CRUD operations
  */
 export class LinksRepository extends BaseRepository {
+  constructor(db: any, private readonly linksTable: any) {
+    super(db);
+  }
   /**
    * Finds a link by its link_id
    *
    * @param linkId - The link primary key
    * @returns The link record or null if not found
    */
-  async findById(linkId: number): Promise<DrizzleLink | null> {
-    const result = await this.db.select().from(links).where(eq(links.link_id, linkId)).limit(1);
+  async findById(linkId: number): Promise<any | null> {
+    const result = await this.db.select().from(this.linksTable).where(eq(this.linksTable.link_id, linkId)).limit(1);
     return result[0] ?? null;
   }
 
   /**
-   * Finds all links with optional pagination
+   * Finds all this.linksTable with optional pagination
    *
    * @param options - Pagination options (optional limit)
-   * @returns Array of links
+   * @returns Array of this.linksTable
    */
-  async findAll(options?: PaginationOptions): Promise<DrizzleLink[]> {
+  async findAll(options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParams(options);
 
-    const query = this.db.select().from(links).orderBy(desc(links.timestamp));
+    const query = this.db.select().from(this.linksTable).orderBy(desc(this.linksTable.timestamp));
 
     if (limit !== undefined) {
       return query.limit(limit);
@@ -48,18 +49,18 @@ export class LinksRepository extends BaseRepository {
    * @param url - The URL to search for
    * @returns The link record or null if not found
    */
-  async findByUrl(url: string): Promise<DrizzleLink | null> {
-    const result = await this.db.select().from(links).where(eq(links.url, url)).limit(1);
+  async findByUrl(url: string): Promise<any | null> {
+    const result = await this.db.select().from(this.linksTable).where(eq(this.linksTable.url, url)).limit(1);
     return result[0] ?? null;
   }
 
   /**
-   * Counts total links
+   * Counts total this.linksTable
    *
-   * @returns Total count of links
+   * @returns Total count of this.linksTable
    */
   async getCount(): Promise<number> {
-    const result = await this.db.select({ count: count() }).from(links);
+    const result = await this.db.select({ count: count() }).from(this.linksTable);
     return result[0]?.count ?? 0;
   }
 
@@ -70,8 +71,8 @@ export class LinksRepository extends BaseRepository {
    * @returns The created link record
    * @throws Error if insert fails to return a record
    */
-  async create(data: DrizzleNewLink): Promise<DrizzleLink> {
-    const result = await this.db.insert(links).values(data).returning();
+  async create(data: any): Promise<any> {
+    const result = await this.db.insert(this.linksTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create link record');
     }
@@ -85,11 +86,11 @@ export class LinksRepository extends BaseRepository {
    * @param data - Partial link data to update
    * @returns The updated link record or null if not found
    */
-  async update(linkId: number, data: Partial<DrizzleNewLink>): Promise<DrizzleLink | null> {
+  async update(linkId: number, data: Partial<any>): Promise<any | null> {
     const result = await this.db
-      .update(links)
+      .update(this.linksTable)
       .set(data)
-      .where(eq(links.link_id, linkId))
+      .where(eq(this.linksTable.link_id, linkId))
       .returning();
     return result[0] ?? null;
   }
@@ -101,17 +102,17 @@ export class LinksRepository extends BaseRepository {
    * @returns true if deleted, false if not found
    */
   async delete(linkId: number): Promise<boolean> {
-    const result = await this.db.delete(links).where(eq(links.link_id, linkId)).returning();
+    const result = await this.db.delete(this.linksTable).where(eq(this.linksTable.link_id, linkId)).returning();
     return result.length > 0;
   }
 
   /**
-   * Deletes all links
+   * Deletes all this.linksTable
    *
-   * @returns Number of deleted links
+   * @returns Number of deleted this.linksTable
    */
   async deleteAll(): Promise<number> {
-    const result = await this.db.delete(links).returning();
+    const result = await this.db.delete(this.linksTable).returning();
     return result.length;
   }
 
@@ -121,11 +122,11 @@ export class LinksRepository extends BaseRepository {
    * @param data - Array of link data for insertion
    * @returns Array of created link records
    */
-  async createMany(data: DrizzleNewLink[]): Promise<DrizzleLink[]> {
+  async createMany(data: any[]): Promise<any[]> {
     if (data.length === 0) {
       return [];
     }
-    return this.db.insert(links).values(data).returning();
+    return this.db.insert(this.linksTable).values(data).returning();
   }
 
   /**
@@ -135,7 +136,7 @@ export class LinksRepository extends BaseRepository {
    * @returns true if the URL exists, false otherwise
    */
   async existsByUrl(url: string): Promise<boolean> {
-    const result = await this.db.select({ count: count() }).from(links).where(eq(links.url, url));
+    const result = await this.db.select({ count: count() }).from(this.linksTable).where(eq(this.linksTable.url, url));
     return (result[0]?.count ?? 0) > 0;
   }
 }
