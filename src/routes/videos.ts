@@ -175,12 +175,9 @@ export function videosRoutes(
 
   // Get all videos data
   fastify.get(
-    '/:videoId/data/all',
+    '/data/all',
     {
-      preHandler: [fastify.optionalAuthenticate],
-      schema: {
-        params: videoIdParamsSchema,
-      },
+      preHandler: [fastify.authenticate],
     },
     controller.getAllVideosData.bind(controller)
   );

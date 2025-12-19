@@ -32,11 +32,11 @@ export function settingsRoutes(
   container: Container
 ): void {
   const settingsService = container.resolve('settingsService');
+  const videosService = container.resolve('videosService');
   const cloudflareService = container.resolve('cloudflareService');
   const websocketService = container.resolve('websocketService');
 
-  const controller = new SettingsController(settingsService, cloudflareService, websocketService);
-
+  const controller = new SettingsController(settingsService, videosService, cloudflareService, websocketService);
   // ============================================================================
   // Settings Root
   // ============================================================================

@@ -988,7 +988,7 @@ export class VideosService extends BaseService {
       isFinalized: video.is_finalized,
       isStreamRecordedRemotely: video.is_stream_recorded_remotely,
       timestamp: video.creation_timestamp,
-     videoAliasUrl,
+      videoAliasUrl,
       outputs,
       meta,
     };

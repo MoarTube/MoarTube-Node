@@ -15,6 +15,7 @@ import type { CloudflareService } from '../services/cloudflare.js';
 import type { WebSocketService } from '../services/websocket.js';
 import { getConfig } from '../config/index.js';
 import { isCloudflareCredentialsValid } from '../utils/index.js';
+import type { VideosService } from '../services/videos.js';
 
 /**
  * Request body interfaces
@@ -37,7 +38,7 @@ export interface AccountBody {
 }
 
 export interface NetworkInternalBody {
-  listeningNodePort: string;
+  nodeListeningPort: number;
 }
 
 export interface NetworkExternalBody {
@@ -82,7 +83,6 @@ export interface StorageConfigBody {
       s3ProviderClientConfig: {
         forcePathStyle: boolean;
         region: string;
-        endpoint?: string;
         credentials: {
           accessKeyId: string;
           secretAccessKey: string;
@@ -113,6 +113,7 @@ export interface SecureBody {
 export class SettingsController extends BaseController {
   constructor(
     private readonly settingsService: SettingsService,
+    private readonly videosService: VideosService,
     private readonly cloudflareService: CloudflareService,
     private readonly websocketService: WebSocketService
   ) {
@@ -514,11 +515,18 @@ export class SettingsController extends BaseController {
         );
       }
 
-      const { listeningNodePort } = request.body as NetworkInternalBody;
+      const { nodeListeningPort } = request.body as NetworkInternalBody;
 
       const config = getConfig();
 
-      config.updateNodeSettings({ nodeListeningPort: Number.parseInt(listeningNodePort, 10) });
+      config.updateNodeSettings({ nodeListeningPort: nodeListeningPort });
+
+      // Signal to restart workers with the new network configuration after response is sent
+      setImmediate(() => {
+        if (process.send !== undefined) {
+          process.send({ cmd: 'restart_server' });
+        }
+      });
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -577,16 +585,14 @@ export class SettingsController extends BaseController {
 
     const nodeSettings = config.nodeSettings;
 
-    if (nodeSettings.storageConfig.storageMode !== 'filesystem') {
-      return;
-    }
+    if (nodeSettings.storageConfig.storageMode === 'filesystem') {
+      const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
+      const videosDirectoryPath = config.paths.videosDirectoryPath;
+      const videos = await this.videosService.getAllVideosData();
 
-    const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
-    const videosDirectoryPath = config.paths.videosDirectoryPath;
-    const videos = await this.settingsService.getIndexedVideos();
-
-    for (const video of videos) {
-      this.rewriteVideoManifests(video, videosDirectoryPath, externalVideosBaseUrl);
+      for (const video of videos) {
+        this.rewriteVideoManifests(video, videosDirectoryPath, externalVideosBaseUrl);
+      }
     }
   }
 
@@ -594,31 +600,26 @@ export class SettingsController extends BaseController {
    * Rewrite manifest URLs for a single video
    */
   private rewriteVideoManifests(
-    video: { video_id: string; outputs?: string | null },
+    video: { videoId: string; outputs: Record<string, string[]> },
     videosDirectoryPath: string,
     externalVideosBaseUrl: string
   ): void {
-    const { video_id: videoId, outputs: outputsJson } = video;
+    let outputs: { m3u8: string[] };
 
-    if (outputsJson === undefined || outputsJson === null || outputsJson === '') {
-      return;
-    }
-
-    let outputs: { m3u8?: string[] };
     try {
-      outputs = JSON.parse(outputsJson) as { m3u8?: string[] };
+      outputs = video.outputs as { m3u8: string[] };
     } catch {
       return; // Skip if outputs is invalid JSON
     }
 
-    if (outputs.m3u8 === undefined || outputs.m3u8.length === 0) {
+    if (outputs.m3u8.length === 0) {
       return;
     }
 
     // Update master manifest
     const masterManifestPath = path.join(
       videosDirectoryPath,
-      videoId,
+      video.videoId,
       'adaptive',
       'm3u8',
       'manifest-master.m3u8'
@@ -631,7 +632,7 @@ export class SettingsController extends BaseController {
     for (const resolution of outputs.m3u8) {
       const manifestPath = path.join(
         videosDirectoryPath,
-        videoId,
+        video.videoId,
         'adaptive',
         'm3u8',
         `manifest-${resolution}.m3u8`
@@ -1039,9 +1040,6 @@ export class SettingsController extends BaseController {
       if (storageConfig.s3Config !== undefined) {
         input.s3BucketName = storageConfig.s3Config.bucketName;
         input.s3Region = storageConfig.s3Config.s3ProviderClientConfig.region;
-        if (storageConfig.s3Config.s3ProviderClientConfig.endpoint !== undefined) {
-          input.s3Endpoint = storageConfig.s3Config.s3ProviderClientConfig.endpoint;
-        }
         input.s3AccessKeyId = storageConfig.s3Config.s3ProviderClientConfig.credentials.accessKeyId;
         input.s3SecretAccessKey =
           storageConfig.s3Config.s3ProviderClientConfig.credentials.secretAccessKey;

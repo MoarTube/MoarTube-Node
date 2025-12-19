@@ -50,7 +50,7 @@ export const databaseDialectSchema = z.enum(['sqlite', 'postgres']);
 /**
  * Storage mode schema
  */
-export const storageModeSchema = z.enum(['filesystem', 's3']);
+export const storageModeSchema = z.enum(['filesystem', 's3provider']);
 
 // ============================================================================
 // Request Body Schemas
@@ -183,12 +183,24 @@ export type DatabaseConfigToggleBody = z.infer<typeof databaseConfigToggleBodySc
  * Storage configuration toggle request body schema
  */
 export const storageConfigToggleBodySchema = z.object({
-  storageMode: storageModeSchema,
-  s3Endpoint: z.url().optional(),
-  s3Region: z.string().optional(),
-  s3Bucket: z.string().optional(),
-  s3AccessKeyId: z.string().optional(),
-  s3SecretAccessKey: z.string().optional(),
+  storageConfig: z.object({
+    storageMode: storageModeSchema,
+    s3Config: z
+      .object({
+        bucketName: z.string().min(1, 'Bucket name is required'),
+        s3ProviderClientConfig: z
+          .object({
+            forcePathStyle: z.boolean(),
+            region: z.string().min(1, 'Region is required'),
+            credentials: z
+              .object({
+                accessKeyId: z.string().min(1, 'Access key ID is required'),
+                secretAccessKey: z.string().min(1, 'Secret access key is required'),
+              }),
+          }),
+      })
+      .optional(),
+  }),
 });
 
 export type StorageConfigToggleBody = z.infer<typeof storageConfigToggleBodySchema>;
