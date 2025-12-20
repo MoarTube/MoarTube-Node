@@ -977,7 +977,15 @@ export class SettingsController extends BaseController {
 
       await this.settingsService.updateDatabaseConfig(databaseConfig);
 
-      return await this.sendSuccess(reply);
+      const result = await this.sendSuccess(reply);
+
+      setImmediate(() => {
+        if (process.send) {
+          process.send({ cmd: 'restart_server' });
+        }
+      });
+
+      return result;
     } catch (error) {
       this.logger.error('Database connection test failed', error);
 
@@ -1047,7 +1055,15 @@ export class SettingsController extends BaseController {
 
       this.settingsService.updateStorageConfig(input);
 
-      return await this.sendSuccess(reply);
+      const result = await this.sendSuccess(reply);
+
+      setImmediate(() => {
+        if (process.send) {
+          process.send({ cmd: 'restart_server' });
+        }
+      });
+
+      return result;
     } catch (error) {
       this.logger.error('Storage config toggle error', error);
 

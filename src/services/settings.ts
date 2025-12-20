@@ -368,13 +368,6 @@ export class SettingsService extends BaseService {
 
     config.updateNodeSettings({ databaseConfig });
 
-    // Signal to restart workers with the new database configuration after response is sent
-    setImmediate(() => {
-      if (process.send !== undefined) {
-        process.send({ cmd: 'restart_server' });
-      }
-    });
-
     this.logger.info('Database configuration updated', { databaseConfig });
   }
 
@@ -418,13 +411,6 @@ export class SettingsService extends BaseService {
     }
 
     config.updateNodeSettings({ storageConfig: newStorageConfig });
-
-    // Signal to restart workers with the new storage configuration after response is sent
-    setImmediate(() => {
-      if (process.send !== undefined) {
-        process.send({ cmd: 'restart_server' });
-      }
-    });
 
     this.logger.info('Storage configuration updated', { mode: storageConfig.storageMode });
   }

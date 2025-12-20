@@ -64,9 +64,6 @@ export class StorageService extends BaseService {
           s3ProviderClientConfig: storageConfig.s3Config.s3ProviderClientConfig as S3ClientConfig,
         };
         this.s3Client = new S3Client(this.s3Config.s3ProviderClientConfig);
-        this.logger.info('S3 client initialized', {
-          bucketName: this.s3Config.bucketName,
-        });
       }
     } catch (error) {
       this.logger.error('S3 client not configured', error);
