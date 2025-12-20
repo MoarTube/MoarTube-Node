@@ -2101,7 +2101,7 @@ body {
                     $('#send-chat-message-button').text('Send');
                   }
                   this.showAlert(true, data.message);
-                } else if (data.eventName === 'information') {
+                } else if (data.eventName === 'cloudflare_turnstile_information') {
                   const cloudflareTurnstileSiteKey = data.cloudflareTurnstileSiteKey;
                   this.CLOUDFLARE_TURNSTILE_SITE_KEY = cloudflareTurnstileSiteKey;
                 }

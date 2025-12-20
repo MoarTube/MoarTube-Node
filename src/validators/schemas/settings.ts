@@ -84,18 +84,6 @@ export const personalizeNodeIdBodySchema = z.object({
 export type PersonalizeNodeIdBody = z.infer<typeof personalizeNodeIdBodySchema>;
 
 /**
- * Secure mode configuration request body schema
- */
-export const configureSecureBodySchema = z.object({
-  isSecure: booleanSchema,
-  keyFile: z.string().optional(),
-  certFile: z.string().optional(),
-  caFiles: z.array(z.string()).optional(),
-});
-
-export type ConfigureSecureBody = z.infer<typeof configureSecureBodySchema>;
-
-/**
  * Account update request body schema
  */
 export const updateAccountBodySchema = z.object({
@@ -155,6 +143,13 @@ export type CloudflareTurnstileConfigureBody = z.infer<
  */
 export const featureToggleBodySchema = z.object({
   isEnabled: booleanSchema,
+});
+
+/**
+ * Secure toggle request body schema (for secure http/https mode)
+ */
+export const secureToggleQuerySchema = z.object({
+  isSecure: booleanSchema,
 });
 
 export type FeatureToggleBody = z.infer<typeof featureToggleBodySchema>;

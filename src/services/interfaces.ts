@@ -273,7 +273,7 @@ export type WebSocketEventName =
   | 'video_publish'
   | 'chat_message'
   | 'chat_settings'
-  | 'information'
+  | 'cloudflare_turnstile_information'
   | 'live_stream_stats'
   | 'node_name_update'
   | 'node_about_update'

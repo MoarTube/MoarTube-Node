@@ -419,19 +419,17 @@ export class SettingsService extends BaseService {
    * Update Cloudflare configuration
    */
   updateCloudflareConfig(
-    emailAddress: string,
-    authenticationKey: string,
-    _accountId: string,
-    zoneId: string,
-    _zoneName: string
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string,
   ): void {
     const config = getConfig();
 
     config.updateNodeSettings({
       isCloudflareCdnEnabled: true,
-      cloudflareEmailAddress: emailAddress,
-      cloudflareGlobalApiKey: authenticationKey,
-      cloudflareZoneId: zoneId,
+      cloudflareEmailAddress: cloudflareEmailAddress,
+      cloudflareZoneId: cloudflareZoneId,
+      cloudflareGlobalApiKey: cloudflareGlobalApiKey,
     });
 
     this.logger.info('Cloudflare configuration updated');

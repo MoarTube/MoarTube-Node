@@ -95,7 +95,7 @@ export interface StorageConfigBody {
 /**
  * Request body for secure mode (HTTPS)
  */
-export interface SecureBody {
+export interface SecureQuery {
   isSecure: boolean;
 }
 
@@ -289,25 +289,39 @@ export class SettingsController extends BaseController {
    */
   configureSecure = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const contentType = request.headers['content-type'] ?? '';
+      const secureQuery = request.query as SecureQuery;
 
-      if (contentType.includes('multipart/form-data')) {
-        const result = await this.enableHttpsMode(request);
+      let result;
+      let outcome;
 
-        if (result.success) {
-          return await this.sendSuccess(reply);
+      if(secureQuery.isSecure) {
+        outcome = await this.enableHttpsMode(request);
+
+        if (outcome.success) {
+          result = await this.sendSuccess(reply);
         } else {
-          return await this.sendError(reply, result.error ?? 'error enabling HTTPS mode');
-        }
-      } else {
-        const result = this.disableHttpsMode(request);
-
-        if (result.success) {
-          return await this.sendSuccess(reply);
-        } else {
-          return await this.sendError(reply, result.error ?? 'error disabling HTTPS mode');
+          result = await this.sendError(reply, outcome.error ?? 'error enabling HTTPS mode');
         }
       }
+      else {
+        outcome = this.disableHttpsMode();
+
+        if (outcome.success) {
+          result = await this.sendSuccess(reply);
+        } else {
+          result = await this.sendError(reply, outcome.error ?? 'error disabling HTTPS mode');
+        }
+      }
+
+      if(outcome.success) {
+        setImmediate(() => {
+          if (process.send) {
+            process.send({ cmd: 'restart_server' });
+          }
+        });
+      }
+
+      return result;
     } catch (error) {
       this.logger.error('Secure mode configuration error', error);
 
@@ -390,18 +404,14 @@ export class SettingsController extends BaseController {
   /**
    * Disable HTTPS mode
    */
-  private disableHttpsMode(request: FastifyRequest): { success: boolean; error?: string } {
-    const body = request.body as SecureBody;
+  private disableHttpsMode(): { success: boolean; error?: string } {
+    this.logger.info('switching node to HTTP mode');
 
-    if (!body.isSecure) {
-      this.logger.info('switching node to HTTP mode');
-      const config = getConfig();
+    const config = getConfig();
 
-      config.updateNodeSettings({ isSecure: false });
-      return { success: true };
-    } else {
-      return { success: false, error: 'invalid parameters - use multipart for enabling HTTPS' };
-    }
+    config.updateNodeSettings({ isSecure: false });
+    
+    return { success: true };
   }
 
   /**
@@ -522,13 +532,15 @@ export class SettingsController extends BaseController {
       config.updateNodeSettings({ nodeListeningPort: nodeListeningPort });
 
       // Signal to restart workers with the new network configuration after response is sent
+      const result = await this.sendSuccess(reply);
+
       setImmediate(() => {
-        if (process.send !== undefined) {
+        if (process.send) {
           process.send({ cmd: 'restart_server' });
         }
       });
 
-      return await this.sendSuccess(reply);
+      return result;
     } catch (error) {
       this.logger.error('Error updating internal network settings', error);
 
@@ -721,10 +733,8 @@ export class SettingsController extends BaseController {
       // Update Cloudflare configuration in settings
       this.settingsService.updateCloudflareConfig(
         cloudflareEmailAddress,
-        cloudflareGlobalApiKey,
-        '',
         cloudflareZoneId,
-        ''
+        cloudflareGlobalApiKey
       );
 
       return await this.sendSuccess(reply);
@@ -804,7 +814,7 @@ export class SettingsController extends BaseController {
 
       // Broadcast to chat clients so they know Turnstile is now enabled
       this.websocketService.broadcastToChat('all', {
-        eventName: 'information',
+        eventName: 'cloudflare_turnstile_information',
         data: {
           cloudflareTurnstileSiteKey,
         },
@@ -840,7 +850,7 @@ export class SettingsController extends BaseController {
 
       // Broadcast to chat clients so they know Turnstile is now disabled
       this.websocketService.broadcastToChat('all', {
-        eventName: 'information',
+        eventName: 'cloudflare_turnstile_information',
         data: {
           cloudflareTurnstileSiteKey: '',
         },

@@ -10,7 +10,6 @@ import {
   personalizeNodeNameBodySchema,
   personalizeNodeAboutBodySchema,
   personalizeNodeIdBodySchema,
-  configureSecureBodySchema,
   updateAccountBodySchema,
   networkInternalBodySchema,
   networkExternalBodySchema,
@@ -19,6 +18,7 @@ import {
   featureToggleBodySchema,
   databaseConfigToggleBodySchema,
   storageConfigToggleBodySchema,
+  secureToggleQuerySchema,
 } from '../validators/index.js';
 
 /**
@@ -140,7 +140,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
-        body: configureSecureBodySchema,
+        querystring: secureToggleQuerySchema
       },
     },
     controller.configureSecure.bind(controller)
