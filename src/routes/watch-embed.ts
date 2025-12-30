@@ -18,14 +18,14 @@ export function watchEmbedRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videosRepository = container.resolve('videosRepository');
-  const linksRepository = container.resolve('linksRepository');
-  const monetizationRepository = container.resolve('monetizationRepository');
+  const videosService = container.resolve('videosService');
+  const linksService = container.resolve('linksService');
+  const monetizationService = container.resolve('monetizationService');
 
   const controller = new WatchEmbedController(
-    videosRepository,
-    linksRepository,
-    monetizationRepository
+    videosService,
+    linksService,
+    monetizationService
   );
 
   // Embedded video player - public (optional auth for password-protected videos)

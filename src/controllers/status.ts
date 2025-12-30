@@ -6,7 +6,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from './base.js';
 import { getConfig } from '../config/index.js';
-import type { Container } from '../core/container.js';
+import type { VideosService } from '../services/index.js';
 
 /**
  * Status information response
@@ -31,11 +31,11 @@ interface StatusInformation {
  * - Health checks
  */
 export class StatusController extends BaseController {
-  private readonly container: Container;
+  private readonly videosService: VideosService;
 
-  constructor(container: Container) {
+  constructor(videosService: VideosService) {
     super('StatusController');
-    this.container = container;
+    this.videosService = videosService;
   }
 
   /**
@@ -49,9 +49,7 @@ export class StatusController extends BaseController {
 
       const nodeSettings = config.nodeSettings;
 
-      const videosService = this.container.resolve('videosService');
-
-      const videoCount = await videosService.countVideos({
+      const videoCount = await this.videosService.countVideos({
         isPublished: true,
       });
 

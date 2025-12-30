@@ -9,11 +9,9 @@ import {
   type FastifyReplyWithView,
   type VideoSource,
 } from './video-controller-base.js';
-import type {
-  LinksRepository,
-  MonetizationRepository,
-  VideosRepository
-} from '../database/repositories/index.js';
+import type { VideosService } from '../services/videos.js';
+import type { LinksService } from '../services/links.js';
+import type { MonetizationService } from '../services/monetization.js';
 import type { DrizzleVideo } from '../database/schemas/sqlite/index.js';
 import { getConfig } from '../config/index.js';
 
@@ -63,11 +61,11 @@ interface EmbedPageData {
  */
 export class WatchEmbedController extends VideoControllerBase {
   constructor(
-    videoRepository: VideosRepository,
-    private readonly linkRepository: LinksRepository,
-    private readonly monetizationRepository: MonetizationRepository
+    private readonly videosService: VideosService,
+    private readonly linksService: LinksService,
+    private readonly monetizationService: MonetizationService
   ) {
-    super('WatchEmbedController', videoRepository);
+    super('WatchEmbedController');
   }
 
   /**
@@ -79,7 +77,7 @@ export class WatchEmbedController extends VideoControllerBase {
     try {
       const { videoId } = request.params as VideoIdParams;
 
-      const video = await this.videoRepository.findById(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         return await this.sendError(reply, 'video not found', 404);
@@ -104,7 +102,7 @@ export class WatchEmbedController extends VideoControllerBase {
     try {
       const { videoId } = request.params as VideoIdParams;
 
-      const video = await this.videoRepository.findById(videoId);
+      const video = await this.videosService.getVideo(videoId);
 
       if (!video) {
         return await this.sendError(reply, 'video not found', 404);
@@ -115,8 +113,8 @@ export class WatchEmbedController extends VideoControllerBase {
       const nodeSettings = config.nodeSettings;
 
       // Get links and wallet addresses for monetization display
-      const links = await this.linkRepository.findAll();
-      const cryptoWalletAddresses = await this.monetizationRepository.findAll();
+      const links = await this.linksService.getAllLinks();
+      const cryptoWalletAddresses = await this.monetizationService.getWalletAddresses();
 
       const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
 

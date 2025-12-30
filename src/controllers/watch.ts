@@ -9,7 +9,7 @@ import { VideoControllerBase, type VideoSource } from './video-controller-base.j
 import type { VideosService } from '../services/videos.js';
 import type { LinksService } from '../services/links.js';
 import type { MonetizationService } from '../services/monetization.js';
-import type { CommentsRepository, VideosRepository } from '../database/repositories/index.js';
+import type { CommentsService } from '../services/comments.js';
 import type { DrizzleVideo } from '../database/schemas/sqlite/index.js';
 import { getConfig } from '../config/index.js';
 
@@ -109,20 +109,19 @@ export class WatchController extends VideoControllerBase {
   private readonly videosService: VideosService;
   private readonly linksService: LinksService;
   private readonly monetizationService: MonetizationService;
-  private readonly commentRepository: CommentsRepository;
+  private readonly commentsService: CommentsService;
 
   constructor(
-    videoRepository: VideosRepository,
     videosService: VideosService,
     linksService: LinksService,
     monetizationService: MonetizationService,
-    commentRepository: CommentsRepository
+    commentsService: CommentsService
   ) {
-    super('WatchController', videoRepository);
+    super('WatchController');
     this.videosService = videosService;
     this.linksService = linksService;
     this.monetizationService = monetizationService;
-    this.commentRepository = commentRepository;
+    this.commentsService = commentsService;
   }
 
   /**
@@ -173,7 +172,7 @@ export class WatchController extends VideoControllerBase {
           sortBy: 'creation_timestamp',
           sortDirection: 'desc',
         }),
-        this.commentRepository.findByVideoIdWithTimestampFilter(
+        this.commentsService.getCommentsForVideo(
           video.video_id,
           'before',
           'ascending',

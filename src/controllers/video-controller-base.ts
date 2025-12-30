@@ -6,7 +6,6 @@
  */
 import type { FastifyReply } from 'fastify';
 import { BaseController } from './base.js';
-import type { VideosRepository } from '../database/repositories/index.js';
 import type { DrizzleVideo } from '../database/schemas/sqlite/index.js';
 
 /**
@@ -47,10 +46,7 @@ export type FastifyReplyWithView = FastifyReply & {
  * - Common error handling patterns
  */
 export abstract class VideoControllerBase extends BaseController {
-  constructor(
-    name: string,
-    protected readonly videoRepository: VideosRepository
-  ) {
+  constructor(name: string) {
     super(name);
   }
 

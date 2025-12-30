@@ -18,18 +18,16 @@ export function watchRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const videosRepository = container.resolve('videosRepository');
   const videosService = container.resolve('videosService');
   const linksService = container.resolve('linksService');
   const monetizationService = container.resolve('monetizationService');
-  const commentsRepository = container.resolve('commentsRepository');
+  const commentsService = container.resolve('commentsService');
 
   const controller = new WatchController(
-    videosRepository,
     videosService,
     linksService,
     monetizationService,
-    commentsRepository
+    commentsService
   );
 
   // Watch page - public (no auth required)

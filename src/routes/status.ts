@@ -17,7 +17,8 @@ export function statusRoutes(
   fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
   container: Container
 ): void {
-  const controller = new StatusController(container);
+  const videosService = container.resolve('videosService');
+  const controller = new StatusController(videosService);
 
   // Public endpoints (no authentication required)
   fastify.get(
