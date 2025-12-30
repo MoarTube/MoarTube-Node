@@ -43,20 +43,20 @@
     "isolatedModules": true,
 
     // Path Aliases
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@config/*": ["config/*"],
-      "@core/*": ["core/*"],
-      "@database/*": ["database/*"],
-      "@services/*": ["services/*"],
-      "@controllers/*": ["controllers/*"],
-      "@routes/*": ["routes/*"],
-      "@plugins/*": ["plugins/*"],
-      "@utils/*": ["utils/*"],
-      "@websocket/*": ["websocket/*"],
-      "@workers/*": ["workers/*"],
-      "@types/*": ["types/*"]
+      "@/*": ["./src/*"],
+      "@config/*": ["./src/config/*"],
+      "@core/*": ["./src/core/*"],
+      "@database/*": ["./src/database/*"],
+      "@services/*": ["./src/services/*"],
+      "@controllers/*": ["./src/controllers/*"],
+      "@routes/*": ["./src/routes/*"],
+      "@plugins/*": ["./src/plugins/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@websocket/*": ["./src/websocket/*"],
+      "@workers/*": ["./src/workers/*"],
+      "@types/*": ["./src/types/*"]
     },
 
     // Skip type checking for node_modules

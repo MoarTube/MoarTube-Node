@@ -3,3 +3,7 @@ data
 dist
 *.log
 .env
+coverage/
+.nyc_output/
+*.tsbuildinfo
+eslint-report.json
