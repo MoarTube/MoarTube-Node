@@ -152,73 +152,6 @@ export function getHostsFilePath(): string {
 }
 
 /**
- * Format bytes to human-readable string
- * @param bytes - Number of bytes
- * @param decimals - Number of decimal places
- */
-export function formatBytes(bytes: number, decimals = 2): string {
-  if (bytes === 0) {
-    return '0 Bytes';
-  }
-
-  const k = 1024;
-  const dm = Math.max(0, decimals);
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  const sizeLabel = sizes[i] ?? 'Bytes';
-
-  return `${String(Number.parseFloat((bytes / Math.pow(k, i)).toFixed(dm)))} ${sizeLabel}`;
-}
-
-/**
- * Format duration in seconds to HH:MM:SS or MM:SS
- * @param seconds - Duration in seconds
- */
-export function formatDuration(seconds: number): string {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const secs = Math.floor(seconds % 60);
-
-  if (hours > 0) {
-    return `${hours.toString().padStart(2, '0')}:${minutes
-      .toString()
-      .padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  }
-
-  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-}
-
-/**
- * Parse duration string (HH:MM:SS or MM:SS) to seconds
- * @param duration - Duration string
- */
-export function parseDuration(duration: string): number {
-  const parts = duration.split(':').map((p) => Number.parseInt(p, 10));
-
-  if (parts.length === 3) {
-    const hours = parts[0] ?? 0;
-    const minutes = parts[1] ?? 0;
-    const seconds = parts[2] ?? 0;
-    return hours * 3600 + minutes * 60 + seconds;
-  } else if (parts.length === 2) {
-    const minutes = parts[0] ?? 0;
-    const seconds = parts[1] ?? 0;
-    return minutes * 60 + seconds;
-  }
-
-  return Number.parseInt(duration, 10) || 0;
-}
-
-/**
- * Sleep for a specified number of milliseconds
- * @param ms - Milliseconds to sleep
- */
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
  * Chunk an array into smaller arrays
  * @param array - Array to chunk
  * @param size - Chunk size
@@ -231,14 +164,6 @@ export function chunkArray<T>(array: T[], size: number): T[][] {
   }
 
   return chunks;
-}
-
-/**
- * Deep clone an object
- * @param obj - Object to clone
- */
-export function deepClone<T>(obj: T): T {
-  return structuredClone(obj);
 }
 
 /**
@@ -285,85 +210,6 @@ export function deepMerge<T extends Record<string, unknown>>(
 }
 
 /**
- * Debounce a function
- * @param fn - Function to debounce
- * @param delay - Delay in milliseconds
- */
-export function debounce<T extends (...args: unknown[]) => unknown>(
-  fn: T,
-  delay: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout | undefined;
-
-  return function (this: unknown, ...args: Parameters<T>) {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-
-    timeoutId = setTimeout(() => {
-      fn.apply(this, args);
-    }, delay);
-  };
-}
-
-/**
- * Throttle a function
- * @param fn - Function to throttle
- * @param limit - Minimum time between calls in milliseconds
- */
-export function throttle<T extends (...args: unknown[]) => unknown>(
-  fn: T,
-  limit: number
-): (...args: Parameters<T>) => void {
-  let inThrottle = false;
-
-  return function (this: unknown, ...args: Parameters<T>) {
-    if (!inThrottle) {
-      fn.apply(this, args);
-      inThrottle = true;
-      setTimeout(() => {
-        inThrottle = false;
-      }, limit);
-    }
-  };
-}
-
-/**
- * Escape HTML special characters
- * @param str - String to escape
- */
-export function escapeHtml(str: string): string {
-  const htmlEntities: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  };
-
-  return str.replaceAll(/[&<>"']/g, (char) => htmlEntities[char] ?? char);
-}
-
-/**
- * Unescape HTML special characters
- * @param str - String to unescape
- */
-export function unescapeHtml(str: string): string {
-  const htmlEntities: Record<string, string> = {
-    '&amp;': '&',
-    '&lt;': '<',
-    '&gt;': '>',
-    '&quot;': '"',
-    '&#39;': "'",
-  };
-
-  return str.replaceAll(
-    /&amp;|&lt;|&gt;|&quot;|&#39;/g,
-    (entity) => htmlEntities[entity] ?? entity
-  );
-}
-
-/**
  * Truncate a string to a maximum length
  * @param str - String to truncate
  * @param maxLength - Maximum length
@@ -375,26 +221,6 @@ export function truncate(str: string, maxLength: number, suffix = '...'): string
   }
 
   return str.slice(0, maxLength - suffix.length) + suffix;
-}
-
-/**
- * Capitalize the first letter of a string
- */
-export function capitalize(str: string): string {
-  if (str === '') {
-    return str;
-  }
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-/**
- * Convert a string to title case
- */
-export function toTitleCase(str: string): string {
-  return str.replaceAll(
-    /\w\S*/g,
-    (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase()
-  );
 }
 
 /**
@@ -413,13 +239,6 @@ export function isDockerEnvironment(): boolean {
  */
 export function getCurrentTimestamp(): string {
   return new Date().toISOString();
-}
-
-/**
- * Get current Unix timestamp in seconds
- */
-export function getCurrentUnixTimestamp(): number {
-  return Math.floor(Date.now() / 1000);
 }
 
 /**
