@@ -1,36 +1,16 @@
 /**
  * Core Module
  *
- * Barrel export for core application functionality including
- * DI container, cluster management, and shutdown handling.
+ * Barrel export for core application functionality.
  */
 
-// Dependency Injection Container
+// Dependency Injection Container (Container type is used)
 export {
-  createAppContainer,
-  getContainer,
-  isContainerInitialized,
-  resolve,
-  disposeContainer,
   type Container,
-  type ContainerCradle,
 } from './container.js';
 
-// Cluster management
+// Cluster management (ClusterMaster and ClusterWorker are used)
 export {
-  IPCChannel,
-  getIPCChannel,
   ClusterMaster,
   ClusterWorker,
-  type IPCHandler,
-  type IPCLogger,
-  type ClusterMasterOptions,
-  type ClusterWorkerOptions,
 } from './cluster/index.js';
-
-// Graceful shutdown
-export {
-  GracefulShutdown,
-  createGracefulShutdown,
-  type GracefulShutdownConfig,
-} from './shutdown.js';

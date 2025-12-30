@@ -179,10 +179,6 @@ export const LastCheckedContentTrackerSchema = z.object({
 // Inferred Types (for runtime use)
 // ============================================
 
-export type PostgresConfigValidated = z.infer<typeof PostgresConfigSchema>;
-export type DatabaseConfigValidated = z.infer<typeof DatabaseConfigSchema>;
-export type S3ConfigValidated = z.infer<typeof S3ConfigSchema>;
-export type StorageConfigValidated = z.infer<typeof StorageConfigSchema>;
 export type NodeSettingsValidated = z.infer<typeof NodeSettingsSchema>;
 export type AppConfigValidated = z.infer<typeof AppConfigSchema>;
 export type NodeIdentificationValidated = z.infer<typeof NodeIdentificationSchema>;
@@ -238,18 +234,4 @@ export function validateLastCheckedContentTracker(
   return result.data;
 }
 
-/**
- * Safely parse node settings (returns null on failure)
- */
-export function safeParseNodeSettings(data: unknown): NodeSettingsValidated | null {
-  const result = NodeSettingsSchema.safeParse(data);
-  return result.success ? result.data : null;
-}
 
-/**
- * Safely parse app config (returns null on failure)
- */
-export function safeParseAppConfig(data: unknown): AppConfigValidated | null {
-  const result = AppConfigSchema.safeParse(data);
-  return result.success ? result.data : null;
-}

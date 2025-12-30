@@ -9,7 +9,7 @@ import {
   hashPassword,
   verifyPassword,
   getHostsFilePath,
-} from '@utils/helpers';
+} from '@utils/helpers.js';
 
 describe('verifyJwtToken', () => {
   it('should return invalid for empty token', () => {

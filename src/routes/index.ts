@@ -7,11 +7,6 @@ import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import type { Container } from '../core/container.js';
 
-/**
- * Fastify instance with Zod type provider
- */
-export type FastifyZod = FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>;
-
 // Route definitions
 export { statusRoutes } from './status.js';
 export { accountRoutes } from './account.js';

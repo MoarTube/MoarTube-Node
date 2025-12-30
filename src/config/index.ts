@@ -470,5 +470,3 @@ export { Config };
 
 // Re-export subsystem exports for convenience
 export { getEnv } from './env.js';
-export { getPaths, type PathConfig } from './paths.js';
-export { getUrls, type UrlConfig } from './urls.js';
