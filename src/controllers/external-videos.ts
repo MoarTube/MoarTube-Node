@@ -6,9 +6,9 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
-import { BaseController } from './base.js';
-import type { VideosService } from '../services/videos.js';
-import { getConfig } from '../config/index.js';
+import { BaseController } from '@controllers/base.js';
+import type { VideosService } from '@services/videos.js';
+import { getConfig } from '@config/index.js';
 
 /**
  * Route params for video images

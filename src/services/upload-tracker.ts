@@ -6,8 +6,8 @@
  */
 
 import type { FastifyRequest } from 'fastify';
-import type { Logger } from '../utils/logger.js';
-import { type WebSocketService } from './websocket.js';
+import type { Logger } from '@/utils/logger.js';
+import { type WebSocketService } from '@services/websocket.js';
 
 /**
  * Upload tracking state for a single video

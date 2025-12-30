@@ -8,12 +8,12 @@ import {
   VideoControllerBase,
   type FastifyReplyWithView,
   type VideoSource,
-} from './video-controller-base.js';
-import type { VideosService } from '../services/videos.js';
-import type { LinksService } from '../services/links.js';
-import type { MonetizationService } from '../services/monetization.js';
-import type { DrizzleVideo } from '../database/schemas/sqlite/index.js';
-import { getConfig } from '../config/index.js';
+} from '@controllers/video-controller-base.js';
+import type { VideosService } from '@services/videos.js';
+import type { LinksService } from '@services/links.js';
+import type { MonetizationService } from '@services/monetization.js';
+import type { DrizzleVideo } from '@database/schemas/sqlite/index.js';
+import { getConfig } from '@config/index.js';
 
 /**
  * Route params for video/chat endpoints

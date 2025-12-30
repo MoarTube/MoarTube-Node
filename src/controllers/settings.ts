@@ -9,13 +9,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 
-import { BaseController } from './base.js';
-import type { SettingsService } from '../services/settings.js';
-import type { CloudflareService } from '../services/cloudflare.js';
-import type { WebSocketService } from '../services/websocket.js';
-import { getConfig } from '../config/index.js';
-import { isCloudflareCredentialsValid } from '../utils/index.js';
-import type { VideosService } from '../services/videos.js';
+import { BaseController } from '@controllers/base.js';
+import type { SettingsService } from '@services/settings.js';
+import type { CloudflareService } from '@services/cloudflare.js';
+import type { WebSocketService } from '@services/websocket.js';
+import { getConfig } from '@config/index.js';
+import { isCloudflareCredentialsValid } from '@utils/index.js';
+import type { VideosService } from '@services/videos.js';
 
 /**
  * Request body interfaces

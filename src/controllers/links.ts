@@ -4,9 +4,9 @@
  * Handles social link management endpoints.
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { BaseController } from './base.js';
-import type { LinksService } from '../services/links.js';
-import type { CloudflareService } from '../services/cloudflare.js';
+import { BaseController } from '@controllers/base.js';
+import type { LinksService } from '@services/links.js';
+import type { CloudflareService } from '@services/cloudflare.js';
 
 /**
  * Request body for adding a link

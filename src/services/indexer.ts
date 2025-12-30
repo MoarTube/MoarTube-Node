@@ -6,10 +6,10 @@
  */
 import axios, { type AxiosInstance, type AxiosError } from 'axios';
 
-import { BaseService } from './base.js';
-import type { Logger } from '../utils/logger.js';
-import type { VideoIndexData, RemoveFromIndexData, IndexerSubmitResult } from './interfaces.js';
-import { getConfig } from '../config/index.js';
+import { BaseService } from '@services/base.js';
+import type { Logger } from '@/utils/logger.js';
+import type { VideoIndexData, RemoveFromIndexData, IndexerSubmitResult } from '@services/interfaces.js';
+import { getConfig } from '@config/index.js';
 
 /**
  * Indexer response structure

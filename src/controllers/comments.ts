@@ -6,13 +6,13 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import sanitizeHtml from 'sanitize-html';
 
-import { BaseController } from './base.js';
-import type { CommentsService } from '../services/comments.js';
-import type { ReportsService } from '../services/reports.js';
-import type { VideosService } from '../services/videos.js';
-import type { CloudflareService } from '../services/cloudflare.js';
-import type { ReportType } from '../services/interfaces.js';
-import { getConfig } from '../config/index.js';
+import { BaseController } from '@controllers/base.js';
+import type { CommentsService } from '@services/comments.js';
+import type { ReportsService } from '@services/reports.js';
+import type { VideosService } from '@services/videos.js';
+import type { CloudflareService } from '@services/cloudflare.js';
+import type { ReportType } from '@services/interfaces.js';
+import { getConfig } from '@config/index.js';
 
 /**
  * Query parameters for comment search

@@ -6,7 +6,7 @@
  */
 
 // Base service
-export { BaseService } from './base.js';
+export { BaseService } from '@services/base.js';
 
 // Service interfaces (only the actually used ones)
 export type {
@@ -25,18 +25,18 @@ export type {
   UpdateNodeSettingsInput,
   DatabaseConfigInput,
   StorageConfigInput,
-} from './interfaces.js';
+} from '@services/interfaces.js';
 
 // Service implementations that are imported from this barrel
-export { VideosService } from './videos.js';
-export { CommentsService } from './comments.js';
-export { AccountService } from './account.js';
-export { CloudflareService } from './cloudflare.js';
-export { ReportsService } from './reports.js';
+export { VideosService } from '@services/videos.js';
+export { CommentsService } from '@services/comments.js';
+export { AccountService } from '@services/account.js';
+export { CloudflareService } from '@services/cloudflare.js';
+export { ReportsService } from '@services/reports.js';
 export {
   VideoUploadService,
   type UploadResult,
   type VideoUploadOptions,
   type StreamUploadOptions,
   type ImageUploadOptions,
-} from './video-upload.js';
+} from '@services/video-upload.js';

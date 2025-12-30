@@ -11,7 +11,7 @@ import {
   booleanSchema,
   usernameSchema,
   passwordSchema,
-} from './common.js';
+} from '@validators/schemas/common.js';
 
 // ============================================================================
 // Settings-Specific Schemas

@@ -14,7 +14,7 @@ import {
   closeDatabase as closeSqliteDatabase,
   type DatabaseConfig as SqliteDatabaseConfig,
   type DatabaseClient as SqliteDatabaseClient
-} from './sqlite-connection.js';
+} from '@database/sqlite-connection.js';
 
 import {
   createDatabase as createPostgresDatabase,
@@ -25,7 +25,7 @@ import {
   closeDatabase as closePostgresDatabase,
   type DatabaseConfig as PostgresDatabaseConfig,
   type DatabaseClient as PostgresDatabaseClient
-} from './postgres-connection.js';
+} from '@database/postgres-connection.js';
 
 /**
  * Database configuration interface

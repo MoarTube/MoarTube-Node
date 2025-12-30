@@ -35,4 +35,4 @@ export { z } from 'zod';
 export type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
 // Import shared validation error types
-export { ValidationError, type ValidationErrorDetails } from '../errors/index.js';
+export { ValidationError, type ValidationErrorDetails } from '@/errors/index.js';

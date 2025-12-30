@@ -11,10 +11,10 @@ import type {
   NodeSettings,
   NodeIdentification,
   LastCheckedContentTracker,
-} from '../types/index.js';
+} from '@/types/index.js';
 
-import { getEnv, type Env } from './env.js';
-import { initializePaths, type Paths, type PathConfig } from './paths.js';
+import { getEnv, type Env } from '@config/env.js';
+import { initializePaths, type Paths, type PathConfig } from '@config/paths.js';
 import {
   initializeUrls,
   buildNodeBaseUrl,
@@ -22,7 +22,7 @@ import {
   buildExternalResourcesBaseUrl,
   type Urls,
   type UrlConfig,
-} from './urls.js';
+} from '@config/urls.js';
 import {
   validateNodeSettings,
   validateAppConfig,
@@ -30,7 +30,7 @@ import {
   validateLastCheckedContentTracker,
   type NodeSettingsValidated,
   type AppConfigValidated,
-} from './schema.js';
+} from '@config/schema.js';
 
 /**
  * Runtime configuration (not persisted)
@@ -469,4 +469,4 @@ export function getConfig(): Config {
 export { Config };
 
 // Re-export subsystem exports for convenience
-export { getEnv } from './env.js';
+export { getEnv } from '@config/env.js';

@@ -4,7 +4,7 @@
  * Provides data access methods for comment records using Drizzle ORM.
  */
 import { eq, desc, and, gt, lt, like, count } from 'drizzle-orm';
-import { BaseRepository } from './base.js';
+import { BaseRepository } from '@database/repositories/base.js';
 
 /**
  * CommentsRepository class for comment CRUD operations

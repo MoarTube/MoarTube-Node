@@ -11,7 +11,7 @@ import {
   addressSchema,
   portSchema,
   optionalBooleanSchema,
-} from './common.js';
+} from '@validators/schemas/common.js';
 
 /**
  * Sign in request body schema

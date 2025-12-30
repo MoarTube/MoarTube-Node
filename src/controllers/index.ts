@@ -10,12 +10,12 @@ export {
   type ApiSuccessResponse,
   type ApiErrorResponse,
   type PaginatedResponse,
-} from './base.js';
+} from '@controllers/base.js';
 
 // Controllers that are imported from this barrel export
-export { StatusController } from './status.js';
-export { AccountController } from './account.js';
-export { VideosController } from './videos.js';
+export { StatusController } from '@controllers/status.js';
+export { AccountController } from '@controllers/account.js';
+export { VideosController } from '@controllers/videos.js';
 export {
   SettingsController,
   type PersonalizeNodeNameBody,
@@ -29,7 +29,7 @@ export {
   type ToggleBooleanBody,
   type DatabaseConfigBody,
   type StorageConfigBody,
-} from './settings.js';
+} from '@controllers/settings.js';
 export {
   StreamsController,
   type StartStreamBody,
@@ -37,4 +37,4 @@ export {
   type SegmentRemoveParams,
   type SegmentRemoveBody,
   type ChatSettingsBody,
-} from './streams.js';
+} from '@controllers/streams.js';

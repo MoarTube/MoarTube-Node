@@ -7,7 +7,7 @@
 import type { FastifyInstance, FastifyError, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
 import { ZodError } from 'zod';
-import { AppError, ValidationError, type ValidationErrorDetails } from '../errors/index.js';
+import { AppError, ValidationError, type ValidationErrorDetails } from '@/errors/index.js';
 
 /**
  * Standard API error response

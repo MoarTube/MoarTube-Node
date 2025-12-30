@@ -4,9 +4,9 @@
  * Barrel export for all WebSocket message handlers.
  */
 
-export { WebSocketHandler, type HandlerContext } from './base.js';
-export { ChatJoinHandler } from './chat-join.js';
-export { ChatMessageHandler } from './chat-message.js';
-export { VideoStatusHandler } from './video-status.js';
-export { EchoHandler } from './echo.js';
-export { RegisterHandler } from './register.js';
+export { WebSocketHandler, type HandlerContext } from '@websocket/handlers/base.js';
+export { ChatJoinHandler } from '@websocket/handlers/chat-join.js';
+export { ChatMessageHandler } from '@websocket/handlers/chat-message.js';
+export { VideoStatusHandler } from '@websocket/handlers/video-status.js';
+export { EchoHandler } from '@websocket/handlers/echo.js';
+export { RegisterHandler } from '@websocket/handlers/register.js';

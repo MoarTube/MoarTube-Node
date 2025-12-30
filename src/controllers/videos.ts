@@ -7,20 +7,20 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { BaseController } from './base.js';
+import { BaseController } from '@controllers/base.js';
 import type {
   VideosService,
   CloudflareService,
   CommentsService,
   VideoUploadService,
   ReportsService,
-} from '../services/index.js';
+} from '@services/index.js';
 import {
   type VideoMasterManifestBody,
   type VideoAdaptiveManifestParams,
-} from '../validators/schemas/videos.js';
-import { NotFoundError, BadRequestError, ForbiddenError } from '../errors/index.js';
-import { getConfig } from '../config/index.js';
+} from '@validators/schemas/videos.js';
+import { NotFoundError, BadRequestError, ForbiddenError } from '@errors/index.js';
+import { getConfig } from '@config/index.js';
 
 // Local type definitions
 interface UpdateVideoInput {

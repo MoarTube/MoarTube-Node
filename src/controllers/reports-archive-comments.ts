@@ -5,8 +5,8 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-import { BaseController } from './base.js';
-import type { ReportsService } from '../services/reports.js';
+import { BaseController } from '@controllers/base.js';
+import type { ReportsService } from '@services/reports.js';
 
 /**
  * Request params for archive operations

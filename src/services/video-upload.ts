@@ -10,12 +10,12 @@ import * as path from 'node:path';
 import type { MultipartFile } from '@fastify/multipart';
 import type { FastifyRequest } from 'fastify';
 
-import { getConfig } from '../config/index.js';
-import { type Logger } from '../utils/logger.js';
-import type { VideosService } from './videos.js';
-import type { WebSocketService } from './websocket.js';
-import type { UploadTrackerService } from './upload-tracker.js';
-import { type CloudflareService } from './cloudflare.js';
+import { getConfig } from '@config/index.js';
+import { type Logger } from '@/utils/logger.js';
+import type { VideosService } from '@services/videos.js';
+import type { WebSocketService } from '@services/websocket.js';
+import type { UploadTrackerService } from '@services/upload-tracker.js';
+import { type CloudflareService } from '@services/cloudflare.js';
 
 // ============================================================================
 // Types

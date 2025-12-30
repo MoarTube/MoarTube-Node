@@ -4,9 +4,9 @@
  * Service layer for WebSocket message broadcasting and client management.
  * Provides abstraction over the cluster-aware WebSocket system.
  */
-import { BaseService } from './base.js';
-import type { Logger } from '../utils/logger.js';
-import type { WebSocketMessage, WebSocketEventName } from './interfaces.js';
+import { BaseService } from '@services/base.js';
+import type { Logger } from '@/utils/logger.js';
+import type { WebSocketMessage, WebSocketEventName } from '@services/interfaces.js';
 
 /**
  * WebSocket client connection info

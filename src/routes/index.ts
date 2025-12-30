@@ -5,49 +5,49 @@
  */
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import type { Container } from '../core/container.js';
+import type { Container } from '@core/container.js';
 
 // Route definitions
-export { statusRoutes } from './status.js';
-export { accountRoutes } from './account.js';
-export { videosRoutes } from './videos.js';
-export { baseRoutes } from './base.js';
-export { linksRoutes } from './links.js';
-export { monetizationRoutes } from './monetization.js';
-export { watchEmbedRoutes } from './watch-embed.js';
-export { externalResourcesRoutes } from './external-resources.js';
-export { externalVideosRoutes } from './external-videos.js';
-export { commentsRoutes } from './comments.js';
-export { watchRoutes } from './watch.js';
-export { nodeRoutes } from './node.js';
-export { reportsRoutes } from './reports.js';
-export { reportsVideosRoutes } from './reports-videos.js';
-export { reportsCommentsRoutes } from './reports-comments.js';
-export { reportsArchiveVideosRoutes } from './reports-archive-videos.js';
-export { reportsArchiveCommentsRoutes } from './reports-archive-comments.js';
-export { settingsRoutes } from './settings.js';
-export { streamsRoutes } from './streams.js';
+export { statusRoutes } from '@routes/status.js';
+export { accountRoutes } from '@routes/account.js';
+export { videosRoutes } from '@routes/videos.js';
+export { baseRoutes } from '@routes/base.js';
+export { linksRoutes } from '@routes/links.js';
+export { monetizationRoutes } from '@routes/monetization.js';
+export { watchEmbedRoutes } from '@routes/watch-embed.js';
+export { externalResourcesRoutes } from '@routes/external-resources.js';
+export { externalVideosRoutes } from '@routes/external-videos.js';
+export { commentsRoutes } from '@routes/comments.js';
+export { watchRoutes } from '@routes/watch.js';
+export { nodeRoutes } from '@routes/node.js';
+export { reportsRoutes } from '@routes/reports.js';
+export { reportsVideosRoutes } from '@routes/reports-videos.js';
+export { reportsCommentsRoutes } from '@routes/reports-comments.js';
+export { reportsArchiveVideosRoutes } from '@routes/reports-archive-videos.js';
+export { reportsArchiveCommentsRoutes } from '@routes/reports-archive-comments.js';
+export { settingsRoutes } from '@routes/settings.js';
+export { streamsRoutes } from '@routes/streams.js';
 
 // Import for registration
-import { statusRoutes } from './status.js';
-import { accountRoutes } from './account.js';
-import { videosRoutes } from './videos.js';
-import { baseRoutes } from './base.js';
-import { linksRoutes } from './links.js';
-import { monetizationRoutes } from './monetization.js';
-import { watchEmbedRoutes } from './watch-embed.js';
-import { externalResourcesRoutes } from './external-resources.js';
-import { externalVideosRoutes } from './external-videos.js';
-import { commentsRoutes } from './comments.js';
-import { watchRoutes } from './watch.js';
-import { nodeRoutes } from './node.js';
-import { reportsRoutes } from './reports.js';
-import { reportsVideosRoutes } from './reports-videos.js';
-import { reportsCommentsRoutes } from './reports-comments.js';
-import { reportsArchiveVideosRoutes } from './reports-archive-videos.js';
-import { reportsArchiveCommentsRoutes } from './reports-archive-comments.js';
-import { settingsRoutes } from './settings.js';
-import { streamsRoutes } from './streams.js';
+import { statusRoutes } from '@routes/status.js';
+import { accountRoutes } from '@routes/account.js';
+import { videosRoutes } from '@routes/videos.js';
+import { baseRoutes } from '@routes/base.js';
+import { linksRoutes } from '@routes/links.js';
+import { monetizationRoutes } from '@routes/monetization.js';
+import { watchEmbedRoutes } from '@routes/watch-embed.js';
+import { externalResourcesRoutes } from '@routes/external-resources.js';
+import { externalVideosRoutes } from '@routes/external-videos.js';
+import { commentsRoutes } from '@routes/comments.js';
+import { watchRoutes } from '@routes/watch.js';
+import { nodeRoutes } from '@routes/node.js';
+import { reportsRoutes } from '@routes/reports.js';
+import { reportsVideosRoutes } from '@routes/reports-videos.js';
+import { reportsCommentsRoutes } from '@routes/reports-comments.js';
+import { reportsArchiveVideosRoutes } from '@routes/reports-archive-videos.js';
+import { reportsArchiveCommentsRoutes } from '@routes/reports-archive-comments.js';
+import { settingsRoutes } from '@routes/settings.js';
+import { streamsRoutes } from '@routes/streams.js';
 
 /**
  * Register all application routes

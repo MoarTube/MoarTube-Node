@@ -13,7 +13,7 @@ export {
   getCurrentDialect,
   type DatabaseConfig,
   type DatabaseClient,
-} from './connection.js';
+} from '@database/connection.js';
 
 // Schema exports
-export * from './schemas/sqlite/index.js';
+export * from '@database/schemas/sqlite/index.js';

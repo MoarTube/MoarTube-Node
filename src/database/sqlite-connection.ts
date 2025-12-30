@@ -6,7 +6,9 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import sqliteDatabase from 'better-sqlite3';
-import * as schema from './schemas/sqlite/index.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import * as schema from '@database/schemas/sqlite/index.js';
 
 /**
  * Database configuration interface for SQLite
@@ -58,12 +60,18 @@ export function initializeDatabaseSchema(): void {
   }
 
   try {
-    migrate(drizzleDb, { migrationsFolder: './drizzle/sqlite' });
+    // Resolve migrations folder path relative to project root
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const projectRoot = path.resolve(__dirname, '..', '..');
+    const migrationsFolder = path.join(projectRoot, 'drizzle', 'sqlite');
+
+    migrate(drizzleDb, { migrationsFolder });
 
     if(!sqliteDb) {
       throw new Error('Underlying SQLite database instance not found.');
     }
-    
+
     sqliteDb.exec('VACUUM');
   } catch (error) {
     throw new Error(`Failed to initialize SQLite database schema: ${String(error)}`);

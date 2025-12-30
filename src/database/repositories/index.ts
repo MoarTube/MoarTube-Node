@@ -5,23 +5,23 @@
  */
 
 // Base repository
-export { BaseRepository } from './base.js';
+export { BaseRepository } from '@database/repositories/base.js';
 
 // Videos repository
-export { VideosRepository, type VideoQueryOptions } from './videos.js';
+export { VideosRepository, type VideoQueryOptions } from '@database/repositories/videos.js';
 
 // Comments repository
-export { CommentsRepository } from './comments.js';
+export { CommentsRepository } from '@database/repositories/comments.js';
 
 // Report repositories
-export { ReportsVideosRepository } from './reports-videos.js';
-export { ReportsCommentsRepository } from './reports-comments.js';
+export { ReportsVideosRepository } from '@database/repositories/reports-videos.js';
+export { ReportsCommentsRepository } from '@database/repositories/reports-comments.js';
 
 // Archive repositories
-export { ReportsArchiveVideosRepository } from './reports-archive-videos.js';
-export { ReportsArchiveCommentsRepository } from './reports-archive-comments.js';
+export { ReportsArchiveVideosRepository } from '@database/repositories/reports-archive-videos.js';
+export { ReportsArchiveCommentsRepository } from '@database/repositories/reports-archive-comments.js';
 
 // Other repositories
-export { LiveChatMessagesRepository } from './live-chat-messages.js';
-export { MonetizationRepository } from './monetization.js';
-export { LinksRepository } from './links.js';
+export { LiveChatMessagesRepository } from '@database/repositories/live-chat-messages.js';
+export { MonetizationRepository } from '@database/repositories/monetization.js';
+export { LinksRepository } from '@database/repositories/links.js';

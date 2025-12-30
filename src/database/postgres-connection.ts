@@ -6,7 +6,9 @@ import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgresDatabase from 'postgres';
-import * as schema from './schemas/postgres/index.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import * as schema from '@database/schemas/postgres/index.js';
 import { DrizzleQueryError } from 'drizzle-orm/errors';
 
 /**
@@ -61,7 +63,13 @@ export async function initializeDatabaseSchema(): Promise<void> {
       // Warning: Could not create drizzle schema, assuming it already exists
     }
 
-    await migrate(drizzleDb, { migrationsFolder: './drizzle/postgres' });
+    // Resolve migrations folder path relative to project root
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+    const projectRoot = path.resolve(__dirname, '..', '..');
+    const migrationsFolder = path.join(projectRoot, 'drizzle', 'postgres');
+
+    await migrate(drizzleDb, { migrationsFolder });
   } catch (error) {
     if (error instanceof DrizzleQueryError && error.cause?.message.includes('already exists') === true) {
         return;

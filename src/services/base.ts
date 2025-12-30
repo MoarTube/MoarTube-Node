@@ -5,7 +5,7 @@
  * Services should extend this class to inherit common utilities and patterns.
  */
 
-import type { Logger } from '../utils/logger.js';
+import type { Logger } from '@/utils/logger.js';
 
 /**
  * Abstract base service class

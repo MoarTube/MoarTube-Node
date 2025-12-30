@@ -7,11 +7,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { BaseService } from './base.js';
-import type { Logger } from '../utils/logger.js';
-import type { UpdateNodeSettingsInput, StorageConfigInput } from './interfaces.js';
-import { getConfig } from '../config/index.js';
-import type { DatabaseConfig, StorageConfig } from '../types/index.js';
+import { BaseService } from '@services/base.js';
+import type { Logger } from '@/utils/logger.js';
+import type { UpdateNodeSettingsInput, StorageConfigInput } from '@services/interfaces.js';
+import { getConfig } from '@config/index.js';
+import type { DatabaseConfig, StorageConfig } from '@/types/index.js';
 import type {
   VideosRepository,
   CommentsRepository,
@@ -22,7 +22,7 @@ import type {
   LiveChatMessagesRepository,
   MonetizationRepository,
   LinksRepository
-} from '../database/repositories/index.js';
+} from '@/database/repositories/index.js';
 import type {
   DrizzleVideo,
   DrizzleComment,
@@ -33,9 +33,9 @@ import type {
   DrizzleLiveChatMessage,
   DrizzleCryptoWalletAddress,
   DrizzleLink,
-} from '../database/schemas/sqlite/index.js';
-import type { CloudflareService } from './cloudflare.js';
-import type { IndexerService } from './indexer.js';
+} from '@/database/schemas/sqlite/index.js';
+import type { CloudflareService } from '@services/cloudflare.js';
+import type { IndexerService } from '@services/indexer.js';
 
 /**
  * SettingsService class

@@ -7,10 +7,10 @@
 import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-import { BaseService } from './base.js';
-import type { Logger } from '../utils/logger.js';
-import { getConfig } from '../config/index.js';
-import type { JwtPayload, SignInInput, SignInResult } from './interfaces.js';
+import { BaseService } from '@services/base.js';
+import type { Logger } from '@/utils/logger.js';
+import { getConfig } from '@config/index.js';
+import type { JwtPayload, SignInInput, SignInResult } from '@services/interfaces.js';
 
 /**
  * AccountService class

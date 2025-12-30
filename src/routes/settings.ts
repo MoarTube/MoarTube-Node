@@ -4,8 +4,8 @@
  * Routes for node settings and configuration endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-import type { Container } from '../core/container.js';
-import { SettingsController } from '../controllers/index.js';
+import type { Container } from '@core/container.js';
+import { SettingsController } from '@controllers/index.js';
 import {
   personalizeNodeNameBodySchema,
   personalizeNodeAboutBodySchema,
@@ -19,7 +19,7 @@ import {
   databaseConfigToggleBodySchema,
   storageConfigToggleBodySchema,
   secureToggleQuerySchema,
-} from '../validators/index.js';
+} from '@validators/index.js';
 
 /**
  * Register settings routes

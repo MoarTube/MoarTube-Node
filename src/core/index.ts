@@ -7,10 +7,10 @@
 // Dependency Injection Container (Container type is used)
 export {
   type Container,
-} from './container.js';
+} from '@core/container.js';
 
 // Cluster management (ClusterMaster and ClusterWorker are used)
 export {
   ClusterMaster,
   ClusterWorker,
-} from './cluster/index.js';
+} from '@core/cluster/index.js';

@@ -4,8 +4,8 @@
  * Provides data access methods for live chat message records using Drizzle ORM.
  */
 import { eq, and, gte, count, lt, asc } from 'drizzle-orm';
-import { BaseRepository } from './base.js';
-import type { PaginationOptions } from '../../types/models.js';
+import { BaseRepository } from '@database/repositories/base.js';
+import type { PaginationOptions } from '@/types/models.js';
 
 /**
  * LiveChatMessageRepository class for live chat message CRUD operations

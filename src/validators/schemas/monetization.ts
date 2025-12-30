@@ -4,7 +4,7 @@
  * Zod schemas for crypto wallet address API endpoints.
  */
 import { z } from 'zod';
-import { idSchema } from './common.js';
+import { idSchema } from '@validators/schemas/common.js';
 
 // ============================================================================
 // Monetization-Specific Schemas

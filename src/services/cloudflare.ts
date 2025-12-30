@@ -6,10 +6,10 @@
  */
 import axios, { type AxiosInstance } from 'axios';
 
-import { BaseService } from './base.js';
-import type { Logger } from '../utils/logger.js';
-import type { VideosRepository } from '../database/repositories/index.js';
-import { getConfig } from '../config/index.js';
+import { BaseService } from '@services/base.js';
+import type { Logger } from '@/utils/logger.js';
+import type { VideosRepository } from '@/database/repositories/index.js';
+import { getConfig } from '@config/index.js';
 
 /**
  * Cloudflare API endpoints

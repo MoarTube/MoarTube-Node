@@ -21,10 +21,10 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
-import { BaseService } from './base.js';
-import type { Logger } from '../utils/logger.js';
-import type { StorageMode, FileMetadata } from './interfaces.js';
-import { getConfig } from '../config/index.js';
+import { BaseService } from '@services/base.js';
+import type { Logger } from '@/utils/logger.js';
+import type { StorageMode, FileMetadata } from '@services/interfaces.js';
+import { getConfig } from '@config/index.js';
 
 /**
  * S3 configuration for the storage service

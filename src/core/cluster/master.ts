@@ -13,16 +13,16 @@ import type {
   LiveStreamWorkerStatsResponseMessage,
   RestartDatabaseMessage,
   LiveStreamWatchingCountsTracker,
-} from '../../types/ipc.js';
-import type { WebSocketMessage } from '../../types/websocket.js';
-import { IPCChannel, type IPCLogger } from './ipc-channel.js';
-import { Logger } from '../../utils/logger.js';
-import { getConfig } from '../../config/index.js';
+} from '@/types/ipc.js';
+import type { WebSocketMessage } from '@/types/websocket.js';
+import { IPCChannel, type IPCLogger } from '@core/cluster/ipc-channel.js';
+import { Logger } from '@/utils/logger.js';
+import { getConfig } from '@config/index.js';
 import {
   createDatabase,
   initializeDatabaseSchema,
   getDatabase,
-} from '../../database/connection.js';
+} from '@/database/connection.js';
 
 /**
  * Indexer operations interface

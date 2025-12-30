@@ -15,11 +15,13 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import type { PinoLoggerOptions } from 'fastify/types/logger.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { createAppContainer } from '../core/container.js';
-import { getDatabase } from '../database/index.js';
-import { registerRoutes } from '../routes/index.js';
-import authenticationPlugin from './authentication.js';
+import { createAppContainer } from '@core/container.js';
+import { getDatabase } from '@database/index.js';
+import { registerRoutes } from '@routes/index.js';
+import authenticationPlugin from '@plugins/authentication.js';
 
 /**
  * Get logger configuration for Fastify
@@ -39,10 +41,7 @@ function getLoggerConfig(): FastifyLoggerOptions & PinoLoggerOptions {
 }
 
 // Error handling
-export { default as errorHandlerPlugin } from './error-handler.js';
-
-// Authentication
-// export { default as authenticationPlugin } from './authentication.js'; // Now imported directly
+export { default as errorHandlerPlugin } from '@plugins/error-handler.js';
 
 // Re-export type provider for route typing
 export type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -84,11 +83,16 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   await app.register(fastifyFormbody);
 
   // Register view engine with EJS templating
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const projectRoot = path.resolve(__dirname, '..', '..');
+  const viewsRoot = path.join(projectRoot, 'public', 'views');
+
   await app.register(fastifyView, {
     engine: {
       ejs: (await import('ejs')).default,
     },
-    root: './public/views',
+    root: viewsRoot,
     viewExt: 'ejs',
   });
 
@@ -103,7 +107,7 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   registerRoutes(app.withTypeProvider<ZodTypeProvider>(), container);
 
   // Register error handler
-  const { default: errorHandlerPlugin } = await import('./error-handler.js');
+  const { default: errorHandlerPlugin } = await import('@plugins/error-handler.js');
   await app.register(errorHandlerPlugin);
 
   return app;

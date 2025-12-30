@@ -4,9 +4,9 @@
  * Routes for the main video watch page.
  */
 import type { FastifyInstance } from 'fastify';
-import { WatchController } from '../controllers/watch.js';
-import type { Container } from '../core/container.js';
-import { watchQuerySchema } from '../validators/index.js';
+import { WatchController } from '@controllers/watch.js';
+import type { Container } from '@core/container.js';
+import { watchQuerySchema } from '@validators/index.js';
 
 /**
  * Register watch routes

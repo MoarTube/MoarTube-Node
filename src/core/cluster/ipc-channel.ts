@@ -12,8 +12,8 @@ import type {
   IPCMessage,
   IPCMessageToMaster,
   IPCMessageToWorker,
-} from '../../types/ipc.js';
-import { Logger } from '../../utils/logger.js';
+} from '@/types/ipc.js';
+import { Logger } from '@/utils/logger.js';
 
 /**
  * IPC message handler function type

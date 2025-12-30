@@ -9,9 +9,9 @@ import type {
   ExtendedWebSocket,
   IncomingWebSocketMessage,
   EchoMessage,
-} from '../../types/websocket.js';
-import { WebSocketHandler, type HandlerContext } from './base.js';
-import { echoEventSchema, type EchoEvent } from '../../validators/schemas/index.js';
+} from '@/types/websocket.js';
+import { WebSocketHandler, type HandlerContext } from '@websocket/handlers/base.js';
+import { echoEventSchema, type EchoEvent } from '@validators/schemas/index.js';
 import { ZodError } from 'zod';
 
 /**

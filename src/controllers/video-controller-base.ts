@@ -5,8 +5,8 @@
  * Includes video source building, URL configuration, and shared data structures.
  */
 import type { FastifyReply } from 'fastify';
-import { BaseController } from './base.js';
-import type { DrizzleVideo } from '../database/schemas/sqlite/index.js';
+import { BaseController } from '@controllers/base.js';
+import type { DrizzleVideo } from '@database/schemas/sqlite/index.js';
 
 /**
  * Video source info

@@ -4,9 +4,9 @@
  * Handles status and health check endpoints.
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { BaseController } from './base.js';
-import { getConfig } from '../config/index.js';
-import type { VideosService } from '../services/index.js';
+import { BaseController } from '@controllers/base.js';
+import { getConfig } from '@config/index.js';
+import type { VideosService } from '@services/index.js';
 
 /**
  * Status information response

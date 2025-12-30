@@ -16,9 +16,9 @@ import cluster from 'node:cluster';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { initializeConfig } from './config/index.js';
-import { ClusterMaster, ClusterWorker } from './core/cluster/index.js';
-import { getLogger } from './utils/logger.js';
+import { initializeConfig } from '@config/index.js';
+import { ClusterMaster, ClusterWorker } from '@core/cluster/index.js';
+import { getLogger } from '@utils/logger.js';
 
 /**
  * Initialize configuration

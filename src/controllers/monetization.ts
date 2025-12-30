@@ -4,9 +4,9 @@
  * Handles crypto wallet address management endpoints.
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import { BaseController } from './base.js';
-import type { MonetizationService } from '../services/monetization.js';
-import type { CloudflareService } from '../services/cloudflare.js';
+import { BaseController } from '@controllers/base.js';
+import type { MonetizationService } from '@services/monetization.js';
+import type { CloudflareService } from '@services/cloudflare.js';
 
 /**
  * Request body for adding a wallet address

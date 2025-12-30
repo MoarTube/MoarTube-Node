@@ -7,18 +7,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { BaseService } from './base.js';
-import type { Logger } from '../utils/logger.js';
-import type { StreamConfig } from './interfaces.js';
+import { BaseService } from '@services/base.js';
+import type { Logger } from '@/utils/logger.js';
+import type { StreamConfig } from '@services/interfaces.js';
 import type {
   VideosRepository,
   LiveChatMessagesRepository,
   CommentsRepository
-} from '../database/repositories/index.js';
-import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/sqlite/index.js';
-import { getConfig } from '../config/index.js';
-import { deleteDirectory } from '../utils/filesystem.js';
-import { type WebSocketService } from './websocket.js';
+} from '@/database/repositories/index.js';
+import type { DrizzleVideo, DrizzleNewVideo } from '@/database/schemas/sqlite/index.js';
+import { getConfig } from '@config/index.js';
+import { deleteDirectory } from '@/utils/filesystem.js';
+import { type WebSocketService } from '@services/websocket.js';
 
 /**
  * Stream metadata stored in video meta field

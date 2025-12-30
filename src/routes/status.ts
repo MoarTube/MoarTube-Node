@@ -4,8 +4,8 @@
  * Routes for status and health check endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-import { StatusController } from '../controllers/index.js';
-import type { Container } from '../core/container.js';
+import { StatusController } from '@controllers/index.js';
+import type { Container } from '@core/container.js';
 
 /**
  * Register status routes

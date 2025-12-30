@@ -4,13 +4,13 @@
  * Routes for comment report management.
  */
 import type { FastifyInstance } from 'fastify';
-import { ReportsCommentsController } from '../controllers/reports-comments.js';
-import type { Container } from '../core/container.js';
+import { ReportsCommentsController } from '@controllers/reports-comments.js';
+import type { Container } from '@core/container.js';
 import {
   reportIdParamsSchema,
   reportsQuerySchema,
   archiveReportBodySchema,
-} from '../validators/index.js';
+} from '@validators/index.js';
 
 /**
  * Register reports comments routes

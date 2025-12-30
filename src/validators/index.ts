@@ -5,4 +5,4 @@
  */
 
 // All schemas (moved to dedicated schemas directory)
-export * from './schemas/index.js';
+export * from '@validators/schemas/index.js';

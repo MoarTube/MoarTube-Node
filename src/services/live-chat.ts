@@ -4,11 +4,11 @@
  * Service layer for live chat message operations including CRUD operations,
  * history management, and pruning functionality.
  */
-import { BaseService } from './base.js';
-import type { Logger } from '../utils/logger.js';
-import type { CreateChatMessageInput } from './interfaces.js';
-import type { LiveChatMessagesRepository } from '../database/repositories/index.js';
-import type { DrizzleLiveChatMessage } from '../database/schemas/sqlite/index.js';
+import { BaseService } from '@services/base.js';
+import type { Logger } from '@/utils/logger.js';
+import type { CreateChatMessageInput } from '@services/interfaces.js';
+import type { LiveChatMessagesRepository } from '@/database/repositories/index.js';
+import type { DrizzleLiveChatMessage } from '@/database/schemas/sqlite/index.js';
 
 /**
  * LiveChatService class

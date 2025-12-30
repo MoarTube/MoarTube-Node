@@ -9,8 +9,8 @@ import type {
   ExtendedWebSocket,
   WebSocketMessage,
   IncomingWebSocketMessage,
-} from '../../types/websocket.js';
-import { Logger, type Logger as LoggerType } from '../../utils/logger.js';
+} from '@/types/websocket.js';
+import { Logger, type Logger as LoggerType } from '@/utils/logger.js';
 
 /**
  * Handler context passed to handle methods

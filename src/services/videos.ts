@@ -7,8 +7,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { BaseService } from './base.js';
-import type { Logger } from '../utils/logger.js';
+import { BaseService } from '@services/base.js';
+import type { Logger } from '@/utils/logger.js';
 import type {
   GetVideosOptions,
   CreateVideoInput,
@@ -21,15 +21,15 @@ import type {
   AddToIndexOptions,
   AddToIndexResult,
   VideoIndexData,
-} from './interfaces.js';
-import type { VideosRepository, CommentsRepository } from '../database/repositories/index.js';
-import type { DrizzleVideo, DrizzleNewVideo } from '../database/schemas/sqlite/index.js';
-import { getConfig } from '../config/index.js';
-import type { CloudflareService } from './cloudflare.js';
-import type { StorageService } from './storage.js';
-import type { WebSocketService } from './websocket.js';
-import type { IndexerService } from './indexer.js';
-import type { PaginatedResult } from '../types/models.js';
+} from '@services/interfaces.js';
+import type { VideosRepository, CommentsRepository } from '@/database/repositories/index.js';
+import type { DrizzleVideo, DrizzleNewVideo } from '@/database/schemas/sqlite/index.js';
+import { getConfig } from '@config/index.js';
+import type { CloudflareService } from '@services/cloudflare.js';
+import type { StorageService } from '@services/storage.js';
+import type { WebSocketService } from '@services/websocket.js';
+import type { IndexerService } from '@services/indexer.js';
+import type { PaginatedResult } from '@/types/models.js';
 
 /**
  * VideosService class

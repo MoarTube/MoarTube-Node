@@ -7,28 +7,28 @@
 import { createContainer, asClass, asValue, InjectionMode, type AwilixContainer } from 'awilix';
 
 // Logger
-import { Logger } from '../utils/logger.js';
+import { Logger } from '@/utils/logger.js';
 
 // Database layer
-import type { DatabaseClient } from '../database/connection.js';
-import { getConfig } from '../config/index.js';
+import type { DatabaseClient } from '@/database/connection.js';
+import { getConfig } from '@config/index.js';
 
 // Services
-import { VideosService } from '../services/videos.js';
-import { CommentsService } from '../services/comments.js';
-import { StreamsService } from '../services/streams.js';
-import { AccountService } from '../services/account.js';
-import { StorageService } from '../services/storage.js';
-import { IndexerService } from '../services/indexer.js';
-import { CloudflareService } from '../services/cloudflare.js';
-import { WebSocketService } from '../services/websocket.js';
-import { ReportsService } from '../services/reports.js';
-import { SettingsService } from '../services/settings.js';
-import { UploadTrackerService } from '../services/upload-tracker.js';
-import { VideoUploadService } from '../services/video-upload.js';
-import { LiveChatService } from '../services/live-chat.js';
-import { LinksService } from '../services/links.js';
-import { MonetizationService } from '../services/monetization.js';
+import { VideosService } from '@services/videos.js';
+import { CommentsService } from '@services/comments.js';
+import { StreamsService } from '@services/streams.js';
+import { AccountService } from '@services/account.js';
+import { StorageService } from '@services/storage.js';
+import { IndexerService } from '@services/indexer.js';
+import { CloudflareService } from '@services/cloudflare.js';
+import { WebSocketService } from '@services/websocket.js';
+import { ReportsService } from '@services/reports.js';
+import { SettingsService } from '@services/settings.js';
+import { UploadTrackerService } from '@services/upload-tracker.js';
+import { VideoUploadService } from '@services/video-upload.js';
+import { LiveChatService } from '@services/live-chat.js';
+import { LinksService } from '@services/links.js';
+import { MonetizationService } from '@services/monetization.js';
 
 /**
  * Container cradle type - defines all registered dependencies
@@ -97,8 +97,8 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
 
   // Dynamically import schemas and repositories based on dialect
   const schemas = await (dbDialect === 'postgres'
-    ? import('../database/schemas/postgres/index.js')
-    : import('../database/schemas/sqlite/index.js'));
+    ? import('@database/schemas/postgres/index.js')
+    : import('@database/schemas/sqlite/index.js'));
 
   const {
     VideosRepository,
@@ -110,7 +110,7 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
     LiveChatMessagesRepository,
     MonetizationRepository,
     LinksRepository,
-  } = await import('../database/repositories/index.js');
+  } = await import('@database/repositories/index.js');
 
   // Register database client
   appContainer.register({

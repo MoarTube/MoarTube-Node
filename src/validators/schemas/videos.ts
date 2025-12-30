@@ -24,7 +24,7 @@ import {
   reportMessageSchema,
   searchTermSchemaOptional,
   tagTermSchemaOptional,
-} from './common.js';
+} from '@validators/schemas/common.js';
 
 // ============================================================================
 // Route Parameter Schemas

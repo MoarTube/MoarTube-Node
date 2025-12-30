@@ -49,11 +49,13 @@
       "@config/*": ["./src/config/*"],
       "@core/*": ["./src/core/*"],
       "@database/*": ["./src/database/*"],
+      "@errors/*": ["./src/errors/*"],
       "@services/*": ["./src/services/*"],
       "@controllers/*": ["./src/controllers/*"],
       "@routes/*": ["./src/routes/*"],
       "@plugins/*": ["./src/plugins/*"],
       "@utils/*": ["./src/utils/*"],
+      "@validators/*": ["./src/validators/*"],
       "@websocket/*": ["./src/websocket/*"],
       "@workers/*": ["./src/workers/*"],
       "@types/*": ["./src/types/*"]

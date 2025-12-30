@@ -12,7 +12,7 @@ export {
   resetIPCChannel,
   type IPCHandler,
   type IPCLogger,
-} from './ipc-channel.js';
+} from '@core/cluster/ipc-channel.js';
 
 // Master process
 export {
@@ -21,7 +21,7 @@ export {
   type MasterIndexerOperations,
   type MasterCloudflareOperations,
   type NodeIdentification,
-} from './master.js';
+} from '@core/cluster/master.js';
 
 // Worker process
-export { ClusterWorker, type ClusterWorkerOptions } from './worker.js';
+export { ClusterWorker, type ClusterWorkerOptions } from '@core/cluster/worker.js';

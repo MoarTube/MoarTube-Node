@@ -4,7 +4,7 @@
  * Zod schemas for static resource serving API endpoints.
  */
 import { z } from 'zod';
-import { filenameSchema } from './common.js';
+import { filenameSchema } from '@validators/schemas/common.js';
 
 // ============================================================================
 // Route Parameter Schemas

@@ -4,9 +4,9 @@
  * Routes for the main node page and related endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-import { NodeController } from '../controllers/node.js';
-import type { Container } from '../core/container.js';
-import { nodeSearchQuerySchema, contentCheckedBodySchema } from '../validators/index.js';
+import { NodeController } from '@controllers/node.js';
+import type { Container } from '@core/container.js';
+import { nodeSearchQuerySchema, contentCheckedBodySchema } from '@validators/index.js';
 
 /**
  * Register node routes

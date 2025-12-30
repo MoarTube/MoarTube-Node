@@ -4,8 +4,8 @@
  * Routes for live streaming endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-import type { Container } from '../core/container.js';
-import { StreamsController } from '../controllers/index.js';
+import type { Container } from '@core/container.js';
+import { StreamsController } from '@controllers/index.js';
 import {
   streamVideoIdParamsSchema,
   streamSegmentParamsSchema,
@@ -13,7 +13,7 @@ import {
   chatSettingsBodySchema,
   removeSegmentBodySchema,
   chatHistoryQuerySchema,
-} from '../validators/index.js';
+} from '@validators/index.js';
 
 /**
  * Register streams routes

@@ -4,8 +4,8 @@
  * Routes for video-related endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-import type { Container } from '../core/container.js';
-import { VideosController } from '../controllers/index.js';
+import type { Container } from '@core/container.js';
+import { VideosController } from '@controllers/index.js';
 import {
   videoIdParamsSchema,
   videoCommentIdParamsSchema,
@@ -30,7 +30,7 @@ import {
   videoPermissionsBodySchema,
   videoMasterManifestBodySchema,
   videoCommentGetQuerySchema,
-} from '../validators/index.js';
+} from '@validators/index.js';
 
 /**
  * Register videos routes

@@ -15,7 +15,7 @@ import {
   searchTermSchemaOptional,
   videoIdSchema,
   commentIdSchema,
-} from './common.js';
+} from '@validators/schemas/common.js';
 
 // ============================================================================
 // Route Parameter Schemas

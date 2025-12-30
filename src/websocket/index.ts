@@ -6,7 +6,7 @@
  */
 
 // WebSocket Manager
-export { WebSocketManager, type WebSocketManagerOptions } from './websocket-manager.js';
+export { WebSocketManager, type WebSocketManagerOptions } from '@websocket/websocket-manager.js';
 
 // Handlers
 export {
@@ -15,4 +15,4 @@ export {
   ChatMessageHandler,
   VideoStatusHandler,
   EchoHandler,
-} from './handlers/index.js';
+} from '@websocket/handlers/index.js';

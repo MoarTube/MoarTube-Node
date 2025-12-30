@@ -5,13 +5,13 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-import { VideoControllerBase, type VideoSource } from './video-controller-base.js';
-import type { VideosService } from '../services/videos.js';
-import type { LinksService } from '../services/links.js';
-import type { MonetizationService } from '../services/monetization.js';
-import type { CommentsService } from '../services/comments.js';
-import type { DrizzleVideo } from '../database/schemas/sqlite/index.js';
-import { getConfig } from '../config/index.js';
+import { VideoControllerBase, type VideoSource } from '@controllers/video-controller-base.js';
+import type { VideosService } from '@services/videos.js';
+import type { LinksService } from '@services/links.js';
+import type { MonetizationService } from '@services/monetization.js';
+import type { CommentsService } from '@services/comments.js';
+import type { DrizzleVideo } from '@database/schemas/sqlite/index.js';
+import { getConfig } from '@config/index.js';
 
 /**
  * Query parameters for watch page

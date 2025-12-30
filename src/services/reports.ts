@@ -4,15 +4,15 @@
  * Service layer for content reporting and moderation functionality.
  * Handles video and comment reports, archiving, and moderation workflows.
  */
-import { BaseService } from './base.js';
-import type { Logger } from '../utils/logger.js';
-import type { CreateVideoReportInput, CreateCommentReportInput } from './interfaces.js';
+import { BaseService } from '@services/base.js';
+import type { Logger } from '@/utils/logger.js';
+import type { CreateVideoReportInput, CreateCommentReportInput } from '@services/interfaces.js';
 import type {
   ReportsVideosRepository,
   ReportsCommentsRepository,
   ReportsArchiveVideosRepository,
   ReportsArchiveCommentsRepository
-} from '../database/repositories/index.js';
+} from '@/database/repositories/index.js';
 import type {
   DrizzleVideoReport,
   DrizzleCommentReport,
@@ -22,8 +22,8 @@ import type {
   DrizzleNewCommentReport,
   DrizzleNewVideoReportArchive,
   DrizzleNewCommentReportArchive,
-} from '../database/schemas/sqlite/index.js';
-import type { PaginationOptions } from '../types/models.js';
+} from '@/database/schemas/sqlite/index.js';
+import type { PaginationOptions } from '@/types/models.js';
 
 /**
  * ReportService class

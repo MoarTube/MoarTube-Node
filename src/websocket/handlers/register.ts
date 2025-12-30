@@ -4,11 +4,11 @@
  * Handles client registration messages to establish client type and authentication.
  */
 
-import type { ExtendedWebSocket, IncomingWebSocketMessage } from '../../types/websocket.js';
-import { WebSocketHandler, type HandlerContext } from './base.js';
+import type { ExtendedWebSocket, IncomingWebSocketMessage } from '@/types/websocket.js';
+import { WebSocketHandler, type HandlerContext } from '@websocket/handlers/base.js';
 import jwt from 'jsonwebtoken';
-import { getConfig } from '../../config/index.js';
-import { registerEventSchema, type RegisterEvent } from '../../validators/schemas/index.js';
+import { getConfig } from '@config/index.js';
+import { registerEventSchema, type RegisterEvent } from '@validators/schemas/index.js';
 import { ZodError } from 'zod';
 
 /**

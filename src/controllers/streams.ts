@@ -7,11 +7,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
-import { BaseController } from './base.js';
-import type { StreamsService } from '../services/streams.js';
-import type { VideosService } from '../services/videos.js';
-import type { LiveChatService } from '../services/live-chat.js';
-import { getConfig } from '../config/index.js';
+import { BaseController } from '@controllers/base.js';
+import type { StreamsService } from '@services/streams.js';
+import type { VideosService } from '@services/videos.js';
+import type { LiveChatService } from '@services/live-chat.js';
+import { getConfig } from '@config/index.js';
 
 /**
  * Request body for starting a stream

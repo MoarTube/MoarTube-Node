@@ -13,7 +13,7 @@ import {
   descriptionSchema,
   tagsSchema,
   portSchema,
-} from './common.js';
+} from '@validators/schemas/common.js';
 
 // ============================================================================
 // Stream-Specific Schemas
