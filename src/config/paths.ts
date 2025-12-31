@@ -218,13 +218,6 @@ class Paths implements PathConfig {
 }
 
 /**
- * Export singleton instance getter
- */
-export function getPaths(): Paths {
-  return Paths.getInstance();
-}
-
-/**
  * Export initializer
  */
 export function initializePaths(baseDir: string): Paths {

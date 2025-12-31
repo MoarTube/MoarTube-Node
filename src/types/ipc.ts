@@ -217,20 +217,5 @@ export type IPCMessage = IPCMessageToMaster | IPCMessageToWorker;
 
 // ============================================
 // Pending Job Types
-// ============================================
+// ====================================
 
-/**
- * Pending database write job tracker
- */
-export interface PendingDatabaseWriteJob {
-  resolve: () => void;
-  reject: (error: Error) => void;
-  timestamp: number;
-}
-
-/**
- * Map of pending database write jobs
- */
-export interface PendingDatabaseWriteJobs {
-  [jobId: string]: PendingDatabaseWriteJob;
-}

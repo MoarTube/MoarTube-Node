@@ -27,13 +27,9 @@ export const addLinkBodySchema = z.object({
   svgGraphic: svgGraphicSchema,
 });
 
-export type AddLinkBody = z.infer<typeof addLinkBodySchema>;
-
 /**
  * Delete link request body schema
  */
 export const deleteLinkBodySchema = z.object({
   linkId: idSchema,
 });
-
-export type DeleteLinkBody = z.infer<typeof deleteLinkBodySchema>;

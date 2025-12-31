@@ -17,8 +17,6 @@ export const externalVideoIdParamsSchema = z.object({
   videoId: videoIdSchema,
 });
 
-export type ExternalVideoIdParams = z.infer<typeof externalVideoIdParamsSchema>;
-
 /**
  * Adaptive manifest parameters schema
  */
@@ -28,8 +26,6 @@ export const adaptiveManifestParamsSchema = z.object({
   type: manifestTypeSchema,
   manifestName: z.string().min(1),
 });
-
-export type AdaptiveManifestParams = z.infer<typeof adaptiveManifestParamsSchema>;
 
 /**
  * Adaptive segment parameters schema
@@ -41,8 +37,6 @@ export const adaptiveSegmentParamsSchema = z.object({
   segmentName: z.string().min(1),
 });
 
-export type AdaptiveSegmentParams = z.infer<typeof adaptiveSegmentParamsSchema>;
-
 /**
  * Progressive video parameters schema
  */
@@ -51,5 +45,3 @@ export const progressiveVideoParamsSchema = z.object({
   format: formatSchema,
   progressiveFilename: z.string().min(1),
 });
-
-export type ProgressiveVideoParams = z.infer<typeof progressiveVideoParamsSchema>;

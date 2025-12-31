@@ -90,38 +90,3 @@ export function getDatabase(): BetterSQLite3Database<typeof schema> {
   }
   return drizzleDb;
 }
-
-/**
- * Checks if the SQLite database has been initialized
- *
- * @returns true if database is initialized, false otherwise
- */
-export function isDatabaseInitialized(): boolean {
-  return drizzleDb !== null;
-}
-
-/**
- * Gets the raw SQLite database instance
- *
- * @returns The raw better-sqlite3 database instance
- * @throws Error if database has not been initialized
- */
-export function getRawClient(): sqliteDatabase.Database {
-  if (!drizzleDb) {
-    throw new Error('SQLite database not initialized. Call createDatabase() first.');
-  }
-  // Note: This assumes the drizzle instance has the underlying db accessible
-  // You may need to adjust based on how drizzle stores the raw db
-  throw new Error('getRawSqliteDb not implemented - need to access underlying db from drizzle instance');
-}
-
-/**
- * Closes the SQLite database connection
- */
-export function closeDatabase(): void {
-  if (drizzleDb) {
-    // Close the underlying SQLite connection if possible
-    // drizzleDb.close() or similar - check drizzle API
-    drizzleDb = null;
-  }
-}

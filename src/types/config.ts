@@ -65,23 +65,6 @@ export interface StorageConfig {
 }
 
 // ============================================
-// Cloudflare Configuration
-// ============================================
-
-/**
- * Cloudflare CDN and Turnstile configuration
- */
-export interface CloudflareConfig {
-  isCloudflareCdnEnabled: boolean;
-  cloudflareEmailAddress: string;
-  cloudflareZoneId: string;
-  cloudflareGlobalApiKey: string;
-  isCloudflareTurnstileEnabled: boolean;
-  cloudflareTurnstileSiteKey: string;
-  cloudflareTurnstileSecretKey: string;
-}
-
-// ============================================
 // Node Settings (Main Configuration)
 // ============================================
 
@@ -153,10 +136,6 @@ export interface LastCheckedContentTracker {
   lastCheckedCommentReportsTimestamp: number;
 }
 
-// ============================================
-// Application Config (config.json)
-// ============================================
-
 /**
  * Indexer service configuration
  */
@@ -173,63 +152,4 @@ export interface AliaserConfig {
   httpProtocol: 'http' | 'https';
   host: string;
   port: number;
-}
-
-/**
- * Main application config (config.json)
- */
-export interface AppConfig {
-  isDeveloperMode: boolean;
-  indexerConfig: IndexerConfig;
-  aliaserConfig: AliaserConfig;
-}
-
-// ============================================
-// Runtime Configuration
-// ============================================
-
-/**
- * Runtime configuration (not persisted)
- */
-export interface RuntimeConfig {
-  jwtSecret: string;
-  isDockerEnvironment: boolean;
-  isDeveloperMode: boolean;
-}
-
-// ============================================
-// Path Configuration
-// ============================================
-
-/**
- * All directory and file paths used by the application
- */
-export interface PathConfig {
-  // Base directories
-  publicDirectoryPath: string;
-  dataDirectoryPath: string;
-  viewsDirectoryPath: string;
-
-  // Data subdirectories
-  imagesDirectoryPath: string;
-  videosDirectoryPath: string;
-  databaseDirectoryPath: string;
-  certificatesDirectoryPath: string;
-
-  // Config files
-  nodeSettingsPath: string;
-  lastCheckedContentTrackerPath: string;
-  databaseFilePath: string;
-}
-
-// ============================================
-// Environment Configuration
-// ============================================
-
-/**
- * Environment variables configuration
- */
-export interface EnvConfig {
-  NODE_ENV: 'development' | 'production';
-  IS_DOCKER_ENVIRONMENT: boolean;
 }

@@ -1,8 +1,5 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": [
-    "src/moartube-node.ts"
-  ],
   "project": [
     "src/**/*.{ts,js}"
   ],
@@ -20,15 +17,9 @@
   ],
   "ignoreDependencies": [
     "@types/*",
-    "tsx",
-    "drizzle-kit",
     "@fastify/jwt",
     "async-mutex",
     "http-terminator"
-  ],
-  "ignoreBinaries": [
-    "husky",
-    "lint-staged"
   ],
   "ignoreExportsUsedInFile": true
 }

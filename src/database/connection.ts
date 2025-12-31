@@ -9,9 +9,6 @@ import {
   createDatabase as createSqliteDatabase,
   initializeDatabaseSchema as initializeSqliteDatabaseSchema,
   getDatabase as getSqliteDatabase,
-  isDatabaseInitialized as isSqliteDatabaseInitialized,
-  getRawClient as getRawSqliteDbInternal,
-  closeDatabase as closeSqliteDatabase,
   type DatabaseConfig as SqliteDatabaseConfig,
   type DatabaseClient as SqliteDatabaseClient
 } from '@database/sqlite-connection.js';
@@ -20,9 +17,6 @@ import {
   createDatabase as createPostgresDatabase,
   initializeDatabaseSchema as initializePostgresDatabaseSchema,
   getDatabase as getPostgresDatabase,
-  isDatabaseInitialized as isPostgresDatabaseInitialized,
-  getRawClient as getRawPostgresClientInternal,
-  closeDatabase as closePostgresDatabase,
   type DatabaseConfig as PostgresDatabaseConfig,
   type DatabaseClient as PostgresDatabaseClient
 } from '@database/postgres-connection.js';
@@ -100,83 +94,4 @@ export function getDatabase(): DatabaseClient {
   } else {
     throw new Error('Database not initialized. Call createDatabase() first.');
   }
-}
-
-/**
- * Checks if the database has been initialized
- *
- * @returns true if database is initialized, false otherwise
- */
-export function isDatabaseInitialized(): boolean {
-  if (currentDialect === 'sqlite') {
-    return isSqliteDatabaseInitialized();
-  } else if (currentDialect === 'postgres') {
-    return isPostgresDatabaseInitialized();
-  }
-  return false;
-}
-
-/**
- * Gets the current database dialect
- *
- * @returns The current dialect or null if not initialized
- */
-export function getCurrentDialect(): 'sqlite' | 'postgres' | null {
-  return currentDialect;
-}
-
-/**
- * Gets the raw SQLite database instance (only works for SQLite)
- *
- * @returns The raw better-sqlite3 database instance
- * @throws Error if not using SQLite or database not initialized
- */
-export function getRawSqliteDb(): unknown {
-  if (currentDialect !== 'sqlite') {
-    throw new Error('Raw SQLite database access only available when using SQLite dialect');
-  }
-  return getRawSqliteDbInternal();
-}
-
-/**
- * Gets the raw PostgreSQL client instance (only works for PostgreSQL)
- *
- * @returns The raw postgres.js client instance
- * @throws Error if not using PostgreSQL or database not initialized
- */
-export function getRawPostgresClient(): unknown {
-  if (currentDialect !== 'postgres') {
-    throw new Error('Raw PostgreSQL client access only available when using PostgreSQL dialect');
-  }
-  return getRawPostgresClientInternal();
-}
-
-/**
- * Checks if the current database is SQLite
- *
- * @returns true if using SQLite, false otherwise
- */
-export function isSqliteDb(): boolean {
-  return currentDialect === 'sqlite';
-}
-
-/**
- * Checks if the current database is PostgreSQL
- *
- * @returns true if using PostgreSQL, false otherwise
- */
-export function isPostgresDb(): boolean {
-  return currentDialect === 'postgres';
-}
-
-/**
- * Closes the database connection
- */
-export async function closeDatabase(): Promise<void> {
-  if (currentDialect === 'sqlite') {
-    closeSqliteDatabase();
-  } else if (currentDialect === 'postgres') {
-    await closePostgresDatabase();
-  }
-  currentDialect = null;
 }

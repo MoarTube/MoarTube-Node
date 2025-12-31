@@ -7,9 +7,6 @@
 // Base controller
 export {
   BaseController,
-  type ApiSuccessResponse,
-  type ApiErrorResponse,
-  type PaginatedResponse,
 } from '@controllers/base.js';
 
 // Controllers that are imported from this barrel export

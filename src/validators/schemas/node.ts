@@ -28,8 +28,6 @@ export const nodeSearchQuerySchema = z.object({
   tagTerm: tagTermSchemaOptional,
 });
 
-export type NodeSearchQuery = z.infer<typeof nodeSearchQuerySchema>;
-
 // ============================================================================
 // Request Body Schemas
 // ============================================================================
@@ -40,5 +38,3 @@ export type NodeSearchQuery = z.infer<typeof nodeSearchQuerySchema>;
 export const contentCheckedBodySchema = z.object({
   contentType: contentTypeSchema,
 });
-
-export type ContentCheckedBody = z.infer<typeof contentCheckedBodySchema>;

@@ -28,8 +28,6 @@ export const commentIdParamsSchema = z.object({
   commentId: commentIdSchema,
 });
 
-export type CommentIdParams = z.infer<typeof commentIdParamsSchema>;
-
 // ============================================================================
 // Query Parameter Schemas
 // ============================================================================
@@ -44,8 +42,6 @@ export const commentSearchQuerySchema = z.object({
   sortDirection: sortDirectionSchema,
   timestamp: timestampSchema,
 });
-
-export type CommentSearchQuery = z.infer<typeof commentSearchQuerySchema>;
 
 // ============================================================================
 // Request Body Schemas
@@ -62,5 +58,3 @@ export const commentReportBodySchema = z.object({
   message: reportMessageSchema,
   cloudflareTurnstileToken: cloudflareTurnstileTokenSchema,
 });
-
-export type CommentReportBody = z.infer<typeof commentReportBodySchema>;

@@ -23,7 +23,6 @@ export type {
   CreateVideoReportInput,
   CreateCommentReportInput,
   UpdateNodeSettingsInput,
-  DatabaseConfigInput,
   StorageConfigInput,
 } from '@services/interfaces.js';
 

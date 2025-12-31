@@ -5,7 +5,6 @@
  */
 
 import * as crypto from 'node:crypto';
-import * as fs from 'node:fs';
 import * as jwt from 'jsonwebtoken';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -152,21 +151,6 @@ export function getHostsFilePath(): string {
 }
 
 /**
- * Chunk an array into smaller arrays
- * @param array - Array to chunk
- * @param size - Chunk size
- */
-export function chunkArray<T>(array: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-
-  return chunks;
-}
-
-/**
  * Check if a value is a plain object
  */
 export function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -207,68 +191,4 @@ export function deepMerge<T extends Record<string, unknown>>(
   }
 
   return result as T;
-}
-
-/**
- * Truncate a string to a maximum length
- * @param str - String to truncate
- * @param maxLength - Maximum length
- * @param suffix - Suffix to append if truncated
- */
-export function truncate(str: string, maxLength: number, suffix = '...'): string {
-  if (str.length <= maxLength) {
-    return str;
-  }
-
-  return str.slice(0, maxLength - suffix.length) + suffix;
-}
-
-/**
- * Check if running in Docker environment
- */
-export function isDockerEnvironment(): boolean {
-  try {
-    return fs.existsSync('/.dockerenv');
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Get current timestamp in ISO format
- */
-export function getCurrentTimestamp(): string {
-  return new Date().toISOString();
-}
-
-/**
- * Parse a URL and extract components
- */
-export interface ParsedUrl {
-  protocol: string;
-  host: string;
-  port: string;
-  path: string;
-  query: string;
-  hash: string;
-}
-
-/**
- * Build a URL from components
- * @param protocol - Protocol (http/https)
- * @param address - Host address
- * @param port - Port number
- * @param path - URL path
- */
-export function buildUrl(
-  protocol: 'http' | 'https',
-  address: string,
-  port: number | string,
-  pathPart = ''
-): string {
-  const portNum = typeof port === 'string' ? Number.parseInt(port, 10) : port;
-  const defaultPort = protocol === 'http' ? 80 : 443;
-  const portString = portNum !== defaultPort ? `:${String(portNum)}` : '';
-
-  return `${protocol}://${address}${portString}${pathPart}`;
 }

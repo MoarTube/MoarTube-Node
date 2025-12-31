@@ -229,13 +229,6 @@ export function buildExternalResourcesBaseUrl(nodeSettings: NodeSettings): strin
 }
 
 /**
- * Export singleton instance getter
- */
-export function getUrls(): Urls {
-  return Urls.getInstance();
-}
-
-/**
  * Export initializer
  */
 export function initializeUrls(indexerConfig: IndexerConfig, aliaserConfig: AliaserConfig): Urls {

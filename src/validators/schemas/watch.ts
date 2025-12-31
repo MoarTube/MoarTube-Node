@@ -17,8 +17,6 @@ export const watchQuerySchema = z.object({
   v: videoIdSchema.optional(),
 });
 
-export type WatchQuery = z.infer<typeof watchQuerySchema>;
-
 // ============================================================================
 // Route Parameter Schemas
 // ============================================================================
@@ -30,4 +28,3 @@ export const watchEmbedVideoIdParamsSchema = z.object({
   videoId: videoIdSchema,
 });
 
-export type WatchEmbedVideoIdParams = z.infer<typeof watchEmbedVideoIdParamsSchema>;

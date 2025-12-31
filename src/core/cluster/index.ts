@@ -8,8 +8,6 @@
 // IPC Channel
 export {
   IPCChannel,
-  getIPCChannel,
-  resetIPCChannel,
   type IPCHandler,
   type IPCLogger,
 } from '@core/cluster/ipc-channel.js';
@@ -20,7 +18,6 @@ export {
   type ClusterMasterOptions,
   type MasterIndexerOperations,
   type MasterCloudflareOperations,
-  type NodeIdentification,
 } from '@core/cluster/master.js';
 
 // Worker process

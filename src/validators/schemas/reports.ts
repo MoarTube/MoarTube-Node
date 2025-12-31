@@ -17,16 +17,12 @@ export const reportIdParamsSchema = z.object({
   reportId: idSchema,
 });
 
-export type ReportIdParams = z.infer<typeof reportIdParamsSchema>;
-
 /**
  * Archive ID parameter schema
  */
 export const archiveIdParamsSchema = z.object({
   archiveId: idSchema,
 });
-
-export type ArchiveIdParams = z.infer<typeof archiveIdParamsSchema>;
 
 // ============================================================================
 // Query Parameter Schemas
@@ -39,8 +35,6 @@ export const reportsQuerySchema = z.object({
   timestamp: timestampSchema.optional(),
 });
 
-export type ReportsQuery = z.infer<typeof reportsQuerySchema>;
-
 // ============================================================================
 // Request Body Schemas
 // ============================================================================
@@ -51,5 +45,3 @@ export type ReportsQuery = z.infer<typeof reportsQuerySchema>;
 export const archiveReportBodySchema = z.object({
   reportId: idSchema,
 });
-
-export type ArchiveReportBody = z.infer<typeof archiveReportBodySchema>;

@@ -63,8 +63,6 @@ export const personalizeNodeNameBodySchema = z.object({
   nodeName: nodeNameSchema,
 });
 
-export type PersonalizeNodeNameBody = z.infer<typeof personalizeNodeNameBodySchema>;
-
 /**
  * Node about personalization request body schema
  */
@@ -72,16 +70,12 @@ export const personalizeNodeAboutBodySchema = z.object({
   nodeAbout: nodeAboutSchema,
 });
 
-export type PersonalizeNodeAboutBody = z.infer<typeof personalizeNodeAboutBodySchema>;
-
 /**
  * Node ID personalization request body schema
  */
 export const personalizeNodeIdBodySchema = z.object({
   nodeId: nodeIdSchema,
 });
-
-export type PersonalizeNodeIdBody = z.infer<typeof personalizeNodeIdBodySchema>;
 
 /**
  * Account update request body schema
@@ -91,16 +85,12 @@ export const updateAccountBodySchema = z.object({
   password: passwordSchema,
 });
 
-export type UpdateAccountBody = z.infer<typeof updateAccountBodySchema>;
-
 /**
  * Internal network configuration request body schema
  */
 export const networkInternalBodySchema = z.object({
   nodeListeningPort: portSchema,
 });
-
-export type NetworkInternalBody = z.infer<typeof networkInternalBodySchema>;
 
 /**
  * External network configuration request body schema
@@ -110,8 +100,6 @@ export const networkExternalBodySchema = z.object({
   publicNodeAddress: addressSchema,
   publicNodePort: portSchema,
 });
-
-export type NetworkExternalBody = z.infer<typeof networkExternalBodySchema>;
 
 /**
  * Cloudflare configuration request body schema
@@ -124,8 +112,6 @@ export const cloudflareConfigureBodySchema = z.object({
   cloudflareGlobalApiKey: z.string().min(1),
 });
 
-export type CloudflareConfigureBody = z.infer<typeof cloudflareConfigureBodySchema>;
-
 /**
  * Cloudflare Turnstile configuration request body schema
  */
@@ -133,10 +119,6 @@ export const cloudflareTurnstileConfigureBodySchema = z.object({
   cloudflareTurnstileSiteKey: z.string().min(1),
   cloudflareTurnstileSecretKey: z.string().min(1),
 });
-
-export type CloudflareTurnstileConfigureBody = z.infer<
-  typeof cloudflareTurnstileConfigureBodySchema
->;
 
 /**
  * Feature toggle request body schema (for comments, likes, dislikes, reports, live chat)
@@ -151,8 +133,6 @@ export const featureToggleBodySchema = z.object({
 export const secureToggleQuerySchema = z.object({
   isSecure: booleanSchema,
 });
-
-export type FeatureToggleBody = z.infer<typeof featureToggleBodySchema>;
 
 /**
  * Database configuration toggle request body schema
@@ -171,8 +151,6 @@ export const databaseConfigToggleBodySchema = z.object({
       .optional(),
   }),
 });
-
-export type DatabaseConfigToggleBody = z.infer<typeof databaseConfigToggleBodySchema>;
 
 /**
  * Storage configuration toggle request body schema
@@ -198,4 +176,3 @@ export const storageConfigToggleBodySchema = z.object({
   }),
 });
 
-export type StorageConfigToggleBody = z.infer<typeof storageConfigToggleBodySchema>;

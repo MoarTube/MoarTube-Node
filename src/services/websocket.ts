@@ -8,15 +8,6 @@ import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/logger.js';
 import type { WebSocketMessage, WebSocketEventName } from '@services/interfaces.js';
 
-/**
- * WebSocket client connection info
- */
-export interface WebSocketClient {
-  id: string;
-  videoId?: string;
-  type: 'node' | 'chat';
-  connectedAt: number;
-}
 
 /**
  * WebSocketService class

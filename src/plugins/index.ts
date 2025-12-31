@@ -47,11 +47,6 @@ export { default as errorHandlerPlugin } from '@plugins/error-handler.js';
 export type { ZodTypeProvider } from 'fastify-type-provider-zod';
 
 /**
- * Fastify instance with Zod type provider
- */
-export type FastifyZodInstance = FastifyInstance;
-
-/**
  * Create and configure a Fastify application instance with Zod validation
  *
  * @returns Configured Fastify instance with Zod type provider

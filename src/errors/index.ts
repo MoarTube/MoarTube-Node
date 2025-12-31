@@ -13,12 +13,6 @@ export {
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
-  ConflictError,
-  UnprocessableEntityError,
-  TooManyRequestsError,
-  InternalServerError,
-  BadGatewayError,
-  ServiceUnavailableError,
   ValidationError,
   type ValidationErrorDetails,
 } from '@errors/http.js';

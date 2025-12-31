@@ -255,23 +255,3 @@ export class IPCChannel {
     return Object.values(workers).filter((w): w is Worker => w !== undefined && !w.isDead());
   }
 }
-
-/**
- * Singleton IPC channel instance
- */
-let ipcChannelInstance: IPCChannel | null = null;
-
-/**
- * Get or create the IPC channel instance
- */
-export function getIPCChannel(logger?: IPCLogger): IPCChannel {
-  ipcChannelInstance ??= new IPCChannel(logger);
-  return ipcChannelInstance;
-}
-
-/**
- * Reset the IPC channel (for testing)
- */
-export function resetIPCChannel(): void {
-  ipcChannelInstance = null;
-}

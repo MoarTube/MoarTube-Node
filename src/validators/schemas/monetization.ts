@@ -47,13 +47,9 @@ export const addWalletAddressBodySchema = z.object({
   currency: currencySchema,
 });
 
-export type AddWalletAddressBody = z.infer<typeof addWalletAddressBodySchema>;
-
 /**
  * Delete wallet address request body schema
  */
 export const deleteWalletAddressBodySchema = z.object({
   cryptoWalletAddressId: idSchema,
 });
-
-export type DeleteWalletAddressBody = z.infer<typeof deleteWalletAddressBodySchema>;

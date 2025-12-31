@@ -8,37 +8,6 @@ import type { FastifyReply } from 'fastify';
 import fs from 'node:fs';
 import { Logger } from '@utils/logger.js';
 
-/**
- * Standard API success response
- */
-export interface ApiSuccessResponse<T = unknown> {
-  isError: false;
-  data?: T;
-  [key: string]: unknown;
-}
-
-/**
- * Standard API error response
- */
-export interface ApiErrorResponse {
-  isError: true;
-  message: string;
-}
-
-/**
- * Paginated response wrapper
- */
-export interface PaginatedResponse<T> {
-  isError: false;
-  data: T[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    pages: number;
-    hasMore: boolean;
-  };
-}
 
 /**
  * Base controller class

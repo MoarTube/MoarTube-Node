@@ -40,13 +40,6 @@ export interface MasterCloudflareOperations {
 }
 
 /**
- * Node identification interface
- */
-export interface NodeIdentification {
-  moarTubeTokenProof: string;
-}
-
-/**
  * Optional master configuration for advanced use cases
  */
 export interface ClusterMasterOptions {

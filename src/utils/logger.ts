@@ -147,35 +147,6 @@ export class Logger {
 }
 
 /**
- * Legacy function for backwards compatibility
- * @deprecated Use Logger class instead
- */
-export function logDebugMessageToConsole(
-  message: string | null,
-  error: Error | null | undefined,
-  stackTrace: string | null | undefined
-): void {
-  const logger = Logger.getInstance();
-  const msg = message ?? 'null';
-  const context: Record<string, unknown> = {};
-  if (error) {
-    context['error'] = error.message;
-    context['stack'] = error.stack;
-  }
-  if (stackTrace !== null) {
-    context['customStack'] = stackTrace;
-  }
-  logger.debug(msg, context);
-}
-
-/**
- * Create a new logger instance
- */
-export function createLogger(config?: LoggerConfig): Logger {
-  return new Logger(config);
-}
-
-/**
  * Get the default logger instance
  */
 export function getLogger(): Logger {

@@ -110,7 +110,6 @@ export const manifestTypeSchema = z.enum(['static', 'dynamic']);
 /**
  * Search term schema
  */
-export const searchTermSchema = z.string().max(100);
 export const searchTermSchemaOptional = z.string().max(100).optional();
 
 /**
@@ -121,7 +120,6 @@ export const sortTermSchema = z.enum(['latest', 'popular', 'oldest']).optional()
 /**
  * Tag term schema for filtering
  */
-export const tagTermSchema = z.string().max(100);
 export const tagTermSchemaOptional = z.string().max(100).optional();
 
 /**

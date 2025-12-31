@@ -91,36 +91,3 @@ export function getDatabase(): PostgresJsDatabase<typeof schema> {
   }
   return drizzleDb;
 }
-
-/**
- * Checks if the PostgreSQL database has been initialized
- *
- * @returns true if database is initialized, false otherwise
- */
-export function isDatabaseInitialized(): boolean {
-  return drizzleDb !== null;
-}
-
-/**
- * Gets the raw PostgreSQL client instance
- *
- * @returns The raw postgres.js client instance
- * @throws Error if database has not been initialized
- */
-export function getRawClient(): postgresDatabase.Sql {
-  if (!databaseClient) {
-    throw new Error('PostgreSQL database not initialized. Call createDatabase() first.');
-  }
-  return databaseClient;
-}
-
-/**
- * Closes the PostgreSQL database connection
- */
-export async function closeDatabase(): Promise<void> {
-  if (databaseClient) {
-    await databaseClient.end();
-    databaseClient = null;
-    drizzleDb = null;
-  }
-}

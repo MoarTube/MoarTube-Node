@@ -349,22 +349,6 @@ export interface UpdateNodeSettingsInput {
 }
 
 /**
- * Database configuration
- */
-export interface DatabaseConfigInput {
-  databaseConfig: {
-    databaseDialect: 'sqlite' | 'postgres';
-    postgresConfig?: {
-      databaseName: string;
-      username: string;
-      password: string;
-      host: string;
-      port: number;
-    };
-  };
-}
-
-/**
  * Storage configuration
  */
 export interface StorageConfigInput {

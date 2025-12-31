@@ -9,8 +9,6 @@ export {
   createDatabase,
   initializeDatabaseSchema,
   getDatabase,
-  isDatabaseInitialized,
-  getCurrentDialect,
   type DatabaseConfig,
   type DatabaseClient,
 } from '@database/connection.js';

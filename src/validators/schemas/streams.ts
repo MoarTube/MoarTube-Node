@@ -69,8 +69,6 @@ export const streamVideoIdParamsSchema = z.object({
   videoId: videoIdSchema,
 });
 
-export type StreamVideoIdParams = z.infer<typeof streamVideoIdParamsSchema>;
-
 /**
  * Stream segment parameters schema
  */
@@ -79,8 +77,6 @@ export const streamSegmentParamsSchema = z.object({
   format: formatSchema,
   resolution: resolutionSchema,
 });
-
-export type StreamSegmentParams = z.infer<typeof streamSegmentParamsSchema>;
 
 // ============================================================================
 // Request Body Schemas
@@ -102,8 +98,6 @@ export const streamStartBodySchema = z.object({
   videoId: videoIdSchemaOptional,
 });
 
-export type StreamStartBody = z.infer<typeof streamStartBodySchema>;
-
 /**
  * Chat settings request body schema
  */
@@ -114,16 +108,12 @@ export const chatSettingsBodySchema = z.object({
   chatSlowModeSeconds: chatSlowModeSecondsSchema,
 });
 
-export type ChatSettingsBody = z.infer<typeof chatSettingsBodySchema>;
-
 /**
  * Remove segment request body schema
  */
 export const removeSegmentBodySchema = z.object({
   segmentName: hlsSegmentNameSchema,
 });
-
-export type RemoveSegmentBody = z.infer<typeof removeSegmentBodySchema>;
 
 // ============================================================================
 // Query Parameter Schemas
@@ -137,4 +127,3 @@ export const chatHistoryQuerySchema = z.object({
   before: z.coerce.number().int().min(0).optional(),
 });
 
-export type ChatHistoryQuery = z.infer<typeof chatHistoryQuerySchema>;

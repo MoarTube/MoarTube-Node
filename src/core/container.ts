@@ -172,30 +172,3 @@ export function getContainer(): Container {
   }
   return container;
 }
-
-/**
- * Check if container has been initialized
- */
-export function isContainerInitialized(): boolean {
-  return container !== null;
-}
-
-/**
- * Resolve a service or repository from the container
- *
- * @param name - Name of the dependency to resolve
- * @returns The resolved dependency
- */
-export function resolve<K extends keyof ContainerCradle>(name: K): ContainerCradle[K] {
-  return getContainer().resolve(name) as ContainerCradle[K];
-}
-
-/**
- * Dispose of the container and all singletons
- */
-export async function disposeContainer(): Promise<void> {
-  if (container) {
-    await container.dispose();
-    container = null;
-  }
-}

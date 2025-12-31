@@ -15,14 +15,6 @@ export interface PaginationOptions {
 }
 
 /**
- * Sort options for database queries
- */
-export interface SortOptions {
-  field: string;
-  direction: 'ASC' | 'DESC';
-}
-
-/**
  * Paginated result wrapper for list queries
  */
 export interface PaginatedResult<T> {

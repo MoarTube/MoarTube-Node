@@ -17,13 +17,9 @@ export const filenameParamsSchema = z.object({
   filename: filenameSchema,
 });
 
-export type FilenameParams = z.infer<typeof filenameParamsSchema>;
-
 /**
  * Image name parameter schema
  */
 export const imageNameParamsSchema = z.object({
   imageName: filenameSchema,
 });
-
-export type ImageNameParams = z.infer<typeof imageNameParamsSchema>;
