@@ -284,7 +284,7 @@ tests/
 
 **Dependencies:** Phase 1 (types, errors, utils)
 
-**Estimated Effort:** 3-4 days
+**Estimated Effort:** 4-5 days
 
 ### Phase 2 Checklist
 
@@ -321,6 +321,48 @@ tests/
   - [ ] PostgreSQL connection creation
   - [ ] Connection configuration
   - [ ] Error handling
+- [ ] **database/sqlite-connection.ts** - SQLite-specific connection
+  - [ ] SQLite database initialization
+  - [ ] Schema migration handling
+  - [ ] Connection pooling
+- [ ] **database/postgres-connection.ts** - PostgreSQL-specific connection
+  - [ ] PostgreSQL database initialization
+  - [ ] Connection string parsing
+  - [ ] SSL configuration
+- [ ] **database/repositories/index.ts** - Repository exports
+  - [ ] Export completeness
+- [ ] **database/repositories/base.ts** - Base repository class
+  - [ ] Common query methods
+  - [ ] Pagination handling
+  - [ ] Error handling
+- [ ] **database/repositories/videos.ts** - Videos repository
+  - [ ] CRUD operations
+  - [ ] Search and filtering
+  - [ ] Statistics updates
+  - [ ] Lifecycle state management
+- [ ] **database/repositories/comments.ts** - Comments repository
+  - [ ] Comment CRUD operations
+  - [ ] Video comment synchronization
+- [ ] **database/repositories/live-chat-messages.ts** - Live chat messages repository
+  - [ ] Message storage and retrieval
+  - [ ] History pruning
+  - [ ] Chat room management
+- [ ] **database/repositories/reports-videos.ts** - Video reports repository
+  - [ ] Video report creation and management
+  - [ ] Report status updates
+- [ ] **database/repositories/reports-comments.ts** - Comment reports repository
+  - [ ] Comment report creation and management
+  - [ ] Report status updates
+- [ ] **database/repositories/reports-archive-videos.ts** - Archived video reports repository
+  - [ ] Archive operations for video reports
+  - [ ] Historical data management
+- [ ] **database/repositories/reports-archive-comments.ts** - Archived comment reports repository
+  - [ ] Archive operations for comment reports
+  - [ ] Historical data management
+- [ ] **database/repositories/monetization.ts** - Monetization repository
+  - [ ] Wallet address management
+- [ ] **database/repositories/links.ts** - Links repository
+  - [ ] External link management
 - [ ] **database/schemas/sqlite/index.ts** - SQLite schema exports
   - [ ] Table schema exports
   - [ ] Schema completeness
@@ -334,39 +376,51 @@ tests/
 - [ ] **database/schemas/sqlite/comments.ts** - Comments table schema
   - [ ] Column definitions
   - [ ] Foreign key constraints
-- [ ] **database/schemas/sqlite/livechatmessages.ts** - Live chat messages schema
+- [ ] **database/schemas/sqlite/live-chat-messages.ts** - Live chat messages schema
   - [ ] Column definitions
   - [ ] Relationship constraints
-- [ ] **database/schemas/sqlite/reports.ts** - Reports tables schema
-  - [ ] Video reports table
-  - [ ] Comment reports table
-  - [ ] Archive tables
+- [ ] **database/schemas/sqlite/reports-videos.ts** - Video reports table schema
+  - [ ] Report column definitions
+  - [ ] Status tracking
+- [ ] **database/schemas/sqlite/reports-comments.ts** - Comment reports table schema
+  - [ ] Report column definitions
+  - [ ] Status tracking
+- [ ] **database/schemas/sqlite/reports-archive-videos.ts** - Archived video reports schema
+  - [ ] Archive table structure
+  - [ ] Historical data constraints
+- [ ] **database/schemas/sqlite/reports-archive-comments.ts** - Archived comment reports schema
+  - [ ] Archive table structure
+  - [ ] Historical data constraints
 - [ ] **database/schemas/sqlite/monetization.ts** - Monetization schema
   - [ ] Wallet addresses table
 - [ ] **database/schemas/sqlite/links.ts** - Links schema
   - [ ] External links table
-- [ ] **database/repositories/base.ts** - Base repository class
-  - [ ] Common query methods
-  - [ ] Pagination handling
-  - [ ] Error handling
-- [ ] **database/repositories/videos.ts** - Videos repository
-  - [ ] CRUD operations
-  - [ ] Search and filtering
-  - [ ] Statistics updates
-  - [ ] Lifecycle state management
-- [ ] **database/repositories/comments.ts** - Comments repository
-  - [ ] Comment CRUD operations
-  - [ ] Video comment synchronization
-- [ ] **database/repositories/livechat.ts** - Live chat repository
-  - [ ] Message storage and retrieval
-  - [ ] History pruning
-- [ ] **database/repositories/reports.ts** - Reports repository
-  - [ ] Report creation and management
-  - [ ] Archive operations
-- [ ] **database/repositories/monetization.ts** - Monetization repository
-  - [ ] Wallet address management
-- [ ] **database/repositories/links.ts** - Links repository
-  - [ ] External link management
+- [ ] **database/schemas/postgres/videos.ts** - PostgreSQL videos table schema
+  - [ ] Column definitions
+  - [ ] Index definitions
+  - [ ] Constraint validation
+- [ ] **database/schemas/postgres/comments.ts** - PostgreSQL comments table schema
+  - [ ] Column definitions
+  - [ ] Foreign key constraints
+- [ ] **database/schemas/postgres/live-chat-messages.ts** - PostgreSQL live chat messages schema
+  - [ ] Column definitions
+  - [ ] Relationship constraints
+- [ ] **database/schemas/postgres/reports-videos.ts** - PostgreSQL video reports table schema
+  - [ ] Report column definitions
+  - [ ] Status tracking
+- [ ] **database/schemas/postgres/reports-comments.ts** - PostgreSQL comment reports table schema
+  - [ ] Report column definitions
+  - [ ] Status tracking
+- [ ] **database/schemas/postgres/reports-archive-videos.ts** - PostgreSQL archived video reports schema
+  - [ ] Archive table structure
+  - [ ] Historical data constraints
+- [ ] **database/schemas/postgres/reports-archive-comments.ts** - PostgreSQL archived comment reports schema
+  - [ ] Archive table structure
+  - [ ] Historical data constraints
+- [ ] **database/schemas/postgres/monetization.ts** - PostgreSQL monetization schema
+  - [ ] Wallet addresses table
+- [ ] **database/schemas/postgres/links.ts** - PostgreSQL links schema
+  - [ ] External links table
 
 ### Phase 2 Completion Criteria
 - [ ] All infrastructure components tested
@@ -728,7 +782,7 @@ tests/
 | Phase | Components | Estimated Tests | Target Coverage | Status |
 |-------|------------|-----------------|----------------|--------|
 | Phase 1 | Types, Errors, Validators, Utils | 150+ | 90% | ✅ **COMPLETED** (100%) |
-| Phase 2 | Config, Database | 200+ | 85% | ⏳ Pending |
+| Phase 2 | Config, Database | 250+ | 85% | ⏳ Pending |
 | Phase 3 | Services | 300+ | 80% | ⏳ Pending |
 | Phase 4 | Controllers, Routes, Plugins | 250+ | 80% | ⏳ Pending |
 | Phase 5 | WebSocket | 150+ | 80% | ⏳ Pending |
@@ -742,8 +796,8 @@ tests/
 - **Status:** ✅ COMPLETED ahead of schedule
 
 **Week 2:** Complete Phase 2 (Infrastructure Layer)
-- Daily Goals: Config → Database schemas → Repositories
-- Deliverable: 200+ additional tests, 85% coverage
+- Daily Goals: Config system → Database connections → Schemas → Repositories
+- Deliverable: 250+ additional tests, 85% coverage
 
 **Week 3-4:** Complete Phase 3 (Business Logic Layer)
 - Daily Goals: 2-3 services per day
