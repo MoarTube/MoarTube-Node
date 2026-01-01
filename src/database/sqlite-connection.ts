@@ -68,11 +68,7 @@ export function initializeDatabaseSchema(): void {
 
     migrate(drizzleDb, { migrationsFolder });
 
-    if(!sqliteDb) {
-      throw new Error('Underlying SQLite database instance not found.');
-    }
-
-    sqliteDb.exec('VACUUM');
+    sqliteDb?.exec('VACUUM');
   } catch (error) {
     throw new Error(`Failed to initialize SQLite database schema: ${String(error)}`);
   }

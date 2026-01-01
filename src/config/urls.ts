@@ -53,7 +53,9 @@ class Urls {
    * Initialize the URLs singleton with service configurations
    */
   static initialize(indexerConfig: IndexerConfig, aliaserConfig: AliaserConfig): Urls {
-    Urls.instance = new Urls(indexerConfig, aliaserConfig);
+    if (!Urls.instance) {
+      Urls.instance = new Urls(indexerConfig, aliaserConfig);
+    }
     return Urls.instance;
   }
 
@@ -63,6 +65,13 @@ class Urls {
    */
   static getInstance(): Urls {
     return Urls.instance;
+  }
+
+  /**
+   * Reset the singleton instance (for testing purposes)
+   */
+  static resetInstance(): void {
+    Urls.instance = undefined as any;
   }
 
   /**

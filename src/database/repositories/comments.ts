@@ -237,12 +237,11 @@ export class CommentsRepository extends BaseRepository {
 
     conditions.push(lt(this.commentsTable.timestamp, timestamp));
 
-    // Build query
-    let query = this.db.select().from(this.commentsTable);
-
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as typeof query;
-    }
+    // Build query - conditions always has at least the timestamp condition
+    let query = this.db
+      .select()
+      .from(this.commentsTable)
+      .where(and(...conditions));
 
     // Sort
     if (sortDirection === 'ascending') {

@@ -77,10 +77,9 @@ export const NodeSettingsSchema = z.object({
   // Server Configuration
   nodeListeningPort: z.union([z.number(), z.string()]).transform((val) => {
     const num = typeof val === 'string' ? Number(val) : val;
-    if (Number.isNaN(num) || num < 1 || num > 65535) {
-      throw new Error('Port must be between 1 and 65535');
-    }
     return num;
+  }).refine((val) => !Number.isNaN(val) && val >= 1 && val <= 65535, {
+    message: 'Port must be between 1 and 65535',
   }),
   isSecure: z.boolean().default(false),
   publicNodeProtocol: z.enum(['http', 'https', '']).default(''),
@@ -159,7 +158,7 @@ export const AppConfigSchema = z.object({
  * Node identification schema
  */
 export const NodeIdentificationSchema = z.object({
-  moarTubeTokenProof: z.string(),
+  moarTubeTokenProof: z.string().min(1, 'Token proof is required'),
 });
 
 // ============================================

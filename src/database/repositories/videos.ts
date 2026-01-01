@@ -92,9 +92,8 @@ export class VideosRepository extends BaseRepository {
 
     let query = this.db.select().from(this.videosTable).orderBy(sortDir(sortField));
 
-    if (conditions) {
-      query = query.where(conditions) as typeof query;
-    }
+    // Apply where conditions only if they exist
+    query = conditions !== undefined ? query.where(conditions) as typeof query : query;
 
     if (limit !== undefined) {
       return query.limit(limit);

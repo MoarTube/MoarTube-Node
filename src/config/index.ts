@@ -109,7 +109,9 @@ class Config {
    * Initialize the configuration system
    */
   static initialize(baseDir: string, configFileName: string): Config {
-    Config.instance = new Config(baseDir, configFileName);
+    if (!Config.instance) {
+      Config.instance = new Config(baseDir, configFileName);
+    }
 
     return Config.instance;
   }

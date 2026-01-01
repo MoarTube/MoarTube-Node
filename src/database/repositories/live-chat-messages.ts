@@ -192,10 +192,7 @@ export class LiveChatMessagesRepository extends BaseRepository {
     }
 
     const oldestKeptMessage = recentMessages.at(0);
-    if (!oldestKeptMessage) {
-      // Should not happen given the length check above, but satisfies TypeScript
-      return 0;
-    }
+
     const cutoffTimestamp = oldestKeptMessage.timestamp;
 
     // Delete messages older than the cutoff

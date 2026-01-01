@@ -100,6 +100,13 @@ class Paths implements PathConfig {
   }
 
   /**
+   * Reset the singleton instance (for testing)
+   */
+  static resetInstance(): void {
+    Paths.instance = undefined;
+  }
+
+  /**
    * Check if the paths have been initialized
    */
   static isInitialized(): boolean {

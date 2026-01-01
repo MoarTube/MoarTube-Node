@@ -20,7 +20,7 @@ const EnvSchema = z.object({
   PORT: z
     .string()
     .optional()
-    .transform((val) => (val !== '' ? Number(val) : undefined)),
+    .transform((val) => (val !== undefined && val !== '' ? Number(val) : undefined)),
   HOST: z.string().optional(),
 });
 
@@ -49,12 +49,24 @@ class Env {
   }
 
   /**
+   * Reset the singleton instance (for testing)
+   */
+  static resetInstance(): void {
+    Env.instance = undefined;
+  }
+
+  /**
    * Load and validate environment variables
    */
   private loadAndValidate(): EnvConfig {
     const result = EnvSchema.safeParse({
       NODE_ENV: process.env['NODE_ENV'],
       IS_DOCKER_ENVIRONMENT: process.env['IS_DOCKER_ENVIRONMENT'],
+      MOARTUBE_DATA_DIR: process.env['MOARTUBE_DATA_DIR'],
+      DATABASE_URL: process.env['DATABASE_URL'],
+      LOG_LEVEL: process.env['LOG_LEVEL'],
+      PORT: process.env['PORT'],
+      HOST: process.env['HOST'],
     });
 
     if (!result.success) {
