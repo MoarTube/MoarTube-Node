@@ -64,6 +64,6 @@
     // Skip type checking for node_modules
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "tests/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "tests/**/*"]
 }
