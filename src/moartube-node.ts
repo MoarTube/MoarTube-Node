@@ -39,10 +39,10 @@ function loadConfig(): void {
 /**
  * Start master process
  */
-function startMaster(): void {
+async function startMaster(): Promise<void> {
   const master = new ClusterMaster();
 
-  void master.start();
+  await master.start();
 }
 
 /**
@@ -61,11 +61,12 @@ try {
   loadConfig();
 
   if (cluster.isPrimary) {
-    startMaster();
+    await startMaster();
   } else {
     await startWorker();
   }
 } catch (error) {
   getLogger().error('Fatal error during startup', error);
+  
   process.exit(1);
 }
