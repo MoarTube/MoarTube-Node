@@ -439,7 +439,7 @@ tests/
 
 **Dependencies:** Phase 1 (types, errors, utils) + Phase 2 (config, database)
 
-**Estimated Effort:** 5-7 days
+**Estimated Effort:** 5-7 days (18 service files)
 
 ### Phase 3 Checklist
 
@@ -450,6 +450,11 @@ tests/
   - [ ] JSON parsing utilities
   - [ ] Timestamp utilities
   - [ ] ID generation
+- [ ] **services/index.ts** - Service exports
+  - [ ] Export completeness for all services
+- [ ] **services/interfaces.ts** - Service interfaces and types
+  - [ ] Service interface definitions
+  - [ ] Type definitions for service contracts
 
 #### Sub-Phase 3.2: Core Services (`src/services/`)
 - [ ] **services/videos.ts** - VideosService
@@ -466,7 +471,7 @@ tests/
   - [ ] Comment CRUD operations
   - [ ] Video comment count sync
   - [ ] Content moderation
-- [ ] **services/livechat.ts** - LiveChatService
+- [ ] **services/live-chat.ts** - LiveChatService
   - [ ] Message broadcasting
   - [ ] History retrieval
   - [ ] Message pruning
@@ -508,10 +513,10 @@ tests/
   - [ ] Cryptocurrency wallet management
 
 #### Sub-Phase 3.6: Upload & Processing Services (`src/services/`)
-- [ ] **services/videoupload.ts** - VideoUploadService
+- [ ] **services/video-upload.ts** - VideoUploadService
   - [ ] File upload handling
   - [ ] Validation and processing
-- [ ] **services/uploadtracker.ts** - UploadTrackerService
+- [ ] **services/upload-tracker.ts** - UploadTrackerService
   - [ ] Upload progress tracking
   - [ ] Status reporting
 
@@ -538,7 +543,7 @@ tests/
 
 **Dependencies:** Phase 1-3 (all previous phases)
 
-**Estimated Effort:** 4-5 days
+**Estimated Effort:** 5-6 days (44 HTTP layer files)
 
 ### Phase 4 Checklist
 
@@ -548,6 +553,11 @@ tests/
   - [ ] Error response methods
   - [ ] File serving methods
   - [ ] Logger integration
+- [ ] **controllers/index.ts** - Controller exports
+  - [ ] Export completeness
+- [ ] **controllers/video-controller-base.ts** - VideoControllerBase class
+  - [ ] Video-specific base functionality
+  - [ ] Common video operations
 - [ ] **controllers/videos.ts** - VideosController
   - [ ] Video CRUD endpoints
   - [ ] Search and filtering
@@ -563,6 +573,14 @@ tests/
   - [ ] Configuration management
 - [ ] **controllers/reports.ts** - ReportsController
   - [ ] Report submission and management
+- [ ] **controllers/reports-videos.ts** - VideoReportsController
+  - [ ] Video report management
+- [ ] **controllers/reports-comments.ts** - CommentReportsController
+  - [ ] Comment report management
+- [ ] **controllers/reports-archive-videos.ts** - ArchivedVideoReportsController
+  - [ ] Archived video report management
+- [ ] **controllers/reports-archive-comments.ts** - ArchivedCommentReportsController
+  - [ ] Archived comment report management
 - [ ] **controllers/links.ts** - LinksController
   - [ ] External link management
 - [ ] **controllers/monetization.ts** - MonetizationController
@@ -573,14 +591,21 @@ tests/
   - [ ] Node information endpoints
 - [ ] **controllers/watch.ts** - WatchController
   - [ ] Video playback pages
-- [ ] **controllers/external.ts** - ExternalController
-  - [ ] Proxy endpoints
+- [ ] **controllers/watch-embed.ts** - WatchEmbedController
+  - [ ] Embedded video player
+- [ ] **controllers/external-resources.ts** - ExternalResourcesController
+  - [ ] External resource proxy
+- [ ] **controllers/external-videos.ts** - ExternalVideosController
+  - [ ] External video management
 
 #### Sub-Phase 4.2: Routes (`src/routes/`)
 - [ ] **routes/index.ts** - Route registration
   - [ ] Route grouping
   - [ ] Prefix handling
   - [ ] Plugin registration
+- [ ] **routes/base.ts** - Base route utilities
+  - [ ] Common route patterns
+  - [ ] Route helper functions
 - [ ] **routes/videos.ts** - Video routes
   - [ ] Route definitions
   - [ ] Validation schemas
@@ -596,12 +621,22 @@ tests/
   - [ ] Admin routes
 - [ ] **routes/reports.ts** - Reports routes
   - [ ] Public and admin routes
+- [ ] **routes/reports-videos.ts** - Video reports routes
+  - [ ] Video report route definitions
+- [ ] **routes/reports-comments.ts** - Comment reports routes
+  - [ ] Comment report route definitions
+- [ ] **routes/reports-archive-videos.ts** - Archived video reports routes
+  - [ ] Archive video report routes
+- [ ] **routes/reports-archive-comments.ts** - Archived comment reports routes
+  - [ ] Archive comment report routes
 - [ ] **routes/links.ts** - Links routes
 - [ ] **routes/monetization.ts** - Monetization routes
 - [ ] **routes/status.ts** - Status routes
 - [ ] **routes/node.ts** - Node routes
 - [ ] **routes/watch.ts** - Watch routes
-- [ ] **routes/external.ts** - External routes
+- [ ] **routes/watch-embed.ts** - Watch embed routes
+- [ ] **routes/external-resources.ts** - External resources routes
+- [ ] **routes/external-videos.ts** - External videos routes
 
 #### Sub-Phase 4.3: Plugins (`src/plugins/`)
 - [ ] **plugins/index.ts** - Plugin registration
@@ -633,13 +668,11 @@ tests/
 
 **Dependencies:** Phase 1-4 (all previous phases)
 
-**Estimated Effort:** 3-4 days
+**Estimated Effort:** 3-4 days (7 WebSocket files)
 
 ### Phase 5 Checklist
 
 #### Sub-Phase 5.1: WebSocket Infrastructure (`src/websocket/`)
-- [ ] **websocket/index.ts** - WebSocket exports
-  - [ ] Export completeness
 - [ ] **websocket/websocket-manager.ts** - WebSocketManager
   - [ ] Client lifecycle management
   - [ ] Message routing
@@ -658,13 +691,13 @@ tests/
 - [ ] **websocket/handlers/echo.ts** - EchoHandler
   - [ ] Message broadcasting
   - [ ] Generic echo functionality
-- [ ] **websocket/handlers/videostatus.ts** - VideoStatusHandler
+- [ ] **websocket/handlers/video-status.ts** - VideoStatusHandler
   - [ ] Video state queries
   - [ ] Status broadcasting
-- [ ] **websocket/handlers/chatjoin.ts** - ChatJoinHandler
+- [ ] **websocket/handlers/chat-join.ts** - ChatJoinHandler
   - [ ] Chat room joining
   - [ ] History retrieval
-- [ ] **websocket/handlers/chatmessage.ts** - ChatMessageHandler
+- [ ] **websocket/handlers/chat-message.ts** - ChatMessageHandler
   - [ ] Message validation
   - [ ] Broadcasting to room
   - [ ] Rate limiting
@@ -687,13 +720,11 @@ tests/
 
 **Dependencies:** Phase 1-5 (all previous phases)
 
-**Estimated Effort:** 2-3 days
+**Estimated Effort:** 1-2 days (6 integration files)
 
 ### Phase 6 Checklist
 
 #### Sub-Phase 6.1: Core Infrastructure (`src/core/`)
-- [ ] **core/index.ts** - Core exports
-  - [ ] Export completeness
 - [ ] **core/container.ts** - Dependency injection container
   - [ ] Service registration
   - [ ] Repository registration
@@ -783,10 +814,10 @@ tests/
 |-------|------------|-----------------|----------------|--------|
 | Phase 1 | Types, Errors, Validators, Utils | 150+ | 90% | ✅ **COMPLETED** (100%) |
 | Phase 2 | Config, Database | 250+ | 85% | ⏳ Pending |
-| Phase 3 | Services | 300+ | 80% | ⏳ Pending |
-| Phase 4 | Controllers, Routes, Plugins | 250+ | 80% | ⏳ Pending |
+| Phase 3 | Services | 350+ | 80% | ⏳ Pending |
+| Phase 4 | Controllers, Routes, Plugins | 300+ | 80% | ⏳ Pending |
 | Phase 5 | WebSocket | 150+ | 80% | ⏳ Pending |
-| Phase 6 | Core, Entry Point | 100+ | 75% | ⏳ Pending |
+| Phase 6 | 6 core files | 100+ | 75% | ⏳ Pending |
 
 ### Weekly Milestones
 
@@ -800,12 +831,12 @@ tests/
 - Deliverable: 250+ additional tests, 85% coverage
 
 **Week 3-4:** Complete Phase 3 (Business Logic Layer)
-- Daily Goals: 2-3 services per day
-- Deliverable: 300+ additional tests, 80% coverage
+- Daily Goals: Base services → Core services → Infrastructure → Admin → Upload → Real-time
+- Deliverable: 350+ additional tests, 80% coverage
 
 **Week 5:** Complete Phase 4 (HTTP Layer)
 - Daily Goals: Controllers → Routes → Plugins
-- Deliverable: 250+ additional tests, 80% coverage
+- Deliverable: 300+ additional tests, 80% coverage
 
 **Week 6:** Complete Phase 5-6 (Real-Time & Integration)
 - Daily Goals: WebSocket → Core → Entry point
