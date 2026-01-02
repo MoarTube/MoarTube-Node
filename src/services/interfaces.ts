@@ -70,6 +70,11 @@ export interface VideoSource {
 }
 
 /**
+ * Video format types
+ */
+export type VideoFormat = 'm3u8' | 'mp4' | 'webm' | 'ogv';
+
+/**
  * Sources by format and resolution
  */
 export interface SourcesFormatsAndResolutions {
@@ -78,6 +83,11 @@ export interface SourcesFormatsAndResolutions {
   webm: string[];
   ogv: string[];
 }
+
+/**
+ * Video outputs structure (available formats/resolutions)
+ */
+export type VideoOutputs = SourcesFormatsAndResolutions;
 
 /**
  * Video watch data for media player
@@ -133,7 +143,7 @@ export interface VideoData {
   isStreamRecordedRemotely: boolean;
   timestamp: number;
   videoAliasUrl: string;
-  outputs: Record<string, string[]>;
+  outputs: VideoOutputs;
   meta: Record<string, unknown>;
 }
 
@@ -351,14 +361,18 @@ export interface UpdateNodeSettingsInput {
 /**
  * Storage configuration
  */
-export interface StorageConfigInput {
-  storageMode: StorageMode;
-  s3BucketName?: string;
-  s3Endpoint?: string;
-  s3AccessKeyId?: string;
-  s3SecretAccessKey?: string;
-  s3Region?: string;
-}
+export type StorageConfigInput =
+  | {
+      storageMode: 'filesystem';
+    }
+  | {
+      storageMode: 's3provider';
+      s3BucketName: string;
+      s3Endpoint?: string;
+      s3AccessKeyId?: string;
+      s3SecretAccessKey?: string;
+      s3Region?: string;
+    };
 
 // ============================================================================
 // Account Service

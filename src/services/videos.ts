@@ -21,6 +21,8 @@ import type {
   AddToIndexOptions,
   AddToIndexResult,
   VideoIndexData,
+  VideoOutputs,
+  VideoFormat,
 } from '@services/interfaces.js';
 import type { VideosRepository, CommentsRepository } from '@/database/repositories/index.js';
 import type { DrizzleVideo, DrizzleNewVideo } from '@/database/schemas/sqlite/index.js';
@@ -488,34 +490,35 @@ export class VideosService extends BaseService {
     return this.withErrorLogging('incrementViewsDebounced', async () => {
       // Increment pending views for this video
       const currentPending = this.pendingViews.get(videoId) ?? 0;
-      this.pendingViews.set(videoId, currentPending + 1);
+      const newPendingCount = currentPending + 1;
+      this.pendingViews.set(videoId, newPendingCount);
 
       // Clear existing timer for this video
       const existingTimer = this.viewTimers.get(videoId);
       if (existingTimer) {
         clearTimeout(existingTimer);
       }
-
+      
       // Set new debounce timer
       const timer = setTimeout(() => {
-        const pendingCount = this.pendingViews.get(videoId) ?? 0;
-        if (pendingCount > 0) {
-          this.pendingViews.delete(videoId);
-          this.viewTimers.delete(videoId);
+        // pendingCount is guaranteed to be > 0 since we always set it before creating the timer
+        const pendingCount = this.pendingViews.get(videoId)!;
 
-          this.videoRepository
-            .incrementViewsBy(videoId, pendingCount)
-            .then(() => {
-              this.logger.debug('Flushed pending views', { videoId, count: pendingCount });
-            })
-            .catch((err: unknown) => {
-              this.logger.error(
-                'Failed to flush pending views',
-                err instanceof Error ? err : new Error(String(err)),
-                { videoId, count: pendingCount }
-              );
-            });
-        }
+        this.pendingViews.delete(videoId);
+        this.viewTimers.delete(videoId);
+
+        this.videoRepository
+          .incrementViewsBy(videoId, pendingCount)
+          .then(() => {
+            this.logger.debug('Flushed pending views', { videoId, count: pendingCount });
+          })
+          .catch((error: unknown) => {
+            this.logger.error(
+              'Failed to flush pending views',
+              error,
+              { videoId, count: pendingCount }
+            );
+          });
       }, VideosService.VIEW_DEBOUNCE_MS);
 
       this.viewTimers.set(videoId, timer);
@@ -526,9 +529,8 @@ export class VideosService extends BaseService {
         throw new Error('Video not found');
       }
 
-      // Return current count + pending
-      const pendingCount = this.pendingViews.get(videoId) ?? 0;
-      return { views: video.views + pendingCount };
+      // Return current count + pending (we already know the pending count)
+      return { views: video.views + newPendingCount };
     });
   }
 
@@ -608,7 +610,7 @@ export class VideosService extends BaseService {
       }
 
       // Only mark as outdated if currently indexed
-      if (video.is_indexed) {
+      if (video.is_indexed === true) {
         await this.videoRepository.update(videoId, {
           is_index_outdated: true,
         });
@@ -657,7 +659,7 @@ export class VideosService extends BaseService {
   /**
    * Update video outputs (available formats/resolutions)
    */
-  async updateOutputs(videoId: string, outputs: Record<string, string[]>): Promise<void> {
+  async updateOutputs(videoId: string, outputs: VideoOutputs): Promise<void> {
     await this.videoRepository.update(videoId, {
       outputs: JSON.stringify(outputs),
     });
@@ -666,28 +668,26 @@ export class VideosService extends BaseService {
   /**
    * Add a resolution to video outputs
    */
-  async addOutputResolution(videoId: string, format: string, resolution: string): Promise<void> {
+  async addOutputResolution(videoId: string, format: VideoFormat, resolution: string): Promise<void> {
     const video = await this.videoRepository.findById(videoId);
     if (!video) {
       throw new Error('Video not found');
     }
 
-    const outputs = this.safeJsonParse<Record<string, string[]>>(video.outputs, {
+    const outputs = this.safeJsonParse(video.outputs, {
       m3u8: [],
       mp4: [],
       webm: [],
       ogv: [],
-    });
-
-    outputs[format] ??= [];
+    }) as VideoOutputs;
 
     if (!outputs[format].includes(resolution)) {
       outputs[format].push(resolution);
 
       // Sort resolutions descending by quality
       outputs[format].sort((a, b) => {
-        const aHeight = Number(a.split('p')[0] ?? '0');
-        const bHeight = Number(b.split('p')[0] ?? '0');
+        const aHeight = this.parseResolutionHeight(a);
+        const bHeight = this.parseResolutionHeight(b);
         return bHeight - aHeight;
       });
     }
@@ -698,22 +698,20 @@ export class VideosService extends BaseService {
   /**
    * Remove a resolution from video outputs
    */
-  async removeOutputResolution(videoId: string, format: string, resolution: string): Promise<void> {
+  async removeOutputResolution(videoId: string, format: VideoFormat, resolution: string): Promise<void> {
     const video = await this.videoRepository.findById(videoId);
     if (!video) {
       throw new Error('Video not found');
     }
 
-    const outputs = this.safeJsonParse<Record<string, string[]>>(video.outputs, {
+    const outputs = this.safeJsonParse(video.outputs, {
       m3u8: [],
       mp4: [],
       webm: [],
       ogv: [],
-    });
+    }) as VideoOutputs;
 
-    if (outputs[format]) {
-      outputs[format] = outputs[format].filter((r) => r !== resolution);
-    }
+    outputs[format] = outputs[format].filter((r) => r !== resolution);
 
     await this.updateOutputs(videoId, outputs);
   }
@@ -729,14 +727,14 @@ export class VideosService extends BaseService {
       throw new Error('Video not found');
     }
 
-    const outputs = this.safeJsonParse<Record<string, string[]>>(video.outputs, {
+    const outputs = this.safeJsonParse(video.outputs, {
       m3u8: [],
       mp4: [],
       webm: [],
       ogv: [],
-    });
+    }) as VideoOutputs;
 
-    const formats = ['m3u8', 'mp4', 'webm', 'ogv'];
+    const formats: VideoFormat[] = ['m3u8', 'mp4', 'webm', 'ogv'];
     const resolutions = ['2160p', '1440p', '1080p', '720p', '480p', '360p', '240p'];
 
     const publishes: Array<{ format: string; resolution: string; isPublished: boolean }> = [];
@@ -746,7 +744,7 @@ export class VideosService extends BaseService {
         publishes.push({
           format,
           resolution,
-          isPublished: video.is_published && (outputs[format]?.includes(resolution) ?? false),
+          isPublished: video.is_published && outputs[format].includes(resolution),
         });
       }
     }
@@ -766,7 +764,7 @@ export class VideosService extends BaseService {
    */
   async markFormatResolutionPublished(
     videoId: string,
-    format: string,
+    format: VideoFormat,
     resolution: string
   ): Promise<void> {
     return this.withErrorLogging('markFormatResolutionPublished', async () => {
@@ -776,19 +774,18 @@ export class VideosService extends BaseService {
       }
 
       // Parse existing outputs
-      const outputs: Record<string, string[]> =
+      const outputs: VideoOutputs =
         typeof video.outputs === 'string'
-          ? (JSON.parse(video.outputs) as Record<string, string[]>)
-          : (video.outputs as Record<string, string[]>);
+          ? (JSON.parse(video.outputs) as VideoOutputs)
+          : (video.outputs as VideoOutputs);
 
       // Add resolution to format if not already present
-      if (outputs[format]?.includes(resolution) !== true) {
-        outputs[format] ??= [];
+      if (!outputs[format].includes(resolution)) {
         outputs[format].push(resolution);
         // Sort by resolution (descending)
         outputs[format].sort((a: string, b: string) => {
-          const aRes = Number(a.split('p')[0] ?? '0');
-          const bRes = Number(b.split('p')[0] ?? '0');
+          const aRes = this.parseResolutionHeight(a);
+          const bRes = this.parseResolutionHeight(b);
           return bRes - aRes;
         });
       }
@@ -801,7 +798,7 @@ export class VideosService extends BaseService {
   /**
    * Notify upload complete for a format/resolution
    */
-  async notifyUploadComplete(videoId: string, format: string, resolution: string): Promise<void> {
+  async notifyUploadComplete(videoId: string, format: VideoFormat, resolution: string): Promise<void> {
     return this.withErrorLogging('notifyUploadComplete', () => {
       this.logger.debug('Upload complete notification', { videoId, format, resolution });
       // Trigger any necessary cache purging or notifications
@@ -813,7 +810,7 @@ export class VideosService extends BaseService {
   /**
    * Notify stream complete for a format/resolution
    */
-  async notifyStreamComplete(videoId: string, format: string, resolution: string): Promise<void> {
+  async notifyStreamComplete(videoId: string, format: VideoFormat, resolution: string): Promise<void> {
     return this.withErrorLogging('notifyStreamComplete', () => {
       this.logger.debug('Stream complete notification', { videoId, format, resolution });
       // The actual implementation depends on stream handling logic
@@ -844,12 +841,12 @@ export class VideosService extends BaseService {
         return null;
       }
 
-      const outputs = this.safeJsonParse<Record<string, string[]>>(video.outputs, {
+      const outputs = this.safeJsonParse(video.outputs, {
         m3u8: [],
         mp4: [],
         webm: [],
         ogv: [],
-      });
+      }) as VideoOutputs;
 
       // Determine manifest type based on streaming status
       const manifestType = video.is_streaming ? 'dynamic' : 'static';
@@ -888,10 +885,10 @@ export class VideosService extends BaseService {
         isStreamed: video.is_streamed,
         comments: video.comments,
         creationTimestamp: video.creation_timestamp,
-        isHlsAvailable: (outputs['m3u8']?.length ?? 0) > 0,
-        isMp4Available: (outputs['mp4']?.length ?? 0) > 0,
-        isWebmAvailable: (outputs['webm']?.length ?? 0) > 0,
-        isOgvAvailable: (outputs['ogv']?.length ?? 0) > 0,
+        isHlsAvailable: (outputs.m3u8.length) > 0,
+        isMp4Available: (outputs.mp4.length) > 0,
+        isWebmAvailable: (outputs.webm.length) > 0,
+        isOgvAvailable: (outputs.ogv.length) > 0,
         adaptiveSources,
         progressiveSources,
         sourcesFormatsAndResolutions,
@@ -952,12 +949,12 @@ export class VideosService extends BaseService {
     const config = getConfig();
     const nodeSettings = config.nodeSettings;
 
-    const outputs = this.safeJsonParse<Record<string, string[]>>(video.outputs, {
+    const outputs = this.safeJsonParse(video.outputs, {
       m3u8: [],
       mp4: [],
       webm: [],
       ogv: [],
-    });
+    }) as VideoOutputs;
 
     const meta = this.safeJsonParse<Record<string, unknown>>(video.meta, {});
 
@@ -1098,13 +1095,13 @@ export class VideosService extends BaseService {
       }
 
       // Parse existing outputs
-      const outputs: Record<string, string[]> =
+      const outputs: VideoOutputs =
         typeof video.outputs === 'string'
-          ? (JSON.parse(video.outputs) as Record<string, string[]>)
-          : (video.outputs as Record<string, string[]>);
+          ? (JSON.parse(video.outputs) as VideoOutputs)
+          : (video.outputs as VideoOutputs);
 
       // Build complete publish status list
-      const formats = ['m3u8', 'mp4', 'webm', 'ogv'];
+      const formats: VideoFormat[] = ['m3u8', 'mp4', 'webm', 'ogv'];
       const resolutions = ['2160p', '1440p', '1080p', '720p', '480p', '360p', '240p'];
 
       const publishes: Array<{ format: string; resolution: string; isPublished: boolean }> = [];
@@ -1114,7 +1111,7 @@ export class VideosService extends BaseService {
           publishes.push({
             format,
             resolution,
-            isPublished: video.is_published && (outputs[format]?.includes(resolution) ?? false),
+            isPublished: video.is_published && outputs[format].includes(resolution),
           });
         }
       }
@@ -1128,7 +1125,7 @@ export class VideosService extends BaseService {
    */
   async unpublishFormatResolution(
     videoId: string,
-    format: string,
+    format: VideoFormat,
     resolution: string
   ): Promise<void> {
     return this.withErrorLogging('unpublishFormatResolution', async () => {
@@ -1138,15 +1135,13 @@ export class VideosService extends BaseService {
       }
 
       // Parse existing outputs
-      const outputs: Record<string, string[]> =
+      const outputs: VideoOutputs =
         typeof video.outputs === 'string'
-          ? (JSON.parse(video.outputs) as Record<string, string[]>)
-          : (video.outputs as Record<string, string[]>);
+          ? (JSON.parse(video.outputs) as VideoOutputs)
+          : (video.outputs as VideoOutputs);
 
       // Remove resolution from format
-      if (outputs[format]) {
-        outputs[format] = outputs[format].filter((item: string) => item !== resolution);
-      }
+      outputs[format] = outputs[format].filter((item: string) => item !== resolution);
 
       await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
 
@@ -1160,7 +1155,7 @@ export class VideosService extends BaseService {
   /**
    * Delete format/resolution files from storage
    */
-  private deleteFormatResolutionFiles(videoId: string, format: string, resolution: string): void {
+  private deleteFormatResolutionFiles(videoId: string, format: VideoFormat, resolution: string): void {
     try {
       const config = getConfig();
       const storageMode = config.nodeSettings.storageConfig.storageMode;
@@ -1540,7 +1535,7 @@ export class VideosService extends BaseService {
 
         return {
           success: false,
-          message: result.message ?? 'Failed to add video to index',
+          message: result.message,
         };
       }
 
@@ -1750,7 +1745,7 @@ export class VideosService extends BaseService {
    * Build adaptive and progressive sources from video outputs
    */
   private buildVideoSources(
-    outputs: Record<string, string[]>,
+    outputs: VideoOutputs,
     videoId: string,
     externalVideosBaseUrl: string,
     manifestType: string,
@@ -1760,8 +1755,8 @@ export class VideosService extends BaseService {
     const progressiveSources: VideoSource[] = [];
 
     // Build sources from outputs
-    for (const format of Object.keys(outputs)) {
-      const resolutions = outputs[format] ?? [];
+    for (const format of Object.keys(outputs) as VideoFormat[]) {
+      const resolutions = outputs[format]!;
 
       for (const resolution of resolutions) {
         if (format === 'm3u8') {
@@ -1799,7 +1794,7 @@ export class VideosService extends BaseService {
   /**
    * Get MIME type for video format
    */
-  private getVideoMimeType(format: string): string | null {
+  private getVideoMimeType(format: VideoFormat): string | null {
     switch (format) {
       case 'mp4':
         return 'video/mp4';
@@ -1810,5 +1805,17 @@ export class VideosService extends BaseService {
       default:
         return null;
     }
+  }
+
+  /**
+   * Parse resolution height from resolution string (e.g., '1080p' -> 1080)
+   *
+   * Returns 0 for malformed resolution strings that don't contain 'p'
+   * or have non-numeric prefixes.
+   */
+  private parseResolutionHeight(resolution: string): number {
+    const parts = resolution.split('p');
+    const height = Number(parts[0]);
+    return Number.isNaN(height) ? 0 : height;
   }
 }

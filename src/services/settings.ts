@@ -9,7 +9,7 @@ import path from 'node:path';
 
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/logger.js';
-import type { UpdateNodeSettingsInput, StorageConfigInput } from '@services/interfaces.js';
+import type { UpdateNodeSettingsInput } from '@services/interfaces.js';
 import { getConfig } from '@config/index.js';
 import type { DatabaseConfig, StorageConfig } from '@/types/index.js';
 import type {
@@ -374,43 +374,10 @@ export class SettingsService extends BaseService {
   /**
    * Update storage configuration
    */
-  updateStorageConfig(storageConfig: StorageConfigInput): void {
+  updateStorageConfig(storageConfig: StorageConfig): void {
     const config = getConfig();
 
-    const newStorageConfig: StorageConfig = {
-      storageMode: storageConfig.storageMode,
-    };
-
-    if (
-      storageConfig.storageMode === 's3provider' &&
-      storageConfig.s3BucketName !== undefined &&
-      storageConfig.s3BucketName !== ''
-    ) {
-      const s3ProviderClientConfig: {
-        forcePathStyle: boolean;
-        region: string;
-        credentials: { accessKeyId: string; secretAccessKey: string };
-        endpoint?: string;
-      } = {
-        forcePathStyle: true,
-        region: storageConfig.s3Region ?? 'us-east-1',
-        credentials: {
-          accessKeyId: storageConfig.s3AccessKeyId ?? '',
-          secretAccessKey: storageConfig.s3SecretAccessKey ?? '',
-        },
-      };
-
-      if (storageConfig.s3Endpoint !== undefined && storageConfig.s3Endpoint !== '') {
-        s3ProviderClientConfig.endpoint = storageConfig.s3Endpoint;
-      }
-
-      newStorageConfig.s3Config = {
-        bucketName: storageConfig.s3BucketName,
-        s3ProviderClientConfig,
-      };
-    }
-
-    config.updateNodeSettings({ storageConfig: newStorageConfig });
+    config.updateNodeSettings({ storageConfig });
 
     this.logger.info('Storage configuration updated', { mode: storageConfig.storageMode });
   }

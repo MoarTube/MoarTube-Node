@@ -16,6 +16,7 @@ import type { WebSocketService } from '@services/websocket.js';
 import { getConfig } from '@config/index.js';
 import { isCloudflareCredentialsValid } from '@utils/index.js';
 import type { VideosService } from '@services/videos.js';
+import type { VideoOutputs } from '@services/interfaces.js';
 
 /**
  * Request body interfaces
@@ -612,7 +613,7 @@ export class SettingsController extends BaseController {
    * Rewrite manifest URLs for a single video
    */
   private rewriteVideoManifests(
-    video: { videoId: string; outputs: Record<string, string[]> },
+    video: { videoId: string; outputs: VideoOutputs },
     videosDirectoryPath: string,
     externalVideosBaseUrl: string
   ): void {
@@ -1044,26 +1045,7 @@ export class SettingsController extends BaseController {
         );
       }
 
-      const input: {
-        storageMode: 'filesystem' | 's3provider';
-        s3BucketName?: string;
-        s3Region?: string;
-        s3Endpoint?: string;
-        s3AccessKeyId?: string;
-        s3SecretAccessKey?: string;
-      } = {
-        storageMode: storageConfig.storageMode,
-      };
-
-      if (storageConfig.s3Config !== undefined) {
-        input.s3BucketName = storageConfig.s3Config.bucketName;
-        input.s3Region = storageConfig.s3Config.s3ProviderClientConfig.region;
-        input.s3AccessKeyId = storageConfig.s3Config.s3ProviderClientConfig.credentials.accessKeyId;
-        input.s3SecretAccessKey =
-          storageConfig.s3Config.s3ProviderClientConfig.credentials.secretAccessKey;
-      }
-
-      this.settingsService.updateStorageConfig(input);
+      this.settingsService.updateStorageConfig(storageConfig);
 
       const result = await this.sendSuccess(reply);
 

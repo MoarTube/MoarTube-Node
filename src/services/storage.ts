@@ -305,7 +305,9 @@ export class StorageService extends BaseService {
       for (const entry of entries) {
         if (entry.isFile()) {
           count++;
-        } else if (entry.isDirectory()) {
+        }
+        
+        if (entry.isDirectory()) {
           countFiles(path.join(dir, entry.name));
         }
       }
@@ -451,16 +453,31 @@ export class StorageService extends BaseService {
       if (response.Contents !== undefined) {
         for (const obj of response.Contents) {
           if (obj.Key !== undefined && obj.Key !== '') {
+            let lastModified;
+
+            if(obj.LastModified !== undefined) {
+              lastModified = obj.LastModified;
+            }
+            else {
+              lastModified = new Date();
+            }
+
             files.push({
               key: obj.Key,
               size: obj.Size ?? 0,
-              lastModified: obj.LastModified ?? new Date(),
+              lastModified: lastModified,
             });
           }
         }
       }
 
-      isTruncated = response.IsTruncated ?? false;
+      if(response.IsTruncated === undefined) {
+        isTruncated = false;
+      }
+      else {
+        isTruncated = response.IsTruncated
+      }
+      
       continuationToken = response.NextContinuationToken;
     }
 
