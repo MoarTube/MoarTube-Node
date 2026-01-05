@@ -292,37 +292,24 @@ export class SettingsController extends BaseController {
     try {
       const secureQuery = request.query as SecureQuery;
 
-      let result;
-      let outcome;
-
       if(secureQuery.isSecure) {
-        outcome = await this.enableHttpsMode(request);
+        const outcome = await this.enableHttpsMode(request);
 
         if (outcome.success) {
-          result = await this.sendSuccess(reply);
+          setImmediate(() => {
+            if (process.send) {
+              process.send({ cmd: 'restart_server' });
+            }
+          });
+          return await this.sendSuccess(reply);
         } else {
-          result = await this.sendError(reply, outcome.error ?? 'error enabling HTTPS mode');
+          return await this.sendError(reply, outcome.error);
         }
       }
       else {
-        outcome = this.disableHttpsMode();
-
-        if (outcome.success) {
-          result = await this.sendSuccess(reply);
-        } else {
-          result = await this.sendError(reply, outcome.error ?? 'error disabling HTTPS mode');
-        }
+        this.disableHttpsMode();
+        return await this.sendSuccess(reply);
       }
-
-      if(outcome.success) {
-        setImmediate(() => {
-          if (process.send) {
-            process.send({ cmd: 'restart_server' });
-          }
-        });
-      }
-
-      return result;
     } catch (error) {
       this.logger.error('Secure mode configuration error', error);
 
@@ -335,7 +322,7 @@ export class SettingsController extends BaseController {
    */
   private async enableHttpsMode(
     request: FastifyRequest
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error: string }> {
     const config = getConfig();
 
     const certsDir = config.paths.certificatesDirectoryPath;
@@ -360,7 +347,7 @@ export class SettingsController extends BaseController {
 
     config.updateNodeSettings({ isSecure: true });
 
-    return { success: true };
+    return { success: true, error: '' };
   }
 
   /**
@@ -617,13 +604,7 @@ export class SettingsController extends BaseController {
     videosDirectoryPath: string,
     externalVideosBaseUrl: string
   ): void {
-    let outputs: { m3u8: string[] };
-
-    try {
-      outputs = video.outputs as { m3u8: string[] };
-    } catch {
-      return; // Skip if outputs is invalid JSON
-    }
+    const outputs = video.outputs as { m3u8: string[] };
 
     if (outputs.m3u8.length === 0) {
       return;

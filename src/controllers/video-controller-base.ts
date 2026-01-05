@@ -84,38 +84,36 @@ export abstract class VideoControllerBase extends BaseController {
 
     // Build sources for each format
     for (const format in outputs) {
-      if (format in outputs) {
-        const resolutions = outputs[format] ?? [];
+      const resolutions = outputs[format];
+      if (!resolutions) continue;
 
-        for (const resolution of resolutions) {
-          if (format === 'm3u8') {
-            // Adaptive streaming (HLS)
-            const src = `${externalVideosBaseUrl}/external/videos/${video.video_id}/adaptive/m3u8/${manifestType}/manifests/manifest-${resolution}.m3u8`;
-            const source: VideoSource = { src, type: 'application/vnd.apple.mpegurl' };
-            adaptiveSources.push(source);
+      for (const resolution of resolutions) {
+        if (format === 'm3u8') {
+          // Adaptive streaming (HLS)
+          const src = `${externalVideosBaseUrl}/external/videos/${video.video_id}/adaptive/m3u8/${manifestType}/manifests/manifest-${resolution}.m3u8`;
+          const source: VideoSource = { src, type: 'application/vnd.apple.mpegurl' };
+          adaptiveSources.push(source);
+          sourcesFormatsAndResolutions.m3u8.push(resolution);
+        } else {
+          // Progressive download
+          const src = `${externalVideosBaseUrl}/external/videos/${video.video_id}/progressive/${format}/${resolution}.${format}`;
+
+          let type: string;
+          if (format === 'mp4') {
+            type = 'video/mp4';
+            sourcesFormatsAndResolutions.mp4.push(resolution);
+          } else if (format === 'webm') {
+            type = 'video/webm';
+            sourcesFormatsAndResolutions.webm.push(resolution);
+          } else if (format === 'ogv') {
+            type = 'video/ogg';
+            sourcesFormatsAndResolutions.ogv.push(resolution);
           } else {
-            // Progressive download
-            const src = `${externalVideosBaseUrl}/external/videos/${video.video_id}/progressive/${format}/${resolution}.${format}`;
-
-            let type: string;
-            if (format === 'mp4') {
-              type = 'video/mp4';
-            } else if (format === 'webm') {
-              type = 'video/webm';
-            } else if (format === 'ogv') {
-              type = 'video/ogg';
-            } else {
-              continue;
-            }
-
-            const source: VideoSource = { src, type };
-            progressiveSources.push(source);
+            continue;
           }
 
-          // Track available formats and resolutions
-          if (format in sourcesFormatsAndResolutions) {
-            sourcesFormatsAndResolutions[format].push(resolution);
-          }
+          const source: VideoSource = { src, type };
+          progressiveSources.push(source);
         }
       }
     }

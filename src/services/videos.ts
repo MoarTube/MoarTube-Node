@@ -525,7 +525,8 @@ export class VideosService extends BaseService {
 
       // Get current database view count
       const video = await this.videoRepository.findById(videoId);
-      if (!video) {
+
+      if (video === null) {
         throw new Error('Video not found');
       }
 
