@@ -372,7 +372,7 @@ export class NodeController extends BaseController {
 
       const currentCount = tagLimitCounter[trimmedTag];
 
-      if (currentCount < tagLimit) {
+      if (currentCount !== undefined && currentCount < tagLimit) {
         tagLimitCounter[trimmedTag] = currentCount + 1;
         return true;
       }
