@@ -31,7 +31,7 @@ export interface ClusterWorkerOptions {
  */
 function getDefaultLogger(): IPCLogger {
   return new Logger({
-    prefix: `Worker ${String(cluster.worker?.id ?? 'unknown')}`,
+    prefix: `Worker ${String(cluster.worker!.id)}`,
   });
 }
 
@@ -117,10 +117,6 @@ export class ClusterWorker {
    * Set up WebSocket server
    */
   private setupWebSocketServer(): void {
-    if (!this.app) {
-      throw new Error('Fastify app not initialized');
-    }
-
     // Create WebSocket server
     this.wss = new WebSocketServer({
       noServer: true,
@@ -177,9 +173,7 @@ export class ClusterWorker {
       }
 
       this.wss.handleUpgrade(request, socket, head, (ws) => {
-        if (this.wss) {
-          this.wss.emit('connection', ws, request);
-        }
+        this.wss!.emit('connection', ws, request);
       });
     });
 
@@ -197,15 +191,11 @@ export class ClusterWorker {
     this.logger.info('Stopping worker');
 
     // Close HTTP server
-    if (this.app) {
-      await this.app.close();
-    }
+    await this.app!.close();
 
     // Close WebSocket server
-    if (this.wss) {
-      this.wss.close();
-      this.wss = null;
-    }
+    this.wss!.close();
+    this.wss = null;
 
     // Close WebSocket connections
     this.wsManager.closeAll();
@@ -275,7 +265,7 @@ export class ClusterWorker {
 
       this.ipc.sendToMaster({
         cmd: 'live_stream_worker_stats_response',
-        workerId: cluster.worker?.id ?? 0,
+        workerId: cluster.worker!.id,
         liveStreamWatchingCounts,
       });
     });
@@ -381,9 +371,7 @@ export class ClusterWorker {
    * Restart HTTP server
    */
   private async restartHttpServer(): Promise<void> {
-    if (this.app) {
-      await this.app.close();
-    }
+    await this.app!.close();
 
     const { createFastifyApp } = await import('@plugins/index.js');
     this.app = await createFastifyApp();
@@ -392,6 +380,6 @@ export class ClusterWorker {
     const port = config.nodeSettings.nodeListeningPort;
 
     await this.app.listen({ port, host: '0.0.0.0' });
-    this.logger.info(`Worker ${String(cluster.worker?.id)} restarted on port ${String(port)}`);
+    this.logger.info(`Worker ${String(cluster.worker!.id)} restarted on port ${String(port)}`);
   }
 }

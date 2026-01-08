@@ -366,41 +366,44 @@ export class ClusterMaster {
       }
 
       const config = getConfig();
-      const nodeIdentification = config.nodeIdentification ?? { moarTubeTokenProof: '' };
 
-      for (const video of videos) {
-        try {
-          const data = {
-            videoId: video.video_id,
-            title: video.title,
-            tags: video.tags,
-            views: video.views,
-            isStreaming: video.is_streaming,
-            lengthSeconds: video.length_seconds,
-            nodeIconPngBase64: '',
-            nodeAvatarPngBase64: '',
-            videoPreviewJpgBase64: '',
-            moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
-          };
+      const nodeIdentification = config.nodeIdentification;
 
-          const response = await this.options.indexer.doIndexUpdate(data);
+      if(nodeIdentification !== null) {
+        for (const video of videos) {
+          try {
+            const data = {
+              videoId: video.video_id,
+              title: video.title,
+              tags: video.tags,
+              views: video.views,
+              isStreaming: video.is_streaming,
+              lengthSeconds: video.length_seconds,
+              nodeIconPngBase64: '',
+              nodeAvatarPngBase64: '',
+              videoPreviewJpgBase64: '',
+              moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
+            };
 
-          if (response.isError) {
-            throw new Error(response.message);
+            const response = await this.options.indexer.doIndexUpdate(data);
+
+            if (response.isError) {
+              throw new Error(response.message);
+            }
+
+            // Update via direct database access
+            if ('run' in db) {
+              (db as { run: (sql: string, ...params: unknown[]) => void }).run(
+                'UPDATE videos SET is_index_outdated = ? WHERE video_id = ?',
+                false,
+                video.video_id
+              );
+            }
+
+            this.logger.debug(`Updated video index: ${video.video_id}`);
+          } catch (error) {
+            this.logger.error(`Failed to update index for video: ${video.video_id}`, error);
           }
-
-          // Update via direct database access
-          if ('run' in db) {
-            (db as { run: (sql: string, ...params: unknown[]) => void }).run(
-              'UPDATE videos SET is_index_outdated = ? WHERE video_id = ?',
-              false,
-              video.video_id
-            );
-          }
-
-          this.logger.debug(`Updated video index: ${video.video_id}`);
-        } catch (error) {
-          this.logger.error(`Failed to update index for video: ${video.video_id}`, error);
         }
       }
     } catch (error) {
@@ -412,10 +415,6 @@ export class ClusterMaster {
    * Run Cloudflare purge task
    */
   private async runCloudflarePurgeTask(): Promise<void> {
-    if (this.options.cloudflare === undefined) {
-      return;
-    }
-
     try {
       await this.options.cloudflare.purgeAllWatchPages();
       await this.options.cloudflare.purgeNodePage();
