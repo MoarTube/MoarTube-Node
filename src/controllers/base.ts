@@ -8,7 +8,6 @@ import type { FastifyReply } from 'fastify';
 import fs from 'node:fs';
 import { Logger } from '@utils/index.js';
 
-
 /**
  * Base controller class
  *

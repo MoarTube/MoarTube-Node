@@ -27,4 +27,3 @@ export const watchQuerySchema = z.object({
 export const watchEmbedVideoIdParamsSchema = z.object({
   videoId: videoIdSchema,
 });
-

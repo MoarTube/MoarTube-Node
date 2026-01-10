@@ -11,7 +11,10 @@ import type { PaginationOptions } from '@/types/index.js';
  * ReportsArchiveCommentsRepository class for archived comment report CRUD operations
  */
 export class ReportsArchiveCommentsRepository extends BaseRepository {
-  constructor(db: any, private readonly commentReportsArchiveTable: any) {
+  constructor(
+    db: any,
+    private readonly commentReportsArchiveTable: any
+  ) {
     super(db);
   }
   /**
@@ -57,10 +60,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of archived reports for comments on the video
    */
-  async findByVideoId(
-    videoId: string,
-    options?: PaginationOptions
-  ): Promise<any[]> {
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -78,10 +78,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of archived reports for the comment
    */
-  async findByCommentId(
-    commentId: number,
-    options?: PaginationOptions
-  ): Promise<any[]> {
+  async findByCommentId(commentId: number, options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db

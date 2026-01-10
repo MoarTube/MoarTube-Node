@@ -386,7 +386,7 @@ export class SettingsService extends BaseService {
   updateCloudflareConfig(
     cloudflareEmailAddress: string,
     cloudflareZoneId: string,
-    cloudflareGlobalApiKey: string,
+    cloudflareGlobalApiKey: string
   ): void {
     const config = getConfig();
 

@@ -11,7 +11,10 @@ import type { PaginationOptions } from '@/types/index.js';
  * ReportsVideosRepository class for video report CRUD operations
  */
 export class ReportsVideosRepository extends BaseRepository {
-  constructor(db: any, private readonly videoReportsTable: any) {
+  constructor(
+    db: any,
+    private readonly videoReportsTable: any
+  ) {
     super(db);
   }
   /**
@@ -38,7 +41,10 @@ export class ReportsVideosRepository extends BaseRepository {
   async findAll(options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParams(options);
 
-    const query = this.db.select().from(this.videoReportsTable).orderBy(desc(this.videoReportsTable.timestamp));
+    const query = this.db
+      .select()
+      .from(this.videoReportsTable)
+      .orderBy(desc(this.videoReportsTable.timestamp));
 
     if (limit !== undefined) {
       return query.limit(limit);

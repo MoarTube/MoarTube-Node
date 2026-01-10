@@ -218,4 +218,3 @@ export type IPCMessage = IPCMessageToMaster | IPCMessageToWorker;
 // ============================================
 // Pending Job Types
 // ====================================
-

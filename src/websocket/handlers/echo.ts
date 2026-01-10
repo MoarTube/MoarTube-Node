@@ -5,11 +5,7 @@
  * broadcasts to all connected clients.
  */
 
-import type {
-  ExtendedWebSocket,
-  IncomingWebSocketMessage,
-  EchoMessage,
-} from '@/types/index.js';
+import type { ExtendedWebSocket, IncomingWebSocketMessage, EchoMessage } from '@/types/index.js';
 import { WebSocketHandler, type HandlerContext } from '@websocket/handlers/base.js';
 import { echoEventSchema, type EchoEvent } from '@validators/schemas/index.js';
 import { ZodError } from 'zod';

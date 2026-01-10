@@ -4,7 +4,11 @@
  * Validation schemas for WebSocket messages in MoarTube-Node
  */
 import { z } from 'zod';
-import { videoIdSchema, timestampSchema, cloudflareTurnstileTokenSchema } from '@validators/schemas/common.js';
+import {
+  videoIdSchema,
+  timestampSchema,
+  cloudflareTurnstileTokenSchema,
+} from '@validators/schemas/common.js';
 
 // ============================================================================
 // Chat Message Schemas

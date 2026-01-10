@@ -11,7 +11,10 @@ import type { PaginationOptions } from '@/types/index.js';
  * ReportsCommentsRepository class for comment report CRUD operations
  */
 export class ReportsCommentsRepository extends BaseRepository {
-  constructor(db: any, private readonly commentReportsTable: any) {
+  constructor(
+    db: any,
+    private readonly commentReportsTable: any
+  ) {
     super(db);
   }
   /**
@@ -38,7 +41,10 @@ export class ReportsCommentsRepository extends BaseRepository {
   async findAll(options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParams(options);
 
-    const query = this.db.select().from(this.commentReportsTable).orderBy(desc(this.commentReportsTable.timestamp));
+    const query = this.db
+      .select()
+      .from(this.commentReportsTable)
+      .orderBy(desc(this.commentReportsTable.timestamp));
 
     if (limit !== undefined) {
       return query.limit(limit);
@@ -54,10 +60,7 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of reports for comments on the video
    */
-  async findByVideoId(
-    videoId: string,
-    options?: PaginationOptions
-  ): Promise<any[]> {
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -75,10 +78,7 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of reports for the comment
    */
-  async findByCommentId(
-    commentId: number,
-    options?: PaginationOptions
-  ): Promise<any[]> {
+  async findByCommentId(commentId: number, options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db

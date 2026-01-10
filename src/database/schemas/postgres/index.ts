@@ -6,10 +6,18 @@
  */
 
 // Video schema
-export { videos, type DrizzleVideo, type DrizzleNewVideo } from '@database/schemas/postgres/videos.js';
+export {
+  videos,
+  type DrizzleVideo,
+  type DrizzleNewVideo,
+} from '@database/schemas/postgres/videos.js';
 
 // Comment schema
-export { comments, type DrizzleComment, type DrizzleNewComment } from '@database/schemas/postgres/comments.js';
+export {
+  comments,
+  type DrizzleComment,
+  type DrizzleNewComment,
+} from '@database/schemas/postgres/comments.js';
 
 // Video reports schema
 export {

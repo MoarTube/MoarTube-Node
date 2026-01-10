@@ -75,12 +75,15 @@ export const StorageConfigSchema = z.object({
  */
 export const NodeSettingsSchema = z.object({
   // Server Configuration
-  nodeListeningPort: z.union([z.number(), z.string()]).transform((val) => {
-    const num = typeof val === 'string' ? Number(val) : val;
-    return num;
-  }).refine((val) => !Number.isNaN(val) && val >= 1 && val <= 65535, {
-    message: 'Port must be between 1 and 65535',
-  }),
+  nodeListeningPort: z
+    .union([z.number(), z.string()])
+    .transform((val) => {
+      const num = typeof val === 'string' ? Number(val) : val;
+      return num;
+    })
+    .refine((val) => !Number.isNaN(val) && val >= 1 && val <= 65535, {
+      message: 'Port must be between 1 and 65535',
+    }),
   isSecure: z.boolean().default(false),
   publicNodeProtocol: z.enum(['http', 'https', '']).default(''),
   publicNodeAddress: z.string().default(''),
@@ -232,5 +235,3 @@ export function validateLastCheckedContentTracker(
   }
   return result.data;
 }
-
-

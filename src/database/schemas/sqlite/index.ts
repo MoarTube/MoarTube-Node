@@ -6,10 +6,18 @@
  */
 
 // Video schema
-export { videos, type DrizzleVideo, type DrizzleNewVideo } from '@database/schemas/sqlite/videos.js';
+export {
+  videos,
+  type DrizzleVideo,
+  type DrizzleNewVideo,
+} from '@database/schemas/sqlite/videos.js';
 
 // Comment schema
-export { comments, type DrizzleComment, type DrizzleNewComment } from '@database/schemas/sqlite/comments.js';
+export {
+  comments,
+  type DrizzleComment,
+  type DrizzleNewComment,
+} from '@database/schemas/sqlite/comments.js';
 
 // Video reports schema
 export {

@@ -7,7 +7,13 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import sanitizeHtml from 'sanitize-html';
 
 import { BaseController } from '@controllers/base.js';
-import type { CommentsService, ReportsService, VideosService, CloudflareService, ReportType } from '@services/index.js';
+import type {
+  CommentsService,
+  ReportsService,
+  VideosService,
+  CloudflareService,
+  ReportType,
+} from '@services/index.js';
 import { getConfig } from '@config/index.js';
 
 /**

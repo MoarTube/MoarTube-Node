@@ -6,11 +6,7 @@
  */
 
 // IPC Channel
-export {
-  IPCChannel,
-  type IPCHandler,
-  type IPCLogger,
-} from '@core/cluster/ipc-channel.js';
+export { IPCChannel, type IPCHandler, type IPCLogger } from '@core/cluster/ipc-channel.js';
 
 // Master process
 export {

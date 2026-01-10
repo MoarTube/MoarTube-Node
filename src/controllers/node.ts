@@ -6,7 +6,14 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from '@controllers/base.js';
-import type { VideosService, LinksService, MonetizationService, StreamsService, CommentsService, ReportsService } from '@services/index.js';
+import type {
+  VideosService,
+  LinksService,
+  MonetizationService,
+  StreamsService,
+  CommentsService,
+  ReportsService,
+} from '@services/index.js';
 import type { DrizzleVideo } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 

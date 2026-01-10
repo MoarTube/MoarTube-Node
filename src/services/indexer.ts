@@ -8,7 +8,11 @@ import axios, { type AxiosInstance, type AxiosError } from 'axios';
 
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
-import type { VideoIndexData, RemoveFromIndexData, IndexerSubmitResult } from '@services/interfaces.js';
+import type {
+  VideoIndexData,
+  RemoveFromIndexData,
+  IndexerSubmitResult,
+} from '@services/interfaces.js';
 import { getConfig } from '@config/index.js';
 
 /**

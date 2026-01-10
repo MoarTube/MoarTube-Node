@@ -10,7 +10,10 @@ import { BaseRepository } from '@database/repositories/base.js';
  * CommentsRepository class for comment CRUD operations
  */
 export class CommentsRepository extends BaseRepository {
-  constructor(db: any, private readonly commentsTable: any) {
+  constructor(
+    db: any,
+    private readonly commentsTable: any
+  ) {
     super(db);
   }
   /**
@@ -19,11 +22,7 @@ export class CommentsRepository extends BaseRepository {
    * @param id - The database primary key
    * @returns The comment record or null if not found
    */
-  async findById(
-    videoId: string,
-    commentId: number,
-    timestamp: number
-  ): Promise<any | null> {
+  async findById(videoId: string, commentId: number, timestamp: number): Promise<any | null> {
     const result = await this.db
       .select()
       .from(this.commentsTable)
@@ -69,8 +68,11 @@ export class CommentsRepository extends BaseRepository {
     timestamp: number
   ): Promise<any[]> {
     const timestampCondition =
-      type === 'before' ? lt(this.commentsTable.timestamp, timestamp) : gt(this.commentsTable.timestamp, timestamp);
-    const orderBy = sort === 'ascending' ? this.commentsTable.timestamp : desc(this.commentsTable.timestamp);
+      type === 'before'
+        ? lt(this.commentsTable.timestamp, timestamp)
+        : gt(this.commentsTable.timestamp, timestamp);
+    const orderBy =
+      sort === 'ascending' ? this.commentsTable.timestamp : desc(this.commentsTable.timestamp);
 
     return this.db
       .select()
@@ -164,7 +166,10 @@ export class CommentsRepository extends BaseRepository {
    * @returns Number of deleted this.commentsTable
    */
   async deleteByVideoId(videoId: string): Promise<number> {
-    const result = await this.db.delete(this.commentsTable).where(eq(this.commentsTable.video_id, videoId)).returning();
+    const result = await this.db
+      .delete(this.commentsTable)
+      .where(eq(this.commentsTable.video_id, videoId))
+      .returning();
     return result.length;
   }
 
@@ -175,14 +180,13 @@ export class CommentsRepository extends BaseRepository {
    * @param timestamp - The comment timestamp
    * @returns The comment record or null if not found
    */
-  async findByVideoIdAndTimestamp(
-    videoId: string,
-    timestamp: number
-  ): Promise<any | null> {
+  async findByVideoIdAndTimestamp(videoId: string, timestamp: number): Promise<any | null> {
     const result = await this.db
       .select()
       .from(this.commentsTable)
-      .where(and(eq(this.commentsTable.video_id, videoId), eq(this.commentsTable.timestamp, timestamp)))
+      .where(
+        and(eq(this.commentsTable.video_id, videoId), eq(this.commentsTable.timestamp, timestamp))
+      )
       .limit(1);
     return result[0] ?? null;
   }

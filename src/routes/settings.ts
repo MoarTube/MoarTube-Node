@@ -36,7 +36,12 @@ export function settingsRoutes(
   const cloudflareService = container.resolve('cloudflareService');
   const websocketService = container.resolve('websocketService');
 
-  const controller = new SettingsController(settingsService, videosService, cloudflareService, websocketService);
+  const controller = new SettingsController(
+    settingsService,
+    videosService,
+    cloudflareService,
+    websocketService
+  );
   // ============================================================================
   // Settings Root
   // ============================================================================
@@ -140,7 +145,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
-        querystring: secureToggleQuerySchema
+        querystring: secureToggleQuerySchema,
       },
     },
     controller.configureSecure.bind(controller)

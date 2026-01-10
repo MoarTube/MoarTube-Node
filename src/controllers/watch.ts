@@ -6,7 +6,12 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { VideoControllerBase, type VideoSource } from '@controllers/video-controller-base.js';
-import type { VideosService, LinksService, MonetizationService, CommentsService } from '@services/index.js';
+import type {
+  VideosService,
+  LinksService,
+  MonetizationService,
+  CommentsService,
+} from '@services/index.js';
 import type { DrizzleVideo } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 
@@ -169,12 +174,7 @@ export class WatchController extends VideoControllerBase {
           sortBy: 'creation_timestamp',
           sortDirection: 'desc',
         }),
-        this.commentsService.getCommentsForVideo(
-          video.video_id,
-          'before',
-          'ascending',
-          Date.now()
-        ),
+        this.commentsService.getCommentsForVideo(video.video_id, 'before', 'ascending', Date.now()),
       ]);
 
     const recommendedVideos = recommendedVideosResult.data;

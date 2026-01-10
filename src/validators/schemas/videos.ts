@@ -53,9 +53,7 @@ export const videoAdaptiveManifestParamsSchema = z.object({
   manifestType: manifestTypeSchema,
 });
 
-export type VideoAdaptiveManifestParams = z.infer<
-  typeof videoAdaptiveManifestParamsSchema
->;
+export type VideoAdaptiveManifestParams = z.infer<typeof videoAdaptiveManifestParamsSchema>;
 
 // ============================================================================
 // Query Parameter Schemas

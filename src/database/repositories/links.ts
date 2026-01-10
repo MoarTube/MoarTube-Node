@@ -11,7 +11,10 @@ import type { PaginationOptions } from '@/types/index.js';
  * LinksRepository class for link CRUD operations
  */
 export class LinksRepository extends BaseRepository {
-  constructor(db: any, private readonly linksTable: any) {
+  constructor(
+    db: any,
+    private readonly linksTable: any
+  ) {
     super(db);
   }
   /**
@@ -21,7 +24,11 @@ export class LinksRepository extends BaseRepository {
    * @returns The link record or null if not found
    */
   async findById(linkId: number): Promise<any | null> {
-    const result = await this.db.select().from(this.linksTable).where(eq(this.linksTable.link_id, linkId)).limit(1);
+    const result = await this.db
+      .select()
+      .from(this.linksTable)
+      .where(eq(this.linksTable.link_id, linkId))
+      .limit(1);
     return result[0] ?? null;
   }
 
@@ -50,7 +57,11 @@ export class LinksRepository extends BaseRepository {
    * @returns The link record or null if not found
    */
   async findByUrl(url: string): Promise<any | null> {
-    const result = await this.db.select().from(this.linksTable).where(eq(this.linksTable.url, url)).limit(1);
+    const result = await this.db
+      .select()
+      .from(this.linksTable)
+      .where(eq(this.linksTable.url, url))
+      .limit(1);
     return result[0] ?? null;
   }
 
@@ -102,7 +113,10 @@ export class LinksRepository extends BaseRepository {
    * @returns true if deleted, false if not found
    */
   async delete(linkId: number): Promise<boolean> {
-    const result = await this.db.delete(this.linksTable).where(eq(this.linksTable.link_id, linkId)).returning();
+    const result = await this.db
+      .delete(this.linksTable)
+      .where(eq(this.linksTable.link_id, linkId))
+      .returning();
     return result.length > 0;
   }
 
@@ -136,7 +150,10 @@ export class LinksRepository extends BaseRepository {
    * @returns true if the URL exists, false otherwise
    */
   async existsByUrl(url: string): Promise<boolean> {
-    const result = await this.db.select({ count: count() }).from(this.linksTable).where(eq(this.linksTable.url, url));
+    const result = await this.db
+      .select({ count: count() })
+      .from(this.linksTable)
+      .where(eq(this.linksTable.url, url));
     return (result[0]?.count ?? 0) > 0;
   }
 }

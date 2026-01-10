@@ -6,10 +6,7 @@
  */
 
 // WebSocket Manager
-export {
-  WebSocketManager,
-  type WebSocketManagerOptions,
-} from '@websocket/websocket-manager.js';
+export { WebSocketManager, type WebSocketManagerOptions } from '@websocket/websocket-manager.js';
 
 // Handlers
 export * from '@websocket/handlers/index.js';

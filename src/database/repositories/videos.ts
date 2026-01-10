@@ -33,7 +33,10 @@ export interface VideoQueryOptions extends PaginationOptions {
  * VideosRepository class for video CRUD operations
  */
 export class VideosRepository extends BaseRepository {
-  constructor(db: any, private readonly videosTable: any) {
+  constructor(
+    db: any,
+    private readonly videosTable: any
+  ) {
     super(db);
   }
   /**
@@ -43,7 +46,11 @@ export class VideosRepository extends BaseRepository {
    * @returns The video record or null if not found
    */
   async findById(videoId: string): Promise<any> {
-    const result = await this.db.select().from(this.videosTable).where(eq(this.videosTable.video_id, videoId)).limit(1);
+    const result = await this.db
+      .select()
+      .from(this.videosTable)
+      .where(eq(this.videosTable.video_id, videoId))
+      .limit(1);
     return result[0] ?? null;
   }
 
@@ -54,7 +61,11 @@ export class VideosRepository extends BaseRepository {
    * @returns The video record or null if not found
    */
   async findByDbId(id: number): Promise<any> {
-    const result = await this.db.select().from(this.videosTable).where(eq(this.videosTable.id, id)).limit(1);
+    const result = await this.db
+      .select()
+      .from(this.videosTable)
+      .where(eq(this.videosTable.id, id))
+      .limit(1);
     return result[0] ?? null;
   }
 
@@ -93,7 +104,7 @@ export class VideosRepository extends BaseRepository {
     let query = this.db.select().from(this.videosTable).orderBy(sortDir(sortField));
 
     // Apply where conditions only if they exist
-    query = conditions !== undefined ? query.where(conditions) as typeof query : query;
+    query = conditions !== undefined ? (query.where(conditions) as typeof query) : query;
 
     if (limit !== undefined) {
       return query.limit(limit);
@@ -156,7 +167,10 @@ export class VideosRepository extends BaseRepository {
    * @returns true if deleted, false if not found
    */
   async delete(videoId: string): Promise<boolean> {
-    const result = await this.db.delete(this.videosTable).where(eq(this.videosTable.video_id, videoId)).returning();
+    const result = await this.db
+      .delete(this.videosTable)
+      .where(eq(this.videosTable.video_id, videoId))
+      .returning();
     return result.length > 0;
   }
 
@@ -245,7 +259,10 @@ export class VideosRepository extends BaseRepository {
    * @param bandwidth - The new bandwidth value
    */
   async updateBandwidth(videoId: string, bandwidth: number): Promise<void> {
-    await this.db.update(this.videosTable).set({ bandwidth }).where(eq(this.videosTable.video_id, videoId));
+    await this.db
+      .update(this.videosTable)
+      .set({ bandwidth })
+      .where(eq(this.videosTable.video_id, videoId));
   }
 
   /**

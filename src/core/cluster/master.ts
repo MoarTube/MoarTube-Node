@@ -18,11 +18,7 @@ import type {
 import { IPCChannel, type IPCLogger } from '@core/cluster/ipc-channel.js';
 import { Logger } from '@utils/index.js';
 import { getConfig } from '@config/index.js';
-import {
-  createDatabase,
-  initializeDatabaseSchema,
-  getDatabase,
-} from '@database/index.js';
+import { createDatabase, initializeDatabaseSchema, getDatabase } from '@database/index.js';
 
 /**
  * Indexer operations interface
@@ -369,7 +365,7 @@ export class ClusterMaster {
 
       const nodeIdentification = config.nodeIdentification;
 
-      if(nodeIdentification !== null) {
+      if (nodeIdentification !== null) {
         for (const video of videos) {
           try {
             const data = {

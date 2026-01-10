@@ -22,11 +22,7 @@ export function watchEmbedRoutes(
   const linksService = container.resolve('linksService');
   const monetizationService = container.resolve('monetizationService');
 
-  const controller = new WatchEmbedController(
-    videosService,
-    linksService,
-    monetizationService
-  );
+  const controller = new WatchEmbedController(videosService, linksService, monetizationService);
 
   // Embedded video player - public (optional auth for password-protected videos)
   fastify.get(

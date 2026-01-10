@@ -11,7 +11,10 @@ import type { PaginationOptions } from '@/types/index.js';
  * MonetizationRepository class for crypto wallet address CRUD operations
  */
 export class MonetizationRepository extends BaseRepository {
-  constructor(db: any, private readonly cryptoWalletAddressesTable: any) {
+  constructor(
+    db: any,
+    private readonly cryptoWalletAddressesTable: any
+  ) {
     super(db);
   }
   /**
@@ -57,10 +60,7 @@ export class MonetizationRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of wallet addresses for the chain
    */
-  async findByChain(
-    chain: string,
-    options?: PaginationOptions
-  ): Promise<any[]> {
+  async findByChain(chain: string, options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -118,10 +118,7 @@ export class MonetizationRepository extends BaseRepository {
    * @param data - Partial wallet data to update
    * @returns The updated wallet record or null if not found
    */
-  async update(
-    walletAddressId: number,
-    data: Partial<any>
-  ): Promise<any | null> {
+  async update(walletAddressId: number, data: Partial<any>): Promise<any | null> {
     const result = await this.db
       .update(this.cryptoWalletAddressesTable)
       .set(data)

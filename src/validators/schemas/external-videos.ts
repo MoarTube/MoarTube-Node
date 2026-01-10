@@ -4,7 +4,12 @@
  * Zod schemas for external video serving API endpoints.
  */
 import { z } from 'zod';
-import { videoIdSchema, formatSchema, resolutionSchema, manifestTypeSchema } from '@validators/schemas/common.js';
+import {
+  videoIdSchema,
+  formatSchema,
+  resolutionSchema,
+  manifestTypeSchema,
+} from '@validators/schemas/common.js';
 
 // ============================================================================
 // Route Parameter Schemas

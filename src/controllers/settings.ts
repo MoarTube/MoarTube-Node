@@ -10,7 +10,13 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 
 import { BaseController } from '@controllers/base.js';
-import type { SettingsService, CloudflareService, WebSocketService, VideosService, VideoOutputs } from '@services/index.js';
+import type {
+  SettingsService,
+  CloudflareService,
+  WebSocketService,
+  VideosService,
+  VideoOutputs,
+} from '@services/index.js';
 import { getConfig } from '@config/index.js';
 import { isCloudflareCredentialsValid } from '@utils/index.js';
 
@@ -288,7 +294,7 @@ export class SettingsController extends BaseController {
     try {
       const secureQuery = request.query as SecureQuery;
 
-      if(secureQuery.isSecure) {
+      if (secureQuery.isSecure) {
         const outcome = await this.enableHttpsMode(request);
 
         if (outcome.success) {
@@ -301,8 +307,7 @@ export class SettingsController extends BaseController {
         } else {
           return await this.sendError(reply, outcome.error);
         }
-      }
-      else {
+      } else {
         this.disableHttpsMode();
         return await this.sendSuccess(reply);
       }
@@ -394,7 +399,7 @@ export class SettingsController extends BaseController {
     const config = getConfig();
 
     config.updateNodeSettings({ isSecure: false });
-    
+
     return { success: true };
   }
 

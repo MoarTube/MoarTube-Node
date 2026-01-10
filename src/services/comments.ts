@@ -8,7 +8,12 @@
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type { CreateCommentInput } from '@services/interfaces.js';
-import type { CommentsRepository, VideosRepository, DrizzleComment, DrizzleNewComment } from '@database/index.js';
+import type {
+  CommentsRepository,
+  VideosRepository,
+  DrizzleComment,
+  DrizzleNewComment,
+} from '@database/index.js';
 import sanitizeHtml from 'sanitize-html';
 
 /**

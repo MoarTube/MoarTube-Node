@@ -4,7 +4,11 @@
  * Zod schemas for node page API endpoints.
  */
 import { z } from 'zod';
-import { searchTermSchemaOptional, sortTermSchema, tagTermSchemaOptional } from '@validators/schemas/common.js';
+import {
+  searchTermSchemaOptional,
+  sortTermSchema,
+  tagTermSchemaOptional,
+} from '@validators/schemas/common.js';
 
 // ============================================================================
 // Node-Specific Schemas

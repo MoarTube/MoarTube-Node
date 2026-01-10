@@ -24,7 +24,12 @@ import type {
   VideoOutputs,
   VideoFormat,
 } from '@services/interfaces.js';
-import type { VideosRepository, CommentsRepository, DrizzleVideo, DrizzleNewVideo } from '@database/index.js';
+import type {
+  VideosRepository,
+  CommentsRepository,
+  DrizzleVideo,
+  DrizzleNewVideo,
+} from '@database/index.js';
 import { getConfig } from '@config/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
 import type { StorageService } from '@services/storage.js';
@@ -310,7 +315,7 @@ export class VideosService extends BaseService {
   /**
    * Update video metadata
    */
-  async updateVideo(videoId: string, data: UpdateVideoInput): Promise<DrizzleVideo| null> {
+  async updateVideo(videoId: string, data: UpdateVideoInput): Promise<DrizzleVideo | null> {
     return this.withErrorLogging('updateVideo', async () => {
       const existingVideo = await this.videoRepository.findById(videoId);
       if (!existingVideo) {
@@ -497,7 +502,7 @@ export class VideosService extends BaseService {
       if (existingTimer) {
         clearTimeout(existingTimer);
       }
-      
+
       // Set new debounce timer
       const timer = setTimeout(() => {
         // pendingCount is guaranteed to be > 0 since we always set it before creating the timer
@@ -512,11 +517,10 @@ export class VideosService extends BaseService {
             this.logger.debug('Flushed pending views', { videoId, count: pendingCount });
           })
           .catch((error: unknown) => {
-            this.logger.error(
-              'Failed to flush pending views',
-              error,
-              { videoId, count: pendingCount }
-            );
+            this.logger.error('Failed to flush pending views', error, {
+              videoId,
+              count: pendingCount,
+            });
           });
       }, VideosService.VIEW_DEBOUNCE_MS);
 
@@ -668,7 +672,11 @@ export class VideosService extends BaseService {
   /**
    * Add a resolution to video outputs
    */
-  async addOutputResolution(videoId: string, format: VideoFormat, resolution: string): Promise<void> {
+  async addOutputResolution(
+    videoId: string,
+    format: VideoFormat,
+    resolution: string
+  ): Promise<void> {
     const video = await this.videoRepository.findById(videoId);
     if (!video) {
       throw new Error('Video not found');
@@ -698,7 +706,11 @@ export class VideosService extends BaseService {
   /**
    * Remove a resolution from video outputs
    */
-  async removeOutputResolution(videoId: string, format: VideoFormat, resolution: string): Promise<void> {
+  async removeOutputResolution(
+    videoId: string,
+    format: VideoFormat,
+    resolution: string
+  ): Promise<void> {
     const video = await this.videoRepository.findById(videoId);
     if (!video) {
       throw new Error('Video not found');
@@ -798,7 +810,11 @@ export class VideosService extends BaseService {
   /**
    * Notify upload complete for a format/resolution
    */
-  async notifyUploadComplete(videoId: string, format: VideoFormat, resolution: string): Promise<void> {
+  async notifyUploadComplete(
+    videoId: string,
+    format: VideoFormat,
+    resolution: string
+  ): Promise<void> {
     return this.withErrorLogging('notifyUploadComplete', () => {
       this.logger.debug('Upload complete notification', { videoId, format, resolution });
       // Trigger any necessary cache purging or notifications
@@ -810,7 +826,11 @@ export class VideosService extends BaseService {
   /**
    * Notify stream complete for a format/resolution
    */
-  async notifyStreamComplete(videoId: string, format: VideoFormat, resolution: string): Promise<void> {
+  async notifyStreamComplete(
+    videoId: string,
+    format: VideoFormat,
+    resolution: string
+  ): Promise<void> {
     return this.withErrorLogging('notifyStreamComplete', () => {
       this.logger.debug('Stream complete notification', { videoId, format, resolution });
       // The actual implementation depends on stream handling logic
@@ -885,10 +905,10 @@ export class VideosService extends BaseService {
         isStreamed: video.is_streamed,
         comments: video.comments,
         creationTimestamp: video.creation_timestamp,
-        isHlsAvailable: (outputs.m3u8.length) > 0,
-        isMp4Available: (outputs.mp4.length) > 0,
-        isWebmAvailable: (outputs.webm.length) > 0,
-        isOgvAvailable: (outputs.ogv.length) > 0,
+        isHlsAvailable: outputs.m3u8.length > 0,
+        isMp4Available: outputs.mp4.length > 0,
+        isWebmAvailable: outputs.webm.length > 0,
+        isOgvAvailable: outputs.ogv.length > 0,
         adaptiveSources,
         progressiveSources,
         sourcesFormatsAndResolutions,
@@ -1155,7 +1175,11 @@ export class VideosService extends BaseService {
   /**
    * Delete format/resolution files from storage
    */
-  private deleteFormatResolutionFiles(videoId: string, format: VideoFormat, resolution: string): void {
+  private deleteFormatResolutionFiles(
+    videoId: string,
+    format: VideoFormat,
+    resolution: string
+  ): void {
     try {
       const config = getConfig();
       const storageMode = config.nodeSettings.storageConfig.storageMode;

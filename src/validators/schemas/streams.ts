@@ -126,4 +126,3 @@ export const chatHistoryQuerySchema = z.object({
   limit: chatHistoryLimitSchema,
   before: z.coerce.number().int().min(0).optional(),
 });
-

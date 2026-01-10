@@ -10,7 +10,7 @@ import {
   initializeDatabaseSchema as initializeSqliteDatabaseSchema,
   getDatabase as getSqliteDatabase,
   type DatabaseConfig as SqliteDatabaseConfig,
-  type DatabaseClient as SqliteDatabaseClient
+  type DatabaseClient as SqliteDatabaseClient,
 } from '@database/sqlite-connection.js';
 
 import {
@@ -18,7 +18,7 @@ import {
   initializeDatabaseSchema as initializePostgresDatabaseSchema,
   getDatabase as getPostgresDatabase,
   type DatabaseConfig as PostgresDatabaseConfig,
-  type DatabaseClient as PostgresDatabaseClient
+  type DatabaseClient as PostgresDatabaseClient,
 } from '@database/postgres-connection.js';
 
 /**

@@ -11,7 +11,10 @@ import type { PaginationOptions } from '@/types/index.js';
  * ReportsArchiveVideosRepository class for archived video report CRUD operations
  */
 export class ReportsArchiveVideosRepository extends BaseRepository {
-  constructor(db: any, private readonly videoReportsArchiveTable: any) {
+  constructor(
+    db: any,
+    private readonly videoReportsArchiveTable: any
+  ) {
     super(db);
   }
   /**
@@ -57,10 +60,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of archived reports for the video
    */
-  async findByVideoId(
-    videoId: string,
-    options?: PaginationOptions
-  ): Promise<any[]> {
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db

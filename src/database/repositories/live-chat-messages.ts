@@ -11,7 +11,10 @@ import type { PaginationOptions } from '@/types/index.js';
  * LiveChatMessageRepository class for live chat message CRUD operations
  */
 export class LiveChatMessagesRepository extends BaseRepository {
-  constructor(db: any, private readonly liveChatMessagesTable: any) {
+  constructor(
+    db: any,
+    private readonly liveChatMessagesTable: any
+  ) {
     super(db);
   }
   /**
@@ -36,10 +39,7 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of chat messages for the video
    */
-  async findByVideoId(
-    videoId: string,
-    options?: PaginationOptions
-  ): Promise<any[]> {
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -57,10 +57,7 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @param count - Number of recent messages to retrieve
    * @returns Array of recent chat messages (ordered oldest to newest)
    */
-  async findRecentByVideoId(
-    videoId: string,
-    count: number = 50
-  ): Promise<any[]> {
+  async findRecentByVideoId(videoId: string, count: number = 50): Promise<any[]> {
     const messages = await this.db
       .select()
       .from(this.liveChatMessagesTable)
@@ -89,7 +86,10 @@ export class LiveChatMessagesRepository extends BaseRepository {
       .select()
       .from(this.liveChatMessagesTable)
       .where(
-        and(eq(this.liveChatMessagesTable.video_id, videoId), gte(this.liveChatMessagesTable.timestamp, afterTimestamp))
+        and(
+          eq(this.liveChatMessagesTable.video_id, videoId),
+          gte(this.liveChatMessagesTable.timestamp, afterTimestamp)
+        )
       )
       .orderBy(asc(this.liveChatMessagesTable.timestamp))
       .limit(limit);
@@ -199,7 +199,10 @@ export class LiveChatMessagesRepository extends BaseRepository {
     const result = await this.db
       .delete(this.liveChatMessagesTable)
       .where(
-        and(eq(this.liveChatMessagesTable.video_id, videoId), lt(this.liveChatMessagesTable.timestamp, cutoffTimestamp))
+        and(
+          eq(this.liveChatMessagesTable.video_id, videoId),
+          lt(this.liveChatMessagesTable.timestamp, cutoffTimestamp)
+        )
       )
       .returning();
 

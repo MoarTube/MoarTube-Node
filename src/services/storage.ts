@@ -306,7 +306,7 @@ export class StorageService extends BaseService {
         if (entry.isFile()) {
           count++;
         }
-        
+
         if (entry.isDirectory()) {
           countFiles(path.join(dir, entry.name));
         }
@@ -455,10 +455,9 @@ export class StorageService extends BaseService {
           if (obj.Key !== undefined && obj.Key !== '') {
             let lastModified;
 
-            if(obj.LastModified !== undefined) {
+            if (obj.LastModified !== undefined) {
               lastModified = obj.LastModified;
-            }
-            else {
+            } else {
               lastModified = new Date();
             }
 
@@ -471,13 +470,12 @@ export class StorageService extends BaseService {
         }
       }
 
-      if(response.IsTruncated === undefined) {
+      if (response.IsTruncated === undefined) {
         isTruncated = false;
+      } else {
+        isTruncated = response.IsTruncated;
       }
-      else {
-        isTruncated = response.IsTruncated
-      }
-      
+
       continuationToken = response.NextContinuationToken;
     }
 

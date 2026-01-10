@@ -15,7 +15,7 @@ import type {
   LiveChatMessagesRepository,
   CommentsRepository,
   DrizzleVideo,
-  DrizzleNewVideo
+  DrizzleNewVideo,
 } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 import { deleteDirectory } from '@/utils/index.js';

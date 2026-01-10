@@ -71,8 +71,11 @@ export async function initializeDatabaseSchema(): Promise<void> {
 
     await migrate(drizzleDb, { migrationsFolder });
   } catch (error) {
-    if (error instanceof DrizzleQueryError && error.cause?.message.includes('already exists') === true) {
-        return;
+    if (
+      error instanceof DrizzleQueryError &&
+      error.cause?.message.includes('already exists') === true
+    ) {
+      return;
     }
 
     throw new Error(`Failed to initialize PostgreSQL database schema: ${String(error)}`);
