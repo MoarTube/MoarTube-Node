@@ -9,12 +9,16 @@ import type { FastifyInstance } from 'fastify';
 import { WebSocketServer } from 'ws';
 import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
-import type { LiveStreamWatchingCountsTracker, LiveStreamWatchingCounts } from '@/types/ipc.js';
-import type { LiveStreamStatsMessage, WebSocketMessage } from '@/types/websocket.js';
+import type {
+  LiveStreamWatchingCountsTracker,
+  LiveStreamWatchingCounts,
+  LiveStreamStatsMessage,
+  WebSocketMessage,
+} from '@/types/index.js';
 import { IPCChannel, type IPCLogger } from '@core/cluster/ipc-channel.js';
-import { WebSocketManager } from '@websocket/websocket-manager.js';
-import { getContainer } from '@core/container.js';
-import { Logger } from '@/utils/logger.js';
+import { WebSocketManager } from '@websocket/index.js';
+import { getContainer } from '@core/index.js';
+import { Logger } from '@utils/index.js';
 import { getConfig } from '@config/index.js';
 import { createDatabase } from '@/database/index.js';
 
@@ -165,6 +169,10 @@ export class ClusterWorker {
     });
 
     // Handle HTTP upgrade requests for WebSocket connections
+    if (!this.app?.server) {
+      this.logger.error('Server not available for WebSocket upgrade handling');
+      return;
+    }
     const server = this.app.server;
     server.on('upgrade', (request: IncomingMessage, socket: Duplex, head: Buffer) => {
       if (!this.wss) {

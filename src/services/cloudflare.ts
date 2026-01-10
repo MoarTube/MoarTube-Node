@@ -7,8 +7,8 @@
 import axios, { type AxiosInstance } from 'axios';
 
 import { BaseService } from '@services/base.js';
-import type { Logger } from '@/utils/logger.js';
-import type { VideosRepository } from '@/database/repositories/index.js';
+import type { Logger } from '@/utils/index.js';
+import type { VideosRepository } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 
 /**

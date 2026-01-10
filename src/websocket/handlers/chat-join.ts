@@ -4,9 +4,9 @@
  * Handles chat join events for live streaming.
  */
 
-import type { ExtendedWebSocket, IncomingWebSocketMessage } from '@/types/websocket.js';
+import type { ExtendedWebSocket, IncomingWebSocketMessage } from '@/types/index.js';
 import { WebSocketHandler, type HandlerContext } from '@websocket/handlers/base.js';
-import type { VideosService } from '@services/videos.js';
+import type { VideosService } from '@services/index.js';
 import { chatJoinEventSchema, type ChatJoinEvent } from '@validators/schemas/index.js';
 
 /**

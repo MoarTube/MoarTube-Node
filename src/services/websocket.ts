@@ -5,7 +5,7 @@
  * Provides abstraction over the cluster-aware WebSocket system.
  */
 import { BaseService } from '@services/base.js';
-import type { Logger } from '@/utils/logger.js';
+import type { Logger } from '@/utils/index.js';
 import type { WebSocketMessage, WebSocketEventName } from '@services/interfaces.js';
 
 

@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 // Mock all dependencies before imports
 vi.mock('node:fs', () => ({
+  rm: vi.fn(),
   default: {
     existsSync: vi.fn(),
     mkdirSync: vi.fn(),
@@ -20,6 +21,7 @@ vi.mock('node:fs', () => ({
     readFileSync: vi.fn(),
     writeFileSync: vi.fn(),
     statSync: vi.fn(() => ({ size: 1024 })),
+    rm: vi.fn(),
   },
 }));
 
@@ -50,6 +52,14 @@ vi.mock('@config/index.js', () => ({
 
 vi.mock('@utils/index.js', () => ({
   isCloudflareCredentialsValid: vi.fn(),
+  Logger: {
+    getInstance: vi.fn(() => ({
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    })),
+  },
 }));
 
 import type { FastifyRequest, FastifyReply } from 'fastify';

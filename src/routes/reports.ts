@@ -4,8 +4,8 @@
  * Routes for report count endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-import { ReportsController } from '@controllers/reports.js';
-import type { Container } from '@core/container.js';
+import { ReportsController } from '@controllers/index.js';
+import type { Container } from '@core/index.js';
 
 /**
  * Register reports routes

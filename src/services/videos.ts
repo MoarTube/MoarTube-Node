@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { BaseService } from '@services/base.js';
-import type { Logger } from '@/utils/logger.js';
+import type { Logger } from '@/utils/index.js';
 import type {
   GetVideosOptions,
   CreateVideoInput,
@@ -24,14 +24,13 @@ import type {
   VideoOutputs,
   VideoFormat,
 } from '@services/interfaces.js';
-import type { VideosRepository, CommentsRepository } from '@/database/repositories/index.js';
-import type { DrizzleVideo, DrizzleNewVideo } from '@/database/schemas/sqlite/index.js';
+import type { VideosRepository, CommentsRepository, DrizzleVideo, DrizzleNewVideo } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
 import type { StorageService } from '@services/storage.js';
 import type { WebSocketService } from '@services/websocket.js';
 import type { IndexerService } from '@services/indexer.js';
-import type { PaginatedResult } from '@/types/models.js';
+import type { PaginatedResult } from '@/types/index.js';
 
 /**
  * VideosService class

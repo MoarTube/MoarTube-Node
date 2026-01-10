@@ -18,7 +18,7 @@ import type { PinoLoggerOptions } from 'fastify/types/logger.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createAppContainer } from '@core/container.js';
+import { createAppContainer } from '@core/index.js';
 import { getDatabase } from '@database/index.js';
 import { registerRoutes } from '@routes/index.js';
 import authenticationPlugin from '@plugins/authentication.js';

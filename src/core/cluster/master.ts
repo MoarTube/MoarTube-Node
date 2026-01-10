@@ -13,16 +13,16 @@ import type {
   LiveStreamWorkerStatsResponseMessage,
   RestartDatabaseMessage,
   LiveStreamWatchingCountsTracker,
-} from '@/types/ipc.js';
-import type { WebSocketMessage } from '@/types/websocket.js';
+  WebSocketMessage,
+} from '@/types/index.js';
 import { IPCChannel, type IPCLogger } from '@core/cluster/ipc-channel.js';
-import { Logger } from '@/utils/logger.js';
+import { Logger } from '@utils/index.js';
 import { getConfig } from '@config/index.js';
 import {
   createDatabase,
   initializeDatabaseSchema,
   getDatabase,
-} from '@/database/connection.js';
+} from '@database/index.js';
 
 /**
  * Indexer operations interface
@@ -416,8 +416,8 @@ export class ClusterMaster {
    */
   private async runCloudflarePurgeTask(): Promise<void> {
     try {
-      await this.options.cloudflare.purgeAllWatchPages();
-      await this.options.cloudflare.purgeNodePage();
+      await this.options.cloudflare?.purgeAllWatchPages();
+      await this.options.cloudflare?.purgeNodePage();
     } catch (error) {
       this.logger.error('Cloudflare purge task failed', error);
     }

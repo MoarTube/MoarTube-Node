@@ -33,9 +33,11 @@ vi.mock('@config/index.js', () => ({
 
 // Mock fs
 vi.mock('node:fs', () => ({
+  rm: vi.fn(),
   default: {
     existsSync: vi.fn(),
     unlinkSync: vi.fn(),
+    rm: vi.fn(),
   },
 }));
 

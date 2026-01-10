@@ -4,8 +4,8 @@
  * Routes for archived video report management.
  */
 import type { FastifyInstance } from 'fastify';
-import { ReportsArchiveVideosController } from '@controllers/reports-archive-videos.js';
-import type { Container } from '@core/container.js';
+import { ReportsArchiveVideosController } from '@controllers/index.js';
+import type { Container } from '@core/index.js';
 import { archiveIdParamsSchema, reportsQuerySchema } from '@validators/index.js';
 
 /**

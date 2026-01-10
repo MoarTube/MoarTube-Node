@@ -4,8 +4,8 @@
  * Routes for video report management.
  */
 import type { FastifyInstance } from 'fastify';
-import { ReportsVideosController } from '@controllers/reports-videos.js';
-import type { Container } from '@core/container.js';
+import { ReportsVideosController } from '@controllers/index.js';
+import type { Container } from '@core/index.js';
 import {
   reportIdParamsSchema,
   reportsQuerySchema,

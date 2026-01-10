@@ -4,7 +4,7 @@
  * Routes for live streaming endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-import type { Container } from '@core/container.js';
+import type { Container } from '@core/index.js';
 import { StreamsController } from '@controllers/index.js';
 import {
   streamVideoIdParamsSchema,

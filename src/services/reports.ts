@@ -5,15 +5,13 @@
  * Handles video and comment reports, archiving, and moderation workflows.
  */
 import { BaseService } from '@services/base.js';
-import type { Logger } from '@/utils/logger.js';
+import type { Logger } from '@/utils/index.js';
 import type { CreateVideoReportInput, CreateCommentReportInput } from '@services/interfaces.js';
 import type {
   ReportsVideosRepository,
   ReportsCommentsRepository,
   ReportsArchiveVideosRepository,
-  ReportsArchiveCommentsRepository
-} from '@/database/repositories/index.js';
-import type {
+  ReportsArchiveCommentsRepository,
   DrizzleVideoReport,
   DrizzleCommentReport,
   DrizzleVideoReportArchive,
@@ -22,8 +20,8 @@ import type {
   DrizzleNewCommentReport,
   DrizzleNewVideoReportArchive,
   DrizzleNewCommentReportArchive,
-} from '@/database/schemas/sqlite/index.js';
-import type { PaginationOptions } from '@/types/models.js';
+} from '@database/index.js';
+import type { PaginationOptions } from '@/types/index.js';
 
 /**
  * ReportService class

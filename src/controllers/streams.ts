@@ -8,9 +8,7 @@ import path from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from '@controllers/base.js';
-import type { StreamsService } from '@services/streams.js';
-import type { VideosService } from '@services/videos.js';
-import type { LiveChatService } from '@services/live-chat.js';
+import type { StreamsService, VideosService, LiveChatService } from '@services/index.js';
 import { getConfig } from '@config/index.js';
 
 /**

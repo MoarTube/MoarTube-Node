@@ -4,7 +4,7 @@
  * Routes for node settings and configuration endpoints.
  */
 import type { FastifyInstance } from 'fastify';
-import type { Container } from '@core/container.js';
+import type { Container } from '@core/index.js';
 import { SettingsController } from '@controllers/index.js';
 import {
   personalizeNodeNameBodySchema,

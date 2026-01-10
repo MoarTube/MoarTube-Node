@@ -8,7 +8,7 @@ import bcryptjs from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
 import { BaseService } from '@services/base.js';
-import type { Logger } from '@/utils/logger.js';
+import type { Logger } from '@/utils/index.js';
 import { getConfig } from '@config/index.js';
 import type { JwtPayload, SignInInput, SignInResult } from '@services/interfaces.js';
 

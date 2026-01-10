@@ -6,7 +6,7 @@
 import type { FastifyInstance } from 'fastify';
 import { AccountController } from '@controllers/index.js';
 import { signInBodySchema } from '@validators/index.js';
-import type { Container } from '@core/container.js';
+import type { Container } from '@core/index.js';
 
 /**
  * Register account routes

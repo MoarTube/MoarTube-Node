@@ -5,7 +5,7 @@
  */
 import { eq, desc, count } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
-import type { PaginationOptions } from '@/types/models.js';
+import type { PaginationOptions } from '@/types/index.js';
 
 /**
  * MonetizationRepository class for crypto wallet address CRUD operations

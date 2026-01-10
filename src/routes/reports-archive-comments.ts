@@ -4,8 +4,8 @@
  * Routes for archived comment report management.
  */
 import type { FastifyInstance } from 'fastify';
-import { ReportsArchiveCommentsController } from '@controllers/reports-archive-comments.js';
-import type { Container } from '@core/container.js';
+import { ReportsArchiveCommentsController } from '@controllers/index.js';
+import type { Container } from '@core/index.js';
 import { archiveIdParamsSchema, reportsQuerySchema } from '@validators/index.js';
 
 /**

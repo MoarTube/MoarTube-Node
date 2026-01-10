@@ -15,3 +15,6 @@ export {
 
 // Schema exports
 export * from '@database/schemas/sqlite/index.js';
+
+// Repository exports
+export * from '@database/repositories/index.js';

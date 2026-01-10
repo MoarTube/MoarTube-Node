@@ -5,10 +5,9 @@
  * history management, and pruning functionality.
  */
 import { BaseService } from '@services/base.js';
-import type { Logger } from '@/utils/logger.js';
+import type { Logger } from '@/utils/index.js';
 import type { CreateChatMessageInput } from '@services/interfaces.js';
-import type { LiveChatMessagesRepository } from '@/database/repositories/index.js';
-import type { DrizzleLiveChatMessage } from '@/database/schemas/sqlite/index.js';
+import type { LiveChatMessagesRepository, DrizzleLiveChatMessage } from '@database/index.js';
 
 /**
  * LiveChatService class

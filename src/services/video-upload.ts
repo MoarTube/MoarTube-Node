@@ -11,7 +11,7 @@ import type { MultipartFile } from '@fastify/multipart';
 import type { FastifyRequest } from 'fastify';
 
 import { getConfig } from '@config/index.js';
-import { type Logger } from '@/utils/logger.js';
+import { type Logger } from '@/utils/index.js';
 import type { VideosService } from '@services/videos.js';
 import type { WebSocketService } from '@services/websocket.js';
 import type { UploadTrackerService } from '@services/upload-tracker.js';

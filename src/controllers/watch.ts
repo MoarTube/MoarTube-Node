@@ -6,11 +6,8 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { VideoControllerBase, type VideoSource } from '@controllers/video-controller-base.js';
-import type { VideosService } from '@services/videos.js';
-import type { LinksService } from '@services/links.js';
-import type { MonetizationService } from '@services/monetization.js';
-import type { CommentsService } from '@services/comments.js';
-import type { DrizzleVideo } from '@database/schemas/sqlite/index.js';
+import type { VideosService, LinksService, MonetizationService, CommentsService } from '@services/index.js';
+import type { DrizzleVideo } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 
 /**

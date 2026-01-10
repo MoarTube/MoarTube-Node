@@ -13,18 +13,19 @@ import type {
   WebSocketClientType,
   BroadcastOptions,
   LiveStreamWatchingCounts,
-} from '@/types/websocket.js';
-import type { HandlerContext, WebSocketHandler } from '@websocket/handlers/base.js';
-import { ChatJoinHandler } from '@websocket/handlers/chat-join.js';
-import { ChatMessageHandler } from '@websocket/handlers/chat-message.js';
-import { VideoStatusHandler } from '@websocket/handlers/video-status.js';
-import { EchoHandler } from '@websocket/handlers/echo.js';
-import { RegisterHandler } from '@websocket/handlers/register.js';
-import { Logger, type Logger as LoggerType } from '@utils/logger.js';
-import type { Container } from '@core/container.js';
-import type { VideosService } from '@services/videos.js';
-import type { LiveChatService } from '@services/live-chat.js';
-import type { CloudflareService } from '@services/cloudflare.js';
+} from '@/types/index.js';
+import {
+  type HandlerContext,
+  type WebSocketHandler,
+  ChatJoinHandler,
+  ChatMessageHandler,
+  VideoStatusHandler,
+  EchoHandler,
+  RegisterHandler,
+} from '@websocket/handlers/index.js';
+import { Logger, type Logger as LoggerType } from '@utils/index.js';
+import type { Container } from '@core/index.js';
+import type { VideosService, LiveChatService, CloudflareService } from '@services/index.js';
 
 /**
  * Configuration options for WebSocket Manager

@@ -4,7 +4,7 @@
  * Handles client registration messages to establish client type and authentication.
  */
 
-import type { ExtendedWebSocket, IncomingWebSocketMessage } from '@/types/websocket.js';
+import type { ExtendedWebSocket, IncomingWebSocketMessage } from '@/types/index.js';
 import { WebSocketHandler, type HandlerContext } from '@websocket/handlers/base.js';
 import jwt from 'jsonwebtoken';
 import { getConfig } from '@config/index.js';

@@ -4,5 +4,11 @@
  * Centralized exports for all utility modules.
  */
 
-// Validators (only the actually used ones)
+// Logger
+export { Logger, getLogger, LogLevel, type LoggerConfig } from '@utils/logger.js';
+
+// Filesystem utilities
+export { deleteDirectory, FilesystemError } from '@utils/filesystem.js';
+
+// Validators
 export { isCloudflareCredentialsValid } from '@utils/validators.js';

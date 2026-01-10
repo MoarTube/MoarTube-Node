@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { BaseService } from '@services/base.js';
-import type { Logger } from '@/utils/logger.js';
+import type { Logger } from '@/utils/index.js';
 import type { UpdateNodeSettingsInput } from '@services/interfaces.js';
 import { getConfig } from '@config/index.js';
 import type { DatabaseConfig, StorageConfig } from '@/types/index.js';
@@ -21,9 +21,7 @@ import type {
   ReportsArchiveCommentsRepository,
   LiveChatMessagesRepository,
   MonetizationRepository,
-  LinksRepository
-} from '@/database/repositories/index.js';
-import type {
+  LinksRepository,
   DrizzleVideo,
   DrizzleComment,
   DrizzleVideoReport,
@@ -33,7 +31,7 @@ import type {
   DrizzleLiveChatMessage,
   DrizzleCryptoWalletAddress,
   DrizzleLink,
-} from '@/database/schemas/sqlite/index.js';
+} from '@database/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
 import type { IndexerService } from '@services/indexer.js';
 

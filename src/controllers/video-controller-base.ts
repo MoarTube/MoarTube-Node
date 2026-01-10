@@ -6,7 +6,7 @@
  */
 import type { FastifyReply } from 'fastify';
 import { BaseController } from '@controllers/base.js';
-import type { DrizzleVideo } from '@database/schemas/sqlite/index.js';
+import type { DrizzleVideo } from '@database/index.js';
 
 /**
  * Video source info

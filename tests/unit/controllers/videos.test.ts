@@ -50,6 +50,7 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn().mockReturnValue(true),
   mkdirSync: vi.fn(),
   writeFileSync: vi.fn(),
+  rm: vi.fn(),
   default: {
     createReadStream: vi.fn().mockReturnValue({
       pipe: vi.fn(),
@@ -62,6 +63,7 @@ vi.mock('node:fs', () => ({
     existsSync: vi.fn().mockReturnValue(true),
     mkdirSync: vi.fn(),
     writeFileSync: vi.fn(),
+    rm: vi.fn(),
   },
 }));
 

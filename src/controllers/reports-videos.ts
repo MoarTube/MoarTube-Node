@@ -6,7 +6,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from '@controllers/base.js';
-import type { ReportsService } from '@services/reports.js';
+import type { ReportsService } from '@services/index.js';
 
 /**
  * Request body for archiving a report

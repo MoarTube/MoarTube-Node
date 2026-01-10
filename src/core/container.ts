@@ -7,28 +7,30 @@
 import { createContainer, asClass, asValue, InjectionMode, type AwilixContainer } from 'awilix';
 
 // Logger
-import { Logger } from '@/utils/logger.js';
+import { Logger } from '@utils/index.js';
 
 // Database layer
-import type { DatabaseClient } from '@/database/connection.js';
+import type { DatabaseClient } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 
 // Services
-import { VideosService } from '@services/videos.js';
-import { CommentsService } from '@services/comments.js';
-import { StreamsService } from '@services/streams.js';
-import { AccountService } from '@services/account.js';
-import { StorageService } from '@services/storage.js';
-import { IndexerService } from '@services/indexer.js';
-import { CloudflareService } from '@services/cloudflare.js';
-import { WebSocketService } from '@services/websocket.js';
-import { ReportsService } from '@services/reports.js';
-import { SettingsService } from '@services/settings.js';
-import { UploadTrackerService } from '@services/upload-tracker.js';
-import { VideoUploadService } from '@services/video-upload.js';
-import { LiveChatService } from '@services/live-chat.js';
-import { LinksService } from '@services/links.js';
-import { MonetizationService } from '@services/monetization.js';
+import {
+  VideosService,
+  CommentsService,
+  StreamsService,
+  AccountService,
+  StorageService,
+  IndexerService,
+  CloudflareService,
+  WebSocketService,
+  ReportsService,
+  SettingsService,
+  UploadTrackerService,
+  VideoUploadService,
+  LiveChatService,
+  LinksService,
+  MonetizationService,
+} from '@services/index.js';
 
 /**
  * Container cradle type - defines all registered dependencies

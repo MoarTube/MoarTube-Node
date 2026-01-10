@@ -4,10 +4,9 @@
  * Service layer for crypto wallet address operations including CRUD operations.
  */
 import { BaseService } from '@services/base.js';
-import type { Logger } from '@/utils/logger.js';
+import type { Logger } from '@/utils/index.js';
 import type { CreateWalletAddressInput } from '@services/interfaces.js';
-import type { MonetizationRepository } from '@/database/repositories/index.js';
-import type { DrizzleCryptoWalletAddress } from '@/database/schemas/sqlite/index.js';
+import type { MonetizationRepository, DrizzleCryptoWalletAddress } from '@database/index.js';
 
 /**
  * MonetizationService class

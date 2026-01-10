@@ -10,13 +10,9 @@ import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 
 import { BaseController } from '@controllers/base.js';
-import type { SettingsService } from '@services/settings.js';
-import type { CloudflareService } from '@services/cloudflare.js';
-import type { WebSocketService } from '@services/websocket.js';
+import type { SettingsService, CloudflareService, WebSocketService, VideosService, VideoOutputs } from '@services/index.js';
 import { getConfig } from '@config/index.js';
 import { isCloudflareCredentialsValid } from '@utils/index.js';
-import type { VideosService } from '@services/videos.js';
-import type { VideoOutputs } from '@services/interfaces.js';
 
 /**
  * Request body interfaces

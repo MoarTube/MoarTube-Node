@@ -8,11 +8,13 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 
 // Mock node:fs module
 vi.mock('node:fs', () => ({
+  rm: vi.fn(),
   default: {
     existsSync: vi.fn(),
     createReadStream: vi.fn(),
     statSync: vi.fn(),
     stat: vi.fn(),
+    rm: vi.fn(),
   },
 }));
 

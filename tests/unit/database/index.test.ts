@@ -91,9 +91,11 @@ describe('database/index.ts', () => {
     it('should export all expected functions and types', () => {
       // Test runtime exports (functions and objects) - types are compile-time only
       const expectedRuntimeExports = [
+        // Connection exports
         'createDatabase',
         'initializeDatabaseSchema',
         'getDatabase',
+        // Schema exports
         'videos',
         'comments',
         'videoReports',
@@ -103,6 +105,17 @@ describe('database/index.ts', () => {
         'liveChatMessages',
         'cryptoWalletAddresses',
         'links',
+        // Repository exports
+        'BaseRepository',
+        'VideosRepository',
+        'CommentsRepository',
+        'ReportsVideosRepository',
+        'ReportsCommentsRepository',
+        'ReportsArchiveVideosRepository',
+        'ReportsArchiveCommentsRepository',
+        'LiveChatMessagesRepository',
+        'MonetizationRepository',
+        'LinksRepository',
       ];
 
       expectedRuntimeExports.forEach(exportName => {
@@ -113,9 +126,11 @@ describe('database/index.ts', () => {
     it('should not have unexpected exports', () => {
       const actualExports = Object.keys(databaseExports);
       const expectedRuntimeExports = [
+        // Connection exports
         'createDatabase',
         'initializeDatabaseSchema',
         'getDatabase',
+        // Schema exports
         'videos',
         'comments',
         'videoReports',
@@ -125,6 +140,17 @@ describe('database/index.ts', () => {
         'liveChatMessages',
         'cryptoWalletAddresses',
         'links',
+        // Repository exports
+        'BaseRepository',
+        'VideosRepository',
+        'CommentsRepository',
+        'ReportsVideosRepository',
+        'ReportsCommentsRepository',
+        'ReportsArchiveVideosRepository',
+        'ReportsArchiveCommentsRepository',
+        'LiveChatMessagesRepository',
+        'MonetizationRepository',
+        'LinksRepository',
       ];
 
       // Check that we don't have extra exports

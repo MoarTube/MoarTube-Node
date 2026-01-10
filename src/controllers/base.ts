@@ -6,7 +6,7 @@
  */
 import type { FastifyReply } from 'fastify';
 import fs from 'node:fs';
-import { Logger } from '@utils/logger.js';
+import { Logger } from '@utils/index.js';
 
 
 /**

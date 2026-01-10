@@ -5,7 +5,7 @@
  */
 import { eq, desc, count, gt } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
-import type { PaginationOptions } from '@/types/models.js';
+import type { PaginationOptions } from '@/types/index.js';
 
 /**
  * ReportsVideosRepository class for video report CRUD operations

@@ -10,7 +10,7 @@ import type {
   IncomingWebSocketMessage,
   VideoStatusMessage,
   WebSocketMessage,
-} from '@/types/websocket.js';
+} from '@/types/index.js';
 import { type HandlerContext, WebSocketHandler } from '@websocket/handlers/base.js';
 import { videoStatusEventSchema, type VideoStatusEvent } from '@validators/schemas/index.js';
 import { ZodError } from 'zod';

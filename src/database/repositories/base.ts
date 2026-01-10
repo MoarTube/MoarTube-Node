@@ -3,7 +3,7 @@
  *
  * All repository classes extend this base class to share common functionality.
  */
-import type { PaginationOptions } from '@/types/models.js';
+import type { PaginationOptions } from '@/types/index.js';
 
 /**
  * Base repository with common operations

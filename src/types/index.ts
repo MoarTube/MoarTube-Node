@@ -1,9 +1,9 @@
 /**
- * Shared type definitions - only the actually used types
- * TODO: Consider removing this barrel export and importing directly from specific files
+ * Shared type definitions barrel export
+ * Re-exports all types from specific type modules for convenient importing
  */
 
-// Only the types that are actually imported from this barrel export
+// Config types
 export type {
   DatabaseConfig,
   StorageConfig,
@@ -13,3 +13,15 @@ export type {
   NodeIdentification,
   LastCheckedContentTracker,
 } from './config.js';
+
+// WebSocket types
+export * from './websocket.js';
+
+// IPC types
+export * from './ipc.js';
+
+// Model types
+export * from './models.js';
+
+// API types
+export * from './api.js';

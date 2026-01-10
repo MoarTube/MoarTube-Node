@@ -4,15 +4,13 @@
  * Handles live chat messages for video streams.
  */
 
-import type { ExtendedWebSocket, IncomingWebSocketMessage } from '@/types/websocket.js';
+import type { ExtendedWebSocket, IncomingWebSocketMessage } from '@/types/index.js';
 import { WebSocketHandler, type HandlerContext } from '@websocket/handlers/base.js';
-import type { VideosService } from '@services/videos.js';
+import type { VideosService, LiveChatService, CloudflareService } from '@services/index.js';
 import { getConfig } from '@config/index.js';
 import sanitizeHtml from 'sanitize-html';
 import { chatMessageEventSchema, type ChatMessageEvent } from '@validators/schemas/index.js';
 import { ZodError } from 'zod';
-import type { LiveChatService } from '@services/live-chat.js';
-import type { CloudflareService } from '@services/cloudflare.js';
 
 /**
  * Handler for live chat messages

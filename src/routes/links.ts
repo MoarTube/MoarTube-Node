@@ -4,8 +4,8 @@
  * Routes for social link management.
  */
 import type { FastifyInstance } from 'fastify';
-import { LinksController } from '@controllers/links.js';
-import type { Container } from '@core/container.js';
+import { LinksController } from '@controllers/index.js';
+import type { Container } from '@core/index.js';
 import { addLinkBodySchema, deleteLinkBodySchema } from '@validators/index.js';
 
 /**

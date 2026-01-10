@@ -18,7 +18,7 @@ import type {
 import {
   type VideoMasterManifestBody,
   type VideoAdaptiveManifestParams,
-} from '@validators/schemas/videos.js';
+} from '@validators/index.js';
 import { NotFoundError, BadRequestError, ForbiddenError } from '@errors/index.js';
 import { getConfig } from '@config/index.js';
 

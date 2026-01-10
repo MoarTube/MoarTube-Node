@@ -5,7 +5,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { StatusController } from '@controllers/index.js';
-import type { Container } from '@core/container.js';
+import type { Container } from '@core/index.js';
 
 /**
  * Register status routes

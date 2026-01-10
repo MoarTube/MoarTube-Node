@@ -5,7 +5,7 @@
  */
 import { eq, and, gte, count, lt, asc } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
-import type { PaginationOptions } from '@/types/models.js';
+import type { PaginationOptions } from '@/types/index.js';
 
 /**
  * LiveChatMessageRepository class for live chat message CRUD operations

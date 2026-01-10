@@ -4,8 +4,8 @@
  * Routes for comment search and reporting.
  */
 import type { FastifyInstance } from 'fastify';
-import { CommentsController } from '@controllers/comments.js';
-import type { Container } from '@core/container.js';
+import { CommentsController } from '@controllers/index.js';
+import type { Container } from '@core/index.js';
 import {
   commentIdParamsSchema,
   commentSearchQuerySchema,

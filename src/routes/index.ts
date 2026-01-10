@@ -5,7 +5,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import type { Container } from '@core/container.js';
+import type { Container } from '@core/index.js';
 
 // Route definitions
 export { statusRoutes } from '@routes/status.js';

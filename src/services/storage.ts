@@ -22,7 +22,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 import { BaseService } from '@services/base.js';
-import type { Logger } from '@/utils/logger.js';
+import type { Logger } from '@/utils/index.js';
 import type { StorageMode, FileMetadata } from '@services/interfaces.js';
 import { getConfig } from '@config/index.js';
 

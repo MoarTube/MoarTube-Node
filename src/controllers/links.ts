@@ -5,8 +5,7 @@
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from '@controllers/base.js';
-import type { LinksService } from '@services/links.js';
-import type { CloudflareService } from '@services/cloudflare.js';
+import type { LinksService, CloudflareService } from '@services/index.js';
 
 /**
  * Request body for adding a link

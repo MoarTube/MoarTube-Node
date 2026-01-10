@@ -25,10 +25,12 @@ vi.mock('@utils/logger.js', () => ({
 
 // Mock fs module
 vi.mock('node:fs', () => ({
+  rm: vi.fn(),
   default: {
     existsSync: vi.fn(),
     statSync: vi.fn(),
     createReadStream: vi.fn(),
+    rm: vi.fn(),
   },
 }));
 

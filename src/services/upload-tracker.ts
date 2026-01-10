@@ -6,7 +6,7 @@
  */
 
 import type { FastifyRequest } from 'fastify';
-import type { Logger } from '@/utils/logger.js';
+import type { Logger } from '@/utils/index.js';
 import { type WebSocketService } from '@services/websocket.js';
 
 /**
