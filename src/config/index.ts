@@ -58,14 +58,14 @@ class Config {
     // Initialize environment first
     this._env = getEnv();
 
-    // Initialize paths
-    this._paths = initializePaths(baseDir);
+    // Load app config json file first (needed for isDeveloperMode)
+    this._appConfig = this.loadAppConfig(baseDir, configFileName);
+
+    // Initialize paths (needs isDeveloperMode to determine data directory location)
+    this._paths = initializePaths(baseDir, this._appConfig.isDeveloperMode);
 
     // Ensure data directories exist
     this.ensureDataDirectoriesExist();
-
-    // Load app config json file
-    this._appConfig = this.loadAppConfig(baseDir, configFileName);
 
     // Initialize URLs with indexer/aliaser configs
     this._urls = initializeUrls(this._appConfig.indexerConfig, this._appConfig.aliaserConfig);

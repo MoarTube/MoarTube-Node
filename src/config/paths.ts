@@ -51,18 +51,19 @@ class Paths implements PathConfig {
   readonly lastCheckedContentTrackerPath: string;
   readonly databaseFilePath: string;
 
-  private constructor(baseDir: string) {
+  private constructor(baseDir: string, isDeveloperMode: boolean) {
     const env = getEnv();
-
-    const isDockerEnvironment = env.isDockerEnvironment;
 
     // Base directories
     this.publicDirectoryPath = path.join(baseDir, 'public');
     this.viewsDirectoryPath = path.join(this.publicDirectoryPath, 'views');
 
-    // Data directory - use environment variable if set, otherwise use default
-    const dataDir = path.join(baseDir, 'data');
-    this.dataDirectoryPath = isDockerEnvironment ? '/data' : dataDir;
+    // Data directory priority:
+    // 1. MOARTUBE_DATA_DIR environment variable (explicit override)
+    // 2. Docker environment (/data volume)
+    // 3. Developer mode (local ./data directory)
+    // 4. Production (OS-specific user data directory)
+    this.dataDirectoryPath = this.resolveDataDirectory(baseDir, isDeveloperMode, env);
 
     // Data subdirectories
     this.imagesDirectoryPath = path.join(this.dataDirectoryPath, 'images');
@@ -81,10 +82,84 @@ class Paths implements PathConfig {
   }
 
   /**
+   * Resolve the data directory path based on priority order:
+   * 1. MOARTUBE_DATA_DIR environment variable
+   * 2. Docker environment
+   * 3. Developer mode
+   * 4. OS-specific user data directory
+   */
+  private resolveDataDirectory(
+    baseDir: string,
+    isDeveloperMode: boolean,
+    env: ReturnType<typeof getEnv>
+  ): string {
+    // Priority 1: Explicit environment variable override
+    const envDataDir = env.dataDirectory;
+    if (envDataDir !== undefined && envDataDir !== '') {
+      return envDataDir;
+    }
+
+    // Priority 2: Docker environment uses /data volume
+    if (env.isDockerEnvironment) {
+      return '/data';
+    }
+
+    // Priority 3: Developer mode uses local ./data directory
+    if (isDeveloperMode) {
+      return path.join(baseDir, 'data');
+    }
+
+    // Priority 4: Production uses OS-specific user data directory
+    return this.getOsSpecificDataDirectory();
+  }
+
+  /**
+   * Get the OS-specific user data directory
+   * - Windows: %APPDATA%/moartube-node
+   * - macOS: ~/Library/Application Support/moartube-node
+   * - Linux: ~/.local/share/moartube-node
+   */
+  private getOsSpecificDataDirectory(): string {
+    const appName = 'moartube-node';
+
+    if (process.platform === 'win32') {
+      const appData = process.env['APPDATA'];
+      if (appData === undefined || appData === '') {
+        throw new Error(
+          'APPDATA environment variable is not set. ' +
+          'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
+        );
+      }
+      return path.join(appData, appName);
+    }
+
+    if (process.platform === 'darwin') {
+      const home = process.env['HOME'];
+      if (home === undefined || home === '') {
+        throw new Error(
+          'HOME environment variable is not set. ' +
+          'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
+        );
+      }
+      return path.join(home, 'Library', 'Application Support', appName);
+    }
+
+    // Linux and other Unix-like systems
+    const home = process.env['HOME'];
+    if (home === undefined || home === '') {
+      throw new Error(
+        'HOME environment variable is not set. ' +
+        'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
+      );
+    }
+    return path.join(home, '.local', 'share', appName);
+  }
+
+  /**
    * Initialize the paths singleton with the application base directory
    */
-  static initialize(baseDir: string): Paths {
-    Paths.instance ??= new Paths(baseDir);
+  static initialize(baseDir: string, isDeveloperMode: boolean): Paths {
+    Paths.instance ??= new Paths(baseDir, isDeveloperMode);
     return Paths.instance;
   }
 
@@ -227,8 +302,8 @@ class Paths implements PathConfig {
 /**
  * Export initializer
  */
-export function initializePaths(baseDir: string): Paths {
-  return Paths.initialize(baseDir);
+export function initializePaths(baseDir: string, isDeveloperMode: boolean): Paths {
+  return Paths.initialize(baseDir, isDeveloperMode);
 }
 
 /**

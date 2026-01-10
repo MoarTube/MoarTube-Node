@@ -29,7 +29,7 @@ describe('config/paths.ts', () => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
 
-      const paths1 = Paths.initialize('/app');
+      const paths1 = Paths.initialize('/app', true);
       const paths2 = Paths.getInstance();
 
       expect(paths1).toBe(paths2);
@@ -45,7 +45,7 @@ describe('config/paths.ts', () => {
 
       expect(Paths.isInitialized()).toBe(false);
 
-      Paths.initialize('/app');
+      Paths.initialize('/app', true);
 
       expect(Paths.isInitialized()).toBe(true);
     });
@@ -54,20 +54,20 @@ describe('config/paths.ts', () => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
 
-      const paths1 = initializePaths('/app');
-      const paths2 = initializePaths('/app');
+      const paths1 = initializePaths('/app', true);
+      const paths2 = initializePaths('/app', true);
 
       expect(paths1).toBe(paths2);
     });
   });
 
-  describe('Path construction - Non-Docker environment', () => {
+  describe('Path construction - Non-Docker environment (Developer Mode)', () => {
     let paths: Paths;
 
     beforeEach(() => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
-      paths = new Paths('/app');
+      paths = Paths.initialize('/app', true); // Developer mode = true for local data path
     });
 
     it('should construct base directory paths correctly', () => {
@@ -97,7 +97,7 @@ describe('config/paths.ts', () => {
     beforeEach(() => {
       mockEnv = { isDockerEnvironment: true };
       mockGetEnv.mockReturnValue(mockEnv);
-      paths = new Paths('/app');
+      paths = Paths.initialize('/app', false); // Docker takes priority over isDeveloperMode
     });
 
     it('should use /data as data directory in Docker environment', () => {
@@ -119,13 +119,71 @@ describe('config/paths.ts', () => {
     });
   });
 
+  describe('Path construction - MOARTUBE_DATA_DIR environment variable', () => {
+    it('should use MOARTUBE_DATA_DIR when set (highest priority)', () => {
+      const customDataDir = '/custom/moartube/data';
+      mockEnv = { isDockerEnvironment: false, dataDirectory: customDataDir };
+      mockGetEnv.mockReturnValue(mockEnv);
+
+      const paths = Paths.initialize('/app', false);
+
+      expect(paths.dataDirectoryPath).toBe(customDataDir);
+      expect(paths.imagesDirectoryPath).toBe(path.join(customDataDir, 'images'));
+      expect(paths.videosDirectoryPath).toBe(path.join(customDataDir, 'media', 'videos'));
+      expect(paths.databaseDirectoryPath).toBe(path.join(customDataDir, 'db'));
+    });
+
+    it('should use MOARTUBE_DATA_DIR even when Docker environment is true', () => {
+      const customDataDir = '/my/custom/path';
+      mockEnv = { isDockerEnvironment: true, dataDirectory: customDataDir };
+      mockGetEnv.mockReturnValue(mockEnv);
+
+      const paths = Paths.initialize('/app', false);
+
+      // MOARTUBE_DATA_DIR takes priority over Docker's /data
+      expect(paths.dataDirectoryPath).toBe(customDataDir);
+    });
+
+    it('should use MOARTUBE_DATA_DIR even when developer mode is true', () => {
+      const customDataDir = '/override/dev/data';
+      mockEnv = { isDockerEnvironment: false, dataDirectory: customDataDir };
+      mockGetEnv.mockReturnValue(mockEnv);
+
+      const paths = Paths.initialize('/app', true); // isDeveloperMode = true
+
+      // MOARTUBE_DATA_DIR takes priority over developer mode
+      expect(paths.dataDirectoryPath).toBe(customDataDir);
+    });
+
+    it('should ignore empty MOARTUBE_DATA_DIR and fall back to next priority', () => {
+      mockEnv = { isDockerEnvironment: true, dataDirectory: '' };
+      mockGetEnv.mockReturnValue(mockEnv);
+
+      const paths = Paths.initialize('/app', false);
+
+      // Empty string should fall back to Docker's /data
+      expect(paths.dataDirectoryPath).toBe('/data');
+    });
+
+    it('should handle Windows-style MOARTUBE_DATA_DIR paths', () => {
+      const customDataDir = 'D:\\MoarTube\\Data';
+      mockEnv = { isDockerEnvironment: false, dataDirectory: customDataDir };
+      mockGetEnv.mockReturnValue(mockEnv);
+
+      const paths = Paths.initialize('/app', false);
+
+      expect(paths.dataDirectoryPath).toBe(customDataDir);
+      expect(paths.imagesDirectoryPath).toBe(path.join(customDataDir, 'images'));
+    });
+  });
+
   describe('Video-specific path methods', () => {
     let paths: Paths;
 
     beforeEach(() => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
-      paths = new Paths('/app');
+      paths = Paths.initialize('/app', true); // Developer mode for local data path
     });
 
     it('should return correct video directory path', () => {
@@ -177,7 +235,7 @@ describe('config/paths.ts', () => {
     beforeEach(() => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
-      paths = new Paths('/app');
+      paths = Paths.initialize('/app', true); // Developer mode for local data path
     });
 
     it('should return correct custom icon path', () => {
@@ -212,10 +270,10 @@ describe('config/paths.ts', () => {
   });
 
   describe('toObject method', () => {
-    it('should return all paths as a plain object - Non-Docker', () => {
+    it('should return all paths as a plain object - Non-Docker (Developer Mode)', () => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
-      const paths = new Paths('/app');
+      const paths = Paths.initialize('/app', true); // Developer mode for local data path
 
       const obj = paths.toObject();
 
@@ -240,7 +298,7 @@ describe('config/paths.ts', () => {
     it('should return all paths as a plain object - Docker', () => {
       mockEnv = { isDockerEnvironment: true };
       mockGetEnv.mockReturnValue(mockEnv);
-      const paths = new Paths('/app');
+      const paths = Paths.initialize('/app', false); // Docker takes priority
 
       const obj = paths.toObject();
 
@@ -254,7 +312,7 @@ describe('config/paths.ts', () => {
     it('should handle Windows-style paths correctly', () => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
-      const paths = new Paths('C:\\app');
+      const paths = Paths.initialize('C:\\app', true); // Developer mode for local data path
 
       // Node.js path.join should handle platform-specific separators
       expect(paths.publicDirectoryPath).toContain('public');
@@ -264,7 +322,7 @@ describe('config/paths.ts', () => {
     it('should handle relative paths correctly', () => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
-      const paths = new Paths('./app');
+      const paths = Paths.initialize('./app', true); // Developer mode for local data path
 
       expect(paths.publicDirectoryPath).toBe(path.join('./app', 'public'));
       expect(paths.dataDirectoryPath).toBe(path.join('./app', 'data'));
