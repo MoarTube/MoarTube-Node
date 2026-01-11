@@ -191,8 +191,8 @@ describe('database/sqlite-connection.ts', () => {
       vi.mocked(drizzle).mockReturnValue(mockDrizzleDb as any);
       vi.mocked(fileURLToPath).mockReturnValue('/project/src/database/sqlite-connection.ts');
       vi.mocked(path.dirname).mockReturnValue('/project/src/database');
-      vi.mocked(path.resolve).mockReturnValue('/project');
-      vi.mocked(path.join).mockReturnValue('/project/drizzle/sqlite');
+      // path.resolve is called with (__dirname, '..', '..', 'drizzle', 'sqlite')
+      vi.mocked(path.resolve).mockReturnValue('/project/drizzle/sqlite');
 
       const { createDatabase, initializeDatabaseSchema } = await import('@database/sqlite-connection.js');
 
@@ -214,6 +214,37 @@ describe('database/sqlite-connection.ts', () => {
       expect(mockExec).toHaveBeenCalledWith('VACUUM');
     });
 
+    it('should use bundled migrations path when running from dist folder', async () => {
+      vi.resetModules();
+
+      const mockDrizzleDb = { type: 'drizzle-sqlite' };
+      vi.mocked(drizzle).mockReturnValue(mockDrizzleDb as any);
+      // Simulate bundled build: __filename is in dist folder
+      vi.mocked(fileURLToPath).mockReturnValue('/project/dist/moartube-node.js');
+      vi.mocked(path.dirname).mockReturnValue('/project/dist');
+      // path.join is called with (__dirname, 'drizzle', 'sqlite')
+      vi.mocked(path.join).mockReturnValue('/project/dist/drizzle/sqlite');
+      vi.mocked(migrate).mockImplementation(() => {});
+
+      const { createDatabase, initializeDatabaseSchema } = await import('@database/sqlite-connection.js');
+
+      const config: DatabaseConfig = {
+        filepath: '/path/to/db.sqlite'
+      };
+
+      createDatabase(config);
+
+      // Reset exec mock to clear VACUUM call count from createDatabase
+      mockExec.mockClear();
+
+      initializeDatabaseSchema();
+
+      expect(path.join).toHaveBeenCalledWith('/project/dist', 'drizzle', 'sqlite');
+      expect(migrate).toHaveBeenCalledWith(mockDrizzleDb, {
+        migrationsFolder: '/project/dist/drizzle/sqlite'
+      });
+    });
+
     it('should handle migration errors', async () => {
       vi.resetModules();
 
@@ -222,7 +253,7 @@ describe('database/sqlite-connection.ts', () => {
       vi.mocked(fileURLToPath).mockReturnValue('/project/src/database/sqlite-connection.ts');
       vi.mocked(path.dirname).mockReturnValue('/project/src/database');
       vi.mocked(path.resolve).mockReturnValue('/project');
-      vi.mocked(path.join).mockReturnValue('/project/drizzle/sqlite');
+      vi.mocked(path.join).mockImplementation((...args) => args.join('/'));
       vi.mocked(migrate).mockImplementation(() => {
         throw new Error('Migration failed');
       });

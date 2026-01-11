@@ -467,6 +467,31 @@ describe('ClusterWorker', () => {
 
       expect(mockSocket.destroy).toHaveBeenCalled();
     });
+
+    it('should log error and return early when server is not available for WebSocket upgrade', async () => {
+      // Import the mocked createFastifyApp
+      const { createFastifyApp } = await import('@plugins/index.js');
+      const mockedCreateFastifyApp = vi.mocked(createFastifyApp);
+
+      // Temporarily mock createFastifyApp to return an app without a server
+      mockedCreateFastifyApp.mockResolvedValueOnce({
+        listen: mockFastifyListen,
+        close: mockFastifyClose,
+        server: undefined as any, // No server available
+        register: vi.fn(),
+        addHook: vi.fn(),
+        decorateRequest: vi.fn(),
+      } as any);
+
+      const worker = new ClusterWorker({ logger: mockLogger as any });
+      await worker.start();
+
+      // Should have logged an error about server not being available
+      expect(mockLogger.error).toHaveBeenCalledWith('Server not available for WebSocket upgrade handling');
+
+      // No upgrade handler should have been registered
+      expect(mockFastifyServerHandlers['upgrade']).toBeUndefined();
+    });
   });
 
   describe('WebSocket handling', () => {

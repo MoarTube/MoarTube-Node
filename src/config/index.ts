@@ -54,7 +54,7 @@ class Config {
   private readonly _runtime: RuntimeConfig;
   private _settingsWatcher: fs.FSWatcher | null = null;
 
-  private constructor(baseDir: string, configFileName: string) {
+  private constructor(baseDir: string, configFileName: string, entryPointDir?: string) {
     // Initialize environment first
     this._env = getEnv();
 
@@ -62,7 +62,8 @@ class Config {
     this._appConfig = this.loadAppConfig(baseDir, configFileName);
 
     // Initialize paths (needs isDeveloperMode to determine data directory location)
-    this._paths = initializePaths(baseDir, this._appConfig.isDeveloperMode);
+    // Pass entryPointDir to properly resolve public folder in bundled builds
+    this._paths = initializePaths(baseDir, this._appConfig.isDeveloperMode, entryPointDir);
 
     // Ensure data directories exist
     this.ensureDataDirectoriesExist();
@@ -103,10 +104,13 @@ class Config {
 
   /**
    * Initialize the configuration system
+   * @param baseDir - Base directory where config files live
+   * @param configFileName - Name of the config file to load
+   * @param entryPointDir - Directory of the entry point (for bundled builds)
    */
-  static initialize(baseDir: string, configFileName: string): Config {
+  static initialize(baseDir: string, configFileName: string, entryPointDir?: string): Config {
     if (!Config.instance) {
-      Config.instance = new Config(baseDir, configFileName);
+      Config.instance = new Config(baseDir, configFileName, entryPointDir);
     }
 
     return Config.instance;
@@ -449,9 +453,12 @@ class Config {
 
 /**
  * Initialize the configuration system
+ * @param baseDir - Base directory where config files live
+ * @param configFileName - Name of the config file to load
+ * @param entryPointDir - Directory of the entry point (for bundled builds)
  */
-export function initializeConfig(baseDir: string, configFileName: string): Config {
-  return Config.initialize(baseDir, configFileName);
+export function initializeConfig(baseDir: string, configFileName: string, entryPointDir?: string): Config {
+  return Config.initialize(baseDir, configFileName, entryPointDir);
 }
 
 /**

@@ -181,8 +181,8 @@ describe('database/postgres-connection.ts', () => {
       vi.mocked(drizzle).mockReturnValue(mockDrizzleDb as any);
       vi.mocked(fileURLToPath).mockReturnValue('/project/src/database/postgres-connection.ts');
       vi.mocked(path.dirname).mockReturnValue('/project/src/database');
-      vi.mocked(path.resolve).mockReturnValue('/project');
-      vi.mocked(path.join).mockReturnValue('/project/drizzle/postgres');
+      // path.resolve is called with (__dirname, '..', '..', 'drizzle', 'postgres')
+      vi.mocked(path.resolve).mockReturnValue('/project/drizzle/postgres');
       vi.mocked(migrate).mockResolvedValue(undefined);
 
       const { createDatabase, initializeDatabaseSchema } = await import('@database/postgres-connection.js');
@@ -200,6 +200,34 @@ describe('database/postgres-connection.ts', () => {
       });
     });
 
+    it('should use bundled migrations path when running from dist folder', async () => {
+      vi.resetModules();
+
+      const mockDrizzleDb = { type: 'drizzle-postgres' };
+      vi.mocked(drizzle).mockReturnValue(mockDrizzleDb as any);
+      // Simulate bundled build: __filename is in dist folder
+      vi.mocked(fileURLToPath).mockReturnValue('/project/dist/moartube-node.js');
+      vi.mocked(path.dirname).mockReturnValue('/project/dist');
+      // path.join is called with (__dirname, 'drizzle', 'postgres')
+      vi.mocked(path.join).mockReturnValue('/project/dist/drizzle/postgres');
+      vi.mocked(migrate).mockResolvedValue(undefined);
+
+      const { createDatabase, initializeDatabaseSchema } = await import('@database/postgres-connection.js');
+
+      const config: DatabaseConfig = {
+        connectionString: 'postgres://localhost:5432/test'
+      };
+
+      createDatabase(config);
+
+      await initializeDatabaseSchema();
+
+      expect(path.join).toHaveBeenCalledWith('/project/dist', 'drizzle', 'postgres');
+      expect(migrate).toHaveBeenCalledWith(mockDrizzleDb, {
+        migrationsFolder: '/project/dist/drizzle/postgres'
+      });
+    });
+
     it('should handle schema creation failure gracefully', async () => {
       vi.resetModules();
 
@@ -207,8 +235,8 @@ describe('database/postgres-connection.ts', () => {
       vi.mocked(drizzle).mockReturnValue(mockDrizzleDb as any);
       vi.mocked(fileURLToPath).mockReturnValue('/project/src/database/postgres-connection.ts');
       vi.mocked(path.dirname).mockReturnValue('/project/src/database');
-      vi.mocked(path.resolve).mockReturnValue('/project');
-      vi.mocked(path.join).mockReturnValue('/project/drizzle/postgres');
+      // path.resolve is called with (__dirname, '..', '..', 'drizzle', 'postgres')
+      vi.mocked(path.resolve).mockReturnValue('/project/drizzle/postgres');
       vi.mocked(migrate).mockResolvedValue(undefined);
 
       const { createDatabase, initializeDatabaseSchema } = await import('@database/postgres-connection.js');
@@ -236,7 +264,7 @@ describe('database/postgres-connection.ts', () => {
       vi.mocked(fileURLToPath).mockReturnValue('/project/src/database/postgres-connection.ts');
       vi.mocked(path.dirname).mockReturnValue('/project/src/database');
       vi.mocked(path.resolve).mockReturnValue('/project');
-      vi.mocked(path.join).mockReturnValue('/project/drizzle/postgres');
+      vi.mocked(path.join).mockImplementation((...args) => args.join('/'));
       vi.mocked(migrate).mockRejectedValue(new Error('Migration failed'));
 
       const { createDatabase, initializeDatabaseSchema } = await import('@database/postgres-connection.js');
@@ -339,7 +367,7 @@ describe('database/postgres-connection.ts', () => {
       vi.mocked(fileURLToPath).mockReturnValue('/project/src/database/postgres-connection.ts');
       vi.mocked(path.dirname).mockReturnValue('/project/src/database');
       vi.mocked(path.resolve).mockReturnValue('/project');
-      vi.mocked(path.join).mockReturnValue('/project/drizzle/postgres');
+      vi.mocked(path.join).mockImplementation((...args) => args.join('/'));
       vi.mocked(migrate).mockResolvedValue(undefined);
 
       const { createDatabase, getDatabase, initializeDatabaseSchema } = await import('@database/postgres-connection.js');

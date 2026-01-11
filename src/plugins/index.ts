@@ -15,9 +15,8 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import type { PinoLoggerOptions } from 'fastify/types/logger.js';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
+import { getConfig } from '@config/index.js';
 import { createAppContainer } from '@core/index.js';
 import { getDatabase } from '@database/index.js';
 import { registerRoutes } from '@routes/index.js';
@@ -78,10 +77,9 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   await app.register(fastifyFormbody);
 
   // Register view engine with EJS templating
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const projectRoot = path.resolve(__dirname, '..', '..');
-  const viewsRoot = path.join(projectRoot, 'public', 'views');
+  // Use configured paths from Config singleton to ensure correct path in bundled builds
+  const config = getConfig();
+  const viewsRoot = config.paths.viewsDirectoryPath;
 
   await app.register(fastifyView, {
     engine: {

@@ -63,11 +63,17 @@ export async function initializeDatabaseSchema(): Promise<void> {
       // Warning: Could not create drizzle schema, assuming it already exists
     }
 
-    // Resolve migrations folder path relative to project root
+    // Resolve migrations folder path
+    // In development (tsx): src/database/postgres-connection.ts -> ../../drizzle/postgres
+    // In production (bundled): dist/moartube-node.js -> ./drizzle/postgres (copied by tsup)
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    const projectRoot = path.resolve(__dirname, '..', '..');
-    const migrationsFolder = path.join(projectRoot, 'drizzle', 'postgres');
+    
+    // Check if we're running from the bundled dist file or from source
+    const isBundled = __dirname.includes('dist') || !__filename.includes('database');
+    const migrationsFolder = isBundled
+      ? path.join(__dirname, 'drizzle', 'postgres')
+      : path.resolve(__dirname, '..', '..', 'drizzle', 'postgres');
 
     await migrate(drizzleDb, { migrationsFolder });
   } catch (error) {

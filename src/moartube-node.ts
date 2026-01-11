@@ -33,7 +33,7 @@ function loadConfig(): void {
   // Determine base directory where config json files live
   const baseDir = path.resolve(__dirname, '..');
 
-  initializeConfig(baseDir, 'config_test.json');
+  initializeConfig(baseDir, 'config_test.json', __dirname);
 }
 
 /**

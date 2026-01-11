@@ -61,6 +61,51 @@ describe('config/paths.ts', () => {
     });
   });
 
+  describe('Path construction - Bundled builds (entryPointDir)', () => {
+    it('should use entryPointDir for public paths when bundled (dist directory)', () => {
+      mockEnv = { isDockerEnvironment: false };
+      mockGetEnv.mockReturnValue(mockEnv);
+      
+      // Simulate bundled build where entryPointDir is the dist directory
+      const paths = Paths.initialize('/project', true, '/project/dist');
+      
+      // Public directory should be in dist folder
+      expect(paths.publicDirectoryPath).toBe(path.join('/project/dist', 'public'));
+      expect(paths.viewsDirectoryPath).toBe(path.join('/project/dist', 'public', 'views'));
+      // Data directory still follows normal resolution (developer mode)
+      expect(paths.dataDirectoryPath).toBe(path.join('/project', 'data'));
+    });
+
+    it('should use entryPointDir when path ends with dist', () => {
+      mockEnv = { isDockerEnvironment: false };
+      mockGetEnv.mockReturnValue(mockEnv);
+      
+      const paths = Paths.initialize('/app', true, '/app/output/dist');
+      
+      expect(paths.publicDirectoryPath).toBe(path.join('/app/output/dist', 'public'));
+    });
+
+    it('should use baseDir for public paths when entryPointDir is undefined', () => {
+      mockEnv = { isDockerEnvironment: false };
+      mockGetEnv.mockReturnValue(mockEnv);
+      
+      const paths = Paths.initialize('/app', true, undefined);
+      
+      expect(paths.publicDirectoryPath).toBe(path.join('/app', 'public'));
+      expect(paths.viewsDirectoryPath).toBe(path.join('/app', 'public', 'views'));
+    });
+
+    it('should use baseDir for public paths when entryPointDir does not contain dist', () => {
+      mockEnv = { isDockerEnvironment: false };
+      mockGetEnv.mockReturnValue(mockEnv);
+      
+      // entryPointDir that doesn't indicate a bundled build
+      const paths = Paths.initialize('/app', true, '/app/src');
+      
+      expect(paths.publicDirectoryPath).toBe(path.join('/app', 'public'));
+    });
+  });
+
   describe('Path construction - Non-Docker environment (Developer Mode)', () => {
     let paths: Paths;
 
@@ -326,6 +371,138 @@ describe('config/paths.ts', () => {
 
       expect(paths.publicDirectoryPath).toBe(path.join('./app', 'public'));
       expect(paths.dataDirectoryPath).toBe(path.join('./app', 'data'));
+    });
+  });
+
+  describe('OS-specific data directory - Production mode', () => {
+    const originalPlatform = process.platform;
+    const originalEnv = { ...process.env };
+
+    afterEach(() => {
+      // Restore original environment
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+      process.env = { ...originalEnv };
+    });
+
+    describe('Windows (win32)', () => {
+      beforeEach(() => {
+        Object.defineProperty(process, 'platform', { value: 'win32' });
+      });
+
+      it('should use APPDATA directory on Windows in production mode', () => {
+        process.env['APPDATA'] = 'C:\\Users\\Test\\AppData\\Roaming';
+        mockEnv = { isDockerEnvironment: false, dataDirectory: undefined };
+        mockGetEnv.mockReturnValue(mockEnv);
+
+        const paths = Paths.initialize('/app', false); // Production mode (isDeveloperMode = false)
+
+        expect(paths.dataDirectoryPath).toBe(path.join('C:\\Users\\Test\\AppData\\Roaming', 'moartube-node'));
+      });
+
+      it('should throw error when APPDATA is not set on Windows', () => {
+        process.env['APPDATA'] = '';
+        mockEnv = { isDockerEnvironment: false, dataDirectory: undefined };
+        mockGetEnv.mockReturnValue(mockEnv);
+
+        expect(() => Paths.initialize('/app', false)).toThrow(
+          'APPDATA environment variable is not set'
+        );
+      });
+
+      it('should throw error when APPDATA is undefined on Windows', () => {
+        delete process.env['APPDATA'];
+        mockEnv = { isDockerEnvironment: false, dataDirectory: undefined };
+        mockGetEnv.mockReturnValue(mockEnv);
+
+        expect(() => Paths.initialize('/app', false)).toThrow(
+          'APPDATA environment variable is not set'
+        );
+      });
+    });
+
+    describe('macOS (darwin)', () => {
+      beforeEach(() => {
+        Object.defineProperty(process, 'platform', { value: 'darwin' });
+      });
+
+      it('should use ~/Library/Application Support on macOS in production mode', () => {
+        process.env['HOME'] = '/Users/testuser';
+        mockEnv = { isDockerEnvironment: false, dataDirectory: undefined };
+        mockGetEnv.mockReturnValue(mockEnv);
+
+        const paths = Paths.initialize('/app', false); // Production mode
+
+        expect(paths.dataDirectoryPath).toBe(path.join('/Users/testuser', 'Library', 'Application Support', 'moartube-node'));
+      });
+
+      it('should throw error when HOME is not set on macOS', () => {
+        process.env['HOME'] = '';
+        mockEnv = { isDockerEnvironment: false, dataDirectory: undefined };
+        mockGetEnv.mockReturnValue(mockEnv);
+
+        expect(() => Paths.initialize('/app', false)).toThrow(
+          'HOME environment variable is not set'
+        );
+      });
+
+      it('should throw error when HOME is undefined on macOS', () => {
+        delete process.env['HOME'];
+        mockEnv = { isDockerEnvironment: false, dataDirectory: undefined };
+        mockGetEnv.mockReturnValue(mockEnv);
+
+        expect(() => Paths.initialize('/app', false)).toThrow(
+          'HOME environment variable is not set'
+        );
+      });
+    });
+
+    describe('Linux and other Unix-like systems', () => {
+      beforeEach(() => {
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+      });
+
+      it('should use ~/.local/share on Linux in production mode', () => {
+        process.env['HOME'] = '/home/testuser';
+        mockEnv = { isDockerEnvironment: false, dataDirectory: undefined };
+        mockGetEnv.mockReturnValue(mockEnv);
+
+        const paths = Paths.initialize('/app', false); // Production mode
+
+        expect(paths.dataDirectoryPath).toBe(path.join('/home/testuser', '.local', 'share', 'moartube-node'));
+      });
+
+      it('should throw error when HOME is not set on Linux', () => {
+        process.env['HOME'] = '';
+        mockEnv = { isDockerEnvironment: false, dataDirectory: undefined };
+        mockGetEnv.mockReturnValue(mockEnv);
+
+        expect(() => Paths.initialize('/app', false)).toThrow(
+          'HOME environment variable is not set'
+        );
+      });
+
+      it('should throw error when HOME is undefined on Linux', () => {
+        delete process.env['HOME'];
+        mockEnv = { isDockerEnvironment: false, dataDirectory: undefined };
+        mockGetEnv.mockReturnValue(mockEnv);
+
+        expect(() => Paths.initialize('/app', false)).toThrow(
+          'HOME environment variable is not set'
+        );
+      });
+    });
+
+    describe('Other Unix-like systems (FreeBSD)', () => {
+      it('should use ~/.local/share on FreeBSD in production mode', () => {
+        Object.defineProperty(process, 'platform', { value: 'freebsd' });
+        process.env['HOME'] = '/home/testuser';
+        mockEnv = { isDockerEnvironment: false, dataDirectory: undefined };
+        mockGetEnv.mockReturnValue(mockEnv);
+
+        const paths = Paths.initialize('/app', false); // Production mode
+
+        expect(paths.dataDirectoryPath).toBe(path.join('/home/testuser', '.local', 'share', 'moartube-node'));
+      });
     });
   });
 });

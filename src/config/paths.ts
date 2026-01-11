@@ -51,11 +51,18 @@ class Paths implements PathConfig {
   readonly lastCheckedContentTrackerPath: string;
   readonly databaseFilePath: string;
 
-  private constructor(baseDir: string, isDeveloperMode: boolean) {
+  private constructor(baseDir: string, isDeveloperMode: boolean, entryPointDir?: string) {
     const env = getEnv();
 
+    // Determine public directory location
+    // In bundled builds (dist/), public is at dist/public (entryPointDir/public)
+    // In dev/source mode, public is at project root (baseDir/public)
+    const isBundled = entryPointDir !== undefined && 
+      (entryPointDir.includes('dist') || entryPointDir.endsWith('dist'));
+    const publicBase = isBundled ? entryPointDir : baseDir;
+    
     // Base directories
-    this.publicDirectoryPath = path.join(baseDir, 'public');
+    this.publicDirectoryPath = path.join(publicBase, 'public');
     this.viewsDirectoryPath = path.join(this.publicDirectoryPath, 'views');
 
     // Data directory priority:
@@ -157,9 +164,12 @@ class Paths implements PathConfig {
 
   /**
    * Initialize the paths singleton with the application base directory
+   * @param baseDir - Base directory where config files live
+   * @param isDeveloperMode - Whether running in developer mode
+   * @param entryPointDir - Directory of the entry point (for bundled builds)
    */
-  static initialize(baseDir: string, isDeveloperMode: boolean): Paths {
-    Paths.instance ??= new Paths(baseDir, isDeveloperMode);
+  static initialize(baseDir: string, isDeveloperMode: boolean, entryPointDir?: string): Paths {
+    Paths.instance ??= new Paths(baseDir, isDeveloperMode, entryPointDir);
     return Paths.instance;
   }
 
@@ -301,9 +311,12 @@ class Paths implements PathConfig {
 
 /**
  * Export initializer
+ * @param baseDir - Base directory where config files live
+ * @param isDeveloperMode - Whether running in developer mode
+ * @param entryPointDir - Directory of the entry point (for bundled builds)
  */
-export function initializePaths(baseDir: string, isDeveloperMode: boolean): Paths {
-  return Paths.initialize(baseDir, isDeveloperMode);
+export function initializePaths(baseDir: string, isDeveloperMode: boolean, entryPointDir?: string): Paths {
+  return Paths.initialize(baseDir, isDeveloperMode, entryPointDir);
 }
 
 /**

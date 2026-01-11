@@ -1467,6 +1467,7 @@ body {
           this.EXTERNAL_RESOURCES_BASE_URL = null;
           this.THEATER_MODE_BUTTON = null;
           this.IS_DARK_MODE_ENABLED = false;
+          this.IS_STREAMING = false;
           this.COMMENT_INPUT_FORM_DYNAMIC = $('\
             <form id="comment-input-form-dynamic" class="comment-input-form" role="form" method="POST" data-commentformtype="dynamic" style="background: #cb0c9f12;padding: 5px 5px 5px 5px;">\
               <textarea class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area" rows="1" placeholder="Add a comment..." maxlength="500" name="commentPlainText"></textarea>\
@@ -1774,6 +1775,7 @@ body {
           const progressiveSources = video.progressiveSources;
           const sourcesFormatsAndResolutions = video.sourcesFormatsAndResolutions;
           this.DOWNLOADABLE_SOURCES = progressiveSources;
+          this.IS_STREAMING = isStreaming;
           if (isStreaming) {
             this.connectWebsocket();
           }
@@ -1952,6 +1954,238 @@ body {
           overflowButton.el().style.cursor = "pointer";
         }
 
+        showVideoJsOverflowMenuHtml(player, adaptiveSources, progressiveSources, sourcesFormatsAndResolutions) {
+          const MATERIAL_NAVIGATE_NEXT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z" fill="#fff"/></svg>';
+          const MATERIAL_NAVIGATE_BEFORE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M560-240 320-480l240-240 56 56-184 184 184 184-56 56Z" fill="#fff"/></svg>';
+          const MATERIAL_DONE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z" fill="#fff"/></svg>';
+
+          const currentPlaybackRate = player.playbackRate();
+
+          player.on(["playing"], function (e) {
+            // can only set a playback rate when the player is actually playing; setting before "playing" has no effect
+            player.playbackRate(currentPlaybackRate);
+          });
+
+          // Combine adaptive and progressive sources
+          const sources = [...adaptiveSources, ...progressiveSources];
+
+          if (this.CURRENT_VIDEO_RESOLUTION == null && this.CURRENT_VIDEO_FORMAT == null) {
+            const currentSource = player.currentSrc();
+            const segments = currentSource.split('/');
+
+            this.CURRENT_VIDEO_RESOLUTION = segments[segments.length - 1];
+            this.CURRENT_VIDEO_FORMAT = segments[segments.length - 2];
+
+            if (this.CURRENT_VIDEO_FORMAT !== 'mp4' && this.CURRENT_VIDEO_FORMAT !== 'webm' && this.CURRENT_VIDEO_FORMAT !== 'ogv') {
+              this.CURRENT_VIDEO_FORMAT = 'm3u8';
+              this.CURRENT_VIDEO_RESOLUTION = 'auto';
+            }
+          }
+
+          this.showOverflowMenuMain(player, sourcesFormatsAndResolutions, currentPlaybackRate, MATERIAL_NAVIGATE_NEXT_SVG, MATERIAL_NAVIGATE_BEFORE_SVG, MATERIAL_DONE_SVG, sources);
+        }
+
+        showOverflowMenuMain(player, sourcesFormatsAndResolutions, currentPlaybackRate, MATERIAL_NAVIGATE_NEXT_SVG, MATERIAL_NAVIGATE_BEFORE_SVG, MATERIAL_DONE_SVG, sources) {
+          const html = '\
+            <div class="video-js-overflow-menu">\
+              <button type="button" class="video-js-overflow-format-button"><label class="video-js-overflow-button-label"><span>Quality</span><span class="video-js-current-selection-span">' + this.CURRENT_VIDEO_FORMAT + ' ' + this.CURRENT_VIDEO_RESOLUTION + MATERIAL_NAVIGATE_NEXT_SVG + '</span></label></button>\
+              <button type="button" class="video-js-overflow-playback-speed-button"><label class="video-js-overflow-button-label"><span>Playback speed</span><span class="video-js-current-selection-span">' + currentPlaybackRate + 'x' + MATERIAL_NAVIGATE_NEXT_SVG + '</span></label></button>\
+            </div>';
+
+          if ($("#video-player .vjs-control-bar .video-js-overflow-menu").length) {
+            $("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
+          }
+          else {
+            $("#video-player .vjs-control-bar").append(html);
+          }
+
+          $('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-button').click((event) => {
+            event.stopPropagation();
+
+            this.showOverflowMenuFormats(player, sourcesFormatsAndResolutions, currentPlaybackRate, MATERIAL_NAVIGATE_NEXT_SVG, MATERIAL_NAVIGATE_BEFORE_SVG, MATERIAL_DONE_SVG, sources);
+          });
+
+          $('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-playback-speed-button').click((event) => {
+            event.stopPropagation();
+
+            this.showPlayRateMenu(player, sourcesFormatsAndResolutions, currentPlaybackRate, MATERIAL_NAVIGATE_NEXT_SVG, MATERIAL_NAVIGATE_BEFORE_SVG, MATERIAL_DONE_SVG, sources);
+          });
+        }
+
+        showOverflowMenuFormats(player, sourcesFormatsAndResolutions, currentPlaybackRate, MATERIAL_NAVIGATE_NEXT_SVG, MATERIAL_NAVIGATE_BEFORE_SVG, MATERIAL_DONE_SVG, sources) {
+          // find the (available) formats that actually have sources; not empty array
+          const availableFormats = Object.keys(sourcesFormatsAndResolutions).filter(key => Array.isArray(sourcesFormatsAndResolutions[key]) && sourcesFormatsAndResolutions[key].length > 0);
+
+          let html = '<div class="video-js-overflow-menu">\
+            <button type="button" class="video-js-back-to-overflow-main-button"><span>Format</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
+
+          availableFormats.forEach((availableFormat) => {
+            if (this.CURRENT_VIDEO_FORMAT === availableFormat) {
+              html += '<button type="button" class="video-js-overflow-format-explicit-button video-js-overflow-explicit-selected-button" data-format="' + availableFormat + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + availableFormat + '</span></button>';
+            }
+            else {
+              html += '<button type="button" class="video-js-overflow-format-explicit-button" data-format="' + availableFormat + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + availableFormat + '</span></button>';
+            }
+          });
+
+          html += '</div>';
+
+          $("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
+
+          $('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-explicit-button').click((event) => {
+            event.stopPropagation();
+
+            const selectedVideoFormat = $(event.target).closest('button').data('format');
+
+            this.showOverflowMenuResolutions(player, sourcesFormatsAndResolutions, selectedVideoFormat, currentPlaybackRate, MATERIAL_NAVIGATE_NEXT_SVG, MATERIAL_NAVIGATE_BEFORE_SVG, MATERIAL_DONE_SVG, sources);
+          });
+
+          // back from formats menu to main menu
+          $('.video-js-back-to-overflow-main-button').click((event) => {
+            event.stopPropagation();
+
+            this.showOverflowMenuMain(player, sourcesFormatsAndResolutions, currentPlaybackRate, MATERIAL_NAVIGATE_NEXT_SVG, MATERIAL_NAVIGATE_BEFORE_SVG, MATERIAL_DONE_SVG, sources);
+          });
+        }
+
+        showOverflowMenuResolutions(player, sourcesFormatsAndResolutions, selectedVideoFormat, currentPlaybackRate, MATERIAL_NAVIGATE_NEXT_SVG, MATERIAL_NAVIGATE_BEFORE_SVG, MATERIAL_DONE_SVG, sources) {
+          const resolutions = sourcesFormatsAndResolutions[selectedVideoFormat];
+
+          let html = '<div class="video-js-overflow-menu">\
+            <button type="button" class="video-js-back-to-overflow-formats-button"><span>Resolution</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
+
+          resolutions.forEach((resolution) => {
+            if (selectedVideoFormat === this.CURRENT_VIDEO_FORMAT && this.CURRENT_VIDEO_RESOLUTION === resolution) {
+              html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button video-js-overflow-explicit-selected-button" data-resolution="' + resolution + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + resolution + '</span></button>';
+            }
+            else {
+              html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button" data-resolution="' + resolution + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + resolution + '</span></button>';
+            }
+          });
+
+          if (selectedVideoFormat === 'm3u8') {
+            if (this.CURRENT_VIDEO_RESOLUTION === 'auto') {
+              html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button video-js-overflow-explicit-selected-button" data-resolution="auto"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>auto</span></button>';
+            }
+            else {
+              html += '<button type="button" class="video-js-overflow-format-resolution-explicit-button" data-resolution="auto"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>auto</span></button>';
+            }
+          }
+
+          html += '</div>';
+
+          $("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
+
+          // back from resolutions menu to formats menu
+          $('.video-js-back-to-overflow-formats-button').click((event) => {
+            event.stopPropagation();
+
+            this.showOverflowMenuFormats(player, sourcesFormatsAndResolutions, currentPlaybackRate, MATERIAL_NAVIGATE_NEXT_SVG, MATERIAL_NAVIGATE_BEFORE_SVG, MATERIAL_DONE_SVG, sources);
+          });
+
+          $('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button').click((event) => {
+            event.stopPropagation();
+
+            this.CURRENT_VIDEO_FORMAT = selectedVideoFormat;
+            this.CURRENT_VIDEO_RESOLUTION = $(event.target).closest('button').data('resolution');
+
+            $('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button .video-js-chosen-item').addClass('hidden-elem');
+            $('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-format-resolution-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
+
+            $(event.target).closest('button').addClass('video-js-overflow-explicit-selected-button');
+            $(event.target).closest('button').find('.video-js-chosen-item').removeClass('hidden-elem');
+
+            let source;
+
+            if (this.CURRENT_VIDEO_FORMAT === 'm3u8') {
+              if (this.CURRENT_VIDEO_RESOLUTION === 'auto') {
+                source = { src: sources[0].src, type: sources[0].type };
+              }
+              else {
+                for (const adaptiveSource of sources) {
+                  if (adaptiveSource.type !== 'application/x-mpegURL') continue;
+                  const segments = adaptiveSource.src.split('/');
+                  const adaptiveSourceResolution = segments[segments.length - 1];
+
+                  if (adaptiveSourceResolution === ('manifest-' + this.CURRENT_VIDEO_RESOLUTION + '.' + this.CURRENT_VIDEO_FORMAT)) {
+                    source = { src: adaptiveSource.src, type: adaptiveSource.type };
+                  }
+                }
+              }
+            }
+            else {
+              for (const progressiveSource of sources) {
+                if (progressiveSource.type === 'application/x-mpegURL') continue;
+                const segments = progressiveSource.src.split('/');
+
+                const progressiveSourceResolution = segments[segments.length - 1];
+                const progressiveSourceFormat = segments[segments.length - 2];
+
+                if (this.CURRENT_VIDEO_RESOLUTION === progressiveSourceResolution.split('.')[0] && this.CURRENT_VIDEO_FORMAT === progressiveSourceFormat) {
+                  source = { src: progressiveSource.src, type: progressiveSource.type };
+                }
+              }
+            }
+
+            const currentTime = player.currentTime();
+
+            player.src(source);
+            player.currentTime(currentTime);
+
+            player.play()
+              .then(function () {
+                // do nothing
+              })
+              .catch(function (error) {
+                console.log(error);
+              });
+          });
+        }
+
+        showPlayRateMenu(player, sourcesFormatsAndResolutions, currentPlaybackRate, MATERIAL_NAVIGATE_NEXT_SVG, MATERIAL_NAVIGATE_BEFORE_SVG, MATERIAL_DONE_SVG, sources) {
+          const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+
+          let html = '<div class="video-js-overflow-menu">\
+            <button type="button" class="video-js-back-to-overflow-main-button"><span>Playback speed</span>' + MATERIAL_NAVIGATE_BEFORE_SVG + '</button>';
+
+          playbackRates.forEach((playbackRate) => {
+            if (playbackRate === currentPlaybackRate) {
+              html += '<button type="button" class="video-js-overflow-explicit-button video-js-overflow-explicit-selected-button" data-playbackrate="' + playbackRate + '"><span class="video-js-chosen-item">' + MATERIAL_DONE_SVG + '</span><span>' + playbackRate + '</span></button>';
+            }
+            else {
+              html += '<button type="button" class="video-js-overflow-explicit-button" data-playbackrate="' + playbackRate + '"><span class="video-js-chosen-item hidden-elem">' + MATERIAL_DONE_SVG + '</span><span>' + playbackRate + '</span></button>';
+            }
+          });
+
+          html += '</div>';
+
+          $("#video-player .vjs-control-bar .video-js-overflow-menu").replaceWith(html);
+
+          $('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').click((event) => {
+            event.stopPropagation();
+
+            const selectedPlaybackRate = $(event.target).closest('button').data('playbackrate');
+
+            $('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button .video-js-chosen-item').addClass('hidden-elem');
+            $('#video-player .vjs-control-bar .video-js-overflow-menu .video-js-overflow-explicit-button').removeClass('video-js-overflow-explicit-selected-button');
+
+            $(event.target).closest('button').addClass('video-js-overflow-explicit-selected-button');
+            $(event.target).closest('button').find('.video-js-chosen-item').removeClass('hidden-elem');
+
+            player.playbackRate(selectedPlaybackRate);
+          });
+
+          $('.video-js-back-to-overflow-main-button').click((event) => {
+            event.stopPropagation();
+
+            this.showOverflowMenuMain(player, sourcesFormatsAndResolutions, currentPlaybackRate, MATERIAL_NAVIGATE_NEXT_SVG, MATERIAL_NAVIGATE_BEFORE_SVG, MATERIAL_DONE_SVG, sources);
+          });
+        }
+
+        removeOverflowMenuHtml() {
+          $('#video-player .vjs-control-bar .video-js-overflow-menu').remove();
+        }
+
         configurePlayerEvents(player) {
           player.on(["loadstart", "firstplay", "pause", "ended", "adplay", "adplaying", "adfirstplay", "adpause", "adended", "contentplay", "contentplaying", "contentfirstplay", "contentpause", "contentended", "contentupdate"], function (e) {});
           player.on(["fullscreenchange"], function (e) {
@@ -1991,8 +2225,56 @@ body {
         configurePlayerContextMenu(player) {
           player.el().addEventListener('contextmenu', (event) => {
             event.preventDefault();
-            this.showCustomContextMenu(event.pageX, event.pageY);
+            this.showCustomContextMenu(event.pageX, event.pageY, player);
           }, false);
+        }
+
+        showCustomContextMenu(x, y, player) {
+          let menu = $('#video-player-context-menu');
+
+          if ($(menu).length === 0) {
+            menu = $('<div id="video-player-context-menu" class="list-group"></div>');
+
+            $(menu).append('<a id="copy-video-url" class="list-group-item list-group-item-action p-1 hand bg-dark text-light">copy video url</a>');
+
+            if (!this.IS_STREAMING) {
+              $(menu).append('<a id="copy-video-url-at-current-time" class="list-group-item list-group-item-action p-1 hand bg-dark text-light">copy video url at current time</a>');
+            }
+
+            $(menu).css({
+              position: 'absolute'
+            });
+
+            $(menu).appendTo('body');
+
+            $('#copy-video-url').click((event) => {
+              event.stopPropagation();
+
+              const videoUrl = window.location.origin + '/watch?v=' + this.VIDEO_ID;
+              this.setClipboard(videoUrl);
+
+              $(menu).remove();
+            });
+
+            $('#copy-video-url-at-current-time').click((event) => {
+              event.stopPropagation();
+
+              const videoUrlAtCurrentTime = window.location.origin + '/watch?v=' + this.VIDEO_ID + '&t=' + Math.floor(player.currentTime());
+              this.setClipboard(videoUrlAtCurrentTime);
+
+              $(menu).remove();
+            });
+          }
+
+          $(menu).css({
+            left: x + 'px',
+            top: y + 'px',
+            display: 'block'
+          });
+
+          $(document).click(function () {
+            $(menu).remove();
+          });
         }
 
         jumpToUrlTimeParameter(player) {

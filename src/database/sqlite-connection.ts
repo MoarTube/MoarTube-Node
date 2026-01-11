@@ -60,11 +60,17 @@ export function initializeDatabaseSchema(): void {
   }
 
   try {
-    // Resolve migrations folder path relative to project root
+    // Resolve migrations folder path
+    // In development (tsx): src/database/sqlite-connection.ts -> ../../drizzle/sqlite
+    // In production (bundled): dist/moartube-node.js -> ./drizzle/sqlite (copied by tsup)
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    const projectRoot = path.resolve(__dirname, '..', '..');
-    const migrationsFolder = path.join(projectRoot, 'drizzle', 'sqlite');
+    
+    // Check if we're running from the bundled dist file or from source
+    const isBundled = __dirname.includes('dist') || !__filename.includes('database');
+    const migrationsFolder = isBundled
+      ? path.join(__dirname, 'drizzle', 'sqlite')
+      : path.resolve(__dirname, '..', '..', 'drizzle', 'sqlite');
 
     migrate(drizzleDb, { migrationsFolder });
 

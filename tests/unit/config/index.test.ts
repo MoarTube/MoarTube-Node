@@ -239,7 +239,7 @@ describe('config/index.ts', () => {
       const config = Config.initialize(mockBaseDir, mockConfigFileName);
 
       expect(getEnv).toHaveBeenCalledTimes(1);
-      expect(initializePaths).toHaveBeenCalledWith(mockBaseDir, mockAppConfig.isDeveloperMode);
+      expect(initializePaths).toHaveBeenCalledWith(mockBaseDir, mockAppConfig.isDeveloperMode, undefined);
       expect(validateAppConfig).toHaveBeenCalledTimes(1);
       expect(initializeUrls).toHaveBeenCalledWith(mockAppConfig.indexerConfig, mockAppConfig.aliaserConfig);
       expect(validateNodeSettings).toHaveBeenCalledTimes(1);
