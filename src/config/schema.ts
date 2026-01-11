@@ -148,7 +148,6 @@ export const AliaserConfigSchema = z.object({
  * Main application config schema (config.json)
  */
 export const AppConfigSchema = z.object({
-  isDeveloperMode: z.boolean().default(false),
   indexerConfig: IndexerConfigSchema,
   aliaserConfig: AliaserConfigSchema,
 });

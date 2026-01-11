@@ -507,7 +507,6 @@ describe('config/schema.ts', () => {
     describe('AppConfigSchema', () => {
       it('should validate valid app config', () => {
         const validConfig = {
-          isDeveloperMode: false,
           indexerConfig: {
             httpProtocol: 'https' as const,
             host: 'indexer.moartube.com',
@@ -525,23 +524,11 @@ describe('config/schema.ts', () => {
         expect(result.data).toEqual(validConfig);
       });
 
-      it('should use default for isDeveloperMode', () => {
-        const configWithoutDevMode = {
-          indexerConfig: {
-            httpProtocol: 'https' as const,
-            host: 'indexer.moartube.com',
-            port: 443,
-          },
-          aliaserConfig: {
-            httpProtocol: 'https' as const,
-            host: 'aliaser.moartube.com',
-            port: 443,
-          },
-        };
+      it('should require indexerConfig and aliaserConfig', () => {
+        const configMissingFields = {};
 
-        const result = AppConfigSchema.safeParse(configWithoutDevMode);
-        expect(result.success).toBe(true);
-        expect(result.data?.isDeveloperMode).toBe(false);
+        const result = AppConfigSchema.safeParse(configMissingFields);
+        expect(result.success).toBe(false);
       });
     });
   });
@@ -635,7 +622,6 @@ describe('config/schema.ts', () => {
     describe('validateAppConfig', () => {
       it('should validate and return valid app config', () => {
         const validConfig = {
-          isDeveloperMode: true,
           indexerConfig: {
             httpProtocol: 'https' as const,
             host: 'indexer.moartube.com',
@@ -649,13 +635,11 @@ describe('config/schema.ts', () => {
         };
 
         const result = validateAppConfig(validConfig);
-        expect(result.isDeveloperMode).toBe(true);
         expect(result.indexerConfig.host).toBe('indexer.moartube.com');
       });
 
       it('should throw error for invalid app config', () => {
         const invalidConfig = {
-          isDeveloperMode: true,
           indexerConfig: {
             httpProtocol: 'https' as const,
             host: '', // Invalid empty host
@@ -750,7 +734,6 @@ describe('config/schema.ts', () => {
       };
 
       const appConfig: AppConfigValidated = {
-        isDeveloperMode: false,
         indexerConfig: {
           httpProtocol: 'https',
           host: 'indexer.moartube.com',
@@ -775,7 +758,7 @@ describe('config/schema.ts', () => {
 
       // If these compile without errors, the types are correct
       expect(nodeSettings.nodeListeningPort).toBe(8080);
-      expect(appConfig.isDeveloperMode).toBe(false);
+      expect(appConfig.indexerConfig.host).toBe('indexer.moartube.com');
       expect(nodeId.moarTubeTokenProof).toBe('token-proof');
       expect(tracker.lastCheckedCommentsTimestamp).toBe(1234567890);
     });

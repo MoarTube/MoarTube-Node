@@ -47,6 +47,9 @@ vi.mock('@config/index.js', () => ({
       dataDirectoryPath: '/data',
       databaseFilePath: '/data/db.sqlite',
     },
+    runtime: {
+      isDevelopment: false,
+    },
     nodeSettings: {
       databaseConfig: {
         databaseDialect: 'sqlite',
@@ -100,6 +103,13 @@ describe('ClusterMaster', () => {
     warn: ReturnType<typeof vi.fn>;
     error: ReturnType<typeof vi.fn>;
   };
+  let mockIndexer: {
+    submitVideoToIndex: ReturnType<typeof vi.fn>;
+  };
+  let mockCloudflare: {
+    purgeAllWatchPages: ReturnType<typeof vi.fn>;
+    purgeNodePage: ReturnType<typeof vi.fn>;
+  };
   let originalProcessOn: typeof process.on;
   let cluster: typeof import('node:cluster').default;
 
@@ -115,6 +125,15 @@ describe('ClusterMaster', () => {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
+    };
+
+    mockIndexer = {
+      submitVideoToIndex: vi.fn().mockResolvedValue({ isError: false }),
+    };
+
+    mockCloudflare = {
+      purgeAllWatchPages: vi.fn().mockResolvedValue(undefined),
+      purgeNodePage: vi.fn().mockResolvedValue(undefined),
     };
 
     // Store original process.on
@@ -154,37 +173,15 @@ describe('ClusterMaster', () => {
   });
 
   describe('constructor', () => {
-    it('should create a ClusterMaster with default options', () => {
-      const master = new ClusterMaster();
-      expect(master).toBeDefined();
-    });
-
-    it('should create a ClusterMaster with custom logger', () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      expect(master).toBeDefined();
-    });
-
-    it('should create a ClusterMaster with indexer operations', () => {
-      const indexer = {
-        doIndexUpdate: vi.fn(),
-      };
-      const master = new ClusterMaster({ indexer });
-      expect(master).toBeDefined();
-    });
-
-    it('should create a ClusterMaster with cloudflare operations', () => {
-      const cloudflare = {
-        purgeAllWatchPages: vi.fn(),
-        purgeNodePage: vi.fn(),
-      };
-      const master = new ClusterMaster({ cloudflare });
+    it('should create a ClusterMaster with all required services', () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       expect(master).toBeDefined();
     });
   });
 
   describe('start', () => {
     it('should start the cluster master', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
 
       expect(mockLogger.info).toHaveBeenCalledWith('Starting MoarTube Node cluster master');
@@ -192,7 +189,7 @@ describe('ClusterMaster', () => {
     });
 
     it('should not start twice', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
       await master.start();
 
@@ -204,32 +201,280 @@ describe('ClusterMaster', () => {
     });
 
     it('should set up error handlers', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
 
       expect(process.on).toHaveBeenCalledWith('uncaughtException', expect.any(Function));
       expect(process.on).toHaveBeenCalledWith('unhandledRejection', expect.any(Function));
     });
 
-    it('should initialize database for SQLite', async () => {
-      const { createDatabase, initializeDatabaseSchema } = await import('@/database/connection.js');
-
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      expect(createDatabase).toHaveBeenCalledWith({
-        dialect: 'sqlite',
-        filepath: '/data/db.sqlite',
-      });
-      expect(initializeDatabaseSchema).toHaveBeenCalled();
-    });
-
-    it('should initialize database for PostgreSQL', async () => {
+    it('should log development mode when isDevelopment is true', async () => {
       const { getConfig } = await import('@config/index.js');
       (getConfig as ReturnType<typeof vi.fn>).mockReturnValue({
         paths: {
           dataDirectoryPath: '/data',
           databaseFilePath: '/data/db.sqlite',
+        },
+        runtime: {
+          isDevelopment: true,
+        },
+        nodeSettings: {
+          databaseConfig: {
+            databaseDialect: 'sqlite',
+          },
+          nodeId: 'existing-node-id',
+        },
+        updateNodeSettings: vi.fn(),
+      });
+
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      expect(mockLogger.info).toHaveBeenCalledWith('Running in development mode');
+    });
+
+    // Note: Database initialization tests are now in moartube-node.test.ts
+    // The ClusterMaster no longer initializes the database on start() - 
+    // this is done in startMaster() before ClusterMaster is created.
+    // The initializeDatabase() method is only used for restart_database IPC calls.
+
+    it('should generate new node ID if not present', async () => {
+      const { getConfig } = await import('@config/index.js');
+      const mockUpdateNodeSettings = vi.fn();
+      (getConfig as ReturnType<typeof vi.fn>).mockReturnValue({
+        paths: {
+          dataDirectoryPath: '/data',
+          databaseFilePath: '/data/db.sqlite',
+        },
+        runtime: {
+          isDevelopment: false,
+        },
+        nodeSettings: {
+          databaseConfig: {
+            databaseDialect: 'sqlite',
+          },
+          nodeId: undefined,
+        },
+        updateNodeSettings: mockUpdateNodeSettings,
+      });
+
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      expect(mockUpdateNodeSettings).toHaveBeenCalledWith({
+        nodeId: expect.any(String),
+      });
+      expect(mockLogger.info).toHaveBeenCalledWith('Generated new node ID');
+    });
+
+    it('should generate new node ID if empty string', async () => {
+      const { getConfig } = await import('@config/index.js');
+      const mockUpdateNodeSettings = vi.fn();
+      (getConfig as ReturnType<typeof vi.fn>).mockReturnValue({
+        paths: {
+          dataDirectoryPath: '/data',
+          databaseFilePath: '/data/db.sqlite',
+        },
+        runtime: {
+          isDevelopment: false,
+        },
+        nodeSettings: {
+          databaseConfig: {
+            databaseDialect: 'sqlite',
+          },
+          nodeId: '',
+        },
+        updateNodeSettings: mockUpdateNodeSettings,
+      });
+
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      expect(mockUpdateNodeSettings).toHaveBeenCalled();
+    });
+
+    it('should fork workers based on CPU count', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      expect(cluster.fork).toHaveBeenCalledTimes(2); // Mock has 2 CPUs
+      expect(mockLogger.info).toHaveBeenCalledWith('Forked 2 workers');
+    });
+
+    it('should set up worker exit handler', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      expect(cluster.on).toHaveBeenCalledWith('exit', expect.any(Function));
+    });
+
+    it('should set up IPC handlers', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      expect(mockIpcOn).toHaveBeenCalledWith('get_jwt_secret', expect.any(Function));
+      expect(mockIpcOn).toHaveBeenCalledWith('update_node_name', expect.any(Function));
+      expect(mockIpcOn).toHaveBeenCalledWith('websocket_broadcast', expect.any(Function));
+      expect(mockIpcStartListening).toHaveBeenCalled();
+    });
+  });
+
+  describe('stop', () => {
+    it('should stop the cluster master', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+      await master.stop();
+
+      expect(mockLogger.info).toHaveBeenCalledWith('Stopping cluster master');
+    });
+
+    it('should return early if not running', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.stop();
+
+      expect(mockLogger.info).not.toHaveBeenCalledWith('Stopping cluster master');
+    });
+
+    it('should clear interval handles', async () => {
+      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
+
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+      await master.stop();
+
+      expect(clearIntervalSpy).toHaveBeenCalled();
+    });
+
+    it('should kill all workers on stop', async () => {
+      const mockWorker = { id: 1, kill: vi.fn() };
+      mockIpcGetWorkers.mockReturnValue([mockWorker]);
+
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+      await master.stop();
+
+      expect(mockWorker.kill).toHaveBeenCalledWith('SIGTERM');
+    });
+  });
+
+  describe('IPC handlers', () => {
+    it('should handle get_jwt_secret request', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      const mockWorker = { id: 1 };
+      ipcHandlers['get_jwt_secret']?.({ cmd: 'get_jwt_secret' }, mockWorker);
+
+      expect(mockIpcSendToWorker).toHaveBeenCalledWith(mockWorker, {
+        cmd: 'get_jwt_secret_response',
+        jwtSecret: expect.any(String),
+      });
+    });
+
+    it('should not send jwt_secret when worker is undefined', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      // Call without a worker (undefined)
+      ipcHandlers['get_jwt_secret']?.({ cmd: 'get_jwt_secret' }, undefined);
+
+      expect(mockIpcSendToWorker).not.toHaveBeenCalled();
+    });
+
+    it('should handle update_node_name request', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      ipcHandlers['update_node_name']?.({ cmd: 'update_node_name', nodeName: 'New Node Name' });
+
+      expect(mockIpcBroadcast).toHaveBeenCalledWith({
+        cmd: 'update_node_name_response',
+        nodeName: 'New Node Name',
+      });
+    });
+
+    it('should handle websocket_broadcast request', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      const wsMessage = { eventName: 'test', data: 'test' };
+      ipcHandlers['websocket_broadcast']?.({ cmd: 'websocket_broadcast', message: wsMessage });
+
+      expect(mockIpcBroadcast).toHaveBeenCalledWith({
+        cmd: 'websocket_broadcast_response',
+        message: wsMessage,
+      });
+    });
+
+    it('should handle websocket_broadcast_chat request', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      const wsMessage = { eventName: 'chat', videoId: 'vid123', data: 'message' };
+      ipcHandlers['websocket_broadcast_chat']?.({ cmd: 'websocket_broadcast_chat', message: wsMessage });
+
+      expect(mockIpcBroadcast).toHaveBeenCalledWith({
+        cmd: 'websocket_broadcast_chat_response',
+        message: wsMessage,
+      });
+    });
+
+    it('should handle live_stream_worker_stats_response', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      // Should not throw
+      ipcHandlers['live_stream_worker_stats_response']?.({
+        cmd: 'live_stream_worker_stats_response',
+        workerId: 1,
+        liveStreamWatchingCounts: { video1: 5 },
+      });
+
+      expect(true).toBe(true);
+    });
+
+    it('should handle restart_server request', async () => {
+      const mockWorker = { id: 1, kill: vi.fn() };
+      mockIpcGetWorkers.mockReturnValue([mockWorker]);
+
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      ipcHandlers['restart_server']?.({ cmd: 'restart_server' });
+
+      expect(mockLogger.info).toHaveBeenCalledWith('Restarting all workers');
+      expect(mockWorker.kill).toHaveBeenCalledWith('SIGTERM');
+    });
+
+    it('should handle restart_database request', async () => {
+      const { createDatabase, initializeDatabaseSchema } = await import('@/database/connection.js');
+
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
+      await master.start();
+
+      await ipcHandlers['restart_database']?.({
+        cmd: 'restart_database',
+        databaseDialect: 'sqlite',
+      });
+
+      expect(mockLogger.info).toHaveBeenCalledWith('Changing database configuration to: sqlite');
+      expect(createDatabase).toHaveBeenCalledWith({
+        dialect: 'sqlite',
+        filepath: '/data/db.sqlite',
+      });
+      expect(initializeDatabaseSchema).toHaveBeenCalled();
+      expect(mockIpcBroadcast).toHaveBeenCalledWith({ cmd: 'restart_database_response' });
+    });
+
+    it('should handle restart_database request for postgres', async () => {
+      const { getConfig } = await import('@config/index.js');
+      (getConfig as ReturnType<typeof vi.fn>).mockReturnValue({
+        paths: {
+          dataDirectoryPath: '/data',
+          databaseFilePath: '/data/db.sqlite',
+        },
+        runtime: {
+          isDevelopment: false,
         },
         nodeSettings: {
           databaseConfig: {
@@ -247,23 +492,34 @@ describe('ClusterMaster', () => {
         updateNodeSettings: vi.fn(),
       });
 
-      const { createDatabase } = await import('@/database/connection.js');
+      const { createDatabase, initializeDatabaseSchema } = await import('@/database/connection.js');
 
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
 
+      await ipcHandlers['restart_database']?.({
+        cmd: 'restart_database',
+        databaseDialect: 'postgres',
+      });
+
+      expect(mockLogger.info).toHaveBeenCalledWith('Changing database configuration to: postgres');
       expect(createDatabase).toHaveBeenCalledWith({
         dialect: 'postgres',
         connectionString: 'postgres://user:pass@localhost:5432/moartube',
       });
+      expect(initializeDatabaseSchema).toHaveBeenCalled();
+      expect(mockIpcBroadcast).toHaveBeenCalledWith({ cmd: 'restart_database_response' });
     });
 
-    it('should throw error if postgres config is missing', async () => {
+    it('should throw error on restart_database if postgres config is missing', async () => {
       const { getConfig } = await import('@config/index.js');
       (getConfig as ReturnType<typeof vi.fn>).mockReturnValue({
         paths: {
           dataDirectoryPath: '/data',
           databaseFilePath: '/data/db.sqlite',
+        },
+        runtime: {
+          isDevelopment: false,
         },
         nodeSettings: {
           databaseConfig: {
@@ -275,226 +531,15 @@ describe('ClusterMaster', () => {
         updateNodeSettings: vi.fn(),
       });
 
-      const master = new ClusterMaster({ logger: mockLogger as any });
-
-      await expect(master.start()).rejects.toThrow(
-        'Postgres configuration is required for postgres database dialect'
-      );
-    });
-
-    it('should generate new node ID if not present', async () => {
-      const { getConfig } = await import('@config/index.js');
-      const mockUpdateNodeSettings = vi.fn();
-      (getConfig as ReturnType<typeof vi.fn>).mockReturnValue({
-        paths: {
-          dataDirectoryPath: '/data',
-          databaseFilePath: '/data/db.sqlite',
-        },
-        nodeSettings: {
-          databaseConfig: {
-            databaseDialect: 'sqlite',
-          },
-          nodeId: undefined,
-        },
-        updateNodeSettings: mockUpdateNodeSettings,
-      });
-
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
 
-      expect(mockUpdateNodeSettings).toHaveBeenCalledWith({
-        nodeId: expect.any(String),
-      });
-      expect(mockLogger.info).toHaveBeenCalledWith('Generated new node ID');
-    });
-
-    it('should generate new node ID if empty string', async () => {
-      const { getConfig } = await import('@config/index.js');
-      const mockUpdateNodeSettings = vi.fn();
-      (getConfig as ReturnType<typeof vi.fn>).mockReturnValue({
-        paths: {
-          dataDirectoryPath: '/data',
-          databaseFilePath: '/data/db.sqlite',
-        },
-        nodeSettings: {
-          databaseConfig: {
-            databaseDialect: 'sqlite',
-          },
-          nodeId: '',
-        },
-        updateNodeSettings: mockUpdateNodeSettings,
-      });
-
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      expect(mockUpdateNodeSettings).toHaveBeenCalled();
-    });
-
-    it('should fork workers based on CPU count', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      expect(cluster.fork).toHaveBeenCalledTimes(2); // Mock has 2 CPUs
-      expect(mockLogger.info).toHaveBeenCalledWith('Forked 2 workers');
-    });
-
-    it('should set up worker exit handler', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      expect(cluster.on).toHaveBeenCalledWith('exit', expect.any(Function));
-    });
-
-    it('should set up IPC handlers', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      expect(mockIpcOn).toHaveBeenCalledWith('get_jwt_secret', expect.any(Function));
-      expect(mockIpcOn).toHaveBeenCalledWith('update_node_name', expect.any(Function));
-      expect(mockIpcOn).toHaveBeenCalledWith('websocket_broadcast', expect.any(Function));
-      expect(mockIpcStartListening).toHaveBeenCalled();
-    });
-  });
-
-  describe('stop', () => {
-    it('should stop the cluster master', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-      await master.stop();
-
-      expect(mockLogger.info).toHaveBeenCalledWith('Stopping cluster master');
-    });
-
-    it('should return early if not running', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.stop();
-
-      expect(mockLogger.info).not.toHaveBeenCalledWith('Stopping cluster master');
-    });
-
-    it('should clear interval handles', async () => {
-      const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
-
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-      await master.stop();
-
-      expect(clearIntervalSpy).toHaveBeenCalled();
-    });
-
-    it('should kill all workers on stop', async () => {
-      const mockWorker = { id: 1, kill: vi.fn() };
-      mockIpcGetWorkers.mockReturnValue([mockWorker]);
-
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-      await master.stop();
-
-      expect(mockWorker.kill).toHaveBeenCalledWith('SIGTERM');
-    });
-  });
-
-  describe('IPC handlers', () => {
-    it('should handle get_jwt_secret request', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      const mockWorker = { id: 1 };
-      ipcHandlers['get_jwt_secret']?.({ cmd: 'get_jwt_secret' }, mockWorker);
-
-      expect(mockIpcSendToWorker).toHaveBeenCalledWith(mockWorker, {
-        cmd: 'get_jwt_secret_response',
-        jwtSecret: expect.any(String),
-      });
-    });
-
-    it('should not send jwt_secret when worker is undefined', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      // Call without a worker (undefined)
-      ipcHandlers['get_jwt_secret']?.({ cmd: 'get_jwt_secret' }, undefined);
-
-      expect(mockIpcSendToWorker).not.toHaveBeenCalled();
-    });
-
-    it('should handle update_node_name request', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      ipcHandlers['update_node_name']?.({ cmd: 'update_node_name', nodeName: 'New Node Name' });
-
-      expect(mockIpcBroadcast).toHaveBeenCalledWith({
-        cmd: 'update_node_name_response',
-        nodeName: 'New Node Name',
-      });
-    });
-
-    it('should handle websocket_broadcast request', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      const wsMessage = { eventName: 'test', data: 'test' };
-      ipcHandlers['websocket_broadcast']?.({ cmd: 'websocket_broadcast', message: wsMessage });
-
-      expect(mockIpcBroadcast).toHaveBeenCalledWith({
-        cmd: 'websocket_broadcast_response',
-        message: wsMessage,
-      });
-    });
-
-    it('should handle websocket_broadcast_chat request', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      const wsMessage = { eventName: 'chat', videoId: 'vid123', data: 'message' };
-      ipcHandlers['websocket_broadcast_chat']?.({ cmd: 'websocket_broadcast_chat', message: wsMessage });
-
-      expect(mockIpcBroadcast).toHaveBeenCalledWith({
-        cmd: 'websocket_broadcast_chat_response',
-        message: wsMessage,
-      });
-    });
-
-    it('should handle live_stream_worker_stats_response', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      // Should not throw
-      ipcHandlers['live_stream_worker_stats_response']?.({
-        cmd: 'live_stream_worker_stats_response',
-        workerId: 1,
-        liveStreamWatchingCounts: { video1: 5 },
-      });
-
-      expect(true).toBe(true);
-    });
-
-    it('should handle restart_server request', async () => {
-      const mockWorker = { id: 1, kill: vi.fn() };
-      mockIpcGetWorkers.mockReturnValue([mockWorker]);
-
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      ipcHandlers['restart_server']?.({ cmd: 'restart_server' });
-
-      expect(mockLogger.info).toHaveBeenCalledWith('Restarting all workers');
-      expect(mockWorker.kill).toHaveBeenCalledWith('SIGTERM');
-    });
-
-    it('should handle restart_database request', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
-      await master.start();
-
-      await ipcHandlers['restart_database']?.({
-        cmd: 'restart_database',
-        databaseDialect: 'sqlite',
-      });
-
-      expect(mockLogger.info).toHaveBeenCalledWith('Changing database configuration to: sqlite');
-      expect(mockIpcBroadcast).toHaveBeenCalledWith({ cmd: 'restart_database_response' });
+      await expect(
+        ipcHandlers['restart_database']?.({
+          cmd: 'restart_database',
+          databaseDialect: 'postgres',
+        })
+      ).rejects.toThrow('Postgres configuration is required for postgres database dialect');
     });
   });
 
@@ -507,7 +552,7 @@ describe('ClusterMaster', () => {
         }
       });
 
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Reset fork calls from start
@@ -529,7 +574,7 @@ describe('ClusterMaster', () => {
         }
       });
 
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
       await master.stop();
 
@@ -546,7 +591,7 @@ describe('ClusterMaster', () => {
 
   describe('periodic tasks', () => {
     it('should start periodic tasks', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Verify intervals were set up (they will be cleared on stop)
@@ -554,7 +599,7 @@ describe('ClusterMaster', () => {
     });
 
     it('should request live stream stats periodically', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Advance timers by 1 second
@@ -564,7 +609,7 @@ describe('ClusterMaster', () => {
     });
 
     it('should broadcast live stream stats update periodically', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Advance timers by 1 second
@@ -577,34 +622,28 @@ describe('ClusterMaster', () => {
     });
 
     it('should run cloudflare purge task when cloudflare is configured', async () => {
-      const mockCloudflare = {
+      const testCloudflare = {
         purgeAllWatchPages: vi.fn().mockResolvedValue(undefined),
         purgeNodePage: vi.fn().mockResolvedValue(undefined),
       };
 
-      const master = new ClusterMaster({
-        logger: mockLogger as any,
-        cloudflare: mockCloudflare,
-      });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, testCloudflare as any);
       await master.start();
 
       // Advance timers by 10 minutes
       await vi.advanceTimersByTimeAsync(60000 * 10);
 
-      expect(mockCloudflare.purgeAllWatchPages).toHaveBeenCalled();
-      expect(mockCloudflare.purgeNodePage).toHaveBeenCalled();
+      expect(testCloudflare.purgeAllWatchPages).toHaveBeenCalled();
+      expect(testCloudflare.purgeNodePage).toHaveBeenCalled();
     });
 
     it('should handle cloudflare purge errors', async () => {
-      const mockCloudflare = {
+      const testCloudflare = {
         purgeAllWatchPages: vi.fn().mockRejectedValue(new Error('Purge failed')),
         purgeNodePage: vi.fn().mockResolvedValue(undefined),
       };
 
-      const master = new ClusterMaster({
-        logger: mockLogger as any,
-        cloudflare: mockCloudflare,
-      });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, testCloudflare as any);
       await master.start();
 
       // Advance timers by 10 minutes
@@ -619,7 +658,7 @@ describe('ClusterMaster', () => {
 
   describe('index update task', () => {
     it('should skip when no indexer is configured', async () => {
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Advance timers by 3 seconds
@@ -636,20 +675,17 @@ describe('ClusterMaster', () => {
         run: vi.fn(),
       });
 
-      const mockIndexer = {
-        doIndexUpdate: vi.fn(),
+      const testIndexer = {
+        submitVideoToIndex: vi.fn(),
       };
 
-      const master = new ClusterMaster({
-        logger: mockLogger as any,
-        indexer: mockIndexer,
-      });
+      const master = new ClusterMaster(mockLogger as any, testIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Advance timers by 3 seconds
       await vi.advanceTimersByTimeAsync(3000);
 
-      expect(mockIndexer.doIndexUpdate).not.toHaveBeenCalled();
+      expect(testIndexer.submitVideoToIndex).not.toHaveBeenCalled();
     });
 
     it('should update outdated videos', async () => {
@@ -659,6 +695,9 @@ describe('ClusterMaster', () => {
         paths: {
           dataDirectoryPath: '/data',
           databaseFilePath: '/data/db.sqlite',
+        },
+        runtime: {
+          isDevelopment: false,
         },
         nodeSettings: {
           databaseConfig: {
@@ -688,20 +727,17 @@ describe('ClusterMaster', () => {
         run: mockDbRun,
       });
 
-      const mockIndexer = {
-        doIndexUpdate: vi.fn().mockResolvedValue({ isError: false }),
+      const testIndexer = {
+        submitVideoToIndex: vi.fn().mockResolvedValue({ isError: false }),
       };
 
-      const master = new ClusterMaster({
-        logger: mockLogger as any,
-        indexer: mockIndexer,
-      });
+      const master = new ClusterMaster(mockLogger as any, testIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Advance timers by 3 seconds
       await vi.advanceTimersByTimeAsync(3000);
 
-      expect(mockIndexer.doIndexUpdate).toHaveBeenCalledWith({
+      expect(testIndexer.submitVideoToIndex).toHaveBeenCalledWith({
         videoId: 'vid1',
         title: 'Test Video',
         tags: 'test,video',
@@ -737,14 +773,11 @@ describe('ClusterMaster', () => {
         run: vi.fn(),
       });
 
-      const mockIndexer = {
-        doIndexUpdate: vi.fn().mockResolvedValue({ isError: true, message: 'Update failed' }),
+      const testIndexer = {
+        submitVideoToIndex: vi.fn().mockResolvedValue({ isError: true, message: 'Update failed' }),
       };
 
-      const master = new ClusterMaster({
-        logger: mockLogger as any,
-        indexer: mockIndexer,
-      });
+      const master = new ClusterMaster(mockLogger as any, testIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Advance timers by 3 seconds
@@ -764,14 +797,11 @@ describe('ClusterMaster', () => {
         }),
       });
 
-      const mockIndexer = {
-        doIndexUpdate: vi.fn(),
+      const testIndexer = {
+        submitVideoToIndex: vi.fn(),
       };
 
-      const master = new ClusterMaster({
-        logger: mockLogger as any,
-        indexer: mockIndexer,
-      });
+      const master = new ClusterMaster(mockLogger as any, testIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Advance timers by 3 seconds
@@ -789,6 +819,9 @@ describe('ClusterMaster', () => {
         paths: {
           dataDirectoryPath: '/data',
           databaseFilePath: '/data/db.sqlite',
+        },
+        runtime: {
+          isDevelopment: false,
         },
         nodeSettings: {
           databaseConfig: {
@@ -815,21 +848,18 @@ describe('ClusterMaster', () => {
         run: vi.fn(),
       });
 
-      const mockIndexer = {
-        doIndexUpdate: vi.fn(),
+      const testIndexer = {
+        submitVideoToIndex: vi.fn(),
       };
 
-      const master = new ClusterMaster({
-        logger: mockLogger as any,
-        indexer: mockIndexer,
-      });
+      const master = new ClusterMaster(mockLogger as any, testIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Advance timers by 3 seconds
       await vi.advanceTimersByTimeAsync(3000);
 
-      // Should not call doIndexUpdate when nodeIdentification is null
-      expect(mockIndexer.doIndexUpdate).not.toHaveBeenCalled();
+      // Should not call submitVideoToIndex when nodeIdentification is null
+      expect(testIndexer.submitVideoToIndex).not.toHaveBeenCalled();
     });
 
     it('should skip when database does not have all method', async () => {
@@ -839,21 +869,18 @@ describe('ClusterMaster', () => {
         run: vi.fn(),
       });
 
-      const mockIndexer = {
-        doIndexUpdate: vi.fn(),
+      const testIndexer = {
+        submitVideoToIndex: vi.fn(),
       };
 
-      const master = new ClusterMaster({
-        logger: mockLogger as any,
-        indexer: mockIndexer,
-      });
+      const master = new ClusterMaster(mockLogger as any, testIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Advance timers by 3 seconds
       await vi.advanceTimersByTimeAsync(3000);
 
-      // Should not call doIndexUpdate because videos array stays empty
-      expect(mockIndexer.doIndexUpdate).not.toHaveBeenCalled();
+      // Should not call submitVideoToIndex because videos array stays empty
+      expect(testIndexer.submitVideoToIndex).not.toHaveBeenCalled();
     });
 
     it('should skip database update when db does not have run method', async () => {
@@ -862,6 +889,9 @@ describe('ClusterMaster', () => {
         paths: {
           dataDirectoryPath: '/data',
           databaseFilePath: '/data/db.sqlite',
+        },
+        runtime: {
+          isDevelopment: false,
         },
         nodeSettings: {
           databaseConfig: {
@@ -891,21 +921,18 @@ describe('ClusterMaster', () => {
         // No 'run' method
       });
 
-      const mockIndexer = {
-        doIndexUpdate: vi.fn().mockResolvedValue({ isError: false }),
+      const testIndexer = {
+        submitVideoToIndex: vi.fn().mockResolvedValue({ isError: false }),
       };
 
-      const master = new ClusterMaster({
-        logger: mockLogger as any,
-        indexer: mockIndexer,
-      });
+      const master = new ClusterMaster(mockLogger as any, testIndexer as any, mockCloudflare as any);
       await master.start();
 
       // Advance timers by 3 seconds
       await vi.advanceTimersByTimeAsync(3000);
 
-      // Should call doIndexUpdate but skip the database update
-      expect(mockIndexer.doIndexUpdate).toHaveBeenCalled();
+      // Should call submitVideoToIndex but skip the database update
+      expect(testIndexer.submitVideoToIndex).toHaveBeenCalled();
       expect(mockLogger.debug).toHaveBeenCalledWith('Updated video index: vid1');
     });
   });
@@ -920,7 +947,7 @@ describe('ClusterMaster', () => {
         return process;
       });
 
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
 
       const error = new Error('Test uncaught error');
@@ -938,7 +965,7 @@ describe('ClusterMaster', () => {
         return process;
       });
 
-      const master = new ClusterMaster({ logger: mockLogger as any });
+      const master = new ClusterMaster(mockLogger as any, mockIndexer as any, mockCloudflare as any);
       await master.start();
 
       const reason = new Error('Test unhandled rejection');

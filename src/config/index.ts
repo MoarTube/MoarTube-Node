@@ -34,7 +34,7 @@ import {
 export interface RuntimeConfig {
   jwtSecret: string;
   isDockerEnvironment: boolean;
-  isDeveloperMode: boolean;
+  isDevelopment: boolean;
 }
 
 /**
@@ -58,12 +58,12 @@ class Config {
     // Initialize environment first
     this._env = getEnv();
 
-    // Load app config json file first (needed for isDeveloperMode)
+    // Load app config json file
     this._appConfig = this.loadAppConfig(baseDir, configFileName);
 
-    // Initialize paths (needs isDeveloperMode to determine data directory location)
+    // Initialize paths (needs isDevelopment to determine data directory location)
     // Pass entryPointDir to properly resolve public folder in bundled builds
-    this._paths = initializePaths(baseDir, this._appConfig.isDeveloperMode, entryPointDir);
+    this._paths = initializePaths(baseDir, this._env.isDevelopment, entryPointDir);
 
     // Ensure data directories exist
     this.ensureDataDirectoriesExist();
@@ -84,7 +84,7 @@ class Config {
     this._runtime = {
       jwtSecret: '', // Set later via setJwtSecret
       isDockerEnvironment: this._env.isDockerEnvironment,
-      isDeveloperMode: this._appConfig.isDeveloperMode,
+      isDevelopment: this._env.isDevelopment,
     };
 
     // Set up file watching for settings file
@@ -160,10 +160,10 @@ class Config {
   }
 
   /**
-   * Check if developer mode is enabled
+   * Check if development mode is enabled (NODE_ENV=development)
    */
-  get isDeveloperMode(): boolean {
-    return this._appConfig.isDeveloperMode;
+  get isDevelopment(): boolean {
+    return this._env.isDevelopment;
   }
 
   // ============================================
@@ -434,7 +434,7 @@ class Config {
     env: ReturnType<Env['getAll']>;
     paths: PathConfig;
     urls: UrlConfig;
-    isDeveloperMode: boolean;
+    isDevelopment: boolean;
     isDockerEnvironment: boolean;
     storageMode: string;
     databaseDialect: string;
@@ -443,7 +443,7 @@ class Config {
       env: this._env.getAll(),
       paths: this._paths.toObject(),
       urls: this._urls.toObject(),
-      isDeveloperMode: this._appConfig.isDeveloperMode,
+      isDevelopment: this._env.isDevelopment,
       isDockerEnvironment: this._runtime.isDockerEnvironment,
       storageMode: this._nodeSettings.storageConfig.storageMode,
       databaseDialect: this._nodeSettings.databaseConfig.databaseDialect,

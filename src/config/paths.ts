@@ -51,7 +51,7 @@ class Paths implements PathConfig {
   readonly lastCheckedContentTrackerPath: string;
   readonly databaseFilePath: string;
 
-  private constructor(baseDir: string, isDeveloperMode: boolean, entryPointDir?: string) {
+  private constructor(baseDir: string, isDevelopment: boolean, entryPointDir?: string) {
     const env = getEnv();
 
     // Determine public directory location
@@ -68,9 +68,9 @@ class Paths implements PathConfig {
     // Data directory priority:
     // 1. MOARTUBE_DATA_DIR environment variable (explicit override)
     // 2. Docker environment (/data volume)
-    // 3. Developer mode (local ./data directory)
+    // 3. Development mode (local ./data directory)
     // 4. Production (OS-specific user data directory)
-    this.dataDirectoryPath = this.resolveDataDirectory(baseDir, isDeveloperMode, env);
+    this.dataDirectoryPath = this.resolveDataDirectory(baseDir, isDevelopment, env);
 
     // Data subdirectories
     this.imagesDirectoryPath = path.join(this.dataDirectoryPath, 'images');
@@ -92,12 +92,12 @@ class Paths implements PathConfig {
    * Resolve the data directory path based on priority order:
    * 1. MOARTUBE_DATA_DIR environment variable
    * 2. Docker environment
-   * 3. Developer mode
+   * 3. Development mode
    * 4. OS-specific user data directory
    */
   private resolveDataDirectory(
     baseDir: string,
-    isDeveloperMode: boolean,
+    isDevelopment: boolean,
     env: ReturnType<typeof getEnv>
   ): string {
     // Priority 1: Explicit environment variable override
@@ -111,8 +111,8 @@ class Paths implements PathConfig {
       return '/data';
     }
 
-    // Priority 3: Developer mode uses local ./data directory
-    if (isDeveloperMode) {
+    // Priority 3: Development mode uses local ./data directory
+    if (isDevelopment) {
       return path.join(baseDir, 'data');
     }
 
@@ -165,11 +165,11 @@ class Paths implements PathConfig {
   /**
    * Initialize the paths singleton with the application base directory
    * @param baseDir - Base directory where config files live
-   * @param isDeveloperMode - Whether running in developer mode
+   * @param isDevelopment - Whether running in development mode (NODE_ENV=development)
    * @param entryPointDir - Directory of the entry point (for bundled builds)
    */
-  static initialize(baseDir: string, isDeveloperMode: boolean, entryPointDir?: string): Paths {
-    Paths.instance ??= new Paths(baseDir, isDeveloperMode, entryPointDir);
+  static initialize(baseDir: string, isDevelopment: boolean, entryPointDir?: string): Paths {
+    Paths.instance ??= new Paths(baseDir, isDevelopment, entryPointDir);
     return Paths.instance;
   }
 
@@ -312,11 +312,11 @@ class Paths implements PathConfig {
 /**
  * Export initializer
  * @param baseDir - Base directory where config files live
- * @param isDeveloperMode - Whether running in developer mode
+ * @param isDevelopment - Whether running in development mode (NODE_ENV=development)
  * @param entryPointDir - Directory of the entry point (for bundled builds)
  */
-export function initializePaths(baseDir: string, isDeveloperMode: boolean, entryPointDir?: string): Paths {
-  return Paths.initialize(baseDir, isDeveloperMode, entryPointDir);
+export function initializePaths(baseDir: string, isDevelopment: boolean, entryPointDir?: string): Paths {
+  return Paths.initialize(baseDir, isDevelopment, entryPointDir);
 }
 
 /**

@@ -72,7 +72,7 @@ vi.mock('@config/index.js', () => ({
       moarTubeTokenProof: 'test-token-proof',
     },
     runtime: {
-      isDeveloperMode: false,
+      isDevelopment: false,
     },
     paths: {
       videosDirectoryPath: '/data/videos',
@@ -480,7 +480,7 @@ describe('VideosService', () => {
           moarTubeTokenProof: 'test-token-proof',
         },
         runtime: {
-          isDeveloperMode: false,
+          isDevelopment: false,
         },
         paths: {
           videosDirectoryPath: '/data/videos',
@@ -847,7 +847,7 @@ describe('VideosService', () => {
           moarTubeTokenProof: 'test-token-proof',
         },
         runtime: {
-          isDeveloperMode: false,
+          isDevelopment: false,
         },
         paths: {
           videosDirectoryPath: '/data/videos',
@@ -1689,7 +1689,7 @@ describe('VideosService', () => {
           moarTubeTokenProof: 'test-token-proof',
         },
         runtime: {
-          isDeveloperMode: true,
+          isDevelopment: true,
         },
         paths: {
           videosDirectoryPath: '/data/videos',
@@ -1891,7 +1891,7 @@ describe('VideosService', () => {
           moarTubeTokenProof: 'test-token-proof',
         },
         runtime: {
-          isDeveloperMode: true,
+          isDevelopment: true,
         },
         paths: {
           videosDirectoryPath: '/data/videos',
@@ -1931,7 +1931,7 @@ describe('VideosService', () => {
           moarTubeTokenProof: 'test-token-proof',
         },
         runtime: {
-          isDeveloperMode: false,
+          isDevelopment: false,
         },
         paths: {
           videosDirectoryPath: '/data/videos',
@@ -2301,7 +2301,7 @@ describe('VideosService', () => {
           moarTubeTokenProof: 'test-token-proof',
         },
         runtime: {
-          isDeveloperMode: false,
+          isDevelopment: false,
         },
         paths: {
           videosDirectoryPath: '/data/videos',
@@ -2422,7 +2422,7 @@ describe('VideosService', () => {
           moarTubeTokenProof: 'test-token-proof',
         },
         runtime: {
-          isDeveloperMode: false,
+          isDevelopment: false,
         },
         paths: {
           videosDirectoryPath: '/data/videos',
@@ -2609,7 +2609,7 @@ describe('VideosService', () => {
           moarTubeTokenProof: '',
         },
         runtime: {
-          isDeveloperMode: false,
+          isDevelopment: false,
         },
         paths: {
           videosDirectoryPath: '/data/videos',
@@ -2680,7 +2680,7 @@ describe('VideosService', () => {
           moarTubeTokenProof: '',
         },
         runtime: {
-          isDeveloperMode: false,
+          isDevelopment: false,
         },
         paths: {
           videosDirectoryPath: '/data/videos',

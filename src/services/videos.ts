@@ -982,8 +982,8 @@ export class VideosService extends BaseService {
     let videoAliasUrl = 'MoarTube Aliaser link unavailable (video not indexed)';
 
     if (video.is_indexed && nodeSettings.nodeId) {
-      const isDeveloperMode = config.runtime.isDeveloperMode;
-      if (isDeveloperMode) {
+      const isDevelopment = config.runtime.isDevelopment;
+      if (isDevelopment) {
         // Use localhost for development
         const aliaserPort = config.urls.getAliaserConfig().port;
         videoAliasUrl = `http://localhost:${String(aliaserPort)}/nodes/${nodeSettings.nodeId}/videos/${video.video_id}`;
@@ -1092,8 +1092,8 @@ export class VideosService extends BaseService {
         throw new Error('Node ID not configured');
       }
 
-      const isDeveloperMode = config.runtime.isDeveloperMode;
-      if (isDeveloperMode) {
+      const isDevelopment = config.runtime.isDevelopment;
+      if (isDevelopment) {
         const aliaserPort = config.urls.getAliaserConfig().port;
         return `http://localhost:${String(aliaserPort)}/nodes/${nodeSettings.nodeId}/videos/${videoId}`;
       } else {

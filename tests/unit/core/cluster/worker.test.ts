@@ -262,14 +262,14 @@ describe('ClusterWorker', () => {
     });
 
     it('should create a ClusterWorker with custom logger', () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       expect(worker).toBeDefined();
     });
   });
 
   describe('getWebSocketManager', () => {
     it('should return the WebSocket manager', () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       const wsManager = worker.getWebSocketManager();
       expect(wsManager).toBeDefined();
     });
@@ -277,7 +277,7 @@ describe('ClusterWorker', () => {
 
   describe('start', () => {
     it('should start the worker', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       expect(mockLogger.info).toHaveBeenCalledWith('Starting worker');
@@ -285,7 +285,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should not start twice', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
       await worker.start();
 
@@ -298,7 +298,7 @@ describe('ClusterWorker', () => {
     it('should connect to database for SQLite', async () => {
       const { createDatabase } = await import('@/database/index.js');
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       expect(createDatabase).toHaveBeenCalledWith({
@@ -332,7 +332,7 @@ describe('ClusterWorker', () => {
 
       const { createDatabase } = await import('@/database/index.js');
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       expect(createDatabase).toHaveBeenCalledWith({
@@ -357,7 +357,7 @@ describe('ClusterWorker', () => {
         },
       });
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
 
       await expect(worker.start()).rejects.toThrow(
         'Postgres configuration is required for postgres database dialect'
@@ -365,14 +365,14 @@ describe('ClusterWorker', () => {
     });
 
     it('should request JWT secret from master', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       expect(mockIpcSendToMaster).toHaveBeenCalledWith({ cmd: 'get_jwt_secret' });
     });
 
     it('should set up IPC handlers', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       expect(mockIpcOn).toHaveBeenCalledWith('get_jwt_secret_response', expect.any(Function));
@@ -381,21 +381,21 @@ describe('ClusterWorker', () => {
     });
 
     it('should start HTTP server', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       expect(mockFastifyListen).toHaveBeenCalledWith({ port: 3000, host: '0.0.0.0' });
     });
 
     it('should start WebSocket heartbeat', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       expect(mockWsStartHeartbeat).toHaveBeenCalled();
     });
 
     it('should set container on WebSocketManager', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       expect(mockWsSetContainer).toHaveBeenCalled();
@@ -408,7 +408,7 @@ describe('ClusterWorker', () => {
         throw new Error('Process exited');
       });
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
 
       await expect(worker.start()).rejects.toThrow('Process exited');
       expect(mockLogger.error).toHaveBeenCalled();
@@ -417,7 +417,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should set up WebSocket server connection handler', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       // Verify WebSocket server handlers are registered
@@ -431,7 +431,7 @@ describe('ClusterWorker', () => {
         }
       );
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       // Simulate an upgrade request
@@ -447,7 +447,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should destroy socket when wss is null during upgrade', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       // Store the upgrade handler
@@ -483,7 +483,7 @@ describe('ClusterWorker', () => {
         decorateRequest: vi.fn(),
       } as any);
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       // Should have logged an error about server not being available
@@ -496,7 +496,7 @@ describe('ClusterWorker', () => {
 
   describe('WebSocket handling', () => {
     it('should handle WebSocket connection', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       // Simulate a WebSocket connection
@@ -518,7 +518,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle WebSocket connection without cf-connecting-ip', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const mockWsOn = vi.fn();
@@ -537,7 +537,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle WebSocket connection with undefined remoteAddress', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const mockWsOn = vi.fn();
@@ -556,7 +556,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle WebSocket client disconnection', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const wsEventHandlers: Record<string, Function> = {};
@@ -586,7 +586,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle WebSocket messages (Buffer)', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const wsEventHandlers: Record<string, Function> = {};
@@ -616,7 +616,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle WebSocket messages (ArrayBuffer)', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const wsEventHandlers: Record<string, Function> = {};
@@ -646,7 +646,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle WebSocket messages (string)', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const wsEventHandlers: Record<string, Function> = {};
@@ -676,7 +676,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle WebSocket messages (array of Buffers)', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const wsEventHandlers: Record<string, Function> = {};
@@ -706,7 +706,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle WebSocket messages (array with ArrayBuffer)', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const wsEventHandlers: Record<string, Function> = {};
@@ -739,7 +739,7 @@ describe('ClusterWorker', () => {
 
   describe('stop', () => {
     it('should stop the worker', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
       await worker.stop();
 
@@ -747,14 +747,14 @@ describe('ClusterWorker', () => {
     });
 
     it('should return early if not running', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.stop();
 
       expect(mockLogger.info).not.toHaveBeenCalledWith('Stopping worker');
     });
 
     it('should close HTTP server', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
       await worker.stop();
 
@@ -762,7 +762,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should close WebSocket server', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
       await worker.stop();
 
@@ -770,7 +770,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should close all WebSocket connections', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
       await worker.stop();
 
@@ -780,7 +780,7 @@ describe('ClusterWorker', () => {
 
   describe('IPC handlers', () => {
     it('should handle get_jwt_secret_response', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       ipcHandlers['get_jwt_secret_response']?.({
@@ -794,7 +794,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle websocket_broadcast_response', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const wsMessage = { eventName: 'test', data: 'test data' };
@@ -808,7 +808,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle websocket_broadcast_chat_response', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const wsMessage = { eventName: 'chat', videoId: 'vid123', data: 'hello' };
@@ -825,7 +825,7 @@ describe('ClusterWorker', () => {
       const counts = { video1: 5, video2: 3 };
       mockWsGetLiveStreamWatchingCounts.mockReturnValue(counts);
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       ipcHandlers['live_stream_worker_stats_request']?.({
@@ -847,7 +847,7 @@ describe('ClusterWorker', () => {
       };
       mockWsGetClients.mockReturnValue([mockClient]);
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       ipcHandlers['live_stream_worker_stats_update']?.({
@@ -866,7 +866,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle restart_server_response', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       // The handler is async, need to handle the promise
@@ -879,7 +879,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle restart_database_response', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       ipcHandlers['restart_database_response']?.({ cmd: 'restart_database_response' });
@@ -888,7 +888,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should handle update_node_name_response', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       ipcHandlers['update_node_name_response']?.({
@@ -907,7 +907,7 @@ describe('ClusterWorker', () => {
       };
       mockWsGetClients.mockReturnValue([mockClient]);
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       // Include null values in the tracker
@@ -934,7 +934,7 @@ describe('ClusterWorker', () => {
       };
       mockWsGetClients.mockReturnValue([mockClient]);
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       ipcHandlers['live_stream_worker_stats_update']?.({
@@ -955,7 +955,7 @@ describe('ClusterWorker', () => {
       };
       mockWsGetClients.mockReturnValue([mockClient]);
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       ipcHandlers['live_stream_worker_stats_update']?.({
@@ -976,7 +976,7 @@ describe('ClusterWorker', () => {
       };
       mockWsGetClients.mockReturnValue([mockClient]);
 
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       ipcHandlers['live_stream_worker_stats_update']?.({
@@ -996,7 +996,7 @@ describe('ClusterWorker', () => {
 
   describe('public methods', () => {
     it('should broadcast to all workers', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const message = { eventName: 'test_event', data: 'test_data' };
@@ -1009,7 +1009,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should broadcast chat to all workers', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       const message = { eventName: 'chat', videoId: 'vid123', data: 'hello' };
@@ -1022,7 +1022,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should request server restart', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       worker.requestServerRestart();
@@ -1033,7 +1033,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should request database restart', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       worker.requestDatabaseRestart('postgres');
@@ -1045,7 +1045,7 @@ describe('ClusterWorker', () => {
     });
 
     it('should request node name update', async () => {
-      const worker = new ClusterWorker({ logger: mockLogger as any });
+      const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
       worker.requestNodeNameUpdate('New Name');

@@ -68,6 +68,7 @@ describe('config/index.ts', () => {
 
   const mockEnv = {
     isDockerEnvironment: false,
+    isDevelopment: false,
     getAll: vi.fn(() => ({ NODE_ENV: 'development', IS_DOCKER_ENVIRONMENT: 'false' })),
   };
 
@@ -98,7 +99,6 @@ describe('config/index.ts', () => {
   };
 
   const mockAppConfig = {
-    isDeveloperMode: false,
     indexerConfig: {
       httpProtocol: 'https',
       host: 'indexer.moartube.com',
@@ -239,7 +239,7 @@ describe('config/index.ts', () => {
       const config = Config.initialize(mockBaseDir, mockConfigFileName);
 
       expect(getEnv).toHaveBeenCalledTimes(1);
-      expect(initializePaths).toHaveBeenCalledWith(mockBaseDir, mockAppConfig.isDeveloperMode, undefined);
+      expect(initializePaths).toHaveBeenCalledWith(mockBaseDir, false, undefined);
       expect(validateAppConfig).toHaveBeenCalledTimes(1);
       expect(initializeUrls).toHaveBeenCalledWith(mockAppConfig.indexerConfig, mockAppConfig.aliaserConfig);
       expect(validateNodeSettings).toHaveBeenCalledTimes(1);
@@ -282,13 +282,13 @@ describe('config/index.ts', () => {
 
       // Should be frozen/read-only
       expect(() => {
-        (appConfig as any).isDeveloperMode = true;
+        (appConfig as any).indexerConfig = {};
       }).toThrow();
     });
 
-    it('should return correct developer mode status', () => {
+    it('should return correct development mode status from env', () => {
       const config = Config.initialize(mockBaseDir, mockConfigFileName);
-      expect(config.isDeveloperMode).toBe(false);
+      expect(config.isDevelopment).toBe(false);
     });
   });
 
@@ -463,7 +463,7 @@ describe('config/index.ts', () => {
       expect(config.runtime).toEqual({
         jwtSecret: '',
         isDockerEnvironment: false,
-        isDeveloperMode: false,
+        isDevelopment: false,
       });
     });
 
@@ -623,7 +623,7 @@ describe('config/index.ts', () => {
           aliaserUrl: 'https://aliaser.moartube.com',
           cloudflareZoneUrl: 'https://api.cloudflare.com/client/v4/zones/',
         },
-        isDeveloperMode: false,
+        isDevelopment: false,
         isDockerEnvironment: false,
         storageMode: 'filesystem',
         databaseDialect: 'sqlite',

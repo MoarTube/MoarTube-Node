@@ -142,7 +142,7 @@ describe('config/paths.ts', () => {
     beforeEach(() => {
       mockEnv = { isDockerEnvironment: true };
       mockGetEnv.mockReturnValue(mockEnv);
-      paths = Paths.initialize('/app', false); // Docker takes priority over isDeveloperMode
+      paths = Paths.initialize('/app', false); // Docker takes priority over isDevelopment
     });
 
     it('should use /data as data directory in Docker environment', () => {
@@ -194,9 +194,9 @@ describe('config/paths.ts', () => {
       mockEnv = { isDockerEnvironment: false, dataDirectory: customDataDir };
       mockGetEnv.mockReturnValue(mockEnv);
 
-      const paths = Paths.initialize('/app', true); // isDeveloperMode = true
+      const paths = Paths.initialize('/app', true); // isDevelopment = true
 
-      // MOARTUBE_DATA_DIR takes priority over developer mode
+      // MOARTUBE_DATA_DIR takes priority over development mode
       expect(paths.dataDirectoryPath).toBe(customDataDir);
     });
 
@@ -394,7 +394,7 @@ describe('config/paths.ts', () => {
         mockEnv = { isDockerEnvironment: false, dataDirectory: undefined };
         mockGetEnv.mockReturnValue(mockEnv);
 
-        const paths = Paths.initialize('/app', false); // Production mode (isDeveloperMode = false)
+        const paths = Paths.initialize('/app', false); // Production mode (isDevelopment = false)
 
         expect(paths.dataDirectoryPath).toBe(path.join('C:\\Users\\Test\\AppData\\Roaming', 'moartube-node'));
       });

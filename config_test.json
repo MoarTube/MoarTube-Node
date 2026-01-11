@@ -1,1 +1,1 @@
-{"isDeveloperMode": true,"indexerConfig":{"httpProtocol":"http","host":"localhost","port":8282},"aliaserConfig":{"httpProtocol":"http","host":"localhost","port":8484}}
+{"indexerConfig":{"httpProtocol":"http","host":"localhost","port":8282},"aliaserConfig":{"httpProtocol":"http","host":"localhost","port":8484}}

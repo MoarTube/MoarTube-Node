@@ -538,11 +538,11 @@ export class SettingsService extends BaseService {
   }
 
   /**
-   * Check if node is in developer mode
+   * Check if node is in development mode (NODE_ENV=development)
    */
-  isDeveloperMode(): boolean {
+  isDevelopment(): boolean {
     const config = getConfig();
-    return config.isDeveloperMode;
+    return config.isDevelopment;
   }
 
   /**

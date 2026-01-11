@@ -16,43 +16,10 @@ import type {
   WebSocketMessage,
 } from '@/types/index.js';
 import { IPCChannel, type IPCLogger } from '@core/cluster/ipc-channel.js';
-import { Logger } from '@utils/index.js';
 import { getConfig } from '@config/index.js';
 import { createDatabase, initializeDatabaseSchema, getDatabase } from '@database/index.js';
-
-/**
- * Indexer operations interface
- */
-export interface MasterIndexerOperations {
-  doIndexUpdate: (data: unknown) => Promise<{ isError: boolean; message?: string }>;
-}
-
-/**
- * Cloudflare operations interface
- */
-export interface MasterCloudflareOperations {
-  purgeAllWatchPages: () => Promise<void>;
-  purgeNodePage: () => Promise<void>;
-}
-
-/**
- * Optional master configuration for advanced use cases
- */
-export interface ClusterMasterOptions {
-  /** Logger instance */
-  logger?: IPCLogger;
-  /** Indexer operations */
-  indexer?: MasterIndexerOperations;
-  /** Cloudflare operations */
-  cloudflare?: MasterCloudflareOperations;
-}
-
-/**
- * Get default logger (lazy initialization to ensure Config is loaded)
- */
-function getDefaultLogger(): IPCLogger {
-  return Logger.getInstance();
-}
+import type { IndexerService } from '@services/indexer.js';
+import type { CloudflareService } from '@services/cloudflare.js';
 
 /**
  * Cluster Master Process Manager
@@ -62,15 +29,21 @@ function getDefaultLogger(): IPCLogger {
 export class ClusterMaster {
   private readonly ipc: IPCChannel;
   private readonly logger: IPCLogger;
-  private readonly options: ClusterMasterOptions;
+  private readonly indexer: IndexerService;
+  private readonly cloudflare: CloudflareService;
   private readonly jwtSecret: string;
   private liveStreamWatchingCountsTracker: LiveStreamWatchingCountsTracker = {};
   private intervalHandles: NodeJS.Timeout[] = [];
   private isRunning = false;
 
-  constructor(options: ClusterMasterOptions = {}) {
-    this.options = options;
-    this.logger = options.logger ?? getDefaultLogger();
+  constructor(
+    logger: IPCLogger,
+    indexer: IndexerService,
+    cloudflare: CloudflareService
+  ) {
+    this.logger = logger;
+    this.indexer = indexer;
+    this.cloudflare = cloudflare;
     this.ipc = new IPCChannel(this.logger);
     this.jwtSecret = crypto.randomBytes(32).toString('hex');
   }
@@ -87,15 +60,14 @@ export class ClusterMaster {
 
     this.logger.info('Starting MoarTube Node cluster master');
 
+    this.logger.info(`Running in ${config.runtime.isDevelopment ? 'development' : 'production'} mode`);
+
     this.logger.info(
-      `Configured MoarTube Node to use data directory path: ${config.paths.dataDirectoryPath}`
+      `Data directory path: ${config.paths.dataDirectoryPath}`
     );
 
     // Set up global error handlers
     this.setupErrorHandlers();
-
-    // Initialize database
-    await this.initializeDatabase();
 
     // Ensure node has an ID
     this.ensureNodeId();
@@ -157,7 +129,7 @@ export class ClusterMaster {
   }
 
   /**
-   * Initialize database connection
+   * Initialize database connection (used for database restart)
    */
   private async initializeDatabase(): Promise<void> {
     const config = getConfig();
@@ -186,7 +158,7 @@ export class ClusterMaster {
     // Initialize database schema
     await initializeDatabaseSchema();
 
-    this.logger.debug('Database initialized');
+    this.logger.debug('Database re-initialized');
   }
 
   /**
@@ -323,23 +295,17 @@ export class ClusterMaster {
     this.intervalHandles.push(temp1, temp2, temp3);
 
     // Cloudflare purge task (every 10 minutes)
-    if (this.options.cloudflare !== undefined) {
-      this.intervalHandles.push(
-        setInterval(() => {
-          void this.runCloudflarePurgeTask();
-        }, 60000 * 10)
-      );
-    }
+    this.intervalHandles.push(
+      setInterval(() => {
+        void this.runCloudflarePurgeTask();
+      }, 60000 * 10)
+    );
   }
 
   /**
    * Run index update task
    */
   private async runIndexUpdateTask(): Promise<void> {
-    if (this.options.indexer === undefined) {
-      return;
-    }
-
     try {
       const db = getDatabase();
       let videos: Array<{
@@ -381,7 +347,7 @@ export class ClusterMaster {
               moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
             };
 
-            const response = await this.options.indexer.doIndexUpdate(data);
+            const response = await this.indexer.submitVideoToIndex(data);
 
             if (response.isError) {
               throw new Error(response.message);
@@ -412,8 +378,8 @@ export class ClusterMaster {
    */
   private async runCloudflarePurgeTask(): Promise<void> {
     try {
-      await this.options.cloudflare?.purgeAllWatchPages();
-      await this.options.cloudflare?.purgeNodePage();
+      await this.cloudflare.purgeAllWatchPages();
+      await this.cloudflare.purgeNodePage();
     } catch (error) {
       this.logger.error('Cloudflare purge task failed', error);
     }

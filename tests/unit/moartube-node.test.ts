@@ -338,6 +338,55 @@ describe('MoarTube-Node Entry Point', () => {
       
       vi.doMock('@config/index.js', () => ({
         initializeConfig: vi.fn(),
+        getConfig: vi.fn(() => ({
+          paths: {
+            dataDirectoryPath: '/data',
+            databaseFilePath: '/data/db.sqlite',
+          },
+          nodeSettings: {
+            databaseConfig: {
+              databaseDialect: 'sqlite',
+            },
+          },
+        })),
+      }));
+
+      vi.doMock('@utils/index.js', () => ({
+        Logger: {
+          getInstance: vi.fn(() => ({
+            error: loggerErrorFn,
+            info: vi.fn(),
+            debug: vi.fn(),
+            warn: vi.fn(),
+          })),
+        },
+        getLogger: vi.fn(() => ({
+          error: loggerErrorFn,
+          info: vi.fn(),
+          debug: vi.fn(),
+          warn: vi.fn(),
+        })),
+      }));
+
+      vi.doMock('@services/index.js', () => ({
+        IndexerService: class MockIndexerService {},
+        CloudflareService: class MockCloudflareService {},
+      }));
+
+      vi.doMock('@database/index.js', () => ({
+        createDatabase: vi.fn(),
+        initializeDatabaseSchema: vi.fn().mockResolvedValue(undefined),
+        getDatabase: vi.fn(),
+      }));
+
+      vi.doMock('@core/container.js', () => ({
+        createAppContainer: vi.fn().mockResolvedValue({
+          resolve: vi.fn((name: string) => {
+            if (name === 'indexerService') return {};
+            if (name === 'cloudflareService') return {};
+            return {};
+          }),
+        }),
       }));
       
       vi.doMock('@core/cluster/index.js', () => ({
@@ -397,6 +446,55 @@ describe('MoarTube-Node Entry Point', () => {
       
       vi.doMock('@config/index.js', () => ({
         initializeConfig: vi.fn(),
+        getConfig: vi.fn(() => ({
+          paths: {
+            dataDirectoryPath: '/data',
+            databaseFilePath: '/data/db.sqlite',
+          },
+          nodeSettings: {
+            databaseConfig: {
+              databaseDialect: 'sqlite',
+            },
+          },
+        })),
+      }));
+
+      vi.doMock('@utils/index.js', () => ({
+        Logger: {
+          getInstance: vi.fn(() => ({
+            error: loggerErrorFn,
+            info: vi.fn(),
+            debug: vi.fn(),
+            warn: vi.fn(),
+          })),
+        },
+        getLogger: vi.fn(() => ({
+          error: loggerErrorFn,
+          info: vi.fn(),
+          debug: vi.fn(),
+          warn: vi.fn(),
+        })),
+      }));
+
+      vi.doMock('@services/index.js', () => ({
+        IndexerService: class MockIndexerService {},
+        CloudflareService: class MockCloudflareService {},
+      }));
+
+      vi.doMock('@database/index.js', () => ({
+        createDatabase: vi.fn(),
+        initializeDatabaseSchema: vi.fn().mockResolvedValue(undefined),
+        getDatabase: vi.fn(),
+      }));
+
+      vi.doMock('@core/container.js', () => ({
+        createAppContainer: vi.fn().mockResolvedValue({
+          resolve: vi.fn((name: string) => {
+            if (name === 'indexerService') return {};
+            if (name === 'cloudflareService') return {};
+            return {};
+          }),
+        }),
       }));
       
       vi.doMock('@core/cluster/index.js', () => ({
@@ -459,6 +557,32 @@ describe('MoarTube-Node Entry Point', () => {
           throw configError;
         }),
       }));
+
+      vi.doMock('@utils/index.js', () => ({
+        Logger: {
+          getInstance: vi.fn(() => ({
+            error: loggerErrorFn,
+            info: vi.fn(),
+            debug: vi.fn(),
+            warn: vi.fn(),
+          })),
+        },
+        getLogger: vi.fn(() => ({
+          error: loggerErrorFn,
+          info: vi.fn(),
+          debug: vi.fn(),
+          warn: vi.fn(),
+        })),
+      }));
+
+      vi.doMock('@services/index.js', () => ({
+        IndexerService: class MockIndexerService {},
+        CloudflareService: class MockCloudflareService {},
+      }));
+
+      vi.doMock('@database/repositories/index.js', () => ({
+        VideosRepository: class MockVideosRepository {},
+      }));
       
       vi.doMock('@core/cluster/index.js', () => ({
         ClusterMaster: class ClusterMaster {
@@ -485,6 +609,222 @@ describe('MoarTube-Node Entry Point', () => {
       }
       
       expect(loggerErrorFn).toHaveBeenCalledWith('Fatal error during startup', configError);
+      expect(exitFn).toHaveBeenCalledWith(1);
+      
+      exitFn.mockRestore();
+    });
+
+    it('should initialize database for PostgreSQL dialect', async () => {
+      const loggerDebugFn = vi.fn();
+      const masterStartFn = vi.fn().mockResolvedValue(undefined);
+      const createDatabaseFn = vi.fn();
+      const initializeDatabaseSchemaFn = vi.fn().mockResolvedValue(undefined);
+      
+      vi.resetModules();
+      
+      vi.doMock('node:cluster', () => ({
+        default: { isPrimary: true },
+      }));
+      
+      vi.doMock('node:path', () => ({
+        default: {
+          dirname: vi.fn(() => '/app/dist'),
+          resolve: vi.fn(() => '/app'),
+        },
+      }));
+      
+      vi.doMock('node:url', () => ({
+        fileURLToPath: vi.fn(() => '/app/dist/moartube-node.js'),
+      }));
+      
+      vi.doMock('@config/index.js', () => ({
+        initializeConfig: vi.fn(),
+        getConfig: vi.fn(() => ({
+          paths: {
+            dataDirectoryPath: '/data',
+            databaseFilePath: '/data/db.sqlite',
+          },
+          nodeSettings: {
+            databaseConfig: {
+              databaseDialect: 'postgres',
+              postgresConfig: {
+                username: 'testuser',
+                password: 'testpass',
+                host: 'localhost',
+                port: 5432,
+                databaseName: 'testdb',
+              },
+            },
+          },
+        })),
+      }));
+
+      vi.doMock('@utils/index.js', () => ({
+        Logger: {
+          getInstance: vi.fn(() => ({
+            error: vi.fn(),
+            info: vi.fn(),
+            debug: loggerDebugFn,
+            warn: vi.fn(),
+          })),
+        },
+        getLogger: vi.fn(() => ({
+          error: vi.fn(),
+          info: vi.fn(),
+          debug: loggerDebugFn,
+          warn: vi.fn(),
+        })),
+      }));
+
+      vi.doMock('@database/index.js', () => ({
+        createDatabase: createDatabaseFn,
+        initializeDatabaseSchema: initializeDatabaseSchemaFn,
+        getDatabase: vi.fn(),
+      }));
+
+      vi.doMock('@core/container.js', () => ({
+        createAppContainer: vi.fn().mockResolvedValue({
+          resolve: vi.fn((name: string) => {
+            if (name === 'indexerService') return {};
+            if (name === 'cloudflareService') return {};
+            return {};
+          }),
+        }),
+      }));
+      
+      vi.doMock('@core/cluster/index.js', () => ({
+        ClusterMaster: class ClusterMaster {
+          start = masterStartFn;
+        },
+        ClusterWorker: class ClusterWorker {
+          start = vi.fn();
+        },
+      }));
+      
+      vi.doMock('@utils/logger.js', () => ({
+        getLogger: vi.fn(() => ({
+          error: vi.fn(),
+          info: vi.fn(),
+          debug: loggerDebugFn,
+          warn: vi.fn(),
+        })),
+      }));
+
+      try {
+        await import('@/moartube-node.js');
+      } catch {
+        // Module execution may throw
+      }
+      
+      // Wait for async operations
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      expect(createDatabaseFn).toHaveBeenCalledWith({
+        dialect: 'postgres',
+        connectionString: 'postgres://testuser:testpass@localhost:5432/testdb',
+      });
+      expect(initializeDatabaseSchemaFn).toHaveBeenCalled();
+    });
+
+    it('should throw error when postgres config is missing', async () => {
+      const loggerErrorFn = vi.fn();
+      const exitFn = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+      
+      vi.resetModules();
+      
+      vi.doMock('node:cluster', () => ({
+        default: { isPrimary: true },
+      }));
+      
+      vi.doMock('node:path', () => ({
+        default: {
+          dirname: vi.fn(() => '/app/dist'),
+          resolve: vi.fn(() => '/app'),
+        },
+      }));
+      
+      vi.doMock('node:url', () => ({
+        fileURLToPath: vi.fn(() => '/app/dist/moartube-node.js'),
+      }));
+      
+      vi.doMock('@config/index.js', () => ({
+        initializeConfig: vi.fn(),
+        getConfig: vi.fn(() => ({
+          paths: {
+            dataDirectoryPath: '/data',
+            databaseFilePath: '/data/db.sqlite',
+          },
+          nodeSettings: {
+            databaseConfig: {
+              databaseDialect: 'postgres',
+              postgresConfig: undefined,
+            },
+          },
+        })),
+      }));
+
+      vi.doMock('@utils/index.js', () => ({
+        Logger: {
+          getInstance: vi.fn(() => ({
+            error: loggerErrorFn,
+            info: vi.fn(),
+            debug: vi.fn(),
+            warn: vi.fn(),
+          })),
+        },
+        getLogger: vi.fn(() => ({
+          error: loggerErrorFn,
+          info: vi.fn(),
+          debug: vi.fn(),
+          warn: vi.fn(),
+        })),
+      }));
+
+      vi.doMock('@database/index.js', () => ({
+        createDatabase: vi.fn(),
+        initializeDatabaseSchema: vi.fn().mockResolvedValue(undefined),
+        getDatabase: vi.fn(),
+      }));
+
+      vi.doMock('@core/container.js', () => ({
+        createAppContainer: vi.fn().mockResolvedValue({
+          resolve: vi.fn(),
+        }),
+      }));
+      
+      vi.doMock('@core/cluster/index.js', () => ({
+        ClusterMaster: class ClusterMaster {
+          start = vi.fn();
+        },
+        ClusterWorker: class ClusterWorker {
+          start = vi.fn();
+        },
+      }));
+      
+      vi.doMock('@utils/logger.js', () => ({
+        getLogger: vi.fn(() => ({
+          error: loggerErrorFn,
+          info: vi.fn(),
+          debug: vi.fn(),
+          warn: vi.fn(),
+        })),
+      }));
+
+      try {
+        await import('@/moartube-node.js');
+      } catch {
+        // Error is caught and handled by the module
+      }
+      
+      // Wait for async error handling
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      expect(loggerErrorFn).toHaveBeenCalledWith(
+        'Fatal error during startup',
+        expect.objectContaining({
+          message: 'Postgres configuration is required for postgres database dialect',
+        })
+      );
       expect(exitFn).toHaveBeenCalledWith(1);
       
       exitFn.mockRestore();

@@ -23,23 +23,6 @@ import { getConfig } from '@config/index.js';
 import { createDatabase } from '@/database/index.js';
 
 /**
- * Optional worker configuration for advanced use cases
- */
-export interface ClusterWorkerOptions {
-  /** Logger instance */
-  logger?: IPCLogger;
-}
-
-/**
- * Get default logger (lazy initialization to ensure Config is loaded)
- */
-function getDefaultLogger(): IPCLogger {
-  return new Logger({
-    prefix: `Worker ${String(cluster.worker!.id)}`,
-  });
-}
-
-/**
  * Cluster Worker Process Manager
  *
  * Handles HTTP requests and WebSocket connections in a worker process.
@@ -52,8 +35,8 @@ export class ClusterWorker {
   private wss: WebSocketServer | null = null;
   private isRunning = false;
 
-  constructor(options: ClusterWorkerOptions = {}) {
-    this.logger = options.logger ?? getDefaultLogger();
+  constructor(logger: IPCLogger) {
+    this.logger = logger;
     this.ipc = new IPCChannel(this.logger);
 
     // Create WebSocketManager (container will be provided later)

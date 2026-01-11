@@ -774,11 +774,11 @@ describe('SettingsService', () => {
     });
   });
 
-  describe('isDeveloperMode', () => {
-    it('should return developer mode status', () => {
-      mockConfig.isDeveloperMode = true;
+  describe('isDevelopment', () => {
+    it('should return development mode status from env', () => {
+      mockConfig.isDevelopment = true;
 
-      const result = service.isDeveloperMode();
+      const result = service.isDevelopment();
 
       expect(result).toBe(true);
     });
