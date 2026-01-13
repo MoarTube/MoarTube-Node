@@ -87,7 +87,7 @@ API endpoints may be rate-limited to prevent abuse.
 /**
  * Swagger UI configuration
  */
-const swaggerUiConfig: FastifySwaggerUiOptions = {
+export const swaggerUiConfig: FastifySwaggerUiOptions = {
   routePrefix: '/documentation',
   uiConfig: {
     docExpansion: 'list',

@@ -97,5 +97,14 @@ describe('Swagger Plugin', () => {
       // Should NOT have registered swagger plugins
       expect(mockApp.register).not.toHaveBeenCalled();
     });
+
+    it('should have transformStaticCSP function that transforms CSP header', async () => {
+      const { swaggerUiConfig } = await import('@plugins/swagger.js');
+      
+      const testHeader = "default-src 'self'";
+      const result = swaggerUiConfig.transformStaticCSP(testHeader);
+      
+      expect(result).toBe(testHeader);
+    });
   });
 });

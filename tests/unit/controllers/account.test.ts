@@ -249,7 +249,9 @@ describe('AccountController', () => {
 
   describe('signOut', () => {
     it('should return success response', async () => {
-      const mockRequest = createMockRequest();
+      const mockRequest = createMockRequest({
+        isAuthenticated: true,
+      });
 
       await controller.signOut(mockRequest, mockReply);
 

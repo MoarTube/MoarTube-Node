@@ -50,7 +50,7 @@ export function accountRoutes(
   fastify.get(
     '/authenticated',
     {
-      preHandler: [fastify.optionalAuthenticate],
+      preHandler: [fastify.authenticate],
       schema: {
         tags: ['Account'],
       },
