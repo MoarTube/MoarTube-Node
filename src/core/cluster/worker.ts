@@ -18,7 +18,6 @@ import type {
 import { IPCChannel, type IPCLogger } from '@core/cluster/ipc-channel.js';
 import { WebSocketManager } from '@websocket/index.js';
 import { getContainer } from '@core/index.js';
-import { Logger } from '@utils/index.js';
 import { getConfig } from '@config/index.js';
 import { createDatabase } from '@/database/index.js';
 

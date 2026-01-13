@@ -231,15 +231,98 @@ describe('IndexerService', () => {
   });
 
   describe('updateVideoIndex', () => {
-    it('should update video in index', async () => {
+    const mockUpdateData = {
+      videoId: 'video123',
+      title: 'Test Video',
+      tags: 'test',
+      views: 100,
+      isStreaming: false,
+      lengthSeconds: 120,
+      nodeIconPngBase64: '',
+      nodeAvatarPngBase64: '',
+      videoPreviewJpgBase64: '',
+      moarTubeTokenProof: 'test-token-proof',
+    };
+
+    it('should update video in index and return success result', async () => {
       vi.mocked(mockHttpClient.post!).mockResolvedValue({
+        status: 200,
+        data: { isError: false, message: 'Success' },
+      });
+
+      const result = await service.updateVideoIndex(mockUpdateData);
+
+      expect(result).toEqual({
+        isError: false,
+        statusCode: 200,
+        message: 'Success',
+      });
+      expect(mockHttpClient.post).toHaveBeenCalledWith('/index/video/update', mockUpdateData);
+      expect(mockLogger.info).toHaveBeenCalledWith('Video index updated', { videoId: 'video123' });
+    });
+
+    it('should return result without message if not provided', async () => {
+      vi.mocked(mockHttpClient.post!).mockResolvedValue({
+        status: 200,
         data: { isError: false },
       });
 
-      await service.updateVideoIndex({ videoId: 'video123' });
+      const result = await service.updateVideoIndex(mockUpdateData);
 
-      expect(mockHttpClient.post).toHaveBeenCalledWith('/index/video/update', { videoId: 'video123' });
-      expect(mockLogger.info).toHaveBeenCalledWith('Video index updated', { videoId: 'video123' });
+      expect(result).toEqual({
+        isError: false,
+        statusCode: 200,
+      });
+    });
+
+    it('should handle 413 Request Entity Too Large error', async () => {
+      const error = {
+        response: {
+          status: 413,
+          data: { isError: true, message: 'Request too large' },
+        },
+      };
+      vi.mocked(mockHttpClient.post!).mockRejectedValue(error);
+
+      const result = await service.updateVideoIndex(mockUpdateData);
+
+      expect(result.isError).toBe(true);
+      expect(result.statusCode).toBe(413);
+      expect(result.message).toContain('1MB limit');
+      expect(mockLogger.warn).toHaveBeenCalledWith('Video index update too large', {
+        videoId: 'video123',
+      });
+    });
+
+    it('should handle other errors and log them', async () => {
+      const error = {
+        response: {
+          status: 500,
+          data: { isError: true, message: 'Server error' },
+        },
+      };
+      vi.mocked(mockHttpClient.post!).mockRejectedValue(error);
+
+      const result = await service.updateVideoIndex(mockUpdateData);
+
+      expect(result.isError).toBe(true);
+      expect(result.statusCode).toBe(500);
+      expect(result.message).toBe('Server error');
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to update video index', error, {
+        videoId: 'video123',
+      });
+    });
+
+    it('should not log success when response indicates error', async () => {
+      vi.mocked(mockHttpClient.post!).mockResolvedValue({
+        status: 200,
+        data: { isError: true, message: 'Video not found' },
+      });
+
+      const result = await service.updateVideoIndex(mockUpdateData);
+
+      expect(result.isError).toBe(true);
+      expect(mockLogger.info).not.toHaveBeenCalledWith('Video index updated', expect.anything());
     });
   });
 

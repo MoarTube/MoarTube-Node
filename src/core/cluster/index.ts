@@ -9,12 +9,7 @@
 export { IPCChannel, type IPCHandler, type IPCLogger } from '@core/cluster/ipc-channel.js';
 
 // Master process
-export {
-  ClusterMaster,
-  type ClusterMasterOptions,
-  type MasterIndexerOperations,
-  type MasterCloudflareOperations,
-} from '@core/cluster/master.js';
+export { ClusterMaster } from '@core/cluster/master.js';
 
 // Worker process
-export { ClusterWorker, type ClusterWorkerOptions } from '@core/cluster/worker.js';
+export { ClusterWorker } from '@core/cluster/worker.js';

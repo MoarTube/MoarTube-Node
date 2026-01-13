@@ -27,6 +27,7 @@ export type {
   StorageMode,
   FileMetadata,
   VideoIndexData,
+  VideoUpdateData,
   RemoveFromIndexData,
   IndexerSubmitResult,
   WebSocketEventName,

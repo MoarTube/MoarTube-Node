@@ -257,6 +257,22 @@ export interface RemoveFromIndexData {
 }
 
 /**
+ * Data for updating a video in the index
+ */
+export interface VideoUpdateData {
+  videoId: string;
+  title: string;
+  tags: string;
+  views: number;
+  isStreaming: boolean;
+  lengthSeconds: number;
+  nodeIconPngBase64: string;
+  nodeAvatarPngBase64: string;
+  videoPreviewJpgBase64: string;
+  moarTubeTokenProof: string;
+}
+
+/**
  * Result from indexer submission
  */
 export interface IndexerSubmitResult {

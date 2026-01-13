@@ -51,7 +51,7 @@ export class ClusterMaster {
   /**
    * Start the cluster master
    */
-  async start(): Promise<void> {
+  start(): void {
     if (this.isRunning) {
       return;
     }
@@ -347,7 +347,7 @@ export class ClusterMaster {
               moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
             };
 
-            const response = await this.indexer.submitVideoToIndex(data);
+            const response = await this.indexer.updateVideoIndex(data);
 
             if (response.isError) {
               throw new Error(response.message);

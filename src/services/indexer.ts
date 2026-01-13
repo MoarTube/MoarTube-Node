@@ -10,6 +10,7 @@ import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type {
   VideoIndexData,
+  VideoUpdateData,
   RemoveFromIndexData,
   IndexerSubmitResult,
 } from '@services/interfaces.js';
@@ -124,11 +125,46 @@ export class IndexerService extends BaseService {
   /**
    * Update video data in the index
    */
-  async updateVideoIndex(data: Partial<VideoIndexData>): Promise<void> {
-    return this.withErrorLogging('updateVideoIndex', async () => {
-      await this.httpClient.post('/index/video/update', data);
-      this.logger.info('Video index updated', { videoId: data.videoId });
-    });
+  async updateVideoIndex(data: VideoUpdateData): Promise<IndexerSubmitResult> {
+    try {
+      const response = await this.httpClient.post<IndexerResponse>('/index/video/update', data);
+      const result: IndexerSubmitResult = {
+        isError: response.data.isError,
+        statusCode: response.status,
+      };
+      if (response.data.message !== undefined) {
+        result.message = response.data.message;
+      }
+      if (!response.data.isError) {
+        this.logger.info('Video index updated', { videoId: data.videoId });
+      }
+      return result;
+    } catch (error) {
+      const axiosError = error as AxiosError<IndexerResponse>;
+
+      // Handle 413 Request Entity Too Large specifically
+      if (axiosError.response?.status === 413) {
+        this.logger.warn('Video index update too large', { videoId: data.videoId });
+        return {
+          isError: true,
+          message:
+            'The request size exceeded the 1MB limit. Try reducing the size of your node icon, avatar, and/or video preview images.',
+          statusCode: 413,
+        };
+      }
+
+      this.logger.error('Failed to update video index', error, {
+        videoId: data.videoId,
+      });
+      const result: IndexerSubmitResult = {
+        isError: true,
+        message: axiosError.response?.data.message ?? (error as Error).message,
+      };
+      if (axiosError.response?.status !== undefined) {
+        result.statusCode = axiosError.response.status;
+      }
+      return result;
+    }
   }
 
   /**

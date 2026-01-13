@@ -728,7 +728,7 @@ describe('ClusterMaster', () => {
       });
 
       const testIndexer = {
-        submitVideoToIndex: vi.fn().mockResolvedValue({ isError: false }),
+        updateVideoIndex: vi.fn().mockResolvedValue({ isError: false }),
       };
 
       const master = new ClusterMaster(mockLogger as any, testIndexer as any, mockCloudflare as any);
@@ -737,7 +737,7 @@ describe('ClusterMaster', () => {
       // Advance timers by 3 seconds
       await vi.advanceTimersByTimeAsync(3000);
 
-      expect(testIndexer.submitVideoToIndex).toHaveBeenCalledWith({
+      expect(testIndexer.updateVideoIndex).toHaveBeenCalledWith({
         videoId: 'vid1',
         title: 'Test Video',
         tags: 'test,video',
@@ -922,7 +922,7 @@ describe('ClusterMaster', () => {
       });
 
       const testIndexer = {
-        submitVideoToIndex: vi.fn().mockResolvedValue({ isError: false }),
+        updateVideoIndex: vi.fn().mockResolvedValue({ isError: false }),
       };
 
       const master = new ClusterMaster(mockLogger as any, testIndexer as any, mockCloudflare as any);
@@ -931,8 +931,8 @@ describe('ClusterMaster', () => {
       // Advance timers by 3 seconds
       await vi.advanceTimersByTimeAsync(3000);
 
-      // Should call submitVideoToIndex but skip the database update
-      expect(testIndexer.submitVideoToIndex).toHaveBeenCalled();
+      // Should call updateVideoIndex but skip the database update
+      expect(testIndexer.updateVideoIndex).toHaveBeenCalled();
       expect(mockLogger.debug).toHaveBeenCalledWith('Updated video index: vid1');
     });
   });
