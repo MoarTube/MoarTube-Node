@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Watch Routes
  *
  * Routes for the main video watch page.
@@ -36,9 +36,11 @@ export function watchRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Watch'],
         querystring: watchQuerySchema,
       },
     },
     controller.getWatchPage.bind(controller)
   );
 }
+

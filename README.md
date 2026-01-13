@@ -216,7 +216,7 @@ npm i @moartube/moartube-node
 And run from the command-line locally:
 
 ```bash
-node node_modules/@moartube/moartube-node/moartube-node.js
+node node_modules/@moartube/moartube-node/dist/moartube-node.js
 ```
 
 ## [git](https://github.com/MoarTube/MoarTube-Node)
@@ -229,10 +229,17 @@ Open a terminal in the cloned directory and run:
 
 ```bash
 npm install
+npm run build
 ```
 
 ```bash
-node moartube-node.js
+npm start
+```
+
+Or for development with hot-reload:
+
+```bash
+npm run dev
 ```
 
 ## [script (Ubuntu Linux)](https://www.moartube.com/bash/install/node)
@@ -293,7 +300,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/snap/bin/node /home/Moartube-Node/moartube-node.js
+ExecStart=/snap/bin/node /home/Moartube-Node/dist/moartube-node.js
 Restart=always
 
 [Install]
@@ -339,7 +346,88 @@ Restart the moartube-node service.
 sudo systemctl restart moartube-node
 ```
 
+# Development
 
+MoarTube Node is built with TypeScript and uses modern tooling for development.
+
+## Tech Stack
+
+- **Runtime**: Node.js 20+
+- **Language**: TypeScript 5.x with strict type checking
+- **Framework**: Fastify 5.x with Zod validation
+- **Database**: SQLite (local) or PostgreSQL (remote) via Drizzle ORM
+- **Testing**: Vitest with 100% code coverage
+- **Build**: tsup for bundling
+
+## Project Structure
+
+```
+src/
+├── config/          # Configuration and environment
+├── controllers/     # Request handlers
+├── core/            # Core functionality (DI container, clustering)
+├── database/        # Database connections and repositories
+├── errors/          # Custom error classes
+├── plugins/         # Fastify plugins (auth, swagger, error handling)
+├── routes/          # Route definitions with Zod schemas
+├── services/        # Business logic services
+├── types/           # TypeScript type definitions
+├── utils/           # Utility functions
+├── validators/      # Zod validation schemas
+├── websocket/       # WebSocket handlers
+└── moartube-node.ts # Application entry point
+```
+
+## Development Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Run in development mode with hot-reload
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production build
+npm start
+
+# Run tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Type check
+npm run typecheck
+
+# Lint code
+npm run lint
+
+# Format code
+npm run format
+```
+
+## API Documentation
+
+API documentation is available via Swagger UI at `/documentation` when running in development mode.
+
+To enable in production, set the environment variable:
+```bash
+ENABLE_SWAGGER_IN_PRODUCTION=true
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `NODE_PORT` | HTTP port to listen on | `80` |
+| `IS_DOCKER_ENVIRONMENT` | Running in Docker | `false` |
+| `NODE_ENV` | Environment mode | `development` |
+| `DATABASE_TYPE` | `sqlite` or `postgres` | `sqlite` |
+| `POSTGRES_URL` | PostgreSQL connection URL | - |
+| `ENABLE_SWAGGER_IN_PRODUCTION` | Enable Swagger in production | `false` |
 
 
 

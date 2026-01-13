@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Streams Routes
  *
  * Routes for live streaming endpoints.
@@ -41,6 +41,7 @@ export function streamsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Streams'],
         body: streamStartBodySchema,
       },
     },
@@ -53,6 +54,7 @@ export function streamsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Streams'],
         params: streamVideoIdParamsSchema,
       },
     },
@@ -69,6 +71,7 @@ export function streamsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Streams'],
         params: streamSegmentParamsSchema,
         body: removeSegmentBodySchema,
       },
@@ -86,6 +89,7 @@ export function streamsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Streams'],
         params: streamVideoIdParamsSchema,
       },
     },
@@ -102,6 +106,7 @@ export function streamsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Streams'],
         params: streamVideoIdParamsSchema,
         body: chatSettingsBodySchema,
       },
@@ -115,6 +120,7 @@ export function streamsRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Streams'],
         params: streamVideoIdParamsSchema,
         querystring: chatHistoryQuerySchema,
       },
@@ -122,3 +128,4 @@ export function streamsRoutes(
     controller.getChatHistory.bind(controller)
   );
 }
+

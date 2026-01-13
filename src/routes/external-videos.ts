@@ -1,4 +1,4 @@
-/**
+﻿/**
  * External Videos Routes
  *
  * Routes for serving video content (thumbnails, adaptive streams, progressive downloads).
@@ -33,6 +33,9 @@ export function externalVideosRoutes(
     '/baseUrl',
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['External-Videos'],
+      },
     },
     controller.getBaseUrl.bind(controller)
   );
@@ -43,6 +46,7 @@ export function externalVideosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['External-Videos'],
         params: externalVideoIdParamsSchema,
       },
     },
@@ -55,6 +59,7 @@ export function externalVideosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['External-Videos'],
         params: externalVideoIdParamsSchema,
       },
     },
@@ -67,6 +72,7 @@ export function externalVideosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['External-Videos'],
         params: externalVideoIdParamsSchema,
       },
     },
@@ -79,6 +85,7 @@ export function externalVideosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['External-Videos'],
         params: adaptiveManifestParamsSchema,
       },
     },
@@ -91,6 +98,7 @@ export function externalVideosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['External-Videos'],
         params: adaptiveSegmentParamsSchema,
       },
     },
@@ -103,9 +111,11 @@ export function externalVideosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['External-Videos'],
         params: progressiveVideoParamsSchema,
       },
     },
     controller.getProgressive.bind(controller)
   );
 }
+

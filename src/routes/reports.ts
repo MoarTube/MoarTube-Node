@@ -26,6 +26,9 @@ export function reportsRoutes(
     '/count',
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Reports'],
+      },
     },
     controller.getReportsCount.bind(controller)
   );

@@ -85,10 +85,10 @@ export class AccountController extends BaseController {
    *
    * Sign out the current user
    */
-  signOut = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  signOut = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       return await this.sendSuccess(reply, {
-        wasAuthenticated: true,
+        wasAuthenticated: request.isAuthenticated,
       });
     } catch (error) {
       this.logger.error('AccountController.signOut failed', error);

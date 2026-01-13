@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Node Routes
  *
  * Routes for the main node page and related endpoints.
@@ -40,6 +40,7 @@ export function nodeRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Node'],
         querystring: nodeSearchQuerySchema,
       },
     },
@@ -52,6 +53,7 @@ export function nodeRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Node'],
         querystring: nodeSearchQuerySchema,
       },
     },
@@ -63,6 +65,9 @@ export function nodeRoutes(
     '/newContentCounts',
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Node'],
+      },
     },
     controller.getNewContentCounts.bind(controller)
   );
@@ -73,9 +78,11 @@ export function nodeRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Node'],
         body: contentCheckedBodySchema,
       },
     },
     controller.contentChecked.bind(controller)
   );
 }
+

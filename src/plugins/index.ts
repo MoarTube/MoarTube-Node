@@ -21,6 +21,7 @@ import { createAppContainer } from '@core/index.js';
 import { getDatabase } from '@database/index.js';
 import { registerRoutes } from '@routes/index.js';
 import authenticationPlugin from '@plugins/authentication.js';
+import swaggerPlugin from '@plugins/swagger.js';
 
 /**
  * Get logger configuration for Fastify
@@ -91,6 +92,9 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
 
   // Register authentication plugin
   await app.register(authenticationPlugin);
+
+  // Register Swagger/OpenAPI documentation
+  await app.register(swaggerPlugin);
 
   // Create DI container with database
   const db = getDatabase();

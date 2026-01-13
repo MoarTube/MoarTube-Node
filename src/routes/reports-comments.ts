@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Reports Comments Routes
  *
  * Routes for comment report management.
@@ -32,6 +32,7 @@ export function reportsCommentsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Reports'],
         querystring: reportsQuerySchema,
       },
     },
@@ -44,6 +45,7 @@ export function reportsCommentsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Reports'],
         body: archiveReportBodySchema,
       },
     },
@@ -56,9 +58,11 @@ export function reportsCommentsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Reports'],
         params: reportIdParamsSchema,
       },
     },
     controller.deleteReport.bind(controller)
   );
 }
+

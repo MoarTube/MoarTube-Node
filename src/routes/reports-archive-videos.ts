@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Reports Archive Videos Routes
  *
  * Routes for archived video report management.
@@ -28,6 +28,7 @@ export function reportsArchiveVideosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Reports'],
         querystring: reportsQuerySchema,
       },
     },
@@ -40,9 +41,11 @@ export function reportsArchiveVideosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Reports'],
         params: archiveIdParamsSchema,
       },
     },
     controller.deleteArchive.bind(controller)
   );
 }
+

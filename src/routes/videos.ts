@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Videos Routes
  *
  * Routes for video-related endpoints.
@@ -66,6 +66,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         querystring: videoSearchQuerySchema,
       },
     },
@@ -77,6 +78,9 @@ export function videosRoutes(
     '/recommended',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Videos'],
+      },
     },
     controller.getRecommended.bind(controller)
   );
@@ -86,6 +90,9 @@ export function videosRoutes(
     '/tags',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Videos'],
+      },
     },
     controller.getTags.bind(controller)
   );
@@ -95,6 +102,9 @@ export function videosRoutes(
     '/tags/all',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Videos'],
+      },
     },
     controller.getAllTags.bind(controller)
   );
@@ -105,6 +115,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         querystring: videoCommentsQuerySchema,
       },
@@ -118,6 +129,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         params: videoCommentIdParamsSchema,
         querystring: videoCommentGetQuerySchema,
       },
@@ -131,6 +143,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -143,6 +156,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -155,6 +169,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -167,6 +182,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -178,6 +194,9 @@ export function videosRoutes(
     '/data/all',
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Videos'],
+      },
     },
     controller.getAllVideosData.bind(controller)
   );
@@ -188,6 +207,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -200,6 +220,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoLikeDislikeBodySchema,
       },
@@ -213,6 +234,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoLikeDislikeBodySchema,
       },
@@ -226,6 +248,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoCommentBodySchema,
       },
@@ -239,6 +262,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoReportBodySchema,
       },
@@ -256,6 +280,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         body: videoDeleteBodySchema,
       },
     },
@@ -268,6 +293,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         body: videoFinalizeBodySchema,
       },
     },
@@ -280,6 +306,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         body: videoImportBodySchema,
       },
     },
@@ -292,6 +319,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         body: videoIdBodySchema,
       },
     },
@@ -304,6 +332,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         body: videoIdBodySchema,
       },
     },
@@ -316,6 +345,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         body: videoIdBodySchema,
       },
     },
@@ -328,6 +358,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         body: videoIdBodySchema,
       },
     },
@@ -340,6 +371,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoDataBodySchema,
       },
@@ -353,6 +385,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoLengthsBodySchema,
       },
@@ -366,6 +399,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -378,6 +412,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoAdaptiveManifestParamsSchema,
         body: videoMasterManifestBodySchema,
       },
@@ -391,6 +426,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoCommentIdParamsSchema,
         querystring: videoCommentDeleteQuerySchema,
       },
@@ -404,6 +440,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoPermissionsBodySchema,
       },
@@ -417,6 +454,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         querystring: videoUploadQuerySchema,
       },
@@ -430,6 +468,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -442,6 +481,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -454,6 +494,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -466,6 +507,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -478,6 +520,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -490,6 +533,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -502,6 +546,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoSourceFileExtensionBodySchema,
       },
@@ -515,6 +560,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -527,6 +573,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
       },
     },
@@ -539,6 +586,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoUnpublishBodySchema,
       },
@@ -552,6 +600,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoUnpublishBodySchema,
       },
@@ -565,6 +614,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoIndexAddBodySchema,
       },
@@ -578,6 +628,7 @@ export function videosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Videos'],
         params: videoIdParamsSchema,
         body: videoIndexRemoveBodySchema,
       },
@@ -585,3 +636,5 @@ export function videosRoutes(
     controller.removeFromIndex.bind(controller)
   );
 }
+
+

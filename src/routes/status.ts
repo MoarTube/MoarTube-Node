@@ -25,6 +25,9 @@ export function statusRoutes(
     '/information',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Status'],
+      },
     },
     controller.information.bind(controller)
   );
@@ -33,6 +36,9 @@ export function statusRoutes(
     '/heartbeat',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Status'],
+      },
     },
     controller.heartbeat.bind(controller)
   );

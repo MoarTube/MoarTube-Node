@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Reports Archive Comments Routes
  *
  * Routes for archived comment report management.
@@ -28,6 +28,7 @@ export function reportsArchiveCommentsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Reports'],
         querystring: reportsQuerySchema,
       },
     },
@@ -40,9 +41,11 @@ export function reportsArchiveCommentsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Reports'],
         params: archiveIdParamsSchema,
       },
     },
     controller.deleteArchive.bind(controller)
   );
 }
+

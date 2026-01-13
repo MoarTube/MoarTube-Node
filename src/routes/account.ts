@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Account Routes
  *
  * Routes for authentication and account management.
@@ -27,6 +27,7 @@ export function accountRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Account'],
         body: signInBodySchema,
       },
     },
@@ -38,6 +39,9 @@ export function accountRoutes(
     '/signout',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Account'],
+      },
     },
     controller.signOut.bind(controller)
   );
@@ -46,7 +50,10 @@ export function accountRoutes(
   fastify.get(
     '/authenticated',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Account'],
+      },
     },
     controller.authenticated.bind(controller)
   );

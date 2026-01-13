@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Watch Embed Routes
  *
  * Routes for embedded video and chat pages.
@@ -30,6 +30,7 @@ export function watchEmbedRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Watch'],
         params: watchEmbedVideoIdParamsSchema,
       },
     },
@@ -42,9 +43,11 @@ export function watchEmbedRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Watch'],
         params: watchEmbedVideoIdParamsSchema,
       },
     },
     controller.getEmbedChat.bind(controller)
   );
 }
+

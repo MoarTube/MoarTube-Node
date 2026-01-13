@@ -1,4 +1,4 @@
-/**
+﻿/**
  * External Resources Routes
  *
  * Routes for serving static assets (JavaScript, CSS, fonts, images).
@@ -25,6 +25,7 @@ export function externalResourcesRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['External-Resources'],
         params: filenameParamsSchema,
       },
     },
@@ -37,6 +38,7 @@ export function externalResourcesRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['External-Resources'],
         params: filenameParamsSchema,
       },
     },
@@ -49,6 +51,7 @@ export function externalResourcesRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['External-Resources'],
         params: filenameParamsSchema,
       },
     },
@@ -61,9 +64,11 @@ export function externalResourcesRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['External-Resources'],
         params: imageNameParamsSchema,
       },
     },
     controller.getImage.bind(controller)
   );
 }
+

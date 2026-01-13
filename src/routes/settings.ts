@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Settings Routes
  *
  * Routes for node settings and configuration endpoints.
@@ -51,6 +51,9 @@ export function settingsRoutes(
     '/',
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Settings'],
+      },
     },
     controller.getSettings.bind(controller)
   );
@@ -64,6 +67,9 @@ export function settingsRoutes(
     '/avatar',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Settings'],
+      },
     },
     controller.getAvatar.bind(controller)
   );
@@ -73,6 +79,9 @@ export function settingsRoutes(
     '/avatar',
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Settings'],
+      },
     },
     controller.uploadAvatar.bind(controller)
   );
@@ -82,6 +91,9 @@ export function settingsRoutes(
     '/banner',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Settings'],
+      },
     },
     controller.getBanner.bind(controller)
   );
@@ -91,6 +103,9 @@ export function settingsRoutes(
     '/banner',
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Settings'],
+      },
     },
     controller.uploadBanner.bind(controller)
   );
@@ -105,6 +120,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: personalizeNodeNameBodySchema,
       },
     },
@@ -117,6 +133,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: personalizeNodeAboutBodySchema,
       },
     },
@@ -129,6 +146,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: personalizeNodeIdBodySchema,
       },
     },
@@ -145,6 +163,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         querystring: secureToggleQuerySchema,
       },
     },
@@ -157,6 +176,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: updateAccountBodySchema,
       },
     },
@@ -173,6 +193,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: networkInternalBodySchema,
       },
     },
@@ -185,6 +206,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: networkExternalBodySchema,
       },
     },
@@ -201,6 +223,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: cloudflareConfigureBodySchema,
       },
     },
@@ -212,6 +235,9 @@ export function settingsRoutes(
     '/cloudflare/clear',
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Settings'],
+      },
     },
     controller.cloudflareClear.bind(controller)
   );
@@ -222,6 +248,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: cloudflareTurnstileConfigureBodySchema,
       },
     },
@@ -233,6 +260,9 @@ export function settingsRoutes(
     '/cloudflare/turnstile/clear',
     {
       preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Settings'],
+      },
     },
     controller.cloudflareTurnstileClear.bind(controller)
   );
@@ -247,6 +277,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: featureToggleBodySchema,
       },
     },
@@ -259,6 +290,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: featureToggleBodySchema,
       },
     },
@@ -271,6 +303,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: featureToggleBodySchema,
       },
     },
@@ -283,6 +316,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: featureToggleBodySchema,
       },
     },
@@ -295,6 +329,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: featureToggleBodySchema,
       },
     },
@@ -311,6 +346,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: databaseConfigToggleBodySchema,
       },
     },
@@ -323,6 +359,7 @@ export function settingsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Settings'],
         body: storageConfigToggleBodySchema,
       },
     },
@@ -338,6 +375,9 @@ export function settingsRoutes(
     '/export/database',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Settings'],
+      },
     },
     controller.exportDatabase.bind(controller)
   );
@@ -348,7 +388,11 @@ export function settingsRoutes(
     '/import/database',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Settings'],
+      },
     },
     controller.importDatabase.bind(controller)
   );
 }
+

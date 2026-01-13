@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Comments Routes
  *
  * Routes for comment search and reporting.
@@ -40,6 +40,7 @@ export function commentsRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Comments'],
         querystring: commentSearchQuerySchema,
       },
     },
@@ -52,6 +53,7 @@ export function commentsRoutes(
     {
       preHandler: [fastify.optionalAuthenticate],
       schema: {
+        tags: ['Comments'],
         params: commentIdParamsSchema,
         body: commentReportBodySchema,
       },
@@ -59,3 +61,4 @@ export function commentsRoutes(
     controller.reportComment.bind(controller)
   );
 }
+

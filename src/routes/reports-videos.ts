@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Reports Videos Routes
  *
  * Routes for video report management.
@@ -32,6 +32,7 @@ export function reportsVideosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Reports'],
         querystring: reportsQuerySchema,
       },
     },
@@ -44,6 +45,7 @@ export function reportsVideosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Reports'],
         body: archiveReportBodySchema,
       },
     },
@@ -56,9 +58,11 @@ export function reportsVideosRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Reports'],
         params: reportIdParamsSchema,
       },
     },
     controller.deleteReport.bind(controller)
   );
 }
+

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Monetization Routes
  *
  * Routes for crypto wallet address management.
@@ -27,6 +27,9 @@ export function monetizationRoutes(
     '/all',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Monetization'],
+      },
     },
     controller.getAllWalletAddresses.bind(controller)
   );
@@ -37,6 +40,7 @@ export function monetizationRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Monetization'],
         body: addWalletAddressBodySchema,
       },
     },
@@ -49,9 +53,11 @@ export function monetizationRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Monetization'],
         body: deleteWalletAddressBodySchema,
       },
     },
     controller.deleteWalletAddress.bind(controller)
   );
 }
+

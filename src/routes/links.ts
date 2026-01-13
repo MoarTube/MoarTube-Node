@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Links Routes
  *
  * Routes for social link management.
@@ -27,6 +27,9 @@ export function linksRoutes(
     '/all',
     {
       preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Links'],
+      },  
     },
     controller.getAllLinks.bind(controller)
   );
@@ -37,6 +40,7 @@ export function linksRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Links'],
         body: addLinkBodySchema,
       },
     },
@@ -49,9 +53,11 @@ export function linksRoutes(
     {
       preHandler: [fastify.authenticate],
       schema: {
+        tags: ['Links'],
         body: deleteLinkBodySchema,
       },
     },
     controller.deleteLink.bind(controller)
   );
 }
+
