@@ -774,7 +774,7 @@ describe('ClusterMaster', () => {
       });
 
       const testIndexer = {
-        submitVideoToIndex: vi.fn().mockResolvedValue({ isError: true, message: 'Update failed' }),
+        updateVideoIndex: vi.fn().mockResolvedValue({ isError: true, message: 'Update failed' }),
       };
 
       const master = new ClusterMaster(mockLogger as any, testIndexer as any, mockCloudflare as any);
@@ -798,7 +798,7 @@ describe('ClusterMaster', () => {
       });
 
       const testIndexer = {
-        submitVideoToIndex: vi.fn(),
+        updateVideoIndex: vi.fn(),
       };
 
       const master = new ClusterMaster(mockLogger as any, testIndexer as any, mockCloudflare as any);

@@ -324,6 +324,17 @@ describe('IndexerService', () => {
       expect(result.isError).toBe(true);
       expect(mockLogger.info).not.toHaveBeenCalledWith('Video index updated', expect.anything());
     });
+
+    it('should handle network errors without response', async () => {
+      const error = new Error('Network error');
+      vi.mocked(mockHttpClient.post!).mockRejectedValue(error);
+
+      const result = await service.updateVideoIndex(mockUpdateData);
+
+      expect(result.isError).toBe(true);
+      expect(result.message).toBe('Network error');
+      expect(result.statusCode).toBeUndefined();
+    });
   });
 
   describe('updateNodeName', () => {
