@@ -28,7 +28,7 @@ export interface UrlConfig {
  * URL configuration singleton class
  */
 class Urls {
-  private static instance: Urls;
+  private static instance: Urls | undefined;
 
   private readonly indexerConfig: IndexerConfig;
   private readonly aliaserConfig: AliaserConfig;

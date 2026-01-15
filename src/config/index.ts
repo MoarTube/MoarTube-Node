@@ -42,7 +42,7 @@ export interface RuntimeConfig {
  * Coordinates all configuration subsystems and provides unified access
  */
 class Config {
-  private static instance: Config;
+  private static instance: Config | undefined;
 
   private readonly _env: Env;
   private readonly _paths: Paths;

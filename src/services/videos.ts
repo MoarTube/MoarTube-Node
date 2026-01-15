@@ -506,7 +506,10 @@ export class VideosService extends BaseService {
       // Set new debounce timer
       const timer = setTimeout(() => {
         // pendingCount is guaranteed to be > 0 since we always set it before creating the timer
-        const pendingCount = this.pendingViews.get(videoId)!;
+        const pendingCount = this.pendingViews.get(videoId);
+        if (pendingCount === undefined) {
+          return;
+        }
 
         this.pendingViews.delete(videoId);
         this.viewTimers.delete(videoId);
@@ -614,7 +617,7 @@ export class VideosService extends BaseService {
       }
 
       // Only mark as outdated if currently indexed
-      if (video.is_indexed === true) {
+      if (video.is_indexed) {
         await this.videoRepository.update(videoId, {
           is_index_outdated: true,
         });
@@ -1780,7 +1783,10 @@ export class VideosService extends BaseService {
 
     // Build sources from outputs
     for (const format of Object.keys(outputs) as VideoFormat[]) {
-      const resolutions = outputs[format]!;
+      const resolutions = outputs[format];
+      if (!resolutions) {
+        continue;
+      }
 
       for (const resolution of resolutions) {
         if (format === 'm3u8') {
