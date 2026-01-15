@@ -90,7 +90,7 @@ async function startMaster(): Promise<void> {
 
   const master = new ClusterMaster(logger, indexer, cloudflare);
 
-  await master.start();
+  master.start();
 }
 
 /**
