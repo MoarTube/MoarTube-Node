@@ -36,6 +36,8 @@
     "dev:start": "tsx src/moartube-node.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests --ext .ts",
+    "lint:src": "eslint src --ext .ts",
+    "lint:tests": "eslint tests --ext .ts",
     "lint:fix": "eslint src tests --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
