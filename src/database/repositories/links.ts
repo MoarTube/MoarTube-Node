@@ -137,7 +137,7 @@ export class LinksRepository extends BaseRepository {
    * @param data - Array of link data for insertion
    * @returns Array of created link records
    */
-  async createMany(data: any[]): Promise<DrizzleLink[]> {
+  async createMany(data: DrizzleNewLink[]): Promise<DrizzleLink[]> {
     if (data.length === 0) {
       return [];
     }

@@ -329,9 +329,9 @@ export class VideosRepository extends BaseRepository {
     sortBy: string
   ):
     | typeof this.videosTable.views
-     
-     
-      {
+    | typeof this.videosTable.likes
+    | typeof this.videosTable.title
+    | typeof this.videosTable.creation_timestamp {
     switch (sortBy) {
       case 'views':
         return this.videosTable.views;
