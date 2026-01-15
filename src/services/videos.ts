@@ -1784,7 +1784,7 @@ export class VideosService extends BaseService {
     // Build sources from outputs
     for (const format of Object.keys(outputs) as VideoFormat[]) {
       const resolutions = outputs[format];
-      if (!resolutions) {
+      if (resolutions.length === 0) {
         continue;
       }
 

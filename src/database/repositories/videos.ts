@@ -105,7 +105,7 @@ export class VideosRepository extends BaseRepository {
     let query = this.db.select().from(this.videosTable).orderBy(sortDir(sortField));
 
     // Apply where conditions only if they exist
-    query = conditions !== undefined ? (query.where(conditions) as typeof query) : query;
+    query = conditions !== undefined ? (query.where(conditions)) : query;
 
     if (limit !== undefined) {
       return query.limit(limit);
@@ -329,9 +329,9 @@ export class VideosRepository extends BaseRepository {
     sortBy: string
   ):
     | typeof this.videosTable.views
-    | typeof this.videosTable.likes
-    | typeof this.videosTable.title
-    | typeof this.videosTable.creation_timestamp {
+     
+     
+      {
     switch (sortBy) {
       case 'views':
         return this.videosTable.views;

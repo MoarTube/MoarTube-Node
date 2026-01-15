@@ -53,9 +53,7 @@ class Urls {
    * Initialize the URLs singleton with service configurations
    */
   static initialize(indexerConfig: IndexerConfig, aliaserConfig: AliaserConfig): Urls {
-    if (!Urls.instance) {
-      Urls.instance = new Urls(indexerConfig, aliaserConfig);
-    }
+    Urls.instance ??= new Urls(indexerConfig, aliaserConfig);
     return Urls.instance;
   }
 

@@ -126,15 +126,15 @@ export class CommentsRepository extends BaseRepository {
   /**
    * Updates a comment record
    *
-   * @param id - The database primary key
+   * @param commentId - The comment identifier
    * @param data - Partial comment data to update
    * @returns The updated comment record or null if not found
    */
-  async update(videoId: string, commentId: number, timestamp: number, data: Partial<DrizzleNewComment>): Promise<DrizzleComment | null> {
+  async update(commentId: number, data: Partial<DrizzleNewComment>): Promise<DrizzleComment | null> {
     const result = await this.db
       .update(this.commentsTable)
       .set(data)
-      .where(eq(this.commentsTable.comment_id, id))
+      .where(eq(this.commentsTable.comment_id, commentId))
       .returning();
     return result[0] ?? null;
   }
@@ -250,9 +250,9 @@ export class CommentsRepository extends BaseRepository {
 
     // Sort
     if (sortDirection === 'ascending') {
-      query = query.orderBy(this.commentsTable.timestamp) as typeof query;
+      query = query.orderBy(this.commentsTable.timestamp);
     } else {
-      query = query.orderBy(desc(this.commentsTable.timestamp)) as typeof query;
+      query = query.orderBy(desc(this.commentsTable.timestamp));
     }
 
     return query.limit(limit);
