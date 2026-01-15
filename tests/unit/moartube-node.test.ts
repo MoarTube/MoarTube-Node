@@ -391,7 +391,7 @@ describe('MoarTube-Node Entry Point', () => {
       
       vi.doMock('@core/cluster/index.js', () => ({
         ClusterMaster: class ClusterMaster {
-          start = vi.fn().mockRejectedValue(startupError);
+          start = vi.fn(() => { throw startupError; });
         },
         ClusterWorker: class ClusterWorker {
           start = vi.fn();
