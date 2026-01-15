@@ -53,7 +53,7 @@ export default tseslint.config(
         ...globals.es2022,
       },
       parserOptions: {
-        project: './tsconfig.json',
+        project: ['./tsconfig.json', './tsconfig.build.json'],
       },
     },
     rules: {

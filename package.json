@@ -35,8 +35,8 @@
     "start": "node dist/moartube-node.js",
     "dev:start": "tsx src/moartube-node.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix",
+    "lint": "eslint src tests --ext .ts",
+    "lint:fix": "eslint src tests --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
     "test": "vitest run",
@@ -50,6 +50,10 @@
   },
   "lint-staged": {
     "src/**/*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "tests/**/*.ts": [
       "eslint --fix",
       "prettier --write"
     ]
