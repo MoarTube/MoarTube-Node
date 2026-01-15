@@ -6,6 +6,7 @@
 import { eq, desc, count, gt } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
 import type { PaginationOptions } from '@/types/index.js';
+import type { DrizzleCommentReport, DrizzleNewCommentReport } from '@database/schemas/sqlite/index.js';
 
 /**
  * ReportsCommentsRepository class for comment report CRUD operations
@@ -23,7 +24,7 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @param reportId - The report primary key
    * @returns The report record or null if not found
    */
-  async findById(reportId: number): Promise<any | null> {
+  async findById(reportId: number): Promise<DrizzleCommentReport | null> {
     const result = await this.db
       .select()
       .from(this.commentReportsTable)
@@ -38,7 +39,7 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @param options - Pagination options (optional limit)
    * @returns Array of comment reports
    */
-  async findAll(options?: PaginationOptions): Promise<any[]> {
+  async findAll(options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
     const { limit } = this.getPaginationParams(options);
 
     const query = this.db
@@ -60,7 +61,7 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of reports for comments on the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -78,7 +79,7 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of reports for the comment
    */
-  async findByCommentId(commentId: number, options?: PaginationOptions): Promise<any[]> {
+  async findByCommentId(commentId: number, options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -106,7 +107,7 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @returns The created report record
    * @throws Error if insert fails to return a record
    */
-  async create(data: any): Promise<any> {
+  async create(data: DrizzleNewCommentReport): Promise<DrizzleCommentReport> {
     const result = await this.db.insert(this.commentReportsTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create comment report record');
@@ -186,7 +187,7 @@ export class ReportsCommentsRepository extends BaseRepository {
    * @param data - Array of report data for insertion
    * @returns Array of created report records
    */
-  async createMany(data: any[]): Promise<any[]> {
+  async createMany(data: DrizzleNewCommentReport[]): Promise<DrizzleCommentReport[]> {
     if (data.length === 0) {
       return [];
     }

@@ -6,6 +6,7 @@
 import { eq, desc, asc, sql, and, or, like, count, lt, type SQL } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
 import type { PaginationOptions } from '@/types/index.js';
+import type { DrizzleVideo, DrizzleNewVideo } from '@database/schemas/sqlite/index.js';
 
 /**
  * Options for querying this.videosTable
@@ -45,7 +46,7 @@ export class VideosRepository extends BaseRepository {
    * @param videoId - The unique video identifier
    * @returns The video record or null if not found
    */
-  async findById(videoId: string): Promise<any> {
+  async findById(videoId: string): Promise<DrizzleVideo | null> {
     const result = await this.db
       .select()
       .from(this.videosTable)
@@ -60,7 +61,7 @@ export class VideosRepository extends BaseRepository {
    * @param id - The database primary key
    * @returns The video record or null if not found
    */
-  async findByDbId(id: number): Promise<any> {
+  async findByDbId(id: number): Promise<DrizzleVideo> {
     const result = await this.db
       .select()
       .from(this.videosTable)
@@ -75,7 +76,7 @@ export class VideosRepository extends BaseRepository {
    * @param options - Query options for pagination and sorting
    * @returns Array of published this.videosTable
    */
-  async findPublished(options?: VideoQueryOptions): Promise<any[]> {
+  async findPublished(options?: VideoQueryOptions): Promise<DrizzleVideo[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
     const sortDir = options?.sortDirection === 'asc' ? asc : desc;
     const sortField = this.getSortField(options?.sortBy ?? 'creation_timestamp');
@@ -94,7 +95,7 @@ export class VideosRepository extends BaseRepository {
    * @param options - Query options including optional limit
    * @returns Array of this.videosTable matching the criteria
    */
-  async findAll(options?: VideoQueryOptions): Promise<any[]> {
+  async findAll(options?: VideoQueryOptions): Promise<DrizzleVideo[]> {
     const { limit } = this.getPaginationParams(options);
     const sortDir = options?.sortDirection === 'asc' ? asc : desc;
     const sortField = this.getSortField(options?.sortBy ?? 'creation_timestamp');
@@ -136,7 +137,7 @@ export class VideosRepository extends BaseRepository {
    * @returns The created video record
    * @throws Error if insert fails to return a record
    */
-  async create(data: any): Promise<any> {
+  async create(data: DrizzleNewVideo): Promise<DrizzleVideo> {
     const result = await this.db.insert(this.videosTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create video record');
@@ -151,7 +152,7 @@ export class VideosRepository extends BaseRepository {
    * @param data - Partial video data to update
    * @returns The updated video record or null if not found
    */
-  async update(videoId: string, data: Partial<any>): Promise<any | null> {
+  async update(videoId: string, data: Partial<DrizzleNewVideo>): Promise<DrizzleVideo | null> {
     const result = await this.db
       .update(this.videosTable)
       .set(data)
@@ -270,7 +271,7 @@ export class VideosRepository extends BaseRepository {
    *
    * @returns Array of streaming this.videosTable
    */
-  async findStreaming(): Promise<any[]> {
+  async findStreaming(): Promise<DrizzleVideo[]> {
     return this.db
       .select()
       .from(this.videosTable)
@@ -283,7 +284,7 @@ export class VideosRepository extends BaseRepository {
    *
    * @returns Array of indexed this.videosTable
    */
-  async findIndexed(): Promise<any[]> {
+  async findIndexed(): Promise<DrizzleVideo[]> {
     return this.db
       .select()
       .from(this.videosTable)
@@ -296,7 +297,7 @@ export class VideosRepository extends BaseRepository {
    *
    * @returns Array of this.videosTable pending indexing
    */
-  async findPendingIndexing(): Promise<any[]> {
+  async findPendingIndexing(): Promise<DrizzleVideo[]> {
     return this.db
       .select()
       .from(this.videosTable)
@@ -411,7 +412,7 @@ export class VideosRepository extends BaseRepository {
    * @param data - Array of video data for insertion
    * @returns Array of created video records
    */
-  async createMany(data: any[]): Promise<any[]> {
+  async createMany(data: DrizzleNewVideo[]): Promise<DrizzleVideo[]> {
     if (data.length === 0) {
       return [];
     }

@@ -5,6 +5,7 @@
  */
 import { eq, desc, and, gt, lt, like, count } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
+import type { DrizzleComment, DrizzleNewComment } from '@database/schemas/sqlite/index.js';
 
 /**
  * CommentsRepository class for comment CRUD operations
@@ -22,7 +23,7 @@ export class CommentsRepository extends BaseRepository {
    * @param id - The database primary key
    * @returns The comment record or null if not found
    */
-  async findById(videoId: string, commentId: number, timestamp: number): Promise<any | null> {
+  async findById(videoId: string, commentId: number, timestamp: number): Promise<DrizzleComment | null> {
     const result = await this.db
       .select()
       .from(this.commentsTable)
@@ -44,7 +45,7 @@ export class CommentsRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of this.commentsTable for the video
    */
-  async findByVideoId(videoId: string): Promise<any[]> {
+  async findByVideoId(videoId: string): Promise<DrizzleComment[]> {
     return this.db
       .select()
       .from(this.commentsTable)
@@ -66,7 +67,7 @@ export class CommentsRepository extends BaseRepository {
     type: 'before' | 'after',
     sort: 'ascending' | 'descending',
     timestamp: number
-  ): Promise<any[]> {
+  ): Promise<DrizzleComment[]> {
     const timestampCondition =
       type === 'before'
         ? lt(this.commentsTable.timestamp, timestamp)
@@ -101,7 +102,7 @@ export class CommentsRepository extends BaseRepository {
    * @param options - Pagination options (optional limit)
    * @returns Array of all this.commentsTable
    */
-  async findAll(): Promise<any[]> {
+  async findAll(): Promise<DrizzleComment[]> {
     const query = this.db.select().from(this.commentsTable);
 
     return query;
@@ -114,7 +115,7 @@ export class CommentsRepository extends BaseRepository {
    * @returns The created comment record
    * @throws Error if insert fails to return a record
    */
-  async create(data: any): Promise<any> {
+  async create(data: DrizzleNewComment): Promise<DrizzleComment> {
     const result = await this.db.insert(this.commentsTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create comment record');
@@ -129,7 +130,7 @@ export class CommentsRepository extends BaseRepository {
    * @param data - Partial comment data to update
    * @returns The updated comment record or null if not found
    */
-  async update(id: number, data: Partial<any>): Promise<any | null> {
+  async update(videoId: string, commentId: number, timestamp: number, data: Partial<DrizzleNewComment>): Promise<DrizzleComment | null> {
     const result = await this.db
       .update(this.commentsTable)
       .set(data)
@@ -180,7 +181,7 @@ export class CommentsRepository extends BaseRepository {
    * @param timestamp - The comment timestamp
    * @returns The comment record or null if not found
    */
-  async findByVideoIdAndTimestamp(videoId: string, timestamp: number): Promise<any | null> {
+  async findByVideoIdAndTimestamp(videoId: string, timestamp: number): Promise<DrizzleComment | null> {
     const result = await this.db
       .select()
       .from(this.commentsTable)
@@ -227,7 +228,7 @@ export class CommentsRepository extends BaseRepository {
     timestamp: number,
     videoId?: string,
     searchTerm?: string
-  ): Promise<any[]> {
+  ): Promise<DrizzleComment[]> {
     // Build conditions array
     const conditions = [];
 
@@ -273,7 +274,7 @@ export class CommentsRepository extends BaseRepository {
    * @param data - Array of comment data for insertion
    * @returns Array of created comment records
    */
-  async createMany(data: any[]): Promise<any[]> {
+  async createMany(data: DrizzleNewComment[]): Promise<DrizzleComment[]> {
     if (data.length === 0) {
       return [];
     }

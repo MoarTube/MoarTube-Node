@@ -6,6 +6,7 @@
 import { eq, desc, count } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
 import type { PaginationOptions } from '@/types/index.js';
+import type { DrizzleLink, DrizzleNewLink } from '@database/schemas/sqlite/index.js';
 
 /**
  * LinksRepository class for link CRUD operations
@@ -23,7 +24,7 @@ export class LinksRepository extends BaseRepository {
    * @param linkId - The link primary key
    * @returns The link record or null if not found
    */
-  async findById(linkId: number): Promise<any | null> {
+  async findById(linkId: number): Promise<DrizzleLink | null> {
     const result = await this.db
       .select()
       .from(this.linksTable)
@@ -38,7 +39,7 @@ export class LinksRepository extends BaseRepository {
    * @param options - Pagination options (optional limit)
    * @returns Array of this.linksTable
    */
-  async findAll(options?: PaginationOptions): Promise<any[]> {
+  async findAll(options?: PaginationOptions): Promise<DrizzleLink[]> {
     const { limit } = this.getPaginationParams(options);
 
     const query = this.db.select().from(this.linksTable).orderBy(desc(this.linksTable.timestamp));
@@ -56,7 +57,7 @@ export class LinksRepository extends BaseRepository {
    * @param url - The URL to search for
    * @returns The link record or null if not found
    */
-  async findByUrl(url: string): Promise<any | null> {
+  async findByUrl(url: string): Promise<DrizzleLink | null> {
     const result = await this.db
       .select()
       .from(this.linksTable)
@@ -82,7 +83,7 @@ export class LinksRepository extends BaseRepository {
    * @returns The created link record
    * @throws Error if insert fails to return a record
    */
-  async create(data: any): Promise<any> {
+  async create(data: DrizzleNewLink): Promise<DrizzleLink> {
     const result = await this.db.insert(this.linksTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create link record');
@@ -97,7 +98,7 @@ export class LinksRepository extends BaseRepository {
    * @param data - Partial link data to update
    * @returns The updated link record or null if not found
    */
-  async update(linkId: number, data: Partial<any>): Promise<any | null> {
+  async update(linkId: number, data: Partial<DrizzleNewLink>): Promise<DrizzleLink | null> {
     const result = await this.db
       .update(this.linksTable)
       .set(data)
@@ -136,7 +137,7 @@ export class LinksRepository extends BaseRepository {
    * @param data - Array of link data for insertion
    * @returns Array of created link records
    */
-  async createMany(data: any[]): Promise<any[]> {
+  async createMany(data: any[]): Promise<DrizzleLink[]> {
     if (data.length === 0) {
       return [];
     }
