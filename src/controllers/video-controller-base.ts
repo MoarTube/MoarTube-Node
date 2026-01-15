@@ -46,9 +46,6 @@ export type FastifyReplyWithView = FastifyReply & {
  * - Common error handling patterns
  */
 export abstract class VideoControllerBase extends BaseController {
-  constructor(name: string) {
-    super(name);
-  }
 
   /**
    * Build video sources from video metadata
@@ -85,7 +82,9 @@ export abstract class VideoControllerBase extends BaseController {
     // Build sources for each format
     for (const format in outputs) {
       const resolutions = outputs[format];
-      if (!resolutions) continue;
+      if (!resolutions) {
+        continue;
+      }
 
       for (const resolution of resolutions) {
         if (format === 'm3u8') {

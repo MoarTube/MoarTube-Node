@@ -42,7 +42,7 @@ export interface RuntimeConfig {
  * Coordinates all configuration subsystems and provides unified access
  */
 class Config {
-  private static instance: Config;
+  private static instance: Config | undefined;
 
   private readonly _env: Env;
   private readonly _paths: Paths;
@@ -109,10 +109,7 @@ class Config {
    * @param entryPointDir - Directory of the entry point (for bundled builds)
    */
   static initialize(baseDir: string, configFileName: string, entryPointDir?: string): Config {
-    if (!Config.instance) {
-      Config.instance = new Config(baseDir, configFileName, entryPointDir);
-    }
-
+    Config.instance ??= new Config(baseDir, configFileName, entryPointDir);
     return Config.instance;
   }
 

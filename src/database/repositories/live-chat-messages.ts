@@ -6,6 +6,7 @@
 import { eq, and, gte, count, lt, asc } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
 import type { PaginationOptions } from '@/types/index.js';
+import type { DrizzleLiveChatMessage, DrizzleNewLiveChatMessage } from '@database/schemas/sqlite/index.js';
 
 /**
  * LiveChatMessageRepository class for live chat message CRUD operations
@@ -23,7 +24,7 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @param chatMessageId - The message primary key
    * @returns The message record or null if not found
    */
-  async findById(chatMessageId: number): Promise<any | null> {
+  async findById(chatMessageId: number): Promise<DrizzleLiveChatMessage | null> {
     const result = await this.db
       .select()
       .from(this.liveChatMessagesTable)
@@ -39,7 +40,7 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of chat messages for the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleLiveChatMessage[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -57,7 +58,7 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @param count - Number of recent messages to retrieve
    * @returns Array of recent chat messages (ordered oldest to newest)
    */
-  async findRecentByVideoId(videoId: string, count: number = 50): Promise<any[]> {
+  async findRecentByVideoId(videoId: string, count: number = 50): Promise<DrizzleLiveChatMessage[]> {
     const messages = await this.db
       .select()
       .from(this.liveChatMessagesTable)
@@ -81,7 +82,7 @@ export class LiveChatMessagesRepository extends BaseRepository {
     videoId: string,
     afterTimestamp: number,
     limit: number = 100
-  ): Promise<any[]> {
+  ): Promise<DrizzleLiveChatMessage[]> {
     return this.db
       .select()
       .from(this.liveChatMessagesTable)
@@ -115,7 +116,7 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @param options - Pagination options (optional limit/offset)
    * @returns Array of all live chat messages
    */
-  async findAll(options?: PaginationOptions): Promise<any[]> {
+  async findAll(options?: PaginationOptions): Promise<DrizzleLiveChatMessage[]> {
     const { limit } = this.getPaginationParams(options);
 
     const query = this.db.select().from(this.liveChatMessagesTable);
@@ -134,7 +135,7 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @returns The created message record
    * @throws Error if insert fails to return a record
    */
-  async create(data: any): Promise<any> {
+  async create(data: DrizzleNewLiveChatMessage): Promise<DrizzleLiveChatMessage> {
     const result = await this.db.insert(this.liveChatMessagesTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create live chat message record');
@@ -225,7 +226,7 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @param data - Array of message data for insertion
    * @returns Array of created message records
    */
-  async createMany(data: any[]): Promise<any[]> {
+  async createMany(data: DrizzleNewLiveChatMessage[]): Promise<DrizzleLiveChatMessage[]> {
     if (data.length === 0) {
       return [];
     }

@@ -6,6 +6,7 @@
 import { eq, desc, count, gt } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
 import type { PaginationOptions } from '@/types/index.js';
+import type { DrizzleVideoReport, DrizzleNewVideoReport } from '@database/schemas/sqlite/index.js';
 
 /**
  * ReportsVideosRepository class for video report CRUD operations
@@ -23,7 +24,7 @@ export class ReportsVideosRepository extends BaseRepository {
    * @param reportId - The report primary key
    * @returns The report record or null if not found
    */
-  async findById(reportId: number): Promise<any | null> {
+  async findById(reportId: number): Promise<DrizzleVideoReport | null> {
     const result = await this.db
       .select()
       .from(this.videoReportsTable)
@@ -38,7 +39,7 @@ export class ReportsVideosRepository extends BaseRepository {
    * @param options - Pagination options (optional limit)
    * @returns Array of video reports
    */
-  async findAll(options?: PaginationOptions): Promise<any[]> {
+  async findAll(options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
     const { limit } = this.getPaginationParams(options);
 
     const query = this.db
@@ -60,7 +61,7 @@ export class ReportsVideosRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of reports for the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -88,7 +89,7 @@ export class ReportsVideosRepository extends BaseRepository {
    * @returns The created report record
    * @throws Error if insert fails to return a record
    */
-  async create(data: any): Promise<any> {
+  async create(data: DrizzleNewVideoReport): Promise<DrizzleVideoReport> {
     const result = await this.db.insert(this.videoReportsTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create video report record');
@@ -154,7 +155,7 @@ export class ReportsVideosRepository extends BaseRepository {
    * @param data - Array of report data for insertion
    * @returns Array of created report records
    */
-  async createMany(data: any[]): Promise<any[]> {
+  async createMany(data: DrizzleNewVideoReport[]): Promise<DrizzleVideoReport[]> {
     if (data.length === 0) {
       return [];
     }

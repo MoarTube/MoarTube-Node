@@ -6,6 +6,7 @@
 import { eq, desc, count } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
 import type { PaginationOptions } from '@/types/index.js';
+import type { DrizzleVideoReportArchive, DrizzleNewVideoReportArchive } from '@database/schemas/sqlite/index.js';
 
 /**
  * ReportsArchiveVideosRepository class for archived video report CRUD operations
@@ -23,7 +24,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @param archiveId - The archive primary key
    * @returns The archive record or null if not found
    */
-  async findById(archiveId: number): Promise<any | null> {
+  async findById(archiveId: number): Promise<DrizzleVideoReportArchive | null> {
     const result = await this.db
       .select()
       .from(this.videoReportsArchiveTable)
@@ -38,7 +39,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @param options - Pagination options (optional limit)
    * @returns Array of archived video reports
    */
-  async findAll(options?: PaginationOptions): Promise<any[]> {
+  async findAll(options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]> {
     const { limit } = this.getPaginationParams(options);
 
     const query = this.db
@@ -60,7 +61,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of archived reports for the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -77,7 +78,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @param reportId - The original report ID
    * @returns The archive record or null if not found
    */
-  async findByReportId(reportId: number): Promise<any | null> {
+  async findByReportId(reportId: number): Promise<DrizzleVideoReportArchive | null> {
     const result = await this.db
       .select()
       .from(this.videoReportsArchiveTable)
@@ -103,7 +104,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @returns The created archive record
    * @throws Error if insert fails to return a record
    */
-  async create(data: any): Promise<any> {
+  async create(data: DrizzleNewVideoReportArchive): Promise<DrizzleVideoReportArchive> {
     const result = await this.db.insert(this.videoReportsArchiveTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create video report archive record');
@@ -155,7 +156,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @param data - Array of archive data for insertion
    * @returns Array of created archive records
    */
-  async createMany(data: any[]): Promise<any[]> {
+  async createMany(data: DrizzleNewVideoReportArchive[]): Promise<DrizzleVideoReportArchive[]> {
     if (data.length === 0) {
       return [];
     }

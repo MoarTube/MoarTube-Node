@@ -6,6 +6,7 @@
 import { eq, desc, count } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
 import type { PaginationOptions } from '@/types/index.js';
+import type { DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress } from '@database/schemas/sqlite/index.js';
 
 /**
  * MonetizationRepository class for crypto wallet address CRUD operations
@@ -23,7 +24,7 @@ export class MonetizationRepository extends BaseRepository {
    * @param walletAddressId - The wallet address primary key
    * @returns The wallet record or null if not found
    */
-  async findById(walletAddressId: number): Promise<any | null> {
+  async findById(walletAddressId: number): Promise<DrizzleCryptoWalletAddress | null> {
     const result = await this.db
       .select()
       .from(this.cryptoWalletAddressesTable)
@@ -38,7 +39,7 @@ export class MonetizationRepository extends BaseRepository {
    * @param options - Pagination options (optional limit/offset)
    * @returns Array of wallet addresses
    */
-  async findAll(options?: PaginationOptions): Promise<any[]> {
+  async findAll(options?: PaginationOptions): Promise<DrizzleCryptoWalletAddress[]> {
     const { limit } = this.getPaginationParams(options);
 
     const query = this.db
@@ -60,7 +61,7 @@ export class MonetizationRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of wallet addresses for the chain
    */
-  async findByChain(chain: string, options?: PaginationOptions): Promise<any[]> {
+  async findByChain(chain: string, options?: PaginationOptions): Promise<DrizzleCryptoWalletAddress[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -77,7 +78,7 @@ export class MonetizationRepository extends BaseRepository {
    * @param walletAddress - The wallet address string
    * @returns The wallet record or null if not found
    */
-  async findByAddress(walletAddress: string): Promise<any | null> {
+  async findByAddress(walletAddress: string): Promise<DrizzleCryptoWalletAddress | null> {
     const result = await this.db
       .select()
       .from(this.cryptoWalletAddressesTable)
@@ -103,7 +104,7 @@ export class MonetizationRepository extends BaseRepository {
    * @returns The created wallet record
    * @throws Error if insert fails to return a record
    */
-  async create(data: any): Promise<any> {
+  async create(data: DrizzleNewCryptoWalletAddress): Promise<DrizzleCryptoWalletAddress> {
     const result = await this.db.insert(this.cryptoWalletAddressesTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create crypto wallet address record');
@@ -118,7 +119,7 @@ export class MonetizationRepository extends BaseRepository {
    * @param data - Partial wallet data to update
    * @returns The updated wallet record or null if not found
    */
-  async update(walletAddressId: number, data: Partial<any>): Promise<any | null> {
+  async update(walletAddressId: number, data: Partial<DrizzleNewCryptoWalletAddress>): Promise<DrizzleCryptoWalletAddress | null> {
     const result = await this.db
       .update(this.cryptoWalletAddressesTable)
       .set(data)
@@ -185,7 +186,7 @@ export class MonetizationRepository extends BaseRepository {
    * @param data - Array of wallet address data for insertion
    * @returns Array of created wallet address records
    */
-  async createMany(data: any[]): Promise<any[]> {
+  async createMany(data: DrizzleNewCryptoWalletAddress[]): Promise<DrizzleCryptoWalletAddress[]> {
     if (data.length === 0) {
       return [];
     }

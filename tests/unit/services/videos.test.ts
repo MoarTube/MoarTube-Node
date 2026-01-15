@@ -1055,6 +1055,28 @@ describe('VideosService', () => {
         { videoId: 'video123', count: 1 }
       );
     });
+
+    it('should handle race condition where pendingViews is cleared before debounce callback', async () => {
+      const mockVideo = { video_id: 'video123', views: 100 };
+      mockVideosRepository.findById.mockResolvedValue(mockVideo);
+
+      // Call to set up debounce
+      await service.incrementViewsDebounced('video123');
+
+      // Spy on the pendingViews Map and make get return undefined to simulate race condition
+      const pendingViewsMap = (service as any).pendingViews as Map<string, number>;
+      const originalGet = pendingViewsMap.get.bind(pendingViewsMap);
+      pendingViewsMap.get = vi.fn().mockReturnValueOnce(undefined);
+
+      // Advance timers to trigger the debounce callback
+      await vi.advanceTimersByTimeAsync(500);
+
+      // The callback should return early without calling incrementViewsBy
+      expect(mockVideosRepository.incrementViewsBy).not.toHaveBeenCalled();
+
+      // Restore original get method
+      pendingViewsMap.get = originalGet;
+    });
   });
 
   describe('like/dislike tracking', () => {

@@ -6,6 +6,7 @@
 import { eq, desc, count } from 'drizzle-orm';
 import { BaseRepository } from '@database/repositories/base.js';
 import type { PaginationOptions } from '@/types/index.js';
+import type { DrizzleCommentReportArchive, DrizzleNewCommentReportArchive } from '@database/schemas/sqlite/index.js';
 
 /**
  * ReportsArchiveCommentsRepository class for archived comment report CRUD operations
@@ -23,7 +24,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param archiveId - The archive primary key
    * @returns The archive record or null if not found
    */
-  async findById(archiveId: number): Promise<any | null> {
+  async findById(archiveId: number): Promise<DrizzleCommentReportArchive | null> {
     const result = await this.db
       .select()
       .from(this.commentReportsArchiveTable)
@@ -38,7 +39,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param options - Pagination options (optional limit)
    * @returns Array of archived comment reports
    */
-  async findAll(options?: PaginationOptions): Promise<any[]> {
+  async findAll(options?: PaginationOptions): Promise<DrizzleCommentReportArchive[]> {
     const { limit } = this.getPaginationParams(options);
 
     const query = this.db
@@ -60,7 +61,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of archived reports for comments on the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleCommentReportArchive[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -78,7 +79,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of archived reports for the comment
    */
-  async findByCommentId(commentId: number, options?: PaginationOptions): Promise<any[]> {
+  async findByCommentId(commentId: number, options?: PaginationOptions): Promise<DrizzleCommentReportArchive[]> {
     const { limit } = this.getPaginationParamsWithDefault(options);
 
     return this.db
@@ -95,7 +96,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param reportId - The original report ID
    * @returns The archive record or null if not found
    */
-  async findByReportId(reportId: number): Promise<any | null> {
+  async findByReportId(reportId: number): Promise<DrizzleCommentReportArchive | null> {
     const result = await this.db
       .select()
       .from(this.commentReportsArchiveTable)
@@ -121,7 +122,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @returns The created archive record
    * @throws Error if insert fails to return a record
    */
-  async create(data: any): Promise<any> {
+  async create(data: DrizzleNewCommentReportArchive): Promise<DrizzleCommentReportArchive> {
     const result = await this.db.insert(this.commentReportsArchiveTable).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create comment report archive record');
@@ -187,7 +188,7 @@ export class ReportsArchiveCommentsRepository extends BaseRepository {
    * @param data - Array of archive data for insertion
    * @returns Array of created archive records
    */
-  async createMany(data: any[]): Promise<any[]> {
+  async createMany(data: DrizzleNewCommentReportArchive[]): Promise<DrizzleCommentReportArchive[]> {
     if (data.length === 0) {
       return [];
     }

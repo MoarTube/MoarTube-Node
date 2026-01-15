@@ -769,6 +769,32 @@ describe('ClusterWorker', () => {
       expect(mockWssClose).toHaveBeenCalled();
     });
 
+    it('should handle stop when app is null', async () => {
+      const worker = new ClusterWorker(mockLogger as any);
+      await worker.start();
+      
+      // Manually set app to null to test the falsy branch
+      (worker as any).app = null;
+      
+      await worker.stop();
+
+      expect(mockFastifyClose).not.toHaveBeenCalled(); // Should not try to close null app
+      expect(mockWssClose).toHaveBeenCalled(); // But should still close wss
+    });
+
+    it('should handle stop when wss is null', async () => {
+      const worker = new ClusterWorker(mockLogger as any);
+      await worker.start();
+      
+      // Manually set wss to null to test the falsy branch
+      (worker as any).wss = null;
+      
+      await worker.stop();
+
+      expect(mockFastifyClose).toHaveBeenCalled(); // Should close app
+      expect(mockWssClose).not.toHaveBeenCalled(); // Should not try to close null wss
+    });
+
     it('should close all WebSocket connections', async () => {
       const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
@@ -839,6 +865,29 @@ describe('ClusterWorker', () => {
       });
     });
 
+    it('should handle live_stream_worker_stats_request when cluster.worker is null', async () => {
+      // Temporarily mock cluster.worker to be null
+      const clusterMock = vi.mocked(await import('node:cluster'));
+      const originalWorker = clusterMock.default.worker;
+      clusterMock.default.worker = null as any;
+
+      const worker = new ClusterWorker(mockLogger as any);
+      await worker.start();
+
+      // Clear any calls made during start
+      mockIpcSendToMaster.mockClear();
+
+      ipcHandlers['live_stream_worker_stats_request']?.({
+        cmd: 'live_stream_worker_stats_request',
+      });
+
+      expect(mockLogger.error).toHaveBeenCalledWith('Worker context not available');
+      expect(mockIpcSendToMaster).not.toHaveBeenCalled();
+
+      // Restore original mock
+      clusterMock.default.worker = originalWorker;
+    });
+
     it('should handle live_stream_worker_stats_update', async () => {
       // Set up a mock client that is watching a video
       const mockClient = {
@@ -869,13 +918,82 @@ describe('ClusterWorker', () => {
       const worker = new ClusterWorker(mockLogger as any);
       await worker.start();
 
+      // Reset mocks to check calls
+      mockFastifyClose.mockClear();
+      const { createFastifyApp } = await import('@plugins/index.js');
+      (createFastifyApp as any).mockClear();
+      mockFastifyListen.mockClear();
+
       // The handler is async, need to handle the promise
       ipcHandlers['restart_server_response']?.({ cmd: 'restart_server_response' });
 
-      // Give the async operation a tick to start
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      // Wait for the async operation to complete
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(mockLogger.info).toHaveBeenCalledWith('Received server restart request');
+      expect(mockFastifyClose).toHaveBeenCalled();
+      expect(createFastifyApp).toHaveBeenCalled();
+      expect(mockFastifyListen).toHaveBeenCalledWith({ port: 3000, host: '0.0.0.0' });
+      expect(mockLogger.info).toHaveBeenCalledWith('Worker 1 restarted on port 3000');
+    });
+
+    it('should handle restart_server_response when cluster.worker is null', async () => {
+      // Temporarily mock cluster.worker to be null
+      const clusterMock = vi.mocked(await import('node:cluster'));
+      const originalWorker = clusterMock.default.worker;
+      clusterMock.default.worker = null as any;
+
+      try {
+        const worker = new ClusterWorker(mockLogger as any);
+        await worker.start();
+
+        // Reset mocks to check calls
+        mockFastifyClose.mockClear();
+        const { createFastifyApp } = await import('@plugins/index.js');
+        (createFastifyApp as any).mockClear();
+        mockFastifyListen.mockClear();
+
+        // The handler is async, need to handle the promise
+        ipcHandlers['restart_server_response']?.({ cmd: 'restart_server_response' });
+
+        // Wait for the async operation to complete
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        expect(mockLogger.info).toHaveBeenCalledWith('Received server restart request');
+        expect(mockFastifyClose).toHaveBeenCalled();
+        expect(createFastifyApp).toHaveBeenCalled();
+        expect(mockFastifyListen).toHaveBeenCalledWith({ port: 3000, host: '0.0.0.0' });
+        expect(mockLogger.info).toHaveBeenCalledWith('Worker unknown restarted on port 3000');
+      } finally {
+        // Restore original mock
+        clusterMock.default.worker = originalWorker;
+      }
+    });
+
+    it('should handle restart_server_response when app is null', async () => {
+      const worker = new ClusterWorker(mockLogger as any);
+      await worker.start();
+
+      // Manually set app to null to test the falsy branch
+      (worker as any).app = null;
+
+      // Reset mocks to check calls
+      mockFastifyClose.mockClear();
+      const { createFastifyApp } = await import('@plugins/index.js');
+      (createFastifyApp as any).mockClear();
+      mockFastifyListen.mockClear();
+
+      // The handler is async, need to handle the promise
+      ipcHandlers['restart_server_response']?.({ cmd: 'restart_server_response' });
+
+      // Wait for the async operation to complete
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(mockLogger.info).toHaveBeenCalledWith('Received server restart request');
+      expect(mockFastifyClose).not.toHaveBeenCalled(); // Should not try to close null app
+      expect(createFastifyApp).toHaveBeenCalled();
+      expect(mockFastifyListen).toHaveBeenCalledWith({ port: 3000, host: '0.0.0.0' });
+      expect(mockLogger.info).toHaveBeenCalledWith('Worker 1 restarted on port 3000');
     });
 
     it('should handle restart_database_response', async () => {
