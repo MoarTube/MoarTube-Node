@@ -69,7 +69,7 @@ class Urls {
    * Reset the singleton instance (for testing purposes)
    */
   static resetInstance(): void {
-    Urls.instance = undefined as any;
+    Urls.instance = undefined;
   }
 
   /**
