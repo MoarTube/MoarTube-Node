@@ -4,22 +4,31 @@ import type { DatabaseClient } from '@database/postgres-connection.js';
 import { comments } from '@database/schemas/postgres/index.js';
 import { eq, desc, and, gt, lt, like, count } from 'drizzle-orm';
 
-export class CommentsRepositoryPostgres implements ICommentsRepository<DrizzleComment, DrizzleNewComment> {
+export class CommentsRepositoryPostgres implements ICommentsRepository<
+  DrizzleComment,
+  DrizzleNewComment
+> {
   private readonly db: DatabaseClient;
-  
+
   constructor(db: DatabaseClient) {
     this.db = db;
   }
 
-  async findById(videoId: string, commentId: number, timestamp: number): Promise<DrizzleComment | null> {
+  async findById(
+    videoId: string,
+    commentId: number,
+    timestamp: number
+  ): Promise<DrizzleComment | null> {
     const result = await this.db
       .select()
       .from(comments)
-      .where(and(
-        eq(comments.comment_id, commentId),
-        eq(comments.video_id, videoId),
-        eq(comments.timestamp, timestamp)
-      ))
+      .where(
+        and(
+          eq(comments.comment_id, commentId),
+          eq(comments.video_id, videoId),
+          eq(comments.timestamp, timestamp)
+        )
+      )
       .limit(1);
     return result[0] ?? null;
   }
@@ -39,11 +48,8 @@ export class CommentsRepositoryPostgres implements ICommentsRepository<DrizzleCo
     timestamp: number
   ): Promise<DrizzleComment[]> {
     const timestampCondition =
-      type === 'before'
-        ? lt(comments.timestamp, timestamp)
-        : gt(comments.timestamp, timestamp);
-    const orderBy =
-      sort === 'ascending' ? comments.timestamp : desc(comments.timestamp);
+      type === 'before' ? lt(comments.timestamp, timestamp) : gt(comments.timestamp, timestamp);
+    const orderBy = sort === 'ascending' ? comments.timestamp : desc(comments.timestamp);
 
     return this.db
       .select()
@@ -84,24 +90,26 @@ export class CommentsRepositoryPostgres implements ICommentsRepository<DrizzleCo
   async delete(videoId: string, commentId: number, timestamp: number): Promise<boolean> {
     const result = await this.db
       .delete(comments)
-      .where(and(
-        eq(comments.comment_id, commentId),
-        eq(comments.video_id, videoId),
-        eq(comments.timestamp, timestamp)
-      ))
+      .where(
+        and(
+          eq(comments.comment_id, commentId),
+          eq(comments.video_id, videoId),
+          eq(comments.timestamp, timestamp)
+        )
+      )
       .returning();
     return result.length > 0;
   }
 
   async deleteByVideoId(videoId: string): Promise<number> {
-    const result = await this.db
-      .delete(comments)
-      .where(eq(comments.video_id, videoId))
-      .returning();
+    const result = await this.db.delete(comments).where(eq(comments.video_id, videoId)).returning();
     return result.length;
   }
 
-  async findByVideoIdAndTimestamp(videoId: string, timestamp: number): Promise<DrizzleComment | null> {
+  async findByVideoIdAndTimestamp(
+    videoId: string,
+    timestamp: number
+  ): Promise<DrizzleComment | null> {
     const result = await this.db
       .select()
       .from(comments)

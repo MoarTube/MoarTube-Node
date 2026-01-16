@@ -128,4 +128,3 @@ export function streamsRoutes(
     controller.getChatHistory.bind(controller)
   );
 }
-

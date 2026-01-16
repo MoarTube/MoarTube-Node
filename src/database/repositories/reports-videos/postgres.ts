@@ -1,18 +1,22 @@
 import { eq, desc, count, gt } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { IReportsVideosRepository } from './interface.js';
-import type { DrizzleVideoReport, DrizzleNewVideoReport } from '@database/schemas/postgres/reports-videos.js';
+import type {
+  DrizzleVideoReport,
+  DrizzleNewVideoReport,
+} from '@database/schemas/postgres/reports-videos.js';
 import type { DatabaseClient } from '@database/postgres-connection.js';
 import { videoReports } from '@database/schemas/postgres/index.js';
 
 /**
  * PostgreSQL implementation of the Reports Videos Repository
  */
-export class ReportsVideosRepositoryPostgres
-  implements IReportsVideosRepository<DrizzleVideoReport, DrizzleNewVideoReport>
-{
+export class ReportsVideosRepositoryPostgres implements IReportsVideosRepository<
+  DrizzleVideoReport,
+  DrizzleNewVideoReport
+> {
   private readonly db: DatabaseClient;
-  
+
   constructor(db: DatabaseClient) {
     this.db = db;
   }
@@ -35,10 +39,7 @@ export class ReportsVideosRepositoryPostgres
   async findAll(options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
     const { limit } = { limit: options?.limit };
 
-    const query = this.db
-      .select()
-      .from(videoReports)
-      .orderBy(desc(videoReports.timestamp));
+    const query = this.db.select().from(videoReports).orderBy(desc(videoReports.timestamp));
 
     if (limit !== undefined) {
       return query.limit(limit);

@@ -636,5 +636,3 @@ export function videosRoutes(
     controller.removeFromIndex.bind(controller)
   );
 }
-
-

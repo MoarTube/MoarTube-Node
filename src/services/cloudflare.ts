@@ -8,7 +8,13 @@ import axios, { type AxiosInstance } from 'axios';
 
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
-import type { IVideosRepository, SQLiteVideo, SQLiteNewVideo, PostgresVideo, PostgresNewVideo } from '@database/index.js';
+import type {
+  IVideosRepository,
+  SQLiteVideo,
+  SQLiteNewVideo,
+  PostgresVideo,
+  PostgresNewVideo,
+} from '@database/index.js';
 
 // Common interface for video objects (both SQLite and PostgreSQL types have the same structure)
 interface VideoWithId {
@@ -31,10 +37,17 @@ const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/sit
  * - CDN configuration management
  */
 export class CloudflareService extends BaseService {
-  private readonly videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>;
+  private readonly videosRepository:
+    | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
+    | IVideosRepository<PostgresVideo, PostgresNewVideo>;
   private httpClient: AxiosInstance | null = null;
 
-  constructor(logger: Logger, videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>) {
+  constructor(
+    logger: Logger,
+    videosRepository:
+      | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
+      | IVideosRepository<PostgresVideo, PostgresNewVideo>
+  ) {
     super('CloudflareService', logger);
     this.videosRepository = videosRepository;
     this.initializeHttpClient();

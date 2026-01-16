@@ -73,16 +73,28 @@ export interface StartStreamOptions {
  * - Integration with video records
  */
 export class StreamsService extends BaseService {
-  private readonly videoRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>;
-  private readonly liveChatMessageRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
-  private readonly commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>;
+  private readonly videoRepository:
+    | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
+    | IVideosRepository<PostgresVideo, PostgresNewVideo>;
+  private readonly liveChatMessageRepository:
+    | ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage>
+    | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
+  private readonly commentsRepository:
+    | ICommentsRepository<SQLiteComment, SQLiteNewComment>
+    | ICommentsRepository<PostgresComment, PostgresNewComment>;
   private readonly websocketService: WebSocketService;
 
   constructor(
     logger: Logger,
-    videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>,
-    liveChatMessagesRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>,
-    commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>,
+    videosRepository:
+      | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
+      | IVideosRepository<PostgresVideo, PostgresNewVideo>,
+    liveChatMessagesRepository:
+      | ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage>
+      | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>,
+    commentsRepository:
+      | ICommentsRepository<SQLiteComment, SQLiteNewComment>
+      | ICommentsRepository<PostgresComment, PostgresNewComment>,
     websocketService: WebSocketService
   ) {
     super('StreamService', logger);

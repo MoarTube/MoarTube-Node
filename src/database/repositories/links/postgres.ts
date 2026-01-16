@@ -7,17 +7,13 @@ import { links } from '@/database/schemas/postgres/links.js';
 
 export class LinksRepositoryPostgres implements ILinksRepository<DrizzleLink, DrizzleNewLink> {
   private readonly db: DatabaseClient;
-  
+
   constructor(db: DatabaseClient) {
     this.db = db;
   }
 
   async findById(linkId: number): Promise<DrizzleLink | null> {
-    const result = await this.db
-      .select()
-      .from(links)
-      .where(eq(links.link_id, linkId))
-      .limit(1);
+    const result = await this.db.select().from(links).where(eq(links.link_id, linkId)).limit(1);
     return result[0] ?? null;
   }
 
@@ -34,11 +30,7 @@ export class LinksRepositoryPostgres implements ILinksRepository<DrizzleLink, Dr
   }
 
   async findByUrl(url: string): Promise<DrizzleLink | null> {
-    const result = await this.db
-      .select()
-      .from(links)
-      .where(eq(links.url, url))
-      .limit(1);
+    const result = await this.db.select().from(links).where(eq(links.url, url)).limit(1);
     return result[0] ?? null;
   }
 
@@ -65,10 +57,7 @@ export class LinksRepositoryPostgres implements ILinksRepository<DrizzleLink, Dr
   }
 
   async delete(linkId: number): Promise<boolean> {
-    const result = await this.db
-      .delete(links)
-      .where(eq(links.link_id, linkId))
-      .returning();
+    const result = await this.db.delete(links).where(eq(links.link_id, linkId)).returning();
     return result.length > 0;
   }
 
@@ -85,10 +74,7 @@ export class LinksRepositoryPostgres implements ILinksRepository<DrizzleLink, Dr
   }
 
   async existsByUrl(url: string): Promise<boolean> {
-    const result = await this.db
-      .select({ count: count() })
-      .from(links)
-      .where(eq(links.url, url));
+    const result = await this.db.select({ count: count() }).from(links).where(eq(links.url, url));
     return (result[0]?.count ?? 0) > 0;
   }
 }

@@ -1,13 +1,19 @@
 import { eq, desc, count } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { IMonetizationRepository } from './interface.js';
-import type { DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress } from '@/database/schemas/postgres/monetization.js';
+import type {
+  DrizzleCryptoWalletAddress,
+  DrizzleNewCryptoWalletAddress,
+} from '@/database/schemas/postgres/monetization.js';
 import type { DatabaseClient } from '@database/postgres-connection.js';
 import { cryptoWalletAddresses } from '@/database/schemas/postgres/monetization.js';
 
-export class MonetizationRepositoryPostgres implements IMonetizationRepository<DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress> {
+export class MonetizationRepositoryPostgres implements IMonetizationRepository<
+  DrizzleCryptoWalletAddress,
+  DrizzleNewCryptoWalletAddress
+> {
   private readonly db: DatabaseClient;
-  
+
   constructor(db: DatabaseClient) {
     this.db = db;
   }
@@ -36,7 +42,10 @@ export class MonetizationRepositoryPostgres implements IMonetizationRepository<D
     return query;
   }
 
-  async findByChain(chain: string, options?: PaginationOptions): Promise<DrizzleCryptoWalletAddress[]> {
+  async findByChain(
+    chain: string,
+    options?: PaginationOptions
+  ): Promise<DrizzleCryptoWalletAddress[]> {
     const { limit } = { limit: options?.limit ?? 20 };
 
     return this.db
@@ -69,7 +78,10 @@ export class MonetizationRepositoryPostgres implements IMonetizationRepository<D
     return result[0];
   }
 
-  async update(walletAddressId: number, data: Partial<DrizzleNewCryptoWalletAddress>): Promise<DrizzleCryptoWalletAddress | null> {
+  async update(
+    walletAddressId: number,
+    data: Partial<DrizzleNewCryptoWalletAddress>
+  ): Promise<DrizzleCryptoWalletAddress | null> {
     const result = await this.db
       .update(cryptoWalletAddresses)
       .set(data)

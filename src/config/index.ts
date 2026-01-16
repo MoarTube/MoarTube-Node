@@ -458,7 +458,11 @@ class Config {
  * @param configFileName - Name of the config file to load
  * @param entryPointDir - Directory of the entry point (for bundled builds)
  */
-export function initializeConfig(baseDir: string, configFileName: string, entryPointDir?: string): Config {
+export function initializeConfig(
+  baseDir: string,
+  configFileName: string,
+  entryPointDir?: string
+): Config {
   return Config.initialize(baseDir, configFileName, entryPointDir);
 }
 

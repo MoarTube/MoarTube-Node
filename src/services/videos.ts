@@ -54,8 +54,12 @@ import type { PaginatedResult } from '@/types/index.js';
  * - Index management
  */
 export class VideosService extends BaseService {
-  private readonly videoRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>;
-  private readonly commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>;
+  private readonly videoRepository:
+    | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
+    | IVideosRepository<PostgresVideo, PostgresNewVideo>;
+  private readonly commentsRepository:
+    | ICommentsRepository<SQLiteComment, SQLiteNewComment>
+    | ICommentsRepository<PostgresComment, PostgresNewComment>;
   private readonly storageService: StorageService;
   private readonly websocketService: WebSocketService;
   private readonly cloudflareService: CloudflareService;
@@ -68,8 +72,12 @@ export class VideosService extends BaseService {
 
   constructor(
     logger: Logger,
-    videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>,
-    commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>,
+    videosRepository:
+      | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
+      | IVideosRepository<PostgresVideo, PostgresNewVideo>,
+    commentsRepository:
+      | ICommentsRepository<SQLiteComment, SQLiteNewComment>
+      | ICommentsRepository<PostgresComment, PostgresNewComment>,
     storageService: StorageService,
     websocketService: WebSocketService,
     cloudflareService: CloudflareService,
@@ -96,7 +104,9 @@ export class VideosService extends BaseService {
   /**
    * Get videos with filtering and pagination
    */
-  async getVideos(options?: GetVideosOptions): Promise<PaginatedResult<SQLiteVideo | PostgresVideo>> {
+  async getVideos(
+    options?: GetVideosOptions
+  ): Promise<PaginatedResult<SQLiteVideo | PostgresVideo>> {
     return this.withErrorLogging('getVideos', async () => {
       const limit = options?.limit ?? 20;
 
@@ -321,7 +331,10 @@ export class VideosService extends BaseService {
   /**
    * Update video metadata
    */
-  async updateVideo(videoId: string, data: UpdateVideoInput): Promise<SQLiteVideo | PostgresVideo | null> {
+  async updateVideo(
+    videoId: string,
+    data: UpdateVideoInput
+  ): Promise<SQLiteVideo | PostgresVideo | null> {
     return this.withErrorLogging('updateVideo', async () => {
       const existingVideo = await this.videoRepository.findById(videoId);
       if (!existingVideo) {

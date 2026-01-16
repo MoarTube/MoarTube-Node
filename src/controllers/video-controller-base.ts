@@ -46,7 +46,6 @@ export type FastifyReplyWithView = FastifyReply & {
  * - Common error handling patterns
  */
 export abstract class VideoControllerBase extends BaseController {
-
   /**
    * Build video sources from video metadata
    *

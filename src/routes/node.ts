@@ -85,4 +85,3 @@ export function nodeRoutes(
     controller.contentChecked.bind(controller)
   );
 }
-

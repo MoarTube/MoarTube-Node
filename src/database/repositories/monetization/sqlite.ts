@@ -1,13 +1,19 @@
 import { eq, desc, count } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { IMonetizationRepository } from './interface.js';
-import type { DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress } from '@/database/schemas/sqlite/monetization.js';
+import type {
+  DrizzleCryptoWalletAddress,
+  DrizzleNewCryptoWalletAddress,
+} from '@/database/schemas/sqlite/monetization.js';
 import type { DatabaseClient } from '@database/sqlite-connection.js';
 import { cryptoWalletAddresses } from '@/database/schemas/sqlite/monetization.js';
 
-export class MonetizationRepositorySQLite implements IMonetizationRepository<DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress> {
+export class MonetizationRepositorySQLite implements IMonetizationRepository<
+  DrizzleCryptoWalletAddress,
+  DrizzleNewCryptoWalletAddress
+> {
   private readonly db: DatabaseClient;
-  
+
   constructor(db: DatabaseClient) {
     this.db = db;
   }
@@ -36,7 +42,10 @@ export class MonetizationRepositorySQLite implements IMonetizationRepository<Dri
     return query;
   }
 
-  async findByChain(chain: string, options?: PaginationOptions): Promise<DrizzleCryptoWalletAddress[]> {
+  async findByChain(
+    chain: string,
+    options?: PaginationOptions
+  ): Promise<DrizzleCryptoWalletAddress[]> {
     const { limit } = { limit: options?.limit ?? 20 };
 
     return this.db
@@ -69,7 +78,10 @@ export class MonetizationRepositorySQLite implements IMonetizationRepository<Dri
     return result[0];
   }
 
-  async update(walletAddressId: number, data: Partial<DrizzleNewCryptoWalletAddress>): Promise<DrizzleCryptoWalletAddress | null> {
+  async update(
+    walletAddressId: number,
+    data: Partial<DrizzleNewCryptoWalletAddress>
+  ): Promise<DrizzleCryptoWalletAddress | null> {
     const result = await this.db
       .update(cryptoWalletAddresses)
       .set(data)

@@ -31,13 +31,21 @@ import sanitizeHtml from 'sanitize-html';
  * - Comment search functionality
  */
 export class CommentsService extends BaseService {
-  private readonly commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>;
-  private readonly videoRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>;
+  private readonly commentsRepository:
+    | ICommentsRepository<SQLiteComment, SQLiteNewComment>
+    | ICommentsRepository<PostgresComment, PostgresNewComment>;
+  private readonly videoRepository:
+    | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
+    | IVideosRepository<PostgresVideo, PostgresNewVideo>;
 
   constructor(
     logger: Logger,
-    commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>,
-    videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>
+    commentsRepository:
+      | ICommentsRepository<SQLiteComment, SQLiteNewComment>
+      | ICommentsRepository<PostgresComment, PostgresNewComment>,
+    videosRepository:
+      | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
+      | IVideosRepository<PostgresVideo, PostgresNewVideo>
   ) {
     super('CommentService', logger);
     this.commentsRepository = commentsRepository;

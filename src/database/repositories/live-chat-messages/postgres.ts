@@ -6,16 +6,22 @@
 import { eq, and, gte, count, lt, asc } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { ILiveChatMessagesRepository } from './interface.js';
-import type { DrizzleLiveChatMessage, DrizzleNewLiveChatMessage } from '@/database/schemas/postgres/live-chat-messages.js';
+import type {
+  DrizzleLiveChatMessage,
+  DrizzleNewLiveChatMessage,
+} from '@/database/schemas/postgres/live-chat-messages.js';
 import type { DatabaseClient } from '@database/postgres-connection.js';
 import { liveChatMessages } from '@/database/schemas/postgres/live-chat-messages.js';
 
 /**
  * LiveChatMessagesRepositoryPostgres class for live chat message CRUD operations
  */
-export class LiveChatMessagesRepositoryPostgres implements ILiveChatMessagesRepository<DrizzleLiveChatMessage, DrizzleNewLiveChatMessage> {
+export class LiveChatMessagesRepositoryPostgres implements ILiveChatMessagesRepository<
+  DrizzleLiveChatMessage,
+  DrizzleNewLiveChatMessage
+> {
   private readonly db: DatabaseClient;
-  
+
   constructor(db: DatabaseClient) {
     this.db = db;
   }
@@ -42,7 +48,10 @@ export class LiveChatMessagesRepositoryPostgres implements ILiveChatMessagesRepo
    * @param options - Pagination options
    * @returns Array of chat messages for the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleLiveChatMessage[]> {
+  async findByVideoId(
+    videoId: string,
+    options?: PaginationOptions
+  ): Promise<DrizzleLiveChatMessage[]> {
     const { limit } = { limit: options?.limit ?? 20 };
 
     return this.db
@@ -60,7 +69,10 @@ export class LiveChatMessagesRepositoryPostgres implements ILiveChatMessagesRepo
    * @param count - Number of recent messages to retrieve
    * @returns Array of recent chat messages (ordered oldest to newest)
    */
-  async findRecentByVideoId(videoId: string, count: number = 50): Promise<DrizzleLiveChatMessage[]> {
+  async findRecentByVideoId(
+    videoId: string,
+    count: number = 50
+  ): Promise<DrizzleLiveChatMessage[]> {
     const messages = await this.db
       .select()
       .from(liveChatMessages)
@@ -89,10 +101,7 @@ export class LiveChatMessagesRepositoryPostgres implements ILiveChatMessagesRepo
       .select()
       .from(liveChatMessages)
       .where(
-        and(
-          eq(liveChatMessages.video_id, videoId),
-          gte(liveChatMessages.timestamp, afterTimestamp)
-        )
+        and(eq(liveChatMessages.video_id, videoId), gte(liveChatMessages.timestamp, afterTimestamp))
       )
       .orderBy(asc(liveChatMessages.timestamp))
       .limit(limit);
@@ -196,24 +205,23 @@ export class LiveChatMessagesRepositoryPostgres implements ILiveChatMessagesRepo
 
     const oldestKeptMessage = recentMessages.at(0);
 
-    if(oldestKeptMessage === undefined) {
-        return 0;
-    }
-    else {
-        const cutoffTimestamp = oldestKeptMessage.timestamp;
+    if (oldestKeptMessage === undefined) {
+      return 0;
+    } else {
+      const cutoffTimestamp = oldestKeptMessage.timestamp;
 
-        // Delete messages older than the cutoff
-        const result = await this.db
+      // Delete messages older than the cutoff
+      const result = await this.db
         .delete(liveChatMessages)
         .where(
-            and(
+          and(
             eq(liveChatMessages.video_id, videoId),
             lt(liveChatMessages.timestamp, cutoffTimestamp)
-            )
+          )
         )
         .returning();
 
-        return result.length;
+      return result.length;
     }
   }
 

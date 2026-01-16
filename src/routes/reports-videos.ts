@@ -65,4 +65,3 @@ export function reportsVideosRoutes(
     controller.deleteReport.bind(controller)
   );
 }
-

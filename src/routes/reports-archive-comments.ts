@@ -48,4 +48,3 @@ export function reportsArchiveCommentsRoutes(
     controller.deleteArchive.bind(controller)
   );
 }
-

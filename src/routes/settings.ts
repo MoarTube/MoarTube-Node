@@ -395,4 +395,3 @@ export function settingsRoutes(
     controller.importDatabase.bind(controller)
   );
 }
-

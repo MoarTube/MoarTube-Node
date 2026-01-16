@@ -112,7 +112,7 @@ async function swaggerPlugin(app: FastifyInstance): Promise<void> {
   // Only enable Swagger in development or when explicitly enabled
   const isProduction = process.env['NODE_ENV'] === 'production';
   const enableInProduction = process.env['ENABLE_SWAGGER_IN_PRODUCTION'] === 'true';
-  
+
   if (isProduction && !enableInProduction) {
     app.log.info('Swagger documentation disabled in production');
     return;

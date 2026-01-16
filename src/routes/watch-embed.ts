@@ -50,4 +50,3 @@ export function watchEmbedRoutes(
     controller.getEmbedChat.bind(controller)
   );
 }
-

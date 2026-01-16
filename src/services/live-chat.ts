@@ -7,7 +7,13 @@
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type { CreateChatMessageInput } from '@services/interfaces.js';
-import type { ILiveChatMessagesRepository, SQLiteLiveChatMessage, SQLiteNewLiveChatMessage, PostgresLiveChatMessage, PostgresNewLiveChatMessage } from '@database/index.js';
+import type {
+  ILiveChatMessagesRepository,
+  SQLiteLiveChatMessage,
+  SQLiteNewLiveChatMessage,
+  PostgresLiveChatMessage,
+  PostgresNewLiveChatMessage,
+} from '@database/index.js';
 
 /**
  * LiveChatService class
@@ -18,9 +24,16 @@ import type { ILiveChatMessagesRepository, SQLiteLiveChatMessage, SQLiteNewLiveC
  * - Message pruning based on limits
  */
 export class LiveChatService extends BaseService {
-  private readonly liveChatMessageRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
+  private readonly liveChatMessageRepository:
+    | ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage>
+    | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
 
-  constructor(logger: Logger, liveChatMessagesRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>) {
+  constructor(
+    logger: Logger,
+    liveChatMessagesRepository:
+      | ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage>
+      | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>
+  ) {
     super('LiveChatService', logger);
     this.liveChatMessageRepository = liveChatMessagesRepository;
   }
@@ -28,7 +41,10 @@ export class LiveChatService extends BaseService {
   /**
    * Get recent chat messages for a video
    */
-  async getRecentMessages(videoId: string, count?: number): Promise<(SQLiteLiveChatMessage | PostgresLiveChatMessage)[]> {
+  async getRecentMessages(
+    videoId: string,
+    count?: number
+  ): Promise<(SQLiteLiveChatMessage | PostgresLiveChatMessage)[]> {
     return this.withErrorLogging('getRecentMessages', async () => {
       return this.liveChatMessageRepository.findRecentByVideoId(videoId, count);
     });
@@ -50,7 +66,9 @@ export class LiveChatService extends BaseService {
   /**
    * Create a new chat message
    */
-  async createMessage(data: CreateChatMessageInput): Promise<SQLiteLiveChatMessage | PostgresLiveChatMessage> {
+  async createMessage(
+    data: CreateChatMessageInput
+  ): Promise<SQLiteLiveChatMessage | PostgresLiveChatMessage> {
     return this.withErrorLogging('createMessage', async () => {
       return this.liveChatMessageRepository.create({
         video_id: data.videoId,

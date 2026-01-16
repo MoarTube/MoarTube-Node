@@ -48,4 +48,3 @@ export function reportsArchiveVideosRoutes(
     controller.deleteArchive.bind(controller)
   );
 }
-

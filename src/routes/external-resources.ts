@@ -71,4 +71,3 @@ export function externalResourcesRoutes(
     controller.getImage.bind(controller)
   );
 }
-

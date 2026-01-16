@@ -43,4 +43,3 @@ export function watchRoutes(
     controller.getWatchPage.bind(controller)
   );
 }
-

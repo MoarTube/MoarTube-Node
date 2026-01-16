@@ -65,4 +65,3 @@ export function reportsCommentsRoutes(
     controller.deleteReport.bind(controller)
   );
 }
-

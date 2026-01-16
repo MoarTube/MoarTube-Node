@@ -6,16 +6,22 @@
 import { eq, desc, count } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { IReportsArchiveVideosRepository } from './interface.js';
-import type { DrizzleVideoReportArchive, DrizzleNewVideoReportArchive } from '@/database/schemas/sqlite/reports-archive-videos.js';
+import type {
+  DrizzleVideoReportArchive,
+  DrizzleNewVideoReportArchive,
+} from '@/database/schemas/sqlite/reports-archive-videos.js';
 import type { DatabaseClient } from '@database/sqlite-connection.js';
 import { videoReportsArchive } from '@/database/schemas/sqlite/reports-archive-videos.js';
 
 /**
  * ReportsArchiveVideosRepositorySQLite class for archived video report CRUD operations
  */
-export class ReportsArchiveVideosRepositorySQLite implements IReportsArchiveVideosRepository<DrizzleVideoReportArchive, DrizzleNewVideoReportArchive> {
+export class ReportsArchiveVideosRepositorySQLite implements IReportsArchiveVideosRepository<
+  DrizzleVideoReportArchive,
+  DrizzleNewVideoReportArchive
+> {
   private readonly db: DatabaseClient;
-  
+
   constructor(db: DatabaseClient) {
     this.db = db;
   }
@@ -63,7 +69,10 @@ export class ReportsArchiveVideosRepositorySQLite implements IReportsArchiveVide
    * @param options - Pagination options
    * @returns Array of archived reports for the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]> {
+  async findByVideoId(
+    videoId: string,
+    options?: PaginationOptions
+  ): Promise<DrizzleVideoReportArchive[]> {
     const { limit } = { limit: options?.limit ?? 20 };
 
     return this.db

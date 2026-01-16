@@ -68,7 +68,7 @@ export async function initializeDatabaseSchema(): Promise<void> {
     // In production (bundled): dist/moartube-node.js -> ./drizzle/postgres (copied by tsup)
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
-    
+
     // Check if we're running from the bundled dist file or from source
     const isBundled = __dirname.includes('dist') || !__filename.includes('database');
     const migrationsFolder = isBundled

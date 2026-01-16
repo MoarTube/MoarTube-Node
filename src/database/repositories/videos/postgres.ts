@@ -1,7 +1,10 @@
 import { eq, desc, asc, sql, and, or, like, count, lt, type SQL } from 'drizzle-orm';
 import { videos } from '@database/schemas/postgres/index.js';
 import type { DatabaseClient } from '@database/postgres-connection.js';
-import type { IVideosRepository, VideoQueryOptions } from '@database/repositories/videos/interface.js';
+import type {
+  IVideosRepository,
+  VideoQueryOptions,
+} from '@database/repositories/videos/interface.js';
 import type { DrizzleVideo, DrizzleNewVideo } from '@database/schemas/postgres/index.js';
 
 /**
@@ -17,11 +20,7 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
    * Finds a video by its unique video_id
    */
   async findById(videoId: string): Promise<DrizzleVideo | null> {
-    const result = await this.db
-      .select()
-      .from(videos)
-      .where(eq(videos.video_id, videoId))
-      .limit(1);
+    const result = await this.db.select().from(videos).where(eq(videos.video_id, videoId)).limit(1);
     return result[0] ?? null;
   }
 
@@ -29,11 +28,7 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
    * Finds a video by its database id
    */
   async findByDbId(id: number): Promise<DrizzleVideo | null> {
-    const result = await this.db
-      .select()
-      .from(videos)
-      .where(eq(videos.id, id))
-      .limit(1);
+    const result = await this.db.select().from(videos).where(eq(videos.id, id)).limit(1);
     return result[0] ?? null;
   }
 
@@ -115,10 +110,7 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
    * Deletes a video record
    */
   async delete(videoId: string): Promise<boolean> {
-    const result = await this.db
-      .delete(videos)
-      .where(eq(videos.video_id, videoId))
-      .returning();
+    const result = await this.db.delete(videos).where(eq(videos.video_id, videoId)).returning();
     return result.length > 0;
   }
 
@@ -190,10 +182,7 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
    * Updates the bandwidth for a video
    */
   async updateBandwidth(videoId: string, bandwidth: number): Promise<void> {
-    await this.db
-      .update(videos)
-      .set({ bandwidth })
-      .where(eq(videos.video_id, videoId));
+    await this.db.update(videos).set({ bandwidth }).where(eq(videos.video_id, videoId));
   }
 
   /**

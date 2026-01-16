@@ -118,4 +118,3 @@ export function externalVideosRoutes(
     controller.getProgressive.bind(controller)
   );
 }
-

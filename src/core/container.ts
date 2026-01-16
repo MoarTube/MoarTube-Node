@@ -59,7 +59,7 @@ import type {
   SQLiteLink,
   SQLiteNewLink,
   PostgresLink,
-  PostgresNewLink
+  PostgresNewLink,
 } from '@database/index.js';
 
 import type { DatabaseClient as SQLiteClient } from '@database/sqlite-connection.js';
@@ -95,15 +95,36 @@ export interface ContainerCradle {
   db: DatabaseClient;
 
   // Repositories
-  videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>;
-  commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>;
-  reportsVideosRepository: IReportsVideosRepository<SQLiteVideoReport, SQLiteNewVideoReport> | IReportsVideosRepository<PostgresVideoReport, PostgresNewVideoReport>;
-  reportsCommentsRepository: IReportsCommentsRepository<SQLiteCommentReport, SQLiteNewCommentReport> | IReportsCommentsRepository<PostgresCommentReport, PostgresNewCommentReport>;
-  reportsArchiveVideosRepository: IReportsArchiveVideosRepository<SQLiteVideoReportArchive, SQLiteNewVideoReportArchive> | IReportsArchiveVideosRepository<PostgresVideoReportArchive, PostgresNewVideoReportArchive>;
-  reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<SQLiteCommentReportArchive, SQLiteNewCommentReportArchive> | IReportsArchiveCommentsRepository<PostgresCommentReportArchive, PostgresNewCommentReportArchive>;
-  liveChatMessagesRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
-  monetizationRepository: IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress> | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>;
-  linksRepository: ILinksRepository<SQLiteLink, SQLiteNewLink> | ILinksRepository<PostgresLink, PostgresNewLink>;
+  videosRepository:
+    | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
+    | IVideosRepository<PostgresVideo, PostgresNewVideo>;
+  commentsRepository:
+    | ICommentsRepository<SQLiteComment, SQLiteNewComment>
+    | ICommentsRepository<PostgresComment, PostgresNewComment>;
+  reportsVideosRepository:
+    | IReportsVideosRepository<SQLiteVideoReport, SQLiteNewVideoReport>
+    | IReportsVideosRepository<PostgresVideoReport, PostgresNewVideoReport>;
+  reportsCommentsRepository:
+    | IReportsCommentsRepository<SQLiteCommentReport, SQLiteNewCommentReport>
+    | IReportsCommentsRepository<PostgresCommentReport, PostgresNewCommentReport>;
+  reportsArchiveVideosRepository:
+    | IReportsArchiveVideosRepository<SQLiteVideoReportArchive, SQLiteNewVideoReportArchive>
+    | IReportsArchiveVideosRepository<PostgresVideoReportArchive, PostgresNewVideoReportArchive>;
+  reportsArchiveCommentsRepository:
+    | IReportsArchiveCommentsRepository<SQLiteCommentReportArchive, SQLiteNewCommentReportArchive>
+    | IReportsArchiveCommentsRepository<
+        PostgresCommentReportArchive,
+        PostgresNewCommentReportArchive
+      >;
+  liveChatMessagesRepository:
+    | ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage>
+    | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
+  monetizationRepository:
+    | IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress>
+    | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>;
+  linksRepository:
+    | ILinksRepository<SQLiteLink, SQLiteNewLink>
+    | ILinksRepository<PostgresLink, PostgresNewLink>;
 
   // Services
   videosService: VideosService;
@@ -184,51 +205,49 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
 
   // Register repositories (they need db and table in constructor)
   appContainer.register({
-    videosRepository: asValue(createTypedRepository(
-      dbDialect,
-      createVideosRepository,
-      createVideosRepository
-    )),
-    commentsRepository: asValue(createTypedRepository(
-      dbDialect,
-      createCommentsRepository,
-      createCommentsRepository
-    )),
-    reportsVideosRepository: asValue(createTypedRepository(
-      dbDialect,
-      createReportsVideosRepository,
-      createReportsVideosRepository
-    )),
-    reportsCommentsRepository: asValue(createTypedRepository(
-      dbDialect,
-      createReportsCommentsRepository,
-      createReportsCommentsRepository
-    )),
-    reportsArchiveVideosRepository: asValue(createTypedRepository(
-      dbDialect,
-      createReportsArchiveVideosRepository,
-      createReportsArchiveVideosRepository
-    )),
-    reportsArchiveCommentsRepository: asValue(createTypedRepository(
-      dbDialect,
-      createReportsArchiveCommentsRepository,
-      createReportsArchiveCommentsRepository
-    )),
-    liveChatMessagesRepository: asValue(createTypedRepository(
-      dbDialect,
-      createLiveChatMessagesRepository,
-      createLiveChatMessagesRepository
-    )),
-    monetizationRepository: asValue(createTypedRepository(
-      dbDialect,
-      createMonetizationRepository,
-      createMonetizationRepository
-    )),
-    linksRepository: asValue(createTypedRepository(
-      dbDialect,
-      createLinksRepository,
-      createLinksRepository
-    )),
+    videosRepository: asValue(
+      createTypedRepository(dbDialect, createVideosRepository, createVideosRepository)
+    ),
+    commentsRepository: asValue(
+      createTypedRepository(dbDialect, createCommentsRepository, createCommentsRepository)
+    ),
+    reportsVideosRepository: asValue(
+      createTypedRepository(dbDialect, createReportsVideosRepository, createReportsVideosRepository)
+    ),
+    reportsCommentsRepository: asValue(
+      createTypedRepository(
+        dbDialect,
+        createReportsCommentsRepository,
+        createReportsCommentsRepository
+      )
+    ),
+    reportsArchiveVideosRepository: asValue(
+      createTypedRepository(
+        dbDialect,
+        createReportsArchiveVideosRepository,
+        createReportsArchiveVideosRepository
+      )
+    ),
+    reportsArchiveCommentsRepository: asValue(
+      createTypedRepository(
+        dbDialect,
+        createReportsArchiveCommentsRepository,
+        createReportsArchiveCommentsRepository
+      )
+    ),
+    liveChatMessagesRepository: asValue(
+      createTypedRepository(
+        dbDialect,
+        createLiveChatMessagesRepository,
+        createLiveChatMessagesRepository
+      )
+    ),
+    monetizationRepository: asValue(
+      createTypedRepository(dbDialect, createMonetizationRepository, createMonetizationRepository)
+    ),
+    linksRepository: asValue(
+      createTypedRepository(dbDialect, createLinksRepository, createLinksRepository)
+    ),
   });
 
   // Register services (singletons for shared state)

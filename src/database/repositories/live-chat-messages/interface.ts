@@ -40,7 +40,11 @@ export interface ILiveChatMessagesRepository<MessageType, NewMessageType> {
    * @param limit - Maximum number of messages to retrieve
    * @returns Array of chat messages after the timestamp
    */
-  findAfterTimestamp(videoId: string, afterTimestamp: number, limit?: number): Promise<MessageType[]>;
+  findAfterTimestamp(
+    videoId: string,
+    afterTimestamp: number,
+    limit?: number
+  ): Promise<MessageType[]>;
 
   /**
    * Counts total chat messages for a video

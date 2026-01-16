@@ -1,18 +1,22 @@
 import { eq, desc, count, gt } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { IReportsCommentsRepository } from './interface.js';
-import type { DrizzleCommentReport, DrizzleNewCommentReport } from '@database/schemas/postgres/reports-comments.js';
+import type {
+  DrizzleCommentReport,
+  DrizzleNewCommentReport,
+} from '@database/schemas/postgres/reports-comments.js';
 import type { DatabaseClient } from '@database/postgres-connection.js';
 import { commentReports } from '@database/schemas/postgres/index.js';
 
 /**
  * PostgreSQL implementation of the Reports Comments Repository
  */
-export class ReportsCommentsRepositoryPostgres
-  implements IReportsCommentsRepository<DrizzleCommentReport, DrizzleNewCommentReport>
-{
+export class ReportsCommentsRepositoryPostgres implements IReportsCommentsRepository<
+  DrizzleCommentReport,
+  DrizzleNewCommentReport
+> {
   private readonly db: DatabaseClient;
-  
+
   constructor(db: DatabaseClient) {
     this.db = db;
   }
@@ -35,10 +39,7 @@ export class ReportsCommentsRepositoryPostgres
   async findAll(options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
     const { limit } = { limit: options?.limit };
 
-    const query = this.db
-      .select()
-      .from(commentReports)
-      .orderBy(desc(commentReports.timestamp));
+    const query = this.db.select().from(commentReports).orderBy(desc(commentReports.timestamp));
 
     if (limit !== undefined) {
       return query.limit(limit);
@@ -50,7 +51,10 @@ export class ReportsCommentsRepositoryPostgres
   /**
    * Finds all reports for comments on a specific video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
+  async findByVideoId(
+    videoId: string,
+    options?: PaginationOptions
+  ): Promise<DrizzleCommentReport[]> {
     const { limit } = { limit: options?.limit ?? 20 };
 
     return this.db
@@ -64,7 +68,10 @@ export class ReportsCommentsRepositoryPostgres
   /**
    * Finds all reports for a specific comment
    */
-  async findByCommentId(commentId: number, options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
+  async findByCommentId(
+    commentId: number,
+    options?: PaginationOptions
+  ): Promise<DrizzleCommentReport[]> {
     const { limit } = { limit: options?.limit ?? 20 };
 
     return this.db

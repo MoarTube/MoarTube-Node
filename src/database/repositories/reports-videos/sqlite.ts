@@ -1,15 +1,19 @@
 import { eq, desc, count, gt } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { IReportsVideosRepository } from './interface.js';
-import type { DrizzleVideoReport, DrizzleNewVideoReport } from '@database/schemas/sqlite/reports-videos.js';
+import type {
+  DrizzleVideoReport,
+  DrizzleNewVideoReport,
+} from '@database/schemas/sqlite/reports-videos.js';
 import type { DatabaseClient } from '@database/sqlite-connection.js';
 import { videoReports } from '@database/schemas/sqlite/index.js';
 
-export class ReportsVideosRepositorySQLite
-  implements IReportsVideosRepository<DrizzleVideoReport, DrizzleNewVideoReport>
-{
+export class ReportsVideosRepositorySQLite implements IReportsVideosRepository<
+  DrizzleVideoReport,
+  DrizzleNewVideoReport
+> {
   private readonly db: DatabaseClient;
-  
+
   constructor(db: DatabaseClient) {
     this.db = db;
   }
@@ -26,10 +30,7 @@ export class ReportsVideosRepositorySQLite
   async findAll(options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
     const { limit } = { limit: options?.limit };
 
-    const query = this.db
-      .select()
-      .from(videoReports)
-      .orderBy(desc(videoReports.timestamp));
+    const query = this.db.select().from(videoReports).orderBy(desc(videoReports.timestamp));
 
     if (limit !== undefined) {
       return query.limit(limit);

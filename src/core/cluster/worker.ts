@@ -163,7 +163,7 @@ export class ClusterWorker {
       }
 
       this.wss.handleUpgrade(request, socket, head, (ws) => {
-      (this.wss as WebSocketServer).emit('connection', ws, request);
+        (this.wss as WebSocketServer).emit('connection', ws, request);
       });
     });
 

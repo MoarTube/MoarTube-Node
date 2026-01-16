@@ -36,11 +36,7 @@ export class ClusterMaster {
   private intervalHandles: NodeJS.Timeout[] = [];
   private isRunning = false;
 
-  constructor(
-    logger: IPCLogger,
-    indexer: IndexerService,
-    cloudflare: CloudflareService
-  ) {
+  constructor(logger: IPCLogger, indexer: IndexerService, cloudflare: CloudflareService) {
     this.logger = logger;
     this.indexer = indexer;
     this.cloudflare = cloudflare;
@@ -60,11 +56,11 @@ export class ClusterMaster {
 
     this.logger.info('Starting MoarTube Node cluster master');
 
-    this.logger.info(`Running in ${config.runtime.isDevelopment ? 'development' : 'production'} mode`);
-
     this.logger.info(
-      `Data directory path: ${config.paths.dataDirectoryPath}`
+      `Running in ${config.runtime.isDevelopment ? 'development' : 'production'} mode`
     );
+
+    this.logger.info(`Data directory path: ${config.paths.dataDirectoryPath}`);
 
     // Set up global error handlers
     this.setupErrorHandlers();

@@ -57,10 +57,11 @@ class Paths implements PathConfig {
     // Determine public directory location
     // In bundled builds (dist/), public is at dist/public (entryPointDir/public)
     // In dev/source mode, public is at project root (baseDir/public)
-    const isBundled = entryPointDir !== undefined && 
+    const isBundled =
+      entryPointDir !== undefined &&
       (entryPointDir.includes('dist') || entryPointDir.endsWith('dist'));
     const publicBase = isBundled ? entryPointDir : baseDir;
-    
+
     // Base directories
     this.publicDirectoryPath = path.join(publicBase, 'public');
     this.viewsDirectoryPath = path.join(this.publicDirectoryPath, 'views');
@@ -134,7 +135,7 @@ class Paths implements PathConfig {
       if (appData === undefined || appData === '') {
         throw new Error(
           'APPDATA environment variable is not set. ' +
-          'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
+            'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
         );
       }
       return path.join(appData, appName);
@@ -145,7 +146,7 @@ class Paths implements PathConfig {
       if (home === undefined || home === '') {
         throw new Error(
           'HOME environment variable is not set. ' +
-          'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
+            'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
         );
       }
       return path.join(home, 'Library', 'Application Support', appName);
@@ -156,7 +157,7 @@ class Paths implements PathConfig {
     if (home === undefined || home === '') {
       throw new Error(
         'HOME environment variable is not set. ' +
-        'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
+          'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
       );
     }
     return path.join(home, '.local', 'share', appName);
@@ -315,7 +316,11 @@ class Paths implements PathConfig {
  * @param isDevelopment - Whether running in development mode (NODE_ENV=development)
  * @param entryPointDir - Directory of the entry point (for bundled builds)
  */
-export function initializePaths(baseDir: string, isDevelopment: boolean, entryPointDir?: string): Paths {
+export function initializePaths(
+  baseDir: string,
+  isDevelopment: boolean,
+  entryPointDir?: string
+): Paths {
   return Paths.initialize(baseDir, isDevelopment, entryPointDir);
 }
 

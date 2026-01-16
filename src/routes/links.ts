@@ -29,7 +29,7 @@ export function linksRoutes(
       preHandler: [fastify.optionalAuthenticate],
       schema: {
         tags: ['Links'],
-      },  
+      },
     },
     controller.getAllLinks.bind(controller)
   );
@@ -60,4 +60,3 @@ export function linksRoutes(
     controller.deleteLink.bind(controller)
   );
 }
-

@@ -6,16 +6,22 @@
 import { eq, desc, count } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { IReportsArchiveCommentsRepository } from './interface.js';
-import type { DrizzleCommentReportArchive, DrizzleNewCommentReportArchive } from '@/database/schemas/postgres/reports-archive-comments.js';
+import type {
+  DrizzleCommentReportArchive,
+  DrizzleNewCommentReportArchive,
+} from '@/database/schemas/postgres/reports-archive-comments.js';
 import type { DatabaseClient } from '@database/postgres-connection.js';
 import { commentReportsArchive } from '@/database/schemas/postgres/reports-archive-comments.js';
 
 /**
  * ReportsArchiveCommentsRepositoryPostgres class for archived comment report CRUD operations
  */
-export class ReportsArchiveCommentsRepositoryPostgres implements IReportsArchiveCommentsRepository<DrizzleCommentReportArchive, DrizzleNewCommentReportArchive> {
+export class ReportsArchiveCommentsRepositoryPostgres implements IReportsArchiveCommentsRepository<
+  DrizzleCommentReportArchive,
+  DrizzleNewCommentReportArchive
+> {
   private readonly db: DatabaseClient;
-  
+
   constructor(db: DatabaseClient) {
     this.db = db;
   }
@@ -63,7 +69,10 @@ export class ReportsArchiveCommentsRepositoryPostgres implements IReportsArchive
    * @param options - Pagination options
    * @returns Array of archived reports for comments on the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleCommentReportArchive[]> {
+  async findByVideoId(
+    videoId: string,
+    options?: PaginationOptions
+  ): Promise<DrizzleCommentReportArchive[]> {
     const { limit } = { limit: options?.limit ?? 20 };
 
     return this.db
@@ -81,7 +90,10 @@ export class ReportsArchiveCommentsRepositoryPostgres implements IReportsArchive
    * @param options - Pagination options
    * @returns Array of archived reports for the comment
    */
-  async findByCommentId(commentId: number, options?: PaginationOptions): Promise<DrizzleCommentReportArchive[]> {
+  async findByCommentId(
+    commentId: number,
+    options?: PaginationOptions
+  ): Promise<DrizzleCommentReportArchive[]> {
     const { limit } = { limit: options?.limit ?? 20 };
 
     return this.db

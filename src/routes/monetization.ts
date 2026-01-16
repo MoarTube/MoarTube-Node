@@ -60,4 +60,3 @@ export function monetizationRoutes(
     controller.deleteWalletAddress.bind(controller)
   );
 }
-

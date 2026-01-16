@@ -264,7 +264,9 @@ export class NodeController extends BaseController {
   /**
    * Fetch published and live videos, merge and deduplicate
    */
-  private async fetchAndMergeVideos(searchTerm: string | undefined): Promise<(SQLiteVideo | PostgresVideo)[]> {
+  private async fetchAndMergeVideos(
+    searchTerm: string | undefined
+  ): Promise<(SQLiteVideo | PostgresVideo)[]> {
     const queryOptions: { isPublished: boolean; search?: string } = {
       isPublished: true,
     };
@@ -294,7 +296,10 @@ export class NodeController extends BaseController {
   /**
    * Sort videos by the given sort term
    */
-  private sortVideos(videos: (SQLiteVideo | PostgresVideo)[], sortTerm: string): (SQLiteVideo | PostgresVideo)[] {
+  private sortVideos(
+    videos: (SQLiteVideo | PostgresVideo)[],
+    sortTerm: string
+  ): (SQLiteVideo | PostgresVideo)[] {
     const sorted = [...videos];
 
     if (sortTerm === 'latest') {
@@ -311,7 +316,10 @@ export class NodeController extends BaseController {
   /**
    * Filter videos by tag with optional tag limit
    */
-  private filterByTag(videos: (SQLiteVideo | PostgresVideo)[], tagTerm: string | undefined): (SQLiteVideo | PostgresVideo)[] {
+  private filterByTag(
+    videos: (SQLiteVideo | PostgresVideo)[],
+    tagTerm: string | undefined
+  ): (SQLiteVideo | PostgresVideo)[] {
     if (tagTerm !== undefined && tagTerm.length > 0) {
       return this.filterBySpecificTag(videos, tagTerm);
     }
@@ -322,7 +330,10 @@ export class NodeController extends BaseController {
   /**
    * Filter videos that have a specific tag
    */
-  private filterBySpecificTag(videos: (SQLiteVideo | PostgresVideo)[], tagTerm: string): (SQLiteVideo | PostgresVideo)[] {
+  private filterBySpecificTag(
+    videos: (SQLiteVideo | PostgresVideo)[],
+    tagTerm: string
+  ): (SQLiteVideo | PostgresVideo)[] {
     const results: (SQLiteVideo | PostgresVideo)[] = [];
 
     for (const video of videos) {
@@ -338,7 +349,9 @@ export class NodeController extends BaseController {
   /**
    * Filter videos with a limit per tag
    */
-  private filterWithTagLimit(videos: (SQLiteVideo | PostgresVideo)[]): (SQLiteVideo | PostgresVideo)[] {
+  private filterWithTagLimit(
+    videos: (SQLiteVideo | PostgresVideo)[]
+  ): (SQLiteVideo | PostgresVideo)[] {
     const tagLimit = 4;
     const tagLimitCounter: Record<string, number> = {};
     const results: (SQLiteVideo | PostgresVideo)[] = [];

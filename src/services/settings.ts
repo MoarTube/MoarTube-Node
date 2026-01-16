@@ -75,27 +75,69 @@ import type { IndexerService } from '@services/indexer.js';
 export class SettingsService extends BaseService {
   private readonly indexerService: IndexerService;
   private readonly cloudflareService: CloudflareService;
-  private readonly videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>;
-  private readonly commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>;
-  private readonly reportsVideosRepository: IReportsVideosRepository<SQLiteVideoReport, SQLiteNewVideoReport> | IReportsVideosRepository<PostgresVideoReport, PostgresNewVideoReport>;
-  private readonly reportsCommentsRepository: IReportsCommentsRepository<SQLiteCommentReport, SQLiteNewCommentReport> | IReportsCommentsRepository<PostgresCommentReport, PostgresNewCommentReport>;
-  private readonly reportsArchiveVideosRepository: IReportsArchiveVideosRepository<SQLiteVideoReportArchive, SQLiteNewVideoReportArchive> | IReportsArchiveVideosRepository<PostgresVideoReportArchive, PostgresNewVideoReportArchive>;
-  private readonly reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<SQLiteCommentReportArchive, SQLiteNewCommentReportArchive> | IReportsArchiveCommentsRepository<PostgresCommentReportArchive, PostgresNewCommentReportArchive>;
-  private readonly liveChatMessagesRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
-  private readonly monetizationRepository: IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress> | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>;
-  private readonly linksRepository: ILinksRepository<SQLiteLink, SQLiteNewLink> | ILinksRepository<PostgresLink, PostgresNewLink>;
+  private readonly videosRepository:
+    | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
+    | IVideosRepository<PostgresVideo, PostgresNewVideo>;
+  private readonly commentsRepository:
+    | ICommentsRepository<SQLiteComment, SQLiteNewComment>
+    | ICommentsRepository<PostgresComment, PostgresNewComment>;
+  private readonly reportsVideosRepository:
+    | IReportsVideosRepository<SQLiteVideoReport, SQLiteNewVideoReport>
+    | IReportsVideosRepository<PostgresVideoReport, PostgresNewVideoReport>;
+  private readonly reportsCommentsRepository:
+    | IReportsCommentsRepository<SQLiteCommentReport, SQLiteNewCommentReport>
+    | IReportsCommentsRepository<PostgresCommentReport, PostgresNewCommentReport>;
+  private readonly reportsArchiveVideosRepository:
+    | IReportsArchiveVideosRepository<SQLiteVideoReportArchive, SQLiteNewVideoReportArchive>
+    | IReportsArchiveVideosRepository<PostgresVideoReportArchive, PostgresNewVideoReportArchive>;
+  private readonly reportsArchiveCommentsRepository:
+    | IReportsArchiveCommentsRepository<SQLiteCommentReportArchive, SQLiteNewCommentReportArchive>
+    | IReportsArchiveCommentsRepository<
+        PostgresCommentReportArchive,
+        PostgresNewCommentReportArchive
+      >;
+  private readonly liveChatMessagesRepository:
+    | ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage>
+    | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
+  private readonly monetizationRepository:
+    | IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress>
+    | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>;
+  private readonly linksRepository:
+    | ILinksRepository<SQLiteLink, SQLiteNewLink>
+    | ILinksRepository<PostgresLink, PostgresNewLink>;
 
   constructor(
     logger: Logger,
-    videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>,
-    commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>,
-    reportsVideosRepository: IReportsVideosRepository<SQLiteVideoReport, SQLiteNewVideoReport> | IReportsVideosRepository<PostgresVideoReport, PostgresNewVideoReport>,
-    reportsCommentsRepository: IReportsCommentsRepository<SQLiteCommentReport, SQLiteNewCommentReport> | IReportsCommentsRepository<PostgresCommentReport, PostgresNewCommentReport>,
-    reportsArchiveVideosRepository: IReportsArchiveVideosRepository<SQLiteVideoReportArchive, SQLiteNewVideoReportArchive> | IReportsArchiveVideosRepository<PostgresVideoReportArchive, PostgresNewVideoReportArchive>,
-    reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<SQLiteCommentReportArchive, SQLiteNewCommentReportArchive> | IReportsArchiveCommentsRepository<PostgresCommentReportArchive, PostgresNewCommentReportArchive>,
-    liveChatMessagesRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>,
-    monetizationRepository: IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress> | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>,
-    linksRepository: ILinksRepository<SQLiteLink, SQLiteNewLink> | ILinksRepository<PostgresLink, PostgresNewLink>,
+    videosRepository:
+      | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
+      | IVideosRepository<PostgresVideo, PostgresNewVideo>,
+    commentsRepository:
+      | ICommentsRepository<SQLiteComment, SQLiteNewComment>
+      | ICommentsRepository<PostgresComment, PostgresNewComment>,
+    reportsVideosRepository:
+      | IReportsVideosRepository<SQLiteVideoReport, SQLiteNewVideoReport>
+      | IReportsVideosRepository<PostgresVideoReport, PostgresNewVideoReport>,
+    reportsCommentsRepository:
+      | IReportsCommentsRepository<SQLiteCommentReport, SQLiteNewCommentReport>
+      | IReportsCommentsRepository<PostgresCommentReport, PostgresNewCommentReport>,
+    reportsArchiveVideosRepository:
+      | IReportsArchiveVideosRepository<SQLiteVideoReportArchive, SQLiteNewVideoReportArchive>
+      | IReportsArchiveVideosRepository<PostgresVideoReportArchive, PostgresNewVideoReportArchive>,
+    reportsArchiveCommentsRepository:
+      | IReportsArchiveCommentsRepository<SQLiteCommentReportArchive, SQLiteNewCommentReportArchive>
+      | IReportsArchiveCommentsRepository<
+          PostgresCommentReportArchive,
+          PostgresNewCommentReportArchive
+        >,
+    liveChatMessagesRepository:
+      | ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage>
+      | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>,
+    monetizationRepository:
+      | IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress>
+      | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>,
+    linksRepository:
+      | ILinksRepository<SQLiteLink, SQLiteNewLink>
+      | ILinksRepository<PostgresLink, PostgresNewLink>,
     indexerService: IndexerService,
     cloudflareService: CloudflareService
   ) {
