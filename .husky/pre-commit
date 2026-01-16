@@ -1,1 +1,1 @@
-npm run typecheck && npm run lint:src && npm run test
+npm run prettier && npm run typecheck && npm run lint:src && npm run test
