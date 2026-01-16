@@ -14,7 +14,7 @@ import type {
   CommentsService,
   ReportsService,
 } from '@services/index.js';
-import type { DrizzleVideo } from '@database/index.js';
+import type { SQLiteVideo, PostgresVideo } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 
 /**
@@ -253,7 +253,7 @@ export class NodeController extends BaseController {
     searchTerm: string | undefined,
     sortTerm: string,
     tagTerm: string | undefined
-  ): Promise<{ isError: false; searchResults: DrizzleVideo[] }> {
+  ): Promise<{ isError: false; searchResults: (SQLiteVideo | PostgresVideo)[] }> {
     const videos = await this.fetchAndMergeVideos(searchTerm);
     const sortedVideos = this.sortVideos(videos, sortTerm);
     const searchResults = this.filterByTag(sortedVideos, tagTerm);
@@ -264,7 +264,7 @@ export class NodeController extends BaseController {
   /**
    * Fetch published and live videos, merge and deduplicate
    */
-  private async fetchAndMergeVideos(searchTerm: string | undefined): Promise<DrizzleVideo[]> {
+  private async fetchAndMergeVideos(searchTerm: string | undefined): Promise<(SQLiteVideo | PostgresVideo)[]> {
     const queryOptions: { isPublished: boolean; search?: string } = {
       isPublished: true,
     };
@@ -277,7 +277,7 @@ export class NodeController extends BaseController {
     const videos = videosResult.data;
     const liveVideos = await this.streamsService.getActiveStreams();
 
-    const videoMap = new Map<string, DrizzleVideo>();
+    const videoMap = new Map<string, SQLiteVideo | PostgresVideo>();
 
     for (const video of videos) {
       videoMap.set(video.video_id, video);
@@ -294,7 +294,7 @@ export class NodeController extends BaseController {
   /**
    * Sort videos by the given sort term
    */
-  private sortVideos(videos: DrizzleVideo[], sortTerm: string): DrizzleVideo[] {
+  private sortVideos(videos: (SQLiteVideo | PostgresVideo)[], sortTerm: string): (SQLiteVideo | PostgresVideo)[] {
     const sorted = [...videos];
 
     if (sortTerm === 'latest') {
@@ -311,7 +311,7 @@ export class NodeController extends BaseController {
   /**
    * Filter videos by tag with optional tag limit
    */
-  private filterByTag(videos: DrizzleVideo[], tagTerm: string | undefined): DrizzleVideo[] {
+  private filterByTag(videos: (SQLiteVideo | PostgresVideo)[], tagTerm: string | undefined): (SQLiteVideo | PostgresVideo)[] {
     if (tagTerm !== undefined && tagTerm.length > 0) {
       return this.filterBySpecificTag(videos, tagTerm);
     }
@@ -322,8 +322,8 @@ export class NodeController extends BaseController {
   /**
    * Filter videos that have a specific tag
    */
-  private filterBySpecificTag(videos: DrizzleVideo[], tagTerm: string): DrizzleVideo[] {
-    const results: DrizzleVideo[] = [];
+  private filterBySpecificTag(videos: (SQLiteVideo | PostgresVideo)[], tagTerm: string): (SQLiteVideo | PostgresVideo)[] {
+    const results: (SQLiteVideo | PostgresVideo)[] = [];
 
     for (const video of videos) {
       const tagsArray = video.tags.split(',').map((t: string) => t.trim());
@@ -338,10 +338,10 @@ export class NodeController extends BaseController {
   /**
    * Filter videos with a limit per tag
    */
-  private filterWithTagLimit(videos: DrizzleVideo[]): DrizzleVideo[] {
+  private filterWithTagLimit(videos: (SQLiteVideo | PostgresVideo)[]): (SQLiteVideo | PostgresVideo)[] {
     const tagLimit = 4;
     const tagLimitCounter: Record<string, number> = {};
-    const results: DrizzleVideo[] = [];
+    const results: (SQLiteVideo | PostgresVideo)[] = [];
 
     for (const video of videos) {
       if (this.shouldAddVideoByTagLimit(video, tagLimitCounter, tagLimit)) {
@@ -356,7 +356,7 @@ export class NodeController extends BaseController {
    * Check if video should be added based on tag limit
    */
   private shouldAddVideoByTagLimit(
-    video: DrizzleVideo,
+    video: SQLiteVideo | PostgresVideo,
     tagLimitCounter: Record<string, number>,
     tagLimit: number
   ): boolean {

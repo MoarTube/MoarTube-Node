@@ -6,7 +6,7 @@
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type { CreateLinkInput } from '@services/interfaces.js';
-import type { ILinksRepository, DrizzleLink, DrizzleNewLink } from '@database/index.js';
+import type { ILinksRepository, SQLiteLink, SQLiteNewLink, PostgresLink, PostgresNewLink } from '@database/index.js';
 
 /**
  * LinksService class
@@ -15,9 +15,9 @@ import type { ILinksRepository, DrizzleLink, DrizzleNewLink } from '@database/in
  * - Link CRUD operations
  */
 export class LinksService extends BaseService {
-  private readonly linksRepository: ILinksRepository<DrizzleLink, DrizzleNewLink>;
+  private readonly linksRepository: ILinksRepository<SQLiteLink, SQLiteNewLink> | ILinksRepository<PostgresLink, PostgresNewLink>;
 
-  constructor(logger: Logger, linksRepository: ILinksRepository<DrizzleLink, DrizzleNewLink>) {
+  constructor(logger: Logger, linksRepository: ILinksRepository<SQLiteLink, SQLiteNewLink> | ILinksRepository<PostgresLink, PostgresNewLink>) {
     super('LinksService', logger);
     this.linksRepository = linksRepository;
   }
@@ -25,7 +25,7 @@ export class LinksService extends BaseService {
   /**
    * Get all links
    */
-  async getAllLinks(): Promise<DrizzleLink[]> {
+  async getAllLinks(): Promise<(SQLiteLink | PostgresLink)[]> {
     return this.withErrorLogging('getAllLinks', async () => {
       return this.linksRepository.findAll();
     });
@@ -34,7 +34,7 @@ export class LinksService extends BaseService {
   /**
    * Create a new link
    */
-  async createLink(data: CreateLinkInput): Promise<DrizzleLink> {
+  async createLink(data: CreateLinkInput): Promise<SQLiteLink | PostgresLink> {
     return this.withErrorLogging('createLink', async () => {
       return this.linksRepository.create({
         url: data.url,

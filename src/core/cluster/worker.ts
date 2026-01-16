@@ -163,7 +163,7 @@ export class ClusterWorker {
       }
 
       this.wss.handleUpgrade(request, socket, head, (ws) => {
-        this.wss!.emit('connection', ws, request);
+      (this.wss as WebSocketServer).emit('connection', ws, request);
       });
     });
 
@@ -181,10 +181,14 @@ export class ClusterWorker {
     this.logger.info('Stopping worker');
 
     // Close HTTP server
-    await this.app!.close();
+    if (this.app) {
+      await this.app.close();
+    }
 
     // Close WebSocket server
-    this.wss!.close();
+    if (this.wss) {
+      this.wss.close();
+    }
     this.wss = null;
 
     // Close WebSocket connections
@@ -255,7 +259,7 @@ export class ClusterWorker {
 
       this.ipc.sendToMaster({
         cmd: 'live_stream_worker_stats_response',
-        workerId: cluster.worker!.id,
+        workerId: cluster.worker?.id ?? 0,
         liveStreamWatchingCounts,
       });
     });
@@ -361,7 +365,9 @@ export class ClusterWorker {
    * Restart HTTP server
    */
   private async restartHttpServer(): Promise<void> {
-    await this.app!.close();
+    if (this.app) {
+      await this.app.close();
+    }
 
     const { createFastifyApp } = await import('@plugins/index.js');
     this.app = await createFastifyApp();
@@ -370,6 +376,6 @@ export class ClusterWorker {
     const port = config.nodeSettings.nodeListeningPort;
 
     await this.app.listen({ port, host: '0.0.0.0' });
-    this.logger.info(`Worker ${String(cluster.worker!.id)} restarted on port ${String(port)}`);
+    this.logger.info(`Worker ${String(cluster.worker?.id ?? 0)} restarted on port ${String(port)}`);
   }
 }

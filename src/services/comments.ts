@@ -11,10 +11,14 @@ import type { CreateCommentInput } from '@services/interfaces.js';
 import type {
   ICommentsRepository,
   IVideosRepository,
-  DrizzleComment,
-  DrizzleNewComment,
-  DrizzleVideo,
-  DrizzleNewVideo,
+  SQLiteComment,
+  SQLiteNewComment,
+  PostgresComment,
+  PostgresNewComment,
+  SQLiteVideo,
+  SQLiteNewVideo,
+  PostgresVideo,
+  PostgresNewVideo,
 } from '@database/index.js';
 import sanitizeHtml from 'sanitize-html';
 
@@ -27,13 +31,13 @@ import sanitizeHtml from 'sanitize-html';
  * - Comment search functionality
  */
 export class CommentsService extends BaseService {
-  private readonly commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>;
-  private readonly videoRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>;
+  private readonly commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>;
+  private readonly videoRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>;
 
   constructor(
     logger: Logger,
-    commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>,
-    videosRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>
+    commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>,
+    videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>
   ) {
     super('CommentService', logger);
     this.commentsRepository = commentsRepository;
@@ -47,7 +51,7 @@ export class CommentsService extends BaseService {
     videoId: string,
     commentId: number,
     timestamp: number
-  ): Promise<DrizzleComment | null> {
+  ): Promise<SQLiteComment | PostgresComment | null> {
     return this.withErrorLogging('getComment', async () => {
       return this.commentsRepository.findById(videoId, commentId, timestamp);
     });
@@ -61,7 +65,7 @@ export class CommentsService extends BaseService {
     type: string,
     sort: string,
     timestamp: number
-  ): Promise<DrizzleComment[]> {
+  ): Promise<(SQLiteComment | PostgresComment)[]> {
     return this.withErrorLogging('getCommentsForVideo', async () => {
       // Validate parameters
       if (type !== 'before' && type !== 'after') {
@@ -83,7 +87,7 @@ export class CommentsService extends BaseService {
   /**
    * Create a new comment
    */
-  async createComment(data: CreateCommentInput): Promise<DrizzleComment> {
+  async createComment(data: CreateCommentInput): Promise<SQLiteComment | PostgresComment> {
     return this.withErrorLogging('createComment', async () => {
       const timestamp = this.getCurrentTimestampMs();
 
@@ -93,7 +97,7 @@ export class CommentsService extends BaseService {
       });
 
       // Create comment data
-      const commentData: DrizzleNewComment = {
+      const commentData: SQLiteNewComment | PostgresNewComment = {
         video_id: data.videoId,
         comment_plain_text_sanitized: commentPlainTextSanitized,
         timestamp,
@@ -173,7 +177,7 @@ export class CommentsService extends BaseService {
     timestamp: number,
     videoId?: string,
     searchTerm?: string
-  ): Promise<DrizzleComment[]> {
+  ): Promise<(SQLiteComment | PostgresComment)[]> {
     return await this.commentsRepository.search(
       limit,
       sortDirection,

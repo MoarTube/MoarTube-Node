@@ -12,14 +12,22 @@ import type {
   IReportsCommentsRepository,
   IReportsArchiveVideosRepository,
   IReportsArchiveCommentsRepository,
-  DrizzleVideoReport,
-  DrizzleCommentReport,
-  DrizzleVideoReportArchive,
-  DrizzleCommentReportArchive,
-  DrizzleNewVideoReport,
-  DrizzleNewCommentReport,
-  DrizzleNewVideoReportArchive,
-  DrizzleNewCommentReportArchive,
+  SQLiteVideoReport,
+  SQLiteCommentReport,
+  SQLiteVideoReportArchive,
+  SQLiteCommentReportArchive,
+  SQLiteNewVideoReport,
+  SQLiteNewCommentReport,
+  SQLiteNewVideoReportArchive,
+  SQLiteNewCommentReportArchive,
+  PostgresVideoReport,
+  PostgresCommentReport,
+  PostgresVideoReportArchive,
+  PostgresCommentReportArchive,
+  PostgresNewVideoReport,
+  PostgresNewCommentReport,
+  PostgresNewVideoReportArchive,
+  PostgresNewCommentReportArchive,
 } from '@database/index.js';
 import type { PaginationOptions } from '@/types/index.js';
 
@@ -33,17 +41,17 @@ import type { PaginationOptions } from '@/types/index.js';
  * - Report statistics
  */
 export class ReportsService extends BaseService {
-  private readonly reportsVideosRepository: IReportsVideosRepository<DrizzleVideoReport, DrizzleNewVideoReport>;
-  private readonly reportsCommentsRepository: IReportsCommentsRepository<DrizzleCommentReport, DrizzleNewCommentReport>;
-  private readonly reportsArchiveVideosRepository: IReportsArchiveVideosRepository<DrizzleVideoReportArchive, DrizzleNewVideoReportArchive>;
-  private readonly reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<DrizzleCommentReportArchive, DrizzleNewCommentReportArchive>;
+  private readonly reportsVideosRepository: IReportsVideosRepository<SQLiteVideoReport, SQLiteNewVideoReport> | IReportsVideosRepository<PostgresVideoReport, PostgresNewVideoReport>;
+  private readonly reportsCommentsRepository: IReportsCommentsRepository<SQLiteCommentReport, SQLiteNewCommentReport> | IReportsCommentsRepository<PostgresCommentReport, PostgresNewCommentReport>;
+  private readonly reportsArchiveVideosRepository: IReportsArchiveVideosRepository<SQLiteVideoReportArchive, SQLiteNewVideoReportArchive> | IReportsArchiveVideosRepository<PostgresVideoReportArchive, PostgresNewVideoReportArchive>;
+  private readonly reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<SQLiteCommentReportArchive, SQLiteNewCommentReportArchive> | IReportsArchiveCommentsRepository<PostgresCommentReportArchive, PostgresNewCommentReportArchive>;
 
   constructor(
     logger: Logger,
-    reportsVideosRepository: IReportsVideosRepository<DrizzleVideoReport, DrizzleNewVideoReport>,
-    reportsCommentsRepository: IReportsCommentsRepository<DrizzleCommentReport, DrizzleNewCommentReport>,
-    reportsArchiveVideosRepository: IReportsArchiveVideosRepository<DrizzleVideoReportArchive, DrizzleNewVideoReportArchive>,
-    reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<DrizzleCommentReportArchive, DrizzleNewCommentReportArchive>
+    reportsVideosRepository: IReportsVideosRepository<SQLiteVideoReport, SQLiteNewVideoReport> | IReportsVideosRepository<PostgresVideoReport, PostgresNewVideoReport>,
+    reportsCommentsRepository: IReportsCommentsRepository<SQLiteCommentReport, SQLiteNewCommentReport> | IReportsCommentsRepository<PostgresCommentReport, PostgresNewCommentReport>,
+    reportsArchiveVideosRepository: IReportsArchiveVideosRepository<SQLiteVideoReportArchive, SQLiteNewVideoReportArchive> | IReportsArchiveVideosRepository<PostgresVideoReportArchive, PostgresNewVideoReportArchive>,
+    reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<SQLiteCommentReportArchive, SQLiteNewCommentReportArchive> | IReportsArchiveCommentsRepository<PostgresCommentReportArchive, PostgresNewCommentReportArchive>
   ) {
     super('ReportsService', logger);
     this.reportsVideosRepository = reportsVideosRepository;
@@ -55,11 +63,11 @@ export class ReportsService extends BaseService {
   /**
    * Create a video report
    */
-  async createVideoReport(data: CreateVideoReportInput): Promise<DrizzleVideoReport> {
+  async createVideoReport(data: CreateVideoReportInput): Promise<SQLiteVideoReport | PostgresVideoReport> {
     return this.withErrorLogging('createVideoReport', async () => {
       const timestamp = this.getCurrentTimestampMs();
 
-      const reportData: DrizzleNewVideoReport = {
+      const reportData: SQLiteNewVideoReport | PostgresNewVideoReport = {
         timestamp,
         video_timestamp: data.videoTimestamp,
         video_id: data.videoId,
@@ -80,11 +88,11 @@ export class ReportsService extends BaseService {
   /**
    * Create a comment report
    */
-  async createCommentReport(data: CreateCommentReportInput): Promise<DrizzleCommentReport> {
+  async createCommentReport(data: CreateCommentReportInput): Promise<SQLiteCommentReport | PostgresCommentReport> {
     return this.withErrorLogging('createCommentReport', async () => {
       const timestamp = this.getCurrentTimestampMs();
 
-      const reportData: DrizzleNewCommentReport = {
+      const reportData: SQLiteNewCommentReport | PostgresNewCommentReport = {
         timestamp,
         comment_timestamp: data.commentTimestamp,
         video_id: data.videoId,
@@ -107,35 +115,35 @@ export class ReportsService extends BaseService {
   /**
    * Get all video reports
    */
-  async getVideoReports(options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
+  async getVideoReports(options?: PaginationOptions): Promise<(SQLiteVideoReport | PostgresVideoReport)[]> {
     return this.reportsVideosRepository.findAll(options);
   }
 
   /**
    * Get all comment reports
    */
-  async getCommentReports(options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
+  async getCommentReports(options?: PaginationOptions): Promise<(SQLiteCommentReport | PostgresCommentReport)[]> {
     return this.reportsCommentsRepository.findAll(options);
   }
 
   /**
    * Get video reports for a specific video
    */
-  async getVideoReportsForVideo(videoId: string): Promise<DrizzleVideoReport[]> {
+  async getVideoReportsForVideo(videoId: string): Promise<(SQLiteVideoReport | PostgresVideoReport)[]> {
     return this.reportsVideosRepository.findByVideoId(videoId);
   }
 
   /**
    * Get comment reports for a specific video
    */
-  async getCommentReportsForVideo(videoId: string): Promise<DrizzleCommentReport[]> {
+  async getCommentReportsForVideo(videoId: string): Promise<(SQLiteCommentReport | PostgresCommentReport)[]> {
     return this.reportsCommentsRepository.findByVideoId(videoId);
   }
 
   /**
    * Archive a video report (mark as handled)
    */
-  async archiveVideoReport(reportId: number): Promise<DrizzleVideoReportArchive> {
+  async archiveVideoReport(reportId: number): Promise<SQLiteVideoReportArchive | PostgresVideoReportArchive> {
     return this.withErrorLogging('archiveVideoReport', async () => {
       const report = await this.reportsVideosRepository.findById(reportId);
       if (!report) {
@@ -143,7 +151,7 @@ export class ReportsService extends BaseService {
       }
 
       // Create archive record
-      const archiveData: DrizzleNewVideoReportArchive = {
+      const archiveData: SQLiteNewVideoReportArchive | PostgresNewVideoReportArchive = {
         report_id: report.report_id,
         timestamp: report.timestamp,
         video_timestamp: report.video_timestamp,
@@ -167,7 +175,7 @@ export class ReportsService extends BaseService {
   /**
    * Archive a comment report (mark as handled)
    */
-  async archiveCommentReport(reportId: number): Promise<DrizzleCommentReportArchive> {
+  async archiveCommentReport(reportId: number): Promise<SQLiteCommentReportArchive | PostgresCommentReportArchive> {
     return this.withErrorLogging('archiveCommentReport', async () => {
       const report = await this.reportsCommentsRepository.findById(reportId);
       if (!report) {
@@ -175,7 +183,7 @@ export class ReportsService extends BaseService {
       }
 
       // Create archive record
-      const archiveData: DrizzleNewCommentReportArchive = {
+      const archiveData: SQLiteNewCommentReportArchive | PostgresNewCommentReportArchive = {
         report_id: report.report_id,
         timestamp: report.timestamp,
         comment_timestamp: report.comment_timestamp,
@@ -218,7 +226,7 @@ export class ReportsService extends BaseService {
   /**
    * Get archived video reports
    */
-  async getArchivedVideoReports(options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]> {
+  async getArchivedVideoReports(options?: PaginationOptions): Promise<(SQLiteVideoReportArchive | PostgresVideoReportArchive)[]> {
     return this.reportsArchiveVideosRepository.findAll(options);
   }
 
@@ -227,7 +235,7 @@ export class ReportsService extends BaseService {
    */
   async getArchivedCommentReports(
     options?: PaginationOptions
-  ): Promise<DrizzleCommentReportArchive[]> {
+  ): Promise<(SQLiteCommentReportArchive | PostgresCommentReportArchive)[]> {
     return this.reportsArchiveCommentsRepository.findAll(options);
   }
 

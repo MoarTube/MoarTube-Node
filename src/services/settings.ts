@@ -22,25 +22,43 @@ import type {
   ILiveChatMessagesRepository,
   IMonetizationRepository,
   ILinksRepository,
-  DrizzleVideo,
-  DrizzleComment,
-  DrizzleVideoReport,
-  DrizzleCommentReport,
-  DrizzleVideoReportArchive,
-  DrizzleCommentReportArchive,
-  DrizzleLiveChatMessage,
-  DrizzleCryptoWalletAddress,
-  DrizzleLink,
-  DrizzleNewVideo,
-  DrizzleNewComment,
-  DrizzleNewVideoReport,
-  DrizzleNewCommentReport,
-  DrizzleNewVideoReportArchive,
-  DrizzleNewCommentReportArchive,
-  DrizzleNewLiveChatMessage,
-  DrizzleNewCryptoWalletAddress,
-  DrizzleNewLink,
-} from '@database/index.js';
+  SQLiteVideo,
+  SQLiteComment,
+  SQLiteVideoReport,
+  SQLiteCommentReport,
+  SQLiteVideoReportArchive,
+  SQLiteCommentReportArchive,
+  SQLiteLiveChatMessage,
+  SQLiteCryptoWalletAddress,
+  SQLiteLink,
+  SQLiteNewVideo,
+  SQLiteNewComment,
+  SQLiteNewVideoReport,
+  SQLiteNewCommentReport,
+  SQLiteNewVideoReportArchive,
+  SQLiteNewCommentReportArchive,
+  SQLiteNewLiveChatMessage,
+  SQLiteNewCryptoWalletAddress,
+  SQLiteNewLink,
+  PostgresVideo,
+  PostgresComment,
+  PostgresVideoReport,
+  PostgresCommentReport,
+  PostgresVideoReportArchive,
+  PostgresCommentReportArchive,
+  PostgresLiveChatMessage,
+  PostgresCryptoWalletAddress,
+  PostgresLink,
+  PostgresNewVideo,
+  PostgresNewComment,
+  PostgresNewVideoReport,
+  PostgresNewCommentReport,
+  PostgresNewVideoReportArchive,
+  PostgresNewCommentReportArchive,
+  PostgresNewLiveChatMessage,
+  PostgresNewCryptoWalletAddress,
+  PostgresNewLink,
+} from '@database/repositories/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
 import type { IndexerService } from '@services/indexer.js';
 
@@ -57,27 +75,27 @@ import type { IndexerService } from '@services/indexer.js';
 export class SettingsService extends BaseService {
   private readonly indexerService: IndexerService;
   private readonly cloudflareService: CloudflareService;
-  private readonly videosRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>;
-  private readonly commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>;
-  private readonly reportsVideosRepository: IReportsVideosRepository<DrizzleVideoReport, DrizzleNewVideoReport>;
-  private readonly reportsCommentsRepository: IReportsCommentsRepository<DrizzleCommentReport, DrizzleNewCommentReport>;
-  private readonly reportsArchiveVideosRepository: IReportsArchiveVideosRepository<DrizzleVideoReportArchive, DrizzleNewVideoReportArchive>;
-  private readonly reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<DrizzleCommentReportArchive, DrizzleNewCommentReportArchive>;
-  private readonly liveChatMessagesRepository: ILiveChatMessagesRepository<DrizzleLiveChatMessage, DrizzleNewLiveChatMessage>;
-  private readonly monetizationRepository: IMonetizationRepository<DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress>;
-  private readonly linksRepository: ILinksRepository<DrizzleLink, DrizzleNewLink>;
+  private readonly videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>;
+  private readonly commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>;
+  private readonly reportsVideosRepository: IReportsVideosRepository<SQLiteVideoReport, SQLiteNewVideoReport> | IReportsVideosRepository<PostgresVideoReport, PostgresNewVideoReport>;
+  private readonly reportsCommentsRepository: IReportsCommentsRepository<SQLiteCommentReport, SQLiteNewCommentReport> | IReportsCommentsRepository<PostgresCommentReport, PostgresNewCommentReport>;
+  private readonly reportsArchiveVideosRepository: IReportsArchiveVideosRepository<SQLiteVideoReportArchive, SQLiteNewVideoReportArchive> | IReportsArchiveVideosRepository<PostgresVideoReportArchive, PostgresNewVideoReportArchive>;
+  private readonly reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<SQLiteCommentReportArchive, SQLiteNewCommentReportArchive> | IReportsArchiveCommentsRepository<PostgresCommentReportArchive, PostgresNewCommentReportArchive>;
+  private readonly liveChatMessagesRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
+  private readonly monetizationRepository: IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress> | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>;
+  private readonly linksRepository: ILinksRepository<SQLiteLink, SQLiteNewLink> | ILinksRepository<PostgresLink, PostgresNewLink>;
 
   constructor(
     logger: Logger,
-    videosRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>,
-    commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>,
-    reportsVideosRepository: IReportsVideosRepository<DrizzleVideoReport, DrizzleNewVideoReport>,
-    reportsCommentsRepository: IReportsCommentsRepository<DrizzleCommentReport, DrizzleNewCommentReport>,
-    reportsArchiveVideosRepository: IReportsArchiveVideosRepository<DrizzleVideoReportArchive, DrizzleNewVideoReportArchive>,
-    reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<DrizzleCommentReportArchive, DrizzleNewCommentReportArchive>,
-    liveChatMessagesRepository: ILiveChatMessagesRepository<DrizzleLiveChatMessage, DrizzleNewLiveChatMessage>,
-    monetizationRepository: IMonetizationRepository<DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress>,
-    linksRepository: ILinksRepository<DrizzleLink, DrizzleNewLink>,
+    videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>,
+    commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>,
+    reportsVideosRepository: IReportsVideosRepository<SQLiteVideoReport, SQLiteNewVideoReport> | IReportsVideosRepository<PostgresVideoReport, PostgresNewVideoReport>,
+    reportsCommentsRepository: IReportsCommentsRepository<SQLiteCommentReport, SQLiteNewCommentReport> | IReportsCommentsRepository<PostgresCommentReport, PostgresNewCommentReport>,
+    reportsArchiveVideosRepository: IReportsArchiveVideosRepository<SQLiteVideoReportArchive, SQLiteNewVideoReportArchive> | IReportsArchiveVideosRepository<PostgresVideoReportArchive, PostgresNewVideoReportArchive>,
+    reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<SQLiteCommentReportArchive, SQLiteNewCommentReportArchive> | IReportsArchiveCommentsRepository<PostgresCommentReportArchive, PostgresNewCommentReportArchive>,
+    liveChatMessagesRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>,
+    monetizationRepository: IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress> | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>,
+    linksRepository: ILinksRepository<SQLiteLink, SQLiteNewLink> | ILinksRepository<PostgresLink, PostgresNewLink>,
     indexerService: IndexerService,
     cloudflareService: CloudflareService
   ) {
@@ -637,7 +655,7 @@ export class SettingsService extends BaseService {
   /**
    * Get all indexed videos
    */
-  async getIndexedVideos(): Promise<DrizzleVideo[]> {
+  async getIndexedVideos(): Promise<(SQLiteVideo | PostgresVideo)[]> {
     return this.withErrorLogging('getIndexedVideos', async () => {
       return this.videosRepository.findIndexed();
     });
@@ -647,15 +665,15 @@ export class SettingsService extends BaseService {
    * Export all application data
    */
   async exportAllData(): Promise<{
-    videos: DrizzleVideo[];
-    comments: DrizzleComment[];
-    videoReports: DrizzleVideoReport[];
-    commentReports: DrizzleCommentReport[];
-    videoReportsArchives: DrizzleVideoReportArchive[];
-    commentReportsArchives: DrizzleCommentReportArchive[];
-    liveChatMessages: DrizzleLiveChatMessage[];
-    cryptoWalletAddresses: DrizzleCryptoWalletAddress[];
-    links: DrizzleLink[];
+    videos: (SQLiteVideo | PostgresVideo)[];
+    comments: (SQLiteComment | PostgresComment)[];
+    videoReports: (SQLiteVideoReport | PostgresVideoReport)[];
+    commentReports: (SQLiteCommentReport | PostgresCommentReport)[];
+    videoReportsArchives: (SQLiteVideoReportArchive | PostgresVideoReportArchive)[];
+    commentReportsArchives: (SQLiteCommentReportArchive | PostgresCommentReportArchive)[];
+    liveChatMessages: (SQLiteLiveChatMessage | PostgresLiveChatMessage)[];
+    cryptoWalletAddresses: (SQLiteCryptoWalletAddress | PostgresCryptoWalletAddress)[];
+    links: (SQLiteLink | PostgresLink)[];
   }> {
     return this.withErrorLogging('exportAllData', async () => {
       const [

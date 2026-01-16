@@ -28,7 +28,7 @@ export interface UrlConfig {
  * URL configuration singleton class
  */
 class Urls {
-  private static instance: Urls;
+  private static instance: Urls | null = null;
 
   private readonly indexerConfig: IndexerConfig;
   private readonly aliaserConfig: AliaserConfig;
@@ -53,9 +53,7 @@ class Urls {
    * Initialize the URLs singleton with service configurations
    */
   static initialize(indexerConfig: IndexerConfig, aliaserConfig: AliaserConfig): Urls {
-    if (!Urls.instance) {
-      Urls.instance = new Urls(indexerConfig, aliaserConfig);
-    }
+    Urls.instance ??= new Urls(indexerConfig, aliaserConfig);
     return Urls.instance;
   }
 
@@ -64,6 +62,9 @@ class Urls {
    * @throws Error if not initialized
    */
   static getInstance(): Urls {
+    if (!Urls.instance) {
+      throw new Error('Urls not initialized. Call Urls.initialize() first.');
+    }
     return Urls.instance;
   }
 
@@ -71,7 +72,7 @@ class Urls {
    * Reset the singleton instance (for testing purposes)
    */
   static resetInstance(): void {
-    Urls.instance = undefined as any;
+    Urls.instance = null;
   }
 
   /**

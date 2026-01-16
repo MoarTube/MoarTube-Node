@@ -10,7 +10,7 @@ import {
   type VideoSource,
 } from '@controllers/video-controller-base.js';
 import type { VideosService, LinksService, MonetizationService } from '@services/index.js';
-import type { DrizzleVideo } from '@database/index.js';
+import type { SQLiteVideo, PostgresVideo } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 
 /**
@@ -150,7 +150,7 @@ export class WatchEmbedController extends VideoControllerBase {
   /**
    * Build all data needed for the embedded video page
    */
-  private buildPageData(video: DrizzleVideo): EmbedPageData {
+  private buildPageData(video: SQLiteVideo | PostgresVideo): EmbedPageData {
     const config = getConfig();
 
     const externalVideosBaseUrl = config.getExternalVideosBaseUrl();

@@ -6,7 +6,7 @@
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type { CreateWalletAddressInput } from '@services/interfaces.js';
-import type { IMonetizationRepository, DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress } from '@database/index.js';
+import type { IMonetizationRepository, SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress, PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress } from '@database/index.js';
 
 /**
  * MonetizationService class
@@ -15,9 +15,9 @@ import type { IMonetizationRepository, DrizzleCryptoWalletAddress, DrizzleNewCry
  * - Wallet address CRUD operations
  */
 export class MonetizationService extends BaseService {
-  private readonly monetizationRepository: IMonetizationRepository<DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress>;
+  private readonly monetizationRepository: IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress> | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>;
 
-  constructor(logger: Logger, monetizationRepository: IMonetizationRepository<DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress>) {
+  constructor(logger: Logger, monetizationRepository: IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress> | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>) {
     super('MonetizationService', logger);
     this.monetizationRepository = monetizationRepository;
   }
@@ -25,7 +25,7 @@ export class MonetizationService extends BaseService {
   /**
    * Get all wallet addresses
    */
-  async getWalletAddresses(): Promise<DrizzleCryptoWalletAddress[]> {
+  async getWalletAddresses(): Promise<(SQLiteCryptoWalletAddress | PostgresCryptoWalletAddress)[]> {
     return this.withErrorLogging('getWalletAddresses', async () => {
       return this.monetizationRepository.findAll();
     });
@@ -34,7 +34,7 @@ export class MonetizationService extends BaseService {
   /**
    * Get a wallet address by ID
    */
-  async getWalletAddress(walletAddressId: number): Promise<DrizzleCryptoWalletAddress | null> {
+  async getWalletAddress(walletAddressId: number): Promise<SQLiteCryptoWalletAddress | PostgresCryptoWalletAddress | null> {
     return this.withErrorLogging('getWalletAddress', async () => {
       return this.monetizationRepository.findById(walletAddressId);
     });
@@ -43,7 +43,7 @@ export class MonetizationService extends BaseService {
   /**
    * Get wallet addresses by chain
    */
-  async getWalletAddressesByChain(chain: string): Promise<DrizzleCryptoWalletAddress[]> {
+  async getWalletAddressesByChain(chain: string): Promise<(SQLiteCryptoWalletAddress | PostgresCryptoWalletAddress)[]> {
     return this.withErrorLogging('getWalletAddressesByChain', async () => {
       return this.monetizationRepository.findByChain(chain);
     });
@@ -52,7 +52,7 @@ export class MonetizationService extends BaseService {
   /**
    * Create a new wallet address
    */
-  async createWalletAddress(data: CreateWalletAddressInput): Promise<DrizzleCryptoWalletAddress> {
+  async createWalletAddress(data: CreateWalletAddressInput): Promise<SQLiteCryptoWalletAddress | PostgresCryptoWalletAddress> {
     return this.withErrorLogging('createWalletAddress', async () => {
       return this.monetizationRepository.create({
         wallet_address: data.walletAddress,
@@ -70,7 +70,7 @@ export class MonetizationService extends BaseService {
   async updateWalletAddress(
     walletAddressId: number,
     data: Partial<CreateWalletAddressInput>
-  ): Promise<DrizzleCryptoWalletAddress | null> {
+  ): Promise<SQLiteCryptoWalletAddress | PostgresCryptoWalletAddress | null> {
     return this.withErrorLogging('updateWalletAddress', async () => {
       const updateData: Partial<{
         wallet_address: string;

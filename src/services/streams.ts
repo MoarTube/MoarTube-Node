@@ -14,12 +14,18 @@ import type {
   IVideosRepository,
   ILiveChatMessagesRepository,
   ICommentsRepository,
-  DrizzleVideo,
-  DrizzleNewVideo,
-  DrizzleComment,
-  DrizzleNewComment,
-  DrizzleLiveChatMessage,
-  DrizzleNewLiveChatMessage,
+  SQLiteVideo,
+  SQLiteNewVideo,
+  PostgresVideo,
+  PostgresNewVideo,
+  SQLiteComment,
+  SQLiteNewComment,
+  PostgresComment,
+  PostgresNewComment,
+  SQLiteLiveChatMessage,
+  SQLiteNewLiveChatMessage,
+  PostgresLiveChatMessage,
+  PostgresNewLiveChatMessage,
 } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 import { deleteDirectory } from '@/utils/index.js';
@@ -67,16 +73,16 @@ export interface StartStreamOptions {
  * - Integration with video records
  */
 export class StreamsService extends BaseService {
-  private readonly videoRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>;
-  private readonly liveChatMessageRepository: ILiveChatMessagesRepository<DrizzleLiveChatMessage, DrizzleNewLiveChatMessage>;
-  private readonly commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>;
+  private readonly videoRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>;
+  private readonly liveChatMessageRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
+  private readonly commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>;
   private readonly websocketService: WebSocketService;
 
   constructor(
     logger: Logger,
-    videosRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>,
-    liveChatMessagesRepository: ILiveChatMessagesRepository<DrizzleLiveChatMessage, DrizzleNewLiveChatMessage>,
-    commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>,
+    videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>,
+    liveChatMessagesRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>,
+    commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>,
     websocketService: WebSocketService
   ) {
     super('StreamService', logger);
@@ -151,7 +157,7 @@ export class StreamsService extends BaseService {
   /**
    * Get all currently streaming videos
    */
-  async getActiveStreams(): Promise<DrizzleVideo[]> {
+  async getActiveStreams(): Promise<(SQLiteVideo | PostgresVideo)[]> {
     return this.videoRepository.findStreaming();
   }
 
@@ -245,7 +251,7 @@ export class StreamsService extends BaseService {
         this.logger.info('Stream resumed', { videoId });
       } else {
         // Create new video record for stream
-        const videoData: DrizzleNewVideo = {
+        const videoData: SQLiteNewVideo | PostgresNewVideo = {
           video_id: videoId,
           source_file_extension: '',
           title: options.title,

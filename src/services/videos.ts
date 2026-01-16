@@ -27,10 +27,14 @@ import type {
 import type {
   IVideosRepository,
   ICommentsRepository,
-  DrizzleVideo,
-  DrizzleNewVideo,
-  DrizzleComment,
-  DrizzleNewComment,
+  SQLiteVideo,
+  SQLiteNewVideo,
+  PostgresVideo,
+  PostgresNewVideo,
+  SQLiteComment,
+  SQLiteNewComment,
+  PostgresComment,
+  PostgresNewComment,
 } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
@@ -50,8 +54,8 @@ import type { PaginatedResult } from '@/types/index.js';
  * - Index management
  */
 export class VideosService extends BaseService {
-  private readonly videoRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>;
-  private readonly commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>;
+  private readonly videoRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>;
+  private readonly commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>;
   private readonly storageService: StorageService;
   private readonly websocketService: WebSocketService;
   private readonly cloudflareService: CloudflareService;
@@ -64,8 +68,8 @@ export class VideosService extends BaseService {
 
   constructor(
     logger: Logger,
-    videosRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>,
-    commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>,
+    videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>,
+    commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>,
     storageService: StorageService,
     websocketService: WebSocketService,
     cloudflareService: CloudflareService,
@@ -83,7 +87,7 @@ export class VideosService extends BaseService {
   /**
    * Get a single video by ID
    */
-  async getVideo(videoId: string): Promise<DrizzleVideo | null> {
+  async getVideo(videoId: string): Promise<SQLiteVideo | PostgresVideo | null> {
     return this.withErrorLogging('getVideo', async () => {
       return this.videoRepository.findById(videoId);
     });
@@ -92,7 +96,7 @@ export class VideosService extends BaseService {
   /**
    * Get videos with filtering and pagination
    */
-  async getVideos(options?: GetVideosOptions): Promise<PaginatedResult<DrizzleVideo>> {
+  async getVideos(options?: GetVideosOptions): Promise<PaginatedResult<SQLiteVideo | PostgresVideo>> {
     return this.withErrorLogging('getVideos', async () => {
       const limit = options?.limit ?? 20;
 
@@ -236,7 +240,7 @@ export class VideosService extends BaseService {
       this.createVideoStorageDirectories(videoId);
 
       // Create video record
-      const videoData: DrizzleNewVideo = {
+      const videoData: SQLiteNewVideo | PostgresNewVideo = {
         video_id: videoId,
         source_file_extension: '',
         title: data.title,
@@ -317,7 +321,7 @@ export class VideosService extends BaseService {
   /**
    * Update video metadata
    */
-  async updateVideo(videoId: string, data: UpdateVideoInput): Promise<DrizzleVideo | null> {
+  async updateVideo(videoId: string, data: UpdateVideoInput): Promise<SQLiteVideo | PostgresVideo | null> {
     return this.withErrorLogging('updateVideo', async () => {
       const existingVideo = await this.videoRepository.findById(videoId);
       if (!existingVideo) {
@@ -351,7 +355,7 @@ export class VideosService extends BaseService {
   async updateVideoMeta(
     videoId: string,
     meta: Record<string, unknown>
-  ): Promise<DrizzleVideo | null> {
+  ): Promise<SQLiteVideo | PostgresVideo | null> {
     return this.withErrorLogging('updateVideoMeta', async () => {
       const existingVideo = await this.videoRepository.findById(videoId);
       if (!existingVideo) {
@@ -508,7 +512,7 @@ export class VideosService extends BaseService {
       // Set new debounce timer
       const timer = setTimeout(() => {
         // pendingCount is guaranteed to be > 0 since we always set it before creating the timer
-        const pendingCount = this.pendingViews.get(videoId)!;
+        const pendingCount = this.pendingViews.get(videoId) ?? 0;
 
         this.pendingViews.delete(videoId);
         this.viewTimers.delete(videoId);
@@ -579,7 +583,7 @@ export class VideosService extends BaseService {
   /**
    * Get videos pending indexing
    */
-  async getVideosNeedingIndexing(): Promise<DrizzleVideo[]> {
+  async getVideosNeedingIndexing(): Promise<(SQLiteVideo | PostgresVideo)[]> {
     return this.videoRepository.findPendingIndexing();
   }
 
@@ -616,7 +620,7 @@ export class VideosService extends BaseService {
       }
 
       // Only mark as outdated if currently indexed
-      if (video.is_indexed === true) {
+      if (video.is_indexed) {
         await this.videoRepository.update(videoId, {
           is_index_outdated: true,
         });
@@ -960,14 +964,14 @@ export class VideosService extends BaseService {
   async getAllVideosData(): Promise<VideoData[]> {
     return this.withErrorLogging('getAllVideosData', async () => {
       const videos = await this.videoRepository.findAll({});
-      return videos.map((video: any) => this.formatVideoData(video));
+      return videos.map((video: SQLiteVideo | PostgresVideo) => this.formatVideoData(video));
     });
   }
 
   /**
    * Format video into VideoData structure
    */
-  private formatVideoData(video: DrizzleVideo): VideoData {
+  private formatVideoData(video: SQLiteVideo | PostgresVideo): VideoData {
     const config = getConfig();
     const nodeSettings = config.nodeSettings;
 
@@ -1016,7 +1020,7 @@ export class VideosService extends BaseService {
   /**
    * Get recommended videos (published or live)
    */
-  async getRecommendedVideos(): Promise<DrizzleVideo[]> {
+  async getRecommendedVideos(): Promise<(SQLiteVideo | PostgresVideo)[]> {
     return this.withErrorLogging('getRecommendedVideos', async () => {
       // Get all published or live videos, ordered by creation timestamp
       const videos = await this.videoRepository.findAll({
@@ -1025,7 +1029,7 @@ export class VideosService extends BaseService {
       });
 
       // Filter to only published or live videos
-      return videos.filter((v: any) => v.is_published || v.is_live);
+      return videos.filter((v: SQLiteVideo | PostgresVideo) => v.is_published || v.is_live);
     });
   }
 
@@ -1055,7 +1059,7 @@ export class VideosService extends BaseService {
   /**
    * Extract unique tags from videos
    */
-  private extractUniqueTags(videos: DrizzleVideo[]): string[] {
+  private extractUniqueTags(videos: (SQLiteVideo | PostgresVideo)[]): string[] {
     const tagsSet = new Set<string>();
 
     for (const video of videos) {
@@ -1715,9 +1719,9 @@ export class VideosService extends BaseService {
    */
   private buildVideoUpdateObject(
     data: UpdateVideoInput,
-    existingVideo: DrizzleVideo
-  ): Partial<DrizzleNewVideo> {
-    const updates: Partial<DrizzleNewVideo> = {};
+    existingVideo: SQLiteVideo | PostgresVideo
+  ): Partial<SQLiteNewVideo | PostgresNewVideo> {
+    const updates: Partial<SQLiteNewVideo | PostgresNewVideo> = {};
 
     if (data.title !== undefined) {
       updates.title = data.title;
@@ -1782,7 +1786,7 @@ export class VideosService extends BaseService {
 
     // Build sources from outputs
     for (const format of Object.keys(outputs) as VideoFormat[]) {
-      const resolutions = outputs[format]!;
+      const resolutions = outputs[format];
 
       for (const resolution of resolutions) {
         if (format === 'm3u8') {

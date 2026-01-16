@@ -12,7 +12,7 @@ import type {
   MonetizationService,
   CommentsService,
 } from '@services/index.js';
-import type { DrizzleVideo } from '@database/index.js';
+import type { SQLiteVideo, PostgresVideo } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 
 /**
@@ -154,7 +154,7 @@ export class WatchController extends VideoControllerBase {
   /**
    * Build all data needed for the watch page
    */
-  private async buildPageData(video: DrizzleVideo): Promise<WatchPageData> {
+  private async buildPageData(video: SQLiteVideo | PostgresVideo): Promise<WatchPageData> {
     const config = getConfig();
 
     const nodeSettings = config.nodeSettings;
@@ -258,7 +258,7 @@ export class WatchController extends VideoControllerBase {
    * Build video data response
    */
   private buildVideoData(
-    video: DrizzleVideo,
+    video: SQLiteVideo | PostgresVideo,
     isHlsAvailable: boolean,
     isMp4Available: boolean,
     isWebmAvailable: boolean,

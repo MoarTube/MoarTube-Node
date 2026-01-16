@@ -6,7 +6,7 @@
  */
 import type { FastifyReply } from 'fastify';
 import { BaseController } from '@controllers/base.js';
-import type { DrizzleVideo } from '@database/index.js';
+import type { SQLiteVideo, PostgresVideo } from '@database/index.js';
 
 /**
  * Video source info
@@ -46,9 +46,6 @@ export type FastifyReplyWithView = FastifyReply & {
  * - Common error handling patterns
  */
 export abstract class VideoControllerBase extends BaseController {
-  constructor(name: string) {
-    super(name);
-  }
 
   /**
    * Build video sources from video metadata
@@ -58,7 +55,7 @@ export abstract class VideoControllerBase extends BaseController {
    * @returns Video sources and format information
    */
   protected buildVideoSources(
-    video: DrizzleVideo,
+    video: SQLiteVideo | PostgresVideo,
     externalVideosBaseUrl: string
   ): VideoSourcesResult {
     const adaptiveSources: VideoSource[] = [];
@@ -85,7 +82,9 @@ export abstract class VideoControllerBase extends BaseController {
     // Build sources for each format
     for (const format in outputs) {
       const resolutions = outputs[format];
-      if (!resolutions) continue;
+      if (!resolutions) {
+        continue;
+      }
 
       for (const resolution of resolutions) {
         if (format === 'm3u8') {
