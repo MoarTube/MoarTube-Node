@@ -11,11 +11,15 @@ import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type { StreamConfig } from '@services/interfaces.js';
 import type {
-  VideosRepository,
-  LiveChatMessagesRepository,
-  CommentsRepository,
+  IVideosRepository,
+  ILiveChatMessagesRepository,
+  ICommentsRepository,
   DrizzleVideo,
   DrizzleNewVideo,
+  DrizzleComment,
+  DrizzleNewComment,
+  DrizzleLiveChatMessage,
+  DrizzleNewLiveChatMessage,
 } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 import { deleteDirectory } from '@/utils/index.js';
@@ -63,16 +67,16 @@ export interface StartStreamOptions {
  * - Integration with video records
  */
 export class StreamsService extends BaseService {
-  private readonly videoRepository: VideosRepository;
-  private readonly liveChatMessageRepository: LiveChatMessagesRepository;
-  private readonly commentsRepository: CommentsRepository;
+  private readonly videoRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>;
+  private readonly liveChatMessageRepository: ILiveChatMessagesRepository<DrizzleLiveChatMessage, DrizzleNewLiveChatMessage>;
+  private readonly commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>;
   private readonly websocketService: WebSocketService;
 
   constructor(
     logger: Logger,
-    videosRepository: VideosRepository,
-    liveChatMessagesRepository: LiveChatMessagesRepository,
-    commentsRepository: CommentsRepository,
+    videosRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>,
+    liveChatMessagesRepository: ILiveChatMessagesRepository<DrizzleLiveChatMessage, DrizzleNewLiveChatMessage>,
+    commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>,
     websocketService: WebSocketService
   ) {
     super('StreamService', logger);

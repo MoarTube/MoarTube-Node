@@ -8,10 +8,10 @@ import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type { CreateVideoReportInput, CreateCommentReportInput } from '@services/interfaces.js';
 import type {
-  ReportsVideosRepository,
-  ReportsCommentsRepository,
-  ReportsArchiveVideosRepository,
-  ReportsArchiveCommentsRepository,
+  IReportsVideosRepository,
+  IReportsCommentsRepository,
+  IReportsArchiveVideosRepository,
+  IReportsArchiveCommentsRepository,
   DrizzleVideoReport,
   DrizzleCommentReport,
   DrizzleVideoReportArchive,
@@ -33,17 +33,17 @@ import type { PaginationOptions } from '@/types/index.js';
  * - Report statistics
  */
 export class ReportsService extends BaseService {
-  private readonly reportsVideosRepository: ReportsVideosRepository;
-  private readonly reportsCommentsRepository: ReportsCommentsRepository;
-  private readonly reportsArchiveVideosRepository: ReportsArchiveVideosRepository;
-  private readonly reportsArchiveCommentsRepository: ReportsArchiveCommentsRepository;
+  private readonly reportsVideosRepository: IReportsVideosRepository<DrizzleVideoReport, DrizzleNewVideoReport>;
+  private readonly reportsCommentsRepository: IReportsCommentsRepository<DrizzleCommentReport, DrizzleNewCommentReport>;
+  private readonly reportsArchiveVideosRepository: IReportsArchiveVideosRepository<DrizzleVideoReportArchive, DrizzleNewVideoReportArchive>;
+  private readonly reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<DrizzleCommentReportArchive, DrizzleNewCommentReportArchive>;
 
   constructor(
     logger: Logger,
-    reportsVideosRepository: ReportsVideosRepository,
-    reportsCommentsRepository: ReportsCommentsRepository,
-    reportsArchiveVideosRepository: ReportsArchiveVideosRepository,
-    reportsArchiveCommentsRepository: ReportsArchiveCommentsRepository
+    reportsVideosRepository: IReportsVideosRepository<DrizzleVideoReport, DrizzleNewVideoReport>,
+    reportsCommentsRepository: IReportsCommentsRepository<DrizzleCommentReport, DrizzleNewCommentReport>,
+    reportsArchiveVideosRepository: IReportsArchiveVideosRepository<DrizzleVideoReportArchive, DrizzleNewVideoReportArchive>,
+    reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<DrizzleCommentReportArchive, DrizzleNewCommentReportArchive>
   ) {
     super('ReportsService', logger);
     this.reportsVideosRepository = reportsVideosRepository;

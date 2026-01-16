@@ -6,7 +6,7 @@
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type { CreateLinkInput } from '@services/interfaces.js';
-import type { LinksRepository, DrizzleLink } from '@database/index.js';
+import type { ILinksRepository, DrizzleLink, DrizzleNewLink } from '@database/index.js';
 
 /**
  * LinksService class
@@ -15,9 +15,9 @@ import type { LinksRepository, DrizzleLink } from '@database/index.js';
  * - Link CRUD operations
  */
 export class LinksService extends BaseService {
-  private readonly linksRepository: LinksRepository;
+  private readonly linksRepository: ILinksRepository<DrizzleLink, DrizzleNewLink>;
 
-  constructor(logger: Logger, linksRepository: LinksRepository) {
+  constructor(logger: Logger, linksRepository: ILinksRepository<DrizzleLink, DrizzleNewLink>) {
     super('LinksService', logger);
     this.linksRepository = linksRepository;
   }

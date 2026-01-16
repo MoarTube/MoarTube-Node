@@ -25,10 +25,12 @@ import type {
   VideoFormat,
 } from '@services/interfaces.js';
 import type {
-  VideosRepository,
-  CommentsRepository,
+  IVideosRepository,
+  ICommentsRepository,
   DrizzleVideo,
   DrizzleNewVideo,
+  DrizzleComment,
+  DrizzleNewComment,
 } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
@@ -48,8 +50,8 @@ import type { PaginatedResult } from '@/types/index.js';
  * - Index management
  */
 export class VideosService extends BaseService {
-  private readonly videoRepository: VideosRepository;
-  private readonly commentsRepository: CommentsRepository;
+  private readonly videoRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>;
+  private readonly commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>;
   private readonly storageService: StorageService;
   private readonly websocketService: WebSocketService;
   private readonly cloudflareService: CloudflareService;
@@ -62,8 +64,8 @@ export class VideosService extends BaseService {
 
   constructor(
     logger: Logger,
-    videosRepository: VideosRepository,
-    commentsRepository: CommentsRepository,
+    videosRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>,
+    commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>,
     storageService: StorageService,
     websocketService: WebSocketService,
     cloudflareService: CloudflareService,
@@ -958,7 +960,7 @@ export class VideosService extends BaseService {
   async getAllVideosData(): Promise<VideoData[]> {
     return this.withErrorLogging('getAllVideosData', async () => {
       const videos = await this.videoRepository.findAll({});
-      return videos.map((video) => this.formatVideoData(video));
+      return videos.map((video: any) => this.formatVideoData(video));
     });
   }
 
@@ -1023,7 +1025,7 @@ export class VideosService extends BaseService {
       });
 
       // Filter to only published or live videos
-      return videos.filter((v) => v.is_published || v.is_live);
+      return videos.filter((v: any) => v.is_published || v.is_live);
     });
   }
 

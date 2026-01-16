@@ -6,7 +6,7 @@
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type { CreateWalletAddressInput } from '@services/interfaces.js';
-import type { MonetizationRepository, DrizzleCryptoWalletAddress } from '@database/index.js';
+import type { IMonetizationRepository, DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress } from '@database/index.js';
 
 /**
  * MonetizationService class
@@ -15,9 +15,9 @@ import type { MonetizationRepository, DrizzleCryptoWalletAddress } from '@databa
  * - Wallet address CRUD operations
  */
 export class MonetizationService extends BaseService {
-  private readonly monetizationRepository: MonetizationRepository;
+  private readonly monetizationRepository: IMonetizationRepository<DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress>;
 
-  constructor(logger: Logger, monetizationRepository: MonetizationRepository) {
+  constructor(logger: Logger, monetizationRepository: IMonetizationRepository<DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress>) {
     super('MonetizationService', logger);
     this.monetizationRepository = monetizationRepository;
   }

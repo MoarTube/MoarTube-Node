@@ -8,7 +8,7 @@ import axios, { type AxiosInstance } from 'axios';
 
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
-import type { VideosRepository } from '@database/index.js';
+import type { IVideosRepository, DrizzleVideo, DrizzleNewVideo } from '@database/index.js';
 import { getConfig } from '@config/index.js';
 
 /**
@@ -26,10 +26,10 @@ const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/sit
  * - CDN configuration management
  */
 export class CloudflareService extends BaseService {
-  private readonly videosRepository: VideosRepository;
+  private readonly videosRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>;
   private httpClient: AxiosInstance | null = null;
 
-  constructor(logger: Logger, videosRepository: VideosRepository) {
+  constructor(logger: Logger, videosRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>) {
     super('CloudflareService', logger);
     this.videosRepository = videosRepository;
     this.initializeHttpClient();
@@ -110,7 +110,7 @@ export class CloudflareService extends BaseService {
       if (ids.length === 0) {
         // Get all videos if none specified
         const videos = await this.videosRepository.findAll({ limit: 10000 });
-        ids.push(...videos.map((v) => v.video_id));
+        ids.push(...videos.map((v: any) => v.video_id));
       }
 
       const files = ids.map((id) => `${nodeBaseUrl}/watch?v=${id}`);
@@ -142,7 +142,7 @@ export class CloudflareService extends BaseService {
       const ids = videoIds ?? [];
       if (ids.length === 0) {
         const videos = await this.videosRepository.findAll({ limit: 10000 });
-        ids.push(...videos.map((v) => v.video_id));
+        ids.push(...videos.map((v: any) => v.video_id));
       }
 
       const files: string[] = [];

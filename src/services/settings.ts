@@ -13,15 +13,15 @@ import type { UpdateNodeSettingsInput } from '@services/interfaces.js';
 import { getConfig } from '@config/index.js';
 import type { DatabaseConfig, StorageConfig } from '@/types/index.js';
 import type {
-  VideosRepository,
-  CommentsRepository,
-  ReportsVideosRepository,
-  ReportsCommentsRepository,
-  ReportsArchiveVideosRepository,
-  ReportsArchiveCommentsRepository,
-  LiveChatMessagesRepository,
-  MonetizationRepository,
-  LinksRepository,
+  IVideosRepository,
+  ICommentsRepository,
+  IReportsVideosRepository,
+  IReportsCommentsRepository,
+  IReportsArchiveVideosRepository,
+  IReportsArchiveCommentsRepository,
+  ILiveChatMessagesRepository,
+  IMonetizationRepository,
+  ILinksRepository,
   DrizzleVideo,
   DrizzleComment,
   DrizzleVideoReport,
@@ -31,6 +31,15 @@ import type {
   DrizzleLiveChatMessage,
   DrizzleCryptoWalletAddress,
   DrizzleLink,
+  DrizzleNewVideo,
+  DrizzleNewComment,
+  DrizzleNewVideoReport,
+  DrizzleNewCommentReport,
+  DrizzleNewVideoReportArchive,
+  DrizzleNewCommentReportArchive,
+  DrizzleNewLiveChatMessage,
+  DrizzleNewCryptoWalletAddress,
+  DrizzleNewLink,
 } from '@database/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
 import type { IndexerService } from '@services/indexer.js';
@@ -48,27 +57,27 @@ import type { IndexerService } from '@services/indexer.js';
 export class SettingsService extends BaseService {
   private readonly indexerService: IndexerService;
   private readonly cloudflareService: CloudflareService;
-  private readonly videosRepository: VideosRepository;
-  private readonly commentsRepository: CommentsRepository;
-  private readonly reportsVideosRepository: ReportsVideosRepository;
-  private readonly reportsCommentsRepository: ReportsCommentsRepository;
-  private readonly reportsArchiveVideosRepository: ReportsArchiveVideosRepository;
-  private readonly reportsArchiveCommentsRepository: ReportsArchiveCommentsRepository;
-  private readonly liveChatMessagesRepository: LiveChatMessagesRepository;
-  private readonly monetizationRepository: MonetizationRepository;
-  private readonly linksRepository: LinksRepository;
+  private readonly videosRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>;
+  private readonly commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>;
+  private readonly reportsVideosRepository: IReportsVideosRepository<DrizzleVideoReport, DrizzleNewVideoReport>;
+  private readonly reportsCommentsRepository: IReportsCommentsRepository<DrizzleCommentReport, DrizzleNewCommentReport>;
+  private readonly reportsArchiveVideosRepository: IReportsArchiveVideosRepository<DrizzleVideoReportArchive, DrizzleNewVideoReportArchive>;
+  private readonly reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<DrizzleCommentReportArchive, DrizzleNewCommentReportArchive>;
+  private readonly liveChatMessagesRepository: ILiveChatMessagesRepository<DrizzleLiveChatMessage, DrizzleNewLiveChatMessage>;
+  private readonly monetizationRepository: IMonetizationRepository<DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress>;
+  private readonly linksRepository: ILinksRepository<DrizzleLink, DrizzleNewLink>;
 
   constructor(
     logger: Logger,
-    videosRepository: VideosRepository,
-    commentsRepository: CommentsRepository,
-    reportsVideosRepository: ReportsVideosRepository,
-    reportsCommentsRepository: ReportsCommentsRepository,
-    reportsArchiveVideosRepository: ReportsArchiveVideosRepository,
-    reportsArchiveCommentsRepository: ReportsArchiveCommentsRepository,
-    liveChatMessagesRepository: LiveChatMessagesRepository,
-    monetizationRepository: MonetizationRepository,
-    linksRepository: LinksRepository,
+    videosRepository: IVideosRepository<DrizzleVideo, DrizzleNewVideo>,
+    commentsRepository: ICommentsRepository<DrizzleComment, DrizzleNewComment>,
+    reportsVideosRepository: IReportsVideosRepository<DrizzleVideoReport, DrizzleNewVideoReport>,
+    reportsCommentsRepository: IReportsCommentsRepository<DrizzleCommentReport, DrizzleNewCommentReport>,
+    reportsArchiveVideosRepository: IReportsArchiveVideosRepository<DrizzleVideoReportArchive, DrizzleNewVideoReportArchive>,
+    reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<DrizzleCommentReportArchive, DrizzleNewCommentReportArchive>,
+    liveChatMessagesRepository: ILiveChatMessagesRepository<DrizzleLiveChatMessage, DrizzleNewLiveChatMessage>,
+    monetizationRepository: IMonetizationRepository<DrizzleCryptoWalletAddress, DrizzleNewCryptoWalletAddress>,
+    linksRepository: ILinksRepository<DrizzleLink, DrizzleNewLink>,
     indexerService: IndexerService,
     cloudflareService: CloudflareService
   ) {
