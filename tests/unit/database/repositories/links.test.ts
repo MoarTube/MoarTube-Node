@@ -1,12 +1,12 @@
 /**
  * Unit tests for database/repositories/links.ts
  *
- * Tests the LinksRepository class which provides CRUD operations
+ * Tests the LinksRepository interface implementations which provide CRUD operations
  * for social link records.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { LinksRepository } from '@database/repositories/links.js';
+import { createLinksRepository, type ILinksRepository } from '@database/repositories/links/index.js';
 
 // Mock drizzle-orm operators
 vi.mock('drizzle-orm', () => ({
@@ -17,8 +17,7 @@ vi.mock('drizzle-orm', () => ({
 
 describe('database/repositories/links.ts', () => {
   let mockDb: any;
-  let mockLinksTable: any;
-  let repository: LinksRepository;
+  let repository: ILinksRepository<any, any>;
 
   beforeEach(() => {
     mockDb = {
@@ -35,13 +34,8 @@ describe('database/repositories/links.ts', () => {
       delete: vi.fn().mockReturnThis(),
     };
 
-    mockLinksTable = {
-      link_id: { name: 'link_id' },
-      url: { name: 'url' },
-      timestamp: { name: 'timestamp' },
-    };
-
-    repository = new LinksRepository(mockDb, mockLinksTable);
+    // Create repository using factory function
+    repository = createLinksRepository('sqlite', mockDb);
   });
 
   afterEach(() => {

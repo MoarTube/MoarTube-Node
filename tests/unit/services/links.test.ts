@@ -7,13 +7,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LinksService } from '@/services/links.js';
 import type { Logger } from '@/utils/logger.js';
-import type { LinksRepository } from '@/database/repositories/index.js';
+import type { ILinksRepository } from '@/database/repositories/index.js';
 import type { DrizzleLink } from '@/database/schemas/sqlite/index.js';
 
 describe('LinksService', () => {
   let service: LinksService;
   let mockLogger: Logger;
-  let mockLinksRepository: LinksRepository;
+  let mockLinksRepository: ILinksRepository;
 
   const mockLink: DrizzleLink = {
     id: 1,
@@ -37,7 +37,7 @@ describe('LinksService', () => {
       findAll: vi.fn(),
       create: vi.fn(),
       delete: vi.fn(),
-    } as unknown as LinksRepository;
+    } as unknown as ILinksRepository;
 
     service = new LinksService(mockLogger, mockLinksRepository);
   });

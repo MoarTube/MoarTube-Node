@@ -16,7 +16,7 @@ import type {
   ReportsArchiveCommentsRepository,
   LiveChatMessagesRepository,
   MonetizationRepository,
-  LinksRepository,
+  ILinksRepository,
 } from '@/database/repositories/index.js';
 import type { CloudflareService } from '@/services/cloudflare.js';
 import type { IndexerService } from '@/services/indexer.js';
@@ -73,7 +73,7 @@ describe('SettingsService', () => {
   let mockReportsArchiveCommentsRepository: ReportsArchiveCommentsRepository;
   let mockLiveChatMessagesRepository: LiveChatMessagesRepository;
   let mockMonetizationRepository: MonetizationRepository;
-  let mockLinksRepository: LinksRepository;
+  let mockLinksRepository: ILinksRepository;
   let mockIndexerService: IndexerService;
   let mockCloudflareService: CloudflareService;
   let mockConfig: ReturnType<typeof getConfig>;
@@ -97,7 +97,7 @@ describe('SettingsService', () => {
     mockReportsArchiveCommentsRepository = {} as ReportsArchiveCommentsRepository;
     mockLiveChatMessagesRepository = {} as LiveChatMessagesRepository;
     mockMonetizationRepository = {} as MonetizationRepository;
-    mockLinksRepository = {} as LinksRepository;
+    mockLinksRepository = {} as ILinksRepository;
 
     mockIndexerService = {
       performNodeIdentification: vi.fn(),

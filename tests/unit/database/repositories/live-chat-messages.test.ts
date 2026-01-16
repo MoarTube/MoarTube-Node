@@ -1,11 +1,11 @@
 /**
  * Unit tests for database/repositories/live-chat-messages.ts
  *
- * Tests the LiveChatMessagesRepository class for live chat message CRUD operations.
+ * Tests the LiveChatMessagesRepository interface implementations for live chat message CRUD operations.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { LiveChatMessagesRepository } from '@database/repositories/live-chat-messages.js';
+import { createLiveChatMessagesRepository, type ILiveChatMessagesRepository } from '@database/repositories/live-chat-messages/index.js';
 
 // Mock drizzle-orm operators
 vi.mock('drizzle-orm', () => ({
@@ -19,8 +19,7 @@ vi.mock('drizzle-orm', () => ({
 
 describe('database/repositories/live-chat-messages.ts', () => {
   let mockDb: any;
-  let mockChatTable: any;
-  let repository: LiveChatMessagesRepository;
+  let repository: ILiveChatMessagesRepository<any, any>;
 
   beforeEach(() => {
     mockDb = {
@@ -35,13 +34,8 @@ describe('database/repositories/live-chat-messages.ts', () => {
       delete: vi.fn().mockReturnThis(),
     };
 
-    mockChatTable = {
-      chat_message_id: { name: 'chat_message_id' },
-      video_id: { name: 'video_id' },
-      timestamp: { name: 'timestamp' },
-    };
-
-    repository = new LiveChatMessagesRepository(mockDb, mockChatTable);
+    // Create repository using factory function
+    repository = createLiveChatMessagesRepository('sqlite', mockDb);
   });
 
   afterEach(() => {

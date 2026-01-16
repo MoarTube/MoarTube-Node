@@ -4,24 +4,21 @@
  * This file exports all repository classes for convenient importing.
  */
 
-// Base repository
-export { BaseRepository } from '@database/repositories/base.js';
-
 // Videos repository
-export { VideosRepository, type VideoQueryOptions } from '@database/repositories/videos.js';
+export { createVideosRepository, type IVideosRepository, type VideoQueryOptions, type SQLiteVideo, type SQLiteNewVideo, type PostgresVideo, type PostgresNewVideo } from '@database/repositories/videos/index.js';
 
 // Comments repository
-export { CommentsRepository } from '@database/repositories/comments.js';
+export { createCommentsRepository, type ICommentsRepository, type SQLiteComment, type SQLiteNewComment, type PostgresComment, type PostgresNewComment } from '@database/repositories/comments/index.js';
 
 // Report repositories
-export { ReportsVideosRepository } from '@database/repositories/reports-videos.js';
-export { ReportsCommentsRepository } from '@database/repositories/reports-comments.js';
+export { createReportsVideosRepository, type IReportsVideosRepository, type SQLiteVideoReport, type SQLiteNewVideoReport, type PostgresVideoReport, type PostgresNewVideoReport } from '@database/repositories/reports-videos/index.js';
+export { createReportsCommentsRepository, type IReportsCommentsRepository, type SQLiteCommentReport, type SQLiteNewCommentReport, type PostgresCommentReport, type PostgresNewCommentReport } from '@database/repositories/reports-comments/index.js';
 
 // Archive repositories
-export { ReportsArchiveVideosRepository } from '@database/repositories/reports-archive-videos.js';
-export { ReportsArchiveCommentsRepository } from '@database/repositories/reports-archive-comments.js';
+export { createReportsArchiveVideosRepository, type IReportsArchiveVideosRepository, type SQLiteVideoReportArchive, type SQLiteNewVideoReportArchive, type PostgresVideoReportArchive, type PostgresNewVideoReportArchive } from '@database/repositories/reports-archive-videos/index.js';
+export { createReportsArchiveCommentsRepository, type IReportsArchiveCommentsRepository, type SQLiteCommentReportArchive, type SQLiteNewCommentReportArchive, type PostgresCommentReportArchive, type PostgresNewCommentReportArchive } from '@database/repositories/reports-archive-comments/index.js';
 
 // Other repositories
-export { LiveChatMessagesRepository } from '@database/repositories/live-chat-messages.js';
-export { MonetizationRepository } from '@database/repositories/monetization.js';
-export { LinksRepository } from '@database/repositories/links.js';
+export { createLiveChatMessagesRepository, type ILiveChatMessagesRepository, type SQLiteLiveChatMessage, type SQLiteNewLiveChatMessage, type PostgresLiveChatMessage, type PostgresNewLiveChatMessage } from '@database/repositories/live-chat-messages/index.js';
+export { createMonetizationRepository, type IMonetizationRepository, type SQLiteCryptoWalletAddress, type SQLiteNewCryptoWalletAddress, type PostgresCryptoWalletAddress, type PostgresNewCryptoWalletAddress } from '@database/repositories/monetization/index.js';
+export { createLinksRepository, type ILinksRepository, type SQLiteLink, type SQLiteNewLink, type PostgresLink, type PostgresNewLink } from '@database/repositories/links/index.js';

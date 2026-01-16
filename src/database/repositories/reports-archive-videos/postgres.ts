@@ -1,33 +1,36 @@
 /**
- * Reports Archive Videos Repository
+ * Reports Archive Videos Repository - PostgreSQL Implementation
  *
- * Provides data access methods for archived video report records using Drizzle ORM.
+ * Provides data access methods for archived video report records using Drizzle ORM with PostgreSQL.
  */
 import { eq, desc, count } from 'drizzle-orm';
-import { BaseRepository } from '@database/repositories/base.js';
 import type { PaginationOptions } from '@/types/index.js';
+import type { IReportsArchiveVideosRepository } from './interface.js';
+import type { DrizzleVideoReportArchive, DrizzleNewVideoReportArchive } from '@/database/schemas/postgres/reports-archive-videos.js';
+import type { DatabaseClient } from '@database/postgres-connection.js';
+import { videoReportsArchive } from '@/database/schemas/postgres/reports-archive-videos.js';
 
 /**
- * ReportsArchiveVideosRepository class for archived video report CRUD operations
+ * ReportsArchiveVideosRepositoryPostgres class for archived video report CRUD operations
  */
-export class ReportsArchiveVideosRepository extends BaseRepository {
-  constructor(
-    db: any,
-    private readonly videoReportsArchiveTable: any
-  ) {
-    super(db);
+export class ReportsArchiveVideosRepositoryPostgres implements IReportsArchiveVideosRepository<DrizzleVideoReportArchive, DrizzleNewVideoReportArchive> {
+  private readonly db: DatabaseClient;
+  
+  constructor(db: DatabaseClient) {
+    this.db = db;
   }
+
   /**
    * Finds an archived video report by its archive_id
    *
    * @param archiveId - The archive primary key
    * @returns The archive record or null if not found
    */
-  async findById(archiveId: number): Promise<any | null> {
+  async findById(archiveId: number): Promise<DrizzleVideoReportArchive | null> {
     const result = await this.db
       .select()
-      .from(this.videoReportsArchiveTable)
-      .where(eq(this.videoReportsArchiveTable.archive_id, archiveId))
+      .from(videoReportsArchive)
+      .where(eq(videoReportsArchive.archive_id, archiveId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -38,13 +41,13 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @param options - Pagination options (optional limit)
    * @returns Array of archived video reports
    */
-  async findAll(options?: PaginationOptions): Promise<any[]> {
-    const { limit } = this.getPaginationParams(options);
+  async findAll(options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]> {
+    const { limit } = { limit: options?.limit };
 
     const query = this.db
       .select()
-      .from(this.videoReportsArchiveTable)
-      .orderBy(desc(this.videoReportsArchiveTable.timestamp));
+      .from(videoReportsArchive)
+      .orderBy(desc(videoReportsArchive.timestamp));
 
     if (limit !== undefined) {
       return query.limit(limit);
@@ -60,14 +63,14 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of archived reports for the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
-    const { limit } = this.getPaginationParamsWithDefault(options);
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]> {
+    const { limit } = { limit: options?.limit ?? 20 };
 
     return this.db
       .select()
-      .from(this.videoReportsArchiveTable)
-      .where(eq(this.videoReportsArchiveTable.video_id, videoId))
-      .orderBy(desc(this.videoReportsArchiveTable.timestamp))
+      .from(videoReportsArchive)
+      .where(eq(videoReportsArchive.video_id, videoId))
+      .orderBy(desc(videoReportsArchive.timestamp))
       .limit(limit);
   }
 
@@ -77,11 +80,11 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @param reportId - The original report ID
    * @returns The archive record or null if not found
    */
-  async findByReportId(reportId: number): Promise<any | null> {
+  async findByReportId(reportId: number): Promise<DrizzleVideoReportArchive | null> {
     const result = await this.db
       .select()
-      .from(this.videoReportsArchiveTable)
-      .where(eq(this.videoReportsArchiveTable.report_id, reportId))
+      .from(videoReportsArchive)
+      .where(eq(videoReportsArchive.report_id, reportId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -92,7 +95,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @returns Total count of archived video reports
    */
   async getCount(): Promise<number> {
-    const result = await this.db.select({ count: count() }).from(this.videoReportsArchiveTable);
+    const result = await this.db.select({ count: count() }).from(videoReportsArchive);
     return result[0]?.count ?? 0;
   }
 
@@ -103,8 +106,8 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @returns The created archive record
    * @throws Error if insert fails to return a record
    */
-  async create(data: any): Promise<any> {
-    const result = await this.db.insert(this.videoReportsArchiveTable).values(data).returning();
+  async create(data: DrizzleNewVideoReportArchive): Promise<DrizzleVideoReportArchive> {
+    const result = await this.db.insert(videoReportsArchive).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create video report archive record');
     }
@@ -119,8 +122,8 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    */
   async delete(archiveId: number): Promise<boolean> {
     const result = await this.db
-      .delete(this.videoReportsArchiveTable)
-      .where(eq(this.videoReportsArchiveTable.archive_id, archiveId))
+      .delete(videoReportsArchive)
+      .where(eq(videoReportsArchive.archive_id, archiveId))
       .returning();
     return result.length > 0;
   }
@@ -133,8 +136,8 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    */
   async deleteByVideoId(videoId: string): Promise<number> {
     const result = await this.db
-      .delete(this.videoReportsArchiveTable)
-      .where(eq(this.videoReportsArchiveTable.video_id, videoId))
+      .delete(videoReportsArchive)
+      .where(eq(videoReportsArchive.video_id, videoId))
       .returning();
     return result.length;
   }
@@ -145,7 +148,7 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @returns Number of deleted archive records
    */
   async deleteAll(): Promise<number> {
-    const result = await this.db.delete(this.videoReportsArchiveTable).returning();
+    const result = await this.db.delete(videoReportsArchive).returning();
     return result.length;
   }
 
@@ -155,10 +158,10 @@ export class ReportsArchiveVideosRepository extends BaseRepository {
    * @param data - Array of archive data for insertion
    * @returns Array of created archive records
    */
-  async createMany(data: any[]): Promise<any[]> {
+  async createMany(data: DrizzleNewVideoReportArchive[]): Promise<DrizzleVideoReportArchive[]> {
     if (data.length === 0) {
       return [];
     }
-    return this.db.insert(this.videoReportsArchiveTable).values(data).returning();
+    return this.db.insert(videoReportsArchive).values(data).returning();
   }
 }

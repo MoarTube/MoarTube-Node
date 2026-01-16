@@ -53,33 +53,138 @@ vi.mock('@database/schemas/postgres/index.js', () => ({
 }));
 
 vi.mock('@database/repositories/index.js', () => ({
-  VideosRepository: class VideosRepository {
-    constructor(public db: unknown, public videosTable: unknown) {}
-  },
-  CommentsRepository: class CommentsRepository {
-    constructor(public db: unknown, public commentsTable: unknown) {}
-  },
-  ReportsVideosRepository: class ReportsVideosRepository {
-    constructor(public db: unknown, public videoReportsTable: unknown) {}
-  },
-  ReportsCommentsRepository: class ReportsCommentsRepository {
-    constructor(public db: unknown, public commentReportsTable: unknown) {}
-  },
-  ReportsArchiveVideosRepository: class ReportsArchiveVideosRepository {
-    constructor(public db: unknown, public videoReportsArchiveTable: unknown) {}
-  },
-  ReportsArchiveCommentsRepository: class ReportsArchiveCommentsRepository {
-    constructor(public db: unknown, public commentReportsArchiveTable: unknown) {}
-  },
-  LiveChatMessagesRepository: class LiveChatMessagesRepository {
-    constructor(public db: unknown, public liveChatMessagesTable: unknown) {}
-  },
-  MonetizationRepository: class MonetizationRepository {
-    constructor(public db: unknown, public cryptoWalletAddressesTable: unknown) {}
-  },
-  LinksRepository: class LinksRepository {
-    constructor(public db: unknown, public linksTable: unknown) {}
-  },
+  createVideosRepository: vi.fn(() => ({
+    findById: vi.fn(),
+    findByDbId: vi.fn(),
+    findPublished: vi.fn(),
+    findAll: vi.fn(),
+    getCount: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    incrementViews: vi.fn(),
+    incrementViewsBy: vi.fn(),
+    incrementLikes: vi.fn(),
+    incrementDislikes: vi.fn(),
+    incrementComments: vi.fn(),
+    decrementComments: vi.fn(),
+    updateBandwidth: vi.fn(),
+    findStreaming: vi.fn(),
+    findIndexed: vi.fn(),
+    findPendingIndexing: vi.fn(),
+    markAllIndexedAsOutdated: vi.fn(),
+    deleteAll: vi.fn(),
+    createMany: vi.fn(),
+  })),
+  createCommentsRepository: vi.fn(() => ({
+    findById: vi.fn(),
+    findByVideoId: vi.fn(),
+    findByVideoIdWithTimestampFilter: vi.fn(),
+    countByVideoId: vi.fn(),
+    findAll: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    deleteByVideoId: vi.fn(),
+    findByVideoIdAndTimestamp: vi.fn(),
+    countAll: vi.fn(),
+    countNewerThan: vi.fn(),
+    search: vi.fn(),
+    deleteAll: vi.fn(),
+    createMany: vi.fn(),
+  })),
+  createReportsVideosRepository: vi.fn(() => ({
+    findById: vi.fn(),
+    findAll: vi.fn(),
+    findByVideoId: vi.fn(),
+    getCount: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+    deleteByVideoId: vi.fn(),
+    countNewerThan: vi.fn(),
+    deleteAll: vi.fn(),
+    createMany: vi.fn(),
+  })),
+  createReportsCommentsRepository: vi.fn().mockReturnValue({
+    findById: vi.fn(),
+    findAll: vi.fn(),
+    findByVideoId: vi.fn(),
+    findByCommentId: vi.fn(),
+    getCount: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+    deleteByCommentId: vi.fn(),
+    deleteByVideoId: vi.fn(),
+    countNewerThan: vi.fn(),
+    deleteAll: vi.fn(),
+    createMany: vi.fn(),
+  }),
+  createReportsArchiveVideosRepository: vi.fn().mockReturnValue({
+    findById: vi.fn(),
+    findAll: vi.fn(),
+    findByVideoId: vi.fn(),
+    findByReportId: vi.fn(),
+    getCount: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+    deleteByVideoId: vi.fn(),
+    deleteAll: vi.fn(),
+    createMany: vi.fn(),
+  }),
+  createReportsArchiveCommentsRepository: vi.fn().mockReturnValue({
+    findById: vi.fn(),
+    findAll: vi.fn(),
+    findByVideoId: vi.fn(),
+    findByCommentId: vi.fn(),
+    findByReportId: vi.fn(),
+    getCount: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+    deleteByCommentId: vi.fn(),
+    deleteByVideoId: vi.fn(),
+    deleteAll: vi.fn(),
+    createMany: vi.fn(),
+  }),
+  createLiveChatMessagesRepository: vi.fn().mockReturnValue({
+    findById: vi.fn(),
+    findByVideoId: vi.fn(),
+    findRecentByVideoId: vi.fn(),
+    findAfterTimestamp: vi.fn(),
+    countByVideoId: vi.fn(),
+    findAll: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+    deleteByVideoId: vi.fn(),
+    pruneOldMessages: vi.fn(),
+    deleteAll: vi.fn(),
+    createMany: vi.fn(),
+  }),
+  createMonetizationRepository: vi.fn().mockReturnValue({
+    findById: vi.fn(),
+    findAll: vi.fn(),
+    findByChain: vi.fn(),
+    findByAddress: vi.fn(),
+    getCount: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    deleteByChain: vi.fn(),
+    exists: vi.fn(),
+    deleteAll: vi.fn(),
+    createMany: vi.fn(),
+  }),
+  createLinksRepository: vi.fn().mockReturnValue({
+    findById: vi.fn(),
+    findAll: vi.fn(),
+    findByUrl: vi.fn(),
+    getCount: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    deleteAll: vi.fn(),
+    createMany: vi.fn(),
+    existsByUrl: vi.fn(),
+  }),
 }));
 
 // Mock all service classes

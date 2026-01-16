@@ -1,13 +1,38 @@
 /**
  * Unit tests for database/repositories/videos.ts
  *
- * Tests the VideosRepository class which provides CRUD operations
+ * Tests the VideosRepository interface implementations which provide CRUD operations
  * and specialized queries for video records.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { VideosRepository } from '@database/repositories/videos.js';
-import type { VideoQueryOptions } from '@database/repositories/videos.js';
+import { createVideosRepository, type IVideosRepository, type VideoQueryOptions } from '@database/repositories/videos/index.js';
+
+// Mock the schema import first
+vi.mock('@database/schemas/sqlite/index.js', () => ({
+  videos: {
+    name: 'videos',
+    id: { name: 'id' },
+    video_id: { name: 'video_id' },
+    title: { name: 'title' },
+    description: { name: 'description' },
+    tags: { name: 'tags' },
+    length_seconds: { name: 'length_seconds' },
+    length_timestamp: { name: 'length_timestamp' },
+    views: { name: 'views' },
+    comments: { name: 'comments' },
+    likes: { name: 'likes' },
+    dislikes: { name: 'dislikes' },
+    bandwidth: { name: 'bandwidth' },
+    is_importing: { name: 'is_importing' },
+    is_imported: { name: 'is_imported' },
+    is_publishing: { name: 'is_publishing' },
+    is_published: { name: 'is_published' },
+    is_streaming: { name: 'is_streaming' },
+    is_streamed: { name: 'is_streamed' },
+    is_stream_recorded_remotely: { name: 'is_stream_recorded_remotely' },
+  },
+}));
 
 // Mock drizzle-orm operators
 vi.mock('drizzle-orm', () => ({
@@ -22,10 +47,11 @@ vi.mock('drizzle-orm', () => ({
   lt: vi.fn((field, value) => ({ type: 'lt', field, value })),
 }));
 
+import { videos as mockVideosTable } from '@database/schemas/sqlite/index.js';
+
 describe('database/repositories/videos.ts', () => {
   let mockDb: any;
-  let mockVideosTable: any;
-  let repository: VideosRepository;
+  let repository: IVideosRepository<any, any>;
 
   beforeEach(() => {
     // Create chainable mock database
@@ -43,36 +69,18 @@ describe('database/repositories/videos.ts', () => {
       delete: vi.fn().mockReturnThis(),
     };
 
-    // Mock videos table with column references
-    mockVideosTable = {
-      id: { name: 'id' },
-      video_id: { name: 'video_id' },
-      title: { name: 'title' },
-      description: { name: 'description' },
-      tags: { name: 'tags' },
-      views: { name: 'views' },
-      likes: { name: 'likes' },
-      dislikes: { name: 'dislikes' },
-      comments: { name: 'comments' },
-      creation_timestamp: { name: 'creation_timestamp' },
-      is_published: { name: 'is_published' },
-      is_streaming: { name: 'is_streaming' },
-      is_finalized: { name: 'is_finalized' },
-      is_indexed: { name: 'is_indexed' },
-      is_index_outdated: { name: 'is_index_outdated' },
-      bandwidth: { name: 'bandwidth' },
-    };
-
-    repository = new VideosRepository(mockDb, mockVideosTable);
+    // Create repository using factory function
+    repository = createVideosRepository('sqlite', mockDb);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('constructor', () => {
+  describe('factory function', () => {
     it('should create repository with database and table', () => {
-      expect(repository).toBeInstanceOf(VideosRepository);
+      expect(repository).toBeDefined();
+      expect(typeof repository.findById).toBe('function');
     });
   });
 
@@ -125,7 +133,7 @@ describe('database/repositories/videos.ts', () => {
       const result = await repository.findPublished();
 
       expect(mockDb.select).toHaveBeenCalled();
-      expect(mockDb.limit).toHaveBeenCalledWith(20); // default limit
+      expect(mockDb.limit).toHaveBeenCalledWith(50); // default limit
       expect(result).toEqual(mockVideos);
     });
 

@@ -1,12 +1,22 @@
 /**
  * Unit tests for database/repositories/comments.ts
  *
- * Tests the CommentsRepository class which provides CRUD operations
+ * Tests the CommentsRepository interface implementations which provide CRUD operations
  * and specialized queries for comment records.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { CommentsRepository } from '@database/repositories/comments.js';
+
+// Mock the schema import first
+vi.mock('@database/schemas/sqlite/index.js', () => ({
+  comments: {
+    name: 'comments',
+    comment_id: { name: 'comment_id' },
+    video_id: { name: 'video_id' },
+    timestamp: { name: 'timestamp' },
+    comment_plain_text_sanitized: { name: 'comment_plain_text_sanitized' },
+  },
+}));
 
 // Mock drizzle-orm operators
 vi.mock('drizzle-orm', () => ({
@@ -19,10 +29,12 @@ vi.mock('drizzle-orm', () => ({
   count: vi.fn(() => ({ type: 'count' })),
 }));
 
+import { createCommentsRepository, type ICommentsRepository } from '@database/repositories/comments/index.js';
+import { comments as mockCommentsTable } from '@database/schemas/sqlite/index.js';
+
 describe('database/repositories/comments.ts', () => {
   let mockDb: any;
-  let mockCommentsTable: any;
-  let repository: CommentsRepository;
+  let repository: ICommentsRepository<any, any>;
 
   beforeEach(() => {
     // Create chainable mock database
@@ -41,24 +53,20 @@ describe('database/repositories/comments.ts', () => {
     };
 
     // Mock comments table with column references
-    mockCommentsTable = {
-      id: { name: 'id' },
-      comment_id: { name: 'comment_id' },
-      video_id: { name: 'video_id' },
-      timestamp: { name: 'timestamp' },
-      comment_plain_text_sanitized: { name: 'comment_plain_text_sanitized' },
-    };
+    // mockCommentsTable is now imported from the mocked schema
 
-    repository = new CommentsRepository(mockDb, mockCommentsTable);
+    // Create repository using factory function
+    repository = createCommentsRepository('sqlite', mockDb);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('constructor', () => {
+  describe('factory function', () => {
     it('should create repository with database and table', () => {
-      expect(repository).toBeInstanceOf(CommentsRepository);
+      expect(repository).toBeDefined();
+      expect(typeof repository.findById).toBe('function');
     });
   });
 

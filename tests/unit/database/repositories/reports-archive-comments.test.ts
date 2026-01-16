@@ -1,11 +1,11 @@
 /**
  * Unit tests for database/repositories/reports-archive-comments.ts
  *
- * Tests the ReportsArchiveCommentsRepository class for archived comment report CRUD operations.
+ * Tests the ReportsArchiveCommentsRepository interface implementations for archived comment report CRUD operations.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { ReportsArchiveCommentsRepository } from '@database/repositories/reports-archive-comments.js';
+import { createReportsArchiveCommentsRepository, type IReportsArchiveCommentsRepository } from '@database/repositories/reports-archive-comments/index.js';
 
 // Mock drizzle-orm operators
 vi.mock('drizzle-orm', () => ({
@@ -16,8 +16,7 @@ vi.mock('drizzle-orm', () => ({
 
 describe('database/repositories/reports-archive-comments.ts', () => {
   let mockDb: any;
-  let mockArchiveTable: any;
-  let repository: ReportsArchiveCommentsRepository;
+  let repository: IReportsArchiveCommentsRepository<any, any>;
 
   beforeEach(() => {
     mockDb = {
@@ -32,14 +31,8 @@ describe('database/repositories/reports-archive-comments.ts', () => {
       delete: vi.fn().mockReturnThis(),
     };
 
-    mockArchiveTable = {
-      archive_id: { name: 'archive_id' },
-      video_id: { name: 'video_id' },
-      comment_id: { name: 'comment_id' },
-      timestamp: { name: 'timestamp' },
-    };
-
-    repository = new ReportsArchiveCommentsRepository(mockDb, mockArchiveTable);
+    // Create repository using factory function
+    repository = createReportsArchiveCommentsRepository('sqlite', mockDb);
   });
 
   afterEach(() => {

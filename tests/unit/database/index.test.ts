@@ -106,16 +106,15 @@ describe('database/index.ts', () => {
         'cryptoWalletAddresses',
         'links',
         // Repository exports
-        'BaseRepository',
-        'VideosRepository',
-        'CommentsRepository',
-        'ReportsVideosRepository',
-        'ReportsCommentsRepository',
-        'ReportsArchiveVideosRepository',
-        'ReportsArchiveCommentsRepository',
-        'LiveChatMessagesRepository',
-        'MonetizationRepository',
-        'LinksRepository',
+        'createVideosRepository',
+        'createCommentsRepository',
+        'createReportsVideosRepository',
+        'createReportsCommentsRepository',
+        'createReportsArchiveVideosRepository',
+        'createReportsArchiveCommentsRepository',
+        'createLiveChatMessagesRepository',
+        'createMonetizationRepository',
+        'createLinksRepository',
       ];
 
       expectedRuntimeExports.forEach(exportName => {
@@ -141,16 +140,15 @@ describe('database/index.ts', () => {
         'cryptoWalletAddresses',
         'links',
         // Repository exports
-        'BaseRepository',
-        'VideosRepository',
-        'CommentsRepository',
-        'ReportsVideosRepository',
-        'ReportsCommentsRepository',
-        'ReportsArchiveVideosRepository',
-        'ReportsArchiveCommentsRepository',
-        'LiveChatMessagesRepository',
-        'MonetizationRepository',
-        'LinksRepository',
+        'createVideosRepository',
+        'createCommentsRepository',
+        'createReportsVideosRepository',
+        'createReportsCommentsRepository',
+        'createReportsArchiveVideosRepository',
+        'createReportsArchiveCommentsRepository',
+        'createLiveChatMessagesRepository',
+        'createMonetizationRepository',
+        'createLinksRepository',
       ];
 
       // Check that we don't have extra exports

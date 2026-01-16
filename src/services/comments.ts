@@ -9,7 +9,7 @@ import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type { CreateCommentInput } from '@services/interfaces.js';
 import type {
-  CommentsRepository,
+  ICommentsRepository,
   VideosRepository,
   DrizzleComment,
   DrizzleNewComment,
@@ -24,13 +24,13 @@ import sanitizeHtml from 'sanitize-html';
  * - Video comment count management
  * - Comment search functionality
  */
-export class CommentsService extends BaseService {
-  private readonly commentsRepository: CommentsRepository;
+export class CommentsService<CommentType = DrizzleComment, NewCommentType = DrizzleNewComment> extends BaseService {
+  private readonly commentsRepository: ICommentsRepository<CommentType, NewCommentType>;
   private readonly videoRepository: VideosRepository;
 
   constructor(
     logger: Logger,
-    commentsRepository: CommentsRepository,
+    commentsRepository: ICommentsRepository<CommentType, NewCommentType>,
     videosRepository: VideosRepository
   ) {
     super('CommentService', logger);

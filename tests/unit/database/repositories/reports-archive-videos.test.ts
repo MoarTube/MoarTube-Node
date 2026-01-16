@@ -1,11 +1,11 @@
 /**
  * Unit tests for database/repositories/reports-archive-videos.ts
  *
- * Tests the ReportsArchiveVideosRepository class for archived video report CRUD operations.
+ * Tests the ReportsArchiveVideosRepository interface implementations for archived video report CRUD operations.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { ReportsArchiveVideosRepository } from '@database/repositories/reports-archive-videos.js';
+import { createReportsArchiveVideosRepository, type IReportsArchiveVideosRepository } from '@database/repositories/reports-archive-videos/index.js';
 
 // Mock drizzle-orm operators
 vi.mock('drizzle-orm', () => ({
@@ -16,8 +16,7 @@ vi.mock('drizzle-orm', () => ({
 
 describe('database/repositories/reports-archive-videos.ts', () => {
   let mockDb: any;
-  let mockArchiveTable: any;
-  let repository: ReportsArchiveVideosRepository;
+  let repository: IReportsArchiveVideosRepository<any, any>;
 
   beforeEach(() => {
     mockDb = {
@@ -32,13 +31,8 @@ describe('database/repositories/reports-archive-videos.ts', () => {
       delete: vi.fn().mockReturnThis(),
     };
 
-    mockArchiveTable = {
-      archive_id: { name: 'archive_id' },
-      video_id: { name: 'video_id' },
-      timestamp: { name: 'timestamp' },
-    };
-
-    repository = new ReportsArchiveVideosRepository(mockDb, mockArchiveTable);
+    // Create repository using factory function
+    repository = createReportsArchiveVideosRepository('sqlite', mockDb);
   });
 
   afterEach(() => {

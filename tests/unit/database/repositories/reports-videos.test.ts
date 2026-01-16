@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { ReportsVideosRepository } from '@database/repositories/reports-videos.js';
+import { createReportsVideosRepository, type IReportsVideosRepository } from '@database/repositories/reports-videos/index.js';
 
 // Mock drizzle-orm operators
 vi.mock('drizzle-orm', () => ({
@@ -15,10 +15,9 @@ vi.mock('drizzle-orm', () => ({
   gt: vi.fn((field, value) => ({ type: 'gt', field, value })),
 }));
 
-describe('database/repositories/reports-videos.ts', () => {
+describe('database/repositories/reports-videos/index.ts', () => {
   let mockDb: any;
-  let mockReportsTable: any;
-  let repository: ReportsVideosRepository;
+  let repository: IReportsVideosRepository<any, any>;
 
   beforeEach(() => {
     mockDb = {
@@ -33,13 +32,7 @@ describe('database/repositories/reports-videos.ts', () => {
       delete: vi.fn().mockReturnThis(),
     };
 
-    mockReportsTable = {
-      report_id: { name: 'report_id' },
-      video_id: { name: 'video_id' },
-      timestamp: { name: 'timestamp' },
-    };
-
-    repository = new ReportsVideosRepository(mockDb, mockReportsTable);
+    repository = createReportsVideosRepository('sqlite', mockDb);
   });
 
   afterEach(() => {

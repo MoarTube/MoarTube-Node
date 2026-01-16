@@ -1,33 +1,36 @@
 /**
- * Live Chat Message Repository
+ * Live Chat Messages Repository - SQLite Implementation
  *
- * Provides data access methods for live chat message records using Drizzle ORM.
+ * Provides data access methods for live chat message records using Drizzle ORM with SQLite.
  */
 import { eq, and, gte, count, lt, asc } from 'drizzle-orm';
-import { BaseRepository } from '@database/repositories/base.js';
 import type { PaginationOptions } from '@/types/index.js';
+import type { ILiveChatMessagesRepository } from './interface.js';
+import type { DrizzleLiveChatMessage, DrizzleNewLiveChatMessage } from '@/database/schemas/sqlite/live-chat-messages.js';
+import type { DatabaseClient } from '@database/sqlite-connection.js';
+import { liveChatMessages } from '@/database/schemas/sqlite/live-chat-messages.js';
 
 /**
- * LiveChatMessageRepository class for live chat message CRUD operations
+ * LiveChatMessagesRepositorySQLite class for live chat message CRUD operations
  */
-export class LiveChatMessagesRepository extends BaseRepository {
-  constructor(
-    db: any,
-    private readonly liveChatMessagesTable: any
-  ) {
-    super(db);
+export class LiveChatMessagesRepositorySQLite implements ILiveChatMessagesRepository<DrizzleLiveChatMessage, DrizzleNewLiveChatMessage> {
+  private readonly db: DatabaseClient;
+  
+  constructor(db: DatabaseClient) {
+    this.db = db;
   }
+
   /**
    * Finds a live chat message by its chat_message_id
    *
    * @param chatMessageId - The message primary key
    * @returns The message record or null if not found
    */
-  async findById(chatMessageId: number): Promise<any | null> {
+  async findById(chatMessageId: number): Promise<DrizzleLiveChatMessage | null> {
     const result = await this.db
       .select()
-      .from(this.liveChatMessagesTable)
-      .where(eq(this.liveChatMessagesTable.chat_message_id, chatMessageId))
+      .from(liveChatMessages)
+      .where(eq(liveChatMessages.chat_message_id, chatMessageId))
       .limit(1);
     return result[0] ?? null;
   }
@@ -39,14 +42,14 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @param options - Pagination options
    * @returns Array of chat messages for the video
    */
-  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<any[]> {
-    const { limit } = this.getPaginationParamsWithDefault(options);
+  async findByVideoId(videoId: string, options?: PaginationOptions): Promise<DrizzleLiveChatMessage[]> {
+    const { limit } = { limit: options?.limit ?? 20 };
 
     return this.db
       .select()
-      .from(this.liveChatMessagesTable)
-      .where(eq(this.liveChatMessagesTable.video_id, videoId))
-      .orderBy(asc(this.liveChatMessagesTable.timestamp))
+      .from(liveChatMessages)
+      .where(eq(liveChatMessages.video_id, videoId))
+      .orderBy(asc(liveChatMessages.timestamp))
       .limit(limit);
   }
 
@@ -57,12 +60,12 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @param count - Number of recent messages to retrieve
    * @returns Array of recent chat messages (ordered oldest to newest)
    */
-  async findRecentByVideoId(videoId: string, count: number = 50): Promise<any[]> {
+  async findRecentByVideoId(videoId: string, count: number = 50): Promise<DrizzleLiveChatMessage[]> {
     const messages = await this.db
       .select()
-      .from(this.liveChatMessagesTable)
-      .where(eq(this.liveChatMessagesTable.video_id, videoId))
-      .orderBy(asc(this.liveChatMessagesTable.timestamp))
+      .from(liveChatMessages)
+      .where(eq(liveChatMessages.video_id, videoId))
+      .orderBy(asc(liveChatMessages.timestamp))
       .limit(count);
 
     // Reverse to get oldest to newest order for display
@@ -81,17 +84,17 @@ export class LiveChatMessagesRepository extends BaseRepository {
     videoId: string,
     afterTimestamp: number,
     limit: number = 100
-  ): Promise<any[]> {
+  ): Promise<DrizzleLiveChatMessage[]> {
     return this.db
       .select()
-      .from(this.liveChatMessagesTable)
+      .from(liveChatMessages)
       .where(
         and(
-          eq(this.liveChatMessagesTable.video_id, videoId),
-          gte(this.liveChatMessagesTable.timestamp, afterTimestamp)
+          eq(liveChatMessages.video_id, videoId),
+          gte(liveChatMessages.timestamp, afterTimestamp)
         )
       )
-      .orderBy(asc(this.liveChatMessagesTable.timestamp))
+      .orderBy(asc(liveChatMessages.timestamp))
       .limit(limit);
   }
 
@@ -104,8 +107,8 @@ export class LiveChatMessagesRepository extends BaseRepository {
   async countByVideoId(videoId: string): Promise<number> {
     const result = await this.db
       .select({ count: count() })
-      .from(this.liveChatMessagesTable)
-      .where(eq(this.liveChatMessagesTable.video_id, videoId));
+      .from(liveChatMessages)
+      .where(eq(liveChatMessages.video_id, videoId));
     return result[0]?.count ?? 0;
   }
 
@@ -115,10 +118,10 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @param options - Pagination options (optional limit/offset)
    * @returns Array of all live chat messages
    */
-  async findAll(options?: PaginationOptions): Promise<any[]> {
-    const { limit } = this.getPaginationParams(options);
+  async findAll(options?: PaginationOptions): Promise<DrizzleLiveChatMessage[]> {
+    const { limit } = { limit: options?.limit };
 
-    const query = this.db.select().from(this.liveChatMessagesTable);
+    const query = this.db.select().from(liveChatMessages);
 
     if (limit !== undefined) {
       return query.limit(limit);
@@ -134,8 +137,8 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @returns The created message record
    * @throws Error if insert fails to return a record
    */
-  async create(data: any): Promise<any> {
-    const result = await this.db.insert(this.liveChatMessagesTable).values(data).returning();
+  async create(data: DrizzleNewLiveChatMessage): Promise<DrizzleLiveChatMessage> {
+    const result = await this.db.insert(liveChatMessages).values(data).returning();
     if (!result[0]) {
       throw new Error('Failed to create live chat message record');
     }
@@ -150,8 +153,8 @@ export class LiveChatMessagesRepository extends BaseRepository {
    */
   async delete(chatMessageId: number): Promise<boolean> {
     const result = await this.db
-      .delete(this.liveChatMessagesTable)
-      .where(eq(this.liveChatMessagesTable.chat_message_id, chatMessageId))
+      .delete(liveChatMessages)
+      .where(eq(liveChatMessages.chat_message_id, chatMessageId))
       .returning();
     return result.length > 0;
   }
@@ -164,8 +167,8 @@ export class LiveChatMessagesRepository extends BaseRepository {
    */
   async deleteByVideoId(videoId: string): Promise<number> {
     const result = await this.db
-      .delete(this.liveChatMessagesTable)
-      .where(eq(this.liveChatMessagesTable.video_id, videoId))
+      .delete(liveChatMessages)
+      .where(eq(liveChatMessages.video_id, videoId))
       .returning();
     return result.length;
   }
@@ -180,10 +183,10 @@ export class LiveChatMessagesRepository extends BaseRepository {
   async pruneOldMessages(videoId: string, keepCount: number): Promise<number> {
     // First, find the timestamp cutoff
     const recentMessages = await this.db
-      .select({ timestamp: this.liveChatMessagesTable.timestamp })
-      .from(this.liveChatMessagesTable)
-      .where(eq(this.liveChatMessagesTable.video_id, videoId))
-      .orderBy(asc(this.liveChatMessagesTable.timestamp))
+      .select({ timestamp: liveChatMessages.timestamp })
+      .from(liveChatMessages)
+      .where(eq(liveChatMessages.video_id, videoId))
+      .orderBy(asc(liveChatMessages.timestamp))
       .limit(keepCount);
 
     if (recentMessages.length < keepCount) {
@@ -193,20 +196,25 @@ export class LiveChatMessagesRepository extends BaseRepository {
 
     const oldestKeptMessage = recentMessages.at(0);
 
-    const cutoffTimestamp = oldestKeptMessage.timestamp;
+    if(oldestKeptMessage === undefined) {
+      return 0;
+    }
+    else {
+        const cutoffTimestamp = oldestKeptMessage.timestamp;
 
-    // Delete messages older than the cutoff
-    const result = await this.db
-      .delete(this.liveChatMessagesTable)
-      .where(
-        and(
-          eq(this.liveChatMessagesTable.video_id, videoId),
-          lt(this.liveChatMessagesTable.timestamp, cutoffTimestamp)
+        // Delete messages older than the cutoff
+        const result = await this.db
+        .delete(liveChatMessages)
+        .where(
+            and(
+            eq(liveChatMessages.video_id, videoId),
+            lt(liveChatMessages.timestamp, cutoffTimestamp)
+            )
         )
-      )
-      .returning();
+        .returning();
 
-    return result.length;
+        return result.length;
+    }
   }
 
   /**
@@ -215,7 +223,7 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @returns Number of deleted messages
    */
   async deleteAll(): Promise<number> {
-    const result = await this.db.delete(this.liveChatMessagesTable).returning();
+    const result = await this.db.delete(liveChatMessages).returning();
     return result.length;
   }
 
@@ -225,10 +233,10 @@ export class LiveChatMessagesRepository extends BaseRepository {
    * @param data - Array of message data for insertion
    * @returns Array of created message records
    */
-  async createMany(data: any[]): Promise<any[]> {
+  async createMany(data: DrizzleNewLiveChatMessage[]): Promise<DrizzleLiveChatMessage[]> {
     if (data.length === 0) {
       return [];
     }
-    return this.db.insert(this.liveChatMessagesTable).values(data).returning();
+    return this.db.insert(liveChatMessages).values(data).returning();
   }
 }

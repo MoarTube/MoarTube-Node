@@ -1,11 +1,11 @@
 /**
  * Unit tests for database/repositories/reports-comments.ts
  *
- * Tests the ReportsCommentsRepository class for comment report CRUD operations.
+ * Tests the ReportsCommentsRepository interface implementations for comment report CRUD operations.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { ReportsCommentsRepository } from '@database/repositories/reports-comments.js';
+import { createReportsCommentsRepository, type IReportsCommentsRepository } from '@database/repositories/reports-comments/index.js';
 
 // Mock drizzle-orm operators
 vi.mock('drizzle-orm', () => ({
@@ -17,8 +17,7 @@ vi.mock('drizzle-orm', () => ({
 
 describe('database/repositories/reports-comments.ts', () => {
   let mockDb: any;
-  let mockReportsTable: any;
-  let repository: ReportsCommentsRepository;
+  let repository: IReportsCommentsRepository<any, any>;
 
   beforeEach(() => {
     mockDb = {
@@ -33,14 +32,8 @@ describe('database/repositories/reports-comments.ts', () => {
       delete: vi.fn().mockReturnThis(),
     };
 
-    mockReportsTable = {
-      report_id: { name: 'report_id' },
-      video_id: { name: 'video_id' },
-      comment_id: { name: 'comment_id' },
-      timestamp: { name: 'timestamp' },
-    };
-
-    repository = new ReportsCommentsRepository(mockDb, mockReportsTable);
+    // Create repository using factory function
+    repository = createReportsCommentsRepository('sqlite', mockDb);
   });
 
   afterEach(() => {

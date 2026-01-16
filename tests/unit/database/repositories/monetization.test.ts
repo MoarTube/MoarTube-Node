@@ -1,12 +1,12 @@
 /**
  * Unit tests for database/repositories/monetization.ts
  *
- * Tests the MonetizationRepository class which provides CRUD operations
+ * Tests the MonetizationRepository interface implementations which provide CRUD operations
  * for crypto wallet address records.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { MonetizationRepository } from '@database/repositories/monetization.js';
+import { createMonetizationRepository, type IMonetizationRepository } from '@database/repositories/monetization/index.js';
 
 // Mock drizzle-orm operators
 vi.mock('drizzle-orm', () => ({
@@ -17,8 +17,7 @@ vi.mock('drizzle-orm', () => ({
 
 describe('database/repositories/monetization.ts', () => {
   let mockDb: any;
-  let mockWalletTable: any;
-  let repository: MonetizationRepository;
+  let repository: IMonetizationRepository<any, any>;
 
   beforeEach(() => {
     mockDb = {
@@ -35,14 +34,8 @@ describe('database/repositories/monetization.ts', () => {
       delete: vi.fn().mockReturnThis(),
     };
 
-    mockWalletTable = {
-      wallet_address_id: { name: 'wallet_address_id' },
-      wallet_address: { name: 'wallet_address' },
-      chain: { name: 'chain' },
-      timestamp: { name: 'timestamp' },
-    };
-
-    repository = new MonetizationRepository(mockDb, mockWalletTable);
+    // Create repository using factory function
+    repository = createMonetizationRepository('sqlite', mockDb);
   });
 
   afterEach(() => {
