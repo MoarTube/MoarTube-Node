@@ -1,1 +1,3 @@
-npm run format && git add . && npm run typecheck && npm run lint:src && npm run test
+npx lint-staged-src
+npm run typecheck
+npm run test
