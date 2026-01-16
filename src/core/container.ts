@@ -5,7 +5,16 @@
  * All services and repositories are registered here for dependency injection.
  */
 import { createContainer, asClass, asValue, InjectionMode, type AwilixContainer } from 'awilix';
+
+// Logger
+import { Logger } from '@utils/index.js';
+
+// Config
+import { getConfig } from '@config/index.js';
+
+// Database layer
 import type {
+  DatabaseClient,
   IVideosRepository,
   ICommentsRepository,
   IReportsVideosRepository,
@@ -53,14 +62,8 @@ import type {
   PostgresNewLink
 } from '@database/index.js';
 
-// Logger
-import { Logger } from '@utils/index.js';
-
-// Database layer
-import type { DatabaseClient } from '@database/index.js';
 import type { DatabaseClient as SQLiteClient } from '@database/sqlite-connection.js';
 import type { DatabaseClient as PostgresClient } from '@database/postgres-connection.js';
-import { getConfig } from '@config/index.js';
 
 // Services
 import {
