@@ -5,12 +5,61 @@
  * All services and repositories are registered here for dependency injection.
  */
 import { createContainer, asClass, asValue, InjectionMode, type AwilixContainer } from 'awilix';
+import type {
+  IVideosRepository,
+  ICommentsRepository,
+  IReportsVideosRepository,
+  IReportsCommentsRepository,
+  IReportsArchiveVideosRepository,
+  IReportsArchiveCommentsRepository,
+  ILiveChatMessagesRepository,
+  IMonetizationRepository,
+  ILinksRepository,
+  SQLiteVideo,
+  SQLiteNewVideo,
+  PostgresVideo,
+  PostgresNewVideo,
+  SQLiteComment,
+  SQLiteNewComment,
+  PostgresComment,
+  PostgresNewComment,
+  SQLiteVideoReport,
+  SQLiteNewVideoReport,
+  PostgresVideoReport,
+  PostgresNewVideoReport,
+  SQLiteCommentReport,
+  SQLiteNewCommentReport,
+  PostgresCommentReport,
+  PostgresNewCommentReport,
+  SQLiteVideoReportArchive,
+  SQLiteNewVideoReportArchive,
+  PostgresVideoReportArchive,
+  PostgresNewVideoReportArchive,
+  SQLiteCommentReportArchive,
+  SQLiteNewCommentReportArchive,
+  PostgresCommentReportArchive,
+  PostgresNewCommentReportArchive,
+  SQLiteLiveChatMessage,
+  SQLiteNewLiveChatMessage,
+  PostgresLiveChatMessage,
+  PostgresNewLiveChatMessage,
+  SQLiteCryptoWalletAddress,
+  SQLiteNewCryptoWalletAddress,
+  PostgresCryptoWalletAddress,
+  PostgresNewCryptoWalletAddress,
+  SQLiteLink,
+  SQLiteNewLink,
+  PostgresLink,
+  PostgresNewLink
+} from '@database/repositories/index.js';
 
 // Logger
 import { Logger } from '@utils/index.js';
 
 // Database layer
 import type { DatabaseClient } from '@database/index.js';
+import type { DatabaseClient as SQLiteClient } from '@database/sqlite-connection.js';
+import type { DatabaseClient as PostgresClient } from '@database/postgres-connection.js';
 import { getConfig } from '@config/index.js';
 
 // Services
@@ -43,15 +92,15 @@ export interface ContainerCradle {
   db: DatabaseClient;
 
   // Repositories
-  videosRepository: any;
-  commentsRepository: any;
-  reportsVideosRepository: any;
-  reportsCommentsRepository: any;
-  reportsArchiveVideosRepository: any;
-  reportsArchiveCommentsRepository: any;
-  liveChatMessagesRepository: any;
-  monetizationRepository: any;
-  linksRepository: any;
+  videosRepository: IVideosRepository<SQLiteVideo, SQLiteNewVideo> | IVideosRepository<PostgresVideo, PostgresNewVideo>;
+  commentsRepository: ICommentsRepository<SQLiteComment, SQLiteNewComment> | ICommentsRepository<PostgresComment, PostgresNewComment>;
+  reportsVideosRepository: IReportsVideosRepository<SQLiteVideoReport, SQLiteNewVideoReport> | IReportsVideosRepository<PostgresVideoReport, PostgresNewVideoReport>;
+  reportsCommentsRepository: IReportsCommentsRepository<SQLiteCommentReport, SQLiteNewCommentReport> | IReportsCommentsRepository<PostgresCommentReport, PostgresNewCommentReport>;
+  reportsArchiveVideosRepository: IReportsArchiveVideosRepository<SQLiteVideoReportArchive, SQLiteNewVideoReportArchive> | IReportsArchiveVideosRepository<PostgresVideoReportArchive, PostgresNewVideoReportArchive>;
+  reportsArchiveCommentsRepository: IReportsArchiveCommentsRepository<SQLiteCommentReportArchive, SQLiteNewCommentReportArchive> | IReportsArchiveCommentsRepository<PostgresCommentReportArchive, PostgresNewCommentReportArchive>;
+  liveChatMessagesRepository: ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage> | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
+  monetizationRepository: IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress> | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>;
+  linksRepository: ILinksRepository<SQLiteLink, SQLiteNewLink> | ILinksRepository<PostgresLink, PostgresNewLink>;
 
   // Services
   videosService: VideosService;
@@ -97,21 +146,16 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
   const config = getConfig();
   const dbDialect = config.nodeSettings.databaseConfig.databaseDialect;
 
-  // Dynamically import schemas and repositories based on dialect
-  const schemas = await (dbDialect === 'postgres'
-    ? import('@database/schemas/postgres/index.js')
-    : import('@database/schemas/sqlite/index.js'));
-
   const {
-    VideosRepository,
-    CommentsRepository,
-    ReportsVideosRepository,
-    ReportsCommentsRepository,
-    ReportsArchiveVideosRepository,
-    ReportsArchiveCommentsRepository,
-    LiveChatMessagesRepository,
-    MonetizationRepository,
-    LinksRepository,
+    createVideosRepository,
+    createCommentsRepository,
+    createReportsVideosRepository,
+    createReportsCommentsRepository,
+    createReportsArchiveVideosRepository,
+    createReportsArchiveCommentsRepository,
+    createLiveChatMessagesRepository,
+    createMonetizationRepository,
+    createLinksRepository,
   } = await import('@database/repositories/index.js');
 
   // Register database client
@@ -124,35 +168,64 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
     logger: asValue(Logger.getInstance()),
   });
 
+  // Helper function to create typed repositories
+  const createTypedRepository = <T>(
+    dialect: 'sqlite' | 'postgres',
+    sqliteFactory: (dialect: 'sqlite', db: SQLiteClient) => T,
+    postgresFactory: (dialect: 'postgres', db: PostgresClient) => T
+  ): T => {
+    return dialect === 'sqlite'
+      ? sqliteFactory('sqlite', db as SQLiteClient)
+      : postgresFactory('postgres', db as PostgresClient);
+  };
+
   // Register repositories (they need db and table in constructor)
   appContainer.register({
-    videosRepository: asClass(VideosRepository as any)
-      .singleton()
-      .inject(() => ({ videosTable: schemas.videos })),
-    commentsRepository: asClass(CommentsRepository as any)
-      .singleton()
-      .inject(() => ({ commentsTable: schemas.comments })),
-    reportsVideosRepository: asClass(ReportsVideosRepository as any)
-      .singleton()
-      .inject(() => ({ videoReportsTable: schemas.videoReports })),
-    reportsCommentsRepository: asClass(ReportsCommentsRepository as any)
-      .singleton()
-      .inject(() => ({ commentReportsTable: schemas.commentReports })),
-    reportsArchiveVideosRepository: asClass(ReportsArchiveVideosRepository as any)
-      .singleton()
-      .inject(() => ({ videoReportsArchiveTable: schemas.videoReportsArchive })),
-    reportsArchiveCommentsRepository: asClass(ReportsArchiveCommentsRepository as any)
-      .singleton()
-      .inject(() => ({ commentReportsArchiveTable: schemas.commentReportsArchive })),
-    liveChatMessagesRepository: asClass(LiveChatMessagesRepository as any)
-      .singleton()
-      .inject(() => ({ liveChatMessagesTable: schemas.liveChatMessages })),
-    monetizationRepository: asClass(MonetizationRepository as any)
-      .singleton()
-      .inject(() => ({ cryptoWalletAddressesTable: schemas.cryptoWalletAddresses })),
-    linksRepository: asClass(LinksRepository as any)
-      .singleton()
-      .inject(() => ({ linksTable: schemas.links })),
+    videosRepository: asValue(createTypedRepository(
+      dbDialect,
+      createVideosRepository,
+      createVideosRepository
+    )),
+    commentsRepository: asValue(createTypedRepository(
+      dbDialect,
+      createCommentsRepository,
+      createCommentsRepository
+    )),
+    reportsVideosRepository: asValue(createTypedRepository(
+      dbDialect,
+      createReportsVideosRepository,
+      createReportsVideosRepository
+    )),
+    reportsCommentsRepository: asValue(createTypedRepository(
+      dbDialect,
+      createReportsCommentsRepository,
+      createReportsCommentsRepository
+    )),
+    reportsArchiveVideosRepository: asValue(createTypedRepository(
+      dbDialect,
+      createReportsArchiveVideosRepository,
+      createReportsArchiveVideosRepository
+    )),
+    reportsArchiveCommentsRepository: asValue(createTypedRepository(
+      dbDialect,
+      createReportsArchiveCommentsRepository,
+      createReportsArchiveCommentsRepository
+    )),
+    liveChatMessagesRepository: asValue(createTypedRepository(
+      dbDialect,
+      createLiveChatMessagesRepository,
+      createLiveChatMessagesRepository
+    )),
+    monetizationRepository: asValue(createTypedRepository(
+      dbDialect,
+      createMonetizationRepository,
+      createMonetizationRepository
+    )),
+    linksRepository: asValue(createTypedRepository(
+      dbDialect,
+      createLinksRepository,
+      createLinksRepository
+    )),
   });
 
   // Register services (singletons for shared state)
