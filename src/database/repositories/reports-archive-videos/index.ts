@@ -27,5 +27,3 @@ export function createReportsArchiveVideosRepository(
 }
 
 export type { IReportsArchiveVideosRepository } from '@database/repositories/reports-archive-videos/interface.js';
-export type { DrizzleVideoReportArchive as SQLiteVideoReportArchive, DrizzleNewVideoReportArchive as SQLiteNewVideoReportArchive } from '@database/schemas/sqlite/reports-archive-videos.js';
-export type { DrizzleVideoReportArchive as PostgresVideoReportArchive, DrizzleNewVideoReportArchive as PostgresNewVideoReportArchive } from '@database/schemas/postgres/reports-archive-videos.js';

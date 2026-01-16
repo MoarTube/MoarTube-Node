@@ -27,5 +27,3 @@ export function createMonetizationRepository(
 }
 
 export type { IMonetizationRepository } from '@database/repositories/monetization/interface.js';
-export type { DrizzleCryptoWalletAddress as SQLiteCryptoWalletAddress, DrizzleNewCryptoWalletAddress as SQLiteNewCryptoWalletAddress } from '@database/schemas/sqlite/monetization.js';
-export type { DrizzleCryptoWalletAddress as PostgresCryptoWalletAddress, DrizzleNewCryptoWalletAddress as PostgresNewCryptoWalletAddress } from '@database/schemas/postgres/monetization.js';

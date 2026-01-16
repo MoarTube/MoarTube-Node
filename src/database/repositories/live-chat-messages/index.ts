@@ -27,5 +27,3 @@ export function createLiveChatMessagesRepository(
 }
 
 export type { ILiveChatMessagesRepository } from '@database/repositories/live-chat-messages/interface.js';
-export type { DrizzleLiveChatMessage as SQLiteLiveChatMessage, DrizzleNewLiveChatMessage as SQLiteNewLiveChatMessage } from '@database/schemas/sqlite/live-chat-messages.js';
-export type { DrizzleLiveChatMessage as PostgresLiveChatMessage, DrizzleNewLiveChatMessage as PostgresNewLiveChatMessage } from '@database/schemas/postgres/live-chat-messages.js';

@@ -51,7 +51,7 @@ import type {
   SQLiteNewLink,
   PostgresLink,
   PostgresNewLink
-} from '@database/repositories/index.js';
+} from '@database/index.js';
 
 // Logger
 import { Logger } from '@utils/index.js';

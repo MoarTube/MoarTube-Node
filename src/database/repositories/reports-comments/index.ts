@@ -27,5 +27,3 @@ export function createReportsCommentsRepository(
 }
 
 export type { IReportsCommentsRepository } from '@database/repositories/reports-comments/interface.js';
-export type { DrizzleCommentReport as SQLiteCommentReport, DrizzleNewCommentReport as SQLiteNewCommentReport } from '@database/schemas/sqlite/reports-comments.js';
-export type { DrizzleCommentReport as PostgresCommentReport, DrizzleNewCommentReport as PostgresNewCommentReport } from '@database/schemas/postgres/reports-comments.js';

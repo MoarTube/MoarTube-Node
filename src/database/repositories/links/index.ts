@@ -27,5 +27,3 @@ export function createLinksRepository(
 }
 
 export type { ILinksRepository } from '@database/repositories/links/interface.js';
-export type { DrizzleLink as SQLiteLink, DrizzleNewLink as SQLiteNewLink } from '@database/schemas/sqlite/links.js';
-export type { DrizzleLink as PostgresLink, DrizzleNewLink as PostgresNewLink } from '@database/schemas/postgres/links.js';

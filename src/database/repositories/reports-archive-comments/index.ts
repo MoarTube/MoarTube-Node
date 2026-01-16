@@ -27,5 +27,3 @@ export function createReportsArchiveCommentsRepository(
 }
 
 export type { IReportsArchiveCommentsRepository } from '@database/repositories/reports-archive-comments/interface.js';
-export type { DrizzleCommentReportArchive as SQLiteCommentReportArchive, DrizzleNewCommentReportArchive as SQLiteNewCommentReportArchive } from '@database/schemas/sqlite/reports-archive-comments.js';
-export type { DrizzleCommentReportArchive as PostgresCommentReportArchive, DrizzleNewCommentReportArchive as PostgresNewCommentReportArchive } from '@database/schemas/postgres/reports-archive-comments.js';

@@ -35,7 +35,7 @@ export {
   type ILinksRepository,
 } from '@database/repositories/index.js';
 
-// Schema types (SQLite types for backward compatibility and type safety)
+// Schema types for SQLite
 export type {
   DrizzleVideo as SQLiteVideo,
   DrizzleNewVideo as SQLiteNewVideo,
@@ -57,7 +57,7 @@ export type {
   DrizzleNewLink as SQLiteNewLink,
 } from '@database/schemas/sqlite/index.js';
 
-// Also export PostgreSQL types for services that need them
+// Schema types for Postgres
 export type {
   DrizzleVideo as PostgresVideo,
   DrizzleNewVideo as PostgresNewVideo,

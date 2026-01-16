@@ -58,7 +58,7 @@ import type {
   PostgresNewLiveChatMessage,
   PostgresNewCryptoWalletAddress,
   PostgresNewLink,
-} from '@database/repositories/index.js';
+} from '@database/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
 import type { IndexerService } from '@services/indexer.js';
 
