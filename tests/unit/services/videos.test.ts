@@ -1055,6 +1055,24 @@ describe('VideosService', () => {
         { videoId: 'video123', count: 1 }
       );
     });
+
+    it('should handle missing pending views in debounce callback', async () => {
+      const mockVideo = { video_id: 'video123', views: 100 };
+      mockVideosRepository.findById.mockResolvedValue(mockVideo);
+      mockVideosRepository.incrementViewsBy.mockResolvedValue(undefined);
+
+      // Call to set up debounce
+      await service.incrementViewsDebounced('video123');
+
+      // Simulate the map being cleared (edge case)
+      (service as any).pendingViews.delete('video123');
+
+      // Advance timers to trigger the debounce callback
+      await vi.advanceTimersByTimeAsync(500);
+
+      // Should have called incrementViewsBy with 0
+      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledWith('video123', 0);
+    });
   });
 
   describe('like/dislike tracking', () => {

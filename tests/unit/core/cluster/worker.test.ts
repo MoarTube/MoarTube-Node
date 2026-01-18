@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import cluster from 'node:cluster';
 
 // Store handlers for IPC testing
 const ipcHandlers: Record<string, Function> = {};
@@ -778,6 +779,31 @@ describe('ClusterWorker', () => {
     });
   });
 
+  it('should handle stop when app is null', async () => {
+    const worker = new ClusterWorker(mockLogger as any);
+    await worker.start();
+    (worker as any).app = null;
+    await worker.stop();
+    expect(mockFastifyClose).not.toHaveBeenCalled();
+  });
+
+  it('should handle stop when wss is null', async () => {
+    const worker = new ClusterWorker(mockLogger as any);
+    await worker.start();
+    (worker as any).wss = null;
+    await worker.stop();
+    expect(mockWssClose).not.toHaveBeenCalled();
+  });
+
+  it('should handle cluster.worker being null', async () => {
+    const originalWorker = cluster.worker;
+    cluster.worker = null as any;
+    const worker = new ClusterWorker(mockLogger as any);
+    await worker.start();
+    expect(mockLogger.info).toHaveBeenCalledWith('Worker undefined listening on port 3000');
+    cluster.worker = originalWorker;
+  });
+
   describe('IPC handlers', () => {
     it('should handle get_jwt_secret_response', async () => {
       const worker = new ClusterWorker(mockLogger as any);
@@ -876,6 +902,39 @@ describe('ClusterWorker', () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(mockLogger.info).toHaveBeenCalledWith('Received server restart request');
+    });
+
+    it('should handle restart_server_response when app is null', async () => {
+      const worker = new ClusterWorker(mockLogger as any);
+      await worker.start();
+      (worker as any).app = null;
+
+      ipcHandlers['restart_server_response']?.({ cmd: 'restart_server_response' });
+
+      // Give the async operation a tick to start
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockLogger.info).toHaveBeenCalledWith('Received server restart request');
+      // Should not try to close null app
+      expect(mockFastifyClose).not.toHaveBeenCalled();
+    });
+
+    it('should handle restart_server_response when cluster.worker is null', async () => {
+      const originalWorker = cluster.worker;
+      cluster.worker = null as any;
+
+      const worker = new ClusterWorker(mockLogger as any);
+      await worker.start();
+
+      ipcHandlers['restart_server_response']?.({ cmd: 'restart_server_response' });
+
+      // Give the async operation a tick to start
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockLogger.info).toHaveBeenCalledWith('Received server restart request');
+      expect(mockLogger.info).toHaveBeenCalledWith('Worker 0 restarted on port 3000');
+
+      cluster.worker = originalWorker;
     });
 
     it('should handle restart_database_response', async () => {
@@ -991,6 +1050,24 @@ describe('ClusterWorker', () => {
         eventName: 'live_stream_stats',
         watchingCount: 0,
       });
+    });
+
+    it('should handle live_stream_worker_stats_request when cluster.worker is null', async () => {
+      const originalWorker = cluster.worker;
+      cluster.worker = null as any;
+
+      const worker = new ClusterWorker(mockLogger as any);
+      await worker.start();
+
+      ipcHandlers['live_stream_worker_stats_request']?.();
+
+      expect(mockIpcSendToMaster).toHaveBeenCalledWith({
+        cmd: 'live_stream_worker_stats_response',
+        workerId: 0, // Should default to 0 when cluster.worker is null
+        liveStreamWatchingCounts: {},
+      });
+
+      cluster.worker = originalWorker;
     });
   });
 

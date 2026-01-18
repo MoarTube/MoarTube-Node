@@ -79,6 +79,10 @@ describe('config/urls.ts', () => {
 
       expect(() => new Urls(invalidIndexerConfig, mockAliaserConfig)).toThrow('Invalid indexer config');
     });
+
+    it('should throw when getInstance is called before initialize', () => {
+      expect(() => Urls.getInstance()).toThrow('Urls not initialized. Call Urls.initialize() first.');
+    });
   });
 
   describe('URL generation', () => {
