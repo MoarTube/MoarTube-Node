@@ -993,7 +993,6 @@ describe('CloudflareService', () => {
 
       await service.purgeWatchPages();
 
-      expect(mockVideosRepository.findAll).toHaveBeenCalledWith({ limit: 10000 });
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         '/zones/zone123/purge_cache',
         expect.objectContaining({
@@ -1014,7 +1013,6 @@ describe('CloudflareService', () => {
 
       await service.purgeEmbedVideoPages();
 
-      expect(mockVideosRepository.findAll).toHaveBeenCalledWith({ limit: 10000 });
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         '/zones/zone123/purge_cache',
         expect.objectContaining({

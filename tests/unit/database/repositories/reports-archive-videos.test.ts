@@ -5,6 +5,36 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+
+// Mock the schema imports first
+vi.mock('@database/schemas/sqlite/reports-archive-videos.js', () => ({
+  videoReportsArchive: {
+    name: 'videoreportsarchives',
+    archive_id: { name: 'archive_id' },
+    report_id: { name: 'report_id' },
+    timestamp: { name: 'timestamp' },
+    video_timestamp: { name: 'video_timestamp' },
+    video_id: { name: 'video_id' },
+    email: { name: 'email' },
+    type: { name: 'type' },
+    message: { name: 'message' },
+  },
+}));
+
+vi.mock('@database/schemas/postgres/reports-archive-videos.js', () => ({
+  videoReportsArchive: {
+    name: 'videoreportsarchives',
+    archive_id: { name: 'archive_id' },
+    report_id: { name: 'report_id' },
+    timestamp: { name: 'timestamp' },
+    video_timestamp: { name: 'video_timestamp' },
+    video_id: { name: 'video_id' },
+    email: { name: 'email' },
+    type: { name: 'type' },
+    message: { name: 'message' },
+  },
+}));
+
 import { createReportsArchiveVideosRepository, type IReportsArchiveVideosRepository } from '@database/repositories/reports-archive-videos/index.js';
 
 // Mock drizzle-orm operators
@@ -16,7 +46,8 @@ vi.mock('drizzle-orm', () => ({
 
 describe('database/repositories/reports-archive-videos.ts', () => {
   let mockDb: any;
-  let repository: IReportsArchiveVideosRepository<any, any>;
+  let sqliteRepository: IReportsArchiveVideosRepository<any, any>;
+  let postgresRepository: IReportsArchiveVideosRepository<any, any>;
 
   beforeEach(() => {
     mockDb = {
@@ -31,175 +62,284 @@ describe('database/repositories/reports-archive-videos.ts', () => {
       delete: vi.fn().mockReturnThis(),
     };
 
-    // Create repository using factory function
-    repository = createReportsArchiveVideosRepository('sqlite', mockDb);
+    // Create repositories using factory function
+    sqliteRepository = createReportsArchiveVideosRepository('sqlite', mockDb);
+    postgresRepository = createReportsArchiveVideosRepository('postgres', mockDb);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('findById', () => {
-    it('should find archive by id', async () => {
-      const mockArchive = { archive_id: 1 };
-      mockDb.limit.mockResolvedValue([mockArchive]);
-
-      const result = await repository.findById(1);
-
-      expect(result).toEqual(mockArchive);
+  describe('factory function', () => {
+    it('should create SQLite repository', () => {
+      expect(sqliteRepository).toBeDefined();
+      expect(typeof sqliteRepository.findById).toBe('function');
     });
 
-    it('should return null when not found', async () => {
-      mockDb.limit.mockResolvedValue([]);
+    it('should create Postgres repository', () => {
+      expect(postgresRepository).toBeDefined();
+      expect(typeof postgresRepository.findById).toBe('function');
+    });
+  });
 
-      const result = await repository.findById(999);
+  describe('findById', () => {
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      expect(result).toBeNull();
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should find archive by id', async () => {
+          const mockArchive = { archive_id: 1 };
+          mockDb.limit.mockResolvedValue([mockArchive]);
+
+          const result = await repository().findById(1);
+
+          expect(result).toEqual(mockArchive);
+        });
+
+        it('should return null when not found', async () => {
+          mockDb.limit.mockResolvedValue([]);
+
+          const result = await repository().findById(999);
+
+          expect(result).toBeNull();
+        });
+      });
     });
   });
 
   describe('findAll', () => {
-    it('should return all archives without limit', async () => {
-      const mockArchives = [{ archive_id: 1 }];
-      mockDb.orderBy.mockResolvedValue(mockArchives);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.findAll();
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should return all archives without limit', async () => {
+          const mockArchives = [{ archive_id: 1 }];
+          mockDb.orderBy.mockResolvedValue(mockArchives);
 
-      expect(result).toEqual(mockArchives);
-    });
+          const result = await repository().findAll();
 
-    it('should apply limit when specified', async () => {
-      mockDb.limit.mockResolvedValue([]);
+          expect(result).toEqual(mockArchives);
+        });
 
-      await repository.findAll({ limit: 10 });
+        it('should apply limit when specified', async () => {
+          mockDb.limit.mockResolvedValue([]);
 
-      expect(mockDb.limit).toHaveBeenCalledWith(10);
+          await repository().findAll({ limit: 10 });
+
+          expect(mockDb.limit).toHaveBeenCalledWith(10);
+        });
+      });
     });
   });
 
   describe('findByVideoId', () => {
-    it('should find archives by video id', async () => {
-      const mockArchives = [{ archive_id: 1 }];
-      mockDb.limit.mockResolvedValue(mockArchives);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.findByVideoId('v1');
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should find archives by video id', async () => {
+          const mockArchives = [{ archive_id: 1 }];
+          mockDb.limit.mockResolvedValue(mockArchives);
 
-      expect(mockDb.limit).toHaveBeenCalledWith(20);
-      expect(result).toEqual(mockArchives);
+          const result = await repository().findByVideoId('v1');
+
+          expect(mockDb.limit).toHaveBeenCalledWith(20); // default limit
+          expect(result).toEqual(mockArchives);
+        });
+      });
     });
   });
 
   describe('findByReportId', () => {
-    it('should find archive by report id', async () => {
-      const mockArchive = { archive_id: 1, report_id: 5 };
-      mockDb.limit.mockResolvedValue([mockArchive]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.findByReportId(5);
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should find archive by report id', async () => {
+          const mockArchive = { archive_id: 1, report_id: 5 };
+          mockDb.limit.mockResolvedValue([mockArchive]);
 
-      expect(result).toEqual(mockArchive);
-    });
+          const result = await repository().findByReportId(5);
 
-    it('should return null when report id not found', async () => {
-      mockDb.limit.mockResolvedValue([]);
+          expect(result).toEqual(mockArchive);
+        });
 
-      const result = await repository.findByReportId(999);
+        it('should return null when report id not found', async () => {
+          mockDb.limit.mockResolvedValue([]);
 
-      expect(result).toBeNull();
+          const result = await repository().findByReportId(999);
+
+          expect(result).toBeNull();
+        });
+      });
     });
   });
 
   describe('getCount', () => {
-    it('should return count of archives', async () => {
-      mockDb.from.mockResolvedValue([{ count: 30 }]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.getCount();
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should return count of archives', async () => {
+          mockDb.from.mockResolvedValue([{ count: 30 }]);
 
-      expect(result).toBe(30);
-    });
+          const result = await repository().getCount();
 
-    it('should return 0 when no archives', async () => {
-      mockDb.from.mockResolvedValue([{}]);
+          expect(result).toBe(30);
+        });
 
-      const result = await repository.getCount();
+        it('should return 0 when no archives', async () => {
+          mockDb.from.mockResolvedValue([{}]);
 
-      expect(result).toBe(0);
+          const result = await repository().getCount();
+
+          expect(result).toBe(0);
+        });
+      });
     });
   });
 
   describe('create', () => {
-    it('should create an archive record', async () => {
-      const archiveData = { video_id: 'v1' };
-      const created = { archive_id: 1, ...archiveData };
-      mockDb.returning.mockResolvedValue([created]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.create(archiveData);
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should create an archive record', async () => {
+          const archiveData = { report_id: 1, timestamp: 1234567890, video_timestamp: 1234567800, video_id: 'v1', email: 'test@example.com', type: 'spam', message: 'Test message' };
+          const created = { archive_id: 1, ...archiveData };
+          mockDb.returning.mockResolvedValue([created]);
 
-      expect(result).toEqual(created);
-    });
+          const result = await repository().create(archiveData);
 
-    it('should throw error when insert fails', async () => {
-      mockDb.returning.mockResolvedValue([]);
+          expect(result).toEqual(created);
+        });
 
-      await expect(repository.create({ video_id: 'v1' })).rejects.toThrow(
-        'Failed to create video report archive record'
-      );
+        it('should throw error when insert fails', async () => {
+          mockDb.returning.mockResolvedValue([]);
+
+          await expect(repository().create({ report_id: 1, timestamp: 1234567890, video_timestamp: 1234567800, video_id: 'v1', email: 'test@example.com', type: 'spam', message: 'Test message' })).rejects.toThrow(
+            'Failed to create video report archive record'
+          );
+        });
+      });
     });
   });
 
   describe('delete', () => {
-    it('should delete archive by id', async () => {
-      mockDb.returning.mockResolvedValue([{ archive_id: 1 }]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.delete(1);
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should delete archive by id', async () => {
+          mockDb.returning.mockResolvedValue([{ archive_id: 1 }]);
 
-      expect(result).toBe(true);
-    });
+          const result = await repository().delete(1);
 
-    it('should return false when archive not found', async () => {
-      mockDb.returning.mockResolvedValue([]);
+          expect(result).toBe(true);
+        });
 
-      const result = await repository.delete(999);
+        it('should return false when archive not found', async () => {
+          mockDb.returning.mockResolvedValue([]);
 
-      expect(result).toBe(false);
+          const result = await repository().delete(999);
+
+          expect(result).toBe(false);
+        });
+      });
     });
   });
 
   describe('deleteByVideoId', () => {
-    it('should delete all archives for video', async () => {
-      mockDb.returning.mockResolvedValue([{}, {}]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.deleteByVideoId('v1');
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should delete all archives for video', async () => {
+          mockDb.returning.mockResolvedValue([{}, {}]);
 
-      expect(result).toBe(2);
+          const result = await repository().deleteByVideoId('v1');
+
+          expect(result).toBe(2);
+        });
+      });
     });
   });
 
   describe('deleteAll', () => {
-    it('should delete all archives and return count', async () => {
-      mockDb.returning.mockResolvedValue([{}, {}, {}]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.deleteAll();
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should delete all archives and return count', async () => {
+          mockDb.returning.mockResolvedValue([{}, {}, {}, {}]);
 
-      expect(result).toBe(3);
+          const result = await repository().deleteAll();
+
+          expect(result).toBe(4);
+        });
+      });
     });
   });
 
   describe('createMany', () => {
-    it('should create multiple archives', async () => {
-      const archivesData = [{ video_id: 'v1' }, { video_id: 'v2' }];
-      const created = [{ archive_id: 1 }, { archive_id: 2 }];
-      mockDb.returning.mockResolvedValue(created);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.createMany(archivesData);
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should create multiple archives', async () => {
+          const archivesData = [
+            { report_id: 1, timestamp: 1234567890, video_timestamp: 1234567800, video_id: 'v1', email: 'test1@example.com', type: 'spam', message: 'Test message 1' },
+            { report_id: 2, timestamp: 1234567891, video_timestamp: 1234567801, video_id: 'v2', email: 'test2@example.com', type: 'harassment', message: 'Test message 2' }
+          ];
+          const created = [
+            { archive_id: 1, ...archivesData[0] },
+            { archive_id: 2, ...archivesData[1] },
+          ];
+          mockDb.returning.mockResolvedValue(created);
 
-      expect(result).toEqual(created);
-    });
+          const result = await repository().createMany(archivesData);
 
-    it('should return empty array when data is empty', async () => {
-      const result = await repository.createMany([]);
+          expect(result).toEqual(created);
+        });
 
-      expect(mockDb.insert).not.toHaveBeenCalled();
-      expect(result).toEqual([]);
+        it('should return empty array when data is empty', async () => {
+          const result = await repository().createMany([]);
+
+          expect(mockDb.insert).not.toHaveBeenCalled();
+          expect(result).toEqual([]);
+        });
+      });
     });
   });
 });

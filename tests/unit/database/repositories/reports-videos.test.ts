@@ -1,10 +1,38 @@
 /**
  * Unit tests for database/repositories/reports-videos.ts
  *
- * Tests the ReportsVideosRepository class for video report CRUD operations.
+ * Tests the ReportsVideosRepository interface implementations for video report CRUD operations.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+
+// Mock the schema imports first
+vi.mock('@database/schemas/sqlite/reports-videos.js', () => ({
+  videoReports: {
+    name: 'videoreports',
+    report_id: { name: 'report_id' },
+    timestamp: { name: 'timestamp' },
+    video_timestamp: { name: 'video_timestamp' },
+    video_id: { name: 'video_id' },
+    email: { name: 'email' },
+    type: { name: 'type' },
+    message: { name: 'message' },
+  },
+}));
+
+vi.mock('@database/schemas/postgres/reports-videos.js', () => ({
+  videoReports: {
+    name: 'videoreports',
+    report_id: { name: 'report_id' },
+    timestamp: { name: 'timestamp' },
+    video_timestamp: { name: 'video_timestamp' },
+    video_id: { name: 'video_id' },
+    email: { name: 'email' },
+    type: { name: 'type' },
+    message: { name: 'message' },
+  },
+}));
+
 import { createReportsVideosRepository, type IReportsVideosRepository } from '@database/repositories/reports-videos/index.js';
 
 // Mock drizzle-orm operators
@@ -15,9 +43,10 @@ vi.mock('drizzle-orm', () => ({
   gt: vi.fn((field, value) => ({ type: 'gt', field, value })),
 }));
 
-describe('database/repositories/reports-videos/index.ts', () => {
+describe('database/repositories/reports-videos.ts', () => {
   let mockDb: any;
-  let repository: IReportsVideosRepository<any, any>;
+  let sqliteRepository: IReportsVideosRepository<any, any>;
+  let postgresRepository: IReportsVideosRepository<any, any>;
 
   beforeEach(() => {
     mockDb = {
@@ -32,173 +61,288 @@ describe('database/repositories/reports-videos/index.ts', () => {
       delete: vi.fn().mockReturnThis(),
     };
 
-    repository = createReportsVideosRepository('sqlite', mockDb);
+    // Create repositories using factory function
+    sqliteRepository = createReportsVideosRepository('sqlite', mockDb);
+    postgresRepository = createReportsVideosRepository('postgres', mockDb);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('findById', () => {
-    it('should find report by id', async () => {
-      const mockReport = { report_id: 1 };
-      mockDb.limit.mockResolvedValue([mockReport]);
-
-      const result = await repository.findById(1);
-
-      expect(result).toEqual(mockReport);
+  describe('factory function', () => {
+    it('should create SQLite repository', () => {
+      expect(sqliteRepository).toBeDefined();
+      expect(typeof sqliteRepository.findById).toBe('function');
     });
 
-    it('should return null when not found', async () => {
-      mockDb.limit.mockResolvedValue([]);
+    it('should create Postgres repository', () => {
+      expect(postgresRepository).toBeDefined();
+      expect(typeof postgresRepository.findById).toBe('function');
+    });
+  });
 
-      const result = await repository.findById(999);
+  describe('findById', () => {
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      expect(result).toBeNull();
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should find report by id', async () => {
+          const mockReport = { report_id: 1 };
+          mockDb.limit.mockResolvedValue([mockReport]);
+
+          const result = await repository().findById(1);
+
+          expect(result).toEqual(mockReport);
+        });
+
+        it('should return null when not found', async () => {
+          mockDb.limit.mockResolvedValue([]);
+
+          const result = await repository().findById(999);
+
+          expect(result).toBeNull();
+        });
+      });
     });
   });
 
   describe('findAll', () => {
-    it('should return all reports without limit', async () => {
-      const mockReports = [{ report_id: 1 }];
-      mockDb.orderBy.mockResolvedValue(mockReports);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.findAll();
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should return all reports without limit', async () => {
+          const mockReports = [{ report_id: 1 }];
+          mockDb.orderBy.mockResolvedValue(mockReports);
 
-      expect(result).toEqual(mockReports);
-    });
+          const result = await repository().findAll();
 
-    it('should apply limit when specified', async () => {
-      mockDb.limit.mockResolvedValue([]);
+          expect(result).toEqual(mockReports);
+        });
 
-      await repository.findAll({ limit: 10 });
+        it('should apply limit when specified', async () => {
+          mockDb.limit.mockResolvedValue([]);
 
-      expect(mockDb.limit).toHaveBeenCalledWith(10);
+          await repository().findAll({ limit: 10 });
+
+          expect(mockDb.limit).toHaveBeenCalledWith(10);
+        });
+      });
     });
   });
 
   describe('findByVideoId', () => {
-    it('should find reports by video id with default limit', async () => {
-      const mockReports = [{ report_id: 1 }];
-      mockDb.limit.mockResolvedValue(mockReports);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.findByVideoId('v1');
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should find reports by video id with default limit', async () => {
+          const mockReports = [{ report_id: 1 }];
+          mockDb.limit.mockResolvedValue(mockReports);
 
-      expect(mockDb.limit).toHaveBeenCalledWith(20);
-      expect(result).toEqual(mockReports);
+          const result = await repository().findByVideoId('v1');
+
+          expect(mockDb.limit).toHaveBeenCalledWith(20);
+          expect(result).toEqual(mockReports);
+        });
+
+        it('should apply custom limit', async () => {
+          mockDb.limit.mockResolvedValue([]);
+
+          await repository().findByVideoId('v1', { limit: 5 });
+
+          expect(mockDb.limit).toHaveBeenCalledWith(5);
+        });
+      });
     });
   });
 
   describe('getCount', () => {
-    it('should return count of reports', async () => {
-      mockDb.from.mockResolvedValue([{ count: 15 }]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.getCount();
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should return count of reports', async () => {
+          mockDb.from.mockResolvedValue([{ count: 15 }]);
 
-      expect(result).toBe(15);
-    });
+          const result = await repository().getCount();
 
-    it('should return 0 when no reports', async () => {
-      mockDb.from.mockResolvedValue([{}]);
+          expect(result).toBe(15);
+        });
 
-      const result = await repository.getCount();
+        it('should return 0 when no reports', async () => {
+          mockDb.from.mockResolvedValue([{}]);
 
-      expect(result).toBe(0);
+          const result = await repository().getCount();
+
+          expect(result).toBe(0);
+        });
+      });
     });
   });
 
   describe('create', () => {
-    it('should create a report record', async () => {
-      const reportData = { video_id: 'v1', reason: 'spam' };
-      const created = { report_id: 1, ...reportData };
-      mockDb.returning.mockResolvedValue([created]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.create(reportData);
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should create a report record', async () => {
+          const reportData = { video_id: 'v1', reason: 'spam', timestamp: 123, video_timestamp: 456, email: 'test@example.com', type: 'spam', message: 'test' };
+          const created = { report_id: 1, ...reportData };
+          mockDb.returning.mockResolvedValue([created]);
 
-      expect(result).toEqual(created);
-    });
+          const result = await repository().create(reportData);
 
-    it('should throw error when insert fails', async () => {
-      mockDb.returning.mockResolvedValue([]);
+          expect(result).toEqual(created);
+        });
 
-      await expect(repository.create({ video_id: 'v1' })).rejects.toThrow(
-        'Failed to create video report record'
-      );
+        it('should throw error when insert fails', async () => {
+          mockDb.returning.mockResolvedValue([]);
+
+          await expect(repository().create({ video_id: 'v1', timestamp: 123, video_timestamp: 456, email: 'test@example.com', type: 'spam', message: 'test' })).rejects.toThrow(
+            'Failed to create video report record'
+          );
+        });
+      });
     });
   });
 
   describe('delete', () => {
-    it('should delete report by id', async () => {
-      mockDb.returning.mockResolvedValue([{ report_id: 1 }]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.delete(1);
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should delete report by id', async () => {
+          mockDb.returning.mockResolvedValue([{ report_id: 1 }]);
 
-      expect(result).toBe(true);
-    });
+          const result = await repository().delete(1);
 
-    it('should return false when report not found', async () => {
-      mockDb.returning.mockResolvedValue([]);
+          expect(result).toBe(true);
+        });
 
-      const result = await repository.delete(999);
+        it('should return false when report not found', async () => {
+          mockDb.returning.mockResolvedValue([]);
 
-      expect(result).toBe(false);
+          const result = await repository().delete(999);
+
+          expect(result).toBe(false);
+        });
+      });
     });
   });
 
   describe('deleteByVideoId', () => {
-    it('should delete all reports for video', async () => {
-      mockDb.returning.mockResolvedValue([{}, {}]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.deleteByVideoId('v1');
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should delete all reports for video', async () => {
+          mockDb.returning.mockResolvedValue([{}, {}]);
 
-      expect(result).toBe(2);
+          const result = await repository().deleteByVideoId('v1');
+
+          expect(result).toBe(2);
+        });
+      });
     });
   });
 
   describe('countNewerThan', () => {
-    it('should count reports newer than timestamp', async () => {
-      mockDb.where.mockResolvedValue([{ count: 5 }]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.countNewerThan(12345);
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should count reports newer than timestamp', async () => {
+          mockDb.where.mockResolvedValue([{ count: 5 }]);
 
-      expect(result).toBe(5);
-    });
+          const result = await repository().countNewerThan(12345);
 
-    it('should return 0 when no newer reports', async () => {
-      mockDb.where.mockResolvedValue([{}]);
+          expect(result).toBe(5);
+        });
 
-      const result = await repository.countNewerThan(99999);
+        it('should return 0 when no newer reports', async () => {
+          mockDb.where.mockResolvedValue([{}]);
 
-      expect(result).toBe(0);
+          const result = await repository().countNewerThan(99999);
+
+          expect(result).toBe(0);
+        });
+      });
     });
   });
 
   describe('deleteAll', () => {
-    it('should delete all reports and return count', async () => {
-      mockDb.returning.mockResolvedValue([{}, {}, {}]);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.deleteAll();
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should delete all reports and return count', async () => {
+          mockDb.returning.mockResolvedValue([{}, {}, {}]);
 
-      expect(result).toBe(3);
+          const result = await repository().deleteAll();
+
+          expect(result).toBe(3);
+        });
+      });
     });
   });
 
   describe('createMany', () => {
-    it('should create multiple reports', async () => {
-      const reportsData = [{ video_id: 'v1' }, { video_id: 'v2' }];
-      const created = [{ report_id: 1 }, { report_id: 2 }];
-      mockDb.returning.mockResolvedValue(created);
+    const testCases = [
+      { name: 'SQLite', repository: () => sqliteRepository },
+      { name: 'Postgres', repository: () => postgresRepository },
+    ];
 
-      const result = await repository.createMany(reportsData);
+    testCases.forEach(({ name, repository }) => {
+      describe(`${name} implementation`, () => {
+        it('should create multiple reports', async () => {
+          const reportsData = [
+            { video_id: 'v1', timestamp: 123, video_timestamp: 456, email: 'test1@example.com', type: 'spam', message: 'test1' },
+            { video_id: 'v2', timestamp: 124, video_timestamp: 457, email: 'test2@example.com', type: 'harassment', message: 'test2' }
+          ];
+          const created = [{ report_id: 1 }, { report_id: 2 }];
+          mockDb.returning.mockResolvedValue(created);
 
-      expect(result).toEqual(created);
-    });
+          const result = await repository().createMany(reportsData);
 
-    it('should return empty array when data is empty', async () => {
-      const result = await repository.createMany([]);
+          expect(result).toEqual(created);
+        });
 
-      expect(mockDb.insert).not.toHaveBeenCalled();
-      expect(result).toEqual([]);
+        it('should return empty array when data is empty', async () => {
+          const result = await repository().createMany([]);
+
+          expect(mockDb.insert).not.toHaveBeenCalled();
+          expect(result).toEqual([]);
+        });
+      });
     });
   });
 });

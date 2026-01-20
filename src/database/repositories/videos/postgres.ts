@@ -253,7 +253,7 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
   /**
    * Gets the sort field based on the sort option
    */
-  private getSortField(
+  protected getSortField(
     sortBy: string
   ):
     | typeof videos.views
@@ -276,7 +276,7 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
   /**
    * Builds WHERE conditions from query options
    */
-  private buildWhereConditions(options?: VideoQueryOptions): SQL | undefined {
+  protected buildWhereConditions(options?: VideoQueryOptions): SQL | undefined {
     if (options === undefined) {
       return undefined;
     }

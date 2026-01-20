@@ -127,7 +127,7 @@ export class CloudflareService extends BaseService {
       const ids = videoIds ?? [];
       if (ids.length === 0) {
         // Get all videos if none specified
-        const videos = await this.videosRepository.findAll({ limit: 10000 });
+        const videos = await this.videosRepository.findAll();
         ids.push(...videos.map((v: VideoWithId) => v.video_id));
       }
 
@@ -159,7 +159,7 @@ export class CloudflareService extends BaseService {
 
       const ids = videoIds ?? [];
       if (ids.length === 0) {
-        const videos = await this.videosRepository.findAll({ limit: 10000 });
+        const videos = await this.videosRepository.findAll();
         ids.push(...videos.map((v: VideoWithId) => v.video_id));
       }
 

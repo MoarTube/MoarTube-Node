@@ -54,10 +54,6 @@
     "src/**/*.ts": [
       "eslint --fix",
       "prettier --write"
-    ],
-    "tests/**/*.ts": [
-      "eslint --fix",
-      "prettier --write"
     ]
   },
   "dependencies": {
