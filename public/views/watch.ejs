@@ -2384,7 +2384,7 @@ body {
                   }
                   this.showAlert(true, data.message);
                 } else if (data.eventName === 'cloudflare_turnstile_information') {
-                  const cloudflareTurnstileSiteKey = data.cloudflareTurnstileSiteKey;
+                  const cloudflareTurnstileSiteKey = data.data.cloudflareTurnstileSiteKey;
                   this.CLOUDFLARE_TURNSTILE_SITE_KEY = cloudflareTurnstileSiteKey;
                 }
               };
