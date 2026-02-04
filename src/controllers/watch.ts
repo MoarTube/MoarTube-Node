@@ -182,11 +182,6 @@ export class WatchController extends VideoControllerBase {
     const { adaptiveSources, progressiveSources, sourcesFormatsAndResolutions } =
       this.buildVideoSources(video, externalVideosBaseUrl);
 
-    const isHlsAvailable = sourcesFormatsAndResolutions.m3u8.length > 0;
-    const isMp4Available = sourcesFormatsAndResolutions.mp4.length > 0;
-    const isWebmAvailable = sourcesFormatsAndResolutions.webm.length > 0;
-    const isOgvAvailable = sourcesFormatsAndResolutions.ogv.length > 0;
-
     return {
       informationData: this.buildNodeInformation(nodeSettings, videoCount),
       linksData: { isError: false as const, links },
@@ -196,10 +191,6 @@ export class WatchController extends VideoControllerBase {
       },
       videoData: this.buildVideoData(
         video,
-        isHlsAvailable,
-        isMp4Available,
-        isWebmAvailable,
-        isOgvAvailable,
         adaptiveSources,
         progressiveSources,
         sourcesFormatsAndResolutions
@@ -259,10 +250,6 @@ export class WatchController extends VideoControllerBase {
    */
   private buildVideoData(
     video: SQLiteVideo | PostgresVideo,
-    isHlsAvailable: boolean,
-    isMp4Available: boolean,
-    isWebmAvailable: boolean,
-    isOgvAvailable: boolean,
     adaptiveSources: VideoSource[],
     progressiveSources: VideoSource[],
     sourcesFormatsAndResolutions: {
@@ -288,10 +275,10 @@ export class WatchController extends VideoControllerBase {
         isCommentsEnabled: video.is_comments_enabled,
         isReportsEnabled: video.is_reports_enabled,
         creationTimestamp: video.creation_timestamp,
-        isHlsAvailable,
-        isMp4Available,
-        isWebmAvailable,
-        isOgvAvailable,
+        isHlsAvailable: sourcesFormatsAndResolutions.m3u8.length > 0,
+        isMp4Available: sourcesFormatsAndResolutions.mp4.length > 0,
+        isWebmAvailable: sourcesFormatsAndResolutions.webm.length > 0,
+        isOgvAvailable: sourcesFormatsAndResolutions.ogv.length > 0,
         adaptiveSources,
         progressiveSources,
         sourcesFormatsAndResolutions,
