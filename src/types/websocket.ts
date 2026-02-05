@@ -39,6 +39,9 @@ export type WebSocketEventName =
   | 'node_about_update'
   // Registration events
   | 'registered'
+  // Ping/Pong
+  | 'ping'
+  | 'pong'
   // Echo event (generic broadcast)
   | 'echo';
 

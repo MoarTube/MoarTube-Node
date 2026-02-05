@@ -1095,6 +1095,34 @@ export class VideosController extends BaseController {
    * Get video data with formatted fields
    * GET /videos/:videoId/data
    */
+  /**
+   * Get video sources (adaptive and progressive)
+   * GET /videos/:videoId/sources
+   */
+  getVideoSources = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    try {
+      const { videoId } = request.params as VideoIdParams;
+
+      const sources = await this.videosService.getVideoSources(videoId);
+
+      if (sources === null) {
+        throw new NotFoundError(`Video not found`);
+      }
+
+      return await this.sendSuccess(reply, sources);
+    } catch (error) {
+      if (error instanceof NotFoundError) {
+        return this.sendError(reply, error.message, 404);
+      }
+      this.logger.error('VideosController.getVideoSources failed', error);
+      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+    }
+  };
+
+  /**
+   * Get detailed video data
+   * GET /videos/:videoId/data
+   */
   getVideoData = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { videoId } = request.params as VideoIdParams;

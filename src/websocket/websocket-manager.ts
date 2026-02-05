@@ -21,6 +21,7 @@ import {
   ChatMessageHandler,
   VideoStatusHandler,
   EchoHandler,
+  PingHandler,
   RegisterHandler,
 } from '@websocket/handlers/index.js';
 import { Logger, type Logger as LoggerType } from '@utils/index.js';
@@ -74,6 +75,7 @@ export class WebSocketManager {
     // Register handlers that don't need services
     this.registerHandler(new VideoStatusHandler());
     this.registerHandler(new EchoHandler());
+    this.registerHandler(new PingHandler());
     this.registerHandler(new RegisterHandler());
 
     // Service-dependent handlers will be registered when container is set

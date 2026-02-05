@@ -866,6 +866,47 @@ export class VideosService extends BaseService {
   }
 
   /**
+   * Get video sources (adaptive and progressive)
+   */
+  async getVideoSources(videoId: string): Promise<{ adaptiveSources: VideoSource[]; progressiveSources: VideoSource[] } | null> {
+    return this.withErrorLogging('getVideoSources', async () => {
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        return null;
+      }
+
+      const outputs = this.safeJsonParse(video.outputs, {
+        m3u8: [],
+        mp4: [],
+        webm: [],
+        ogv: [],
+      }) as VideoOutputs;
+
+      // Determine manifest type based on streaming status
+      const manifestType = video.is_streaming ? 'dynamic' : 'static';
+
+      // Get external videos base URL
+      const config = getConfig();
+      const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
+
+      const sourcesFormatsAndResolutions: SourcesFormatsAndResolutions = {
+        m3u8: [],
+        mp4: [],
+        webm: [],
+        ogv: [],
+      };
+
+      return this.buildVideoSources(
+        outputs,
+        videoId,
+        externalVideosBaseUrl,
+        manifestType,
+        sourcesFormatsAndResolutions
+      );
+    });
+  }
+
+  /**
    * Get video watch data for media player
    *
    * Builds the complete data structure needed by the video player including:

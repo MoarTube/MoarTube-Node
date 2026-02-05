@@ -176,6 +176,19 @@ export function videosRoutes(
     controller.getVideoPermissions.bind(controller)
   );
 
+  // Get video sources
+  fastify.get(
+    '/:videoId/sources',
+    {
+      preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Videos'],
+        params: videoIdParamsSchema,
+      },
+    },
+    controller.getVideoSources.bind(controller)
+  );
+
   // Get video data with formatted fields
   fastify.get(
     '/:videoId/data',
