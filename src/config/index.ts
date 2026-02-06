@@ -52,7 +52,8 @@ class Config {
   private _nodeIdentification: NodeIdentification | null = null;
   private _lastCheckedContentTracker: LastCheckedContentTracker;
   private readonly _runtime: RuntimeConfig;
-  private _settingsWatcher: fs.FSWatcher | null = null;
+  private _nodeSettingsWatcher: fs.FSWatcher | null = null;
+  private _lastCheckedContentTrackerWatcher: fs.FSWatcher | null = null;
 
   private constructor(baseDir: string, configFileName: string, entryPointDir?: string) {
     // Initialize environment first
@@ -80,6 +81,9 @@ class Config {
     // Load content tracker
     this._lastCheckedContentTracker = this.loadLastCheckedContentTracker();
 
+    // Set up file watching for tracker file
+    this.setupTrackerFileWatcher();
+
     // Initialize runtime config
     this._runtime = {
       jwtSecret: '', // Set later via setJwtSecret
@@ -95,9 +99,20 @@ class Config {
    * Set up file watcher for automatic settings reload
    */
   private setupSettingsFileWatcher(): void {
-    this._settingsWatcher = fs.watch(this._paths.nodeSettingsPath, (eventType) => {
+    this._nodeSettingsWatcher = fs.watch(this._paths.nodeSettingsPath, (eventType) => {
       if (eventType === 'change') {
         this.reloadNodeSettings();
+      }
+    });
+  }
+
+  /**
+   * Set up file watcher for automatic content tracker reload
+   */
+  private setupTrackerFileWatcher(): void {
+    this._lastCheckedContentTrackerWatcher = fs.watch(this._paths.lastCheckedContentTrackerPath, (eventType) => {
+      if (eventType === 'change') {
+        this.reloadLastCheckedContentTracker();
       }
     });
   }
@@ -243,6 +258,10 @@ class Config {
    * Useful when settings file has been manually edited
    */
   reloadNodeSettings(): void {
+    if (this._lastCheckedContentTrackerWatcher) {
+      this._lastCheckedContentTrackerWatcher.close();
+      this._lastCheckedContentTrackerWatcher = null;
+    }
     this._nodeSettings = this.loadNodeSettings();
   }
 
@@ -250,9 +269,9 @@ class Config {
    * Clean up resources (file watchers, etc.)
    */
   cleanup(): void {
-    if (this._settingsWatcher) {
-      this._settingsWatcher.close();
-      this._settingsWatcher = null;
+    if (this._nodeSettingsWatcher) {
+      this._nodeSettingsWatcher.close();
+      this._nodeSettingsWatcher = null;
     }
   }
 
@@ -302,12 +321,21 @@ class Config {
     const trackerPath = this._paths.lastCheckedContentTrackerPath;
 
     if (!fs.existsSync(trackerPath)) {
-      // Return defaults
-      return {
+      // Create and return defaults
+      const defaults = {
         lastCheckedCommentsTimestamp: 0,
         lastCheckedVideoReportsTimestamp: 0,
         lastCheckedCommentReportsTimestamp: 0,
       };
+      
+      try {
+        fs.mkdirSync(path.dirname(trackerPath), { recursive: true });
+        fs.writeFileSync(trackerPath, JSON.stringify(defaults));
+      } catch (err) {
+        console.error('Failed to create default content tracker file', err);
+      }
+      
+      return defaults;
     }
 
     const rawTracker: unknown = JSON.parse(fs.readFileSync(trackerPath, 'utf8'));
@@ -333,6 +361,24 @@ class Config {
       this._paths.lastCheckedContentTrackerPath,
       JSON.stringify(this._lastCheckedContentTracker)
     );
+  }
+
+  /**
+   * Reload content tracker from disk
+   */
+  reloadLastCheckedContentTracker(): void {
+    // We use loadLastCheckedContentTracker here, but since the file exists (we are watching it),
+    // it will read from disk.
+    // However, loadLastCheckedContentTracker has checks for existance.
+    try {
+        const trackerPath = this._paths.lastCheckedContentTrackerPath;
+        if (fs.existsSync(trackerPath)) {
+            const rawTracker: unknown = JSON.parse(fs.readFileSync(trackerPath, 'utf8'));
+            this._lastCheckedContentTracker = validateLastCheckedContentTracker(rawTracker);
+        }
+    } catch (error) {
+        console.error('Failed to reload content tracker', error);
+    }
   }
 
   // ============================================

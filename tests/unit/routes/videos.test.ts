@@ -281,9 +281,9 @@ describe('Videos Routes', () => {
     expect(mockFastify.post).toHaveBeenCalledWith('/:videoId/index/remove', expect.anything(), expect.any(Function));
   });
 
-  it('should register exactly 14 GET routes', () => {
+  it('should register exactly 15 GET routes', () => {
     videosRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.get).toHaveBeenCalledTimes(14);
+    expect(mockFastify.get).toHaveBeenCalledTimes(15);
   });
 
   it('should register exactly 28 POST routes', () => {
