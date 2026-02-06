@@ -14,6 +14,7 @@ export default tseslint.config(
       '**/*.js',
       '*.config.ts',
       'drizzle.config.ts',
+      'tests/'
     ],
   },
 

@@ -243,7 +243,7 @@ describe('config/index.ts', () => {
     });
 
     it('should initialize all subsystems correctly', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      Config.initialize(mockBaseDir, mockConfigFileName);
 
       expect(getEnv).toHaveBeenCalledTimes(1);
       expect(initializePaths).toHaveBeenCalledWith(mockBaseDir, false, undefined);
