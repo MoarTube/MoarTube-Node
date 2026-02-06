@@ -342,7 +342,7 @@ export function settingsRoutes(
 
   // Toggle database configuration
   fastify.post(
-    '/databaseConfig/toggle',
+    '/database/config/toggle',
     {
       preHandler: [fastify.authenticate],
       schema: {
@@ -355,7 +355,7 @@ export function settingsRoutes(
 
   // Toggle storage configuration
   fastify.post(
-    '/storageConfig/toggle',
+    '/storage/config/toggle',
     {
       preHandler: [fastify.authenticate],
       schema: {
