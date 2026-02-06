@@ -263,10 +263,6 @@ class Config {
    * Useful when settings file has been manually edited
    */
   reloadNodeSettings(): void {
-    if (this._lastCheckedContentTrackerWatcher) {
-      this._lastCheckedContentTrackerWatcher.close();
-      this._lastCheckedContentTrackerWatcher = null;
-    }
     this._nodeSettings = this.loadNodeSettings();
   }
 
@@ -277,6 +273,10 @@ class Config {
     if (this._nodeSettingsWatcher) {
       this._nodeSettingsWatcher.close();
       this._nodeSettingsWatcher = null;
+    }
+    if (this._lastCheckedContentTrackerWatcher) {
+      this._lastCheckedContentTrackerWatcher.close();
+      this._lastCheckedContentTrackerWatcher = null;
     }
   }
 

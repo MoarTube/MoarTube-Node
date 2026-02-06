@@ -11,7 +11,14 @@ vi.mock('node:fs', () => ({
     writeFileSync: vi.fn(),
     mkdirSync: vi.fn(),
     watch: vi.fn(),
+    rm: vi.fn(),
   },
+  existsSync: vi.fn(),
+  readFileSync: vi.fn(),
+  writeFileSync: vi.fn(),
+  mkdirSync: vi.fn(),
+  watch: vi.fn(),
+  rm: vi.fn(),
 }));
 
 vi.mock('node:path', () => ({
@@ -562,8 +569,8 @@ describe('config/index.ts', () => {
     it('should reload settings when file changes', () => {
       Config.initialize(mockBaseDir, mockConfigFileName);
 
-      // Get the watch callback
-      const watchCallback = mockFs.watch.mock.calls[0][1];
+      // Get the watch callback for settings file (second call to fs.watch)
+      const watchCallback = mockFs.watch.mock.calls[1][1];
 
       // Simulate file change
       watchCallback('change');
@@ -574,8 +581,8 @@ describe('config/index.ts', () => {
     it('should not reload settings for non-change events', () => {
       Config.initialize(mockBaseDir, mockConfigFileName);
 
-      // Get the watch callback
-      const watchCallback = mockFs.watch.mock.calls[0][1];
+      // Get the watch callback for settings file (second call to fs.watch)
+      const watchCallback = mockFs.watch.mock.calls[1][1];
 
       // Simulate non-change event
       watchCallback('rename');
@@ -593,7 +600,7 @@ describe('config/index.ts', () => {
 
       config.cleanup();
 
-      expect(mockWatcher.close).toHaveBeenCalledTimes(1);
+      expect(mockWatcher.close).toHaveBeenCalledTimes(2);
     });
 
     it('should handle cleanup when no watcher exists', () => {
