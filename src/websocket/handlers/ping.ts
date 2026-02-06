@@ -5,7 +5,11 @@
  * Used for keep-alive and connection health checks.
  */
 
-import type { ExtendedWebSocket, IncomingWebSocketMessage } from '@/types/index.js';
+import type {
+  ExtendedWebSocket,
+  IncomingWebSocketMessage,
+  WebSocketMessageBase,
+} from '@/types/index.js';
 import { WebSocketHandler, type HandlerContext } from '@websocket/handlers/base.js';
 
 /**
@@ -26,10 +30,22 @@ export class PingHandler extends WebSocketHandler {
    */
   handle(
     client: ExtendedWebSocket,
-    message: IncomingWebSocketMessage, // eslint-disable-line @typescript-eslint/no-unused-vars
+    message: IncomingWebSocketMessage,
+    context: HandlerContext
+  ): void {
+    this.processMessage(client, message, context);
+  }
+
+  /**
+   * Process ping message
+   */
+  protected processMessage(
+    client: ExtendedWebSocket,
+    _message: IncomingWebSocketMessage,
     context: HandlerContext
   ): void {
     // Respond with pong
-    context.sendTo(client, { eventName: 'pong' } as any);
+    const pongMessage: WebSocketMessageBase = { eventName: 'pong' };
+    context.sendTo(client, pongMessage);
   }
 }

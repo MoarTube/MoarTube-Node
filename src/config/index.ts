@@ -8,6 +8,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 import type { NodeSettings, NodeIdentification, LastCheckedContentTracker } from '@/types/index.js';
+import { Logger } from '@/utils/index.js';
 
 import { getEnv, type Env } from '@config/env.js';
 import { initializePaths, type Paths, type PathConfig } from '@config/paths.js';
@@ -54,6 +55,7 @@ class Config {
   private readonly _runtime: RuntimeConfig;
   private _nodeSettingsWatcher: fs.FSWatcher | null = null;
   private _lastCheckedContentTrackerWatcher: fs.FSWatcher | null = null;
+  private readonly logger = Logger.getInstance();
 
   private constructor(baseDir: string, configFileName: string, entryPointDir?: string) {
     // Initialize environment first
@@ -110,11 +112,14 @@ class Config {
    * Set up file watcher for automatic content tracker reload
    */
   private setupTrackerFileWatcher(): void {
-    this._lastCheckedContentTrackerWatcher = fs.watch(this._paths.lastCheckedContentTrackerPath, (eventType) => {
-      if (eventType === 'change') {
-        this.reloadLastCheckedContentTracker();
+    this._lastCheckedContentTrackerWatcher = fs.watch(
+      this._paths.lastCheckedContentTrackerPath,
+      (eventType) => {
+        if (eventType === 'change') {
+          this.reloadLastCheckedContentTracker();
+        }
       }
-    });
+    );
   }
 
   /**
@@ -327,14 +332,14 @@ class Config {
         lastCheckedVideoReportsTimestamp: 0,
         lastCheckedCommentReportsTimestamp: 0,
       };
-      
+
       try {
         fs.mkdirSync(path.dirname(trackerPath), { recursive: true });
         fs.writeFileSync(trackerPath, JSON.stringify(defaults));
       } catch (err) {
-        console.error('Failed to create default content tracker file', err);
+        this.logger.error('Failed to create default content tracker file', err);
       }
-      
+
       return defaults;
     }
 
@@ -371,13 +376,13 @@ class Config {
     // it will read from disk.
     // However, loadLastCheckedContentTracker has checks for existance.
     try {
-        const trackerPath = this._paths.lastCheckedContentTrackerPath;
-        if (fs.existsSync(trackerPath)) {
-            const rawTracker: unknown = JSON.parse(fs.readFileSync(trackerPath, 'utf8'));
-            this._lastCheckedContentTracker = validateLastCheckedContentTracker(rawTracker);
-        }
+      const trackerPath = this._paths.lastCheckedContentTrackerPath;
+      if (fs.existsSync(trackerPath)) {
+        const rawTracker: unknown = JSON.parse(fs.readFileSync(trackerPath, 'utf8'));
+        this._lastCheckedContentTracker = validateLastCheckedContentTracker(rawTracker);
+      }
     } catch (error) {
-        console.error('Failed to reload content tracker', error);
+      this.logger.error('Failed to reload content tracker', error);
     }
   }
 
