@@ -83,19 +83,19 @@ describe('Settings Routes', () => {
   });
 
   // Personalization
-  it('should register POST /personalize/nodeName route', () => {
+  it('should register POST /personalize/name route', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledWith('/personalize/nodeName', expect.anything(), expect.any(Function));
+    expect(mockFastify.post).toHaveBeenCalledWith('/personalize/name', expect.anything(), expect.any(Function));
   });
 
-  it('should register POST /personalize/nodeAbout route', () => {
+  it('should register POST /personalize/about route', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledWith('/personalize/nodeAbout', expect.anything(), expect.any(Function));
+    expect(mockFastify.post).toHaveBeenCalledWith('/personalize/about', expect.anything(), expect.any(Function));
   });
 
-  it('should register POST /personalize/nodeId route', () => {
+  it('should register POST /personalize/id route', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledWith('/personalize/nodeId', expect.anything(), expect.any(Function));
+    expect(mockFastify.post).toHaveBeenCalledWith('/personalize/id', expect.anything(), expect.any(Function));
   });
 
   // Security
@@ -168,14 +168,14 @@ describe('Settings Routes', () => {
   });
 
   // Database & Storage Configuration
-  it('should register POST /databaseConfig/toggle route', () => {
+  it('should register POST /database/config/toggle route', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledWith('/databaseConfig/toggle', expect.anything(), expect.any(Function));
+    expect(mockFastify.post).toHaveBeenCalledWith('/database/config/toggle', expect.anything(), expect.any(Function));
   });
 
-  it('should register POST /storageConfig/toggle route', () => {
+  it('should register POST /storage/config/toggle route', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledWith('/storageConfig/toggle', expect.anything(), expect.any(Function));
+    expect(mockFastify.post).toHaveBeenCalledWith('/storage/config/toggle', expect.anything(), expect.any(Function));
   });
 
   // Database Import/Export

@@ -105,9 +105,7 @@ export const networkExternalBodySchema = z.object({
  * Cloudflare configuration request body schema
  */
 export const cloudflareConfigureBodySchema = z.object({
-  cloudflareEmailAddress: z
-    .email('Invalid email format')
-    .max(320, 'Email must be less than 320 characters'),
+  cloudflareEmailAddress: z.string().min(1),
   cloudflareZoneId: z.string().min(1),
   cloudflareGlobalApiKey: z.string().min(1),
 });

@@ -73,9 +73,10 @@ export class RegisterHandler extends WebSocketHandler {
           clientId: client.clientId,
         });
         // Send error to client and close connection
-        context.sendTo(client, { 
-          eventName: 'error', 
-          error: 'Invalid JWT token. Please re-authenticate.' 
+        context.sendTo(client, {
+          eventName: 'error',
+          errorType: 'register',
+          message: 'Invalid JWT token. Please re-authenticate.',
         });
         client.close();
         return;
