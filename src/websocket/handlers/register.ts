@@ -69,9 +69,16 @@ export class RegisterHandler extends WebSocketHandler {
         client.isAuthenticated = true;
       } catch (error) {
         client.isAuthenticated = false;
-        this.logger.error('Invalid JWT token during registration', error, {
+        context.log.error('Invalid JWT token during registration', error, {
           clientId: client.clientId,
         });
+        // Send error to client and close connection
+        context.sendTo(client, { 
+          eventName: 'error', 
+          error: 'Invalid JWT token. Please re-authenticate.' 
+        });
+        client.close();
+        return;
       }
     } else {
       client.isAuthenticated = false;

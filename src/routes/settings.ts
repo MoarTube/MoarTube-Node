@@ -116,7 +116,7 @@ export function settingsRoutes(
 
   // Update node name
   fastify.post(
-    '/personalize/nodeName',
+    '/personalize/name',
     {
       preHandler: [fastify.authenticate],
       schema: {
@@ -129,7 +129,7 @@ export function settingsRoutes(
 
   // Update node about
   fastify.post(
-    '/personalize/nodeAbout',
+    '/personalize/about',
     {
       preHandler: [fastify.authenticate],
       schema: {
@@ -142,7 +142,7 @@ export function settingsRoutes(
 
   // Update node ID
   fastify.post(
-    '/personalize/nodeId',
+    '/personalize/id',
     {
       preHandler: [fastify.authenticate],
       schema: {
