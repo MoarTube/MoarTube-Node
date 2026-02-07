@@ -920,7 +920,6 @@
       				}
       				else {
       					for (const adaptiveSource of sources) {
-      						if (adaptiveSource.type !== 'application/x-mpegURL') continue;
       						const segments = adaptiveSource.src.split('/');
       						const adaptiveSourceResolution = segments[segments.length - 1];
 
@@ -932,7 +931,6 @@
       			}
       			else {
       				for (const progressiveSource of sources) {
-      					if (progressiveSource.type === 'application/x-mpegURL') continue;
       					const segments = progressiveSource.src.split('/');
 
       					const progressiveSourceResolution = segments[segments.length - 1];

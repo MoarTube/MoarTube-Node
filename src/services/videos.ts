@@ -70,6 +70,8 @@ export class VideosService extends BaseService {
   private readonly viewTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private static readonly VIEW_DEBOUNCE_MS = 500;
 
+  private readonly outputsLocks: Map<string, Promise<void>> = new Map();
+
   constructor(
     logger: Logger,
     videosRepository:
@@ -689,6 +691,33 @@ export class VideosService extends BaseService {
   }
 
   /**
+   * Serialize a read-modify-write operation on a video's outputs field.
+   * Ensures only one mutation runs at a time per videoId, preventing
+   * concurrent requests from overwriting each other's changes.
+   */
+  private async withOutputsLock<T>(videoId: string, fn: () => Promise<T>): Promise<T> {
+    // Wait for any pending operation on this video to finish
+    const pending = this.outputsLocks.get(videoId) ?? Promise.resolve();
+
+    let resolve!: () => void;
+    const next = new Promise<void>((r) => {
+      resolve = r;
+    });
+    this.outputsLocks.set(videoId, next);
+
+    try {
+      await pending;
+      return await fn();
+    } finally {
+      resolve();
+      // Clean up if no one else queued behind us
+      if (this.outputsLocks.get(videoId) === next) {
+        this.outputsLocks.delete(videoId);
+      }
+    }
+  }
+
+  /**
    * Add a resolution to video outputs
    */
   async addOutputResolution(
@@ -696,30 +725,32 @@ export class VideosService extends BaseService {
     format: VideoFormat,
     resolution: string
   ): Promise<void> {
-    const video = await this.videoRepository.findById(videoId);
-    if (!video) {
-      throw new Error('Video not found');
-    }
+    await this.withOutputsLock(videoId, async () => {
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        throw new Error('Video not found');
+      }
 
-    const outputs = this.safeJsonParse(video.outputs, {
-      m3u8: [],
-      mp4: [],
-      webm: [],
-      ogv: [],
-    }) as VideoOutputs;
+      const outputs = this.safeJsonParse(video.outputs, {
+        m3u8: [],
+        mp4: [],
+        webm: [],
+        ogv: [],
+      }) as VideoOutputs;
 
-    if (!outputs[format].includes(resolution)) {
-      outputs[format].push(resolution);
+      if (!outputs[format].includes(resolution)) {
+        outputs[format].push(resolution);
 
-      // Sort resolutions descending by quality
-      outputs[format].sort((a, b) => {
-        const aHeight = this.parseResolutionHeight(a);
-        const bHeight = this.parseResolutionHeight(b);
-        return bHeight - aHeight;
-      });
-    }
+        // Sort resolutions descending by quality
+        outputs[format].sort((a, b) => {
+          const aHeight = this.parseResolutionHeight(a);
+          const bHeight = this.parseResolutionHeight(b);
+          return bHeight - aHeight;
+        });
+      }
 
-    await this.updateOutputs(videoId, outputs);
+      await this.updateOutputs(videoId, outputs);
+    });
   }
 
   /**
@@ -730,21 +761,23 @@ export class VideosService extends BaseService {
     format: VideoFormat,
     resolution: string
   ): Promise<void> {
-    const video = await this.videoRepository.findById(videoId);
-    if (!video) {
-      throw new Error('Video not found');
-    }
+    await this.withOutputsLock(videoId, async () => {
+      const video = await this.videoRepository.findById(videoId);
+      if (!video) {
+        throw new Error('Video not found');
+      }
 
-    const outputs = this.safeJsonParse(video.outputs, {
-      m3u8: [],
-      mp4: [],
-      webm: [],
-      ogv: [],
-    }) as VideoOutputs;
+      const outputs = this.safeJsonParse(video.outputs, {
+        m3u8: [],
+        mp4: [],
+        webm: [],
+        ogv: [],
+      }) as VideoOutputs;
 
-    outputs[format] = outputs[format].filter((r) => r !== resolution);
+      outputs[format] = outputs[format].filter((r) => r !== resolution);
 
-    await this.updateOutputs(videoId, outputs);
+      await this.updateOutputs(videoId, outputs);
+    });
   }
 
   /**
@@ -799,30 +832,32 @@ export class VideosService extends BaseService {
     resolution: string
   ): Promise<void> {
     return this.withErrorLogging('markFormatResolutionPublished', async () => {
-      const video = await this.videoRepository.findById(videoId);
-      if (!video) {
-        throw new Error(`Video not found: ${videoId}`);
-      }
+      await this.withOutputsLock(videoId, async () => {
+        const video = await this.videoRepository.findById(videoId);
+        if (!video) {
+          throw new Error(`Video not found: ${videoId}`);
+        }
 
-      // Parse existing outputs
-      const outputs: VideoOutputs =
-        typeof video.outputs === 'string'
-          ? (JSON.parse(video.outputs) as VideoOutputs)
-          : (video.outputs as VideoOutputs);
+        // Parse existing outputs
+        const outputs: VideoOutputs =
+          typeof video.outputs === 'string'
+            ? (JSON.parse(video.outputs) as VideoOutputs)
+            : (video.outputs as VideoOutputs);
 
-      // Add resolution to format if not already present
-      if (!outputs[format].includes(resolution)) {
-        outputs[format].push(resolution);
-        // Sort by resolution (descending)
-        outputs[format].sort((a: string, b: string) => {
-          const aRes = this.parseResolutionHeight(a);
-          const bRes = this.parseResolutionHeight(b);
-          return bRes - aRes;
-        });
-      }
+        // Add resolution to format if not already present
+        if (!outputs[format].includes(resolution)) {
+          outputs[format].push(resolution);
+          // Sort by resolution (descending)
+          outputs[format].sort((a: string, b: string) => {
+            const aRes = this.parseResolutionHeight(a);
+            const bRes = this.parseResolutionHeight(b);
+            return bRes - aRes;
+          });
+        }
 
-      await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
-      this.logger.debug('Format/resolution published', { videoId, format, resolution });
+        await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
+        this.logger.debug('Format/resolution published', { videoId, format, resolution });
+      });
     });
   }
 
@@ -1209,26 +1244,28 @@ export class VideosService extends BaseService {
     resolution: string
   ): Promise<void> {
     return this.withErrorLogging('unpublishFormatResolution', async () => {
-      const video = await this.videoRepository.findById(videoId);
-      if (!video) {
-        throw new Error(`Video not found: ${videoId}`);
-      }
+      await this.withOutputsLock(videoId, async () => {
+        const video = await this.videoRepository.findById(videoId);
+        if (!video) {
+          throw new Error(`Video not found: ${videoId}`);
+        }
 
-      // Parse existing outputs
-      const outputs: VideoOutputs =
-        typeof video.outputs === 'string'
-          ? (JSON.parse(video.outputs) as VideoOutputs)
-          : (video.outputs as VideoOutputs);
+        // Parse existing outputs
+        const outputs: VideoOutputs =
+          typeof video.outputs === 'string'
+            ? (JSON.parse(video.outputs) as VideoOutputs)
+            : (video.outputs as VideoOutputs);
 
-      // Remove resolution from format
-      outputs[format] = outputs[format].filter((item: string) => item !== resolution);
+        // Remove resolution from format
+        outputs[format] = outputs[format].filter((item: string) => item !== resolution);
 
-      await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
+        await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
 
-      // Delete the files from storage
-      this.deleteFormatResolutionFiles(videoId, format, resolution);
+        // Delete the files from storage
+        this.deleteFormatResolutionFiles(videoId, format, resolution);
 
-      this.logger.info('Format/resolution unpublished', { videoId, format, resolution });
+        this.logger.info('Format/resolution unpublished', { videoId, format, resolution });
+      });
     });
   }
 
@@ -1366,8 +1403,7 @@ export class VideosService extends BaseService {
    * - indexed (without force flag)
    */
   async finalizeVideos(
-    videoIds: string[],
-    force = false
+    videoIds: string[]
   ): Promise<{ finalizedVideoIds: string[]; nonFinalizedVideoIds: string[] }> {
     return this.withErrorLogging('finalizeVideos', async () => {
       const finalizedVideoIds: string[] = [];
@@ -1385,8 +1421,7 @@ export class VideosService extends BaseService {
           video.is_importing ||
           video.is_publishing ||
           video.is_streaming ||
-          video.is_indexing ||
-          (!force && video.is_indexed);
+          video.is_indexing;
 
         if (isInActiveState) {
           nonFinalizedVideoIds.push(videoId);
@@ -1396,16 +1431,13 @@ export class VideosService extends BaseService {
             is_publishing: video.is_publishing,
             is_streaming: video.is_streaming,
             is_indexing: video.is_indexing,
-            is_indexed: video.is_indexed,
           });
           continue;
         }
 
         // Finalize = stop any active operations and mark as ready
         await this.videoRepository.update(videoId, {
-          is_importing: false,
-          is_publishing: false,
-          is_streaming: false,
+          is_finalized: true,
         });
 
         finalizedVideoIds.push(videoId);
@@ -1445,15 +1477,6 @@ export class VideosService extends BaseService {
           videoId,
           manifestType,
           path: manifestPath,
-        });
-      } else {
-        const key = `external/videos/${videoId}/adaptive/m3u8/manifest-master.m3u8`;
-        await this.storageService.saveFile(key, Buffer.from(content), 'application/x-mpegURL');
-
-        this.logger.debug('Wrote HLS master manifest to S3', {
-          videoId,
-          manifestType,
-          key,
         });
       }
     });
