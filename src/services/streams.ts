@@ -30,6 +30,7 @@ import type {
 import { getConfig } from '@config/index.js';
 import { deleteDirectory } from '@/utils/index.js';
 import { type WebSocketService } from '@services/websocket.js';
+import { type CloudflareService } from '@services/cloudflare.js';
 
 /**
  * Stream metadata stored in video meta field
@@ -83,6 +84,7 @@ export class StreamsService extends BaseService {
     | ICommentsRepository<SQLiteComment, SQLiteNewComment>
     | ICommentsRepository<PostgresComment, PostgresNewComment>;
   private readonly websocketService: WebSocketService;
+  private readonly cloudflareService: CloudflareService;
 
   constructor(
     logger: Logger,
@@ -95,13 +97,15 @@ export class StreamsService extends BaseService {
     commentsRepository:
       | ICommentsRepository<SQLiteComment, SQLiteNewComment>
       | ICommentsRepository<PostgresComment, PostgresNewComment>,
-    websocketService: WebSocketService
+    websocketService: WebSocketService,
+    cloudflareService: CloudflareService
   ) {
     super('StreamService', logger);
     this.videoRepository = videosRepository;
     this.liveChatMessageRepository = liveChatMessagesRepository;
     this.commentsRepository = commentsRepository;
     this.websocketService = websocketService;
+    this.cloudflareService = cloudflareService;
   }
 
   /**
@@ -146,23 +150,51 @@ export class StreamsService extends BaseService {
         throw new Error(`Video not found: ${videoId}`);
       }
 
-      await this.videoRepository.update(videoId, {
+      // Update streaming flags with conditional is_index_outdated
+      // If the video is indexed, mark it as outdated so the indexer picks it up
+      const updateData: Record<string, unknown> = {
         is_streaming: false,
         is_streamed: true,
-      });
+      };
 
+      if (video.is_indexed) {
+        updateData['is_index_outdated'] = true;
+      }
+
+      await this.videoRepository.update(videoId, updateData);
+
+      // Finalize HLS manifest files (filesystem mode only)
+      this.finalizeStreamManifests(videoId);
+
+      // Handle post-stream recording state
+      if (video.is_stream_recorded_remotely) {
+        // Stream was recorded remotely - mark as published
+        await this.videoRepository.update(videoId, {
+          is_published: true,
+        });
+      } else {
+        // Stream was not recorded - clean up m3u8 directory (filesystem mode only)
+        const config = getConfig();
+        if (config.nodeSettings.storageConfig.storageMode === 'filesystem') {
+          const m3u8DirectoryPath = path.join(
+            config.paths.videosDirectoryPath,
+            videoId,
+            'adaptive',
+            'm3u8'
+          );
+          await deleteDirectory(m3u8DirectoryPath);
+        }
+      }
+
+      // Delete live chat messages
       const deletedCount = await this.liveChatMessageRepository.deleteByVideoId(videoId);
       this.logger.debug('Deleted live chat messages on stream stop', { videoId, deletedCount });
 
-      this.logger.info('Stream stopped', { videoId });
+      // Purge Cloudflare cache
+      void this.cloudflareService.purgeAllWatchPages();
+      void this.cloudflareService.purgeNodePage();
 
-      // Broadcast stream stop
-      this.broadcastStreamEvent('stream_stopped', {
-        videoId,
-        isLive: false,
-        isStreaming: false,
-        isStreamed: true,
-      });
+      this.logger.info('Stream stopped', { videoId });
     });
   }
 
@@ -211,22 +243,24 @@ export class StreamsService extends BaseService {
         ogv: [],
       });
 
-      const meta: StreamMeta = {
-        chatSettings: {
-          isChatHistoryEnabled: true,
-          chatHistoryLimit: 0,
-        },
-        rtmpPort: options.rtmpPort,
-        uuid: 'moartube',
-        networkAddress: options.networkAddress,
-        resolution: options.resolution,
-        isRecordingStreamRemotely: options.isRecordingStreamRemotely,
-        isRecordingStreamLocally: options.isRecordingStreamLocally,
-      };
-
       const timestamp = this.getCurrentTimestampMs();
 
       if (isResumingStream) {
+        // Retrieve existing video to preserve chatSettings
+        const existingVideo = await this.videoRepository.findById(videoId);
+        if (!existingVideo) {
+          throw new Error('video with id does not exist: ' + videoId);
+        }
+
+        // Parse existing meta and preserve chatSettings while updating stream fields
+        const existingMeta = this.safeJsonParse<StreamMeta>(existingVideo.meta, {});
+
+        existingMeta.rtmpPort = options.rtmpPort;
+        existingMeta.networkAddress = options.networkAddress;
+        existingMeta.resolution = options.resolution;
+        existingMeta.isRecordingStreamRemotely = options.isRecordingStreamRemotely;
+        existingMeta.isRecordingStreamLocally = options.isRecordingStreamLocally;
+
         // Update existing video record
         await this.videoRepository.update(videoId, {
           title: options.title,
@@ -247,7 +281,7 @@ export class StreamsService extends BaseService {
           is_stream_recorded_locally: options.isRecordingStreamLocally,
           is_error: false,
           outputs,
-          meta: JSON.stringify(meta),
+          meta: JSON.stringify(existingMeta),
           creation_timestamp: timestamp,
         });
 
@@ -263,6 +297,19 @@ export class StreamsService extends BaseService {
         this.logger.info('Stream resumed', { videoId });
       } else {
         // Create new video record for stream
+        const newMeta: StreamMeta = {
+          chatSettings: {
+            isChatHistoryEnabled: true,
+            chatHistoryLimit: 0,
+          },
+          rtmpPort: options.rtmpPort,
+          uuid: 'moartube',
+          networkAddress: options.networkAddress,
+          resolution: options.resolution,
+          isRecordingStreamRemotely: options.isRecordingStreamRemotely,
+          isRecordingStreamLocally: options.isRecordingStreamLocally,
+        };
+
         const videoData: SQLiteNewVideo | PostgresNewVideo = {
           video_id: videoId,
           source_file_extension: '',
@@ -299,7 +346,7 @@ export class StreamsService extends BaseService {
           is_reports_enabled: true,
           is_live_chat_enabled: true,
           outputs,
-          meta: JSON.stringify(meta),
+          meta: JSON.stringify(newMeta),
           creation_timestamp: timestamp,
         };
 
@@ -321,7 +368,7 @@ export class StreamsService extends BaseService {
         likes: 0,
         dislikes: 0,
         bandwidth: 0,
-        isImporting: 1,
+        isImporting: 0,
         isImported: 0,
         isPublishing: 0,
         isPublished: 0,
@@ -336,6 +383,10 @@ export class StreamsService extends BaseService {
         isError: 0,
         isFinalized: 0,
       });
+
+      // Purge Cloudflare cache
+      void this.cloudflareService.purgeAllWatchPages();
+      void this.cloudflareService.purgeNodePage();
 
       return { videoId };
     });
@@ -381,11 +432,37 @@ export class StreamsService extends BaseService {
       const videosDir = config.paths.videosDirectoryPath;
       const adaptiveDir = path.join(videosDir, videoId, 'adaptive', 'm3u8');
 
-      // End the HLS manifest files by appending #EXT-X-ENDLIST
+      // End the HLS manifest files by appending #EXT-X-ENDLIST and converting EVENT to VOD
       this.endHlsManifests(adaptiveDir);
     }
 
     this.logger.info('Stream manifests finalized', { videoId });
+  }
+
+  /**
+   * Finalize all streamed video HLS manifests at startup
+   * Used for cleanup when server restarts after a crash mid-stream
+   */
+  async finalizeAllStreamedManifests(): Promise<void> {
+    const config = getConfig();
+    const storageMode = config.nodeSettings.storageConfig.storageMode;
+
+    if (storageMode !== 'filesystem') {
+      return;
+    }
+
+    const videos = await this.videoRepository.findAll();
+    const streamedVideos = videos.filter(
+      (v) => v.is_streamed && v.is_stream_recorded_remotely
+    );
+
+    for (const video of streamedVideos) {
+      const videosDir = config.paths.videosDirectoryPath;
+      const adaptiveDir = path.join(videosDir, video.video_id, 'adaptive', 'm3u8');
+      this.endHlsManifests(adaptiveDir);
+    }
+
+    this.logger.info('Finalized all streamed HLS manifests', { count: streamedVideos.length });
   }
 
   // ============================================================================
@@ -436,20 +513,42 @@ export class StreamsService extends BaseService {
   }
 
   /**
-   * End HLS manifest files by appending #EXT-X-ENDLIST
+   * End HLS manifest files by converting EVENT to VOD and appending #EXT-X-ENDLIST
+   *
+   * Legacy layout: manifests live in resolution subdirectories as manifest-{resolution}.m3u8
+   * e.g., {adaptiveDir}/{resolution}/manifest-{resolution}.m3u8
    */
   private endHlsManifests(adaptiveDir: string): void {
     if (!fs.existsSync(adaptiveDir)) {
       return;
     }
 
-    const files = fs.readdirSync(adaptiveDir);
-    for (const file of files) {
-      if (file.endsWith('.m3u8')) {
-        const filePath = path.join(adaptiveDir, file);
+    const HLS_END_LIST_TAG = '#EXT-X-ENDLIST';
+
+    // Traverse resolution subdirectories (e.g., 2160p, 1080p, 720p, etc.)
+    const entries = fs.readdirSync(adaptiveDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const resolutionDir = path.join(adaptiveDir, entry.name);
+        const manifestPath = path.join(resolutionDir, `manifest-${entry.name}.m3u8`);
+
+        if (fs.existsSync(manifestPath)) {
+          const content = fs.readFileSync(manifestPath, 'utf8');
+          if (!content.includes(HLS_END_LIST_TAG)) {
+            // Replace EVENT playlist type with VOD
+            let modified = content.replace('#EXT-X-PLAYLIST-TYPE:EVENT', '#EXT-X-PLAYLIST-TYPE:VOD');
+            modified = modified.trim() + '\n' + HLS_END_LIST_TAG + '\n';
+            fs.writeFileSync(manifestPath, modified);
+          }
+        }
+      } else if (entry.name.endsWith('.m3u8')) {
+        // Also handle manifests directly in the m3u8 directory (fallback)
+        const filePath = path.join(adaptiveDir, entry.name);
         const content = fs.readFileSync(filePath, 'utf8');
-        if (!content.includes('#EXT-X-ENDLIST')) {
-          fs.appendFileSync(filePath, '\n#EXT-X-ENDLIST\n');
+        if (!content.includes(HLS_END_LIST_TAG)) {
+          let modified = content.replace('#EXT-X-PLAYLIST-TYPE:EVENT', '#EXT-X-PLAYLIST-TYPE:VOD');
+          modified = modified.trim() + '\n' + HLS_END_LIST_TAG + '\n';
+          fs.writeFileSync(filePath, modified);
         }
       }
     }

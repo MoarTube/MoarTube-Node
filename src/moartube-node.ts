@@ -84,6 +84,9 @@ async function startMaster(): Promise<void> {
   const db = getDatabase();
   const container = await createAppContainer(db);
 
+  // Startup provisioning: reset stale streaming/importing flags, clean up chat messages, finalize manifests
+  await performStartupProvisioning(logger, container);
+
   // Get services from container
   const indexer = container.resolve('indexerService');
   const cloudflare = container.resolve('cloudflareService');
@@ -91,6 +94,53 @@ async function startMaster(): Promise<void> {
   const master = new ClusterMaster(logger, indexer, cloudflare);
 
   master.start();
+}
+
+/**
+ * Startup provisioning
+ *
+ * Ensures database state is clean after a potential crash mid-stream.
+ * Legacy equivalent: database.js provisioning at startup.
+ */
+async function performStartupProvisioning(
+  logger: Logger,
+  container: Awaited<ReturnType<typeof createAppContainer>>
+): Promise<void> {
+  try {
+    const streamsService = container.resolve('streamsService');
+    const videosRepository = container.resolve('videosRepository');
+    const liveChatMessagesRepository = container.resolve('liveChatMessagesRepository');
+
+    // Mark any currently-streaming videos as streamed
+    const streamingVideos = await videosRepository.findStreaming();
+    for (const video of streamingVideos) {
+      await videosRepository.update(video.video_id, {
+        is_streamed: true,
+      });
+    }
+
+    // Reset all in-progress flags
+    const allVideos = await videosRepository.findAll();
+    for (const video of allVideos) {
+      if (video.is_importing || video.is_publishing || video.is_streaming) {
+        await videosRepository.update(video.video_id, {
+          is_importing: false,
+          is_publishing: false,
+          is_streaming: false,
+        });
+      }
+    }
+
+    // Delete all live chat messages
+    await liveChatMessagesRepository.deleteAll();
+
+    // Finalize any streamed HLS manifest files
+    await streamsService.finalizeAllStreamedManifests();
+
+    logger.info('Startup provisioning completed');
+  } catch (error) {
+    logger.error('Startup provisioning failed', error);
+  }
 }
 
 /**

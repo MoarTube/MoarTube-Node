@@ -169,7 +169,6 @@ export class WatchController extends VideoControllerBase {
         this.linksService.getAllLinks(),
         this.monetizationService.getWalletAddresses(),
         this.videosService.getVideos({
-          isPublished: true,
           limit: 10,
           sortBy: 'creation_timestamp',
           sortDirection: 'desc',

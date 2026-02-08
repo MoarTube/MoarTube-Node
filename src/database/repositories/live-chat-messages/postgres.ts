@@ -81,7 +81,7 @@ export class LiveChatMessagesRepositoryPostgres implements ILiveChatMessagesRepo
       .limit(count);
 
     // Reverse to get oldest to newest order for display
-    return messages.reverse();
+    return messages;
   }
 
   /**

@@ -48,10 +48,10 @@ export const hlsSegmentNameSchema = z
 export const chatHistoryLimitSchema = z.coerce
   .number()
   .int()
-  .min(1)
+  .min(0)
   .max(500)
   .optional()
-  .default(100);
+  .default(0);
 
 /**
  * Chat slow mode seconds schema

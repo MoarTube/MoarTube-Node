@@ -107,7 +107,6 @@ export class NodeController extends BaseController {
 
       // Get all unique tags
       const videosResult = await this.videosService.getVideos({
-        isPublished: true,
       });
       const allVideos = videosResult.data;
 

@@ -81,7 +81,7 @@ export class LiveChatMessagesRepositorySQLite implements ILiveChatMessagesReposi
       .limit(count);
 
     // Reverse to get oldest to newest order for display
-    return messages.reverse();
+    return messages;
   }
 
   /**
