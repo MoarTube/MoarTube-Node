@@ -394,4 +394,20 @@ export function settingsRoutes(
     },
     controller.importDatabase.bind(controller)
   );
+
+  // ============================================================================
+  // Server Restart
+  // ============================================================================
+
+  // Restart the node server (idempotent, separate from config changes)
+  fastify.post(
+    '/restart',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Settings'],
+      },
+    },
+    controller.restartServer.bind(controller)
+  );
 }

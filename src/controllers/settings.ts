@@ -298,11 +298,6 @@ export class SettingsController extends BaseController {
         const outcome = await this.enableHttpsMode(request);
 
         if (outcome.success) {
-          setImmediate(() => {
-            if (process.send) {
-              process.send({ cmd: 'restart_server' });
-            }
-          });
           return await this.sendSuccess(reply);
         } else {
           return await this.sendError(reply, outcome.error);
@@ -520,16 +515,7 @@ export class SettingsController extends BaseController {
 
       config.updateNodeSettings({ nodeListeningPort: nodeListeningPort });
 
-      // Signal to restart workers with the new network configuration after response is sent
-      const result = await this.sendSuccess(reply);
-
-      setImmediate(() => {
-        if (process.send) {
-          process.send({ cmd: 'restart_server' });
-        }
-      });
-
-      return result;
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error updating internal network settings', error);
 
@@ -970,15 +956,7 @@ export class SettingsController extends BaseController {
 
       await this.settingsService.updateDatabaseConfig(databaseConfig);
 
-      const result = await this.sendSuccess(reply);
-
-      setImmediate(() => {
-        if (process.send) {
-          process.send({ cmd: 'restart_server' });
-        }
-      });
-
-      return result;
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Database connection test failed', error);
 
@@ -1029,15 +1007,7 @@ export class SettingsController extends BaseController {
 
       this.settingsService.updateStorageConfig(storageConfig);
 
-      const result = await this.sendSuccess(reply);
-
-      setImmediate(() => {
-        if (process.send) {
-          process.send({ cmd: 'restart_server' });
-        }
-      });
-
-      return result;
+      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Storage config toggle error', error);
 
@@ -1138,6 +1108,34 @@ export class SettingsController extends BaseController {
       this.logger.error('Database import error', error);
 
       return await this.sendError(reply, 'error importing database');
+    }
+  };
+
+  /**
+   * POST /settings/restart
+   *
+   * Restart the server. This is a separate idempotent endpoint so that
+   * callers can perform configuration changes first and then trigger a
+   * restart once they are ready.
+   */
+  restartServer = async (
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    try {
+      const result = await this.sendSuccess(reply);
+
+      setImmediate(() => {
+        if (process.send) {
+          process.send({ cmd: 'restart_server' });
+        }
+      });
+
+      return result;
+    } catch (error) {
+      this.logger.error('Server restart error', error);
+
+      return await this.sendError(reply, 'error restarting the MoarTube node');
     }
   };
 }
