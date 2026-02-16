@@ -903,7 +903,9 @@ export class VideosService extends BaseService {
   /**
    * Get video sources (adaptive and progressive)
    */
-  async getVideoSources(videoId: string): Promise<{ adaptiveSources: VideoSource[]; progressiveSources: VideoSource[] } | null> {
+  async getVideoSources(
+    videoId: string
+  ): Promise<{ adaptiveSources: VideoSource[]; progressiveSources: VideoSource[] } | null> {
     return this.withErrorLogging('getVideoSources', async () => {
       const video = await this.videoRepository.findById(videoId);
       if (!video) {
@@ -1418,10 +1420,7 @@ export class VideosService extends BaseService {
 
         // Safety checks - don't finalize videos in active states
         const isInActiveState =
-          video.is_importing ||
-          video.is_publishing ||
-          video.is_streaming ||
-          video.is_indexing;
+          video.is_importing || video.is_publishing || video.is_streaming || video.is_indexing;
 
         if (isInActiveState) {
           nonFinalizedVideoIds.push(videoId);
@@ -1459,7 +1458,7 @@ export class VideosService extends BaseService {
    * {videosDir}/{videoId}/adaptive/m3u8/manifest-{type}.m3u8
    */
   async writeMasterManifest(videoId: string, manifestType: string, content: string): Promise<void> {
-    return this.withErrorLogging('writeMasterManifest', async () => {
+    return this.withErrorLogging('writeMasterManifest', () => {
       const config = getConfig();
       const storageMode = config.nodeSettings.storageConfig.storageMode;
 
@@ -1478,6 +1477,10 @@ export class VideosService extends BaseService {
           manifestType,
           path: manifestPath,
         });
+      } else {
+        throw new Error(
+          'Master manifest writing is handled directly by MoarTube Client when MoarTube Node is in s3provider mode.'
+        );
       }
     });
   }

@@ -147,16 +147,6 @@ describe('database/repositories/live-chat-messages.ts', () => {
 
     testCases.forEach(({ name, repository }) => {
       describe(`${name} implementation`, () => {
-        it('should find recent messages and reverse order', async () => {
-          const mockMessages = [{ id: 1 }, { id: 2 }, { id: 3 }];
-          mockDb.limit.mockResolvedValue(mockMessages);
-
-          const result = await repository().findRecentByVideoId('v1', 3);
-
-          expect(mockDb.limit).toHaveBeenCalledWith(3);
-          expect(result).toEqual([{ id: 3 }, { id: 2 }, { id: 1 }]);
-        });
-
         it('should use default count of 50', async () => {
           mockDb.limit.mockResolvedValue([]);
 

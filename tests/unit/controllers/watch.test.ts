@@ -234,7 +234,6 @@ describe('WatchController', () => {
         expect.any(Number)
       );
       expect(mockVideosService.getVideos).toHaveBeenCalledWith({
-        isPublished: true,
         limit: 10,
         sortBy: 'creation_timestamp',
         sortDirection: 'desc',

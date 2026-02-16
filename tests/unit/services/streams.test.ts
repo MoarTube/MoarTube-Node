@@ -13,6 +13,7 @@ import type {
   CommentsRepository,
 } from '@/database/repositories/index.js';
 import type { WebSocketService } from '@/services/websocket.js';
+import type { CloudflareService } from '@/services/cloudflare.js';
 
 // Mock the config module
 vi.mock('@config/index.js', () => ({
@@ -43,6 +44,7 @@ vi.mock('node:fs', () => ({
     copyFileSync: vi.fn(),
     readdirSync: vi.fn().mockReturnValue([]),
     readFileSync: vi.fn().mockReturnValue(''),
+    writeFileSync: vi.fn(),
     appendFileSync: vi.fn(),
   },
 }));
@@ -61,6 +63,7 @@ describe('StreamsService', () => {
   let mockLiveChatMessagesRepository: LiveChatMessagesRepository;
   let mockCommentsRepository: CommentsRepository;
   let mockWebSocketService: WebSocketService;
+  let mockCloudflareService: CloudflareService;
 
   const mockVideo = {
     video_id: 'video123',
@@ -106,12 +109,18 @@ describe('StreamsService', () => {
       broadcastToNodes: vi.fn(),
     } as unknown as WebSocketService;
 
+    mockCloudflareService = {
+      purgeAllWatchPages: vi.fn(),
+      purgeNodePage: vi.fn(),
+    } as unknown as CloudflareService;
+
     service = new StreamsService(
       mockLogger,
       mockVideosRepository,
       mockLiveChatMessagesRepository,
       mockCommentsRepository,
-      mockWebSocketService
+      mockWebSocketService,
+      mockCloudflareService
     );
   });
 
@@ -497,13 +506,13 @@ describe('StreamsService', () => {
 
       service.finalizeStreamManifests('video123');
 
-      expect(fs.default.appendFileSync).toHaveBeenCalledWith(
+      expect(fs.default.writeFileSync).toHaveBeenCalledWith(
         expect.stringContaining('stream.m3u8'),
-        '\n#EXT-X-ENDLIST\n'
+        expect.stringContaining('#EXT-X-ENDLIST')
       );
-      expect(fs.default.appendFileSync).toHaveBeenCalledWith(
+      expect(fs.default.writeFileSync).toHaveBeenCalledWith(
         expect.stringContaining('master.m3u8'),
-        '\n#EXT-X-ENDLIST\n'
+        expect.stringContaining('#EXT-X-ENDLIST')
       );
       expect(mockLogger.info).toHaveBeenCalledWith('Stream manifests finalized', {
         videoId: 'video123',
@@ -518,7 +527,7 @@ describe('StreamsService', () => {
 
       service.finalizeStreamManifests('video123');
 
-      expect(fs.default.appendFileSync).not.toHaveBeenCalled();
+      expect(fs.default.writeFileSync).not.toHaveBeenCalled();
     });
 
     it('should skip HLS manifest processing for s3provider storage mode', async () => {

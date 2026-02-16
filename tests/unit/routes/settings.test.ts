@@ -189,13 +189,18 @@ describe('Settings Routes', () => {
     expect(mockFastify.post).toHaveBeenCalledWith('/import/database', expect.anything(), expect.any(Function));
   });
 
+  it('should register POST /restart route', () => {
+    settingsRoutes(mockFastify as any, mockContainer);
+    expect(mockFastify.post).toHaveBeenCalledWith('/restart', expect.anything(), expect.any(Function));
+  });
+
   it('should register exactly 4 GET routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
     expect(mockFastify.get).toHaveBeenCalledTimes(4);
   });
 
-  it('should register exactly 21 POST routes', () => {
+  it('should register exactly 22 POST routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(21);
+    expect(mockFastify.post).toHaveBeenCalledTimes(22);
   });
 });

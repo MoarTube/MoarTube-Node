@@ -388,7 +388,7 @@ describe('SettingsController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should trigger server restart via process.send when updating network settings', async () => {
+    it('should update network settings without triggering restart directly', async () => {
       mockRequest.body = { nodeListeningPort: 9090 };
       mockSettingsService.isDockerEnvironment.mockReturnValue(false);
 
@@ -401,7 +401,7 @@ describe('SettingsController', () => {
       // Wait for setImmediate callback to execute
       await new Promise(resolve => setImmediate(resolve));
 
-      expect(process.send).toHaveBeenCalledWith({ cmd: 'restart_server' });
+      expect(process.send).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
 
       // Restore
@@ -922,7 +922,7 @@ describe('SettingsController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should trigger server restart via process.send after database config update', async () => {
+    it('should update database config without triggering restart directly', async () => {
       mockRequest.body = {
         databaseConfig: {
           databaseDialect: 'sqlite',
@@ -939,7 +939,7 @@ describe('SettingsController', () => {
       // Wait for setImmediate callback to execute
       await new Promise(resolve => setImmediate(resolve));
 
-      expect(process.send).toHaveBeenCalledWith({ cmd: 'restart_server' });
+      expect(process.send).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
 
       // Restore
@@ -1007,7 +1007,7 @@ describe('SettingsController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should trigger server restart via process.send after storage config update', async () => {
+    it('should update storage config without triggering restart directly', async () => {
       mockRequest.body = {
         storageConfig: {
           storageMode: 'filesystem',
@@ -1023,7 +1023,7 @@ describe('SettingsController', () => {
       // Wait for setImmediate callback to execute
       await new Promise(resolve => setImmediate(resolve));
 
-      expect(process.send).toHaveBeenCalledWith({ cmd: 'restart_server' });
+      expect(process.send).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
 
       // Restore
@@ -1272,7 +1272,7 @@ describe('SettingsController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should trigger server restart via process.send when enabling HTTPS', async () => {
+    it('should enable HTTPS without triggering restart directly', async () => {
       mockRequest.query = { isSecure: true };
       vi.mocked(fs.existsSync).mockReturnValue(true);
       
@@ -1296,7 +1296,7 @@ describe('SettingsController', () => {
       // Wait for setImmediate callback to execute
       await new Promise(resolve => setImmediate(resolve));
 
-      expect(process.send).toHaveBeenCalledWith({ cmd: 'restart_server' });
+      expect(process.send).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
 
       // Restore
@@ -1659,6 +1659,44 @@ describe('SettingsController', () => {
       await controller.importDatabase(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
+    });
+  });
+
+  // ===============================
+  // restartServer tests
+  // ===============================
+  describe('restartServer', () => {
+    it('should trigger restart via process.send', async () => {
+      const originalSend = process.send;
+      process.send = vi.fn();
+
+      await controller.restartServer(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
+
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(process.send).toHaveBeenCalledWith({ cmd: 'restart_server' });
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+
+      process.send = originalSend;
+    });
+
+    it('should return success even when process.send is undefined', async () => {
+      const originalSend = process.send;
+      process.send = undefined;
+
+      await controller.restartServer(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
+
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+
+      process.send = originalSend;
     });
   });
 

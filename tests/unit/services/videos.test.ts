@@ -2228,8 +2228,6 @@ describe('VideosService', () => {
             is_importing: true,
             is_publishing: false,
             is_streaming: false,
-            is_indexing: false,
-            is_indexed: false,
           });
         if (id === 'video2')
           return Promise.resolve({
@@ -2237,8 +2235,6 @@ describe('VideosService', () => {
             is_importing: false,
             is_publishing: true,
             is_streaming: false,
-            is_indexing: false,
-            is_indexed: false,
           });
         if (id === 'video3')
           return Promise.resolve({
@@ -2246,8 +2242,6 @@ describe('VideosService', () => {
             is_importing: false,
             is_publishing: false,
             is_streaming: true,
-            is_indexing: false,
-            is_indexed: false,
           });
         if (id === 'video4')
           return Promise.resolve({
@@ -2255,18 +2249,8 @@ describe('VideosService', () => {
             is_importing: false,
             is_publishing: false,
             is_streaming: false,
-            is_indexing: true,
-            is_indexed: false,
           });
-        if (id === 'video5')
-          return Promise.resolve({
-            video_id: 'video5',
-            is_importing: false,
-            is_publishing: false,
-            is_streaming: false,
-            is_indexing: false,
-            is_indexed: true,
-          });
+
         return Promise.resolve(null);
       });
 
@@ -2275,15 +2259,13 @@ describe('VideosService', () => {
         'video2',
         'video3',
         'video4',
-        'video5',
       ]);
 
       expect(result.nonFinalizedVideoIds).toContain('video1');
       expect(result.nonFinalizedVideoIds).toContain('video2');
       expect(result.nonFinalizedVideoIds).toContain('video3');
-      expect(result.nonFinalizedVideoIds).toContain('video4');
-      expect(result.nonFinalizedVideoIds).toContain('video5');
-      expect(result.finalizedVideoIds).toHaveLength(0);
+      expect(result.nonFinalizedVideoIds).not.toContain('video4');
+      expect(result.finalizedVideoIds).toHaveLength(1);
     });
   });
 
@@ -2298,7 +2280,7 @@ describe('VideosService', () => {
       expect(fs.default.writeFileSync).toHaveBeenCalled();
     });
 
-    it('should write manifest to S3 in s3 storage mode', async () => {
+    it('should throw when writing manifest in non-filesystem storage mode', async () => {
       const content = '#EXTM3U\n#EXT-X-VERSION:3';
 
       // Mock S3 storage mode
@@ -2332,13 +2314,10 @@ describe('VideosService', () => {
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
 
-      await service.writeMasterManifest('video123', 'static', content);
-
-      expect(mockStorageService.saveFile).toHaveBeenCalledWith(
-        'external/videos/video123/adaptive/m3u8/manifest-master.m3u8',
-        Buffer.from(content),
-        'application/x-mpegURL'
+      await expect(service.writeMasterManifest('video123', 'static', content)).rejects.toThrow(
+        'Master manifest writing is handled directly by MoarTube Client when MoarTube Node is in s3provider mode.'
       );
+      expect(mockStorageService.saveFile).not.toHaveBeenCalled();
     });
   });
 

@@ -194,6 +194,12 @@ export class StreamsService extends BaseService {
       void this.cloudflareService.purgeAllWatchPages();
       void this.cloudflareService.purgeNodePage();
 
+      this.broadcastStreamEvent('stream_stopped', {
+        videoId,
+        isLive: false,
+        isStreaming: false,
+      });
+
       this.logger.info('Stream stopped', { videoId });
     });
   }
@@ -452,9 +458,7 @@ export class StreamsService extends BaseService {
     }
 
     const videos = await this.videoRepository.findAll();
-    const streamedVideos = videos.filter(
-      (v) => v.is_streamed && v.is_stream_recorded_remotely
-    );
+    const streamedVideos = videos.filter((v) => v.is_streamed && v.is_stream_recorded_remotely);
 
     for (const video of streamedVideos) {
       const videosDir = config.paths.videosDirectoryPath;
@@ -528,22 +532,28 @@ export class StreamsService extends BaseService {
     // Traverse resolution subdirectories (e.g., 2160p, 1080p, 720p, etc.)
     const entries = fs.readdirSync(adaptiveDir, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isDirectory()) {
-        const resolutionDir = path.join(adaptiveDir, entry.name);
-        const manifestPath = path.join(resolutionDir, `manifest-${entry.name}.m3u8`);
+      const entryName = typeof entry === 'string' ? entry : entry.name;
+      const isDirectory = typeof entry === 'string' ? false : entry.isDirectory();
+
+      if (isDirectory) {
+        const resolutionDir = path.join(adaptiveDir, entryName);
+        const manifestPath = path.join(resolutionDir, `manifest-${entryName}.m3u8`);
 
         if (fs.existsSync(manifestPath)) {
           const content = fs.readFileSync(manifestPath, 'utf8');
           if (!content.includes(HLS_END_LIST_TAG)) {
             // Replace EVENT playlist type with VOD
-            let modified = content.replace('#EXT-X-PLAYLIST-TYPE:EVENT', '#EXT-X-PLAYLIST-TYPE:VOD');
+            let modified = content.replace(
+              '#EXT-X-PLAYLIST-TYPE:EVENT',
+              '#EXT-X-PLAYLIST-TYPE:VOD'
+            );
             modified = modified.trim() + '\n' + HLS_END_LIST_TAG + '\n';
             fs.writeFileSync(manifestPath, modified);
           }
         }
-      } else if (entry.name.endsWith('.m3u8')) {
+      } else if (entryName.endsWith('.m3u8')) {
         // Also handle manifests directly in the m3u8 directory (fallback)
-        const filePath = path.join(adaptiveDir, entry.name);
+        const filePath = path.join(adaptiveDir, entryName);
         const content = fs.readFileSync(filePath, 'utf8');
         if (!content.includes(HLS_END_LIST_TAG)) {
           let modified = content.replace('#EXT-X-PLAYLIST-TYPE:EVENT', '#EXT-X-PLAYLIST-TYPE:VOD');
