@@ -1,15 +1,3 @@
-/**
- * MoarTube-Node Entry Point
- *
- * Main entry point for MoarTube-Node. Handles both master and worker processes
- * in a Node.js cluster configuration.
- *
- * Usage:
- *   node moartube-node.js
- *   npm start
- */
-
-// Load environment variables from .env file
 import 'dotenv/config';
 
 import cluster from 'node:cluster';

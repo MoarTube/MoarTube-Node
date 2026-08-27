@@ -211,7 +211,7 @@ class Config {
    */
   private createDefaultNodeSettings(): Record<string, unknown> {
     return {
-      nodeListeningPort: 80,
+      nodeListeningPort: 9090,
       isSecure: false,
       publicNodeProtocol: '',
       publicNodeAddress: '',
