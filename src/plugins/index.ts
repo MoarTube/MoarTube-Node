@@ -70,7 +70,9 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   // Register multipart support (for file uploads)
   await app.register(fastifyMultipart, {
     limits: {
-      fileSize: 1000 * 1000 * 1000 * 1000, // 1TB
+      parts: Infinity,
+      files: Infinity,
+      fileSize: Infinity,
     },
   });
 

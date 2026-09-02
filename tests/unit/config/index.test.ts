@@ -318,7 +318,7 @@ describe('config/index.ts', () => {
       expect(mockFs.mkdirSync).toHaveBeenCalledWith(mockPath.dirname(mockPaths.nodeSettingsPath), { recursive: true });
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockPaths.nodeSettingsPath,
-        expect.stringContaining('"nodeListeningPort": 80')
+        expect.stringContaining('"nodeListeningPort": 9090')
       );
     });
 

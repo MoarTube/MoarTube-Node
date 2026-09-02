@@ -404,7 +404,6 @@ export interface SignInInput {
   moarTubeNodeHttpProtocol: string;
   moarTubeNodeIp: string;
   moarTubeNodePort: number;
-  rememberMe: boolean;
 }
 
 export interface SignInResult {

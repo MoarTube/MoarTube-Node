@@ -496,10 +496,9 @@ describe('Services Interfaces', () => {
         moarTubeNodeHttpProtocol: 'https',
         moarTubeNodeIp: '192.168.1.1',
         moarTubeNodePort: 8080,
-        rememberMe: true,
       };
       expect(input.username).toBe('admin');
-      expect(input.rememberMe).toBe(true);
+      expect(input.moarTubeNodePort).toBe(8080);
     });
   });
 

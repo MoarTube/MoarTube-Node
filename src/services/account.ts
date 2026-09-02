@@ -49,7 +49,7 @@ export class AccountService extends BaseService {
 
       if (isUsernameValid && isPasswordValid) {
         // Generate JWT token
-        const token = this.generateToken(data.username, data.rememberMe);
+        const token = this.generateToken(data.username);
 
         this.logger.info('User signed in successfully', { username: data.username });
 
@@ -68,20 +68,13 @@ export class AccountService extends BaseService {
   }
 
   /**
-   * Generate a JWT token
+   * Generate a JWT token. A session, once created, is intended to last until
+   * the user explicitly signs out - tokens never expire.
    */
-  private generateToken(username: string, rememberMe?: boolean): string {
+  private generateToken(username: string): string {
     const config = getConfig();
     const payload: JwtPayload = { username };
 
-    const options: jwt.SignOptions = {};
-
-    if (rememberMe !== true) {
-      // Token expires in 1 day if not "remember me"
-      options.expiresIn = '1d';
-    }
-    // If rememberMe is true, token doesn't expire
-
-    return jwt.sign(payload, config.jwtSecret, options);
+    return jwt.sign(payload, config.jwtSecret);
   }
 }

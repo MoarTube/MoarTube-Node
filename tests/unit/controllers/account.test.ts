@@ -99,7 +99,6 @@ describe('AccountController', () => {
           moarTubeNodeHttpProtocol: 'https',
           moarTubeNodeIp: 'node.example.com',
           moarTubeNodePort: 443,
-          rememberMe: true,
         },
       });
 
@@ -111,7 +110,6 @@ describe('AccountController', () => {
         moarTubeNodeHttpProtocol: 'https',
         moarTubeNodeIp: 'node.example.com',
         moarTubeNodePort: 443,
-        rememberMe: true,
       });
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -134,7 +132,6 @@ describe('AccountController', () => {
           moarTubeNodeHttpProtocol: 'https',
           moarTubeNodeIp: 'node.example.com',
           moarTubeNodePort: 443,
-          rememberMe: false,
         },
       });
 
@@ -161,7 +158,6 @@ describe('AccountController', () => {
           moarTubeNodeHttpProtocol: 'https',
           moarTubeNodeIp: 'new-node.example.com',
           moarTubeNodePort: 8443,
-          rememberMe: true,
         },
       });
 
@@ -192,7 +188,6 @@ describe('AccountController', () => {
           moarTubeNodeHttpProtocol: 'http',
           moarTubeNodeIp: 'new-node.example.com',
           moarTubeNodePort: 8080,
-          rememberMe: false,
         },
       });
 
@@ -214,7 +209,6 @@ describe('AccountController', () => {
           moarTubeNodeHttpProtocol: 'https',
           moarTubeNodeIp: 'node.example.com',
           moarTubeNodePort: 443,
-          rememberMe: false,
         },
       });
 
@@ -233,7 +227,6 @@ describe('AccountController', () => {
           moarTubeNodeHttpProtocol: 'https',
           moarTubeNodeIp: 'node.example.com',
           moarTubeNodePort: 443,
-          rememberMe: false,
         },
       });
 

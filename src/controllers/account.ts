@@ -32,14 +32,8 @@ export class AccountController extends BaseController {
    */
   signIn = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const {
-        username,
-        password,
-        moarTubeNodeHttpProtocol,
-        moarTubeNodeIp,
-        moarTubeNodePort,
-        rememberMe,
-      } = request.body as SignInBody;
+      const { username, password, moarTubeNodeHttpProtocol, moarTubeNodeIp, moarTubeNodePort } =
+        request.body as SignInBody;
 
       const result = await this.accountService.signIn({
         username,
@@ -47,7 +41,6 @@ export class AccountController extends BaseController {
         moarTubeNodeHttpProtocol,
         moarTubeNodeIp,
         moarTubeNodePort,
-        rememberMe,
       });
 
       if (result.isAuthenticated) {

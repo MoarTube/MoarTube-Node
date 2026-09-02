@@ -77,7 +77,6 @@ describe('AccountService', () => {
       moarTubeNodeHttpProtocol: 'https',
       moarTubeNodeIp: '127.0.0.1',
       moarTubeNodePort: 8080,
-      rememberMe: false,
       ...overrides,
     });
 
@@ -112,17 +111,8 @@ describe('AccountService', () => {
         });
       });
 
-      it('should generate token with expiration when rememberMe is false', async () => {
-        const input = createSignInInput({ rememberMe: false });
-
-        const result = await service.signIn(input);
-
-        const decoded = jwt.decode(result.token!) as { exp?: number };
-        expect(decoded.exp).toBeDefined();
-      });
-
-      it('should generate token without expiration when rememberMe is true', async () => {
-        const input = createSignInInput({ rememberMe: true });
+      it('should generate a token without expiration', async () => {
+        const input = createSignInInput();
 
         const result = await service.signIn(input);
 
