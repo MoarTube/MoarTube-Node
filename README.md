@@ -1,8 +1,9 @@
 <img src="https://github.com/MoarTube/MoarTube-Node/assets/26640616/2dacfc1c-dbd0-4c71-b9a5-b11ac67d290f" alt="logo" width="200"/>
 
 # MoarTube-Node
-Welcome to **MoarTube Node**, the server-side software for hosting your own videos and live streams. This cross-platform Node.js Fastify application is managed by the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client). Viewers visit your node directly; no central website or account is required.
+Welcome to **MoarTube Node**, the server-side software for hosting your own videos and live streams! This cross-platform, terminal-based Node.js Express application is managed by the [MoarTube Client](https://github.com/MoarTube/MoarTube-Client).
 
+[TL;DR: Watch the Quickstart Video](https://www.moartube.com/guides/moartube-quick-start)
 
 # 🚀 How to Get Started
 Welcome to the **MoarTube Node setup guide**! Follow these simple steps to get your MoarTube Node up and running. Don’t worry—MoarTube is designed to be so easy to set up and use, you’ll be done in minutes.
@@ -16,10 +17,12 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
   - [Docker](#docker)
   - [npm](#npm)
   - [git](#git)
+  - [script (Ubuntu Linux)](#script-ubuntu-linux)
 - [Installation Methods](#installation-methods)
   - [Docker](#dockerhub)
   - [npm](#npm-1)
   - [git](#git-1)
+  - [script (Ubuntu Linux)](#script-ubuntu-linux-1)
 - [Next Steps](#next-steps)
   - [Default Login Credentials](#default-login-credentials)
   - [Cloudflare](#cloudflare)
@@ -32,7 +35,7 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
 ## 🖥️ Platform Support
 - Cross-platform compatibility: **Windows**, **macOS**, and **Linux**
 - Capable of running on a **[Raspberry Pi Zero 2 W](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/)**
-- Host videos and streams on your own node
+- Run your node **Privately** or **publicize** your videos and streams on [MoarTube](http://www.moartube.com)
 - MoarTube Client performs **video and stream processing** on your local machine
 - MoarTube Node handles **storage and distribution** of your content
 - Host your node:
@@ -48,7 +51,7 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
   - **OGV** *(VP8, Opus)*
 - Transcoding capabilities:
   - Convert **MP4/WEBM** videos to **HLS/MP4/WEBM/OGV**
-  - Transcode **RTMP streams** (e.g., from OBS) into **HLS live streams**
+  - Transcode **RTMP streams** ([e.g., from OBS](https://www.moartube.com/guides/how-to-live-stream-obs)) into **HLS live streams**
 - Video resolutions: **2160p**, **1440p**, **1080p**, **720p**, **480p**, **360p**, **240p**
 - Video player modes:
   - **Streamer Mode**
@@ -90,26 +93,26 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
   - **External platforms**
 
 ## 🛠️ Advanced Features
-- **Cloudflare CDN**:
+- [**Cloudflare CDN**](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn):
   - Cloudflare's **global network** facilitates mass data propagation for audiences of any size, anywhere.
   - Data is transmitted throughout Cloudflare's **global network** within milliseconds of beng requested.
   - Available to a free-tier Cloudflare account.
-- **Cloudflare Turnstile**:
+- [**Cloudflare Turnstile**](https://www.moartube.com/guides/how-to-enable-cloudflare-turnstile):
   - Next-generation **bot detection** and **human verification** without intrusive captchas.
   - Available to a free-tier Cloudflare account.
-- **Postgres**
+- [**Postgres**](https://www.moartube.com/guides/how-to-configure-database)
   - Remote database storage for video and live stream metadata and information.
   - Host your database **anywhere**.
-- **S3 Providers**
+- [**S3 Providers**](https://www.moartube.com/guides/how-to-configure-storage)
   - Remote storage for video and live stream content.
   - Seemingly **unlimited** storage size and can meet **high demand**.
     - cheap and affordable
   - Compatible with any S3 provider that conforms to the AWS S3 specification.
-- **Dual Box Compatibility**:
+- [**Dual Box Compatibility**](https://www.moartube.com/guides/how-to-dual-box):
   - Broadcast an OBS RTMP stream to a dedicated processing system running the MoarTube Client.
   - Can broadcast to a dedicated processing system over LAN or WAN.
   - No plugins like NDI required.
-- **GPU Acceleration**:
+- [**GPU Acceleration**](https://www.moartube.com/guides/how-to-enable-gpu-acceleration):
   - Supports **Nvidia** and **AMD** GPUs for accelerated encoding/decoding (Windows only).
 
 ## 🏆 Why Choose MoarTube?
@@ -139,7 +142,7 @@ MoarTube is designed to be lightweight and accessible, making it the most resour
 ## 🌐 **Decentralize your Deployment**
 - Designate external providers such as **Postgres** and **S3** to store and distribute your content for greater scalability.
 - Your node becomes completely disposable. Content and metadata are stored **externally** (e.g., S3, Postgres), allowing you to re-deploy your node at any time without data loss. Just tell your new node where its data is and you're back **online**.
-- Cloudflare eliminates much of the strain on your storage distribution by leveraging the **world’s largest CDN**, giving your node the same global delivery reach as **major platforms**.
+- [Cloudflare](https://www.moartube.com/guides/how-to-enable-cloudflare-cdn) eliminates much of the strain on your storage distribution by leveraging the **world’s largest CDN**, giving your node the same global delivery reach as **major platforms**.
 
 ## 🌍 Run Your Node Anywhere
 Whether on a cloud VPS, personal computer, or compact device like a Raspberry Pi, MoarTube gives you full control. MoarTube’s efficiency and flexibility make it the ideal solution for hosting media **anywhere**, on virtually **any hardware**, for audiences of **any size**.
@@ -157,6 +160,9 @@ If you're using npm to install the software, make sure that [Node.js and npm](ht
 ## git
 You can clone the repo, but make sure that [Node.js and npm](https://nodejs.org/en) are installed on your machine.
 
+## script (Ubuntu Linux)
+
+A script to automate your entire setup. Installs Node.js using Snap, clones the git repo using git, installs dependencies using npm, and sets the node to autostart on system boot using systemctl
 
 # Installation Methods
 
@@ -210,7 +216,7 @@ npm i @moartube/moartube-node
 And run from the command-line locally:
 
 ```bash
-node node_modules/@moartube/moartube-node/dist/moartube-node.js
+node node_modules/@moartube/moartube-node/moartube-node.js
 ```
 
 ## [git](https://github.com/MoarTube/MoarTube-Node)
@@ -223,25 +229,19 @@ Open a terminal in the cloned directory and run:
 
 ```bash
 npm install
-npm run build
 ```
 
 ```bash
-npm start
+node moartube-node.js
 ```
 
-Or for development with hot-reload:
+## [script (Ubuntu Linux)](https://www.moartube.com/bash/install/node)
 
 ```bash
-npm run dev
+bash <(wget -O - https://www.moartube.com/bash/install/node)
 ```
-
 
 # Next Steps
-
-This release starts with a fresh SQLite or PostgreSQL database. The regenerated
-`drizzle` directory contains one initial standalone migration per dialect;
-upgrades from previous builds are not supported.
 
 ## Default Login Credentials
 
@@ -253,7 +253,7 @@ By default, MoarTube Node listens on port 80.
 
 ## Cloudflare
 
-At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can give your node CDN capabilities. With its global network, Cloudflare will distribute most of your node's videos and live streams.
+At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://www.moartube.com/guides/how-to-enable-cloudflare-integration). With its global network, Cloudflare will distribute most of your node's videos and live streams.
 
 ## Get MoarTube Client
 
@@ -293,7 +293,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/snap/bin/node /home/Moartube-Node/dist/moartube-node.js
+ExecStart=/snap/bin/node /home/Moartube-Node/moartube-node.js
 Restart=always
 
 [Install]
@@ -339,88 +339,7 @@ Restart the moartube-node service.
 sudo systemctl restart moartube-node
 ```
 
-# Development
 
-MoarTube Node is built with TypeScript and uses modern tooling for development.
-
-## Tech Stack
-
-- **Runtime**: Node.js 20+
-- **Language**: TypeScript 5.x with strict type checking
-- **Framework**: Fastify 5.x with Zod validation
-- **Database**: SQLite (local) or PostgreSQL (remote) via Drizzle ORM
-- **Testing**: Vitest with 100% code coverage
-- **Build**: tsup for bundling
-
-## Project Structure
-
-```
-src/
-├── config/          # Configuration and environment
-├── controllers/     # Request handlers
-├── core/            # Core functionality (DI container, clustering)
-├── database/        # Database connections and repositories
-├── errors/          # Custom error classes
-├── plugins/         # Fastify plugins (auth, swagger, error handling)
-├── routes/          # Route definitions with Zod schemas
-├── services/        # Business logic services
-├── types/           # TypeScript type definitions
-├── utils/           # Utility functions
-├── validators/      # Zod validation schemas
-├── websocket/       # WebSocket handlers
-└── moartube-node.ts # Application entry point
-```
-
-## Development Commands
-
-```bash
-# Install dependencies
-npm install
-
-# Run in development mode with hot-reload
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production build
-npm start
-
-# Run tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Type check
-npm run typecheck
-
-# Lint code
-npm run lint
-
-# Format code
-npm run format
-```
-
-## API Documentation
-
-API documentation is available via Swagger UI at `/documentation` when running in development mode.
-
-To enable in production, set the environment variable:
-```bash
-ENABLE_SWAGGER_IN_PRODUCTION=true
-```
-
-## Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NODE_PORT` | HTTP port to listen on | `80` |
-| `IS_DOCKER_ENVIRONMENT` | Running in Docker | `false` |
-| `NODE_ENV` | Environment mode | `development` |
-| `DATABASE_TYPE` | `sqlite` or `postgres` | `sqlite` |
-| `POSTGRES_URL` | PostgreSQL connection URL | - |
-| `ENABLE_SWAGGER_IN_PRODUCTION` | Enable Swagger in production | `false` |
 
 
 
