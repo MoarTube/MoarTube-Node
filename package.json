@@ -32,7 +32,7 @@
   "scripts": {
     "dev": "tsx watch src/moartube-node.ts",
     "build": "tsup",
-    "start": "node dist/moartube-node.js",
+    "start": "node bin/moartube-node-start",
     "dev:start": "tsx src/moartube-node.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src tests --ext .ts",

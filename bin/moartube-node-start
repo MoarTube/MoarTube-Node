@@ -1,5 +1,51 @@
 #!/usr/bin/env node
 
-process.title = 'MoarTube Node';
+import { existsSync, rmSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
+import cluster from "node:cluster";
 
-await import('../dist/moartube-node.js');
+process.title = "MoarTube Node";
+
+const root = fileURLToPath(new URL("../", import.meta.url));
+const clean = process.argv.slice(2).includes("--clean");
+
+try {
+  if (clean && cluster.isPrimary) {
+    // Resolve build prerequisites before removing the existing installation's data.
+    if (!existsSync(path.join(root, "src", "moartube-node.ts"))) {
+      throw new Error(
+        "Clean startup requires a source checkout and development dependencies.",
+      );
+    }
+    const require = createRequire(import.meta.url);
+    const builder = require.resolve("tsup/dist/cli-default.js");
+
+    for (const name of ["coverage", "data", "dist"]) {
+      const target = path.resolve(root, name);
+      if (path.dirname(target) !== path.resolve(root)) {
+        throw new Error(
+          `Cleanup target is outside the node directory: ${target}`,
+        );
+      }
+      console.log(`Removing ${target}`);
+      rmSync(target, { recursive: true, force: true });
+    }
+
+    const build = spawnSync(process.execPath, [builder], {
+      cwd: root,
+      stdio: "inherit",
+    });
+    if (build.error) throw build.error;
+    if (build.status !== 0) {
+      throw new Error(`Node build failed (${build.signal ?? build.status}).`);
+    }
+  }
+
+  await import(new URL("../dist/moartube-node.js", import.meta.url).href);
+} catch (error) {
+  console.error("Failed to start MoarTube Node:", error);
+  process.exitCode = 1;
+}

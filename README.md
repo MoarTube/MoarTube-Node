@@ -31,6 +31,18 @@ When you’re ready, make sure to check out the [MoarTube Client](https://github
   - [Ubuntu Linux Node.js install Guide](#ubuntu-linux-nodejs-install-guide)
   - [Ubuntu Linux Autostart Guide](#ubuntu-linux-autostart-guide)
 
+## Clean startup
+
+Run `npm start -- --clean` from a source checkout with development dependencies
+installed, or select **Launch Program (Clean)** in VS Code. The CLI also accepts
+`moartube-node --clean`. This permanently deletes the installation's `coverage`,
+`data`, and `dist` directories, including local settings, database, and media.
+Cleanup finishes before rebuilding and startup provisioning. Missing directories
+are ignored; cleanup or build failures stop startup. Cluster workers do not repeat
+cleanup. Paths are relative to the installation, regardless of the terminal's
+working directory. Clean startup requires sources and build tools to recreate
+`dist`; prerequisites are checked before deletion.
+
 # Features
 ## 🖥️ Platform Support
 - Cross-platform compatibility: **Windows**, **macOS**, and **Linux**

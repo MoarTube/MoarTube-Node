@@ -19,13 +19,12 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch (Dev - tsx)",
+            "name": "Launch Program (Clean)",
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "preLaunchTask": "npm: db:push",
             "runtimeExecutable": "npm",
-            "runtimeArgs": ["run", "dev"],
+            "runtimeArgs": ["run", "start", "--", "--clean"],
             "console": "integratedTerminal"
         }
     ]
