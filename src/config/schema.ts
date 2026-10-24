@@ -123,47 +123,6 @@ export const NodeSettingsSchema = z.object({
 });
 
 // ============================================
-// App Config Schemas
-// ============================================
-
-/**
- * Indexer service configuration schema
- */
-export const IndexerConfigSchema = z.object({
-  httpProtocol: z.enum(['http', 'https']),
-  host: z.string().min(1, 'Indexer host is required'),
-  port: z.number().int().min(1).max(65535),
-});
-
-/**
- * Aliaser service configuration schema
- */
-export const AliaserConfigSchema = z.object({
-  httpProtocol: z.enum(['http', 'https']),
-  host: z.string().min(1, 'Aliaser host is required'),
-  port: z.number().int().min(1).max(65535),
-});
-
-/**
- * Main application config schema (config.json)
- */
-export const AppConfigSchema = z.object({
-  indexerConfig: IndexerConfigSchema,
-  aliaserConfig: AliaserConfigSchema,
-});
-
-// ============================================
-// Node Identification Schema
-// ============================================
-
-/**
- * Node identification schema
- */
-export const NodeIdentificationSchema = z.object({
-  moarTubeTokenProof: z.string().min(1, 'Token proof is required'),
-});
-
-// ============================================
 // Last Checked Content Tracker Schema
 // ============================================
 
@@ -181,8 +140,6 @@ export const LastCheckedContentTrackerSchema = z.object({
 // ============================================
 
 export type NodeSettingsValidated = z.infer<typeof NodeSettingsSchema>;
-export type AppConfigValidated = z.infer<typeof AppConfigSchema>;
-export type NodeIdentificationValidated = z.infer<typeof NodeIdentificationSchema>;
 export type LastCheckedContentTrackerValidated = z.infer<typeof LastCheckedContentTrackerSchema>;
 
 // ============================================
@@ -196,28 +153,6 @@ export function validateNodeSettings(data: unknown): NodeSettingsValidated {
   const result = NodeSettingsSchema.safeParse(data);
   if (!result.success) {
     throw new Error(`Invalid node settings: ${result.error.message}`);
-  }
-  return result.data;
-}
-
-/**
- * Validate app config with detailed error messages
- */
-export function validateAppConfig(data: unknown): AppConfigValidated {
-  const result = AppConfigSchema.safeParse(data);
-  if (!result.success) {
-    throw new Error(`Invalid app config: ${result.error.message}`);
-  }
-  return result.data;
-}
-
-/**
- * Validate node identification
- */
-export function validateNodeIdentification(data: unknown): NodeIdentificationValidated {
-  const result = NodeIdentificationSchema.safeParse(data);
-  if (!result.success) {
-    throw new Error(`Invalid node identification: ${result.error.message}`);
   }
   return result.data;
 }

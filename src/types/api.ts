@@ -28,9 +28,6 @@ export interface VideoDataPayload {
   isStreamed: number;
   isStreamRecordedRemotely: number;
   isStreamRecordedLocally: number;
-  isIndexed: number;
-  isIndexing: number;
-  isIndexOutdated: number;
   isError: number;
   isFinalized: number;
   meta: string;

@@ -7,10 +7,7 @@
 export type {
   DatabaseConfig,
   StorageConfig,
-  IndexerConfig,
-  AliaserConfig,
   NodeSettings,
-  NodeIdentification,
   LastCheckedContentTracker,
 } from './config.js';
 

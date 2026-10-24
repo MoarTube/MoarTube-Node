@@ -18,9 +18,6 @@ import type {
   SourcesFormatsAndResolutions,
   VideoPermissions,
   VideoData,
-  AddToIndexOptions,
-  AddToIndexResult,
-  VideoIndexData,
   VideoOutputs,
   VideoFormat,
 } from '@services/interfaces.js';
@@ -40,7 +37,6 @@ import { getConfig } from '@config/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
 import type { StorageService } from '@services/storage.js';
 import type { WebSocketService } from '@services/websocket.js';
-import type { IndexerService } from '@services/indexer.js';
 import type { PaginatedResult } from '@/types/index.js';
 
 /**
@@ -51,7 +47,6 @@ import type { PaginatedResult } from '@/types/index.js';
  * - Import/export workflows
  * - Publishing management
  * - View/like/dislike tracking
- * - Index management
  */
 export class VideosService extends BaseService {
   private readonly videoRepository:
@@ -63,7 +58,6 @@ export class VideosService extends BaseService {
   private readonly storageService: StorageService;
   private readonly websocketService: WebSocketService;
   private readonly cloudflareService: CloudflareService;
-  private readonly indexerService: IndexerService;
 
   // Debounced view counter - tracks pending views per video
   private readonly pendingViews: Map<string, number> = new Map();
@@ -82,8 +76,7 @@ export class VideosService extends BaseService {
       | ICommentsRepository<PostgresComment, PostgresNewComment>,
     storageService: StorageService,
     websocketService: WebSocketService,
-    cloudflareService: CloudflareService,
-    indexerService: IndexerService
+    cloudflareService: CloudflareService
   ) {
     super('VideosService', logger);
     this.videoRepository = videosRepository;
@@ -91,7 +84,6 @@ export class VideosService extends BaseService {
     this.storageService = storageService;
     this.websocketService = websocketService;
     this.cloudflareService = cloudflareService;
-    this.indexerService = indexerService;
   }
 
   /**
@@ -274,9 +266,6 @@ export class VideosService extends BaseService {
         is_stream_recorded_remotely: false,
         is_stream_recorded_locally: false,
         is_live: false,
-        is_indexing: false,
-        is_indexed: false,
-        is_index_outdated: false,
         is_error: false,
         is_finalized: false,
         is_hidden: false,
@@ -317,9 +306,6 @@ export class VideosService extends BaseService {
         isStreamed: 0,
         isStreamRecordedRemotely: 0,
         isStreamRecordedLocally: 0,
-        isIndexed: 0,
-        isIndexing: 0,
-        isIndexOutdated: 0,
         isError: 0,
         isFinalized: 0,
         meta,
@@ -343,7 +329,7 @@ export class VideosService extends BaseService {
         return null;
       }
 
-      const updates = this.buildVideoUpdateObject(data, existingVideo);
+      const updates = this.buildVideoUpdateObject(data);
 
       this.logger.debug('Updating video', { videoId, fields: Object.keys(updates) });
 
@@ -596,58 +582,6 @@ export class VideosService extends BaseService {
   }
 
   /**
-   * Get videos pending indexing
-   */
-  async getVideosNeedingIndexing(): Promise<(SQLiteVideo | PostgresVideo)[]> {
-    return this.videoRepository.findPendingIndexing();
-  }
-
-  /**
-   * Mark video as indexed
-   */
-  async setIndexed(videoId: string, isIndexed: boolean): Promise<void> {
-    await this.videoRepository.update(videoId, {
-      is_indexed: isIndexed,
-      is_index_outdated: false,
-      is_indexing: false,
-    });
-  }
-
-  /**
-   * Mark video index as outdated
-   */
-  async setIndexOutdated(videoId: string): Promise<void> {
-    await this.videoRepository.update(videoId, {
-      is_index_outdated: true,
-    });
-  }
-
-  /**
-   * Mark video index as outdated (with Cloudflare cache purge)
-   *
-   * Also purges thumbnail, preview, and poster images from Cloudflare cache
-   */
-  async markIndexOutdated(videoId: string): Promise<void> {
-    return this.withErrorLogging('markIndexOutdated', async () => {
-      const video = await this.videoRepository.findById(videoId);
-      if (!video) {
-        throw new Error(`Video not found: ${videoId}`);
-      }
-
-      // Only mark as outdated if currently indexed
-      if (video.is_indexed) {
-        await this.videoRepository.update(videoId, {
-          is_index_outdated: true,
-        });
-
-        await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
-        await this.cloudflareService.purgeVideoPreviewImages([videoId]);
-        await this.cloudflareService.purgeVideoPosterImages([videoId]);
-      }
-    });
-  }
-
-  /**
    * Set video source file extension
    */
   async setSourceFileExtension(videoId: string, extension: string): Promise<void> {
@@ -659,24 +593,16 @@ export class VideosService extends BaseService {
   /**
    * Update video length
    *
-   * Also marks index as outdated if video is indexed
    */
   async setVideoLength(
     videoId: string,
     lengthSeconds: number,
     lengthTimestamp: string
   ): Promise<void> {
-    const video = await this.videoRepository.findById(videoId);
-
     const updates: Record<string, unknown> = {
       length_seconds: lengthSeconds,
       length_timestamp: lengthTimestamp,
     };
-
-    // Mark index as outdated if video is indexed
-    if (video?.is_indexed === true) {
-      updates['is_index_outdated'] = true;
-    }
 
     await this.videoRepository.update(videoId, updates);
   }
@@ -1036,7 +962,7 @@ export class VideosService extends BaseService {
   /**
    * Get video data with formatted fields
    *
-   * Returns video data with alias URL and parsed JSON fields
+   * Returns video data with parsed JSON fields
    */
   async getVideoData(videoId: string): Promise<VideoData | null> {
     return this.withErrorLogging('getVideoData', async () => {
@@ -1063,9 +989,6 @@ export class VideosService extends BaseService {
    * Format video into VideoData structure
    */
   private formatVideoData(video: SQLiteVideo | PostgresVideo): VideoData {
-    const config = getConfig();
-    const nodeSettings = config.nodeSettings;
-
     const outputs = this.safeJsonParse(video.outputs, {
       m3u8: [],
       mp4: [],
@@ -1075,34 +998,18 @@ export class VideosService extends BaseService {
 
     const meta = this.safeJsonParse<Record<string, unknown>>(video.meta, {});
 
-    // Build video alias URL if indexed
-    let videoAliasUrl = 'MoarTube Aliaser link unavailable (video not indexed)';
-
-    if (video.is_indexed && nodeSettings.nodeId) {
-      const isDevelopment = config.runtime.isDevelopment;
-      if (isDevelopment) {
-        // Use localhost for development
-        const aliaserPort = config.urls.getAliaserConfig().port;
-        videoAliasUrl = `http://localhost:${String(aliaserPort)}/nodes/${nodeSettings.nodeId}/videos/${video.video_id}`;
-      } else {
-        videoAliasUrl = `https://moartu.be/nodes/${nodeSettings.nodeId}/videos/${video.video_id}`;
-      }
-    }
-
     return {
       videoId: video.video_id,
       title: video.title,
       description: video.description,
       tags: video.tags,
       views: video.views,
-      isIndexed: video.is_indexed,
       isPublished: video.is_published,
       isLive: video.is_live,
       isStreaming: video.is_streaming,
       isFinalized: video.is_finalized,
       isStreamRecordedRemotely: video.is_stream_recorded_remotely,
       timestamp: video.creation_timestamp,
-      videoAliasUrl,
       outputs,
       meta,
     };
@@ -1166,37 +1073,6 @@ export class VideosService extends BaseService {
     }
 
     return Array.from(tagsSet);
-  }
-
-  /**
-   * Get video alias URL for indexed videos
-   */
-  async getAliasUrl(videoId: string): Promise<string | null> {
-    return this.withErrorLogging('getAliasUrl', async () => {
-      const video = await this.videoRepository.findById(videoId);
-      if (!video) {
-        return null;
-      }
-
-      if (!video.is_indexed) {
-        throw new Error('Video is not indexed');
-      }
-
-      const config = getConfig();
-      const nodeSettings = config.nodeSettings;
-
-      if (!nodeSettings.nodeId) {
-        throw new Error('Node ID not configured');
-      }
-
-      const isDevelopment = config.runtime.isDevelopment;
-      if (isDevelopment) {
-        const aliaserPort = config.urls.getAliaserConfig().port;
-        return `http://localhost:${String(aliaserPort)}/nodes/${nodeSettings.nodeId}/videos/${videoId}`;
-      } else {
-        return `https://moartu.be/nodes/${nodeSettings.nodeId}/videos/${videoId}`;
-      }
-    });
   }
 
   /**
@@ -1337,12 +1213,9 @@ export class VideosService extends BaseService {
    * - importing
    * - publishing
    * - streaming
-   * - indexing
-   * - indexed (without force flag)
    */
   async deleteVideos(
-    videoIds: string[],
-    force = false
+    videoIds: string[]
   ): Promise<{ deletedVideoIds: string[]; nonDeletedVideoIds: string[] }> {
     return this.withErrorLogging('deleteVideos', async () => {
       const deletedVideoIds: string[] = [];
@@ -1356,12 +1229,7 @@ export class VideosService extends BaseService {
         }
 
         // Safety checks - don't delete videos in active states
-        const isInActiveState =
-          video.is_importing ||
-          video.is_publishing ||
-          video.is_streaming ||
-          video.is_indexing ||
-          (!force && video.is_indexed);
+        const isInActiveState = video.is_importing || video.is_publishing || video.is_streaming;
 
         if (isInActiveState) {
           nonDeletedVideoIds.push(videoId);
@@ -1370,8 +1238,6 @@ export class VideosService extends BaseService {
             isImporting: video.is_importing,
             isPublishing: video.is_publishing,
             isStreaming: video.is_streaming,
-            isIndexing: video.is_indexing,
-            isIndexed: video.is_indexed,
           });
           continue;
         }
@@ -1401,8 +1267,6 @@ export class VideosService extends BaseService {
    * - importing
    * - publishing
    * - streaming
-   * - indexing
-   * - indexed (without force flag)
    */
   async finalizeVideos(
     videoIds: string[]
@@ -1419,8 +1283,7 @@ export class VideosService extends BaseService {
         }
 
         // Safety checks - don't finalize videos in active states
-        const isInActiveState =
-          video.is_importing || video.is_publishing || video.is_streaming || video.is_indexing;
+        const isInActiveState = video.is_importing || video.is_publishing || video.is_streaming;
 
         if (isInActiveState) {
           nonFinalizedVideoIds.push(videoId);
@@ -1429,7 +1292,6 @@ export class VideosService extends BaseService {
             is_importing: video.is_importing,
             is_publishing: video.is_publishing,
             is_streaming: video.is_streaming,
-            is_indexing: video.is_indexing,
           });
           continue;
         }
@@ -1492,216 +1354,6 @@ export class VideosService extends BaseService {
     await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
     await this.cloudflareService.purgeVideoPreviewImages([videoId]);
     await this.cloudflareService.purgeVideoPosterImages([videoId]);
-  }
-
-  /**
-   * Get node icon as base64 encoded PNG
-   *
-   * Returns custom icon if exists, otherwise the default icon
-   */
-  getNodeIconPngBase64(): string {
-    const config = getConfig();
-    const customPath = path.join(config.paths.dataDirectoryPath, 'images', 'icon.png');
-    const defaultPath = path.join(config.paths.publicDirectoryPath, 'images', 'icon.png');
-
-    if (fs.existsSync(customPath)) {
-      return fs.readFileSync(customPath).toString('base64');
-    }
-    return fs.readFileSync(defaultPath).toString('base64');
-  }
-
-  /**
-   * Get node avatar as base64 encoded PNG
-   *
-   * Returns custom avatar if exists, otherwise the default avatar
-   */
-  getNodeAvatarPngBase64(): string {
-    const config = getConfig();
-    const customPath = path.join(config.paths.dataDirectoryPath, 'images', 'avatar.png');
-    const defaultPath = path.join(config.paths.publicDirectoryPath, 'images', 'avatar.png');
-
-    if (fs.existsSync(customPath)) {
-      return fs.readFileSync(customPath).toString('base64');
-    }
-    return fs.readFileSync(defaultPath).toString('base64');
-  }
-
-  /**
-   * Get video preview image as base64 encoded JPG
-   *
-   * Supports both filesystem and S3 storage modes
-   */
-  async getVideoPreviewJpgBase64(videoId: string): Promise<string> {
-    return this.withErrorLogging('getVideoPreviewJpgBase64', async () => {
-      const config = getConfig();
-      const storageMode = config.nodeSettings.storageConfig.storageMode;
-
-      if (storageMode === 'filesystem') {
-        const previewPath = path.join(
-          config.paths.videosDirectoryPath,
-          videoId,
-          'images',
-          'preview.jpg'
-        );
-
-        if (!fs.existsSync(previewPath)) {
-          throw new Error('Video preview image not found');
-        }
-
-        return fs.readFileSync(previewPath).toString('base64');
-      } else {
-        const key = `external/videos/${videoId}/images/preview.jpg`;
-        const buffer = await this.storageService.getFile(key);
-        return buffer.toString('base64');
-      }
-    });
-  }
-
-  /**
-   * Add video to MoarTube index
-   *
-   * Performs node identification, gathers video and node data,
-   * and submits to the MoarTube indexer
-   */
-  async addToIndex(videoId: string, options: AddToIndexOptions): Promise<AddToIndexResult> {
-    return this.withErrorLogging('addToIndex', async () => {
-      // Validate terms of service agreement
-      if (!options.termsOfServiceAgreed) {
-        throw new Error('Terms of service must be agreed to');
-      }
-
-      // Get video and validate it's in a valid state
-      const video = await this.videoRepository.findById(videoId);
-      if (!video) {
-        throw new Error('Video not found');
-      }
-
-      if (!video.is_published && !video.is_live) {
-        throw new Error('Video must be published or live to be indexed');
-      }
-
-      // Perform node identification
-      await this.indexerService.performNodeIdentification();
-
-      // Get config and node settings
-      const config = getConfig();
-      const nodeSettings = config.nodeSettings;
-      const nodeIdentification = config.nodeIdentification;
-
-      if (
-        nodeIdentification?.moarTubeTokenProof === undefined ||
-        nodeIdentification.moarTubeTokenProof === ''
-      ) {
-        throw new Error('Node identification failed - no token proof');
-      }
-
-      // Get image data
-      const nodeIconPngBase64 = this.getNodeIconPngBase64();
-      const nodeAvatarPngBase64 = this.getNodeAvatarPngBase64();
-      const videoPreviewJpgBase64 = await this.getVideoPreviewJpgBase64(videoId);
-
-      // Prepare submission data
-      const indexData: VideoIndexData = {
-        videoId: video.video_id,
-        nodeId: nodeSettings.nodeId,
-        nodeName: nodeSettings.nodeName,
-        nodeAbout: nodeSettings.nodeAbout,
-        publicNodeProtocol: nodeSettings.publicNodeProtocol,
-        publicNodeAddress: nodeSettings.publicNodeAddress,
-        publicNodePort: nodeSettings.publicNodePort,
-        title: video.title,
-        tags: video.tags,
-        views: video.views,
-        isLive: video.is_live,
-        isStreaming: video.is_streaming,
-        lengthSeconds: video.length_seconds,
-        creationTimestamp: video.creation_timestamp,
-        containsAdultContent: options.containsAdultContent,
-        nodeIconPngBase64,
-        nodeAvatarPngBase64,
-        videoPreviewJpgBase64,
-        moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
-        cloudflareTurnstileToken: options.cloudflareTurnstileToken,
-      };
-
-      // Mark video as indexing
-      await this.videoRepository.update(videoId, { is_indexing: true });
-
-      // Submit to indexer
-      const result = await this.indexerService.submitVideoToIndex(indexData);
-
-      if (result.isError) {
-        // Reset indexing state on error
-        await this.videoRepository.update(videoId, { is_indexing: false });
-
-        // Check for 413 (request too large)
-        if (result.statusCode === 413) {
-          return {
-            success: false,
-            message: result.message,
-            isRequestTooLarge: true,
-          };
-        }
-
-        return {
-          success: false,
-          message: result.message,
-        };
-      }
-
-      // Mark video as indexed
-      await this.videoRepository.update(videoId, {
-        is_indexing: false,
-        is_indexed: true,
-        is_index_outdated: false,
-      });
-
-      this.logger.info('Video added to index', { videoId });
-
-      return { success: true };
-    });
-  }
-
-  /**
-   * Remove video from MoarTube index
-   */
-  async removeFromIndex(videoId: string, cloudflareTurnstileToken: string): Promise<void> {
-    return this.withErrorLogging('removeFromIndex', async () => {
-      // Get video and validate
-      const video = await this.videoRepository.findById(videoId);
-      if (!video) {
-        throw new Error('Video not found');
-      }
-
-      // Perform node identification
-      await this.indexerService.performNodeIdentification();
-
-      // Get node identification
-      const config = getConfig();
-      const nodeIdentification = config.nodeIdentification;
-
-      if (
-        nodeIdentification?.moarTubeTokenProof === undefined ||
-        nodeIdentification.moarTubeTokenProof === ''
-      ) {
-        throw new Error('Node identification failed - no token proof');
-      }
-
-      // Remove from indexer
-      await this.indexerService.removeVideoFromIndex({
-        videoId,
-        moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
-        cloudflareTurnstileToken,
-      });
-
-      // Update video record
-      await this.videoRepository.update(videoId, {
-        is_indexed: false,
-        is_index_outdated: false,
-      });
-
-      this.logger.info('Video removed from index', { videoId });
-    });
   }
 
   // ============================================================================
@@ -1798,8 +1450,7 @@ export class VideosService extends BaseService {
    * Build update object for video metadata
    */
   private buildVideoUpdateObject(
-    data: UpdateVideoInput,
-    existingVideo: SQLiteVideo | PostgresVideo
+    data: UpdateVideoInput
   ): Partial<SQLiteNewVideo | PostgresNewVideo> {
     const updates: Partial<SQLiteNewVideo | PostgresNewVideo> = {};
 
@@ -1838,14 +1489,6 @@ export class VideosService extends BaseService {
     }
     if (data.isLiveChatEnabled !== undefined) {
       updates.is_live_chat_enabled = data.isLiveChatEnabled;
-    }
-
-    // Mark index as outdated if metadata changed and video is indexed
-    if (
-      existingVideo.is_indexed &&
-      (data.title !== undefined || data.description !== undefined || data.tags !== undefined)
-    ) {
-      updates.is_index_outdated = true;
     }
 
     return updates;

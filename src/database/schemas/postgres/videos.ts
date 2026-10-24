@@ -2,7 +2,7 @@
  * Videos table schema definition for Drizzle ORM (PostgreSQL)
  *
  * Represents video records including published videos and live streams.
- * This schema matches the existing Sequelize Video model for backward compatibility.
+ * Standalone video metadata and local operation state.
  */
 import { pgTable, serial, text, integer, boolean, bigint } from 'drizzle-orm/pg-core';
 
@@ -49,11 +49,6 @@ export const videos = pgTable('videos', {
   is_stream_recorded_remotely: boolean('is_stream_recorded_remotely').notNull().default(false),
   is_stream_recorded_locally: boolean('is_stream_recorded_locally').notNull().default(false),
   is_live: boolean('is_live').notNull().default(false),
-
-  // Indexing state
-  is_indexing: boolean('is_indexing').notNull().default(false),
-  is_indexed: boolean('is_indexed').notNull().default(false),
-  is_index_outdated: boolean('is_index_outdated').notNull().default(false),
 
   // Status flags
   is_error: boolean('is_error').notNull().default(false),

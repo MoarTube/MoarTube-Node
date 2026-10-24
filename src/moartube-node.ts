@@ -20,10 +20,10 @@ function loadConfig(): void {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
-  // Determine base directory where config json files live
+  // Determine the application base directory
   const baseDir = path.resolve(__dirname, '..');
 
-  initializeConfig(baseDir, 'config_test.json', __dirname);
+  initializeConfig(baseDir, __dirname);
 }
 
 /**
@@ -76,10 +76,9 @@ async function startMaster(): Promise<void> {
   await performStartupProvisioning(logger, container);
 
   // Get services from container
-  const indexer = container.resolve('indexerService');
   const cloudflare = container.resolve('cloudflareService');
 
-  const master = new ClusterMaster(logger, indexer, cloudflare);
+  const master = new ClusterMaster(logger, cloudflare);
 
   master.start();
 }

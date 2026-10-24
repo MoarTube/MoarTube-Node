@@ -2,4 +2,4 @@
 
 process.title = 'MoarTube Node';
 
-require('../dist/moartube-node');
+await import('../dist/moartube-node.js');

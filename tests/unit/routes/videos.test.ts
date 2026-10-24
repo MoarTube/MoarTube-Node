@@ -9,6 +9,13 @@ import { videosRoutes } from '@routes/videos.js';
 import type { Container } from '@core/container.js';
 
 describe('Videos Routes', () => {
+  it('does not expose retired platform endpoints', () => {
+    videosRoutes(mockFastify as any, mockContainer);
+    const paths = [...mockFastify.get.mock.calls, ...mockFastify.post.mock.calls]
+      .map(([path]) => path);
+    expect(paths).not.toContain('/:videoId/alias');
+    expect(paths.some((path) => path.includes('/index/'))).toBe(false);
+  });
   const mockFastify = {
     get: vi.fn(),
     post: vi.fn(),
@@ -92,11 +99,6 @@ describe('Videos Routes', () => {
   it('should register GET /:videoId/comments/:commentId route', () => {
     videosRoutes(mockFastify as any, mockContainer);
     expect(mockFastify.get).toHaveBeenCalledWith('/:videoId/comments/:commentId', expect.anything(), expect.any(Function));
-  });
-
-  it('should register GET /:videoId/alias route', () => {
-    videosRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.get).toHaveBeenCalledWith('/:videoId/alias', expect.anything(), expect.any(Function));
   });
 
   it('should register GET /:videoId/watch route', () => {
@@ -191,11 +193,6 @@ describe('Videos Routes', () => {
     expect(mockFastify.post).toHaveBeenCalledWith('/:videoId/lengths', expect.anything(), expect.any(Function));
   });
 
-  it('should register POST /:videoId/index/outdated route', () => {
-    videosRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledWith('/:videoId/index/outdated', expect.anything(), expect.any(Function));
-  });
-
   it('should register POST /:videoId/adaptive/m3u8/:manifestType/manifests/masterManifest route', () => {
     videosRoutes(mockFastify as any, mockContainer);
     expect(mockFastify.post).toHaveBeenCalledWith('/:videoId/adaptive/m3u8/:manifestType/manifests/masterManifest', expect.anything(), expect.any(Function));
@@ -271,24 +268,14 @@ describe('Videos Routes', () => {
     expect(mockFastify.post).toHaveBeenCalledWith('/:videoId/published', expect.anything(), expect.any(Function));
   });
 
-  it('should register POST /:videoId/index/add route', () => {
+  it('should register exactly 14 GET routes', () => {
     videosRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledWith('/:videoId/index/add', expect.anything(), expect.any(Function));
+    expect(mockFastify.get).toHaveBeenCalledTimes(14);
   });
 
-  it('should register POST /:videoId/index/remove route', () => {
+  it('should register exactly 25 POST routes', () => {
     videosRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledWith('/:videoId/index/remove', expect.anything(), expect.any(Function));
-  });
-
-  it('should register exactly 15 GET routes', () => {
-    videosRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.get).toHaveBeenCalledTimes(15);
-  });
-
-  it('should register exactly 28 POST routes', () => {
-    videosRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(28);
+    expect(mockFastify.post).toHaveBeenCalledTimes(25);
   });
 
   it('should register exactly 1 DELETE route', () => {

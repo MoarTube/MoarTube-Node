@@ -72,7 +72,6 @@ import {
   StreamsService,
   AccountService,
   StorageService,
-  IndexerService,
   CloudflareService,
   WebSocketService,
   ReportsService,
@@ -132,7 +131,6 @@ export interface ContainerCradle {
   streamsService: StreamsService;
   accountService: AccountService;
   storageService: StorageService;
-  indexerService: IndexerService;
   cloudflareService: CloudflareService;
   websocketService: WebSocketService;
   reportsService: ReportsService;
@@ -254,7 +252,6 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
   appContainer.register({
     accountService: asClass(AccountService).singleton(),
     storageService: asClass(StorageService).singleton(),
-    indexerService: asClass(IndexerService).singleton(),
     websocketService: asClass(WebSocketService).singleton(),
     cloudflareService: asClass(CloudflareService).singleton(),
     videosService: asClass(VideosService).singleton(),

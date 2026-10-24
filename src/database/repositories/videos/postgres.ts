@@ -133,8 +133,6 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
       .update(videos)
       .set({
         views: sql`${videos.views} + ${count}`,
-        // Mark index as outdated if video is indexed (matches JS behavior)
-        is_index_outdated: sql`CASE WHEN ${videos.is_indexed} = true THEN true ELSE ${videos.is_index_outdated} END`,
       })
       .where(eq(videos.video_id, videoId));
   }
@@ -195,42 +193,6 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
       .from(videos)
       .where(eq(videos.is_streaming, true))
       .orderBy(desc(videos.creation_timestamp));
-  }
-
-  /**
-   * Finds all indexed videos
-   */
-  async findIndexed(): Promise<DrizzleVideo[]> {
-    return this.db
-      .select()
-      .from(videos)
-      .where(eq(videos.is_indexed, true))
-      .orderBy(desc(videos.creation_timestamp));
-  }
-
-  /**
-   * Finds all videos that need indexing
-   */
-  async findPendingIndexing(): Promise<DrizzleVideo[]> {
-    return this.db
-      .select()
-      .from(videos)
-      .where(
-        and(
-          eq(videos.is_published, true),
-          or(eq(videos.is_indexed, false), eq(videos.is_index_outdated, true))
-        )
-      );
-  }
-
-  /**
-   * Marks all indexed videos as outdated
-   */
-  async markAllIndexedAsOutdated(): Promise<void> {
-    await this.db
-      .update(videos)
-      .set({ is_index_outdated: true })
-      .where(eq(videos.is_indexed, true));
   }
 
   /**

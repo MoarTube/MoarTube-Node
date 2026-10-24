@@ -2,7 +2,7 @@
  * Videos table schema definition for Drizzle ORM
  *
  * Represents video records including published videos and live streams.
- * This schema matches the existing Sequelize Video model for backward compatibility.
+ * Standalone video metadata and local operation state.
  */
 import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
 
@@ -53,11 +53,6 @@ export const videos = sqliteTable('videos', {
     .notNull()
     .default(false),
   is_live: integer('is_live', { mode: 'boolean' }).notNull().default(false),
-
-  // Indexing state
-  is_indexing: integer('is_indexing', { mode: 'boolean' }).notNull().default(false),
-  is_indexed: integer('is_indexed', { mode: 'boolean' }).notNull().default(false),
-  is_index_outdated: integer('is_index_outdated', { mode: 'boolean' }).notNull().default(false),
 
   // Status flags
   is_error: integer('is_error', { mode: 'boolean' }).notNull().default(false),

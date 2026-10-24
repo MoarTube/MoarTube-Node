@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "8e22aa74-ebd3-4a32-9326-5901a79d5d66",
+  "id": "bc305657-16ac-400f-9daa-bbd620b723c0",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "commentreports": {
@@ -613,30 +613,6 @@
         },
         "is_live": {
           "name": "is_live",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
-        "is_indexing": {
-          "name": "is_indexing",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
-        "is_indexed": {
-          "name": "is_indexed",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
-        },
-        "is_index_outdated": {
-          "name": "is_index_outdated",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,

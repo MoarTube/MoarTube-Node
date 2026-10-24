@@ -33,6 +33,7 @@ describe('SQLite connection and shipped migrations (real SQL)', () => {
   it('runs migrations idempotently and persists data across native connections', async () => {
     database = openTestDatabase();
     sqliteConnection.initializeDatabaseSchema();
+    expect(database.client.prepare('SELECT * FROM __drizzle_migrations').all()).toHaveLength(1);
     expect(sqliteConnection.getDatabase()).toBe(database.db);
     expect(
       database.db.all(

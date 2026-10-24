@@ -5,8 +5,6 @@ import {
   buildNodeBaseUrl,
   buildExternalVideosBaseUrl,
   buildExternalResourcesBaseUrl,
-  type IndexerConfig,
-  type AliaserConfig,
   type NodeSettings,
   type StorageConfig
 } from '@/config/urls.js';
@@ -24,60 +22,20 @@ describe('config/urls.ts', () => {
   });
 
   describe('Urls singleton', () => {
-    const mockIndexerConfig: IndexerConfig = {
-      httpProtocol: 'https',
-      host: 'indexer.moartube.com',
-      port: 443,
-    };
 
-    const mockAliaserConfig: AliaserConfig = {
-      httpProtocol: 'https',
-      host: 'aliaser.moartube.com',
-      port: 443,
-    };
 
     it('should be a singleton', () => {
-      const urls1 = Urls.initialize(mockIndexerConfig, mockAliaserConfig);
+      const urls1 = Urls.initialize();
       const urls2 = Urls.getInstance();
 
       expect(urls1).toBe(urls2);
     });
 
     it('should return the same instance via initializeUrls()', () => {
-      const urls1 = initializeUrls(mockIndexerConfig, mockAliaserConfig);
-      const urls2 = initializeUrls(mockIndexerConfig, mockAliaserConfig);
+      const urls1 = initializeUrls();
+      const urls2 = initializeUrls();
 
       expect(urls1).toBe(urls2);
-    });
-
-    it('should throw error for invalid indexer config', () => {
-      const invalidIndexerConfig = {
-        httpProtocol: 'invalid' as any,
-        host: 'indexer.moartube.com',
-        port: 443,
-      };
-
-      expect(() => new Urls(invalidIndexerConfig, mockAliaserConfig)).toThrow('Invalid indexer config');
-    });
-
-    it('should throw error for invalid aliaser config', () => {
-      const invalidAliaserConfig = {
-        httpProtocol: 'https',
-        host: '', // Invalid empty host
-        port: 443,
-      };
-
-      expect(() => new Urls(mockIndexerConfig, invalidAliaserConfig)).toThrow('Invalid aliaser config');
-    });
-
-    it('should throw error for invalid port in indexer config', () => {
-      const invalidIndexerConfig = {
-        httpProtocol: 'https',
-        host: 'indexer.moartube.com',
-        port: 99999, // Invalid port
-      };
-
-      expect(() => new Urls(invalidIndexerConfig, mockAliaserConfig)).toThrow('Invalid indexer config');
     });
 
     it('should throw when getInstance is called before initialize', () => {
@@ -89,128 +47,24 @@ describe('config/urls.ts', () => {
     let urls: Urls;
 
     beforeEach(() => {
-      const mockIndexerConfig: IndexerConfig = {
-        httpProtocol: 'https',
-        host: 'indexer.moartube.com',
-        port: 443,
-      };
 
-      const mockAliaserConfig: AliaserConfig = {
-        httpProtocol: 'https',
-        host: 'aliaser.moartube.com',
-        port: 443,
-      };
 
-      urls = new Urls(mockIndexerConfig, mockAliaserConfig);
-    });
-
-    it('should generate correct indexer URL with default HTTPS port', () => {
-      expect(urls.indexerUrl).toBe('https://indexer.moartube.com');
-    });
-
-    it('should generate correct aliaser URL with default HTTPS port', () => {
-      expect(urls.aliaserUrl).toBe('https://aliaser.moartube.com');
+      urls = Urls.initialize();
     });
 
     it('should generate correct Cloudflare zone URL', () => {
       expect(urls.cloudflareZoneUrl).toBe('https://api.cloudflare.com/client/v4/zones/');
     });
-
-    it('should include port when not default for HTTPS', () => {
-      const customIndexerConfig: IndexerConfig = {
-        httpProtocol: 'https',
-        host: 'indexer.moartube.com',
-        port: 8443,
-      };
-
-      const customUrls = new Urls(customIndexerConfig, {
-        httpProtocol: 'https',
-        host: 'aliaser.moartube.com',
-        port: 443,
-      });
-
-      expect(customUrls.indexerUrl).toBe('https://indexer.moartube.com:8443');
-    });
-
-    it('should include port when not default for HTTP', () => {
-      const customIndexerConfig: IndexerConfig = {
-        httpProtocol: 'http',
-        host: 'indexer.moartube.com',
-        port: 8080,
-      };
-
-      const customUrls = new Urls(customIndexerConfig, {
-        httpProtocol: 'http',
-        host: 'aliaser.moartube.com',
-        port: 80,
-      });
-
-      expect(customUrls.indexerUrl).toBe('http://indexer.moartube.com:8080');
-      expect(customUrls.aliaserUrl).toBe('http://aliaser.moartube.com');
-    });
-  });
-
-  describe('Configuration access methods', () => {
-    let urls: Urls;
-    const mockIndexerConfig: IndexerConfig = {
-      httpProtocol: 'https',
-      host: 'indexer.moartube.com',
-      port: 443,
-    };
-
-    const mockAliaserConfig: AliaserConfig = {
-      httpProtocol: 'https',
-      host: 'aliaser.moartube.com',
-      port: 443,
-    };
-
-    beforeEach(() => {
-      urls = new Urls(mockIndexerConfig, mockAliaserConfig);
-    });
-
-    it('should return frozen indexer config', () => {
-      const config = urls.getIndexerConfig();
-
-      expect(config).toEqual(mockIndexerConfig);
-
-      // Should be frozen/read-only
-      expect(() => {
-        (config as any).host = 'modified';
-      }).toThrow();
-    });
-
-    it('should return frozen aliaser config', () => {
-      const config = urls.getAliaserConfig();
-
-      expect(config).toEqual(mockAliaserConfig);
-
-      // Should be frozen/read-only
-      expect(() => {
-        (config as any).port = 8080;
-      }).toThrow();
-    });
   });
 
   describe('toObject method', () => {
     it('should return all URLs as a plain object', () => {
-      const mockIndexerConfig: IndexerConfig = {
-        httpProtocol: 'https',
-        host: 'indexer.moartube.com',
-        port: 443,
-      };
 
-      const mockAliaserConfig: AliaserConfig = {
-        httpProtocol: 'https',
-        host: 'aliaser.moartube.com',
-        port: 443,
-      };
 
-      const urls = new Urls(mockIndexerConfig, mockAliaserConfig);
+      const urls = Urls.initialize();
       const obj = urls.toObject();
 
       expect(obj).toEqual({
-        indexerUrl: 'https://indexer.moartube.com',
-        aliaserUrl: 'https://aliaser.moartube.com',
         cloudflareZoneUrl: 'https://api.cloudflare.com/client/v4/zones/',
       });
 

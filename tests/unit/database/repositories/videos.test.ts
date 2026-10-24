@@ -77,9 +77,6 @@ vi.mock('@database/schemas/sqlite/index.js', () => ({
     is_stream_recorded_remotely: { name: 'is_stream_recorded_remotely' },
     is_stream_recorded_locally: { name: 'is_stream_recorded_locally' },
     is_live: { name: 'is_live' },
-    is_indexing: { name: 'is_indexing' },
-    is_indexed: { name: 'is_indexed' },
-    is_index_outdated: { name: 'is_index_outdated' },
     is_error: { name: 'is_error' },
     is_finalized: { name: 'is_finalized' },
     is_hidden: { name: 'is_hidden' },
@@ -121,9 +118,6 @@ vi.mock('@database/schemas/postgres/index.js', () => ({
     is_stream_recorded_remotely: { name: 'is_stream_recorded_remotely' },
     is_stream_recorded_locally: { name: 'is_stream_recorded_locally' },
     is_live: { name: 'is_live' },
-    is_indexing: { name: 'is_indexing' },
-    is_indexed: { name: 'is_indexed' },
-    is_index_outdated: { name: 'is_index_outdated' },
     is_error: { name: 'is_error' },
     is_finalized: { name: 'is_finalized' },
     is_hidden: { name: 'is_hidden' },
@@ -170,9 +164,6 @@ const expectedVideosTable = {
   is_stream_recorded_remotely: { name: 'is_stream_recorded_remotely' },
   is_stream_recorded_locally: { name: 'is_stream_recorded_locally' },
   is_live: { name: 'is_live' },
-  is_indexing: { name: 'is_indexing' },
-  is_indexed: { name: 'is_indexed' },
-  is_index_outdated: { name: 'is_index_outdated' },
   is_error: { name: 'is_error' },
   is_finalized: { name: 'is_finalized' },
   is_hidden: { name: 'is_hidden' },
@@ -698,65 +689,6 @@ describe('database/repositories/videos.ts', () => {
     });
   });
 
-  describe('findIndexed', () => {
-    const testCases = [
-      { name: 'SQLite', repository: () => sqliteRepository },
-      { name: 'Postgres', repository: () => postgresRepository },
-    ];
-
-    testCases.forEach(({ name, repository }) => {
-      describe(`${name} implementation`, () => {
-        it('should find indexed videos', async () => {
-          const mockVideos = [{ video_id: 'v1', is_indexed: true }];
-          mockDb.orderBy.mockResolvedValue(mockVideos);
-
-          const result = await repository().findIndexed();
-
-          expect(result).toEqual(mockVideos);
-        });
-      });
-    });
-  });
-
-  describe('findPendingIndexing', () => {
-    const testCases = [
-      { name: 'SQLite', repository: () => sqliteRepository },
-      { name: 'Postgres', repository: () => postgresRepository },
-    ];
-
-    testCases.forEach(({ name, repository }) => {
-      describe(`${name} implementation`, () => {
-        it('should find videos pending indexing', async () => {
-          const mockVideos = [{ video_id: 'v1', is_indexed: false }];
-          mockDb.where.mockResolvedValue(mockVideos);
-
-          const result = await repository().findPendingIndexing();
-
-          expect(result).toEqual(mockVideos);
-        });
-      });
-    });
-  });
-
-  describe('markAllIndexedAsOutdated', () => {
-    const testCases = [
-      { name: 'SQLite', repository: () => sqliteRepository },
-      { name: 'Postgres', repository: () => postgresRepository },
-    ];
-
-    testCases.forEach(({ name, repository }) => {
-      describe(`${name} implementation`, () => {
-        it('should mark all indexed videos as outdated', async () => {
-          mockDb.returning.mockResolvedValue([]);
-
-          await repository().markAllIndexedAsOutdated();
-
-          expect(mockDb.set).toHaveBeenCalled();
-        });
-      });
-    });
-  });
-
   describe('deleteAll', () => {
     const testCases = [
       { name: 'SQLite', repository: () => sqliteRepository },
@@ -1160,39 +1092,6 @@ describe('database/repositories/videos.ts', () => {
       const result = await repository.findStreaming();
 
       expect(result).toEqual(streamingVideos);
-    });
-  });
-
-  describe('findIndexed', () => {
-    it('should find all indexed videos', async () => {
-      const indexedVideos = [{ video_id: 'idx1', is_indexed: true }];
-      mockDb.orderBy.mockResolvedValue(indexedVideos);
-
-      const result = await repository.findIndexed();
-
-      expect(result).toEqual(indexedVideos);
-    });
-  });
-
-  describe('findPendingIndexing', () => {
-    it('should find videos pending indexing', async () => {
-      const pendingVideos = [{ video_id: 'pending1' }];
-      mockDb.where.mockResolvedValue(pendingVideos);
-
-      const result = await repository.findPendingIndexing();
-
-      expect(result).toEqual(pendingVideos);
-    });
-  });
-
-  describe('markAllIndexedAsOutdated', () => {
-    it('should mark all indexed videos as outdated', async () => {
-      mockDb.where.mockResolvedValue(undefined);
-
-      await repository.markAllIndexedAsOutdated();
-
-      expect(mockDb.update).toHaveBeenCalledWith(mockVideosTable);
-      expect(mockDb.set).toHaveBeenCalledWith({ is_index_outdated: true });
     });
   });
 

@@ -15,15 +15,10 @@ import type {
   VideoWatchData,
   VideoPermissions,
   VideoData,
-  AddToIndexOptions,
-  AddToIndexResult,
   StreamConfig,
   CreateCommentInput,
   StorageMode,
   FileMetadata,
-  VideoIndexData,
-  RemoveFromIndexData,
-  IndexerSubmitResult,
   WebSocketEventName,
   WebSocketMessage,
   ReportType,
@@ -192,47 +187,17 @@ describe('Services Interfaces', () => {
         description: 'Description',
         tags: 'tag1,tag2',
         views: 500,
-        isIndexed: true,
         isPublished: true,
         isLive: false,
         isStreaming: false,
         isFinalized: true,
         isStreamRecordedRemotely: false,
         timestamp: 1234567890000,
-        videoAliasUrl: 'https://alias.example.com/v/abc123',
         outputs: { mp4: ['720p', '1080p'] },
         meta: { duration: 120 },
       };
       expect(videoData.videoId).toBe('abc123');
       expect(videoData.outputs).toHaveProperty('mp4');
-    });
-  });
-
-  describe('AddToIndexOptions', () => {
-    it('should have all required properties', () => {
-      const options: AddToIndexOptions = {
-        containsAdultContent: false,
-        termsOfServiceAgreed: true,
-        cloudflareTurnstileToken: 'token123',
-      };
-      expect(options.containsAdultContent).toBe(false);
-      expect(options.termsOfServiceAgreed).toBe(true);
-    });
-  });
-
-  describe('AddToIndexResult', () => {
-    it('should have success and optional fields', () => {
-      const successResult: AddToIndexResult = {
-        success: true,
-      };
-      expect(successResult.success).toBe(true);
-
-      const errorResult: AddToIndexResult = {
-        success: false,
-        message: 'Failed to index',
-        isRequestTooLarge: true,
-      };
-      expect(errorResult.message).toBe('Failed to index');
     });
   });
 
@@ -294,62 +259,6 @@ describe('Services Interfaces', () => {
         lastModified: new Date(),
       };
       expect(metadata.contentType).toBeUndefined();
-    });
-  });
-
-  describe('VideoIndexData', () => {
-    it('should have all required properties for indexer submission', () => {
-      const indexData: VideoIndexData = {
-        videoId: 'abc123',
-        nodeId: 'node456',
-        nodeName: 'My Node',
-        nodeAbout: 'About my node',
-        publicNodeProtocol: 'https',
-        publicNodeAddress: 'example.com',
-        publicNodePort: '443',
-        title: 'Test Video',
-        tags: 'tag1,tag2',
-        views: 100,
-        isLive: false,
-        isStreaming: false,
-        lengthSeconds: 300,
-        creationTimestamp: 1234567890000,
-        containsAdultContent: false,
-        nodeIconPngBase64: 'base64data',
-        nodeAvatarPngBase64: 'base64data',
-        videoPreviewJpgBase64: 'base64data',
-        moarTubeTokenProof: 'token',
-        cloudflareTurnstileToken: 'turnstile',
-      };
-      expect(indexData.videoId).toBe('abc123');
-      expect(indexData.lengthSeconds).toBe(300);
-    });
-  });
-
-  describe('RemoveFromIndexData', () => {
-    it('should have required properties', () => {
-      const data: RemoveFromIndexData = {
-        videoId: 'abc123',
-        moarTubeTokenProof: 'token',
-        cloudflareTurnstileToken: 'turnstile',
-      };
-      expect(data.videoId).toBe('abc123');
-    });
-  });
-
-  describe('IndexerSubmitResult', () => {
-    it('should have isError and optional fields', () => {
-      const success: IndexerSubmitResult = {
-        isError: false,
-      };
-      expect(success.isError).toBe(false);
-
-      const error: IndexerSubmitResult = {
-        isError: true,
-        message: 'Submission failed',
-        statusCode: 500,
-      };
-      expect(error.statusCode).toBe(500);
     });
   });
 

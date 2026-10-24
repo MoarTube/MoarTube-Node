@@ -70,9 +70,6 @@ vi.mock('@database/repositories/index.js', () => ({
     decrementComments: vi.fn(),
     updateBandwidth: vi.fn(),
     findStreaming: vi.fn(),
-    findIndexed: vi.fn(),
-    findPendingIndexing: vi.fn(),
-    markAllIndexedAsOutdated: vi.fn(),
     deleteAll: vi.fn(),
     createMany: vi.fn(),
   })),
@@ -218,12 +215,6 @@ vi.mock('@services/storage.js', () => ({
   },
 }));
 
-vi.mock('@services/indexer.js', () => ({
-  IndexerService: class IndexerService {
-    constructor() {}
-  },
-}));
-
 vi.mock('@services/cloudflare.js', () => ({
   CloudflareService: class CloudflareService {
     constructor() {}
@@ -356,11 +347,11 @@ describe('Container', () => {
 
       // All services should be defined
       expect(container.cradle.videosService).toBeDefined();
+      expect(container.hasRegistration('indexerService')).toBe(false);
       expect(container.cradle.commentsService).toBeDefined();
       expect(container.cradle.streamsService).toBeDefined();
       expect(container.cradle.accountService).toBeDefined();
       expect(container.cradle.storageService).toBeDefined();
-      expect(container.cradle.indexerService).toBeDefined();
       expect(container.cradle.cloudflareService).toBeDefined();
       expect(container.cradle.websocketService).toBeDefined();
       expect(container.cradle.reportsService).toBeDefined();
@@ -448,7 +439,6 @@ describe('Container', () => {
       expect(container.hasRegistration('streamsService')).toBe(true);
       expect(container.hasRegistration('accountService')).toBe(true);
       expect(container.hasRegistration('storageService')).toBe(true);
-      expect(container.hasRegistration('indexerService')).toBe(true);
       expect(container.hasRegistration('cloudflareService')).toBe(true);
       expect(container.hasRegistration('websocketService')).toBe(true);
       expect(container.hasRegistration('reportsService')).toBe(true);

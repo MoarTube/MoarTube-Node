@@ -130,7 +130,6 @@ describe('config/paths.ts', () => {
 
     it('should construct config file paths correctly', () => {
       expect(paths.nodeSettingsPath).toBe(path.join('/app', 'data', '_node_settings.json'));
-      expect(paths.nodeIdentificationPath).toBe(path.join('/app', 'data', '_node_identification.json'));
       expect(paths.lastCheckedContentTrackerPath).toBe(path.join('/app', 'data', '_last_checked_content_tracker.json'));
       expect(paths.databaseFilePath).toBe(path.join('/app', 'data', 'db', 'node_db.sqlite'));
     });
@@ -158,7 +157,6 @@ describe('config/paths.ts', () => {
 
     it('should construct config file paths correctly in Docker', () => {
       expect(paths.nodeSettingsPath).toBe(path.join('/data', '_node_settings.json'));
-      expect(paths.nodeIdentificationPath).toBe(path.join('/data', '_node_identification.json'));
       expect(paths.lastCheckedContentTrackerPath).toBe(path.join('/data', '_last_checked_content_tracker.json'));
       expect(paths.databaseFilePath).toBe(path.join('/data', 'db', 'node_db.sqlite'));
     });
@@ -331,7 +329,6 @@ describe('config/paths.ts', () => {
         databaseDirectoryPath: path.join('/app', 'data', 'db'),
         certificatesDirectoryPath: path.join('/app', 'data', 'certificates'),
         nodeSettingsPath: path.join('/app', 'data', '_node_settings.json'),
-        nodeIdentificationPath: path.join('/app', 'data', '_node_identification.json'),
         lastCheckedContentTrackerPath: path.join('/app', 'data', '_last_checked_content_tracker.json'),
         databaseFilePath: path.join('/app', 'data', 'db', 'node_db.sqlite'),
       });

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createVideosRepository } from '@database/repositories/videos/index.js';
 import { videos } from '@database/schemas/sqlite/index.js';
+import { getTableColumns } from 'drizzle-orm';
 import { openTestDatabase, video } from './helpers.js';
 
 describe('SQLite videos (real SQL)', () => {
@@ -11,6 +12,19 @@ describe('SQLite videos (real SQL)', () => {
     repository = createVideosRepository('sqlite', database.db);
   });
   afterEach(() => database?.close());
+
+  it('matches the standalone schema exactly after fresh migrations', () => {
+    const columns = database.client.prepare('PRAGMA table_info(videos)').all() as {
+      name: string;
+    }[];
+    expect(columns.map((column) => column.name).sort()).toEqual(
+      Object.keys(getTableColumns(videos)).sort()
+    );
+    expect(columns).toHaveLength(35);
+    for (const column of ['is_indexing', 'is_indexed', 'is_index_outdated']) {
+      expect(getTableColumns(videos)).not.toHaveProperty(column);
+    }
+  });
 
   it('persists defaults, nullable fields, booleans, JSON text, and generated IDs', async () => {
     const row = await repository.create(video('a'));
@@ -40,8 +54,8 @@ describe('SQLite videos (real SQL)', () => {
     expect(await repository.delete('a')).toBe(false);
   });
 
-  it('executes SQL counters and conditional index state updates', async () => {
-    await repository.createMany([video('a'), { ...video('b'), is_indexed: true }]);
+  it('executes SQL counters', async () => {
+    await repository.createMany([video('a'), { ...video('b') }]);
     await repository.incrementViews('a');
     await repository.incrementViewsBy('a', 4);
     await repository.incrementViewsBy('b', 2);
@@ -57,12 +71,8 @@ describe('SQLite videos (real SQL)', () => {
       dislikes: 1,
       comments: 1,
       bandwidth: 123456789,
-      is_index_outdated: false,
     });
-    expect(await repository.findById('b')).toMatchObject({ views: 2, is_index_outdated: true });
-    await repository.markAllIndexedAsOutdated();
-    expect(await repository.findById('a')).toMatchObject({ is_index_outdated: false });
-    expect(await repository.findById('b')).toMatchObject({ is_index_outdated: true });
+    expect(await repository.findById('b')).toMatchObject({ views: 2 });
   });
 
   it('filters publication/streaming/finalization, timestamp boundaries, text, and tags', async () => {
@@ -85,15 +95,12 @@ describe('SQLite videos (real SQL)', () => {
         likes: 3,
         is_published: true,
         is_streaming: true,
-        is_indexed: true,
       },
-      { ...video('c', 300), title: 'Gamma', tags: 'sports', views: 30, likes: 2, is_indexed: true },
+      { ...video('c', 300), title: 'Gamma', tags: 'sports', views: 30, likes: 2 },
       {
         ...video('d', 400),
         title: 'Delta',
         is_published: true,
-        is_indexed: true,
-        is_index_outdated: true,
       },
     ]);
     expect(await repository.findAll()).toEqual([rows[3], rows[2], rows[1], rows[0]]);
@@ -128,8 +135,6 @@ describe('SQLite videos (real SQL)', () => {
       await repository.findPublished({ sortDirection: 'asc', sortBy: 'title', limit: 1 })
     ).toEqual([rows[0]]);
     expect(await repository.findStreaming()).toEqual([rows[1]]);
-    expect(await repository.findIndexed()).toEqual([rows[3], rows[2], rows[1]]);
-    expect(await repository.findPendingIndexing()).toEqual([rows[0], rows[3]]);
     expect(await repository.deleteAll()).toBe(4);
     expect(await repository.deleteAll()).toBe(0);
   });

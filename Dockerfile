@@ -11,6 +11,8 @@ RUN npm ci
 
 # Copy source code
 COPY src/ ./src/
+COPY public/ ./public/
+COPY drizzle/ ./drizzle/
 COPY tsconfig.json tsconfig.build.json tsup.config.ts ./
 
 # Build TypeScript

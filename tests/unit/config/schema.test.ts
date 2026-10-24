@@ -7,18 +7,10 @@ import {
   S3ConfigSchema,
   StorageConfigSchema,
   NodeSettingsSchema,
-  IndexerConfigSchema,
-  AliaserConfigSchema,
-  AppConfigSchema,
-  NodeIdentificationSchema,
   LastCheckedContentTrackerSchema,
   validateNodeSettings,
-  validateAppConfig,
-  validateNodeIdentification,
   validateLastCheckedContentTracker,
   type NodeSettingsValidated,
-  type AppConfigValidated,
-  type NodeIdentificationValidated,
   type LastCheckedContentTrackerValidated,
 } from '@/config/schema.js';
 
@@ -440,122 +432,6 @@ describe('config/schema.ts', () => {
     });
   });
 
-  describe('App Config Schemas', () => {
-    describe('IndexerConfigSchema', () => {
-      it('should validate valid indexer config', () => {
-        const validConfig = {
-          httpProtocol: 'https' as const,
-          host: 'indexer.moartube.com',
-          port: 443,
-        };
-
-        const result = IndexerConfigSchema.safeParse(validConfig);
-        expect(result.success).toBe(true);
-        expect(result.data).toEqual(validConfig);
-      });
-
-      it('should reject empty host', () => {
-        const invalidConfig = {
-          httpProtocol: 'https' as const,
-          host: '',
-          port: 443,
-        };
-
-        const result = IndexerConfigSchema.safeParse(invalidConfig);
-        expect(result.success).toBe(false);
-        expect(result.error?.issues[0].message).toBe('Indexer host is required');
-      });
-
-      it('should reject invalid port', () => {
-        const invalidConfig = {
-          httpProtocol: 'https' as const,
-          host: 'indexer.moartube.com',
-          port: 0,
-        };
-
-        const result = IndexerConfigSchema.safeParse(invalidConfig);
-        expect(result.success).toBe(false);
-      });
-    });
-
-    describe('AliaserConfigSchema', () => {
-      it('should validate valid aliaser config', () => {
-        const validConfig = {
-          httpProtocol: 'https' as const,
-          host: 'aliaser.moartube.com',
-          port: 443,
-        };
-
-        const result = AliaserConfigSchema.safeParse(validConfig);
-        expect(result.success).toBe(true);
-        expect(result.data).toEqual(validConfig);
-      });
-
-      it('should reject empty host', () => {
-        const invalidConfig = {
-          httpProtocol: 'https' as const,
-          host: '',
-          port: 443,
-        };
-
-        const result = AliaserConfigSchema.safeParse(invalidConfig);
-        expect(result.success).toBe(false);
-        expect(result.error?.issues[0].message).toBe('Aliaser host is required');
-      });
-    });
-
-    describe('AppConfigSchema', () => {
-      it('should validate valid app config', () => {
-        const validConfig = {
-          indexerConfig: {
-            httpProtocol: 'https' as const,
-            host: 'indexer.moartube.com',
-            port: 443,
-          },
-          aliaserConfig: {
-            httpProtocol: 'https' as const,
-            host: 'aliaser.moartube.com',
-            port: 443,
-          },
-        };
-
-        const result = AppConfigSchema.safeParse(validConfig);
-        expect(result.success).toBe(true);
-        expect(result.data).toEqual(validConfig);
-      });
-
-      it('should require indexerConfig and aliaserConfig', () => {
-        const configMissingFields = {};
-
-        const result = AppConfigSchema.safeParse(configMissingFields);
-        expect(result.success).toBe(false);
-      });
-    });
-  });
-
-  describe('Node Identification Schema', () => {
-    describe('NodeIdentificationSchema', () => {
-      it('should validate valid node identification', () => {
-        const validIdentification = {
-          moarTubeTokenProof: 'token-proof-123',
-        };
-
-        const result = NodeIdentificationSchema.safeParse(validIdentification);
-        expect(result.success).toBe(true);
-        expect(result.data).toEqual(validIdentification);
-      });
-
-      it('should reject empty token proof', () => {
-        const invalidIdentification = {
-          moarTubeTokenProof: '',
-        };
-
-        const result = NodeIdentificationSchema.safeParse(invalidIdentification);
-        expect(result.success).toBe(false);
-      });
-    });
-  });
-
   describe('Last Checked Content Tracker Schema', () => {
     describe('LastCheckedContentTrackerSchema', () => {
       it('should validate valid content tracker', () => {
@@ -619,62 +495,6 @@ describe('config/schema.ts', () => {
       });
     });
 
-    describe('validateAppConfig', () => {
-      it('should validate and return valid app config', () => {
-        const validConfig = {
-          indexerConfig: {
-            httpProtocol: 'https' as const,
-            host: 'indexer.moartube.com',
-            port: 443,
-          },
-          aliaserConfig: {
-            httpProtocol: 'https' as const,
-            host: 'aliaser.moartube.com',
-            port: 443,
-          },
-        };
-
-        const result = validateAppConfig(validConfig);
-        expect(result.indexerConfig.host).toBe('indexer.moartube.com');
-      });
-
-      it('should throw error for invalid app config', () => {
-        const invalidConfig = {
-          indexerConfig: {
-            httpProtocol: 'https' as const,
-            host: '', // Invalid empty host
-            port: 443,
-          },
-          aliaserConfig: {
-            httpProtocol: 'https' as const,
-            host: 'aliaser.moartube.com',
-            port: 443,
-          },
-        };
-
-        expect(() => validateAppConfig(invalidConfig)).toThrow('Invalid app config');
-      });
-    });
-
-    describe('validateNodeIdentification', () => {
-      it('should validate and return valid node identification', () => {
-        const validIdentification = {
-          moarTubeTokenProof: 'token-proof-123',
-        };
-
-        const result = validateNodeIdentification(validIdentification);
-        expect(result.moarTubeTokenProof).toBe('token-proof-123');
-      });
-
-      it('should throw error for invalid node identification', () => {
-        const invalidIdentification = {
-          moarTubeTokenProof: '', // Invalid empty token
-        };
-
-        expect(() => validateNodeIdentification(invalidIdentification)).toThrow('Invalid node identification');
-      });
-    });
-
     describe('validateLastCheckedContentTracker', () => {
       it('should validate and return valid content tracker', () => {
         const validTracker = {
@@ -733,22 +553,7 @@ describe('config/schema.ts', () => {
         },
       };
 
-      const appConfig: AppConfigValidated = {
-        indexerConfig: {
-          httpProtocol: 'https',
-          host: 'indexer.moartube.com',
-          port: 443,
-        },
-        aliaserConfig: {
-          httpProtocol: 'https',
-          host: 'aliaser.moartube.com',
-          port: 443,
-        },
-      };
 
-      const nodeId: NodeIdentificationValidated = {
-        moarTubeTokenProof: 'token-proof',
-      };
 
       const tracker: LastCheckedContentTrackerValidated = {
         lastCheckedCommentsTimestamp: 1234567890,
@@ -758,8 +563,6 @@ describe('config/schema.ts', () => {
 
       // If these compile without errors, the types are correct
       expect(nodeSettings.nodeListeningPort).toBe(8080);
-      expect(appConfig.indexerConfig.host).toBe('indexer.moartube.com');
-      expect(nodeId.moarTubeTokenProof).toBe('token-proof');
       expect(tracker.lastCheckedCommentsTimestamp).toBe(1234567890);
     });
   });

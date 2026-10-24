@@ -158,8 +158,8 @@ describe('MoarTube-Node Entry Point', () => {
   });
 
   describe('Entry Point Flow', () => {
-    it('should call initializeConfig with baseDir and config filename', async () => {
-      // Verify initializeConfig would be called with resolved base dir and config filename
+    it('should call initializeConfig with baseDir and entry point directory', async () => {
+      // Verify initializeConfig would be called with resolved base dir and entry point directory
       vi.resetModules();
       
       const initConfig = vi.fn();
@@ -208,8 +208,7 @@ describe('MoarTube-Node Entry Point', () => {
         // Module execution may fail in test environment
       }
       
-      // The function should be defined and callable
-      expect(initConfig).toBeDefined();
+      expect(initConfig).toHaveBeenCalledWith('/app', '/app/dist');
     });
 
     it('should instantiate ClusterMaster when isPrimary is true', async () => {
@@ -369,7 +368,6 @@ describe('MoarTube-Node Entry Point', () => {
       }));
 
       vi.doMock('@services/index.js', () => ({
-        IndexerService: class MockIndexerService {},
         CloudflareService: class MockCloudflareService {},
       }));
 
@@ -382,7 +380,6 @@ describe('MoarTube-Node Entry Point', () => {
       vi.doMock('@core/container.js', () => ({
         createAppContainer: vi.fn().mockResolvedValue({
           resolve: vi.fn((name: string) => {
-            if (name === 'indexerService') return {};
             if (name === 'cloudflareService') return {};
             return {};
           }),
@@ -477,7 +474,6 @@ describe('MoarTube-Node Entry Point', () => {
       }));
 
       vi.doMock('@services/index.js', () => ({
-        IndexerService: class MockIndexerService {},
         CloudflareService: class MockCloudflareService {},
       }));
 
@@ -490,7 +486,6 @@ describe('MoarTube-Node Entry Point', () => {
       vi.doMock('@core/container.js', () => ({
         createAppContainer: vi.fn().mockResolvedValue({
           resolve: vi.fn((name: string) => {
-            if (name === 'indexerService') return {};
             if (name === 'cloudflareService') return {};
             return {};
           }),
@@ -576,7 +571,6 @@ describe('MoarTube-Node Entry Point', () => {
       }));
 
       vi.doMock('@services/index.js', () => ({
-        IndexerService: class MockIndexerService {},
         CloudflareService: class MockCloudflareService {},
       }));
 
@@ -685,7 +679,6 @@ describe('MoarTube-Node Entry Point', () => {
       vi.doMock('@core/container.js', () => ({
         createAppContainer: vi.fn().mockResolvedValue({
           resolve: vi.fn((name: string) => {
-            if (name === 'indexerService') return {};
             if (name === 'cloudflareService') return {};
             return {};
           }),

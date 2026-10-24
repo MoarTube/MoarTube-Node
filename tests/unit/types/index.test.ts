@@ -2,10 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type {
   DatabaseConfig,
   StorageConfig,
-  IndexerConfig,
-  AliaserConfig,
   NodeSettings,
-  NodeIdentification,
   LastCheckedContentTracker,
 } from '@/types/index.js';
 
@@ -24,28 +21,6 @@ describe('types/index.ts', () => {
         storageMode: 'filesystem',
       };
       expect(config.storageMode).toBe('filesystem');
-    });
-
-    it('should export IndexerConfig type', () => {
-      const config: IndexerConfig = {
-        httpProtocol: 'https',
-        host: 'indexer.moartube.com',
-        port: 443,
-      };
-      expect(config.httpProtocol).toBe('https');
-      expect(config.host).toBe('indexer.moartube.com');
-      expect(config.port).toBe(443);
-    });
-
-    it('should export AliaserConfig type', () => {
-      const config: AliaserConfig = {
-        httpProtocol: 'https',
-        host: 'aliaser.moartube.com',
-        port: 443,
-      };
-      expect(config.httpProtocol).toBe('https');
-      expect(config.host).toBe('aliaser.moartube.com');
-      expect(config.port).toBe(443);
     });
 
     it('should export NodeSettings type', () => {
@@ -81,13 +56,6 @@ describe('types/index.ts', () => {
       };
       expect(settings.nodeName).toBe('Test Node');
       expect(settings.databaseConfig.databaseDialect).toBe('sqlite');
-    });
-
-    it('should export NodeIdentification type', () => {
-      const identification: NodeIdentification = {
-        moarTubeTokenProof: 'test-token-proof',
-      };
-      expect(identification.moarTubeTokenProof).toBe('test-token-proof');
     });
 
     it('should export LastCheckedContentTracker type', () => {

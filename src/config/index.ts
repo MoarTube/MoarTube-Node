@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
-import type { NodeSettings, NodeIdentification, LastCheckedContentTracker } from '@/types/index.js';
+import type { NodeSettings, LastCheckedContentTracker } from '@/types/index.js';
 import { Logger } from '@/utils/index.js';
 
 import { getEnv, type Env } from '@config/env.js';
@@ -22,11 +22,8 @@ import {
 } from '@config/urls.js';
 import {
   validateNodeSettings,
-  validateAppConfig,
-  validateNodeIdentification,
   validateLastCheckedContentTracker,
   type NodeSettingsValidated,
-  type AppConfigValidated,
 } from '@config/schema.js';
 
 /**
@@ -48,21 +45,16 @@ class Config {
   private readonly _env: Env;
   private readonly _paths: Paths;
   private readonly _urls: Urls;
-  private readonly _appConfig: AppConfigValidated;
   private _nodeSettings: NodeSettingsValidated;
-  private _nodeIdentification: NodeIdentification | null = null;
   private _lastCheckedContentTracker: LastCheckedContentTracker;
   private readonly _runtime: RuntimeConfig;
   private _nodeSettingsWatcher: fs.FSWatcher | null = null;
   private _lastCheckedContentTrackerWatcher: fs.FSWatcher | null = null;
   private readonly logger = Logger.getInstance();
 
-  private constructor(baseDir: string, configFileName: string, entryPointDir?: string) {
+  private constructor(baseDir: string, entryPointDir?: string) {
     // Initialize environment first
     this._env = getEnv();
-
-    // Load app config json file
-    this._appConfig = this.loadAppConfig(baseDir, configFileName);
 
     // Initialize paths (needs isDevelopment to determine data directory location)
     // Pass entryPointDir to properly resolve public folder in bundled builds
@@ -71,14 +63,10 @@ class Config {
     // Ensure data directories exist
     this.ensureDataDirectoriesExist();
 
-    // Initialize URLs with indexer/aliaser configs
-    this._urls = initializeUrls(this._appConfig.indexerConfig, this._appConfig.aliaserConfig);
+    this._urls = initializeUrls();
 
     // Load node settings
     this._nodeSettings = this.loadNodeSettings();
-
-    // Load node identification (may not exist)
-    this._nodeIdentification = this.loadNodeIdentification();
 
     // Load content tracker
     this._lastCheckedContentTracker = this.loadLastCheckedContentTracker();
@@ -124,12 +112,11 @@ class Config {
 
   /**
    * Initialize the configuration system
-   * @param baseDir - Base directory where config files live
-   * @param configFileName - Name of the config file to load
+   * @param baseDir - Application base directory
    * @param entryPointDir - Directory of the entry point (for bundled builds)
    */
-  static initialize(baseDir: string, configFileName: string, entryPointDir?: string): Config {
-    Config.instance ??= new Config(baseDir, configFileName, entryPointDir);
+  static initialize(baseDir: string, entryPointDir?: string): Config {
+    Config.instance ??= new Config(baseDir, entryPointDir);
 
     return Config.instance;
   }
@@ -156,28 +143,6 @@ class Config {
     fs.mkdirSync(this._paths.videosDirectoryPath, { recursive: true });
     fs.mkdirSync(this._paths.databaseDirectoryPath, { recursive: true });
     fs.mkdirSync(this._paths.certificatesDirectoryPath, { recursive: true });
-  }
-
-  // ============================================
-  // App Config (config.json)
-  // ============================================
-
-  private loadAppConfig(baseDir: string, configFileName: string): AppConfigValidated {
-    const configPath = path.join(baseDir, configFileName);
-
-    if (!fs.existsSync(configPath)) {
-      throw new Error(`App config not found: ${configPath}`);
-    }
-
-    const rawConfig: unknown = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    return validateAppConfig(rawConfig);
-  }
-
-  /**
-   * Get app config (read-only)
-   */
-  get appConfig(): Readonly<AppConfigValidated> {
-    return Object.freeze({ ...this._appConfig });
   }
 
   /**
@@ -282,40 +247,6 @@ class Config {
 
   private persistNodeSettings(): void {
     fs.writeFileSync(this._paths.nodeSettingsPath, JSON.stringify(this._nodeSettings, null, 2));
-  }
-
-  // ============================================
-  // Node Identification
-  // ============================================
-
-  private loadNodeIdentification(): NodeIdentification | null {
-    const identPath = this._paths.nodeIdentificationPath;
-
-    if (!fs.existsSync(identPath)) {
-      return null;
-    }
-
-    try {
-      const rawIdent: unknown = JSON.parse(fs.readFileSync(identPath, 'utf8'));
-      return validateNodeIdentification(rawIdent);
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Get node identification (may be null if not yet created)
-   */
-  get nodeIdentification(): Readonly<NodeIdentification> | null {
-    return this._nodeIdentification ? Object.freeze({ ...this._nodeIdentification }) : null;
-  }
-
-  /**
-   * Set node identification and persist to disk
-   */
-  setNodeIdentification(identification: NodeIdentification): void {
-    this._nodeIdentification = validateNodeIdentification(identification);
-    fs.writeFileSync(this._paths.nodeIdentificationPath, JSON.stringify(this._nodeIdentification));
   }
 
   // ============================================
@@ -505,16 +436,11 @@ class Config {
 
 /**
  * Initialize the configuration system
- * @param baseDir - Base directory where config files live
- * @param configFileName - Name of the config file to load
+ * @param baseDir - Application base directory
  * @param entryPointDir - Directory of the entry point (for bundled builds)
  */
-export function initializeConfig(
-  baseDir: string,
-  configFileName: string,
-  entryPointDir?: string
-): Config {
-  return Config.initialize(baseDir, configFileName, entryPointDir);
+export function initializeConfig(baseDir: string, entryPointDir?: string): Config {
+  return Config.initialize(baseDir, entryPointDir);
 }
 
 /**

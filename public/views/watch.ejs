@@ -11,7 +11,7 @@
       content="<%=model.externalVideosBaseUrl%>/external/videos/<%=model.videoData.video.videoId%>/thumbnail"
     />
 
-    <meta property="og:site_name" content="MoarTube.com" />
+    <meta property="og:site_name" content="MoarTube" />
     <meta property="og:title" content="<%=model.videoData.video.title%>" />
     <meta property="og:description" content="<%=model.videoData.video.description%>" />
     <meta property="og:type" content="desktopprofile" />
@@ -943,7 +943,7 @@ body {
   <body>
     <nav class="navbar navbar-expand-xl navbar-light">
       <div class="container-fluid w-100">
-        <a id="moartube-logo" class="navbar-brand" href="https://www.moartube.com">
+        <a id="moartube-logo" class="navbar-brand" href="/">
           <svg
             viewBox="169.022 81.466 89.186 20.228"
             xmlns="http://www.w3.org/2000/svg"
@@ -2778,9 +2778,8 @@ body {
             <div class="share-icon-container"><a id="share-facebook-link" target="_blank"><button class="share-icon-button"><div class="share-icon-svg">' + facebookSVG + '</div><div class="share-icon-title">Facebook</div></button></a></div>\
             <div>' + embedHtml_1 + '</div>\
             <div class="input-group mt-1"><input id="node-video-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="node-video-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
-            <div class="input-group mt-1"><input id="moartube-video-alias-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="moartube-video-alias-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
-            <div class="input-group mt-1"><input id="video-alias-embed-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="video-alias-embed-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
-            <div class="input-group mt-1"><input id="video-alias-embed-code-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="video-alias-embed-code-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>');
+            <div class="input-group mt-1"><input id="video-embed-url-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="video-embed-url-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>\
+            <div class="input-group mt-1"><input id="video-embed-code-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="video-embed-code-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>');
 
           Swal.fire({
             title: 'share',
@@ -2800,45 +2799,33 @@ body {
 
                     const videoData = data.videoData;
                     const title = videoData.title;
-                    const videoAliasUrl = videoData.videoAliasUrl;
 
                     let twitterLink;
                     let redditLink;
                     let facebookLink;
 
-                    if (videoAliasUrl === 'MoarTube Aliaser link unavailable (video not indexed)') {
-                      twitterLink = 'https://twitter.com/intent/tweet?url=' + nodeVideoUrl + '&text=' + title + '&via=MoarTubes&related=MoarTubes';
-                      redditLink = 'https://www.reddit.com/submit?url=' + nodeVideoUrl + '&title=' + title;
-                      facebookLink = 'https://www.facebook.com/dialog/share?app_id=246871938290679&href=' + nodeVideoUrl + '&display=popup';
-                    } else {
-                      twitterLink = 'https://twitter.com/intent/tweet?url=' + videoAliasUrl + '&text=' + title + '&via=MoarTubes&related=MoarTubes';
-                      redditLink = 'https://www.reddit.com/submit?url=' + videoAliasUrl + '&title=' + title;
-                      facebookLink = 'https://www.facebook.com/dialog/share?app_id=246871938290679&href=' + videoAliasUrl + '&display=popup';
-                    }
+                    twitterLink = 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(nodeVideoUrl) + '&text=' + encodeURIComponent(title);
+                    redditLink = 'https://www.reddit.com/submit?url=' + encodeURIComponent(nodeVideoUrl) + '&title=' + encodeURIComponent(title);
+                    facebookLink = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(nodeVideoUrl);
 
                     $('#share-twitter-link').attr('href', twitterLink);
                     $('#share-reddit-link').attr('href', redditLink);
                     $('#share-facebook-link').attr('href', facebookLink);
 
                     $('#node-video-url-input').val(nodeVideoUrl);
-                    $('#moartube-video-alias-url-input').val(videoAliasUrl);
-                    $('#video-alias-embed-url-input').val(embedUrl);
-                    $('#video-alias-embed-code-input').val(embedHtml_2);
+                    $('#video-embed-url-input').val(embedUrl);
+                    $('#video-embed-code-input').val(embedHtml_2);
 
-                    $('#video-alias-embed-url-copy-button').click((event) => {
-                      const value = $('#video-alias-embed-url-input').val();
+                    $('#video-embed-url-copy-button').click((event) => {
+                      const value = $('#video-embed-url-input').val();
                       this.setClipboard(value);
                     });
 
-                    $('#video-alias-embed-code-copy-button').click((event) => {
-                      const value = $('#video-alias-embed-code-input').val();
+                    $('#video-embed-code-copy-button').click((event) => {
+                      const value = $('#video-embed-code-input').val();
                       this.setClipboard(value);
                     });
 
-                    $('#moartube-video-alias-url-copy-button').click((event) => {
-                      const value = $('#moartube-video-alias-url-input').val();
-                      this.setClipboard(value);
-                    });
 
                     $('#node-video-url-copy-button').click((event) => {
                       const value = $('#node-video-url-input').val();

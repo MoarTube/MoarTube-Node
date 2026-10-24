@@ -1,5 +1,5 @@
 import { defineConfig } from 'tsup';
-import { copyFileSync, cpSync, mkdirSync } from 'node:fs';
+import { cpSync } from 'node:fs';
 
 export default defineConfig({
   entry: ['src/moartube-node.ts'],
@@ -26,7 +26,7 @@ export default defineConfig({
     // Copy drizzle migrations to dist folder
     cpSync('drizzle', 'dist/drizzle', { recursive: true });
     console.log('Copied drizzle migrations to dist/drizzle');
-    
+
     // Copy public folder (views, css, js, images, fonts) to dist folder
     cpSync('public', 'dist/public', { recursive: true });
     console.log('Copied public folder to dist/public');

@@ -19,7 +19,6 @@ import type {
   ILinksRepository,
 } from '@/database/repositories/index.js';
 import type { CloudflareService } from '@/services/cloudflare.js';
-import type { IndexerService } from '@/services/indexer.js';
 
 // Mock the config module
 vi.mock('@config/index.js', () => ({
@@ -74,7 +73,6 @@ describe('SettingsService', () => {
   let mockLiveChatMessagesRepository: LiveChatMessagesRepository;
   let mockMonetizationRepository: MonetizationRepository;
   let mockLinksRepository: ILinksRepository;
-  let mockIndexerService: IndexerService;
   let mockCloudflareService: CloudflareService;
   let mockConfig: ReturnType<typeof getConfig>;
 
@@ -98,14 +96,6 @@ describe('SettingsService', () => {
     mockLiveChatMessagesRepository = {} as LiveChatMessagesRepository;
     mockMonetizationRepository = {} as MonetizationRepository;
     mockLinksRepository = {} as ILinksRepository;
-
-    mockIndexerService = {
-      performNodeIdentification: vi.fn(),
-      updateNodeName: vi.fn(),
-      updateNodeAbout: vi.fn(),
-      updateNodeId: vi.fn(),
-      updateExternalNetwork: vi.fn(),
-    } as unknown as IndexerService;
 
     mockCloudflareService = {
       isEnabled: vi.fn().mockReturnValue(false),
@@ -140,7 +130,6 @@ describe('SettingsService', () => {
       mockLiveChatMessagesRepository,
       mockMonetizationRepository,
       mockLinksRepository,
-      mockIndexerService,
       mockCloudflareService
     );
   });
@@ -254,17 +243,10 @@ describe('SettingsService', () => {
       expect(mockLogger.info).toHaveBeenCalledWith('Node name updated', { name: 'New Node Name' });
     });
 
-    it('should update indexer when hasIndexedVideos is true', async () => {
-      await service.updateNodeName('New Node Name', true);
-
-      expect(mockIndexerService.performNodeIdentification).toHaveBeenCalled();
-      expect(mockIndexerService.updateNodeName).toHaveBeenCalledWith('New Node Name');
-    });
-
-    it('should purge Cloudflare cache when enabled and hasIndexedVideos', async () => {
+    it('should purge Cloudflare cache when enabled', async () => {
       vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(true);
 
-      await service.updateNodeName('New Node Name', true);
+      await service.updateNodeName('New Node Name');
 
       expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
     });
@@ -272,17 +254,9 @@ describe('SettingsService', () => {
     it('should not purge Cloudflare cache when disabled', async () => {
       vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(false);
 
-      await service.updateNodeName('New Node Name', true);
+      await service.updateNodeName('New Node Name');
 
       expect(mockCloudflareService.purgeNodePage).not.toHaveBeenCalled();
-    });
-
-    it('should log error and throw on indexer failure', async () => {
-      const error = new Error('Indexer failed');
-      vi.mocked(mockIndexerService.performNodeIdentification).mockRejectedValue(error);
-
-      await expect(service.updateNodeName('New Name', true)).rejects.toThrow('Indexer failed');
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to update node name in indexer', error);
     });
   });
 
@@ -294,57 +268,27 @@ describe('SettingsService', () => {
       expect(mockLogger.info).toHaveBeenCalledWith('Node about updated');
     });
 
-    it('should update indexer when hasIndexedVideos is true', async () => {
-      await service.updateNodeAbout('New about text', true);
-
-      expect(mockIndexerService.performNodeIdentification).toHaveBeenCalled();
-      expect(mockIndexerService.updateNodeAbout).toHaveBeenCalledWith('New about text');
-    });
-
-    it('should log error and throw on indexer failure', async () => {
-      const error = new Error('Indexer failed');
-      vi.mocked(mockIndexerService.updateNodeAbout).mockRejectedValue(error);
-
-      await expect(service.updateNodeAbout('New about', true)).rejects.toThrow('Indexer failed');
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to update node about in indexer', error);
-    });
-
-    it('should purge Cloudflare cache when enabled and hasIndexedVideos', async () => {
+    it('should purge Cloudflare cache when enabled', async () => {
       vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(true);
 
-      await service.updateNodeAbout('New about text', true);
+      await service.updateNodeAbout('New about text');
 
       expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
     });
   });
 
   describe('updateNodeId', () => {
-    it('should update node ID locally when no indexed videos', async () => {
+    it('should update node ID locally', async () => {
       await service.updateNodeId('new-node-id');
 
       expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({ nodeId: 'new-node-id' });
       expect(mockLogger.info).toHaveBeenCalledWith('Node ID updated', { nodeId: 'new-node-id' });
     });
 
-    it('should update indexer when hasIndexedVideos is true', async () => {
-      await service.updateNodeId('new-node-id', true);
-
-      expect(mockIndexerService.performNodeIdentification).toHaveBeenCalled();
-      expect(mockIndexerService.updateNodeId).toHaveBeenCalledWith('new-node-id');
-    });
-
-    it('should log error and throw on indexer failure', async () => {
-      const error = new Error('Indexer failed');
-      vi.mocked(mockIndexerService.updateNodeId).mockRejectedValue(error);
-
-      await expect(service.updateNodeId('new-id', true)).rejects.toThrow('Indexer failed');
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to update node ID in indexer', error);
-    });
-
-    it('should purge Cloudflare cache when enabled and hasIndexedVideos', async () => {
+    it('should purge Cloudflare cache when enabled', async () => {
       vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(true);
 
-      await service.updateNodeId('new-node-id', true);
+      await service.updateNodeId('new-node-id');
 
       expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
     });
@@ -364,27 +308,6 @@ describe('SettingsService', () => {
         address: 'example.com',
         port: '443',
       });
-    });
-
-    it('should update indexer when hasIndexedVideos is true', async () => {
-      await service.updateNetworkSettings('https', 'example.com', '443', true);
-
-      expect(mockIndexerService.performNodeIdentification).toHaveBeenCalled();
-      expect(mockIndexerService.updateExternalNetwork).toHaveBeenCalledWith(
-        'https',
-        'example.com',
-        '443'
-      );
-    });
-
-    it('should log error and throw on indexer failure', async () => {
-      const error = new Error('Indexer failed');
-      vi.mocked(mockIndexerService.updateExternalNetwork).mockRejectedValue(error);
-
-      await expect(
-        service.updateNetworkSettings('https', 'example.com', '443', true)
-      ).rejects.toThrow('Indexer failed');
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to update network in indexer', error);
     });
   });
 
@@ -756,24 +679,6 @@ describe('SettingsService', () => {
     });
   });
 
-  describe('performNodeIdentification', () => {
-    it('should call indexer performNodeIdentification', async () => {
-      await service.performNodeIdentification();
-
-      expect(mockIndexerService.performNodeIdentification).toHaveBeenCalled();
-    });
-  });
-
-  describe('getNodeIdentification', () => {
-    it('should return node identification from config', () => {
-      mockConfig.nodeIdentification = { token: 'abc123' };
-
-      const result = service.getNodeIdentification();
-
-      expect(result).toEqual({ token: 'abc123' });
-    });
-  });
-
   describe('isDevelopment', () => {
     it('should return development mode status from env', () => {
       mockConfig.isDevelopment = true;
@@ -899,27 +804,6 @@ describe('SettingsService', () => {
       const result = service.getNodeBannerBase64();
 
       expect(result).toBe('');
-    });
-  });
-
-  describe('markAllVideosAsNotIndexed', () => {
-    it('should call repository markAllIndexedAsOutdated', async () => {
-      mockVideosRepository.markAllIndexedAsOutdated = vi.fn();
-
-      await service.markAllVideosAsNotIndexed();
-
-      expect(mockVideosRepository.markAllIndexedAsOutdated).toHaveBeenCalled();
-    });
-  });
-
-  describe('getIndexedVideos', () => {
-    it('should return indexed videos from repository', async () => {
-      const videos = [{ video_id: 'video1' }];
-      mockVideosRepository.findIndexed = vi.fn().mockResolvedValue(videos);
-
-      const result = await service.getIndexedVideos();
-
-      expect(result).toEqual(videos);
     });
   });
 

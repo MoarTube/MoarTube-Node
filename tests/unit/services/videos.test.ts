@@ -2,7 +2,7 @@
  * Unit tests for VideosService
  *
  * Tests the video-related business logic including CRUD operations,
- * publishing workflows, metadata management, indexing, and view tracking.
+ * publishing workflows, metadata management and view tracking.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -68,9 +68,6 @@ vi.mock('@config/index.js', () => ({
         storageMode: 'filesystem',
       },
     },
-    nodeIdentification: {
-      moarTubeTokenProof: 'test-token-proof',
-    },
     runtime: {
       isDevelopment: false,
     },
@@ -80,7 +77,6 @@ vi.mock('@config/index.js', () => ({
       publicDirectoryPath: '/public',
     },
     urls: {
-      getAliaserConfig: vi.fn().mockReturnValue({ port: 3000 }),
     },
     getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
   }),
@@ -115,7 +111,6 @@ const mockVideosRepository = {
   incrementLikes: vi.fn(),
   incrementDislikes: vi.fn(),
   updateBandwidth: vi.fn(),
-  findPendingIndexing: vi.fn(),
 };
 
 const mockCommentsRepository = {
@@ -146,12 +141,6 @@ const mockCloudflareService = {
   purgeVideoPosterImages: vi.fn(),
 };
 
-const mockIndexerService = {
-  performNodeIdentification: vi.fn(),
-  submitVideoToIndex: vi.fn(),
-  removeVideoFromIndex: vi.fn(),
-};
-
 describe('VideosService', () => {
   let service: VideosService;
 
@@ -166,7 +155,6 @@ describe('VideosService', () => {
       mockStorageService as never,
       mockWebSocketService as never,
       mockCloudflareService as never,
-      mockIndexerService as never
     );
   });
 
@@ -502,9 +490,6 @@ describe('VideosService', () => {
             storageMode: 'filesystem',
           },
         },
-        nodeIdentification: {
-          moarTubeTokenProof: 'test-token-proof',
-        },
         runtime: {
           isDevelopment: false,
         },
@@ -514,7 +499,6 @@ describe('VideosService', () => {
           publicDirectoryPath: '/public',
         },
         urls: {
-          getAliaserConfig: vi.fn().mockReturnValue({ port: 3000 }),
         },
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
@@ -526,7 +510,6 @@ describe('VideosService', () => {
       const mockVideo = {
         video_id: 'video123',
         title: 'Original Title',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue({ ...mockVideo, title: 'Updated Title' });
@@ -549,7 +532,6 @@ describe('VideosService', () => {
     it('should continue when Cloudflare purge fails', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -565,10 +547,9 @@ describe('VideosService', () => {
       );
     });
 
-    it('should mark index as outdated when indexed video metadata changes', async () => {
+    it('should update video metadata', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: true,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -577,30 +558,25 @@ describe('VideosService', () => {
 
       expect(mockVideosRepository.update).toHaveBeenCalledWith(
         'video123',
-        expect.objectContaining({ is_index_outdated: true })
+        { title: 'New Title' }
       );
     });
 
-    it('should NOT mark index as outdated when non-indexed video metadata changes', async () => {
+    it('should update description and tags', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
 
       await service.updateVideo('video123', { title: 'New Title', description: 'New Desc', tags: 'new,tags' });
 
-      // update should NOT contain is_index_outdated
-      const updateCall = mockVideosRepository.update.mock.calls[0][1];
-      expect(updateCall.is_index_outdated).toBeUndefined();
+      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { title: 'New Title', description: 'New Desc', tags: 'new,tags' });
     });
 
-    it('should NOT mark index as outdated when indexed video non-metadata field changes', async () => {
-      // Covers the branch where is_indexed is true but we're not changing title/description/tags
+    it('should update video visibility', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: true,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -608,16 +584,13 @@ describe('VideosService', () => {
       // Update a non-metadata field (isHidden)
       await service.updateVideo('video123', { isHidden: true });
 
-      // update should NOT contain is_index_outdated since we didn't change metadata
       const updateCall = mockVideosRepository.update.mock.calls[0][1];
-      expect(updateCall.is_index_outdated).toBeUndefined();
       expect(updateCall.is_hidden).toBe(true);
     });
 
     it('should update isDislikesEnabled setting', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -633,7 +606,6 @@ describe('VideosService', () => {
     it('should update isReportsEnabled setting', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -649,7 +621,6 @@ describe('VideosService', () => {
     it('should update isLiveChatEnabled setting', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -665,7 +636,6 @@ describe('VideosService', () => {
     it('should update isHidden setting', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -681,7 +651,6 @@ describe('VideosService', () => {
     it('should update isPassworded and password settings', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -697,7 +666,6 @@ describe('VideosService', () => {
     it('should update isCommentsEnabled setting', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -713,7 +681,6 @@ describe('VideosService', () => {
     it('should update isLikesEnabled setting', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -729,7 +696,6 @@ describe('VideosService', () => {
     it('should update description setting', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -745,7 +711,6 @@ describe('VideosService', () => {
     it('should update tags setting', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -761,7 +726,6 @@ describe('VideosService', () => {
     it('should update isPublished setting', async () => {
       const mockVideo = {
         video_id: 'video123',
-        is_indexed: false,
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
@@ -869,9 +833,6 @@ describe('VideosService', () => {
             storageMode: 's3',
           },
         },
-        nodeIdentification: {
-          moarTubeTokenProof: 'test-token-proof',
-        },
         runtime: {
           isDevelopment: false,
         },
@@ -881,7 +842,6 @@ describe('VideosService', () => {
           publicDirectoryPath: '/public',
         },
         urls: {
-          getAliaserConfig: vi.fn().mockReturnValue({ port: 3000 }),
         },
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
@@ -1145,71 +1105,6 @@ describe('VideosService', () => {
 
       expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { is_error: false });
       // No warning logged when clearing error
-    });
-  });
-
-  describe('indexing workflow', () => {
-    it('should get videos needing indexing', async () => {
-      const mockVideos = [{ video_id: 'video1' }];
-      mockVideosRepository.findPendingIndexing.mockResolvedValue(mockVideos);
-
-      const result = await service.getVideosNeedingIndexing();
-
-      expect(result).toEqual(mockVideos);
-    });
-
-    it('should set indexed state', async () => {
-      mockVideosRepository.update.mockResolvedValue(undefined);
-
-      await service.setIndexed('video123', true);
-
-      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', {
-        is_indexed: true,
-        is_index_outdated: false,
-        is_indexing: false,
-      });
-    });
-
-    it('should set index outdated', async () => {
-      mockVideosRepository.update.mockResolvedValue(undefined);
-
-      await service.setIndexOutdated('video123');
-
-      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', {
-        is_index_outdated: true,
-      });
-    });
-
-    it('should mark index outdated with cache purge for indexed videos', async () => {
-      const mockVideo = { video_id: 'video123', is_indexed: true };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-      mockVideosRepository.update.mockResolvedValue(undefined);
-
-      await service.markIndexOutdated('video123');
-
-      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', {
-        is_index_outdated: true,
-      });
-      expect(mockCloudflareService.purgeVideoThumbnailImages).toHaveBeenCalledWith(['video123']);
-    });
-
-    it('should NOT update when video is not indexed', async () => {
-      const mockVideo = { video_id: 'video123', is_indexed: false };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-      mockVideosRepository.update.mockClear();
-
-      await service.markIndexOutdated('video123');
-
-      // Should not update since video is not indexed
-      expect(mockVideosRepository.update).not.toHaveBeenCalled();
-    });
-
-    it('should throw when video not found for markIndexOutdated', async () => {
-      mockVideosRepository.findById.mockResolvedValue(null);
-
-      await expect(service.markIndexOutdated('nonexistent')).rejects.toThrow(
-        'Video not found: nonexistent'
-      );
     });
   });
 
@@ -1632,7 +1527,6 @@ describe('VideosService', () => {
           description: 'Description 1',
           tags: 'tag1',
           views: 100,
-          is_indexed: false,
           is_published: true,
           is_live: false,
           is_streaming: false,
@@ -1648,7 +1542,6 @@ describe('VideosService', () => {
           description: 'Description 2',
           tags: 'tag2',
           views: 200,
-          is_indexed: false,
           is_published: false,
           is_live: true,
           is_streaming: true,
@@ -1677,7 +1570,6 @@ describe('VideosService', () => {
         description: 'Description',
         tags: 'tag1,tag2',
         views: 100,
-        is_indexed: true,
         is_published: true,
         is_live: false,
         is_streaming: false,
@@ -1693,62 +1585,6 @@ describe('VideosService', () => {
 
       expect(result).toBeTruthy();
       expect(result?.videoId).toBe('video123');
-      expect(result?.videoAliasUrl).toContain('moartu.be');
-    });
-
-    it('should return localhost alias URL in developer mode', async () => {
-      const mockVideo = {
-        video_id: 'video123',
-        title: 'Test Video',
-        description: 'Description',
-        tags: 'tag1,tag2',
-        views: 100,
-        is_indexed: true,
-        is_published: true,
-        is_live: false,
-        is_streaming: false,
-        is_finalized: true,
-        is_stream_recorded_remotely: false,
-        creation_timestamp: Date.now(),
-        outputs: JSON.stringify({ m3u8: ['1080p'], mp4: [], webm: [], ogv: [] }),
-        meta: JSON.stringify({}),
-      };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-
-      // Mock developer mode
-      const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockReturnValueOnce({
-        nodeSettings: {
-          nodeId: 'test-node-id',
-          nodeName: 'Test Node',
-          nodeAbout: 'Test node description',
-          publicNodeProtocol: 'https',
-          publicNodeAddress: 'test.example.com',
-          publicNodePort: 443,
-          storageConfig: {
-            storageMode: 'filesystem',
-          },
-        },
-        nodeIdentification: {
-          moarTubeTokenProof: 'test-token-proof',
-        },
-        runtime: {
-          isDevelopment: true,
-        },
-        paths: {
-          videosDirectoryPath: '/data/videos',
-          dataDirectoryPath: '/data',
-          publicDirectoryPath: '/public',
-        },
-        urls: {
-          getAliaserConfig: vi.fn().mockReturnValue({ port: 8080 }),
-        },
-        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
-      } as any);
-
-      const result = await service.getVideoData('video123');
-
-      expect(result?.videoAliasUrl).toContain('localhost:8080');
     });
 
     it('should return null when video not found', async () => {
@@ -1757,30 +1593,6 @@ describe('VideosService', () => {
       const result = await service.getVideoData('nonexistent');
 
       expect(result).toBeNull();
-    });
-
-    it('should show unavailable message when video not indexed', async () => {
-      const mockVideo = {
-        video_id: 'video123',
-        title: 'Test Video',
-        description: 'Description',
-        tags: 'tag1,tag2',
-        views: 100,
-        is_indexed: false,
-        is_published: true,
-        is_live: false,
-        is_streaming: false,
-        is_finalized: true,
-        is_stream_recorded_remotely: false,
-        creation_timestamp: Date.now(),
-        outputs: JSON.stringify({ m3u8: [], mp4: [], webm: [], ogv: [] }),
-        meta: JSON.stringify({}),
-      };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-
-      const result = await service.getVideoData('video123');
-
-      expect(result?.videoAliasUrl).toContain('unavailable');
     });
   });
 
@@ -1884,111 +1696,6 @@ describe('VideosService', () => {
       expect(result).toHaveLength(2);
       expect(result).toContain('tag1');
       expect(result).toContain('tag2');
-    });
-  });
-
-  describe('getAliasUrl', () => {
-    it('should return alias URL for indexed video', async () => {
-      const mockVideo = { video_id: 'video123', is_indexed: true };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-
-      const result = await service.getAliasUrl('video123');
-
-      expect(result).toContain('moartu.be');
-      expect(result).toContain('video123');
-    });
-
-    it('should throw when video is not indexed', async () => {
-      const mockVideo = { video_id: 'video123', is_indexed: false };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-
-      await expect(service.getAliasUrl('video123')).rejects.toThrow('Video is not indexed');
-    });
-
-    it('should return null when video not found', async () => {
-      mockVideosRepository.findById.mockResolvedValue(null);
-
-      const result = await service.getAliasUrl('nonexistent');
-
-      expect(result).toBeNull();
-    });
-
-    it('should return localhost URL in developer mode', async () => {
-      const mockVideo = { video_id: 'video123', is_indexed: true };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-
-      // Mock developer mode
-      const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockReturnValueOnce({
-        nodeSettings: {
-          nodeId: 'test-node-id',
-          nodeName: 'Test Node',
-          nodeAbout: 'Test node description',
-          publicNodeProtocol: 'https',
-          publicNodeAddress: 'test.example.com',
-          publicNodePort: 443,
-          storageConfig: {
-            storageMode: 'filesystem',
-          },
-        },
-        nodeIdentification: {
-          moarTubeTokenProof: 'test-token-proof',
-        },
-        runtime: {
-          isDevelopment: true,
-        },
-        paths: {
-          videosDirectoryPath: '/data/videos',
-          dataDirectoryPath: '/data',
-          publicDirectoryPath: '/public',
-        },
-        urls: {
-          getAliaserConfig: vi.fn().mockReturnValue({ port: 8080 }),
-        },
-        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
-      } as any);
-
-      const result = await service.getAliasUrl('video123');
-
-      expect(result).toBe('http://localhost:8080/nodes/test-node-id/videos/video123');
-    });
-
-    it('should throw when nodeId is not configured', async () => {
-      const mockVideo = { video_id: 'video123', is_indexed: true };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-
-      // Mock missing nodeId
-      const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockReturnValueOnce({
-        nodeSettings: {
-          nodeId: '',
-          nodeName: 'Test Node',
-          nodeAbout: 'Test node description',
-          publicNodeProtocol: 'https',
-          publicNodeAddress: 'test.example.com',
-          publicNodePort: 443,
-          storageConfig: {
-            storageMode: 'filesystem',
-          },
-        },
-        nodeIdentification: {
-          moarTubeTokenProof: 'test-token-proof',
-        },
-        runtime: {
-          isDevelopment: false,
-        },
-        paths: {
-          videosDirectoryPath: '/data/videos',
-          dataDirectoryPath: '/data',
-          publicDirectoryPath: '/public',
-        },
-        urls: {
-          getAliaserConfig: vi.fn().mockReturnValue({ port: 3000 }),
-        },
-        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
-      } as any);
-
-      await expect(service.getAliasUrl('video123')).rejects.toThrow('Node ID not configured');
     });
   });
 
@@ -2200,9 +1907,9 @@ describe('VideosService', () => {
   });
 
   describe('batch operations', () => {
-    it('should delete multiple videos', async () => {
+    it('should delete inactive videos', async () => {
       mockVideosRepository.findById.mockImplementation((id) => {
-        if (id === 'video1') return Promise.resolve({ video_id: 'video1', is_importing: false, is_publishing: false, is_streaming: false, is_indexing: false, is_indexed: false });
+        if (id === 'video1') return Promise.resolve({ video_id: 'video1', is_importing: false, is_publishing: false, is_streaming: false, });
         if (id === 'video2') return Promise.resolve({ video_id: 'video2', is_importing: true }); // In active state
         return Promise.resolve(null);
       });
@@ -2221,8 +1928,6 @@ describe('VideosService', () => {
         is_importing: false,
         is_publishing: false,
         is_streaming: false,
-        is_indexing: false,
-        is_indexed: false,
       });
       mockVideosRepository.delete.mockResolvedValue(false);
 
@@ -2232,9 +1937,9 @@ describe('VideosService', () => {
       expect(result.nonDeletedVideoIds).toContain('video1');
     });
 
-    it('should finalize multiple videos', async () => {
+    it('should finalize inactive videos', async () => {
       mockVideosRepository.findById.mockImplementation((id) => {
-        if (id === 'video1') return Promise.resolve({ video_id: 'video1', is_importing: false, is_publishing: false, is_streaming: false, is_indexing: false, is_indexed: false });
+        if (id === 'video1') return Promise.resolve({ video_id: 'video1', is_importing: false, is_publishing: false, is_streaming: false, });
         return Promise.resolve(null);
       });
       mockVideosRepository.update.mockResolvedValue(undefined);
@@ -2323,9 +2028,6 @@ describe('VideosService', () => {
             storageMode: 's3',
           },
         },
-        nodeIdentification: {
-          moarTubeTokenProof: 'test-token-proof',
-        },
         runtime: {
           isDevelopment: false,
         },
@@ -2335,7 +2037,6 @@ describe('VideosService', () => {
           publicDirectoryPath: '/public',
         },
         urls: {
-          getAliaserConfig: vi.fn().mockReturnValue({ port: 3000 }),
         },
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
@@ -2357,374 +2058,9 @@ describe('VideosService', () => {
     });
   });
 
-  describe('getNodeIconPngBase64', () => {
-    it('should return base64 encoded custom icon when exists', async () => {
-      const fs = await import('node:fs');
-      // Mock existsSync to return true for custom path
-      vi.mocked(fs.default.existsSync).mockReturnValueOnce(true);
-
-      const result = service.getNodeIconPngBase64();
-
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-    });
-
-    it('should return base64 encoded default icon when custom does not exist', async () => {
-      const fs = await import('node:fs');
-      // Mock existsSync to return false for custom path
-      vi.mocked(fs.default.existsSync).mockReturnValueOnce(false);
-
-      const result = service.getNodeIconPngBase64();
-
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('getNodeAvatarPngBase64', () => {
-    it('should return base64 encoded custom avatar when exists', async () => {
-      const fs = await import('node:fs');
-      // Mock existsSync to return true for custom path
-      vi.mocked(fs.default.existsSync).mockReturnValueOnce(true);
-
-      const result = service.getNodeAvatarPngBase64();
-
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-    });
-
-    it('should return base64 encoded default avatar when custom does not exist', async () => {
-      const fs = await import('node:fs');
-      // Mock existsSync to return false for custom path
-      vi.mocked(fs.default.existsSync).mockReturnValueOnce(false);
-
-      const result = service.getNodeAvatarPngBase64();
-
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('getVideoPreviewJpgBase64', () => {
-    it('should return base64 encoded preview from filesystem', async () => {
-      const fs = await import('node:fs');
-      vi.mocked(fs.default.existsSync).mockReturnValueOnce(true);
-      vi.mocked(fs.default.readFileSync).mockReturnValueOnce(Buffer.from('preview-data'));
-
-      const result = await service.getVideoPreviewJpgBase64('video123');
-
-      expect(typeof result).toBe('string');
-      expect(result).toBe(Buffer.from('preview-data').toString('base64'));
-    });
-
-    it('should throw when preview not found on filesystem', async () => {
-      const fs = await import('node:fs');
-      vi.mocked(fs.default.existsSync).mockReturnValueOnce(false);
-
-      await expect(service.getVideoPreviewJpgBase64('video123')).rejects.toThrow(
-        'Video preview image not found'
-      );
-    });
-
-    it('should return base64 encoded preview from S3', async () => {
-      // Mock S3 storage mode
-      const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockReturnValueOnce({
-        nodeSettings: {
-          nodeId: 'test-node-id',
-          nodeName: 'Test Node',
-          nodeAbout: 'Test node description',
-          publicNodeProtocol: 'https',
-          publicNodeAddress: 'test.example.com',
-          publicNodePort: 443,
-          storageConfig: {
-            storageMode: 's3',
-          },
-        },
-        nodeIdentification: {
-          moarTubeTokenProof: 'test-token-proof',
-        },
-        runtime: {
-          isDevelopment: false,
-        },
-        paths: {
-          videosDirectoryPath: '/data/videos',
-          dataDirectoryPath: '/data',
-          publicDirectoryPath: '/public',
-        },
-        urls: {
-          getAliaserConfig: vi.fn().mockReturnValue({ port: 3000 }),
-        },
-        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
-      } as any);
-      mockStorageService.getFile.mockResolvedValue(Buffer.from('s3-preview-data'));
-
-      const result = await service.getVideoPreviewJpgBase64('video123');
-
-      expect(result).toBe(Buffer.from('s3-preview-data').toString('base64'));
-      expect(mockStorageService.getFile).toHaveBeenCalledWith(
-        'external/videos/video123/images/preview.jpg'
-      );
-    });
-  });
-
-  describe('addToIndex', () => {
-    it('should add video to MoarTube index', async () => {
-      const mockVideo = {
-        video_id: 'video123',
-        title: 'Test Video',
-        tags: 'tag1,tag2',
-        views: 100,
-        is_live: false,
-        is_streaming: false,
-        is_published: true,
-        length_seconds: 300,
-        creation_timestamp: Date.now(),
-      };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-      mockVideosRepository.update.mockResolvedValue(undefined);
-      mockIndexerService.performNodeIdentification.mockResolvedValue(undefined);
-      mockIndexerService.submitVideoToIndex.mockResolvedValue({ isError: false });
-      mockStorageService.getFile.mockResolvedValue(Buffer.from('preview-data'));
-
-      const result = await service.addToIndex('video123', {
-        termsOfServiceAgreed: true,
-        containsAdultContent: false,
-        cloudflareTurnstileToken: 'token123',
-      });
-
-      expect(result.success).toBe(true);
-      expect(mockIndexerService.submitVideoToIndex).toHaveBeenCalled();
-    });
-
-    it('should throw when terms not agreed', async () => {
-      const mockVideo = { video_id: 'video123', is_published: true };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-
-      await expect(
-        service.addToIndex('video123', {
-          termsOfServiceAgreed: false,
-          containsAdultContent: false,
-          cloudflareTurnstileToken: 'token',
-        })
-      ).rejects.toThrow('Terms of service must be agreed to');
-    });
-
-    it('should throw when video not published or live', async () => {
-      const mockVideo = { video_id: 'video123', is_published: false, is_live: false };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-
-      await expect(
-        service.addToIndex('video123', {
-          termsOfServiceAgreed: true,
-          containsAdultContent: false,
-          cloudflareTurnstileToken: 'token',
-        })
-      ).rejects.toThrow('Video must be published or live to be indexed');
-    });
-
-    it('should return error when indexer returns error', async () => {
-      const mockVideo = {
-        video_id: 'video123',
-        title: 'Test Video',
-        tags: 'tag1,tag2',
-        views: 100,
-        is_live: false,
-        is_streaming: false,
-        is_published: true,
-        length_seconds: 300,
-        creation_timestamp: Date.now(),
-      };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-      mockVideosRepository.update.mockResolvedValue(undefined);
-      mockIndexerService.performNodeIdentification.mockResolvedValue(undefined);
-      mockIndexerService.submitVideoToIndex.mockResolvedValue({
-        isError: true,
-        message: 'Indexer failed',
-      });
-      mockStorageService.getFile.mockResolvedValue(Buffer.from('preview-data'));
-
-      const result = await service.addToIndex('video123', {
-        termsOfServiceAgreed: true,
-        containsAdultContent: false,
-        cloudflareTurnstileToken: 'token123',
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.message).toBe('Indexer failed');
-    });
-
-    it('should return isRequestTooLarge when indexer returns 413', async () => {
-      const mockVideo = {
-        video_id: 'video123',
-        title: 'Test Video',
-        tags: 'tag1,tag2',
-        views: 100,
-        is_live: false,
-        is_streaming: false,
-        is_published: true,
-        length_seconds: 300,
-        creation_timestamp: Date.now(),
-      };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-      mockVideosRepository.update.mockResolvedValue(undefined);
-      mockIndexerService.performNodeIdentification.mockResolvedValue(undefined);
-      mockIndexerService.submitVideoToIndex.mockResolvedValue({
-        isError: true,
-        statusCode: 413,
-        message: 'Request too large',
-      });
-      mockStorageService.getFile.mockResolvedValue(Buffer.from('preview-data'));
-
-      const result = await service.addToIndex('video123', {
-        termsOfServiceAgreed: true,
-        containsAdultContent: false,
-        cloudflareTurnstileToken: 'token123',
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.isRequestTooLarge).toBe(true);
-    });
-
-    it('should throw when video not found', async () => {
-      mockVideosRepository.findById.mockResolvedValue(null);
-
-      await expect(
-        service.addToIndex('nonexistent', {
-          termsOfServiceAgreed: true,
-          containsAdultContent: false,
-          cloudflareTurnstileToken: 'token',
-        })
-      ).rejects.toThrow('Video not found');
-    });
-
-    it('should throw when node identification fails', async () => {
-      const mockVideo = {
-        video_id: 'video123',
-        title: 'Test Video',
-        tags: 'tag1',
-        views: 0,
-        is_live: false,
-        is_streaming: false,
-        is_published: true,
-        length_seconds: 100,
-        creation_timestamp: Date.now(),
-      };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-      mockIndexerService.performNodeIdentification.mockResolvedValue(undefined);
-      mockStorageService.getFile.mockResolvedValue(Buffer.from('preview-data'));
-
-      // Mock missing token proof
-      const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockReturnValueOnce({
-        nodeSettings: {
-          nodeId: 'test-node-id',
-          nodeName: 'Test Node',
-          nodeAbout: 'Test node description',
-          publicNodeProtocol: 'https',
-          publicNodeAddress: 'test.example.com',
-          publicNodePort: 443,
-          storageConfig: {
-            storageMode: 'filesystem',
-          },
-        },
-        nodeIdentification: {
-          moarTubeTokenProof: '',
-        },
-        runtime: {
-          isDevelopment: false,
-        },
-        paths: {
-          videosDirectoryPath: '/data/videos',
-          dataDirectoryPath: '/data',
-          publicDirectoryPath: '/public',
-        },
-        urls: {
-          getAliaserConfig: vi.fn().mockReturnValue({ port: 3000 }),
-        },
-        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
-      } as any);
-
-      await expect(
-        service.addToIndex('video123', {
-          termsOfServiceAgreed: true,
-          containsAdultContent: false,
-          cloudflareTurnstileToken: 'token',
-        })
-      ).rejects.toThrow('Node identification failed - no token proof');
-    });
-  });
-
-  describe('removeFromIndex', () => {
-    it('should remove video from MoarTube index', async () => {
-      const mockVideo = { video_id: 'video123', is_indexed: true };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-      mockVideosRepository.update.mockResolvedValue(undefined);
-      mockIndexerService.performNodeIdentification.mockResolvedValue(undefined);
-      mockIndexerService.removeVideoFromIndex.mockResolvedValue(undefined);
-
-      await service.removeFromIndex('video123', 'turnstile-token');
-
-      expect(mockIndexerService.removeVideoFromIndex).toHaveBeenCalled();
-      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', {
-        is_indexed: false,
-        is_index_outdated: false,
-      });
-    });
-
-    it('should throw when video not found', async () => {
-      mockVideosRepository.findById.mockResolvedValue(null);
-
-      await expect(service.removeFromIndex('nonexistent', 'turnstile-token')).rejects.toThrow(
-        'Video not found'
-      );
-    });
-
-    it('should throw when node identification fails', async () => {
-      const mockVideo = { video_id: 'video123', is_indexed: true };
-      mockVideosRepository.findById.mockResolvedValue(mockVideo);
-      mockIndexerService.performNodeIdentification.mockResolvedValue(undefined);
-
-      // Mock missing token proof
-      const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockReturnValueOnce({
-        nodeSettings: {
-          nodeId: 'test-node-id',
-          nodeName: 'Test Node',
-          nodeAbout: 'Test node description',
-          publicNodeProtocol: 'https',
-          publicNodeAddress: 'test.example.com',
-          publicNodePort: 443,
-          storageConfig: {
-            storageMode: 'filesystem',
-          },
-        },
-        nodeIdentification: {
-          moarTubeTokenProof: '',
-        },
-        runtime: {
-          isDevelopment: false,
-        },
-        paths: {
-          videosDirectoryPath: '/data/videos',
-          dataDirectoryPath: '/data',
-          publicDirectoryPath: '/public',
-        },
-        urls: {
-          getAliaserConfig: vi.fn().mockReturnValue({ port: 3000 }),
-        },
-        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
-      } as any);
-
-      await expect(service.removeFromIndex('video123', 'turnstile-token')).rejects.toThrow(
-        'Node identification failed - no token proof'
-      );
-    });
-  });
-
   describe('setVideoLength', () => {
     it('should update video length', async () => {
-      const mockVideo = { video_id: 'video123', is_indexed: false };
+      const mockVideo = { video_id: 'video123', };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(undefined);
 
@@ -2736,8 +2072,8 @@ describe('VideosService', () => {
       });
     });
 
-    it('should mark index outdated when video is indexed', async () => {
-      const mockVideo = { video_id: 'video123', is_indexed: true };
+    it('should update video duration', async () => {
+      const mockVideo = { video_id: 'video123', };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(undefined);
 
@@ -2746,7 +2082,6 @@ describe('VideosService', () => {
       expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', {
         length_seconds: 300,
         length_timestamp: '5:00',
-        is_index_outdated: true,
       });
     });
   });

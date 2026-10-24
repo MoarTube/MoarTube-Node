@@ -19,8 +19,6 @@ import {
   videoDataBodySchema,
   videoUnpublishBodySchema,
   videoSourceFileExtensionBodySchema,
-  videoIndexAddBodySchema,
-  videoIndexRemoveBodySchema,
   videoLengthsBodySchema,
   videoDeleteBodySchema,
   videoFinalizeBodySchema,
@@ -135,19 +133,6 @@ export function videosRoutes(
       },
     },
     controller.getComment.bind(controller)
-  );
-
-  // Get video alias URL
-  fastify.get(
-    '/:videoId/alias',
-    {
-      preHandler: [fastify.optionalAuthenticate],
-      schema: {
-        tags: ['Videos'],
-        params: videoIdParamsSchema,
-      },
-    },
-    controller.getAlias.bind(controller)
   );
 
   // Get video watch data (for media player)
@@ -406,19 +391,6 @@ export function videosRoutes(
     controller.setVideoLengths.bind(controller)
   );
 
-  // Mark video index as outdated
-  fastify.post(
-    '/:videoId/index/outdated',
-    {
-      preHandler: [fastify.authenticate],
-      schema: {
-        tags: ['Videos'],
-        params: videoIdParamsSchema,
-      },
-    },
-    controller.markIndexOutdated.bind(controller)
-  );
-
   // Write HLS master manifest
   fastify.post(
     '/:videoId/adaptive/m3u8/:manifestType/manifests/masterManifest',
@@ -619,33 +591,5 @@ export function videosRoutes(
       },
     },
     controller.formatResolutionPublished.bind(controller)
-  );
-
-  // Add video to MoarTube index
-  fastify.post(
-    '/:videoId/index/add',
-    {
-      preHandler: [fastify.authenticate],
-      schema: {
-        tags: ['Videos'],
-        params: videoIdParamsSchema,
-        body: videoIndexAddBodySchema,
-      },
-    },
-    controller.addToIndex.bind(controller)
-  );
-
-  // Remove video from MoarTube index
-  fastify.post(
-    '/:videoId/index/remove',
-    {
-      preHandler: [fastify.authenticate],
-      schema: {
-        tags: ['Videos'],
-        params: videoIdParamsSchema,
-        body: videoIndexRemoveBodySchema,
-      },
-    },
-    controller.removeFromIndex.bind(controller)
   );
 }

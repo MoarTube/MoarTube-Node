@@ -39,7 +39,7 @@ API endpoints may be rate-limited to prevent abuse.
       version: '1.1.0',
       contact: {
         name: 'MoarTube Support',
-        url: 'https://www.moartube.com',
+        url: 'https://github.com/MoarTube/MoarTube-Node',
       },
       license: {
         name: 'Custom License',
@@ -48,7 +48,7 @@ API endpoints may be rate-limited to prevent abuse.
     },
     externalDocs: {
       description: 'MoarTube Documentation',
-      url: 'https://www.moartube.com/guides',
+      url: 'https://github.com/MoarTube/MoarTube-Node#readme',
     },
     servers: [
       {

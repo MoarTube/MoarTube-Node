@@ -146,22 +146,6 @@ export const videoSourceFileExtensionBodySchema = z.object({
 });
 
 /**
- * Video index add request body schema
- */
-export const videoIndexAddBodySchema = z.object({
-  containsAdultContent: booleanSchema,
-  termsOfServiceAgreed: booleanSchema,
-  cloudflareTurnstileToken: cloudflareTurnstileTokenSchema,
-});
-
-/**
- * Video index remove request body schema
- */
-export const videoIndexRemoveBodySchema = z.object({
-  cloudflareTurnstileToken: cloudflareTurnstileTokenSchema,
-});
-
-/**
  * Video lengths request body schema
  */
 export const videoLengthsBodySchema = z.object({

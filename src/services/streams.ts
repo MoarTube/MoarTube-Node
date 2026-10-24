@@ -150,16 +150,11 @@ export class StreamsService extends BaseService {
         throw new Error(`Video not found: ${videoId}`);
       }
 
-      // Update streaming flags with conditional is_index_outdated
-      // If the video is indexed, mark it as outdated so the indexer picks it up
+      // Update streaming flags
       const updateData: Record<string, unknown> = {
         is_streaming: false,
         is_streamed: true,
       };
-
-      if (video.is_indexed) {
-        updateData['is_index_outdated'] = true;
-      }
 
       await this.videoRepository.update(videoId, updateData);
 
@@ -338,9 +333,6 @@ export class StreamsService extends BaseService {
           is_stream_recorded_remotely: options.isRecordingStreamRemotely,
           is_stream_recorded_locally: options.isRecordingStreamLocally,
           is_live: true,
-          is_indexing: false,
-          is_indexed: false,
-          is_index_outdated: false,
           is_error: false,
           is_finalized: false,
           is_hidden: false,
@@ -383,9 +375,6 @@ export class StreamsService extends BaseService {
         isStreamed: 0,
         isStreamRecordedRemotely: options.isRecordingStreamRemotely,
         isStreamRecordedLocally: options.isRecordingStreamLocally,
-        isIndexed: 0,
-        isIndexing: 0,
-        isIndexOutdated: 0,
         isError: 0,
         isFinalized: 0,
       });

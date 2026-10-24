@@ -17,8 +17,7 @@ import type {
 } from '@/types/index.js';
 import { IPCChannel, type IPCLogger } from '@core/cluster/ipc-channel.js';
 import { getConfig } from '@config/index.js';
-import { createDatabase, initializeDatabaseSchema, getDatabase } from '@database/index.js';
-import type { IndexerService } from '@services/indexer.js';
+import { createDatabase, initializeDatabaseSchema } from '@database/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
 
 /**
@@ -29,16 +28,14 @@ import type { CloudflareService } from '@services/cloudflare.js';
 export class ClusterMaster {
   private readonly ipc: IPCChannel;
   private readonly logger: IPCLogger;
-  private readonly indexer: IndexerService;
   private readonly cloudflare: CloudflareService;
   private readonly jwtSecret: string;
   private liveStreamWatchingCountsTracker: LiveStreamWatchingCountsTracker = {};
   private intervalHandles: NodeJS.Timeout[] = [];
   private isRunning = false;
 
-  constructor(logger: IPCLogger, indexer: IndexerService, cloudflare: CloudflareService) {
+  constructor(logger: IPCLogger, cloudflare: CloudflareService) {
     this.logger = logger;
-    this.indexer = indexer;
     this.cloudflare = cloudflare;
     this.ipc = new IPCChannel(this.logger);
     this.jwtSecret = crypto.randomBytes(32).toString('hex');
@@ -270,11 +267,6 @@ export class ClusterMaster {
    * Start periodic tasks
    */
   private startPeriodicTasks(): void {
-    // Index update task (every 3 seconds)
-    const temp1 = setInterval(() => {
-      void this.runIndexUpdateTask();
-    }, 3000);
-
     // Request live stream stats from workers (every second)
     const temp2 = setInterval(() => {
       this.ipc.broadcast({ cmd: 'live_stream_worker_stats_request' });
@@ -288,7 +280,7 @@ export class ClusterMaster {
       });
     }, 1000);
 
-    this.intervalHandles.push(temp1, temp2, temp3);
+    this.intervalHandles.push(temp2, temp3);
 
     // Cloudflare purge task (every 10 minutes)
     this.intervalHandles.push(
@@ -296,77 +288,6 @@ export class ClusterMaster {
         void this.runCloudflarePurgeTask();
       }, 60000 * 10)
     );
-  }
-
-  /**
-   * Run index update task
-   */
-  private async runIndexUpdateTask(): Promise<void> {
-    try {
-      const db = getDatabase();
-      let videos: Array<{
-        video_id: string;
-        title: string;
-        tags: string;
-        views: number;
-        is_streaming: boolean;
-        length_seconds: number;
-      }> = [];
-
-      if ('all' in db) {
-        videos = (db as { all: (sql: string) => typeof videos }).all(
-          'SELECT * FROM videos WHERE is_indexed = 1 AND is_index_outdated = 1'
-        );
-      }
-
-      if (videos.length === 0) {
-        return;
-      }
-
-      const config = getConfig();
-
-      const nodeIdentification = config.nodeIdentification;
-
-      if (nodeIdentification !== null) {
-        for (const video of videos) {
-          try {
-            const data = {
-              videoId: video.video_id,
-              title: video.title,
-              tags: video.tags,
-              views: video.views,
-              isStreaming: video.is_streaming,
-              lengthSeconds: video.length_seconds,
-              nodeIconPngBase64: '',
-              nodeAvatarPngBase64: '',
-              videoPreviewJpgBase64: '',
-              moarTubeTokenProof: nodeIdentification.moarTubeTokenProof,
-            };
-
-            const response = await this.indexer.updateVideoIndex(data);
-
-            if (response.isError) {
-              throw new Error(response.message);
-            }
-
-            // Update via direct database access
-            if ('run' in db) {
-              (db as { run: (sql: string, ...params: unknown[]) => void }).run(
-                'UPDATE videos SET is_index_outdated = ? WHERE video_id = ?',
-                false,
-                video.video_id
-              );
-            }
-
-            this.logger.debug(`Updated video index: ${video.video_id}`);
-          } catch (error) {
-            this.logger.error(`Failed to update index for video: ${video.video_id}`, error);
-          }
-        }
-      }
-    } catch (error) {
-      this.logger.error('Index update task failed', error);
-    }
   }
 
   /**

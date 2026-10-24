@@ -43,7 +43,6 @@
     "isolatedModules": true,
 
     // Path Aliases
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@config/*": ["./src/config/*"],

@@ -106,7 +106,6 @@ describe('VideoUploadService', () => {
     } as unknown as WebSocketService;
 
     service = new VideoUploadService(
-      mockVideosService,
       mockUploadTrackerService,
       mockCloudflareService,
       mockWebSocketService,
@@ -432,14 +431,13 @@ describe('VideoUploadService', () => {
       expect(mockCloudflareService.purgeVideoThumbnailImages).toHaveBeenCalledWith(['video123']);
     });
 
-    it('should complete preview upload, mark index outdated, and purge cache', async () => {
+    it('should complete preview upload and purge cache', async () => {
       const result = await service.handleImageUploadComplete({
         videoId: 'video123',
         imageType: 'preview',
       });
 
       expect(result.success).toBe(true);
-      expect(mockVideosService.markIndexOutdated).toHaveBeenCalledWith('video123');
       expect(mockCloudflareService.purgeVideoPreviewImages).toHaveBeenCalledWith(['video123']);
     });
 

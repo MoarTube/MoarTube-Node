@@ -9,7 +9,6 @@ import postgresDatabase from 'postgres';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as schema from '@database/schemas/postgres/index.js';
-import { DrizzleQueryError } from 'drizzle-orm/errors';
 
 /**
  * Database configuration interface for PostgreSQL
@@ -78,14 +77,6 @@ export async function initializeDatabaseSchema(): Promise<void> {
     const migrationsFolder = resolveMigrationsFolder(import.meta.url);
     await migrate(connection.db, { migrationsFolder });
   } catch (error) {
-    if (
-      error instanceof DrizzleQueryError &&
-      // Drizzle wraps query failures with the original driver error as their cause.
-      (error.cause as Error).message.includes('already exists')
-    ) {
-      return;
-    }
-
     throw new Error(`Failed to initialize PostgreSQL database schema: ${String(error)}`);
   }
 }

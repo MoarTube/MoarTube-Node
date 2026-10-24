@@ -1232,34 +1232,6 @@ export class VideosController extends BaseController {
   };
 
   /**
-   * Get video alias URL
-   * GET /videos/:videoId/alias
-   */
-  getAlias = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
-
-      const video = await this.videosService.getVideo(videoId);
-
-      if (video === null) {
-        throw new NotFoundError(`Video not found`);
-      }
-
-      if (!video.is_indexed) {
-        throw new BadRequestError('Video is not indexed');
-      }
-
-      const videoAliasUrl = await this.videosService.getAliasUrl(videoId);
-
-      return await this.sendSuccess(reply, { videoAliasUrl });
-    } catch (error) {
-      this.logger.error('VideosController.getAlias failed', error);
-
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
-  };
-
-  /**
    * Batch delete videos
    * POST /videos/delete
    */
@@ -1318,33 +1290,6 @@ export class VideosController extends BaseController {
       return await this.sendSuccess(reply, { videoId });
     } catch (error) {
       this.logger.error('VideosController.setVideoLengths failed', error);
-
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
-  };
-
-  /**
-   * Mark video index as outdated
-   * POST /videos/:videoId/index/outdated
-   */
-  markIndexOutdated = async (
-    request: FastifyRequest,
-    reply: FastifyReply
-  ): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
-
-      const video = await this.videosService.getVideo(videoId);
-
-      if (video === null) {
-        throw new NotFoundError(`Video not found`);
-      }
-
-      await this.videosService.markIndexOutdated(videoId);
-
-      return await this.sendSuccess(reply, { videoId });
-    } catch (error) {
-      this.logger.error('VideosController.markIndexOutdated failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -1568,94 +1513,6 @@ export class VideosController extends BaseController {
       return await this.handleImageUpload(request, reply, 'poster', 'posterFile');
     } catch (error) {
       this.logger.error('VideosController.uploadPoster failed', error);
-
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
-  };
-
-  /**
-   * Add video to MoarTube index
-   * POST /videos/:videoId/index/add
-   */
-  addToIndex = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
-      const { containsAdultContent, termsOfServiceAgreed, cloudflareTurnstileToken } =
-        request.body as {
-          containsAdultContent: boolean;
-          termsOfServiceAgreed: boolean;
-          cloudflareTurnstileToken: string;
-        };
-
-      // Validate required parameters
-      if (typeof containsAdultContent !== 'boolean') {
-        throw new BadRequestError('containsAdultContent is required');
-      }
-
-      if (!termsOfServiceAgreed) {
-        throw new BadRequestError('You must agree to the Terms of Service');
-      }
-
-      if (!cloudflareTurnstileToken || typeof cloudflareTurnstileToken !== 'string') {
-        throw new BadRequestError('cloudflareTurnstileToken is required');
-      }
-
-      // Validate video exists
-      const video = await this.videosService.getVideo(videoId);
-
-      if (!video) {
-        throw new NotFoundError(`Video not found`);
-      }
-
-      // Add to index
-      const result = await this.videosService.addToIndex(videoId, {
-        containsAdultContent,
-        termsOfServiceAgreed,
-        cloudflareTurnstileToken,
-      });
-
-      if (!result.success) {
-        // Return error response with appropriate status code
-        const statusCode = result.isRequestTooLarge === true ? 413 : 400;
-
-        return await reply.status(statusCode).send({
-          isError: true,
-          message: result.message ?? 'Failed to add video to index',
-        });
-      }
-
-      return await this.sendSuccess(reply, { videoId });
-    } catch (error) {
-      this.logger.error('VideosController.addToIndex failed', error);
-
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
-  };
-
-  /**
-   * Remove video from MoarTube index
-   * POST /videos/:videoId/index/remove
-   */
-  removeFromIndex = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
-      const { cloudflareTurnstileToken } = request.body as {
-        cloudflareTurnstileToken: string;
-      };
-
-      // Validate video exists
-      const video = await this.videosService.getVideo(videoId);
-
-      if (!video) {
-        throw new NotFoundError(`Video not found`);
-      }
-
-      // Remove from index
-      await this.videosService.removeFromIndex(videoId, cloudflareTurnstileToken);
-
-      return await this.sendSuccess(reply, { videoId });
-    } catch (error) {
-      this.logger.error('VideosController.removeFromIndex failed', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }

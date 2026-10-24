@@ -113,17 +113,6 @@ export interface NodeSettings {
 }
 
 // ============================================
-// Node Identification
-// ============================================
-
-/**
- * Node identification for MoarTube network
- */
-export interface NodeIdentification {
-  moarTubeTokenProof: string;
-}
-
-// ============================================
 // Content Tracker
 // ============================================
 
@@ -134,22 +123,4 @@ export interface LastCheckedContentTracker {
   lastCheckedCommentsTimestamp: number;
   lastCheckedVideoReportsTimestamp: number;
   lastCheckedCommentReportsTimestamp: number;
-}
-
-/**
- * Indexer service configuration
- */
-export interface IndexerConfig {
-  httpProtocol: 'http' | 'https';
-  host: string;
-  port: number;
-}
-
-/**
- * Aliaser service configuration
- */
-export interface AliaserConfig {
-  httpProtocol: 'http' | 'https';
-  host: string;
-  port: number;
 }

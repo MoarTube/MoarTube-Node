@@ -135,12 +135,12 @@ describe('StreamsService', () => {
       vi.mocked(getConfig).mockReturnValue({ paths: { videosDirectoryPath: '/data/videos', publicDirectoryPath: '/public' }, nodeSettings: { storageConfig: { storageMode: 'filesystem' } } } as never);
     });
 
-    it.each([true, false])('stops indexed remote-recorded=%s streams correctly', async (recorded) => {
+    it.each([true, false])('stops remote-recorded=%s streams correctly', async (recorded) => {
       const { getConfig } = await import('@config/index.js');
       vi.mocked(getConfig).mockReturnValue({ paths: { videosDirectoryPath: '/data/videos' }, nodeSettings: { storageConfig: { storageMode: 's3provider' } } } as never);
-      vi.mocked(mockVideosRepository.findById).mockResolvedValue({ ...mockVideo, is_indexed: true, is_stream_recorded_remotely: recorded } as never);
+      vi.mocked(mockVideosRepository.findById).mockResolvedValue({ ...mockVideo, is_stream_recorded_remotely: recorded } as never);
       await service.stopStream('video123');
-      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { is_streaming: false, is_streamed: true, is_index_outdated: true });
+      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { is_streaming: false, is_streamed: true });
       if (recorded) expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { is_published: true });
     });
 

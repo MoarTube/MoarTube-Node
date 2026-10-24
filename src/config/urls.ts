@@ -3,24 +3,12 @@
  * Centralized management of all external service URLs
  */
 
-import { z } from 'zod';
-import type { IndexerConfig, AliaserConfig, NodeSettings, StorageConfig } from '@/types/index.js';
-
-/**
- * Service endpoint configuration schema
- */
-const ServiceEndpointSchema = z.object({
-  httpProtocol: z.enum(['http', 'https']),
-  host: z.string().min(1),
-  port: z.number().int().min(1).max(65535),
-});
+import type { NodeSettings, StorageConfig } from '@/types/index.js';
 
 /**
  * URL configuration interface
  */
 export interface UrlConfig {
-  readonly indexerUrl: string;
-  readonly aliaserUrl: string;
   readonly cloudflareZoneUrl: string;
 }
 
@@ -30,30 +18,13 @@ export interface UrlConfig {
 class Urls {
   private static instance: Urls | null = null;
 
-  private readonly indexerConfig: IndexerConfig;
-  private readonly aliaserConfig: AliaserConfig;
-
-  private constructor(indexerConfig: IndexerConfig, aliaserConfig: AliaserConfig) {
-    // Validate configs
-    const indexerResult = ServiceEndpointSchema.safeParse(indexerConfig);
-    if (!indexerResult.success) {
-      throw new Error(`Invalid indexer config: ${indexerResult.error.message}`);
-    }
-
-    const aliaserResult = ServiceEndpointSchema.safeParse(aliaserConfig);
-    if (!aliaserResult.success) {
-      throw new Error(`Invalid aliaser config: ${aliaserResult.error.message}`);
-    }
-
-    this.indexerConfig = indexerConfig;
-    this.aliaserConfig = aliaserConfig;
-  }
+  private constructor() {}
 
   /**
    * Initialize the URLs singleton with service configurations
    */
-  static initialize(indexerConfig: IndexerConfig, aliaserConfig: AliaserConfig): Urls {
-    Urls.instance ??= new Urls(indexerConfig, aliaserConfig);
+  static initialize(): Urls {
+    Urls.instance ??= new Urls();
     return Urls.instance;
   }
 
@@ -76,22 +47,6 @@ class Urls {
   }
 
   /**
-   * Get the MoarTube Indexer URL
-   */
-  get indexerUrl(): string {
-    const { httpProtocol, host, port } = this.indexerConfig;
-    return this.buildUrl(httpProtocol, host, port);
-  }
-
-  /**
-   * Get the MoarTube Aliaser URL
-   */
-  get aliaserUrl(): string {
-    const { httpProtocol, host, port } = this.aliaserConfig;
-    return this.buildUrl(httpProtocol, host, port);
-  }
-
-  /**
    * Get the Cloudflare Zone API URL
    */
   get cloudflareZoneUrl(): string {
@@ -99,38 +54,10 @@ class Urls {
   }
 
   /**
-   * Get indexer config details
-   */
-  getIndexerConfig(): Readonly<IndexerConfig> {
-    return Object.freeze({ ...this.indexerConfig });
-  }
-
-  /**
-   * Get aliaser config details
-   */
-  getAliaserConfig(): Readonly<AliaserConfig> {
-    return Object.freeze({ ...this.aliaserConfig });
-  }
-
-  /**
-   * Build a URL from protocol, host, and port
-   */
-  private buildUrl(protocol: string, host: string, port: number): string {
-    // Omit default ports
-    const portSuffix =
-      (protocol === 'http' && port === 80) || (protocol === 'https' && port === 443)
-        ? ''
-        : `:${String(port)}`;
-    return `${protocol}://${host}${portSuffix}`;
-  }
-
-  /**
    * Get all URLs as a plain object
    */
   toObject(): UrlConfig {
     return {
-      indexerUrl: this.indexerUrl,
-      aliaserUrl: this.aliaserUrl,
       cloudflareZoneUrl: this.cloudflareZoneUrl,
     };
   }
@@ -241,8 +168,8 @@ export function buildExternalResourcesBaseUrl(nodeSettings: NodeSettings): strin
 /**
  * Export initializer
  */
-export function initializeUrls(indexerConfig: IndexerConfig, aliaserConfig: AliaserConfig): Urls {
-  return Urls.initialize(indexerConfig, aliaserConfig);
+export function initializeUrls(): Urls {
+  return Urls.initialize();
 }
 
 /**

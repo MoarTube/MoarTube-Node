@@ -135,40 +135,14 @@ export interface VideoData {
   description: string;
   tags: string;
   views: number;
-  isIndexed: boolean;
   isPublished: boolean;
   isLive: boolean;
   isStreaming: boolean;
   isFinalized: boolean;
   isStreamRecordedRemotely: boolean;
   timestamp: number;
-  videoAliasUrl: string;
   outputs: VideoOutputs;
   meta: Record<string, unknown>;
-}
-
-/**
- * Options for adding a video to the MoarTube index
- */
-export interface AddToIndexOptions {
-  /** Whether the video contains adult content */
-  containsAdultContent: boolean;
-  /** User agreed to terms of service */
-  termsOfServiceAgreed: boolean;
-  /** Cloudflare Turnstile token for validation */
-  cloudflareTurnstileToken: string;
-}
-
-/**
- * Result of adding a video to the MoarTube index
- */
-export interface AddToIndexResult {
-  /** Whether the operation succeeded */
-  success: boolean;
-  /** Error message if failed */
-  message?: string | undefined;
-  /** Specific error code for 413 (request too large) */
-  isRequestTooLarge?: boolean | undefined;
 }
 
 // ============================================================================
@@ -215,70 +189,6 @@ export interface FileMetadata {
   size: number;
   lastModified: Date;
   contentType?: string;
-}
-
-// ============================================================================
-// Indexer Service
-// ============================================================================
-
-/**
- * Video index data for submission to indexer
- */
-export interface VideoIndexData {
-  videoId: string;
-  nodeId: string;
-  nodeName: string;
-  nodeAbout: string;
-  publicNodeProtocol: string;
-  publicNodeAddress: string;
-  publicNodePort: string | number;
-  title: string;
-  tags: string;
-  views: number;
-  isLive: boolean;
-  isStreaming: boolean;
-  lengthSeconds: number;
-  creationTimestamp: number;
-  containsAdultContent: boolean;
-  nodeIconPngBase64: string;
-  nodeAvatarPngBase64: string;
-  videoPreviewJpgBase64: string;
-  moarTubeTokenProof: string;
-  cloudflareTurnstileToken: string;
-}
-
-/**
- * Data for removing a video from the index
- */
-export interface RemoveFromIndexData {
-  videoId: string;
-  moarTubeTokenProof: string;
-  cloudflareTurnstileToken: string;
-}
-
-/**
- * Data for updating a video in the index
- */
-export interface VideoUpdateData {
-  videoId: string;
-  title: string;
-  tags: string;
-  views: number;
-  isStreaming: boolean;
-  lengthSeconds: number;
-  nodeIconPngBase64: string;
-  nodeAvatarPngBase64: string;
-  videoPreviewJpgBase64: string;
-  moarTubeTokenProof: string;
-}
-
-/**
- * Result from indexer submission
- */
-export interface IndexerSubmitResult {
-  isError: boolean;
-  message?: string;
-  statusCode?: number;
 }
 
 // ============================================================================

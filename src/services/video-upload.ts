@@ -12,7 +12,6 @@ import type { FastifyRequest } from 'fastify';
 
 import { getConfig } from '@config/index.js';
 import { type Logger } from '@/utils/index.js';
-import type { VideosService } from '@services/videos.js';
 import type { WebSocketService } from '@services/websocket.js';
 import type { UploadTrackerService } from '@services/upload-tracker.js';
 import { type CloudflareService } from '@services/cloudflare.js';
@@ -75,20 +74,17 @@ const VALID_RESOLUTIONS = new Set(['2160p', '1440p', '1080p', '720p', '480p', '3
 // ============================================================================
 
 export class VideoUploadService {
-  private readonly videosService: VideosService;
   private readonly uploadTrackerService: UploadTrackerService;
   private readonly cloudflareService: CloudflareService;
   private readonly websocketService: WebSocketService;
   private readonly logger: Logger;
 
   constructor(
-    videosService: VideosService,
     uploadTrackerService: UploadTrackerService,
     cloudflareService: CloudflareService,
     websocketService: WebSocketService,
     logger: Logger
   ) {
-    this.videosService = videosService;
     this.uploadTrackerService = uploadTrackerService;
     this.cloudflareService = cloudflareService;
     this.websocketService = websocketService;
@@ -276,8 +272,6 @@ export class VideoUploadService {
           await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
           break;
         case 'preview':
-          // Mark index as outdated since preview is used in search results
-          await this.videosService.markIndexOutdated(videoId);
           await this.cloudflareService.purgeVideoPreviewImages([videoId]);
           break;
         case 'poster':

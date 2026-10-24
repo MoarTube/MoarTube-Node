@@ -280,7 +280,7 @@ describe('database/postgres-connection.ts', () => {
       );
     });
 
-    it('should ignore DrizzleQueryError when table already exists', async () => {
+    it('should reject conflicting tables instead of silently skipping pending migrations', async () => {
       vi.resetModules();
 
       const mockDrizzleDb = { type: 'drizzle-postgres' };
@@ -302,8 +302,7 @@ describe('database/postgres-connection.ts', () => {
 
       createDatabase(config);
 
-      // Should not throw - 'already exists' errors are ignored
-      await initializeDatabaseSchema();
+      await expect(initializeDatabaseSchema()).rejects.toThrow('Failed to initialize PostgreSQL database schema');
     });
   });
 

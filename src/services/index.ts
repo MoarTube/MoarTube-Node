@@ -20,16 +20,10 @@ export type {
   VideoWatchData,
   VideoPermissions,
   VideoData,
-  AddToIndexOptions,
-  AddToIndexResult,
   StreamConfig,
   CreateCommentInput,
   StorageMode,
   FileMetadata,
-  VideoIndexData,
-  VideoUpdateData,
-  RemoveFromIndexData,
-  IndexerSubmitResult,
   WebSocketEventName,
   WebSocketMessage,
   ReportType,
@@ -51,7 +45,6 @@ export { CommentsService } from '@services/comments.js';
 export { AccountService } from '@services/account.js';
 export { CloudflareService } from '@services/cloudflare.js';
 export { ReportsService } from '@services/reports.js';
-export { IndexerService } from '@services/indexer.js';
 export { LinksService } from '@services/links.js';
 export { LiveChatService } from '@services/live-chat.js';
 export { MonetizationService } from '@services/monetization.js';

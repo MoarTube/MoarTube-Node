@@ -7,10 +7,7 @@ import type {
   S3Config,
   StorageConfig,
   NodeSettings,
-  NodeIdentification,
   LastCheckedContentTracker,
-  IndexerConfig,
-  AliaserConfig,
 } from '@/types/config.js';
 
 describe('types/config.ts', () => {
@@ -165,7 +162,7 @@ describe('types/config.ts', () => {
         nodeListeningPort: 8080,
         isSecure: true,
         publicNodeProtocol: 'https',
-        publicNodeAddress: 'node.moartube.com',
+        publicNodeAddress: 'node.example.com',
         publicNodePort: 443,
 
         // Node Identity
@@ -244,16 +241,6 @@ describe('types/config.ts', () => {
     });
   });
 
-  describe('NodeIdentification interface', () => {
-    it('should create node identification', () => {
-      const identification: NodeIdentification = {
-        moarTubeTokenProof: 'proof-token-123',
-      };
-
-      expect(identification.moarTubeTokenProof).toBe('proof-token-123');
-    });
-  });
-
   describe('LastCheckedContentTracker interface', () => {
     it('should create content tracker with timestamps', () => {
       const tracker: LastCheckedContentTracker = {
@@ -265,46 +252,6 @@ describe('types/config.ts', () => {
       expect(tracker.lastCheckedCommentsTimestamp).toBe(1640995200000);
       expect(tracker.lastCheckedVideoReportsTimestamp).toBe(1641081600000);
       expect(tracker.lastCheckedCommentReportsTimestamp).toBe(1641168000000);
-    });
-  });
-
-  describe('IndexerConfig interface', () => {
-    it('should create indexer configuration', () => {
-      const config: IndexerConfig = {
-        httpProtocol: 'https',
-        host: 'indexer.moartube.com',
-        port: 8443,
-      };
-
-      expect(config.httpProtocol).toBe('https');
-      expect(config.host).toBe('indexer.moartube.com');
-      expect(config.port).toBe(8443);
-    });
-
-    it('should support HTTP protocol', () => {
-      const config: IndexerConfig = {
-        httpProtocol: 'http',
-        host: 'localhost',
-        port: 8080,
-      };
-
-      expect(config.httpProtocol).toBe('http');
-      expect(config.host).toBe('localhost');
-      expect(config.port).toBe(8080);
-    });
-  });
-
-  describe('AliaserConfig interface', () => {
-    it('should create aliaser configuration', () => {
-      const config: AliaserConfig = {
-        httpProtocol: 'https',
-        host: 'aliaser.moartube.com',
-        port: 8443,
-      };
-
-      expect(config.httpProtocol).toBe('https');
-      expect(config.host).toBe('aliaser.moartube.com');
-      expect(config.port).toBe(8443);
     });
   });
 });

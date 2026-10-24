@@ -23,7 +23,6 @@ export interface PathConfig {
 
   // Config files
   readonly nodeSettingsPath: string;
-  readonly nodeIdentificationPath: string;
   readonly lastCheckedContentTrackerPath: string;
   readonly databaseFilePath: string;
 }
@@ -47,7 +46,6 @@ class Paths implements PathConfig {
 
   // Config files
   readonly nodeSettingsPath: string;
-  readonly nodeIdentificationPath: string;
   readonly lastCheckedContentTrackerPath: string;
   readonly databaseFilePath: string;
 
@@ -81,7 +79,6 @@ class Paths implements PathConfig {
 
     // Config files
     this.nodeSettingsPath = path.join(this.dataDirectoryPath, '_node_settings.json');
-    this.nodeIdentificationPath = path.join(this.dataDirectoryPath, '_node_identification.json');
     this.lastCheckedContentTrackerPath = path.join(
       this.dataDirectoryPath,
       '_last_checked_content_tracker.json'
@@ -303,7 +300,6 @@ class Paths implements PathConfig {
       databaseDirectoryPath: this.databaseDirectoryPath,
       certificatesDirectoryPath: this.certificatesDirectoryPath,
       nodeSettingsPath: this.nodeSettingsPath,
-      nodeIdentificationPath: this.nodeIdentificationPath,
       lastCheckedContentTrackerPath: this.lastCheckedContentTrackerPath,
       databaseFilePath: this.databaseFilePath,
     };

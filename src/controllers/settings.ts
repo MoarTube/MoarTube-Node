@@ -226,9 +226,6 @@ export class SettingsController extends BaseController {
         this.logger.error('Failed to purge node images from Cloudflare', error);
       }
 
-      // Mark all indexed videos as outdated
-      await this.settingsService.markAllVideosAsNotIndexed();
-
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('SettingsController.uploadAvatar failed', error);
@@ -410,11 +407,7 @@ export class SettingsController extends BaseController {
     try {
       const { nodeName } = request.body as PersonalizeNodeNameBody;
 
-      // Check if there are indexed videos to determine if indexer update is needed
-      const indexedVideos = await this.settingsService.getIndexedVideos();
-      const hasIndexedVideos = indexedVideos.length > 0;
-
-      await this.settingsService.updateNodeName(nodeName, hasIndexedVideos);
+      await this.settingsService.updateNodeName(nodeName);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -436,11 +429,7 @@ export class SettingsController extends BaseController {
     try {
       const { nodeAbout } = request.body as PersonalizeNodeAboutBody;
 
-      // Check if there are indexed videos to determine if indexer update is needed
-      const indexedVideos = await this.settingsService.getIndexedVideos();
-      const hasIndexedVideos = indexedVideos.length > 0;
-
-      await this.settingsService.updateNodeAbout(nodeAbout, hasIndexedVideos);
+      await this.settingsService.updateNodeAbout(nodeAbout);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -462,11 +451,7 @@ export class SettingsController extends BaseController {
     try {
       const { nodeId } = request.body as PersonalizeNodeIdBody;
 
-      // Check if there are indexed videos to determine if indexer update is needed
-      const indexedVideos = await this.settingsService.getIndexedVideos();
-      const hasIndexedVideos = indexedVideos.length > 0;
-
-      await this.settingsService.updateNodeId(nodeId, hasIndexedVideos);
+      await this.settingsService.updateNodeId(nodeId);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -534,15 +519,11 @@ export class SettingsController extends BaseController {
       const { publicNodeProtocol, publicNodeAddress, publicNodePort } =
         request.body as NetworkExternalBody;
 
-      // Check if there are indexed videos (required for indexer update)
-      const hasIndexedVideos = await this.checkHasIndexedVideos();
-
-      // Update network settings (this also updates indexer if there are indexed videos)
+      // Update the standalone node network settings
       await this.settingsService.updateNetworkSettings(
         publicNodeProtocol,
         publicNodeAddress,
-        publicNodePort,
-        hasIndexedVideos
+        publicNodePort
       );
 
       // Rewrite HLS manifest URLs if using filesystem storage
@@ -555,14 +536,6 @@ export class SettingsController extends BaseController {
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
-
-  /**
-   * Check if there are any indexed videos
-   */
-  private async checkHasIndexedVideos(): Promise<boolean> {
-    const indexedVideos = await this.settingsService.getIndexedVideos();
-    return indexedVideos.length > 0;
-  }
 
   /**
    * Rewrite all HLS manifest URLs if using filesystem storage
@@ -1118,10 +1091,7 @@ export class SettingsController extends BaseController {
    * callers can perform configuration changes first and then trigger a
    * restart once they are ready.
    */
-  restartServer = async (
-    _request: FastifyRequest,
-    reply: FastifyReply
-  ): Promise<FastifyReply> => {
+  restartServer = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const result = await this.sendSuccess(reply);
 

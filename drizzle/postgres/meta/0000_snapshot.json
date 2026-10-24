@@ -1,5 +1,5 @@
 {
-  "id": "b5a448a0-8ed6-45cb-8f03-969f6407294c",
+  "id": "71e626e7-5215-450a-8bb0-a1f737d1df14",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -565,27 +565,6 @@
         },
         "is_live": {
           "name": "is_live",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_indexing": {
-          "name": "is_indexing",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_indexed": {
-          "name": "is_indexed",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "is_index_outdated": {
-          "name": "is_index_outdated",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

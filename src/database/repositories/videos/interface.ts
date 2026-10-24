@@ -39,9 +39,6 @@ export interface IVideosRepository<VideoType, NewVideoType> {
   decrementComments(videoId: string): Promise<void>;
   updateBandwidth(videoId: string, bandwidth: number): Promise<void>;
   findStreaming(): Promise<VideoType[]>;
-  findIndexed(): Promise<VideoType[]>;
-  findPendingIndexing(): Promise<VideoType[]>;
-  markAllIndexedAsOutdated(): Promise<void>;
   deleteAll(): Promise<number>;
   createMany(data: NewVideoType[]): Promise<VideoType[]>;
 }

@@ -75,7 +75,6 @@ describe('SettingsController', () => {
     getVersion: vi.fn(),
     getAvatarFilePath: vi.fn(),
     getBannerFilePath: vi.fn(),
-    getIndexedVideos: vi.fn(),
     updateNodeName: vi.fn(),
     updateNodeAbout: vi.fn(),
     updateNodeId: vi.fn(),
@@ -87,7 +86,6 @@ describe('SettingsController', () => {
     updateStorageConfig: vi.fn(),
     exportAllData: vi.fn(),
     importDatabase: vi.fn(),
-    markAllVideosAsNotIndexed: vi.fn(),
     isDockerEnvironment: vi.fn(),
   };
 
@@ -143,7 +141,6 @@ describe('SettingsController', () => {
     // Default mock implementations
     mockSettingsService.getNodeSettings.mockReturnValue({ nodeName: 'Test Node' });
     mockSettingsService.getVersion.mockReturnValue('1.0.0');
-    mockSettingsService.getIndexedVideos.mockResolvedValue([]);
     mockSettingsService.isDockerEnvironment.mockReturnValue(false);
     mockVideosService.getAllVideosData.mockResolvedValue([]);
   });
@@ -301,23 +298,12 @@ describe('SettingsController', () => {
   describe('personalizeNodeName', () => {
     it('should update node name', async () => {
       mockRequest.body = { nodeName: 'New Node Name' };
-      mockSettingsService.getIndexedVideos.mockResolvedValue([]);
       mockSettingsService.updateNodeName.mockResolvedValue(undefined);
 
       await controller.personalizeNodeName(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
-      expect(mockSettingsService.updateNodeName).toHaveBeenCalledWith('New Node Name', false);
+      expect(mockSettingsService.updateNodeName).toHaveBeenCalledWith('New Node Name');
       expect(mockReply.status).toHaveBeenCalledWith(200);
-    });
-
-    it('should update indexer when there are indexed videos', async () => {
-      mockRequest.body = { nodeName: 'New Name' };
-      mockSettingsService.getIndexedVideos.mockResolvedValue([{ videoId: 'abc123' }]);
-      mockSettingsService.updateNodeName.mockResolvedValue(undefined);
-
-      await controller.personalizeNodeName(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockSettingsService.updateNodeName).toHaveBeenCalledWith('New Name', true);
     });
 
     it('should return error on failure', async () => {
@@ -333,12 +319,11 @@ describe('SettingsController', () => {
   describe('personalizeNodeAbout', () => {
     it('should update node about', async () => {
       mockRequest.body = { nodeAbout: 'About this node' };
-      mockSettingsService.getIndexedVideos.mockResolvedValue([]);
       mockSettingsService.updateNodeAbout.mockResolvedValue(undefined);
 
       await controller.personalizeNodeAbout(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
-      expect(mockSettingsService.updateNodeAbout).toHaveBeenCalledWith('About this node', false);
+      expect(mockSettingsService.updateNodeAbout).toHaveBeenCalledWith('About this node');
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
@@ -355,18 +340,16 @@ describe('SettingsController', () => {
   describe('personalizeNodeId', () => {
     it('should update node ID', async () => {
       mockRequest.body = { nodeId: 'new-node-id' };
-      mockSettingsService.getIndexedVideos.mockResolvedValue([]);
       mockSettingsService.updateNodeId.mockResolvedValue(undefined);
 
       await controller.personalizeNodeId(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
-      expect(mockSettingsService.updateNodeId).toHaveBeenCalledWith('new-node-id', false);
+      expect(mockSettingsService.updateNodeId).toHaveBeenCalledWith('new-node-id');
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
     it('should return error on failure', async () => {
       mockRequest.body = { nodeId: 'new-node-id' };
-      mockSettingsService.getIndexedVideos.mockResolvedValue([]);
       mockSettingsService.updateNodeId.mockRejectedValue(new Error('Update failed'));
 
       await controller.personalizeNodeId(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -498,7 +481,6 @@ describe('SettingsController', () => {
         publicNodeAddress: 'mynode.example.com',
         publicNodePort: '443',
       };
-      mockSettingsService.getIndexedVideos.mockResolvedValue([]);
       mockSettingsService.updateNetworkSettings.mockResolvedValue(undefined);
       mockVideosService.getAllVideosData.mockResolvedValue([]);
 
@@ -507,8 +489,7 @@ describe('SettingsController', () => {
       expect(mockSettingsService.updateNetworkSettings).toHaveBeenCalledWith(
         'https',
         'mynode.example.com',
-        '443',
-        false
+        '443'
       );
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -536,7 +517,6 @@ describe('SettingsController', () => {
         isDockerEnvironment: false,
       }));
 
-      mockSettingsService.getIndexedVideos.mockResolvedValue([]);
       mockSettingsService.updateNetworkSettings.mockResolvedValue(undefined);
 
       await controller.networkExternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -570,7 +550,6 @@ describe('SettingsController', () => {
         isDockerEnvironment: false,
       }));
 
-      mockSettingsService.getIndexedVideos.mockResolvedValue([]);
       mockSettingsService.updateNetworkSettings.mockResolvedValue(undefined);
       mockVideosService.getAllVideosData.mockResolvedValue([
         { videoId: 'vid1', outputs: { m3u8: ['720p', '1080p'] } },
@@ -613,7 +592,6 @@ describe('SettingsController', () => {
         isDockerEnvironment: false,
       }));
 
-      mockSettingsService.getIndexedVideos.mockResolvedValue([]);
       mockSettingsService.updateNetworkSettings.mockResolvedValue(undefined);
       mockVideosService.getAllVideosData.mockResolvedValue([
         { videoId: 'vid1', outputs: { m3u8: [] } }, // No m3u8 outputs
@@ -647,7 +625,6 @@ describe('SettingsController', () => {
         isDockerEnvironment: false,
       }));
 
-      mockSettingsService.getIndexedVideos.mockResolvedValue([]);
       mockSettingsService.updateNetworkSettings.mockResolvedValue(undefined);
       mockVideosService.getAllVideosData.mockResolvedValue([
         { videoId: 'vid1', outputs: { m3u8: ['720p'] } },
@@ -689,7 +666,6 @@ describe('SettingsController', () => {
         isDockerEnvironment: false,
       }));
 
-      mockSettingsService.getIndexedVideos.mockResolvedValue([]);
       mockSettingsService.updateNetworkSettings.mockResolvedValue(undefined);
       mockVideosService.getAllVideosData.mockResolvedValue([
         { videoId: 'vid1', outputs: { m3u8: ['720p'] } },
@@ -1456,7 +1432,6 @@ describe('SettingsController', () => {
       (mockRequest as any).parts = () => mockParts;
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
       mockCloudflareService.purgeNodeImages.mockResolvedValue(undefined);
-      mockSettingsService.markAllVideosAsNotIndexed.mockResolvedValue(undefined);
 
       await controller.uploadAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
@@ -1476,7 +1451,6 @@ describe('SettingsController', () => {
       (mockRequest as any).parts = () => mockParts;
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
       mockCloudflareService.purgeNodeImages.mockResolvedValue(undefined);
-      mockSettingsService.markAllVideosAsNotIndexed.mockResolvedValue(undefined);
 
       await controller.uploadAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
@@ -1496,7 +1470,6 @@ describe('SettingsController', () => {
       (mockRequest as any).parts = () => mockParts;
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
       mockCloudflareService.purgeNodeImages.mockRejectedValue(new Error('Purge failed'));
-      mockSettingsService.markAllVideosAsNotIndexed.mockResolvedValue(undefined);
 
       await controller.uploadAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
@@ -1527,7 +1500,6 @@ describe('SettingsController', () => {
       };
       (mockRequest as any).parts = () => mockParts;
       mockCloudflareService.purgeNodeImages.mockResolvedValue(undefined);
-      mockSettingsService.markAllVideosAsNotIndexed.mockResolvedValue(undefined);
 
       await controller.uploadAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 

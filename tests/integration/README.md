@@ -55,7 +55,7 @@ npm run test:integration:postgres
 
 The integration tests measure real query behavior:
 CRUD and bulk operations, ordering/limits, timestamp boundaries, text search,
-boolean/null/default conversion, counters/index state, constraints, transaction
+boolean/null/default conversion, counters, constraints, transaction
 rollback, file persistence, and migrations. SQLite `RAISE(IGNORE)` triggers test
 the repositories' empty-insert guards without replacing the database with mocks.
 PostgreSQL uses real `BEFORE INSERT` triggers returning `NULL` for those guards.
@@ -67,8 +67,10 @@ missing-result fallbacks. Migration resolution is tested with real source,
 bundled, and standalone directory layouts and the shipped migration SQL.
 
 PostgreSQL also tests error handling with a closed native connection, migration
-rollback, and preservation of existing tables when the migration journal is
-missing. Each backend's coverage is measured independently of the other backend
+rollback, and explicit failure without data loss when the migration journal is
+missing. Both dialects verify fresh schema parity and exactly one initial
+standalone migration. Previous-build upgrades are not supported or tested.
+Each backend's coverage is measured independently of the other backend
 and the mocks.
 
 The unit report enforces 100% statements, branches, functions, and lines per

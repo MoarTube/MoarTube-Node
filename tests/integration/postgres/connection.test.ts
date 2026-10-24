@@ -29,7 +29,7 @@ describe('PostgreSQL connections and shipped migrations (real SQL)', () => {
   it('runs migrations idempotently and persists timestamp data across independent connections', async () => {
     database = await openTestDatabase();
     const migrations = await database.client`SELECT * FROM drizzle.__drizzle_migrations`;
-    expect(migrations.length).toBeGreaterThan(0);
+    expect(migrations).toHaveLength(1);
     await connection.initializeDatabaseSchema();
     expect(connection.getDatabase()).toBe(database.db);
     const tables =
@@ -105,8 +105,10 @@ describe('PostgreSQL connections and shipped migrations (real SQL)', () => {
     database = await openTestDatabase();
     await database.client`INSERT INTO links (url, svg_graphic, timestamp) VALUES ('existing', '<svg/>', 1)`;
     await database.client`DELETE FROM drizzle.__drizzle_migrations`;
-    // The production initializer tolerates the real "relation already exists" error.
-    await expect(connection.initializeDatabaseSchema()).resolves.toBeUndefined();
+    // Conflicting tables must not silently skip later standalone migrations.
+    await expect(connection.initializeDatabaseSchema()).rejects.toThrow(
+      'Failed to initialize PostgreSQL database schema'
+    );
     expect(await database.client`SELECT url FROM links`).toEqual([{ url: 'existing' }]);
     expect(await database.client`SELECT * FROM drizzle.__drizzle_migrations`).toHaveLength(0);
   });

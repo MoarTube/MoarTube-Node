@@ -52,8 +52,6 @@ vi.mock('@/config/urls.js', () => ({
 
 vi.mock('@/config/schema.js', () => ({
   validateNodeSettings: vi.fn(),
-  validateAppConfig: vi.fn(),
-  validateNodeIdentification: vi.fn(),
   validateLastCheckedContentTracker: vi.fn(),
 }));
 
@@ -63,15 +61,12 @@ import { initializePaths } from '@/config/paths.js';
 import { initializeUrls, buildNodeBaseUrl, buildExternalVideosBaseUrl, buildExternalResourcesBaseUrl } from '@/config/urls.js';
 import {
   validateNodeSettings,
-  validateAppConfig,
-  validateNodeIdentification,
   validateLastCheckedContentTracker,
 } from '@/config/schema.js';
 
 describe('config/index.ts', () => {
   // Mock data
   const mockBaseDir = '/app';
-  const mockConfigFileName = 'config.json';
 
   const mockEnv = {
     isDockerEnvironment: false,
@@ -85,38 +80,20 @@ describe('config/index.ts', () => {
     databaseDirectoryPath: '/app/data/db',
     certificatesDirectoryPath: '/app/data/certificates',
     nodeSettingsPath: '/app/data/_node_settings.json',
-    nodeIdentificationPath: '/app/data/_node_identification.json',
     lastCheckedContentTrackerPath: '/app/data/_last_checked_content_tracker.json',
     toObject: vi.fn(() => ({
       baseDir: '/app',
-      configFileName: 'config.json',
       dataDirectoryPath: '/app/data',
     })),
   };
 
   const mockUrls = {
-    indexerUrl: 'https://indexer.moartube.com',
-    aliaserUrl: 'https://aliaser.moartube.com',
     cloudflareZoneUrl: 'https://api.cloudflare.com/client/v4/zones/',
     toObject: vi.fn(() => ({
-      indexerUrl: 'https://indexer.moartube.com',
-      aliaserUrl: 'https://aliaser.moartube.com',
       cloudflareZoneUrl: 'https://api.cloudflare.com/client/v4/zones/',
     })),
   };
 
-  const mockAppConfig = {
-    indexerConfig: {
-      httpProtocol: 'https',
-      host: 'indexer.moartube.com',
-      port: 443,
-    },
-    aliaserConfig: {
-      httpProtocol: 'https',
-      host: 'aliaser.moartube.com',
-      port: 443,
-    },
-  };
 
   const mockNodeSettings = {
     nodeListeningPort: 8080,
@@ -149,9 +126,6 @@ describe('config/index.ts', () => {
     },
   };
 
-  const mockNodeIdentification = {
-    moarTubeTokenProof: 'token-proof-123',
-  };
 
   const mockContentTracker = {
     lastCheckedCommentsTimestamp: 1234567890,
@@ -178,9 +152,7 @@ describe('config/index.ts', () => {
     (getEnv as MockedFunction<any>).mockReturnValue(mockEnv);
     (initializePaths as MockedFunction<any>).mockReturnValue(mockPaths);
     (initializeUrls as MockedFunction<any>).mockReturnValue(mockUrls);
-    (validateAppConfig as MockedFunction<any>).mockReturnValue(mockAppConfig);
     (validateNodeSettings as MockedFunction<any>).mockImplementation((data) => data);
-    (validateNodeIdentification as MockedFunction<any>).mockImplementation((data) => data);
     (validateLastCheckedContentTracker as MockedFunction<any>).mockReturnValue(mockContentTracker);
 
     // Setup path mocks
@@ -190,14 +162,8 @@ describe('config/index.ts', () => {
     // Setup fs mocks
     mockFs.existsSync.mockReturnValue(true);
     mockFs.readFileSync.mockImplementation((filePath: string) => {
-      if (filePath.includes('config.json')) {
-        return JSON.stringify(mockAppConfig);
-      }
       if (filePath.includes('_node_settings.json')) {
         return JSON.stringify(mockNodeSettings);
-      }
-      if (filePath.includes('_node_identification.json')) {
-        return JSON.stringify(mockNodeIdentification);
       }
       if (filePath.includes('_last_checked_content_tracker.json')) {
         return JSON.stringify(mockContentTracker);
@@ -221,7 +187,7 @@ describe('config/index.ts', () => {
 
   describe('tracker reload and watcher lifecycle', () => {
     it('reloads tracker changes, ignores rename events, and closes watchers once', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       const callback = mockFs.watch.mock.calls.find(([file]) => file === mockPaths.lastCheckedContentTrackerPath)![1] as Function;
       const reload = vi.spyOn(config, 'reloadLastCheckedContentTracker');
       callback('rename');
@@ -238,7 +204,7 @@ describe('config/index.ts', () => {
     });
 
     it('keeps tracker state when its file disappears or contains invalid JSON', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       mockFs.existsSync.mockReturnValue(false);
       config.reloadLastCheckedContentTracker();
       expect(config.lastCheckedContentTracker).toEqual(mockContentTracker);
@@ -254,28 +220,28 @@ describe('config/index.ts', () => {
     it('uses tracker defaults even when creating the defaults file fails', () => {
       mockFs.existsSync.mockImplementation((file) => file !== mockPaths.lastCheckedContentTrackerPath);
       mockFs.writeFileSync.mockImplementation((file) => { if (file === mockPaths.lastCheckedContentTrackerPath) throw new Error('read only'); });
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       expect(config.lastCheckedContentTracker).toEqual({ lastCheckedCommentsTimestamp: 0, lastCheckedVideoReportsTimestamp: 0, lastCheckedCommentReportsTimestamp: 0 });
     });
   });
 
   describe('Config singleton', () => {
     it('should be a singleton', () => {
-      const config1 = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config1 = Config.initialize(mockBaseDir);
       const config2 = Config.getInstance();
 
       expect(config1).toBe(config2);
     });
 
     it('should return the same instance via initializeConfig()', () => {
-      const config1 = initializeConfig(mockBaseDir, mockConfigFileName);
-      const config2 = initializeConfig(mockBaseDir, mockConfigFileName);
+      const config1 = initializeConfig(mockBaseDir);
+      const config2 = initializeConfig(mockBaseDir);
 
       expect(config1).toBe(config2);
     });
 
     it('should return the same instance via getConfig()', () => {
-      Config.initialize(mockBaseDir, mockConfigFileName);
+      Config.initialize(mockBaseDir);
       const config1 = getConfig();
       const config2 = getConfig();
 
@@ -283,21 +249,23 @@ describe('config/index.ts', () => {
     });
 
     it('should initialize all subsystems correctly', () => {
-      Config.initialize(mockBaseDir, mockConfigFileName);
+      Config.initialize(mockBaseDir);
 
       expect(getEnv).toHaveBeenCalledTimes(1);
       expect(initializePaths).toHaveBeenCalledWith(mockBaseDir, false, undefined);
-      expect(validateAppConfig).toHaveBeenCalledTimes(1);
-      expect(initializeUrls).toHaveBeenCalledWith(mockAppConfig.indexerConfig, mockAppConfig.aliaserConfig);
+      expect(initializeUrls).toHaveBeenCalledWith();
       expect(validateNodeSettings).toHaveBeenCalledTimes(1);
-      expect(validateNodeIdentification).toHaveBeenCalledTimes(1);
       expect(validateLastCheckedContentTracker).toHaveBeenCalledTimes(1);
+      expect(mockFs.readFileSync.mock.calls).toEqual([
+        [mockPaths.nodeSettingsPath, 'utf8'],
+        [mockPaths.lastCheckedContentTrackerPath, 'utf8'],
+      ]);
     });
   });
 
   describe('Data directory setup', () => {
     it('should create all required data directories', () => {
-      Config.initialize(mockBaseDir, mockConfigFileName);
+      Config.initialize(mockBaseDir);
 
       expect(mockFs.mkdirSync).toHaveBeenCalledWith(mockPaths.imagesDirectoryPath, { recursive: true });
       expect(mockFs.mkdirSync).toHaveBeenCalledWith(mockPaths.videosDirectoryPath, { recursive: true });
@@ -306,42 +274,17 @@ describe('config/index.ts', () => {
     });
   });
 
-  describe('App config loading', () => {
-    it('should load and validate app config from file', () => {
-      Config.initialize(mockBaseDir, mockConfigFileName);
-
-      expect(mockPath.join).toHaveBeenCalledWith(mockBaseDir, mockConfigFileName);
-      expect(mockFs.readFileSync).toHaveBeenCalledWith('/app/config.json', 'utf8');
-      expect(validateAppConfig).toHaveBeenCalledWith(mockAppConfig);
-    });
-
-    it('should throw error if app config file does not exist', () => {
-      mockFs.existsSync.mockReturnValue(false);
-
-      expect(() => Config.initialize(mockBaseDir, mockConfigFileName)).toThrow('App config not found: /app/config.json');
-    });
-
-    it('should return frozen app config', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
-      const appConfig = config.appConfig;
-
-      expect(appConfig).toEqual(mockAppConfig);
-
-      // Should be frozen/read-only
-      expect(() => {
-        (appConfig as any).indexerConfig = {};
-      }).toThrow();
-    });
+  describe('Runtime mode', () => {
 
     it('should return correct development mode status from env', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       expect(config.isDevelopment).toBe(false);
     });
   });
 
   describe('Node settings loading', () => {
     it('should load existing node settings from file', () => {
-      Config.initialize(mockBaseDir, mockConfigFileName);
+      Config.initialize(mockBaseDir);
 
       expect(mockFs.readFileSync).toHaveBeenCalledWith(mockPaths.nodeSettingsPath, 'utf8');
       expect(validateNodeSettings).toHaveBeenCalledWith(mockNodeSettings);
@@ -353,7 +296,7 @@ describe('config/index.ts', () => {
         return true;
       });
 
-      Config.initialize(mockBaseDir, mockConfigFileName);
+      Config.initialize(mockBaseDir);
 
       expect(mockFs.mkdirSync).toHaveBeenCalledWith(mockPath.dirname(mockPaths.nodeSettingsPath), { recursive: true });
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
@@ -363,7 +306,7 @@ describe('config/index.ts', () => {
     });
 
     it('should return frozen node settings', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       const nodeSettings = config.nodeSettings;
 
       expect(nodeSettings).toEqual(mockNodeSettings);
@@ -375,7 +318,7 @@ describe('config/index.ts', () => {
     });
 
     it('should update node settings and persist to disk', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       const updates = { nodeName: 'Updated Node' };
 
       config.updateNodeSettings(updates);
@@ -388,7 +331,7 @@ describe('config/index.ts', () => {
     });
 
     it('should reload node settings from disk', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
 
       config.reloadNodeSettings();
 
@@ -396,68 +339,9 @@ describe('config/index.ts', () => {
     });
   });
 
-  describe('Node identification loading', () => {
-    it('should load existing node identification from file', () => {
-      Config.initialize(mockBaseDir, mockConfigFileName);
-
-      expect(mockFs.readFileSync).toHaveBeenCalledWith(mockPaths.nodeIdentificationPath, 'utf8');
-      expect(validateNodeIdentification).toHaveBeenCalledWith(mockNodeIdentification);
-    });
-
-    it('should return null if identification file does not exist', () => {
-      mockFs.existsSync.mockImplementation((path) => {
-        if (path === mockPaths.nodeIdentificationPath) return false;
-        return true;
-      });
-
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
-
-      expect(config.nodeIdentification).toBeNull();
-    });
-
-    it('should return null if identification file has invalid JSON', () => {
-      mockFs.readFileSync.mockImplementation((filePath: string) => {
-        if (filePath.includes('_node_identification.json')) {
-          return 'invalid json';
-        }
-        return JSON.stringify(mockNodeIdentification);
-      });
-
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
-
-      expect(config.nodeIdentification).toBeNull();
-    });
-
-    it('should return frozen node identification', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
-      const identification = config.nodeIdentification;
-
-      expect(identification).toEqual(mockNodeIdentification);
-
-      // Should be frozen/read-only
-      expect(() => {
-        (identification as any).moarTubeTokenProof = 'modified';
-      }).toThrow();
-    });
-
-    it('should set and persist node identification', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
-      const newIdentification = { moarTubeTokenProof: 'new-token' };
-
-      config.setNodeIdentification(newIdentification);
-
-      expect(validateNodeIdentification).toHaveBeenCalledWith(newIdentification);
-      expect(mockFs.writeFileSync).toHaveBeenCalledWith(
-        mockPaths.nodeIdentificationPath,
-        JSON.stringify(newIdentification)
-      );
-      expect(config.nodeIdentification).toEqual(newIdentification);
-    });
-  });
-
   describe('Content tracker loading', () => {
     it('should load existing content tracker from file', () => {
-      Config.initialize(mockBaseDir, mockConfigFileName);
+      Config.initialize(mockBaseDir);
 
       expect(mockFs.readFileSync).toHaveBeenCalledWith(mockPaths.lastCheckedContentTrackerPath, 'utf8');
       expect(validateLastCheckedContentTracker).toHaveBeenCalledWith(mockContentTracker);
@@ -469,7 +353,7 @@ describe('config/index.ts', () => {
         return true;
       });
 
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
 
       expect(config.lastCheckedContentTracker).toEqual({
         lastCheckedCommentsTimestamp: 0,
@@ -479,7 +363,7 @@ describe('config/index.ts', () => {
     });
 
     it('should return frozen content tracker', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       const tracker = config.lastCheckedContentTracker;
 
       expect(tracker).toEqual(mockContentTracker);
@@ -491,7 +375,7 @@ describe('config/index.ts', () => {
     });
 
     it('should update content tracker and persist', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       const updates = { lastCheckedCommentsTimestamp: 9999999999 };
 
       config.updateLastCheckedContentTracker(updates);
@@ -505,7 +389,7 @@ describe('config/index.ts', () => {
 
   describe('Runtime configuration', () => {
     it('should initialize runtime config correctly', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
 
       expect(config.runtime).toEqual({
         jwtSecret: '',
@@ -515,7 +399,7 @@ describe('config/index.ts', () => {
     });
 
     it('should return frozen runtime config', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       const runtime = config.runtime;
 
       // Should be frozen/read-only
@@ -525,7 +409,7 @@ describe('config/index.ts', () => {
     });
 
     it('should set JWT secret', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       const secret = 'my-jwt-secret';
 
       config.setJwtSecret(secret);
@@ -542,31 +426,31 @@ describe('config/index.ts', () => {
     });
 
     it('should return correct Docker environment status', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       expect(config.isDockerEnvironment).toBe(false);
     });
   });
 
   describe('Subsystem access', () => {
     it('should provide access to env subsystem', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       expect(config.env).toBe(mockEnv);
     });
 
     it('should provide access to paths subsystem', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       expect(config.paths).toBe(mockPaths);
     });
 
     it('should provide access to urls subsystem', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       expect(config.urls).toBe(mockUrls);
     });
   });
 
   describe('URL builders', () => {
     it('should build node base URL', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
 
       (buildNodeBaseUrl as MockedFunction<any>).mockReturnValue('https://example.com');
 
@@ -577,7 +461,7 @@ describe('config/index.ts', () => {
     });
 
     it('should build external videos base URL', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
 
       (buildExternalVideosBaseUrl as MockedFunction<any>).mockReturnValue('https://cdn.example.com/videos');
 
@@ -588,7 +472,7 @@ describe('config/index.ts', () => {
     });
 
     it('should build external resources base URL', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
 
       (buildExternalResourcesBaseUrl as MockedFunction<any>).mockReturnValue('https://example.com/resources');
 
@@ -601,13 +485,13 @@ describe('config/index.ts', () => {
 
   describe('File watching', () => {
     it('should set up file watcher for settings file', () => {
-      Config.initialize(mockBaseDir, mockConfigFileName);
+      Config.initialize(mockBaseDir);
 
       expect(mockFs.watch).toHaveBeenCalledWith(mockPaths.nodeSettingsPath, expect.any(Function));
     });
 
     it('should reload settings when file changes', () => {
-      Config.initialize(mockBaseDir, mockConfigFileName);
+      Config.initialize(mockBaseDir);
 
       // Get the watch callback for settings file (second call to fs.watch)
       const watchCallback = mockFs.watch.mock.calls[1][1];
@@ -619,7 +503,7 @@ describe('config/index.ts', () => {
     });
 
     it('should not reload settings for non-change events', () => {
-      Config.initialize(mockBaseDir, mockConfigFileName);
+      Config.initialize(mockBaseDir);
 
       // Get the watch callback for settings file (second call to fs.watch)
       const watchCallback = mockFs.watch.mock.calls[1][1];
@@ -636,7 +520,7 @@ describe('config/index.ts', () => {
       const mockWatcher = { close: vi.fn() };
       mockFs.watch.mockReturnValue(mockWatcher as any);
 
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
 
       config.cleanup();
 
@@ -644,7 +528,7 @@ describe('config/index.ts', () => {
     });
 
     it('should handle cleanup when no watcher exists', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
 
       // Simulate no watcher
       (config as any)._settingsWatcher = null;
@@ -655,19 +539,16 @@ describe('config/index.ts', () => {
 
   describe('Summary', () => {
     it('should return correct configuration summary', () => {
-      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const config = Config.initialize(mockBaseDir);
       const summary = config.toSummary();
 
       expect(summary).toEqual({
         env: { NODE_ENV: 'development', IS_DOCKER_ENVIRONMENT: 'false' },
         paths: {
           baseDir: '/app',
-          configFileName: 'config.json',
           dataDirectoryPath: '/app/data',
         },
         urls: {
-          indexerUrl: 'https://indexer.moartube.com',
-          aliaserUrl: 'https://aliaser.moartube.com',
           cloudflareZoneUrl: 'https://api.cloudflare.com/client/v4/zones/',
         },
         isDevelopment: false,
@@ -679,34 +560,16 @@ describe('config/index.ts', () => {
   });
 
   describe('Error handling', () => {
-    it('should handle JSON parse errors in app config', () => {
-      mockFs.readFileSync.mockImplementation((filePath: string) => {
-        if (filePath.includes('config.json')) {
-          return 'invalid json';
-        }
-        return '{}';
-      });
-
-      expect(() => Config.initialize(mockBaseDir, mockConfigFileName)).toThrow();
-    });
 
     it('should handle JSON parse errors in node settings', () => {
       mockFs.readFileSync.mockImplementation((filePath: string) => {
         if (filePath.includes('_node_settings.json')) {
           return 'invalid json';
         }
-        return JSON.stringify(mockAppConfig);
+        return JSON.stringify({});
       });
 
-      expect(() => Config.initialize(mockBaseDir, mockConfigFileName)).toThrow();
-    });
-
-    it('should handle validation errors in app config', () => {
-      (validateAppConfig as MockedFunction<any>).mockImplementation(() => {
-        throw new Error('Invalid app config');
-      });
-
-      expect(() => Config.initialize(mockBaseDir, mockConfigFileName)).toThrow('Invalid app config');
+      expect(() => Config.initialize(mockBaseDir)).toThrow();
     });
 
     it('should handle validation errors in node settings', () => {
@@ -714,7 +577,7 @@ describe('config/index.ts', () => {
         throw new Error('Invalid node settings');
       });
 
-      expect(() => Config.initialize(mockBaseDir, mockConfigFileName)).toThrow('Invalid node settings');
+      expect(() => Config.initialize(mockBaseDir)).toThrow('Invalid node settings');
     });
   });
 });
