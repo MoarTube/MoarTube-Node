@@ -148,6 +148,34 @@ describe('SettingsController', () => {
     mockVideosService.getAllVideosData.mockResolvedValue([]);
   });
 
+  it('sends the server restart command through IPC after responding', async () => {
+    const send = vi.fn();
+    vi.stubGlobal('setImmediate', (callback: () => void) => { callback(); });
+    const originalSend = process.send;
+    process.send = send;
+    try {
+      await controller.restartServer(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(send).toHaveBeenCalledWith({ cmd: 'restart_server' });
+    } finally {
+      process.send = originalSend;
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('returns a client error and does not schedule a restart when sending the response fails', async () => {
+    const schedule = vi.spyOn(globalThis, 'setImmediate');
+    mockReply.send.mockImplementationOnce(() => { throw new Error('response failed'); });
+    try {
+      await controller.restartServer(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      expect(mockReply.status).toHaveBeenLastCalledWith(400);
+      expect(mockReply.send).toHaveBeenLastCalledWith({ isError: true, message: 'error restarting the MoarTube node' });
+      expect(schedule).not.toHaveBeenCalled();
+    } finally {
+      schedule.mockRestore();
+    }
+  });
+
   describe('constructor', () => {
     it('should create a SettingsController instance', () => {
       expect(controller).toBeInstanceOf(SettingsController);

@@ -219,6 +219,46 @@ describe('config/index.ts', () => {
     (Config as any).instance = undefined;
   });
 
+  describe('tracker reload and watcher lifecycle', () => {
+    it('reloads tracker changes, ignores rename events, and closes watchers once', () => {
+      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      const callback = mockFs.watch.mock.calls.find(([file]) => file === mockPaths.lastCheckedContentTrackerPath)![1] as Function;
+      const reload = vi.spyOn(config, 'reloadLastCheckedContentTracker');
+      callback('rename');
+      expect(reload).not.toHaveBeenCalled();
+      const updated = { ...mockContentTracker, lastCheckedCommentsTimestamp: 99 };
+      vi.mocked(validateLastCheckedContentTracker).mockReturnValue(updated);
+      callback('change');
+      expect(config.lastCheckedContentTracker).toEqual(updated);
+      const watchers = mockFs.watch.mock.results.map((result) => result.value);
+      config.cleanup();
+      config.cleanup();
+      for (const watcher of new Set(watchers)) expect(watcher.close).toHaveBeenCalledTimes(watchers.filter((value) => value === watcher).length);
+      reload.mockRestore();
+    });
+
+    it('keeps tracker state when its file disappears or contains invalid JSON', () => {
+      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      mockFs.existsSync.mockReturnValue(false);
+      config.reloadLastCheckedContentTracker();
+      expect(config.lastCheckedContentTracker).toEqual(mockContentTracker);
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.readFileSync.mockReturnValue('{bad json');
+      const error = vi.spyOn((config as any).logger, 'error');
+      config.reloadLastCheckedContentTracker();
+      expect(error).toHaveBeenCalledWith('Failed to reload content tracker', expect.any(Error));
+      expect(config.lastCheckedContentTracker).toEqual(mockContentTracker);
+      error.mockRestore();
+    });
+
+    it('uses tracker defaults even when creating the defaults file fails', () => {
+      mockFs.existsSync.mockImplementation((file) => file !== mockPaths.lastCheckedContentTrackerPath);
+      mockFs.writeFileSync.mockImplementation((file) => { if (file === mockPaths.lastCheckedContentTrackerPath) throw new Error('read only'); });
+      const config = Config.initialize(mockBaseDir, mockConfigFileName);
+      expect(config.lastCheckedContentTracker).toEqual({ lastCheckedCommentsTimestamp: 0, lastCheckedVideoReportsTimestamp: 0, lastCheckedCommentReportsTimestamp: 0 });
+    });
+  });
+
   describe('Config singleton', () => {
     it('should be a singleton', () => {
       const config1 = Config.initialize(mockBaseDir, mockConfigFileName);

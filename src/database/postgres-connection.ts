@@ -23,12 +23,20 @@ export type DatabaseClient = PostgresJsDatabase<typeof schema>;
 /**
  * Drizzle PostgreSQL database instance
  */
-let drizzleDb: PostgresJsDatabase<typeof schema> | null = null;
+let connection: {
+  db: PostgresJsDatabase<typeof schema>;
+  client: postgresDatabase.Sql;
+} | null = null;
 
-/**
- * PostgreSQL client instance (for raw access)
- */
-let databaseClient: postgresDatabase.Sql | null = null;
+/** Resolve the migrations shipped beside a bundle or in the source project. */
+export function resolveMigrationsFolder(moduleUrl: string): string {
+  const filename = fileURLToPath(moduleUrl);
+  const dirname = path.dirname(filename);
+  const isBundled = dirname.includes('dist') || !filename.includes('database');
+  return isBundled
+    ? path.join(dirname, 'drizzle', 'postgres')
+    : path.resolve(dirname, '..', '..', 'drizzle', 'postgres');
+}
 
 /**
  * Creates a PostgreSQL database connection
@@ -42,14 +50,15 @@ export function createDatabase(config: DatabaseConfig): PostgresJsDatabase<typeo
     throw new Error('PostgreSQL connection string is required');
   }
 
-  databaseClient = postgresDatabase(config.connectionString);
-  drizzleDb = drizzle(databaseClient, { schema });
+  const databaseClient = postgresDatabase(config.connectionString);
+  const drizzleDb = drizzle(databaseClient, { schema });
+  connection = { db: drizzleDb, client: databaseClient };
 
   return drizzleDb;
 }
 
 export async function initializeDatabaseSchema(): Promise<void> {
-  if (!drizzleDb || !databaseClient) {
+  if (!connection) {
     throw new Error('PostgreSQL database not initialized. Call createDatabase() first.');
   }
 
@@ -57,7 +66,7 @@ export async function initializeDatabaseSchema(): Promise<void> {
     // Try to create the drizzle schema if it doesn't exist
     // This may fail if the user doesn't have CREATE SCHEMA permission, but that's OK if the schema already exists
     try {
-      await databaseClient`CREATE SCHEMA IF NOT EXISTS drizzle`;
+      await connection.client`CREATE SCHEMA IF NOT EXISTS drizzle`;
     } catch {
       // Schema creation failed - this is OK if the schema already exists
       // Warning: Could not create drizzle schema, assuming it already exists
@@ -66,20 +75,13 @@ export async function initializeDatabaseSchema(): Promise<void> {
     // Resolve migrations folder path
     // In development (tsx): src/database/postgres-connection.ts -> ../../drizzle/postgres
     // In production (bundled): dist/moartube-node.js -> ./drizzle/postgres (copied by tsup)
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-
-    // Check if we're running from the bundled dist file or from source
-    const isBundled = __dirname.includes('dist') || !__filename.includes('database');
-    const migrationsFolder = isBundled
-      ? path.join(__dirname, 'drizzle', 'postgres')
-      : path.resolve(__dirname, '..', '..', 'drizzle', 'postgres');
-
-    await migrate(drizzleDb, { migrationsFolder });
+    const migrationsFolder = resolveMigrationsFolder(import.meta.url);
+    await migrate(connection.db, { migrationsFolder });
   } catch (error) {
     if (
       error instanceof DrizzleQueryError &&
-      error.cause?.message.includes('already exists') === true
+      // Drizzle wraps query failures with the original driver error as their cause.
+      (error.cause as Error).message.includes('already exists')
     ) {
       return;
     }
@@ -95,8 +97,8 @@ export async function initializeDatabaseSchema(): Promise<void> {
  * @throws Error if database has not been initialized
  */
 export function getDatabase(): PostgresJsDatabase<typeof schema> {
-  if (!drizzleDb) {
+  if (!connection) {
     throw new Error('PostgreSQL database not initialized. Call createDatabase() first.');
   }
-  return drizzleDb;
+  return connection.db;
 }

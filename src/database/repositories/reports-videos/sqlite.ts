@@ -52,7 +52,8 @@ export class ReportsVideosRepositorySQLite implements IReportsVideosRepository<
 
   async getCount(): Promise<number> {
     const result = await this.db.select({ count: count() }).from(videoReports);
-    return result[0]?.count ?? 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count;
   }
 
   async create(data: DrizzleNewVideoReport): Promise<DrizzleVideoReport> {
@@ -84,7 +85,8 @@ export class ReportsVideosRepositorySQLite implements IReportsVideosRepository<
       .select({ count: count() })
       .from(videoReports)
       .where(gt(videoReports.timestamp, timestamp));
-    return result[0]?.count ?? 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count;
   }
 
   async deleteAll(): Promise<number> {

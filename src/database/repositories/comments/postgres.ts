@@ -63,7 +63,8 @@ export class CommentsRepositoryPostgres implements ICommentsRepository<
       .select({ count: count() })
       .from(comments)
       .where(eq(comments.video_id, videoId));
-    return result[0]?.count ?? 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count;
   }
 
   async findAll(): Promise<DrizzleComment[]> {
@@ -120,7 +121,8 @@ export class CommentsRepositoryPostgres implements ICommentsRepository<
 
   async countAll(): Promise<number> {
     const result = await this.db.select({ count: count() }).from(comments);
-    return result[0]?.count ?? 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count;
   }
 
   async countNewerThan(timestamp: number): Promise<number> {
@@ -128,7 +130,8 @@ export class CommentsRepositoryPostgres implements ICommentsRepository<
       .select({ count: count() })
       .from(comments)
       .where(gt(comments.timestamp, timestamp));
-    return result[0]?.count ?? 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count;
   }
 
   async search(

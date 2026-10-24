@@ -87,7 +87,8 @@ export class ReportsCommentsRepositorySQLite implements IReportsCommentsReposito
    */
   async getCount(): Promise<number> {
     const result = await this.db.select({ count: count() }).from(commentReports);
-    return result[0]?.count ?? 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count;
   }
 
   /**
@@ -142,7 +143,8 @@ export class ReportsCommentsRepositorySQLite implements IReportsCommentsReposito
       .select({ count: count() })
       .from(commentReports)
       .where(gt(commentReports.timestamp, timestamp));
-    return result[0]?.count ?? 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count;
   }
 
   /**

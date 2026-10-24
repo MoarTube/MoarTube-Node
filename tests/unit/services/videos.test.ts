@@ -174,6 +174,32 @@ describe('VideosService', () => {
     vi.useRealTimers();
   });
 
+  describe('video sources and concurrent output updates', () => {
+    it.each([true, false])('builds sources for streaming=%s', async (isStreaming) => {
+      mockVideosRepository.findById.mockResolvedValue({ video_id: 'v', is_streaming: isStreaming,
+        outputs: JSON.stringify({ m3u8: ['720p'], mp4: ['480p'], webm: [], ogv: [] }) });
+      const sources = await service.getVideoSources('v');
+      expect(sources?.adaptiveSources).toHaveLength(2);
+      expect(sources?.progressiveSources).toHaveLength(1);
+      expect(JSON.stringify(sources)).toContain(isStreaming ? 'dynamic' : 'static');
+    });
+
+    it('returns null for missing video sources', async () => {
+      mockVideosRepository.findById.mockResolvedValue(null);
+      expect(await service.getVideoSources('missing')).toBeNull();
+    });
+
+    it('serializes output changes for the same video without losing either update', async () => {
+      let outputs = JSON.stringify({ m3u8: [], mp4: [], webm: [], ogv: [] });
+      mockVideosRepository.findById.mockImplementation(async () => ({ video_id: 'v', outputs }));
+      mockVideosRepository.update.mockImplementation(async (_id, data) => { outputs = data.outputs; });
+      await Promise.all([service.addOutputResolution('v', 'mp4', '720p'), service.addOutputResolution('v', 'mp4', '1080p')]);
+      expect(JSON.parse(outputs).mp4).toEqual(['1080p', '720p']);
+      mockVideosRepository.update.mockReset();
+      mockVideosRepository.findById.mockReset();
+    });
+  });
+
   describe('constructor', () => {
     it('should create a VideosService instance', () => {
       expect(service).toBeInstanceOf(VideosService);

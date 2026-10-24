@@ -1,0 +1,156 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { createVideosRepository } from '@database/repositories/videos/index.js';
+import { videos } from '@database/schemas/postgres/index.js';
+import { openTestDatabase, video } from './helpers.js';
+
+describe('PostgreSQL videos (real SQL)', () => {
+  let database: Awaited<ReturnType<typeof openTestDatabase>>;
+  let repository: ReturnType<typeof createVideosRepository>;
+  beforeEach(async () => {
+    database = await openTestDatabase();
+    repository = createVideosRepository('postgres', database.db);
+  });
+  afterEach(() => database?.close());
+
+  it('persists defaults, nullable fields, booleans, JSON text, and generated IDs', async () => {
+    const row = await repository.create(video('a'));
+    expect(row).toMatchObject({
+      id: expect.any(Number),
+      views: 0,
+      is_published: false,
+      is_comments_enabled: true,
+      source_file_extension: null,
+      length_timestamp: null,
+      outputs: '{}',
+      meta: '{}',
+    });
+    expect(await repository.findById('a')).toEqual(row);
+    expect(await repository.findByDbId(row.id)).toEqual(row);
+    expect(await repository.findById('missing')).toBeNull();
+    expect(await repository.findByDbId(-1)).toBeNull();
+    const changes = {
+      is_published: true,
+      source_file_extension: 'mp4',
+      outputs: JSON.stringify({ '1080p': '✓' }),
+    };
+    expect(await repository.update('a', changes)).toMatchObject(changes);
+    expect(await repository.findById('a')).toMatchObject(changes);
+    expect(await repository.update('missing', changes)).toBeNull();
+    expect(await repository.delete('a')).toBe(true);
+    expect(await repository.delete('a')).toBe(false);
+  });
+
+  it('executes SQL counters and conditional index state updates', async () => {
+    await repository.createMany([video('a'), { ...video('b'), is_indexed: true }]);
+    await repository.incrementViews('a');
+    await repository.incrementViewsBy('a', 4);
+    await repository.incrementViewsBy('b', 2);
+    await repository.incrementLikes('a');
+    await repository.incrementDislikes('a');
+    await repository.incrementComments('a');
+    await repository.incrementComments('a');
+    await repository.decrementComments('a');
+    await repository.updateBandwidth('a', 123456789);
+    expect(await repository.findById('a')).toMatchObject({
+      views: 5,
+      likes: 1,
+      dislikes: 1,
+      comments: 1,
+      bandwidth: 123456789,
+      is_index_outdated: false,
+    });
+    expect(await repository.findById('b')).toMatchObject({ views: 2, is_index_outdated: true });
+    await repository.markAllIndexedAsOutdated();
+    expect(await repository.findById('a')).toMatchObject({ is_index_outdated: false });
+    expect(await repository.findById('b')).toMatchObject({ is_index_outdated: true });
+  });
+
+  it('filters publication/streaming/finalization, timestamp boundaries, text, and tags', async () => {
+    expect(await repository.getCount()).toBe(0);
+    expect(await repository.getCount({ isPublished: true })).toBe(0);
+    expect(await repository.createMany([])).toEqual([]);
+    const rows = await repository.createMany([
+      {
+        ...video('a', 100),
+        title: 'Alpha',
+        views: 20,
+        likes: 1,
+        is_published: true,
+        is_finalized: true,
+      },
+      {
+        ...video('b', 200),
+        title: 'Beta',
+        views: 10,
+        likes: 3,
+        is_published: true,
+        is_streaming: true,
+        is_indexed: true,
+      },
+      { ...video('c', 300), title: 'Gamma', tags: 'sports', views: 30, likes: 2, is_indexed: true },
+      {
+        ...video('d', 400),
+        title: 'Delta',
+        is_published: true,
+        is_indexed: true,
+        is_index_outdated: true,
+      },
+    ]);
+    expect(await repository.findAll()).toEqual([rows[3], rows[2], rows[1], rows[0]]);
+    expect(await repository.findAll({})).toHaveLength(4);
+    expect(await repository.findAll({ search: '', tagTerm: '' })).toHaveLength(4);
+    expect(await repository.findAll({ sortDirection: 'asc', sortBy: 'title', limit: 2 })).toEqual([
+      rows[0],
+      rows[1],
+    ]);
+    expect(await repository.findAll({ sortBy: 'views', limit: 1 })).toEqual([rows[2]]);
+    expect(await repository.findAll({ sortBy: 'likes', limit: 1 })).toEqual([rows[1]]);
+    expect(await repository.findAll({ sortBy: 'creation_timestamp' })).toHaveLength(4);
+    expect(
+      await repository.findAll({
+        isPublished: true,
+        isStreaming: false,
+        isFinalized: true,
+        search: 'Alpha',
+        tagTerm: 'music',
+        timestamp: 200,
+      })
+    ).toEqual([rows[0]]);
+    expect(await repository.getCount({ isPublished: true })).toBe(3);
+    expect(await repository.getCount({ isPublished: false })).toBe(1);
+    expect(await repository.getCount({})).toBe(4);
+    expect(await repository.findAll({ search: 'Description' })).toHaveLength(4);
+    expect(await repository.findAll({ search: 'sports' })).toEqual([rows[2]]);
+    expect(await repository.findAll({ timestamp: 200 })).toEqual([rows[0]]);
+    expect(await repository.findAll({ search: "' OR 1=1 --" })).toEqual([]);
+    expect(await repository.findPublished()).toEqual([rows[3], rows[1], rows[0]]);
+    expect(
+      await repository.findPublished({ sortDirection: 'asc', sortBy: 'title', limit: 1 })
+    ).toEqual([rows[0]]);
+    expect(await repository.findStreaming()).toEqual([rows[1]]);
+    expect(await repository.findIndexed()).toEqual([rows[3], rows[2], rows[1]]);
+    expect(await repository.findPendingIndexing()).toEqual([rows[0], rows[3]]);
+    expect(await repository.deleteAll()).toBe(4);
+    expect(await repository.deleteAll()).toBe(0);
+  });
+
+  it('rejects NOT NULL violations and rolls back a failed bulk insert atomically', async () => {
+    await expect(repository.create({ ...video('bad'), title: null! })).rejects.toThrow();
+    await expect(
+      repository.createMany([video('valid'), { ...video('bad'), title: null! }])
+    ).rejects.toThrow();
+    expect(await repository.getCount()).toBe(0);
+    await expect(
+      async () =>
+        await database.db.transaction(async (tx) => {
+          await tx.insert(videos).values(video('rollback'));
+          throw new Error('rollback');
+        })
+    ).rejects.toThrow('rollback');
+    expect(await repository.findById('rollback')).toBeNull();
+    await database.ignoreInserts('videos');
+    await expect(repository.create(video('ignored'))).rejects.toThrow(
+      'Failed to create video record'
+    );
+  });
+});

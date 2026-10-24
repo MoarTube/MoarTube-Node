@@ -36,7 +36,8 @@ export class LinksRepositoryPostgres implements ILinksRepository<DrizzleLink, Dr
 
   async getCount(): Promise<number> {
     const result = await this.db.select({ count: count() }).from(links);
-    return result[0]?.count ?? 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count;
   }
 
   async create(data: DrizzleNewLink): Promise<DrizzleLink> {
@@ -75,6 +76,7 @@ export class LinksRepositoryPostgres implements ILinksRepository<DrizzleLink, Dr
 
   async existsByUrl(url: string): Promise<boolean> {
     const result = await this.db.select({ count: count() }).from(links).where(eq(links.url, url));
-    return (result[0]?.count ?? 0) > 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count > 0;
   }
 }

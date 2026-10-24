@@ -2,10 +2,25 @@
 import { defineConfig } from 'vitest/config';
 import { resolve } from 'path';
 
+const fullCoverage = { statements: 100, branches: 100, functions: 100, lines: 100 };
+
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    include: ['tests/unit/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    coverage: {
+      enabled: true,
+      provider: 'v8',
+      reporter: ['text', 'json', 'json-summary', 'html'],
+      reportsDirectory: 'coverage',
+      clean: true,
+      include: ['src/**/*.{js,ts}'],
+      exclude: ['**/*.d.ts', '**/*.config.*', 'src/**/*.test.ts', 'src/**/*.spec.ts'],
+      thresholds: {
+        ...fullCoverage,
+        perFile: true,
+      },
+    },
   },
   resolve: {
     alias: {
@@ -24,23 +39,5 @@ export default defineConfig({
       '@workers': resolve(__dirname, './src/workers'),
       '@types': resolve(__dirname, './src/types'),
     },
-  },
-  coverage: {
-    provider: 'v8',
-    reporter: ['text', 'json', 'html'],
-    include: ['src/**/*.{js,ts}'],
-    exclude: [
-      'node_modules/',
-      'dist/',
-      'bin/',
-      'public/',
-      'views/',
-      'data/',
-      'drizzle/',
-      '**/*.d.ts',
-      '**/*.config.*',
-      'src/**/*.test.ts',
-      'src/**/*.spec.ts',
-    ],
   },
 });

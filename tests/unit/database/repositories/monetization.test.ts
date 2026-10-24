@@ -211,7 +211,7 @@ describe('database/repositories/monetization.ts', () => {
         });
 
         it('should return 0 when no wallets', async () => {
-          mockDb.from.mockResolvedValue([{}]);
+          mockDb.from.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().getCount();
 
@@ -348,8 +348,8 @@ describe('database/repositories/monetization.ts', () => {
           expect(result).toBe(false);
         });
 
-        it('should return false when result is empty array', async () => {
-          mockDb.where.mockResolvedValue([]);
+        it('should return false when the count is zero', async () => {
+          mockDb.where.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().exists('0xmissing');
 

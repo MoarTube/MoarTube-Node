@@ -451,7 +451,7 @@ describe('database/repositories/videos.ts', () => {
         });
 
         it('should return 0 when no videos', async () => {
-          mockDb.from.mockResolvedValue([{}]);
+          mockDb.from.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().getCount();
 
@@ -998,7 +998,7 @@ describe('database/repositories/videos.ts', () => {
 
     it('should return 0 when no videos', async () => {
       mockDb.select.mockReturnThis();
-      mockDb.from.mockResolvedValue([{}]);
+      mockDb.from.mockResolvedValue([{ count: 0 }]);
 
       const result = await repository.getCount();
 

@@ -3,7 +3,7 @@
  *
  * Provides data access methods for live chat message records using Drizzle ORM with PostgreSQL.
  */
-import { eq, and, gte, count, lt, asc } from 'drizzle-orm';
+import { eq, and, gte, count, lt, asc, desc } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { ILiveChatMessagesRepository } from './interface.js';
 import type {
@@ -77,11 +77,11 @@ export class LiveChatMessagesRepositoryPostgres implements ILiveChatMessagesRepo
       .select()
       .from(liveChatMessages)
       .where(eq(liveChatMessages.video_id, videoId))
-      .orderBy(asc(liveChatMessages.timestamp))
+      .orderBy(desc(liveChatMessages.timestamp))
       .limit(count);
 
     // Reverse to get oldest to newest order for display
-    return messages;
+    return messages.reverse();
   }
 
   /**
@@ -118,7 +118,8 @@ export class LiveChatMessagesRepositoryPostgres implements ILiveChatMessagesRepo
       .select({ count: count() })
       .from(liveChatMessages)
       .where(eq(liveChatMessages.video_id, videoId));
-    return result[0]?.count ?? 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count;
   }
 
   /**
@@ -195,7 +196,7 @@ export class LiveChatMessagesRepositoryPostgres implements ILiveChatMessagesRepo
       .select({ timestamp: liveChatMessages.timestamp })
       .from(liveChatMessages)
       .where(eq(liveChatMessages.video_id, videoId))
-      .orderBy(asc(liveChatMessages.timestamp))
+      .orderBy(desc(liveChatMessages.timestamp))
       .limit(keepCount);
 
     if (recentMessages.length < keepCount) {
@@ -203,7 +204,7 @@ export class LiveChatMessagesRepositoryPostgres implements ILiveChatMessagesRepo
       return 0;
     }
 
-    const oldestKeptMessage = recentMessages.at(0);
+    const oldestKeptMessage = recentMessages.at(-1);
 
     if (oldestKeptMessage === undefined) {
       return 0;

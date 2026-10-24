@@ -199,7 +199,7 @@ describe('database/repositories/reports-comments.ts', () => {
         });
 
         it('should return 0 when no reports', async () => {
-          mockDb.from.mockResolvedValue([{}]);
+          mockDb.from.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().getCount();
 
@@ -319,8 +319,8 @@ describe('database/repositories/reports-comments.ts', () => {
           expect(result).toBe(8);
         });
 
-        it('should return 0 when result is empty array', async () => {
-          mockDb.where.mockResolvedValue([]);
+        it('should return 0 when the count is zero', async () => {
+          mockDb.where.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().countNewerThan(99999);
 

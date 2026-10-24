@@ -40,6 +40,7 @@ vi.mock('drizzle-orm', () => ({
   gte: vi.fn((field, value) => ({ type: 'gte', field, value })),
   lt: vi.fn((field, value) => ({ type: 'lt', field, value })),
   asc: vi.fn((field) => ({ type: 'asc', field })),
+  desc: vi.fn((field) => ({ type: 'desc', field })),
   count: vi.fn(() => ({ type: 'count' })),
 }));
 
@@ -204,7 +205,7 @@ describe('database/repositories/live-chat-messages.ts', () => {
         });
 
         it('should return 0 when no messages', async () => {
-          mockDb.where.mockResolvedValue([{}]);
+          mockDb.where.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().countByVideoId('v1');
 

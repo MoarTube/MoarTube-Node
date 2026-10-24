@@ -80,7 +80,8 @@ export class VideosRepositorySQLite implements IVideosRepository<DrizzleVideo, D
 
     const result = conditions ? await query.where(conditions) : await query;
 
-    return result[0]?.count ?? 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count;
   }
 
   /**

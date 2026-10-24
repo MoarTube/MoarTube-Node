@@ -209,7 +209,7 @@ describe('database/repositories/links.ts', () => {
         });
 
         it('should return 0 when no links', async () => {
-          mockDb.from.mockResolvedValue([{}]);
+          mockDb.from.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().getCount();
 
@@ -407,8 +407,8 @@ describe('database/repositories/links.ts', () => {
           expect(mockDb.where).toHaveBeenCalled();
         });
 
-        it('should return false when result is empty array', async () => {
-          mockDb.where.mockResolvedValue([]);
+        it('should return false when the count is zero', async () => {
+          mockDb.where.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().existsByUrl('https://missing.com');
 

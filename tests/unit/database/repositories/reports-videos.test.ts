@@ -184,7 +184,7 @@ describe('database/repositories/reports-videos.ts', () => {
         });
 
         it('should return 0 when no reports', async () => {
-          mockDb.from.mockResolvedValue([{}]);
+          mockDb.from.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().getCount();
 
@@ -286,7 +286,7 @@ describe('database/repositories/reports-videos.ts', () => {
         });
 
         it('should return 0 when no newer reports', async () => {
-          mockDb.where.mockResolvedValue([{}]);
+          mockDb.where.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().countNewerThan(99999);
 

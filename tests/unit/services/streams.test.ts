@@ -129,6 +129,65 @@ describe('StreamsService', () => {
     vi.restoreAllMocks();
   });
 
+  describe('stream recovery and manifest handling', () => {
+    beforeEach(async () => {
+      const { getConfig } = await import('@config/index.js');
+      vi.mocked(getConfig).mockReturnValue({ paths: { videosDirectoryPath: '/data/videos', publicDirectoryPath: '/public' }, nodeSettings: { storageConfig: { storageMode: 'filesystem' } } } as never);
+    });
+
+    it.each([true, false])('stops indexed remote-recorded=%s streams correctly', async (recorded) => {
+      const { getConfig } = await import('@config/index.js');
+      vi.mocked(getConfig).mockReturnValue({ paths: { videosDirectoryPath: '/data/videos' }, nodeSettings: { storageConfig: { storageMode: 's3provider' } } } as never);
+      vi.mocked(mockVideosRepository.findById).mockResolvedValue({ ...mockVideo, is_indexed: true, is_stream_recorded_remotely: recorded } as never);
+      await service.stopStream('video123');
+      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { is_streaming: false, is_streamed: true, is_index_outdated: true });
+      if (recorded) expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { is_published: true });
+    });
+
+    it('retries generated video IDs until a unique ID is found', async () => {
+      vi.mocked(mockVideosRepository.findById).mockResolvedValueOnce(mockVideo).mockResolvedValueOnce(null);
+      await service.startNewStream({ title: 'Live', description: '', tags: '', rtmpPort: 1935, networkAddress: 'localhost', resolution: '720p', isRecordingStreamRemotely: false, isRecordingStreamLocally: false });
+      expect(mockVideosRepository.findById).toHaveBeenCalledTimes(2);
+      expect(mockVideosRepository.create).toHaveBeenCalledOnce();
+    });
+
+    it('rejects resuming a video that no longer exists', async () => {
+      vi.mocked(mockVideosRepository.findById).mockResolvedValue(null);
+      await expect(service.startNewStream({ existingVideoId: 'missing', title: 'Live', description: '', tags: '', rtmpPort: 1935, networkAddress: 'localhost', resolution: '720p', isRecordingStreamRemotely: false, isRecordingStreamLocally: false })).rejects.toThrow('video with id does not exist');
+    });
+
+    it('finalizes only remotely recorded streamed manifests during filesystem recovery', async () => {
+      const fs = (await import('node:fs')).default;
+      (mockVideosRepository as any).findAll = vi.fn().mockResolvedValue([
+        { video_id: 'recorded', is_streamed: true, is_stream_recorded_remotely: true },
+        { video_id: 'local', is_streamed: true, is_stream_recorded_remotely: false },
+        { video_id: 'not-streamed', is_streamed: false, is_stream_recorded_remotely: true },
+      ]);
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      await service.finalizeAllStreamedManifests();
+      expect(fs.existsSync).toHaveBeenCalledExactlyOnceWith('/data/videos/recorded/adaptive/m3u8');
+      expect(mockLogger.info).toHaveBeenCalledWith('Finalized all streamed HLS manifests', { count: 1 });
+      const { getConfig } = await import('@config/index.js');
+      vi.mocked(getConfig).mockReturnValue({ nodeSettings: { storageConfig: { storageMode: 's3provider' } } } as never);
+      vi.mocked((mockVideosRepository as any).findAll).mockClear();
+      await service.finalizeAllStreamedManifests();
+      expect((mockVideosRepository as any).findAll).not.toHaveBeenCalled();
+    });
+
+    it('finalizes resolution manifests, skips missing/already-ended files, and ignores unrelated files', async () => {
+      const fs = (await import('node:fs')).default;
+      vi.mocked(fs.existsSync).mockImplementation((file) => !String(file).includes('missing'));
+      vi.mocked(fs.readdirSync).mockReturnValue([
+        ...['720p', '1080p', 'missing'].map((name) => ({ name, isDirectory: () => true })),
+        { name: 'notes.txt', isDirectory: () => false }, 'direct.m3u8', 'readme.txt',
+      ] as never);
+      vi.mocked(fs.readFileSync).mockImplementation((file) => String(file).includes('1080p') ? '#EXTM3U\n#EXT-X-ENDLIST\n' : '#EXTM3U\n#EXT-X-PLAYLIST-TYPE:EVENT\n');
+      service.finalizeStreamManifests('video123');
+      expect(fs.writeFileSync).toHaveBeenCalledWith('/data/videos/video123/adaptive/m3u8/720p/manifest-720p.m3u8', '#EXTM3U\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-ENDLIST\n');
+      expect(fs.writeFileSync).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('constructor', () => {
     it('should create a StreamsService instance', () => {
       expect(service).toBeInstanceOf(StreamsService);

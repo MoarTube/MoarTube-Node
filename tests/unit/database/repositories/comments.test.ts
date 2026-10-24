@@ -210,7 +210,7 @@ describe('database/repositories/comments.ts', () => {
         });
 
         it('should return 0 when no comments', async () => {
-          mockDb.where.mockResolvedValue([{}]);
+          mockDb.where.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().countByVideoId('v1');
 
@@ -405,7 +405,7 @@ describe('database/repositories/comments.ts', () => {
         });
 
         it('should return 0 when no comments exist', async () => {
-          mockDb.from.mockResolvedValue([{}]);
+          mockDb.from.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().countAll();
 
@@ -433,7 +433,7 @@ describe('database/repositories/comments.ts', () => {
         });
 
         it('should return 0 when no newer comments', async () => {
-          mockDb.where.mockResolvedValue([{}]);
+          mockDb.where.mockResolvedValue([{ count: 0 }]);
 
           const result = await repository().countNewerThan(99999);
 

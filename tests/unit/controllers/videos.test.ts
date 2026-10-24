@@ -218,6 +218,19 @@ describe('VideosController', () => {
     vi.restoreAllMocks();
   });
 
+  describe('getVideoSources', () => {
+    it.each(['found', 'missing', 'error'])('handles %s sources', async (scenario) => {
+      mockVideosService.getVideoSources = vi.fn();
+      const sources = { adaptiveSources: [], progressiveSources: [] };
+      if (scenario === 'error') mockVideosService.getVideoSources.mockRejectedValue(new Error('lookup failed'));
+      else mockVideosService.getVideoSources.mockResolvedValue(scenario === 'found' ? sources : null);
+      const request = createMockRequest({ params: { videoId: 'v' } });
+      await controller.getVideoSources(request, mockReply);
+      expect(mockVideosService.getVideoSources).toHaveBeenCalledWith('v');
+      expect(mockReply.status).toHaveBeenCalledWith(scenario === 'found' ? 200 : scenario === 'missing' ? 404 : 500);
+    });
+  });
+
   describe('constructor', () => {
     it('should create a VideosController instance', () => {
       expect(controller).toBeInstanceOf(VideosController);

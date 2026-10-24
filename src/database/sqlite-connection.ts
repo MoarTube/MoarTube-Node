@@ -22,8 +22,20 @@ export type DatabaseClient = BetterSQLite3Database<typeof schema>;
 /**
  * Drizzle SQLite database instance
  */
-let drizzleDb: BetterSQLite3Database<typeof schema> | null = null;
-let sqliteDb: sqliteDatabase.Database | null = null;
+let connection: {
+  db: BetterSQLite3Database<typeof schema>;
+  client: sqliteDatabase.Database;
+} | null = null;
+
+/** Resolve the migrations shipped beside a bundle or in the source project. */
+export function resolveMigrationsFolder(moduleUrl: string): string {
+  const filename = fileURLToPath(moduleUrl);
+  const dirname = path.dirname(filename);
+  const isBundled = dirname.includes('dist') || !filename.includes('database');
+  return isBundled
+    ? path.join(dirname, 'drizzle', 'sqlite')
+    : path.resolve(dirname, '..', '..', 'drizzle', 'sqlite');
+}
 
 /**
  * Creates a SQLite database connection
@@ -37,14 +49,15 @@ export function createDatabase(config: DatabaseConfig): BetterSQLite3Database<ty
     throw new Error('SQLite filepath is required');
   }
 
-  sqliteDb = new sqliteDatabase(config.filepath);
+  const sqliteDb = new sqliteDatabase(config.filepath);
 
   sqliteDb.exec('VACUUM');
 
   // Enable WAL mode for better concurrent performance
   // sqliteDb.pragma('journal_mode = WAL');
 
-  drizzleDb = drizzle(sqliteDb, { schema });
+  const drizzleDb = drizzle(sqliteDb, { schema });
+  connection = { db: drizzleDb, client: sqliteDb };
 
   return drizzleDb;
 }
@@ -55,7 +68,7 @@ export function createDatabase(config: DatabaseConfig): BetterSQLite3Database<ty
  * @throws Error if database is not initialized or migration fails
  */
 export function initializeDatabaseSchema(): void {
-  if (!drizzleDb) {
+  if (!connection) {
     throw new Error('SQLite database not initialized. Call createDatabase() first.');
   }
 
@@ -63,18 +76,9 @@ export function initializeDatabaseSchema(): void {
     // Resolve migrations folder path
     // In development (tsx): src/database/sqlite-connection.ts -> ../../drizzle/sqlite
     // In production (bundled): dist/moartube-node.js -> ./drizzle/sqlite (copied by tsup)
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-
-    // Check if we're running from the bundled dist file or from source
-    const isBundled = __dirname.includes('dist') || !__filename.includes('database');
-    const migrationsFolder = isBundled
-      ? path.join(__dirname, 'drizzle', 'sqlite')
-      : path.resolve(__dirname, '..', '..', 'drizzle', 'sqlite');
-
-    migrate(drizzleDb, { migrationsFolder });
-
-    sqliteDb?.exec('VACUUM');
+    const migrationsFolder = resolveMigrationsFolder(import.meta.url);
+    migrate(connection.db, { migrationsFolder });
+    connection.client.exec('VACUUM');
   } catch (error) {
     throw new Error(`Failed to initialize SQLite database schema: ${String(error)}`);
   }
@@ -87,8 +91,8 @@ export function initializeDatabaseSchema(): void {
  * @throws Error if database has not been initialized
  */
 export function getDatabase(): BetterSQLite3Database<typeof schema> {
-  if (!drizzleDb) {
+  if (!connection) {
     throw new Error('SQLite database not initialized. Call createDatabase() first.');
   }
-  return drizzleDb;
+  return connection.db;
 }

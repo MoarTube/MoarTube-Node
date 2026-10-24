@@ -126,7 +126,8 @@ export class ReportsArchiveCommentsRepositorySQLite implements IReportsArchiveCo
    */
   async getCount(): Promise<number> {
     const result = await this.db.select({ count: count() }).from(commentReportsArchive);
-    return result[0]?.count ?? 0;
+    // An ungrouped COUNT always returns one row, including zero matches.
+    return (result as [{ count: number }])[0].count;
   }
 
   /**
