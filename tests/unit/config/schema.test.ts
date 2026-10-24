@@ -328,7 +328,6 @@ describe('config/schema.ts', () => {
         publicNodePort: 443,
         nodeName: 'Test Node',
         nodeAbout: 'A test node',
-        nodeId: 'node-123',
         username: 'hashed-username',
         password: 'hashed-password',
         isCloudflareCdnEnabled: false,
@@ -350,6 +349,11 @@ describe('config/schema.ts', () => {
           storageMode: 'filesystem' as const,
         },
       };
+
+      it('ignores the retired Node ID in existing settings', () => {
+        const settings = NodeSettingsSchema.parse({ ...validNodeSettings, nodeId: 'retired' });
+        expect(settings).not.toHaveProperty('nodeId');
+      });
 
       it('should validate complete valid node settings', () => {
         const result = NodeSettingsSchema.safeParse(validNodeSettings);
@@ -530,7 +534,6 @@ describe('config/schema.ts', () => {
         publicNodePort: 443,
         nodeName: 'Test Node',
         nodeAbout: 'A test node',
-        nodeId: 'node-123',
         username: 'hashed-username',
         password: 'hashed-password',
         isCloudflareCdnEnabled: false,

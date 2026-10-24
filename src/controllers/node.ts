@@ -87,7 +87,6 @@ export class NodeController extends BaseController {
         isError: false,
         information: {
           nodeVideoCount: videoCount,
-          nodeId: nodeSettings.nodeId,
           nodeName: nodeSettings.nodeName,
           nodeAbout: nodeSettings.nodeAbout,
           publicNodeProtocol: nodeSettings.publicNodeProtocol,
@@ -106,8 +105,7 @@ export class NodeController extends BaseController {
       const cryptoWalletAddressesData = { isError: false, cryptoWalletAddresses: walletAddresses };
 
       // Get all unique tags
-      const videosResult = await this.videosService.getVideos({
-      });
+      const videosResult = await this.videosService.getVideos({});
       const allVideos = videosResult.data;
 
       const tagsSet = new Set<string>();

@@ -349,7 +349,6 @@ describe('Services Interfaces', () => {
       const settings: UpdateNodeSettingsInput = {
         nodeName: 'My Node',
         nodeAbout: 'About my node',
-        nodeId: 'node123',
         publicNodeProtocol: 'https',
         publicNodeAddress: 'example.com',
         publicNodePort: '443',

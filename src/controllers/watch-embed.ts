@@ -130,7 +130,6 @@ export class WatchEmbedController extends VideoControllerBase {
         nodeSettings: {
           nodeName: nodeSettings.nodeName,
           nodeAbout: nodeSettings.nodeAbout,
-          nodeId: nodeSettings.nodeId,
           publicNodeProtocol: nodeSettings.publicNodeProtocol,
           publicNodeAddress: nodeSettings.publicNodeAddress,
           publicNodePort: nodeSettings.publicNodePort,

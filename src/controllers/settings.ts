@@ -31,10 +31,6 @@ export interface PersonalizeNodeAboutBody {
   nodeAbout: string;
 }
 
-export interface PersonalizeNodeIdBody {
-  nodeId: string;
-}
-
 export interface AccountBody {
   username: string;
   password: string;
@@ -434,28 +430,6 @@ export class SettingsController extends BaseController {
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error updating node about', error);
-
-      return await this.sendError(reply, 'error communicating with the MoarTube node');
-    }
-  };
-
-  /**
-   * POST /settings/personalize/nodeId
-   *
-   * Update node ID
-   */
-  personalizeNodeId = async (
-    request: FastifyRequest,
-    reply: FastifyReply
-  ): Promise<FastifyReply> => {
-    try {
-      const { nodeId } = request.body as PersonalizeNodeIdBody;
-
-      await this.settingsService.updateNodeId(nodeId);
-
-      return await this.sendSuccess(reply);
-    } catch (error) {
-      this.logger.error('Error updating node ID', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }

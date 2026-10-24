@@ -8,7 +8,6 @@
 import cluster from 'node:cluster';
 import os from 'node:os';
 import crypto from 'node:crypto';
-import { v4 as uuidv4 } from 'uuid';
 import type {
   LiveStreamWorkerStatsResponseMessage,
   RestartDatabaseMessage,
@@ -61,9 +60,6 @@ export class ClusterMaster {
 
     // Set up global error handlers
     this.setupErrorHandlers();
-
-    // Ensure node has an ID
-    this.ensureNodeId();
 
     // Set up IPC handlers
     this.setupIPCHandlers();
@@ -152,20 +148,6 @@ export class ClusterMaster {
     await initializeDatabaseSchema();
 
     this.logger.debug('Database re-initialized');
-  }
-
-  /**
-   * Ensure node has an ID
-   */
-  private ensureNodeId(): void {
-    const config = getConfig();
-    const nodeSettings = config.nodeSettings as { nodeId?: string };
-
-    if (nodeSettings.nodeId === undefined || nodeSettings.nodeId === '') {
-      const newNodeId = uuidv4().replaceAll('-', '');
-      config.updateNodeSettings({ nodeId: newNodeId });
-      this.logger.info('Generated new node ID');
-    }
   }
 
   /**

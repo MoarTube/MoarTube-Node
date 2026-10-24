@@ -29,7 +29,6 @@ interface NodeInformationData {
   isError: false;
   information: {
     nodeVideoCount: number;
-    nodeId: string;
     nodeName: string;
     nodeAbout: string;
     publicNodeProtocol: string;
@@ -233,7 +232,6 @@ export class WatchController extends VideoControllerBase {
       isError: false as const,
       information: {
         nodeVideoCount: videoCount,
-        nodeId: nodeSettings.nodeId,
         nodeName: nodeSettings.nodeName,
         nodeAbout: nodeSettings.nodeAbout,
         publicNodeProtocol: nodeSettings.publicNodeProtocol,

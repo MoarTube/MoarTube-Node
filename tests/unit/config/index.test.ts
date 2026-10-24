@@ -103,7 +103,6 @@ describe('config/index.ts', () => {
     publicNodePort: 443,
     nodeName: 'Test Node',
     nodeAbout: 'A test node',
-    nodeId: 'node-123',
     username: 'hashed-username',
     password: 'hashed-password',
     isCloudflareCdnEnabled: false,

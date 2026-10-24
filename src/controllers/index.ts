@@ -57,7 +57,6 @@ export {
   SettingsController,
   type PersonalizeNodeNameBody,
   type PersonalizeNodeAboutBody,
-  type PersonalizeNodeIdBody,
   type AccountBody,
   type NetworkInternalBody,
   type NetworkExternalBody,

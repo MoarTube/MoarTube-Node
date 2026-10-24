@@ -58,7 +58,6 @@ vi.mock('node:path', async (importOriginal) => {
 vi.mock('@config/index.js', () => ({
   getConfig: vi.fn().mockReturnValue({
     nodeSettings: {
-      nodeId: 'test-node-id',
       nodeName: 'Test Node',
       nodeAbout: 'Test node description',
       publicNodeProtocol: 'https',
@@ -480,7 +479,6 @@ describe('VideosService', () => {
       // Restore default mock behavior
       vi.mocked(getConfig).mockReturnValue({
         nodeSettings: {
-          nodeId: 'test-node-id',
           nodeName: 'Test Node',
           nodeAbout: 'Test node description',
           publicNodeProtocol: 'https',
@@ -823,7 +821,6 @@ describe('VideosService', () => {
       const { getConfig } = await import('@config/index.js');
       vi.mocked(getConfig).mockReturnValueOnce({
         nodeSettings: {
-          nodeId: 'test-node-id',
           nodeName: 'Test Node',
           nodeAbout: 'Test node description',
           publicNodeProtocol: 'https',
@@ -2018,7 +2015,6 @@ describe('VideosService', () => {
       const { getConfig } = await import('@config/index.js');
       vi.mocked(getConfig).mockReturnValueOnce({
         nodeSettings: {
-          nodeId: 'test-node-id',
           nodeName: 'Test Node',
           nodeAbout: 'Test node description',
           publicNodeProtocol: 'https',

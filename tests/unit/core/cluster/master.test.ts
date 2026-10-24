@@ -26,9 +26,6 @@ vi.mock('node:os', () => ({
   },
 }));
 
-vi.mock('uuid', () => ({
-  v4: vi.fn(() => 'test-uuid-1234-5678-abcd'),
-}));
 
 vi.mock('@/utils/logger.js', () => ({
   Logger: {
@@ -54,7 +51,6 @@ vi.mock('@config/index.js', () => ({
       databaseConfig: {
         databaseDialect: 'sqlite',
       },
-      nodeId: 'existing-node-id',
     },
     updateNodeSettings: vi.fn(),
   })),
@@ -212,7 +208,6 @@ describe('ClusterMaster', () => {
           databaseConfig: {
             databaseDialect: 'sqlite',
           },
-          nodeId: 'existing-node-id',
         },
         updateNodeSettings: vi.fn(),
       });
@@ -221,66 +216,6 @@ describe('ClusterMaster', () => {
       await master.start();
 
       expect(mockLogger.info).toHaveBeenCalledWith('Running in development mode');
-    });
-
-    // Note: Database initialization tests are now in moartube-node.test.ts
-    // The ClusterMaster no longer initializes the database on start() - 
-    // this is done in startMaster() before ClusterMaster is created.
-    // The initializeDatabase() method is only used for restart_database IPC calls.
-
-    it('should generate new node ID if not present', async () => {
-      const { getConfig } = await import('@config/index.js');
-      const mockUpdateNodeSettings = vi.fn();
-      (getConfig as ReturnType<typeof vi.fn>).mockReturnValue({
-        paths: {
-          dataDirectoryPath: '/data',
-          databaseFilePath: '/data/db.sqlite',
-        },
-        runtime: {
-          isDevelopment: false,
-        },
-        nodeSettings: {
-          databaseConfig: {
-            databaseDialect: 'sqlite',
-          },
-          nodeId: undefined,
-        },
-        updateNodeSettings: mockUpdateNodeSettings,
-      });
-
-      const master = new ClusterMaster(mockLogger as any, mockCloudflare as any);
-      await master.start();
-
-      expect(mockUpdateNodeSettings).toHaveBeenCalledWith({
-        nodeId: expect.any(String),
-      });
-      expect(mockLogger.info).toHaveBeenCalledWith('Generated new node ID');
-    });
-
-    it('should generate new node ID if empty string', async () => {
-      const { getConfig } = await import('@config/index.js');
-      const mockUpdateNodeSettings = vi.fn();
-      (getConfig as ReturnType<typeof vi.fn>).mockReturnValue({
-        paths: {
-          dataDirectoryPath: '/data',
-          databaseFilePath: '/data/db.sqlite',
-        },
-        runtime: {
-          isDevelopment: false,
-        },
-        nodeSettings: {
-          databaseConfig: {
-            databaseDialect: 'sqlite',
-          },
-          nodeId: '',
-        },
-        updateNodeSettings: mockUpdateNodeSettings,
-      });
-
-      const master = new ClusterMaster(mockLogger as any, mockCloudflare as any);
-      await master.start();
-
-      expect(mockUpdateNodeSettings).toHaveBeenCalled();
     });
 
     it('should fork workers based on CPU count', async () => {
@@ -477,7 +412,6 @@ describe('ClusterMaster', () => {
               databaseName: 'moartube',
             },
           },
-          nodeId: 'existing-node-id',
         },
         updateNodeSettings: vi.fn(),
       });
@@ -516,7 +450,6 @@ describe('ClusterMaster', () => {
             databaseDialect: 'postgres',
             postgresConfig: undefined,
           },
-          nodeId: 'existing-node-id',
         },
         updateNodeSettings: vi.fn(),
       });

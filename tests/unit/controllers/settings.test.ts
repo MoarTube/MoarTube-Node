@@ -77,7 +77,6 @@ describe('SettingsController', () => {
     getBannerFilePath: vi.fn(),
     updateNodeName: vi.fn(),
     updateNodeAbout: vi.fn(),
-    updateNodeId: vi.fn(),
     updateCredentials: vi.fn(),
     updateNetworkSettings: vi.fn(),
     updateCloudflareConfig: vi.fn(),
@@ -334,33 +333,6 @@ describe('SettingsController', () => {
       await controller.personalizeNodeAbout(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
-    });
-  });
-
-  describe('personalizeNodeId', () => {
-    it('should update node ID', async () => {
-      mockRequest.body = { nodeId: 'new-node-id' };
-      mockSettingsService.updateNodeId.mockResolvedValue(undefined);
-
-      await controller.personalizeNodeId(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockSettingsService.updateNodeId).toHaveBeenCalledWith('new-node-id');
-      expect(mockReply.status).toHaveBeenCalledWith(200);
-    });
-
-    it('should return error on failure', async () => {
-      mockRequest.body = { nodeId: 'new-node-id' };
-      mockSettingsService.updateNodeId.mockRejectedValue(new Error('Update failed'));
-
-      await controller.personalizeNodeId(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({
-          isError: true,
-          message: 'error communicating with the MoarTube node',
-        })
-      );
     });
   });
 

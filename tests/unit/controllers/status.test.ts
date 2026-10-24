@@ -24,7 +24,6 @@ vi.mock('@utils/logger.js', () => ({
 vi.mock('@config/index.js', () => ({
   getConfig: vi.fn().mockReturnValue({
     nodeSettings: {
-      nodeId: 'test-node-id',
       nodeName: 'Test Node',
       nodeAbout: 'Test node description',
       publicNodeProtocol: 'https',
@@ -92,7 +91,6 @@ describe('StatusController', () => {
         isError: false,
         information: {
           nodeVideoCount: 42,
-          nodeId: 'test-node-id',
           nodeName: 'Test Node',
           nodeAbout: 'Test node description',
           publicNodeProtocol: 'https',

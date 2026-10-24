@@ -12,7 +12,6 @@ vi.mock('@config/index.js', () => ({
     nodeSettings: {
       nodeName: 'Test Node',
       nodeAbout: 'Test about',
-      nodeId: 'node123',
       publicNodeProtocol: 'https',
       publicNodeAddress: 'example.com',
       publicNodePort: '443',
@@ -177,7 +176,6 @@ describe('WatchController', () => {
           informationData: expect.objectContaining({
             isError: false,
             information: expect.objectContaining({
-              nodeId: 'node123',
               nodeName: 'Test Node',
             }),
           }),
@@ -564,7 +562,6 @@ describe('WatchController', () => {
             isError: false,
             information: expect.objectContaining({
               nodeVideoCount: 42,
-              nodeId: 'node123',
               nodeName: 'Test Node',
               nodeAbout: 'Test about',
               publicNodeProtocol: 'https',

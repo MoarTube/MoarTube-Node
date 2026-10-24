@@ -9,6 +9,10 @@ import { settingsRoutes } from '@routes/settings.js';
 import type { Container } from '@core/container.js';
 
 describe('Settings Routes', () => {
+  it('does not register the retired Node ID endpoint', () => {
+    settingsRoutes(mockFastify as any, mockContainer);
+    expect(mockFastify.post.mock.calls.map(([route]) => route)).not.toContain('/personalize/id');
+  });
   const mockFastify = {
     get: vi.fn(),
     post: vi.fn(),
@@ -91,11 +95,6 @@ describe('Settings Routes', () => {
   it('should register POST /personalize/about route', () => {
     settingsRoutes(mockFastify as any, mockContainer);
     expect(mockFastify.post).toHaveBeenCalledWith('/personalize/about', expect.anything(), expect.any(Function));
-  });
-
-  it('should register POST /personalize/id route', () => {
-    settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledWith('/personalize/id', expect.anything(), expect.any(Function));
   });
 
   // Security
@@ -199,8 +198,8 @@ describe('Settings Routes', () => {
     expect(mockFastify.get).toHaveBeenCalledTimes(4);
   });
 
-  it('should register exactly 22 POST routes', () => {
+  it('should register exactly 21 POST routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(22);
+    expect(mockFastify.post).toHaveBeenCalledTimes(21);
   });
 });

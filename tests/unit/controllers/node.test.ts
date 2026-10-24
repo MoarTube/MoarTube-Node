@@ -9,7 +9,6 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 vi.mock('@config/index.js', () => ({
   getConfig: vi.fn(() => ({
     nodeSettings: {
-      nodeId: 'test-node-id',
       nodeName: 'Test Node',
       nodeAbout: 'A test node',
       publicNodeProtocol: 'https',

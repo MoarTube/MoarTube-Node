@@ -70,7 +70,7 @@ operation does not require those optional external providers.
 
 ## Validation
 
-- `npm test`: 2,678 unit tests, 27 SQLite integration tests, and 30 PostgreSQL
+- `npm test`: 2,673 unit tests, 27 SQLite integration tests, and 30 PostgreSQL
   integration tests pass. Each suite reports 100% statement, branch, function,
   and line coverage within its configured scope.
 - Regression coverage verifies endpoint absence, no indexer registration, startup
@@ -109,3 +109,7 @@ Validation does not include a Docker image build, a manual browser playback/uplo
 session, or testing against a separately updated MoarTube Client. No operator
 application database was migrated during this audit; database tests use disposable
 fixtures.
+
+## Node ID retirement
+
+Removed Node ID generation, settings controls, update endpoints, request types, and response/template fields from the active applications. Existing Node settings ignore the obsolete key and omit it on their next normal save. `_src` remains unchanged as reference code.

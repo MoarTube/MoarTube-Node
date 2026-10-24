@@ -183,7 +183,6 @@ class Config {
       publicNodePort: '',
       nodeName: 'moartube node',
       nodeAbout: 'just a MoarTube node',
-      nodeId: '',
       username: 'JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL', // admin (Base64 encoded bcrypt hash)
       password: 'JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX', // admin (Base64 encoded bcrypt hash)
       isCloudflareCdnEnabled: false,

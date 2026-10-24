@@ -44,7 +44,6 @@ vi.mock('@config/index.js', () => ({
       databaseConfig: {
         databaseDialect: 'sqlite',
       },
-      nodeId: 'test-node-id',
       nodeListeningPort: 3000,
     },
     setJwtSecret: mockSetJwtSecret,
@@ -206,7 +205,6 @@ describe('ClusterWorker', () => {
         databaseConfig: {
           databaseDialect: 'sqlite',
         },
-        nodeId: 'test-node-id',
         nodeListeningPort: 3000,
       },
       setJwtSecret: mockSetJwtSecret,
@@ -326,7 +324,6 @@ describe('ClusterWorker', () => {
               databaseName: 'moartube',
             },
           },
-          nodeId: 'test-node-id',
           nodeListeningPort: 3000,
         },
       });

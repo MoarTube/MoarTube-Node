@@ -168,7 +168,6 @@ describe('types/config.ts', () => {
         // Node Identity
         nodeName: 'My MoarTube Node',
         nodeAbout: 'A video sharing node',
-        nodeId: 'node-123',
 
         // Authentication
         username: 'admin',
@@ -217,7 +216,6 @@ describe('types/config.ts', () => {
         publicNodePort: 8080,
         nodeName: 'Test Node',
         nodeAbout: 'Test',
-        nodeId: 'test-123',
         username: 'admin',
         password: 'pass',
         isCloudflareCdnEnabled: false,

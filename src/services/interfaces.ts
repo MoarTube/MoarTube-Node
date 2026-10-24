@@ -273,7 +273,6 @@ export interface CreateCommentReportInput {
 export interface UpdateNodeSettingsInput {
   nodeName?: string;
   nodeAbout?: string;
-  nodeId?: string;
   publicNodeProtocol?: 'http' | 'https';
   publicNodeAddress?: string;
   publicNodePort?: string;

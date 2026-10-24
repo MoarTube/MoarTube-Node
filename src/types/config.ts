@@ -82,7 +82,6 @@ export interface NodeSettings {
   // Node Identity
   nodeName: string;
   nodeAbout: string;
-  nodeId: string;
 
   // Authentication (Base64 encoded bcrypt hashes)
   username: string;

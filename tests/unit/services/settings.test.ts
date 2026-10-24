@@ -106,7 +106,6 @@ describe('SettingsService', () => {
       nodeSettings: {
         nodeName: 'Test Node',
         nodeAbout: 'About text',
-        nodeId: 'node123',
         publicNodeProtocol: 'https',
         publicNodeAddress: 'example.com',
         publicNodePort: '443',
@@ -220,7 +219,6 @@ describe('SettingsService', () => {
       service.updateNodeSettings({
         nodeName: 'Name',
         nodeAbout: 'About',
-        nodeId: 'id123',
         publicNodeProtocol: 'https',
         publicNodeAddress: 'example.com',
         publicNodePort: '443',
@@ -272,23 +270,6 @@ describe('SettingsService', () => {
       vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(true);
 
       await service.updateNodeAbout('New about text');
-
-      expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
-    });
-  });
-
-  describe('updateNodeId', () => {
-    it('should update node ID locally', async () => {
-      await service.updateNodeId('new-node-id');
-
-      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({ nodeId: 'new-node-id' });
-      expect(mockLogger.info).toHaveBeenCalledWith('Node ID updated', { nodeId: 'new-node-id' });
-    });
-
-    it('should purge Cloudflare cache when enabled', async () => {
-      vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(true);
-
-      await service.updateNodeId('new-node-id');
 
       expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
     });

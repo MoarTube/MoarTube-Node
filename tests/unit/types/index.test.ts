@@ -32,7 +32,6 @@ describe('types/index.ts', () => {
         publicNodePort: 80,
         nodeName: 'Test Node',
         nodeAbout: 'Test node description',
-        nodeId: 'test-node-id',
         username: 'dGVzdA==', // base64 encoded 'test'
         password: 'dGVzdA==', // base64 encoded 'test'
         isCloudflareCdnEnabled: false,

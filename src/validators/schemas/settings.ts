@@ -35,14 +35,6 @@ export const nodeAboutSchema = z
   .default('');
 
 /**
- * Node ID schema
- */
-export const nodeIdSchema = z
-  .string()
-  .min(1, 'Node ID is required')
-  .max(100, 'Node ID must be less than 100 characters');
-
-/**
  * Database dialect schema
  */
 export const databaseDialectSchema = z.enum(['sqlite', 'postgres']);
@@ -68,13 +60,6 @@ export const personalizeNodeNameBodySchema = z.object({
  */
 export const personalizeNodeAboutBodySchema = z.object({
   nodeAbout: nodeAboutSchema,
-});
-
-/**
- * Node ID personalization request body schema
- */
-export const personalizeNodeIdBodySchema = z.object({
-  nodeId: nodeIdSchema,
 });
 
 /**

@@ -9,7 +9,6 @@ import { SettingsController } from '@controllers/index.js';
 import {
   personalizeNodeNameBodySchema,
   personalizeNodeAboutBodySchema,
-  personalizeNodeIdBodySchema,
   updateAccountBodySchema,
   networkInternalBodySchema,
   networkExternalBodySchema,
@@ -138,19 +137,6 @@ export function settingsRoutes(
       },
     },
     controller.personalizeNodeAbout.bind(controller)
-  );
-
-  // Update node ID
-  fastify.post(
-    '/personalize/id',
-    {
-      preHandler: [fastify.authenticate],
-      schema: {
-        tags: ['Settings'],
-        body: personalizeNodeIdBodySchema,
-      },
-    },
-    controller.personalizeNodeId.bind(controller)
   );
 
   // ============================================================================

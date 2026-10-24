@@ -189,9 +189,6 @@ export class SettingsService extends BaseService {
     if (data.nodeAbout !== undefined) {
       updates['nodeAbout'] = data.nodeAbout;
     }
-    if (data.nodeId !== undefined) {
-      updates['nodeId'] = data.nodeId;
-    }
     if (data.publicNodeProtocol !== undefined) {
       updates['publicNodeProtocol'] = data.publicNodeProtocol;
     }
@@ -247,19 +244,6 @@ export class SettingsService extends BaseService {
     }
 
     this.logger.info('Node about updated');
-  }
-
-  /**
-   * Update node ID
-   */
-  async updateNodeId(nodeId: string): Promise<void> {
-    const config = getConfig();
-    config.updateNodeSettings({ nodeId });
-    if (this.cloudflareService.isEnabled()) {
-      await this.cloudflareService.purgeNodePage();
-    }
-
-    this.logger.info('Node ID updated', { nodeId });
   }
 
   /**
