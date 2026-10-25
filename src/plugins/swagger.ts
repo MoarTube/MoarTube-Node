@@ -42,7 +42,7 @@ API endpoints may be rate-limited to prevent abuse.
         url: 'https://github.com/MoarTube/MoarTube-Node',
       },
       license: {
-        name: 'Custom License',
+        name: 'MIT',
         url: 'https://github.com/MoarTube/MoarTube-Node/blob/main/LICENSE.md',
       },
     },
