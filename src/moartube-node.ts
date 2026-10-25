@@ -1,3 +1,4 @@
+import '../bin/check-node-version.js';
 import 'dotenv/config';
 
 import cluster from 'node:cluster';

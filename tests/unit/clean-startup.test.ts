@@ -19,6 +19,10 @@ function fixture(): string {
   fixtures.push(root);
   mkdirSync(path.join(root, "bin"));
   copyFileSync(
+    "bin/check-node-version.js",
+    path.join(root, "bin/check-node-version.js"),
+  );
+  copyFileSync(
     "bin/moartube-node-start",
     path.join(root, "bin/moartube-node-start"),
   );

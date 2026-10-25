@@ -144,7 +144,7 @@ MoarTube is designed to be lightweight and accessible, making it the most resour
 - MoarTube Node **efficiently** operates on even the most resource-constrained systems.
   - Runs comfortably on a VPS with 1GB RAM and 1 vCPU.
   - Can run on a [**Raspberry Pi Zero 2 W**](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/).
-- Compatible with **Node.js v20 and later**.
+- Requires **Node.js v24.22.1 or newer**. Installation and startup reject older versions.
 
 ## ⚙️ **Resource Efficiency**
 - **MoarTube Node's** footprint is remarkably small because most computationally heavy tasks, like encoding and memory-intensive operations, are performed on your local machine by the **MoarTube Client**.
@@ -279,8 +279,10 @@ Ubuntu Linux comes pre-installed with the Snap package manager. It's the easiest
 
 Run the command:
 ```bash
-sudo snap install node --classic --channel=21
+sudo snap install node --classic --channel=24
 ```
+
+Run `node --version` and verify that the installed version is at least **24.22.1**.
 
 ## Ubuntu Linux Autostart Guide
 

@@ -4,7 +4,11 @@ import { cpSync } from 'node:fs';
 export default defineConfig({
   entry: ['src/moartube-node.ts'],
   format: ['esm'],
-  target: 'node20',
+  target: 'node24',
+  // Bundlers hoist dependency imports; check the runtime before they load.
+  banner: {
+    js: "import '../bin/check-node-version.js';",
+  },
   outDir: 'dist',
   clean: true,
   sourcemap: true,
@@ -14,6 +18,7 @@ export default defineConfig({
   minify: false,
   skipNodeModulesBundle: true,
   external: [
+    '../bin/check-node-version.js',
     // Keep native modules external
     'better-sqlite3',
     'sharp',

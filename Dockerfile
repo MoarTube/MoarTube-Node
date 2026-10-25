@@ -1,10 +1,13 @@
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:24.22.1-alpine AS builder
 
 WORKDIR /app
 
 # Copy package files first for better caching
 COPY package*.json ./
+COPY .npmrc ./
+COPY bin/ ./bin/
+COPY scripts/ ./scripts/
 
 # Install all dependencies (including devDependencies for build)
 RUN npm ci
@@ -19,12 +22,14 @@ COPY tsconfig.json tsconfig.build.json tsup.config.ts ./
 RUN npm run build
 
 # Production stage
-FROM node:22-alpine AS production
+FROM node:24.22.1-alpine AS production
 
 WORKDIR /moartube-node
 
 # Copy package files
 COPY package*.json ./
+COPY .npmrc ./
+COPY bin/ ./bin/
 
 # Install production dependencies only
 RUN npm ci --only=production && npm cache clean --force
