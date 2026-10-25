@@ -720,6 +720,28 @@ describe('WebSocketManager', () => {
   });
 
   describe('handler context', () => {
+    it.each([undefined, 'testvideo01'])(
+      'should forward broadcasts to the cluster with videoId %s',
+      (videoId) => {
+        const clusterBroadcast = vi.fn();
+        manager = new WebSocketManager({ logger: mockLogger, clusterBroadcast });
+        const client = manager.addClient(createMockWebSocket());
+        const outgoing = { eventName: 'echo', data: 'hello' };
+        manager.registerHandler({
+          name: 'ClusterBroadcastHandler',
+          canHandle: (message) => message.eventName === 'cluster_broadcast_test',
+          handle: (_client, _message, context) => {
+            context.broadcast(outgoing, videoId);
+          },
+        });
+
+        manager.handleMessage(client, JSON.stringify({ eventName: 'cluster_broadcast_test' }));
+
+        expect(clusterBroadcast).toHaveBeenCalledExactlyOnceWith(outgoing, videoId);
+        expect(client.send).not.toHaveBeenCalled();
+      }
+    );
+
     it('should broadcast with videoId using context', () => {
       const ws1 = createMockWebSocket();
       const ws2 = createMockWebSocket();

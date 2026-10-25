@@ -40,6 +40,8 @@ export interface WebSocketManagerOptions {
   clientTimeout?: number;
   /** DI container for service resolution */
   container?: Container;
+  /** Forward handler broadcasts across workers when clustered. */
+  clusterBroadcast?: HandlerContext['broadcast'];
 }
 
 /**
@@ -57,12 +59,14 @@ export class WebSocketManager {
   private container: Container | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private clientIdCounter = 0;
+  private readonly clusterBroadcast: HandlerContext['broadcast'] | undefined;
 
   constructor(options: WebSocketManagerOptions = {}) {
     this.logger = options.logger ?? Logger.getInstance();
     this.heartbeatInterval = options.heartbeatInterval ?? 30000;
     this.clientTimeout = options.clientTimeout ?? 60000;
     this.container = options.container ?? null;
+    this.clusterBroadcast = options.clusterBroadcast;
 
     // Register handlers (services will be resolved when needed)
     this.registerHandlers();
@@ -458,6 +462,10 @@ export class WebSocketManager {
   private createHandlerContext(): HandlerContext {
     return {
       broadcast: (message, videoId): void => {
+        if (this.clusterBroadcast !== undefined) {
+          this.clusterBroadcast(message, videoId);
+          return;
+        }
         if (videoId !== undefined) {
           this.broadcastToVideo(videoId, message);
         } else {

@@ -364,6 +364,8 @@ describe('validators/schemas/common.ts', () => {
 
   describe('reportEmailSchema', () => {
     it('should validate valid emails', () => {
+      expect(reportEmailSchema.parse('')).toBe('');
+      expect(reportEmailSchema.parse(undefined)).toBe('');
       expect(reportEmailSchema.parse('user@example.com')).toBe('user@example.com');
       expect(reportEmailSchema.parse('test.email+tag@domain.co.uk')).toBe('test.email+tag@domain.co.uk');
     });
@@ -381,7 +383,7 @@ describe('validators/schemas/common.ts', () => {
 
   describe('reportTypeSchema', () => {
     it('should validate valid report types', () => {
-      const types = ['spam', 'harassment', 'copyright', 'inappropriate', 'violence', 'misinformation', 'other'];
+      const types = ['complaint', 'spam', 'harassment', 'copyright', 'inappropriate', 'violence', 'misinformation', 'other'];
       types.forEach(type => {
         expect(reportTypeSchema.parse(type)).toBe(type);
       });

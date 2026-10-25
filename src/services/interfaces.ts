@@ -232,6 +232,7 @@ export interface WebSocketMessage {
  * Report type enum
  */
 export type ReportType =
+  | 'complaint'
   | 'spam'
   | 'harassment'
   | 'violence'

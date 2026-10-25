@@ -39,7 +39,16 @@ export class ClusterWorker {
     this.ipc = new IPCChannel(this.logger);
 
     // Create WebSocketManager (container will be provided later)
-    this.wsManager = new WebSocketManager({ logger: this.logger });
+    this.wsManager = new WebSocketManager({
+      logger: this.logger,
+      clusterBroadcast: (message, videoId): void => {
+        if (videoId !== undefined) {
+          this.broadcastChatToAllWorkers({ ...message, videoId });
+        } else {
+          this.broadcastToAllWorkers(message);
+        }
+      },
+    });
   }
 
   /**

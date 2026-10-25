@@ -267,6 +267,25 @@ describe('ClusterWorker', () => {
   });
 
   describe('getWebSocketManager', () => {
+    it('should route room and global broadcasts through the master', async () => {
+      const { WebSocketManager } = await import('@websocket/websocket-manager.js');
+      new ClusterWorker(mockLogger);
+      const options = vi.mocked(WebSocketManager).mock.calls[0]![0];
+      const message = { eventName: 'echo' as const, data: 'hello' };
+
+      options.clusterBroadcast!(message, 'video-1');
+      expect(mockIpcSendToMaster).toHaveBeenLastCalledWith({
+        cmd: 'websocket_broadcast_chat',
+        message: { ...message, videoId: 'video-1' },
+      });
+
+      options.clusterBroadcast!(message);
+      expect(mockIpcSendToMaster).toHaveBeenLastCalledWith({
+        cmd: 'websocket_broadcast',
+        message,
+      });
+    });
+
     it('should return the WebSocket manager', () => {
       const worker = new ClusterWorker(mockLogger as any);
       const wsManager = worker.getWebSocketManager();

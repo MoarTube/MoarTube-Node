@@ -8,6 +8,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from '@controllers/base.js';
+import type { ReportType } from '@services/interfaces.js';
 import type {
   VideosService,
   CloudflareService,
@@ -37,8 +38,6 @@ interface UpdateVideoInput {
   isReportsEnabled?: boolean;
   isLiveChatEnabled?: boolean;
 }
-
-type ReportType = 'inappropriate' | 'copyright' | 'spam' | 'other';
 
 /**
  * Request body/query/params type definitions
