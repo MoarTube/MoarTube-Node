@@ -420,7 +420,8 @@ describe('CloudflareService', () => {
         '/zones/zone123/purge_cache',
         expect.objectContaining({
           files: expect.arrayContaining([
-            expect.stringContaining('/node'),
+            expect.stringMatching(/\/videos(?:\?|$)/),
+            expect.stringContaining('/node/search?'),
           ]),
         })
       );

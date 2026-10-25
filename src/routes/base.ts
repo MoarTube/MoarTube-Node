@@ -8,14 +8,12 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 /**
  * Register base routes
  *
- * Handles root path redirects.
+ * Renders the node home page.
  *
  * @param fastify - Fastify instance
  */
 export function baseRoutes(fastify: FastifyInstance): void {
-  // Root redirect - redirects to /node
-  fastify.get('/', async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    const redirectUrl = '/node' + request.url.substring(1);
-    void reply.redirect(redirectUrl);
+  fastify.get('/', async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    return reply.view('index');
   });
 }

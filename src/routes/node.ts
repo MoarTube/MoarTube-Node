@@ -9,15 +9,11 @@ import type { Container } from '@core/index.js';
 import { nodeSearchQuerySchema, contentCheckedBodySchema } from '@validators/index.js';
 
 /**
- * Register node routes
+ * Create the controller shared by the browsing page and node APIs.
  *
- * @param fastify - Fastify instance with Zod type provider
  * @param container - DI container
  */
-export function nodeRoutes(
-  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
-  container: Container
-): void {
+function createNodeController(container: Container): NodeController {
   const videosService = container.resolve('videosService');
   const linksService = container.resolve('linksService');
   const monetizationService = container.resolve('monetizationService');
@@ -25,7 +21,7 @@ export function nodeRoutes(
   const commentsService = container.resolve('commentsService');
   const reportsService = container.resolve('reportsService');
 
-  const controller = new NodeController(
+  return new NodeController(
     videosService,
     linksService,
     monetizationService,
@@ -33,6 +29,14 @@ export function nodeRoutes(
     commentsService,
     reportsService
   );
+}
+
+/** Register the public video browsing page under /videos. */
+export function nodePageRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
+  const controller = createNodeController(container);
 
   // Node page - public (no auth required)
   fastify.get(
@@ -46,6 +50,20 @@ export function nodeRoutes(
     },
     controller.getNodePage.bind(controller)
   );
+}
+
+/** Register node API endpoints and redirect the former browsing page. */
+export function nodeRoutes(
+  fastify: FastifyInstance & ReturnType<FastifyInstance['withTypeProvider']>,
+  container: Container
+): void {
+  const controller = createNodeController(container);
+
+  fastify.get('/', {}, async (request, reply) => {
+    const queryIndex = request.url.indexOf('?');
+    const query = queryIndex === -1 ? '' : request.url.substring(queryIndex);
+    return reply.redirect('/videos' + query, 301);
+  });
 
   // Search videos - public (no auth required)
   fastify.get(

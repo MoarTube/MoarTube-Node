@@ -5,7 +5,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { nodeRoutes } from '@routes/node.js';
+import Fastify from 'fastify';
+import { nodeRoutes, nodePageRoutes } from '@routes/node.js';
+import { videosRoutes } from '@routes/videos.js';
 import type { Container } from '@core/container.js';
 
 describe('Node Routes', () => {
@@ -37,6 +39,40 @@ describe('Node Routes', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('should serve the browsing page alongside existing video APIs and redirect old links', async () => {
+    const app = Fastify();
+    app.decorate('optionalAuthenticate', async () => {});
+    app.decorate('authenticate', async () => {});
+    app.setValidatorCompiler(() => () => true);
+    app.register(async (instance) => {
+      videosRoutes(instance, mockContainer);
+      nodePageRoutes(instance, mockContainer);
+    }, { prefix: '/videos' });
+    app.register(async (instance) => {
+      nodeRoutes(instance, mockContainer);
+    }, { prefix: '/node' });
+
+    try {
+      await app.ready();
+      expect(app.hasRoute({ method: 'GET', url: '/videos' })).toBe(true);
+      expect(app.hasRoute({ method: 'GET', url: '/videos/' })).toBe(true);
+      expect(app.hasRoute({ method: 'GET', url: '/videos/search' })).toBe(true);
+      expect(app.hasRoute({ method: 'GET', url: '/node/search' })).toBe(true);
+
+      for (const path of ['/node', '/node/']) {
+        const plainResponse = await app.inject(path);
+        expect(plainResponse.statusCode).toBe(301);
+        expect(plainResponse.headers.location).toBe('/videos');
+
+        const response = await app.inject(`${path}?searchTerm=cats&sortTerm=latest&tagTerm=fun`);
+        expect(response.statusCode).toBe(301);
+        expect(response.headers.location).toBe('/videos?searchTerm=cats&sortTerm=latest&tagTerm=fun');
+      }
+    } finally {
+      await app.close();
+    }
   });
 
   it('should resolve videosService from container', () => {

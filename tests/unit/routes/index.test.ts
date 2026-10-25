@@ -53,6 +53,7 @@ vi.mock('@routes/watch.js', () => ({
 
 vi.mock('@routes/node.js', () => ({
   nodeRoutes: vi.fn(),
+  nodePageRoutes: vi.fn(),
 }));
 
 vi.mock('@routes/reports.js', () => ({
@@ -429,6 +430,24 @@ describe('Routes Index', () => {
   });
 
   describe('Route Handler Invocation', () => {
+    it('should register the browsing page alongside the video API routes', async () => {
+      const { registerRoutes, videosRoutes } = await import('@routes/index.js');
+      const { nodePageRoutes } = await import('@routes/node.js');
+      const instance = {};
+      const mockFastify = createMockFastify();
+      const container = createMockContainer();
+      mockFastify.register.mockImplementation((handler: (instance: any) => void, opts: any) => {
+        if (opts.prefix === '/videos') {
+          handler({ withTypeProvider: () => instance });
+        }
+      });
+
+      registerRoutes(mockFastify as any, container);
+
+      expect(videosRoutes).toHaveBeenCalledWith(instance, container);
+      expect(nodePageRoutes).toHaveBeenCalledWith(instance, container);
+    });
+
     it('should call route handler with container for routes that need it', async () => {
       const { registerRoutes, accountRoutes } = await import('@routes/index.js');
 

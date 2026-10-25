@@ -68,7 +68,7 @@ export class NodeController extends BaseController {
   }
 
   /**
-   * GET /node
+   * GET /videos
    *
    * Render the main node page
    */

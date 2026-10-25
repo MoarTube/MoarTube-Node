@@ -198,10 +198,11 @@ export class CloudflareService extends BaseService {
       const nodeBaseUrl = config.getNodeBaseUrl();
 
       const files = [
-        `${nodeBaseUrl}/node`,
-        `${nodeBaseUrl}/node?searchTerm=&sortTerm=latest&tagTerm=`,
-        `${nodeBaseUrl}/node?searchTerm=&sortTerm=popular&tagTerm=`,
-        `${nodeBaseUrl}/node?searchTerm=&sortTerm=oldest&tagTerm=`,
+        `${nodeBaseUrl}/videos`,
+        `${nodeBaseUrl}/videos/`,
+        `${nodeBaseUrl}/videos?searchTerm=&sortTerm=latest&tagTerm=`,
+        `${nodeBaseUrl}/videos?searchTerm=&sortTerm=popular&tagTerm=`,
+        `${nodeBaseUrl}/videos?searchTerm=&sortTerm=oldest&tagTerm=`,
         `${nodeBaseUrl}/node/search?searchTerm=&sortTerm=latest&tagTerm=`,
         `${nodeBaseUrl}/node/search?searchTerm=&sortTerm=popular&tagTerm=`,
         `${nodeBaseUrl}/node/search?searchTerm=&sortTerm=oldest&tagTerm=`,
@@ -494,7 +495,7 @@ export class CloudflareService extends BaseService {
           action: 'set_cache_settings',
           enabled: true,
           expression:
-            '(starts_with(http.request.uri, "/node")) or (starts_with(http.request.uri, "/node?searchTerm=&sortTerm"))',
+            '(http.request.uri.path eq "/videos") or (http.request.uri.path eq "/videos/")',
           action_parameters: {
             cache: true,
             edge_ttl: { mode: 'override_origin', default: 86400 },
