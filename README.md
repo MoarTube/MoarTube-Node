@@ -190,19 +190,67 @@ You can manage MoarTube Node using Docker Desktop by searching for `moartube/moa
 
 ### Manual Docker Setup
 
-To set up MoarTube Node manually using Docker, execute the following command in your terminal. This command pulls the latest MoarTube Node image, creates a container named `moartube-node-1`, assigns it port 8181, and configures it to auto-restart unless manually stopped.
+Build and run this checkout with Docker Compose:
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs -f
+```
+
+Open `http://localhost:9090` and connect MoarTube Client to that address.
+The container and host both use port **9090**.
+The named `moartube-data` volume stores settings, SQLite, certificates, and media
+under `/data`, and survives container replacement and `docker compose down`.
+`docker compose down -v` deletes this data.
+
+The image runs as UID/GID `1001:1001`. Docker initializes named-volume ownership
+automatically; an existing Linux bind mount must be writable by that user.
+Keep the node's internal listening port at `9090` for this configuration. If you
+change it in MoarTube Client, update the port mapping and Docker health check too.
+The included health check expects HTTP; terminate HTTPS at a reverse proxy, or
+adapt the check if enabling HTTPS directly on the node.
+
+`IS_DOCKER_ENVIRONMENT=true` is set by the image and selects `/data`. You do not
+need to edit or pass the checkout's `.env`; it is excluded from the build context.
+`MOARTUBE_DATA_DIR`, if explicitly supplied, overrides this path and requires a
+matching writable volume mount. Avoid passing a development `.env` with
+`IS_DOCKER_ENVIRONMENT=false`, which would bypass the `/data` default.
+
+To build and run without Compose:
+
+```bash
+docker build -t moartube-node:local .
+docker run -d --init --restart unless-stopped -p 9090:9090 --mount source=moartube-data,target=/data --name moartube-node-1 moartube-node:local
+```
+
+After installing the checkout's npm dependencies, run the disposable-container
+smoke test against an already-built image:
+
+```bash
+node scripts/test-docker.mjs moartube-node:local
+```
+
+It checks non-root startup, migrations/SQLite writes, login, pages/player assets,
+file upload/download, WebSockets, Docker health, shutdown, and persistence after
+replacing the container. It removes only its uniquely named test container and
+volume. External Postgres/S3/Cloudflare services and actual video playback require
+separate testing with your configured providers and MoarTube Client.
+
+For published DockerHub images, check that the tag's internal port matches its
+release documentation; the current source uses `9090`. Examples:
 
 #### For x86-64 architecture: 
 ```bash
-docker run --platform linux/amd64 -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartube/moartube-node:latest
+docker run --platform linux/amd64 -d --init --restart unless-stopped -p 9090:9090 --mount source=moartube-data,target=/data --name moartube-node-1 moartube/moartube-node:latest
 ```
 
 #### For ARM64 architecture: 
 ```bash
-docker run --platform linux/arm64 -d --restart unless-stopped -p 8181:80 --name moartube-node-1 moartube/moartube-node:latest
+docker run --platform linux/arm64 -d --init --restart unless-stopped -p 9090:9090 --mount source=moartube-data,target=/data --name moartube-node-1 moartube/moartube-node:latest
 ```
 
-*note: the Docker container uses [**/data**](https://github.com/MoarTube/MoarTube-Node/blob/master/Dockerfile#L19) for its volume container path.*
+The container's persistent volume path is **/data**.
 
 ## [npm](https://www.npmjs.com/package/@moartube/moartube-node)
 You can install MoarTube Node globally:
@@ -259,7 +307,7 @@ bash <(wget -O - https://www.moartube.com/bash/install/node)
 
 The default login credentials for your node are below. Be sure to change these upon logging in.
 
-By default, MoarTube Node listens on port 80.
+By default, MoarTube Node listens on port 9090, including with the Docker examples above.
 
 **username**: admin<br/>**password**: admin
 

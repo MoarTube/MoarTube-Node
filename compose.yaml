@@ -1,0 +1,13 @@
+services:
+  moartube-node:
+    build: .
+    image: moartube-node:local
+    init: true
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - moartube-data:/data
+
+volumes:
+  moartube-data:
