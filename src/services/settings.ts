@@ -5,6 +5,7 @@
  * personalization, and system settings.
  */
 import fs from 'node:fs';
+import { createBackup, restoreBackup, type BackupConfig } from '@/database/backup.js';
 import path from 'node:path';
 
 import { BaseService } from '@services/base.js';
@@ -13,51 +14,36 @@ import type { UpdateNodeSettingsInput } from '@services/interfaces.js';
 import { getConfig } from '@config/index.js';
 import type { DatabaseConfig, StorageConfig } from '@/types/index.js';
 import type {
-  IVideosRepository,
   ICommentsRepository,
   IReportsVideosRepository,
   IReportsCommentsRepository,
   IReportsArchiveVideosRepository,
   IReportsArchiveCommentsRepository,
   ILiveChatMessagesRepository,
-  IMonetizationRepository,
-  ILinksRepository,
-  SQLiteVideo,
   SQLiteComment,
   SQLiteVideoReport,
   SQLiteCommentReport,
   SQLiteVideoReportArchive,
   SQLiteCommentReportArchive,
   SQLiteLiveChatMessage,
-  SQLiteCryptoWalletAddress,
-  SQLiteLink,
-  SQLiteNewVideo,
   SQLiteNewComment,
   SQLiteNewVideoReport,
   SQLiteNewCommentReport,
   SQLiteNewVideoReportArchive,
   SQLiteNewCommentReportArchive,
   SQLiteNewLiveChatMessage,
-  SQLiteNewCryptoWalletAddress,
-  SQLiteNewLink,
-  PostgresVideo,
   PostgresComment,
   PostgresVideoReport,
   PostgresCommentReport,
   PostgresVideoReportArchive,
   PostgresCommentReportArchive,
   PostgresLiveChatMessage,
-  PostgresCryptoWalletAddress,
-  PostgresLink,
-  PostgresNewVideo,
   PostgresNewComment,
   PostgresNewVideoReport,
   PostgresNewCommentReport,
   PostgresNewVideoReportArchive,
   PostgresNewCommentReportArchive,
   PostgresNewLiveChatMessage,
-  PostgresNewCryptoWalletAddress,
-  PostgresNewLink,
 } from '@database/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
 
@@ -71,10 +57,39 @@ import type { CloudflareService } from '@services/cloudflare.js';
  * - Cloudflare integration settings
  */
 export class SettingsService extends BaseService {
+  private backupConfig(): BackupConfig {
+    const config = getConfig();
+    const database = config.nodeSettings.databaseConfig;
+    if (database.databaseDialect === 'sqlite') {
+      return { dialect: 'sqlite', sqlitePath: config.paths.databaseFilePath };
+    }
+    const pg = database.postgresConfig;
+    if (!pg) {
+      throw new Error('Missing PostgreSQL configuration');
+    }
+    return {
+      dialect: 'postgres',
+      postgresUrl:
+        'postgres://' +
+        encodeURIComponent(pg.username) +
+        ':' +
+        encodeURIComponent(pg.password) +
+        '@' +
+        pg.host +
+        ':' +
+        String(pg.port) +
+        '/' +
+        encodeURIComponent(pg.databaseName),
+    };
+  }
+  async createDatabaseBackup() {
+    return createBackup(this.backupConfig());
+  }
+  async restoreDatabaseBackup(file: string): Promise<void> {
+    await restoreBackup(file, this.backupConfig());
+  }
+
   private readonly cloudflareService: CloudflareService;
-  private readonly videosRepository:
-    | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
-    | IVideosRepository<PostgresVideo, PostgresNewVideo>;
   private readonly commentsRepository:
     | ICommentsRepository<SQLiteComment, SQLiteNewComment>
     | ICommentsRepository<PostgresComment, PostgresNewComment>;
@@ -96,18 +111,9 @@ export class SettingsService extends BaseService {
   private readonly liveChatMessagesRepository:
     | ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage>
     | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>;
-  private readonly monetizationRepository:
-    | IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress>
-    | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>;
-  private readonly linksRepository:
-    | ILinksRepository<SQLiteLink, SQLiteNewLink>
-    | ILinksRepository<PostgresLink, PostgresNewLink>;
 
   constructor(
     logger: Logger,
-    videosRepository:
-      | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
-      | IVideosRepository<PostgresVideo, PostgresNewVideo>,
     commentsRepository:
       | ICommentsRepository<SQLiteComment, SQLiteNewComment>
       | ICommentsRepository<PostgresComment, PostgresNewComment>,
@@ -129,24 +135,15 @@ export class SettingsService extends BaseService {
     liveChatMessagesRepository:
       | ILiveChatMessagesRepository<SQLiteLiveChatMessage, SQLiteNewLiveChatMessage>
       | ILiveChatMessagesRepository<PostgresLiveChatMessage, PostgresNewLiveChatMessage>,
-    monetizationRepository:
-      | IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress>
-      | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>,
-    linksRepository:
-      | ILinksRepository<SQLiteLink, SQLiteNewLink>
-      | ILinksRepository<PostgresLink, PostgresNewLink>,
     cloudflareService: CloudflareService
   ) {
     super('SettingsService', logger);
-    this.videosRepository = videosRepository;
     this.commentsRepository = commentsRepository;
     this.reportsVideosRepository = reportsVideosRepository;
     this.reportsCommentsRepository = reportsCommentsRepository;
     this.reportsArchiveVideosRepository = reportsArchiveVideosRepository;
     this.reportsArchiveCommentsRepository = reportsArchiveCommentsRepository;
     this.liveChatMessagesRepository = liveChatMessagesRepository;
-    this.monetizationRepository = monetizationRepository;
-    this.linksRepository = linksRepository;
     this.cloudflareService = cloudflareService;
   }
 
@@ -521,120 +518,6 @@ export class SettingsService extends BaseService {
   }
 
   /**
-   * Get node icon as base64
-   */
-  getNodeIconBase64(): string {
-    try {
-      const config = getConfig();
-      const customPath = path.join(config.paths.dataDirectoryPath, 'images', 'icon.png');
-      const defaultPath = path.join(config.paths.publicDirectoryPath, 'images', 'icon.png');
-
-      const imagePath = fs.existsSync(customPath) ? customPath : defaultPath;
-
-      if (fs.existsSync(imagePath)) {
-        return fs.readFileSync(imagePath).toString('base64');
-      }
-
-      return '';
-    } catch {
-      return '';
-    }
-  }
-
-  /**
-   * Get node avatar as base64
-   */
-  getNodeAvatarBase64(): string {
-    try {
-      const config = getConfig();
-      const customPath = path.join(config.paths.dataDirectoryPath, 'images', 'avatar.png');
-      const defaultPath = path.join(config.paths.publicDirectoryPath, 'images', 'avatar.png');
-
-      const imagePath = fs.existsSync(customPath) ? customPath : defaultPath;
-
-      if (fs.existsSync(imagePath)) {
-        return fs.readFileSync(imagePath).toString('base64');
-      }
-
-      return '';
-    } catch {
-      return '';
-    }
-  }
-
-  /**
-   * Get node banner as base64
-   */
-  getNodeBannerBase64(): string {
-    try {
-      const config = getConfig();
-      const customPath = path.join(config.paths.dataDirectoryPath, 'images', 'banner.png');
-      const defaultPath = path.join(config.paths.publicDirectoryPath, 'images', 'banner.png');
-
-      const imagePath = fs.existsSync(customPath) ? customPath : defaultPath;
-
-      if (fs.existsSync(imagePath)) {
-        return fs.readFileSync(imagePath).toString('base64');
-      }
-
-      return '';
-    } catch {
-      return '';
-    }
-  }
-
-  /**
-   * Export all application data
-   */
-  async exportAllData(): Promise<{
-    videos: (SQLiteVideo | PostgresVideo)[];
-    comments: (SQLiteComment | PostgresComment)[];
-    videoReports: (SQLiteVideoReport | PostgresVideoReport)[];
-    commentReports: (SQLiteCommentReport | PostgresCommentReport)[];
-    videoReportsArchives: (SQLiteVideoReportArchive | PostgresVideoReportArchive)[];
-    commentReportsArchives: (SQLiteCommentReportArchive | PostgresCommentReportArchive)[];
-    liveChatMessages: (SQLiteLiveChatMessage | PostgresLiveChatMessage)[];
-    cryptoWalletAddresses: (SQLiteCryptoWalletAddress | PostgresCryptoWalletAddress)[];
-    links: (SQLiteLink | PostgresLink)[];
-  }> {
-    return this.withErrorLogging('exportAllData', async () => {
-      const [
-        videos,
-        comments,
-        videoReports,
-        commentReports,
-        videoReportsArchives,
-        commentReportsArchives,
-        liveChatMessages,
-        cryptoWalletAddresses,
-        links,
-      ] = await Promise.all([
-        this.videosRepository.findAll(),
-        this.commentsRepository.findAll(),
-        this.reportsVideosRepository.findAll(),
-        this.reportsCommentsRepository.findAll(),
-        this.reportsArchiveVideosRepository.findAll(),
-        this.reportsArchiveCommentsRepository.findAll(),
-        this.liveChatMessagesRepository.findAll(),
-        this.monetizationRepository.findAll(),
-        this.linksRepository.findAll(),
-      ]);
-
-      return {
-        videos,
-        comments,
-        videoReports,
-        commentReports,
-        videoReportsArchives,
-        commentReportsArchives,
-        liveChatMessages,
-        cryptoWalletAddresses,
-        links,
-      };
-    });
-  }
-
-  /**
    * Delete all application data
    */
   async deleteAllData(): Promise<void> {
@@ -647,91 +530,6 @@ export class SettingsService extends BaseService {
         this.reportsArchiveCommentsRepository.deleteAll(),
         this.reportsArchiveVideosRepository.deleteAll(),
       ]);
-    });
-  }
-
-  /**
-   * Import database from JSON file
-   */
-  async importDatabase(databaseFileContent: string): Promise<void> {
-    return this.withErrorLogging('importDatabase', async () => {
-      // Parse the JSON database
-      interface DatabaseTable {
-        rows: Record<string, unknown>[];
-        tableName: string;
-      }
-      const database: DatabaseTable[] = JSON.parse(databaseFileContent) as DatabaseTable[];
-
-      // Clear all tables first (order matters due to potential foreign keys)
-      await this.commentsRepository.deleteAll();
-      await this.liveChatMessagesRepository.deleteAll();
-      await this.reportsCommentsRepository.deleteAll();
-      await this.reportsVideosRepository.deleteAll();
-      await this.reportsArchiveCommentsRepository.deleteAll();
-      await this.reportsArchiveVideosRepository.deleteAll();
-      await this.monetizationRepository.deleteAll();
-      await this.linksRepository.deleteAll();
-      await this.videosRepository.deleteAll();
-
-      // Import each table
-      for (const table of database) {
-        const { rows, tableName } = table;
-
-        if (rows.length === 0) {
-          continue;
-        }
-
-        // Map table names to repository createMany calls
-        switch (tableName) {
-          case 'videos':
-            await this.videosRepository.createMany(
-              rows as Parameters<typeof this.videosRepository.createMany>[0]
-            );
-            break;
-          case 'comments':
-            await this.commentsRepository.createMany(
-              rows as Parameters<typeof this.commentsRepository.createMany>[0]
-            );
-            break;
-          case 'videoreports':
-            await this.reportsVideosRepository.createMany(
-              rows as Parameters<typeof this.reportsVideosRepository.createMany>[0]
-            );
-            break;
-          case 'commentreports':
-            await this.reportsCommentsRepository.createMany(
-              rows as Parameters<typeof this.reportsCommentsRepository.createMany>[0]
-            );
-            break;
-          case 'videoreportsarchives':
-            await this.reportsArchiveVideosRepository.createMany(
-              rows as Parameters<typeof this.reportsArchiveVideosRepository.createMany>[0]
-            );
-            break;
-          case 'commentreportsarchives':
-            await this.reportsArchiveCommentsRepository.createMany(
-              rows as Parameters<typeof this.reportsArchiveCommentsRepository.createMany>[0]
-            );
-            break;
-          case 'livechatmessages':
-            await this.liveChatMessagesRepository.createMany(
-              rows as Parameters<typeof this.liveChatMessagesRepository.createMany>[0]
-            );
-            break;
-          case 'cryptowalletaddresses':
-            await this.monetizationRepository.createMany(
-              rows as Parameters<typeof this.monetizationRepository.createMany>[0]
-            );
-            break;
-          case 'links':
-            await this.linksRepository.createMany(
-              rows as Parameters<typeof this.linksRepository.createMany>[0]
-            );
-            break;
-          default:
-            this.logger.warn(`Unknown table name during import: ${tableName}`);
-        }
-      }
     });
   }
 }

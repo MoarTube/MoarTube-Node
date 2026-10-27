@@ -219,7 +219,11 @@ export class ClusterMaster {
    * Fork worker processes
    */
   private forkWorkers(): void {
-    const numCPUs = os.cpus().length;
+    const configured = Number(process.env['MOARTUBE_WORKERS']);
+    const numCPUs = Math.max(
+      1,
+      Math.min(os.cpus().length, Number.isInteger(configured) && configured > 0 ? configured : 4)
+    );
 
     for (let i = 0; i < numCPUs; i++) {
       cluster.fork();

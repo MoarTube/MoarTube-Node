@@ -8,15 +8,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SettingsService } from '@/services/settings.js';
 import type { Logger } from '@/utils/logger.js';
 import type {
-  VideosRepository,
   CommentsRepository,
   ReportsVideosRepository,
   ReportsCommentsRepository,
   ReportsArchiveVideosRepository,
   ReportsArchiveCommentsRepository,
   LiveChatMessagesRepository,
-  MonetizationRepository,
-  ILinksRepository,
 } from '@/database/repositories/index.js';
 import type { CloudflareService } from '@/services/cloudflare.js';
 
@@ -60,19 +57,21 @@ vi.mock('postgres', () => ({
 
 import { getConfig } from '@config/index.js';
 import fs from 'node:fs';
+import { createBackup, restoreBackup } from '@/database/backup.js';
+vi.mock('@/database/backup.js', () => ({
+  createBackup: vi.fn().mockResolvedValue({ file: 'snapshot' }),
+  restoreBackup: vi.fn().mockResolvedValue(undefined),
+}));
 
 describe('SettingsService', () => {
   let service: SettingsService;
   let mockLogger: Logger;
-  let mockVideosRepository: VideosRepository;
   let mockCommentsRepository: CommentsRepository;
   let mockReportsVideosRepository: ReportsVideosRepository;
   let mockReportsCommentsRepository: ReportsCommentsRepository;
   let mockReportsArchiveVideosRepository: ReportsArchiveVideosRepository;
   let mockReportsArchiveCommentsRepository: ReportsArchiveCommentsRepository;
   let mockLiveChatMessagesRepository: LiveChatMessagesRepository;
-  let mockMonetizationRepository: MonetizationRepository;
-  let mockLinksRepository: ILinksRepository;
   let mockCloudflareService: CloudflareService;
   let mockConfig: ReturnType<typeof getConfig>;
 
@@ -87,15 +86,12 @@ describe('SettingsService', () => {
       child: vi.fn().mockReturnThis(),
     } as unknown as Logger;
 
-    mockVideosRepository = {} as VideosRepository;
     mockCommentsRepository = {} as CommentsRepository;
     mockReportsVideosRepository = {} as ReportsVideosRepository;
     mockReportsCommentsRepository = {} as ReportsCommentsRepository;
     mockReportsArchiveVideosRepository = {} as ReportsArchiveVideosRepository;
     mockReportsArchiveCommentsRepository = {} as ReportsArchiveCommentsRepository;
     mockLiveChatMessagesRepository = {} as LiveChatMessagesRepository;
-    mockMonetizationRepository = {} as MonetizationRepository;
-    mockLinksRepository = {} as ILinksRepository;
 
     mockCloudflareService = {
       isEnabled: vi.fn().mockReturnValue(false),
@@ -105,6 +101,7 @@ describe('SettingsService', () => {
     mockConfig = {
       nodeSettings: {
         nodeName: 'Test Node',
+        databaseConfig: { databaseDialect: 'sqlite' },
         nodeAbout: 'About text',
         publicNodeProtocol: 'https',
         publicNodeAddress: 'example.com',
@@ -120,15 +117,12 @@ describe('SettingsService', () => {
 
     service = new SettingsService(
       mockLogger,
-      mockVideosRepository,
       mockCommentsRepository,
       mockReportsVideosRepository,
       mockReportsCommentsRepository,
       mockReportsArchiveVideosRepository,
       mockReportsArchiveCommentsRepository,
       mockLiveChatMessagesRepository,
-      mockMonetizationRepository,
-      mockLinksRepository,
       mockCloudflareService
     );
   });
@@ -369,7 +363,9 @@ describe('SettingsService', () => {
           storageMode: 'filesystem',
         },
       });
-      expect(mockLogger.info).toHaveBeenCalledWith('Storage configuration updated', { mode: 'filesystem' });
+      expect(mockLogger.info).toHaveBeenCalledWith('Storage configuration updated', {
+        mode: 'filesystem',
+      });
     });
 
     it('should update S3 storage mode with config', () => {
@@ -416,7 +412,9 @@ describe('SettingsService', () => {
       });
 
       const call = vi.mocked(mockConfig.updateNodeSettings).mock.calls[0][0];
-      expect(call.storageConfig.s3Config.s3ProviderClientConfig.endpoint).toBe('https://minio.example.com');
+      expect(call.storageConfig.s3Config.s3ProviderClientConfig.endpoint).toBe(
+        'https://minio.example.com'
+      );
     });
 
     it('should ignore s3 settings when storageMode is filesystem', () => {
@@ -554,7 +552,9 @@ describe('SettingsService', () => {
 
     it('should purge Cloudflare cache when enabled', async () => {
       vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(true);
-      (mockCloudflareService as unknown as { purgeNodeImages: ReturnType<typeof vi.fn> }).purgeNodeImages = vi.fn();
+      (
+        mockCloudflareService as unknown as { purgeNodeImages: ReturnType<typeof vi.fn> }
+      ).purgeNodeImages = vi.fn();
 
       const fsMock = await import('node:fs');
       fsMock.default.mkdirSync = vi.fn();
@@ -562,7 +562,10 @@ describe('SettingsService', () => {
 
       await service.updateAvatar('/tmp/icon.png', '/tmp/avatar.png');
 
-      expect((mockCloudflareService as unknown as { purgeNodeImages: ReturnType<typeof vi.fn> }).purgeNodeImages).toHaveBeenCalled();
+      expect(
+        (mockCloudflareService as unknown as { purgeNodeImages: ReturnType<typeof vi.fn> })
+          .purgeNodeImages
+      ).toHaveBeenCalled();
     });
 
     it('should create images directory if it does not exist', async () => {
@@ -580,7 +583,9 @@ describe('SettingsService', () => {
 
       await service.updateAvatar('/tmp/icon.png', '/tmp/avatar.png');
 
-      expect(fsMock.default.mkdirSync).toHaveBeenCalledWith(expect.stringContaining('images'), { recursive: true });
+      expect(fsMock.default.mkdirSync).toHaveBeenCalledWith(expect.stringContaining('images'), {
+        recursive: true,
+      });
     });
 
     it('should handle non-existent icon or avatar files gracefully', async () => {
@@ -631,12 +636,16 @@ describe('SettingsService', () => {
 
       await service.updateBanner('/tmp/banner.png');
 
-      expect(fsMock.default.mkdirSync).toHaveBeenCalledWith(expect.stringContaining('images'), { recursive: true });
+      expect(fsMock.default.mkdirSync).toHaveBeenCalledWith(expect.stringContaining('images'), {
+        recursive: true,
+      });
     });
 
     it('should purge Cloudflare cache when enabled', async () => {
       vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(true);
-      (mockCloudflareService as unknown as { purgeNodeImages: ReturnType<typeof vi.fn> }).purgeNodeImages = vi.fn();
+      (
+        mockCloudflareService as unknown as { purgeNodeImages: ReturnType<typeof vi.fn> }
+      ).purgeNodeImages = vi.fn();
 
       const fsMock = await import('node:fs');
       fsMock.default.mkdirSync = vi.fn();
@@ -644,7 +653,10 @@ describe('SettingsService', () => {
 
       await service.updateBanner('/tmp/banner.png');
 
-      expect((mockCloudflareService as unknown as { purgeNodeImages: ReturnType<typeof vi.fn> }).purgeNodeImages).toHaveBeenCalled();
+      expect(
+        (mockCloudflareService as unknown as { purgeNodeImages: ReturnType<typeof vi.fn> })
+          .purgeNodeImages
+      ).toHaveBeenCalled();
     });
 
     it('should handle non-existent banner file gracefully', async () => {
@@ -680,138 +692,6 @@ describe('SettingsService', () => {
     });
   });
 
-  describe('getNodeIconBase64', () => {
-    beforeEach(() => {
-      mockConfig.paths = {
-        dataDirectoryPath: '/data',
-        publicDirectoryPath: '/public',
-      };
-    });
-
-    it('should return base64 encoded icon', () => {
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('icon-data'));
-
-      const result = service.getNodeIconBase64();
-
-      expect(result).toBe(Buffer.from('icon-data').toString('base64'));
-    });
-
-    it('should return empty string when icon file does not exist', () => {
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      const result = service.getNodeIconBase64();
-
-      expect(result).toBe('');
-    });
-
-    it('should return empty string on error', () => {
-      vi.mocked(fs.existsSync).mockImplementation(() => {
-        throw new Error('Access denied');
-      });
-
-      const result = service.getNodeIconBase64();
-
-      expect(result).toBe('');
-    });
-  });
-
-  describe('getNodeAvatarBase64', () => {
-    beforeEach(() => {
-      mockConfig.paths = {
-        dataDirectoryPath: '/data',
-        publicDirectoryPath: '/public',
-      };
-    });
-
-    it('should return base64 encoded avatar', () => {
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('avatar-data'));
-
-      const result = service.getNodeAvatarBase64();
-
-      expect(result).toBe(Buffer.from('avatar-data').toString('base64'));
-    });
-
-    it('should return empty string when avatar file does not exist', () => {
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      const result = service.getNodeAvatarBase64();
-
-      expect(result).toBe('');
-    });
-
-    it('should return empty string on error', () => {
-      vi.mocked(fs.existsSync).mockImplementation(() => {
-        throw new Error('Access denied');
-      });
-
-      const result = service.getNodeAvatarBase64();
-
-      expect(result).toBe('');
-    });
-  });
-
-  describe('getNodeBannerBase64', () => {
-    beforeEach(() => {
-      mockConfig.paths = {
-        dataDirectoryPath: '/data',
-        publicDirectoryPath: '/public',
-      };
-    });
-
-    it('should return base64 encoded banner', () => {
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('banner-data'));
-
-      const result = service.getNodeBannerBase64();
-
-      expect(result).toBe(Buffer.from('banner-data').toString('base64'));
-    });
-
-    it('should return empty string when banner file does not exist', () => {
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      const result = service.getNodeBannerBase64();
-
-      expect(result).toBe('');
-    });
-
-    it('should return empty string on error', () => {
-      vi.mocked(fs.existsSync).mockImplementation(() => {
-        throw new Error('Access denied');
-      });
-
-      const result = service.getNodeBannerBase64();
-
-      expect(result).toBe('');
-    });
-  });
-
-  describe('exportAllData', () => {
-    it('should export all data from repositories', async () => {
-      mockVideosRepository.findAll = vi.fn().mockResolvedValue([]);
-      mockCommentsRepository.findAll = vi.fn().mockResolvedValue([]);
-      mockReportsVideosRepository.findAll = vi.fn().mockResolvedValue([]);
-      mockReportsCommentsRepository.findAll = vi.fn().mockResolvedValue([]);
-      mockReportsArchiveVideosRepository.findAll = vi.fn().mockResolvedValue([]);
-      mockReportsArchiveCommentsRepository.findAll = vi.fn().mockResolvedValue([]);
-      mockLiveChatMessagesRepository.findAll = vi.fn().mockResolvedValue([]);
-      mockMonetizationRepository.findAll = vi.fn().mockResolvedValue([]);
-      mockLinksRepository.findAll = vi.fn().mockResolvedValue([]);
-
-      const result = await service.exportAllData();
-
-      expect(result).toHaveProperty('videos');
-      expect(result).toHaveProperty('comments');
-      expect(result).toHaveProperty('videoReports');
-      expect(result).toHaveProperty('commentReports');
-      expect(result).toHaveProperty('liveChatMessages');
-      expect(result).toHaveProperty('cryptoWalletAddresses');
-      expect(result).toHaveProperty('links');
-    });
-  });
-
   describe('deleteAllData', () => {
     it('should delete all data from repositories', async () => {
       mockCommentsRepository.deleteAll = vi.fn();
@@ -827,130 +707,34 @@ describe('SettingsService', () => {
       expect(mockLiveChatMessagesRepository.deleteAll).toHaveBeenCalled();
     });
   });
-
-  describe('importDatabase', () => {
-    beforeEach(() => {
-      mockVideosRepository.createMany = vi.fn();
-      mockVideosRepository.deleteAll = vi.fn();
-      mockCommentsRepository.createMany = vi.fn();
-      mockCommentsRepository.deleteAll = vi.fn();
-      mockReportsVideosRepository.createMany = vi.fn();
-      mockReportsVideosRepository.deleteAll = vi.fn();
-      mockReportsCommentsRepository.createMany = vi.fn();
-      mockReportsCommentsRepository.deleteAll = vi.fn();
-      mockReportsArchiveVideosRepository.createMany = vi.fn();
-      mockReportsArchiveVideosRepository.deleteAll = vi.fn();
-      mockReportsArchiveCommentsRepository.createMany = vi.fn();
-      mockReportsArchiveCommentsRepository.deleteAll = vi.fn();
-      mockLiveChatMessagesRepository.createMany = vi.fn();
-      mockLiveChatMessagesRepository.deleteAll = vi.fn();
-      mockMonetizationRepository.createMany = vi.fn();
-      mockMonetizationRepository.deleteAll = vi.fn();
-      mockLinksRepository.createMany = vi.fn();
-      mockLinksRepository.deleteAll = vi.fn();
+  it('delegates streaming backups using the current database configuration', async () => {
+    mockConfig.nodeSettings.databaseConfig = { databaseDialect: 'sqlite' } as never;
+    await service.createDatabaseBackup();
+    await service.restoreDatabaseBackup('input');
+    expect(createBackup).toHaveBeenLastCalledWith({
+      dialect: 'sqlite',
+      sqlitePath: mockConfig.paths.databaseFilePath,
     });
-
-    it('should import videos table', async () => {
-      const dbContent = JSON.stringify([
-        { tableName: 'videos', rows: [{ video_id: 'v1' }] },
-      ]);
-
-      await service.importDatabase(dbContent);
-
-      expect(mockVideosRepository.deleteAll).toHaveBeenCalled();
-      expect(mockVideosRepository.createMany).toHaveBeenCalledWith([{ video_id: 'v1' }]);
+    expect(restoreBackup).toHaveBeenLastCalledWith('input', {
+      dialect: 'sqlite',
+      sqlitePath: mockConfig.paths.databaseFilePath,
     });
-
-    it('should import comments table', async () => {
-      const dbContent = JSON.stringify([
-        { tableName: 'comments', rows: [{ comment_id: 'c1' }] },
-      ]);
-
-      await service.importDatabase(dbContent);
-
-      expect(mockCommentsRepository.createMany).toHaveBeenCalledWith([{ comment_id: 'c1' }]);
+    mockConfig.nodeSettings.databaseConfig = {
+      databaseDialect: 'postgres',
+      postgresConfig: {
+        username: 'u@',
+        password: 'p:',
+        host: 'localhost',
+        port: 5432,
+        databaseName: 'a/b',
+      },
+    } as never;
+    await service.createDatabaseBackup();
+    expect(createBackup).toHaveBeenLastCalledWith({
+      dialect: 'postgres',
+      postgresUrl: 'postgres://u%40:p%3A@localhost:5432/a%2Fb',
     });
-
-    it('should import videoreports table', async () => {
-      const dbContent = JSON.stringify([
-        { tableName: 'videoreports', rows: [{ report_id: 'r1' }] },
-      ]);
-
-      await service.importDatabase(dbContent);
-
-      expect(mockReportsVideosRepository.createMany).toHaveBeenCalled();
-    });
-
-    it('should import commentreports table', async () => {
-      const dbContent = JSON.stringify([
-        { tableName: 'commentreports', rows: [{ report_id: 'r1' }] },
-      ]);
-
-      await service.importDatabase(dbContent);
-
-      expect(mockReportsCommentsRepository.createMany).toHaveBeenCalled();
-    });
-
-    it('should import livechatmessages table', async () => {
-      const dbContent = JSON.stringify([
-        { tableName: 'livechatmessages', rows: [{ message_id: 'm1' }] },
-      ]);
-
-      await service.importDatabase(dbContent);
-
-      expect(mockLiveChatMessagesRepository.createMany).toHaveBeenCalled();
-    });
-
-    it('should import cryptowalletaddresses table', async () => {
-      const dbContent = JSON.stringify([
-        { tableName: 'cryptowalletaddresses', rows: [{ id: 1 }] },
-      ]);
-
-      await service.importDatabase(dbContent);
-
-      expect(mockMonetizationRepository.createMany).toHaveBeenCalled();
-    });
-
-    it('should import links table', async () => {
-      const dbContent = JSON.stringify([
-        { tableName: 'links', rows: [{ id: 1 }] },
-      ]);
-
-      await service.importDatabase(dbContent);
-
-      expect(mockLinksRepository.createMany).toHaveBeenCalled();
-    });
-
-    it('should skip empty tables', async () => {
-      const dbContent = JSON.stringify([
-        { tableName: 'videos', rows: [] },
-      ]);
-
-      await service.importDatabase(dbContent);
-
-      expect(mockVideosRepository.createMany).not.toHaveBeenCalled();
-    });
-
-    it('should warn on unknown table names', async () => {
-      const dbContent = JSON.stringify([
-        { tableName: 'unknowntable', rows: [{ id: 1 }] },
-      ]);
-
-      await service.importDatabase(dbContent);
-
-      expect(mockLogger.warn).toHaveBeenCalledWith('Unknown table name during import: unknowntable');
-    });
-
-    it('should import archive tables', async () => {
-      const dbContent = JSON.stringify([
-        { tableName: 'videoreportsarchives', rows: [{ id: 1 }] },
-        { tableName: 'commentreportsarchives', rows: [{ id: 2 }] },
-      ]);
-
-      await service.importDatabase(dbContent);
-
-      expect(mockReportsArchiveVideosRepository.createMany).toHaveBeenCalled();
-      expect(mockReportsArchiveCommentsRepository.createMany).toHaveBeenCalled();
-    });
+    mockConfig.nodeSettings.databaseConfig = { databaseDialect: 'postgres' } as never;
+    await expect(service.createDatabaseBackup()).rejects.toThrow('Missing PostgreSQL');
   });
 });

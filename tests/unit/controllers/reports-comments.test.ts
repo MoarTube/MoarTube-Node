@@ -56,32 +56,43 @@ describe('ReportsCommentsController', () => {
       ];
       mockReportsService.getCommentReports.mockResolvedValue(mockReports);
 
-      await controller.getAllReports(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAllReports(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReportsService.getCommentReports).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         isError: false,
         reports: mockReports,
+        hasMore: false,
       });
     });
 
     it('should return empty array when no reports', async () => {
       mockReportsService.getCommentReports.mockResolvedValue([]);
 
-      await controller.getAllReports(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAllReports(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         isError: false,
         reports: [],
+        hasMore: false,
       });
     });
 
     it('should return 500 error on service failure', async () => {
       mockReportsService.getCommentReports.mockRejectedValue(new Error('Database error'));
 
-      await controller.getAllReports(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAllReports(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Note: This controller uses 500 status for errors
       expect(mockReply.status).toHaveBeenCalledWith(500);
@@ -97,7 +108,10 @@ describe('ReportsCommentsController', () => {
       mockRequest.body = { reportId: 1 };
       mockReportsService.archiveCommentReport.mockResolvedValue(undefined);
 
-      await controller.archiveReport(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.archiveReport(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReportsService.archiveCommentReport).toHaveBeenCalledWith(1);
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -107,7 +121,10 @@ describe('ReportsCommentsController', () => {
       mockRequest.body = { reportId: 1 };
       mockReportsService.archiveCommentReport.mockRejectedValue(new Error('Database error'));
 
-      await controller.archiveReport(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.archiveReport(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -122,7 +139,10 @@ describe('ReportsCommentsController', () => {
       mockRequest.params = { reportId: 1 };
       mockReportsService.deleteCommentReport.mockResolvedValue(undefined);
 
-      await controller.deleteReport(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.deleteReport(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReportsService.deleteCommentReport).toHaveBeenCalledWith(1);
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -132,7 +152,10 @@ describe('ReportsCommentsController', () => {
       mockRequest.params = { reportId: 1 };
       mockReportsService.deleteCommentReport.mockRejectedValue(new Error('Database error'));
 
-      await controller.deleteReport(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.deleteReport(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({

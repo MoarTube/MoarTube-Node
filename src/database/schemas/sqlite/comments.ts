@@ -4,24 +4,28 @@
  * Represents user comments on videos.
  * This schema matches the existing Sequelize Comment model for backward compatibility.
  */
-import { sqliteTable, integer, text } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, integer, text, index } from 'drizzle-orm/sqlite-core';
 
 /**
  * Comments table for storing video comments
  */
-export const comments = sqliteTable('comments', {
-  // Primary key - auto-incrementing integer
-  comment_id: integer('comment_id').primaryKey({ autoIncrement: true }),
+export const comments = sqliteTable(
+  'comments',
+  {
+    // Primary key - auto-incrementing integer
+    comment_id: integer('comment_id').primaryKey({ autoIncrement: true }),
 
-  // Reference to the video this comment belongs to
-  video_id: text('video_id').notNull(),
+    // Reference to the video this comment belongs to
+    video_id: text('video_id').notNull(),
 
-  // Sanitized comment text (HTML stripped)
-  comment_plain_text_sanitized: text('comment_plain_text_sanitized').notNull(),
+    // Sanitized comment text (HTML stripped)
+    comment_plain_text_sanitized: text('comment_plain_text_sanitized').notNull(),
 
-  // Unix timestamp of comment creation
-  timestamp: integer('timestamp').notNull(),
-});
+    // Unix timestamp of comment creation
+    timestamp: integer('timestamp').notNull(),
+  },
+  (t) => [index('comments_history').on(t.video_id, t.timestamp, t.comment_id)]
+);
 
 /**
  * Inferred types from the comments table schema

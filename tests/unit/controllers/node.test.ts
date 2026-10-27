@@ -36,6 +36,7 @@ describe('NodeController', () => {
     countVideos: vi.fn(),
     search: vi.fn(),
     getVideos: vi.fn(),
+    getPublishedTags: vi.fn().mockResolvedValue(['tag1', 'tag2']),
   };
 
   const mockLinksService: Record<string, ReturnType<typeof vi.fn>> = {
@@ -124,28 +125,48 @@ describe('NodeController', () => {
       };
 
       const mockVideos = [
-        { video_id: 'vid1', title: 'Test Video 1', tags: 'tag1, tag2', creation_timestamp: 2000, views: 100 },
-        { video_id: 'vid2', title: 'Test Video 2', tags: 'tag3', creation_timestamp: 1000, views: 50 },
+        {
+          video_id: 'vid1',
+          title: 'Test Video 1',
+          tags: 'tag1, tag2',
+          creation_timestamp: 2000,
+          views: 100,
+        },
+        {
+          video_id: 'vid2',
+          title: 'Test Video 2',
+          tags: 'tag3',
+          creation_timestamp: 1000,
+          views: 50,
+        },
       ];
       mockVideosService.countVideos.mockResolvedValue(2);
       mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
-      mockLinksService.getAllLinks.mockResolvedValue([{ id: 1, name: 'Link', url: 'https://example.com' }]);
+      mockLinksService.getAllLinks.mockResolvedValue([
+        { id: 1, name: 'Link', url: 'https://example.com' },
+      ]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
-      await controller.getNodePage(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getNodePage(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockVideosService.countVideos).toHaveBeenCalled();
       expect(mockLinksService.getAllLinks).toHaveBeenCalled();
       expect(mockMonetizationService.getWalletAddresses).toHaveBeenCalled();
-      expect(mockReply.view).toHaveBeenCalledWith('node', expect.objectContaining({
-        model: expect.objectContaining({
-          informationData: expect.any(Object),
-          linksData: expect.any(Object),
-          tagsData: expect.any(Object),
-          searchResultsData: expect.any(Object),
-        }),
-      }));
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'node',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            informationData: expect.any(Object),
+            linksData: expect.any(Object),
+            tagsData: expect.any(Object),
+            searchResultsData: expect.any(Object),
+          }),
+        })
+      );
     });
 
     it('should handle search with search term', async () => {
@@ -156,17 +177,28 @@ describe('NodeController', () => {
       };
 
       const mockVideos = [
-        { video_id: 'vid1', title: 'Test Video', tags: 'test', creation_timestamp: 1000, views: 100 },
+        {
+          video_id: 'vid1',
+          title: 'Test Video',
+          tags: 'test',
+          creation_timestamp: 1000,
+          views: 100,
+        },
       ];
       mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
-      await controller.getNodePage(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getNodePage(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
-      expect(mockVideosService.getVideos).toHaveBeenCalledWith(expect.objectContaining({
-        isPublished: true,
-        search: 'test search',
-      }));
+      expect(mockVideosService.getVideos).toHaveBeenCalledWith(
+        expect.objectContaining({
+          visibleOnly: true,
+          search: 'test search',
+        })
+      );
     });
 
     it('should return error on service failure', async () => {
@@ -178,7 +210,10 @@ describe('NodeController', () => {
 
       mockVideosService.countVideos.mockRejectedValue(new Error('Database error'));
 
-      await controller.getNodePage(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getNodePage(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith('node page rendering error');
@@ -193,7 +228,13 @@ describe('NodeController', () => {
 
       // Videos with empty tags mixed in
       const mockVideos = [
-        { video_id: 'vid1', title: 'Video 1', tags: 'tag1, , tag2', creation_timestamp: 2000, views: 100 },
+        {
+          video_id: 'vid1',
+          title: 'Video 1',
+          tags: 'tag1, , tag2',
+          creation_timestamp: 2000,
+          views: 100,
+        },
         { video_id: 'vid2', title: 'Video 2', tags: '  ,  ', creation_timestamp: 1000, views: 50 },
       ];
       mockVideosService.countVideos.mockResolvedValue(2);
@@ -202,16 +243,22 @@ describe('NodeController', () => {
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
-      await controller.getNodePage(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getNodePage(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
-      expect(mockReply.view).toHaveBeenCalledWith('node', expect.objectContaining({
-        model: expect.objectContaining({
-          // Tags set should only contain non-empty tags
-          tagsData: expect.objectContaining({
-            tags: expect.arrayContaining(['tag1', 'tag2']),
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'node',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            // Tags set should only contain non-empty tags
+            tagsData: expect.objectContaining({
+              tags: expect.arrayContaining(['tag1', 'tag2']),
+            }),
           }),
-        }),
-      }));
+        })
+      );
       // Verify empty tags were not included
       const callArgs = mockReply.view.mock.calls[0][1];
       expect(callArgs.model.tagsData.tags).not.toContain('');
@@ -228,8 +275,20 @@ describe('NodeController', () => {
       };
 
       const mockVideos = [
-        { video_id: 'vid1', title: 'Test Video 1', tags: 'tag1, tag2', views: 100, creation_timestamp: 1000 },
-        { video_id: 'vid2', title: 'Test Video 2', tags: 'tag2, tag3', views: 50, creation_timestamp: 2000 },
+        {
+          video_id: 'vid1',
+          title: 'Test Video 1',
+          tags: 'tag1, tag2',
+          views: 100,
+          creation_timestamp: 1000,
+        },
+        {
+          video_id: 'vid2',
+          title: 'Test Video 2',
+          tags: 'tag2, tag3',
+          views: 50,
+          creation_timestamp: 2000,
+        },
       ];
       mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
@@ -248,7 +307,13 @@ describe('NodeController', () => {
       };
 
       const mockVideos = [
-        { video_id: 'vid1', title: 'Old Video', tags: 'tag1', views: 100, creation_timestamp: 1000 },
+        {
+          video_id: 'vid1',
+          title: 'Old Video',
+          tags: 'tag1',
+          views: 100,
+          creation_timestamp: 1000,
+        },
         { video_id: 'vid2', title: 'New Video', tags: 'tag1', views: 50, creation_timestamp: 2000 },
       ];
       mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
@@ -269,7 +334,13 @@ describe('NodeController', () => {
       };
 
       const mockVideos = [
-        { video_id: 'vid1', title: 'Old Video', tags: 'tag1', views: 100, creation_timestamp: 1000 },
+        {
+          video_id: 'vid1',
+          title: 'Old Video',
+          tags: 'tag1',
+          views: 100,
+          creation_timestamp: 1000,
+        },
         { video_id: 'vid2', title: 'New Video', tags: 'tag1', views: 50, creation_timestamp: 2000 },
       ];
       mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
@@ -312,8 +383,20 @@ describe('NodeController', () => {
       };
 
       const mockVideos = [
-        { video_id: 'vid1', title: 'Less Popular', tags: 'tag1', views: 50, creation_timestamp: 1000 },
-        { video_id: 'vid2', title: 'Most Popular', tags: 'tag1', views: 200, creation_timestamp: 2000 },
+        {
+          video_id: 'vid1',
+          title: 'Less Popular',
+          tags: 'tag1',
+          views: 50,
+          creation_timestamp: 1000,
+        },
+        {
+          video_id: 'vid2',
+          title: 'Most Popular',
+          tags: 'tag1',
+          views: 200,
+          creation_timestamp: 2000,
+        },
       ];
       mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
@@ -333,8 +416,20 @@ describe('NodeController', () => {
       };
 
       const mockVideos = [
-        { video_id: 'vid1', title: 'Has Tag', tags: 'specific-tag, other', views: 100, creation_timestamp: 1000 },
-        { video_id: 'vid2', title: 'No Tag', tags: 'other-tag', views: 50, creation_timestamp: 2000 },
+        {
+          video_id: 'vid1',
+          title: 'Has Tag',
+          tags: 'specific-tag, other',
+          views: 100,
+          creation_timestamp: 1000,
+        },
+        {
+          video_id: 'vid2',
+          title: 'No Tag',
+          tags: 'other-tag',
+          views: 50,
+          creation_timestamp: 2000,
+        },
       ];
       mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
@@ -358,9 +453,15 @@ describe('NodeController', () => {
         { video_id: 'vid1', title: 'Video', tags: 'tag1', views: 100, creation_timestamp: 1000 },
       ];
       const mockLiveStreams = [
-        { video_id: 'live1', title: 'Live Stream', tags: 'live', views: 0, creation_timestamp: 3000 },
+        {
+          video_id: 'live1',
+          title: 'Live Stream',
+          tags: 'live',
+          views: 0,
+          creation_timestamp: 3000,
+        },
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      mockVideosService.getVideos.mockResolvedValue({ data: [...mockVideos, ...mockLiveStreams] });
       mockStreamsService.getActiveStreams.mockResolvedValue(mockLiveStreams);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -380,7 +481,13 @@ describe('NodeController', () => {
         { video_id: 'vid1', title: 'Video', tags: 'tag1', views: 100, creation_timestamp: 1000 },
       ];
       const mockLiveStreams = [
-        { video_id: 'vid1', title: 'Video (Live)', tags: 'tag1', views: 100, creation_timestamp: 1000 },
+        {
+          video_id: 'vid1',
+          title: 'Video (Live)',
+          tags: 'tag1',
+          views: 100,
+          creation_timestamp: 1000,
+        },
       ];
       mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
       mockStreamsService.getActiveStreams.mockResolvedValue(mockLiveStreams);
@@ -427,9 +534,27 @@ describe('NodeController', () => {
       // This forces the continue statement to be hit for every tag
       // vid3 with only empty tags will be EXCLUDED because shouldAddVideoByTagLimit returns false
       const mockVideos = [
-        { video_id: 'vid1', title: 'Video 1', tags: 'tag1, , ', views: 100, creation_timestamp: 1000 },
-        { video_id: 'vid2', title: 'Video 2', tags: ', , tag2', views: 50, creation_timestamp: 2000 },
-        { video_id: 'vid3', title: 'Video 3', tags: '  ,  ,  ', views: 30, creation_timestamp: 3000 }, // Only empty tags - will be excluded
+        {
+          video_id: 'vid1',
+          title: 'Video 1',
+          tags: 'tag1, , ',
+          views: 100,
+          creation_timestamp: 1000,
+        },
+        {
+          video_id: 'vid2',
+          title: 'Video 2',
+          tags: ', , tag2',
+          views: 50,
+          creation_timestamp: 2000,
+        },
+        {
+          video_id: 'vid3',
+          title: 'Video 3',
+          tags: '  ,  ,  ',
+          views: 30,
+          creation_timestamp: 3000,
+        }, // Only empty tags - will be excluded
       ];
       mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
@@ -452,11 +577,41 @@ describe('NodeController', () => {
 
       // Create videos where the 5th video's only tag is already at limit (4)
       const mockVideos = [
-        { video_id: 'vid1', title: 'Video 1', tags: 'onlytag', views: 100, creation_timestamp: 5000 },
-        { video_id: 'vid2', title: 'Video 2', tags: 'onlytag', views: 90, creation_timestamp: 4000 },
-        { video_id: 'vid3', title: 'Video 3', tags: 'onlytag', views: 80, creation_timestamp: 3000 },
-        { video_id: 'vid4', title: 'Video 4', tags: 'onlytag', views: 70, creation_timestamp: 2000 },
-        { video_id: 'vid5', title: 'Video 5', tags: 'onlytag', views: 60, creation_timestamp: 1000 }, // Should be excluded - tag at limit
+        {
+          video_id: 'vid1',
+          title: 'Video 1',
+          tags: 'onlytag',
+          views: 100,
+          creation_timestamp: 5000,
+        },
+        {
+          video_id: 'vid2',
+          title: 'Video 2',
+          tags: 'onlytag',
+          views: 90,
+          creation_timestamp: 4000,
+        },
+        {
+          video_id: 'vid3',
+          title: 'Video 3',
+          tags: 'onlytag',
+          views: 80,
+          creation_timestamp: 3000,
+        },
+        {
+          video_id: 'vid4',
+          title: 'Video 4',
+          tags: 'onlytag',
+          views: 70,
+          creation_timestamp: 2000,
+        },
+        {
+          video_id: 'vid5',
+          title: 'Video 5',
+          tags: 'onlytag',
+          views: 60,
+          creation_timestamp: 1000,
+        }, // Should be excluded - tag at limit
       ];
       mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
@@ -495,7 +650,10 @@ describe('NodeController', () => {
       mockReportsService.countVideoReportsNewerThan.mockResolvedValue(2);
       mockReportsService.countCommentReportsNewerThan.mockResolvedValue(1);
 
-      await controller.getNewContentCounts(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getNewContentCounts(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockCommentsService.countCommentsNewerThan).toHaveBeenCalled();
       expect(mockReportsService.countVideoReportsNewerThan).toHaveBeenCalled();
@@ -516,7 +674,10 @@ describe('NodeController', () => {
       mockReportsService.countVideoReportsNewerThan.mockResolvedValue(0);
       mockReportsService.countCommentReportsNewerThan.mockResolvedValue(0);
 
-      await controller.getNewContentCounts(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getNewContentCounts(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -532,7 +693,10 @@ describe('NodeController', () => {
     it('should return error on service failure', async () => {
       mockCommentsService.countCommentsNewerThan.mockRejectedValue(new Error('Database error'));
 
-      await controller.getNewContentCounts(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getNewContentCounts(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -546,7 +710,10 @@ describe('NodeController', () => {
     it('should update comments checked timestamp', async () => {
       mockRequest.body = { contentType: 'comments' };
 
-      await controller.contentChecked(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.contentChecked(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // The config.updateLastCheckedContentTracker is called internally
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -555,7 +722,10 @@ describe('NodeController', () => {
     it('should update video reports checked timestamp', async () => {
       mockRequest.body = { contentType: 'videoReports' };
 
-      await controller.contentChecked(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.contentChecked(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -563,7 +733,10 @@ describe('NodeController', () => {
     it('should update comment reports checked timestamp', async () => {
       mockRequest.body = { contentType: 'commentReports' };
 
-      await controller.contentChecked(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.contentChecked(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -571,7 +744,10 @@ describe('NodeController', () => {
     it('should return success even for unknown content type (no-op)', async () => {
       mockRequest.body = { contentType: 'unknown' };
 
-      await controller.contentChecked(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.contentChecked(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // The switch just does nothing for unknown types
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -586,7 +762,10 @@ describe('NodeController', () => {
         throw new Error('Config error');
       });
 
-      await controller.contentChecked(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.contentChecked(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -594,5 +773,13 @@ describe('NodeController', () => {
         message: 'error communicating with the MoarTube node',
       });
     });
+  });
+  it('bounds malformed discovery offsets', async () => {
+    mockRequest.query = { offset: -1, sortTerm: 'latest' };
+    mockVideosService.getVideos.mockResolvedValue({ data: [] });
+    await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+    expect(mockVideosService.getVideos).toHaveBeenCalledWith(
+      expect.objectContaining({ offset: 0, limit: 101 })
+    );
   });
 });

@@ -59,6 +59,8 @@ describe.each(cases)('PostgreSQL $name (real SQL)', ({ factory, key, table }) =>
     expect(await repository.findAll()).toEqual([rows[1], rows[0], first]);
     expect(await repository.findAll({})).toHaveLength(3);
     expect(await repository.findAll({ limit: 1 })).toEqual([rows[1]]);
+    expect(await repository.findAll({ limit: 1, offset: 1, search: 'Report' })).toEqual([rows[0]]);
+    expect(await repository.findAll({ search: 'Report 100' })).toEqual([first]);
     expect(await repository.findByVideoId('a')).toEqual([rows[0], first]);
     expect(await repository.findByVideoId('a', { limit: 1 })).toEqual([rows[0]]);
     expect(await repository.findByVideoId('missing')).toEqual([]);

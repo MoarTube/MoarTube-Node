@@ -86,6 +86,8 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
   const surface = player.querySelector('media-container');
   const overlay = wrapper.querySelector('#mtp-video-overlay');
   if (overlay) {
+    // The poster handles its own Play action; exclude it from surface tap-to-pause.
+    overlay.setAttribute('data-interactive', '');
     if (embedded) overlay.classList.remove('hidden-elem');
     surface.append(overlay);
   }
@@ -133,8 +135,10 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
       if (sources.length) setSource(sources[0], false);
       return Promise.resolve();
     }
+    const attemptedMedia = media, attemptedSource = currentSource;
     return media.play().catch(reason => {
-      if (reason.name === 'AbortError') return;
+      if (attemptedMedia !== media || attemptedSource !== currentSource || reason.name === 'AbortError') return;
+      buffering.hidden = true;
       if (!hasPlayed && overlay) overlay.classList.remove('hidden-elem');
     });
   }
@@ -164,11 +168,12 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
       media?.remove();
       media = document.createElement(tag);
       media.setAttribute('playsinline', '');
-      media.setAttribute('preload', 'auto');
       media.setAttribute('disablepictureinpicture', '');
       if (isHls) media.setAttribute('stream-type', isStreaming ? 'live' : 'on-demand');
       player.querySelector('.mt-media-slot').append(media);
     }
+    // Keep initial loading deferred; allow metadata when switching an already-played video.
+    media.setAttribute('preload', hasPlayed ? 'metadata' : 'none');
     currentSource = source;
     selected = sourceSelection(source);
     pendingRestore = snapshot;
@@ -179,7 +184,6 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
       initialSeekDone = true;
       media.playbackRate = snapshot.rate;
       restorePosition();
-      if (!snapshot.paused) void play();
     });
     on('canplay', () => { restorePosition(); buffering.hidden = true; });
     on('progress', restorePosition);
@@ -201,12 +205,15 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
       }
     });
     error.hidden = true;
-    if (isHls) {
-      media.source = { ...source, preferPlayback: /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Android/.test(navigator.userAgent) ? 'native' : 'mse', engine: { hlsJs: { lowLatencyMode: true } } };
+
+    if (media.localName === 'hlsjs-video') {
+      // MoarTube emits no interstitials; keep their scheduler from bypassing preload.
+      const nativeHls = document.createElement('video').canPlayType('application/vnd.apple.mpegurl');
+      media.source = { ...source, preferPlayback: nativeHls && /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Android/.test(navigator.userAgent) ? 'native' : 'mse', engine: { hlsJs: { enableInterstitialPlayback: false, lowLatencyMode: true, backBufferLength: 60, maxBufferLength: 30, maxMaxBufferLength: 60, maxBufferSize: 30 * 1000 * 1000 } } };
     } else {
       media.src = source.src;
-      media.load();
     }
+    if (!snapshot.paused) queueMicrotask(() => void play());
   }
 
   function menuButton(label, action, { checked, detail } = {}) {

@@ -25,7 +25,7 @@ try {
     const require = createRequire(import.meta.url);
     const builder = require.resolve("tsup/dist/cli-default.js");
 
-    for (const name of ["coverage", "data", "dist"]) {
+    for (const name of ["coverage", "data", "dist", "drizzle"]) {
       const target = path.resolve(root, name);
       if (path.dirname(target) !== path.resolve(root)) {
         throw new Error(
@@ -34,6 +34,22 @@ try {
       }
       console.log(`Removing ${target}`);
       rmSync(target, { recursive: true, force: true });
+    }
+
+    // A clean reset discards migration history together with its database.
+    const preparation = spawnSync(
+      process.execPath,
+      [path.join(root, "scripts", "ensure-migrations.mjs")],
+      {
+        cwd: root,
+        stdio: "inherit",
+      },
+    );
+    if (preparation.error) throw preparation.error;
+    if (preparation.status !== 0) {
+      throw new Error(
+        `Migration preparation failed (${preparation.signal ?? preparation.status}).`,
+      );
     }
 
     const build = spawnSync(process.execPath, [builder], {

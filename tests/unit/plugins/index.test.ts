@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  container: {},
+  container: { resolve: vi.fn(() => ({ flushPendingViews: vi.fn() })) },
   db: {},
   registerRoutes: vi.fn(),
   createAppContainer: vi.fn(),

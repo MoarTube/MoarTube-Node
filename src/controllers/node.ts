@@ -24,6 +24,7 @@ export interface NodeQuery {
   searchTerm?: string;
   sortTerm: string;
   tagTerm?: string;
+  offset?: number;
 }
 
 /**
@@ -46,7 +47,7 @@ export class NodeController extends BaseController {
   private readonly videosService: VideosService;
   private readonly linksService: LinksService;
   private readonly monetizationService: MonetizationService;
-  private readonly streamsService: StreamsService;
+
   private readonly commentsService: CommentsService;
   private readonly reportsService: ReportsService;
 
@@ -54,7 +55,7 @@ export class NodeController extends BaseController {
     videosService: VideosService,
     linksService: LinksService,
     monetizationService: MonetizationService,
-    streamsService: StreamsService,
+    _streamsService: StreamsService,
     commentsService: CommentsService,
     reportsService: ReportsService
   ) {
@@ -62,7 +63,7 @@ export class NodeController extends BaseController {
     this.videosService = videosService;
     this.linksService = linksService;
     this.monetizationService = monetizationService;
-    this.streamsService = streamsService;
+
     this.commentsService = commentsService;
     this.reportsService = reportsService;
   }
@@ -74,7 +75,7 @@ export class NodeController extends BaseController {
    */
   getNodePage = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const { searchTerm, sortTerm, tagTerm } = request.query as NodeQuery;
+      const { searchTerm, sortTerm, tagTerm, offset = 0 } = request.query as NodeQuery;
 
       const config = getConfig();
 
@@ -104,24 +105,10 @@ export class NodeController extends BaseController {
       const walletAddresses = await this.monetizationService.getWalletAddresses();
       const cryptoWalletAddressesData = { isError: false, cryptoWalletAddresses: walletAddresses };
 
-      // Get all unique tags
-      const videosResult = await this.videosService.getVideos({});
-      const allVideos = videosResult.data;
-
-      const tagsSet = new Set<string>();
-
-      for (const video of allVideos) {
-        const videoTags = video.tags.split(',');
-        for (const tag of videoTags) {
-          if (tag.trim()) {
-            tagsSet.add(tag.trim());
-          }
-        }
-      }
-      const tagsData = { isError: false, tags: Array.from(tagsSet) };
+      const tagsData = { isError: false, tags: await this.videosService.getPublishedTags() };
 
       // Get search results
-      const searchResultsData = await this.performSearch(searchTerm, sortTerm, tagTerm);
+      const searchResultsData = await this.performSearch(searchTerm, sortTerm, tagTerm, offset);
 
       const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
       const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
@@ -153,11 +140,15 @@ export class NodeController extends BaseController {
    */
   search = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const { searchTerm, sortTerm, tagTerm } = request.query as NodeQuery;
+      const { searchTerm, sortTerm, tagTerm, offset = 0 } = request.query as NodeQuery;
 
-      const data = await this.performSearch(searchTerm, sortTerm, tagTerm);
+      const data = await this.performSearch(searchTerm, sortTerm, tagTerm, offset);
 
-      return await this.sendSuccess(reply, { searchResults: data.searchResults });
+      return await this.sendSuccess(reply, {
+        searchResults: data.searchResults,
+        hasMore: data.hasMore,
+        offset: data.offset,
+      });
     } catch (error) {
       this.logger.error('Search failed', error);
 
@@ -249,45 +240,41 @@ export class NodeController extends BaseController {
   private async performSearch(
     searchTerm: string | undefined,
     sortTerm: string,
-    tagTerm: string | undefined
-  ): Promise<{ isError: false; searchResults: (SQLiteVideo | PostgresVideo)[] }> {
-    const videos = await this.fetchAndMergeVideos(searchTerm);
-    const sortedVideos = this.sortVideos(videos, sortTerm);
+    tagTerm: string | undefined,
+    offset = 0
+  ): Promise<{
+    isError: false;
+    searchResults: (SQLiteVideo | PostgresVideo)[];
+    hasMore: boolean;
+    offset: number;
+  }> {
+    const videos = await this.fetchAndMergeVideos(searchTerm, sortTerm, tagTerm, offset);
+    const hasMore = videos.length > 100;
+    const sortedVideos = this.sortVideos(videos.slice(0, 100), sortTerm);
     const searchResults = this.filterByTag(sortedVideos, tagTerm);
 
-    return { isError: false, searchResults };
+    return { isError: false, searchResults, hasMore, offset };
   }
 
   /**
    * Fetch published and live videos, merge and deduplicate
    */
   private async fetchAndMergeVideos(
-    searchTerm: string | undefined
+    searchTerm: string | undefined,
+    sortTerm: string,
+    tagTerm: string | undefined,
+    offset: number
   ): Promise<(SQLiteVideo | PostgresVideo)[]> {
-    const queryOptions: { isPublished: boolean; search?: string } = {
-      isPublished: true,
-    };
-
-    if (searchTerm !== undefined && searchTerm.length > 0) {
-      queryOptions.search = searchTerm;
-    }
-
-    const videosResult = await this.videosService.getVideos(queryOptions);
-    const videos = videosResult.data;
-    const liveVideos = await this.streamsService.getActiveStreams();
-
-    const videoMap = new Map<string, SQLiteVideo | PostgresVideo>();
-
-    for (const video of videos) {
-      videoMap.set(video.video_id, video);
-    }
-    for (const video of liveVideos) {
-      if (!videoMap.has(video.video_id)) {
-        videoMap.set(video.video_id, video);
-      }
-    }
-
-    return Array.from(videoMap.values());
+    const result = await this.videosService.getVideos({
+      visibleOnly: true,
+      limit: 101,
+      offset: Number.isSafeInteger(offset) && offset >= 0 ? offset : 0,
+      ...(searchTerm ? { search: searchTerm } : {}),
+      ...(tagTerm ? { tagTerm } : {}),
+      sortBy: sortTerm === 'popular' ? 'views' : 'creation_timestamp',
+      sortDirection: sortTerm === 'oldest' ? 'asc' : 'desc',
+    });
+    return result.data;
   }
 
   /**

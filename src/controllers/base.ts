@@ -6,6 +6,7 @@
  */
 import type { FastifyReply } from 'fastify';
 import fs from 'node:fs';
+import { AppError } from '@/errors/index.js';
 import { Logger } from '@utils/index.js';
 
 /**
@@ -52,6 +53,13 @@ export abstract class BaseController {
    */
   protected sendError(reply: FastifyReply, message: string, status = 400): FastifyReply {
     return reply.status(status).send({ isError: true, message });
+  }
+
+  protected sendCaughtError(reply: FastifyReply, error: unknown, fallback: string): FastifyReply {
+    if (error instanceof AppError) {
+      return this.sendError(reply, error.message, error.statusCode);
+    }
+    return this.sendError(reply, fallback, 500);
   }
 
   /**

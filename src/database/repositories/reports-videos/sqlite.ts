@@ -1,4 +1,5 @@
 import { eq, desc, count, gt } from 'drizzle-orm';
+import { or, like } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { IReportsVideosRepository } from './interface.js';
 import type {
@@ -30,10 +31,19 @@ export class ReportsVideosRepositorySQLite implements IReportsVideosRepository<
   async findAll(options?: PaginationOptions): Promise<DrizzleVideoReport[]> {
     const { limit } = { limit: options?.limit };
 
-    const query = this.db.select().from(videoReports).orderBy(desc(videoReports.timestamp));
+    let query = this.db.select().from(videoReports).orderBy(desc(videoReports.timestamp));
+    if (options?.search) {
+      query = query.where(
+        or(
+          like(videoReports.message, '%' + options.search.slice(0, 100) + '%'),
+          like(videoReports.email, '%' + options.search.slice(0, 100) + '%')
+        )
+      ) as typeof query;
+    }
 
     if (limit !== undefined) {
-      return query.limit(limit);
+      const page = query.limit(limit);
+      return options?.offset !== undefined ? page.offset(options.offset) : page;
     }
 
     return query;

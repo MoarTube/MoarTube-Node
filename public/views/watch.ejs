@@ -62,6 +62,7 @@
         padding: 0;
       }
 
+      .comment-quote-button[aria-disabled="true"], .comment-report-button[aria-disabled="true"], #video-report-button[aria-disabled="true"] { pointer-events: none; cursor: default; }
       #comments-container,
       .card {
         background: #f5f5f5;
@@ -207,6 +208,16 @@
         color: #000;
       }
 
+      /* Comment link interactions. */
+      .replyContainer .reply .postNum a {
+        cursor: pointer;
+      }
+      .replyContainer .reply .postNum a:hover,
+      .replyContainer .reply .postNum a:focus-visible {
+        color: #ff0000 !important;
+      }
+      /* End comment link interactions. */
+
       .postMenuBtn {
         margin-left: 5px;
         text-decoration: none;
@@ -267,7 +278,7 @@
         color: #789922;
       }
 
-      .reply:target,
+      .reply:target:not(.comment-unselected),
       .reply.highlight {
         background: #ede3eb !important;
         border: 1px solid #ba9dbf !important;
@@ -276,7 +287,8 @@
         padding: 2px;
       }
 
-      .reply.highlight-anti {
+      .reply.highlight-anti,
+      .reply:target.highlight-anti {
         border-width: 1px !important;
         background-color: #bfa6ba !important;
       }
@@ -423,6 +435,10 @@
 
         #comment-section {
           display: block;
+        }
+
+        #comment-section-back-button-container {
+          display: none !important;
         }
 
         #expand-comment-section {
@@ -733,7 +749,7 @@
           color: white !important;
         }
 
-        .reply:target,
+        .reply:target:not(.comment-unselected),
         .reply.highlight {
           background: #2f2f2f !important;
         }
@@ -750,7 +766,8 @@
           background-color: black !important;
         }
 
-        .reply.highlight-anti {
+        .reply.highlight-anti,
+      .reply:target.highlight-anti {
           border-width: 1px !important;
           background-color: #272727 !important;
         }
@@ -845,7 +862,7 @@ body {
 	color: white !important;
 }
 
-.reply:target, .reply.highlight {
+.reply:target:not(.comment-unselected), .reply.highlight {
 	background: #2f2f2f !important;
 }
 
@@ -873,7 +890,8 @@ body {
 	background-color: black !important;
 }
 
-.reply.highlight-anti {
+.reply.highlight-anti,
+      .reply:target.highlight-anti {
 	border-width: 1px !important;
 	background-color: #272727 !important;
 }
@@ -887,7 +905,8 @@ body {
         styleSheet.disabled = true;
       }
     </script>
-  </head>
+  <script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/memory-limits.js"></script>
+</head>
 
   <body>
     <nav class="navbar navbar-expand-xl navbar-light">
@@ -1386,7 +1405,7 @@ body {
     <script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/keen-slider-6.8.5.min.js"></script>
 
     <script>
-      const INCOMING_PARAMETERS = <%- JSON.stringify(model) %>;
+      const INCOMING_PARAMETERS = <%- JSON.stringify(model).replace(/</g, '\\u003c') %>;
 
       class MoarTubeWatch {
         constructor() {
@@ -1402,9 +1421,20 @@ body {
           this.NODE_BASE_URL = null;
           this.CLOUDFLARE_TURNSTILE_SITE_KEY = null;
           this.COMMENT_ELEMENT_CACHE = {};
-          this.RECOMMENDED_VIDEOS_TAGS_CACHE = { '': [] };
+          this.COMMENT_TOTAL = this.INCOMING_PARAMETERS.commentsData?.totalCount ?? 0;
+          this.COMMENT_TOTAL_VERSION = 0;
+          this.COMMENT_HAS_NEWER = false;
+          this.COMMENT_SUSPENDED = false;
+          this.COMMENT_LIFECYCLE = 0;
+          this.COMMENT_POST_PENDING = false;
+          this.COMMENT_REFRESH_REQUEST = null;
+          this.COMMENT_LOADING = false;
+          this.COMMENT_REQUEST = null;
+          this.COMMENT_HAS_MORE = this.INCOMING_PARAMETERS.commentsData?.hasMore ?? false;
+          this.RECOMMENDED_VIDEOS_TAGS_CACHE = Object.assign(Object.create(null), { '': [] });
           this.DOWNLOADABLE_SOURCES = [];
           this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP = 0;
+          this.MOST_RECENT_VISIBLE_COMMENT_ID = 0;
           this.TIMESTAMP_UPDATE_TRACKER = [];
           this.CRYPTO_WALLET_ADDRESSES = [];
           this.EXTERNAL_VIDEOS_BASE_URL = null;
@@ -1417,7 +1447,7 @@ body {
               <textarea class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area" rows="1" placeholder="Add a comment..." maxlength="500" name="commentPlainText"></textarea>\
               <div class="text-end mt-1">\
                 <div id="comment-input-form-dynamic-submit-container">\
-                  <button id="comment-input-form-dynamic-cancel-button-inner" class="btn btn-outline-primary" type="button" data-commentformtype="dynamic">cancel</button>\
+                  <button id="comment-input-form-dynamic-cancel-button-inner" class="btn btn-outline-primary comment-input-form-dynamic-cancel-button" type="button" data-commentformtype="dynamic">cancel</button>\
                   <button class="btn btn-outline-primary" type="submit">submit</button>\
                   <div id="comment-input-form-dynamic-error-message"></div>\
                 </div>\
@@ -1445,13 +1475,9 @@ body {
             this.loadVideo(this.INCOMING_PARAMETERS.videoData.video);
             this.loadTags(this.INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos);
             this.loadRecommendedVideos(this.INCOMING_PARAMETERS.recommendedVideosData.recommendedVideos, true);
-            this.loadComments(this.INCOMING_PARAMETERS.commentsData.comments, false);
+            this.COMMENT_READY=this.loadInitialComments();
             $('#video-poster').attr('src', this.EXTERNAL_VIDEOS_BASE_URL + '/external/videos/' + this.VIDEO_ID + '/images/poster.jpg');
-            if (this.HASH_VALUE !== '') {
-              if ($(this.HASH_VALUE + ' .postNum a:first-child').length) {
-                $(this.HASH_VALUE + ' .postNum a:first-child')[0].click();
-              }
-            }
+
             this.refreshTextAreas();
           }
           if (window.ethereum != null) {
@@ -1462,6 +1488,8 @@ body {
 
           // Set up event listeners for UI interactions
           this.setupEventListeners();
+          const initialCommentId=window.location.hash.match(/^#p(\d+)$/)?.[1];
+          if(this.VIDEO_ID && initialCommentId)void Promise.resolve(this.COMMENT_READY).then(()=>this.navigateToComment(initialCommentId));
         }
 
         setupEventListeners() {
@@ -1475,7 +1503,7 @@ body {
           $('#video-share-button').off('click').on('click', () => this.shareVideo());
           $('#video-donate-button').off('click').on('click', () => this.donateVideo());
           $('#video-download-button').off('click').on('click', () => this.downloadVideo());
-          $('#video-report-button').off('click').on('click', () => this.showVideoReportModal());
+          $('#video-report-button').off('click').on('click', () => { if (this.VIDEO_CAN_REPORT !== false) this.showVideoReportModal(); });
 
           // Comment section
           $('#expand-comment-section').off('click').on('click', () => this.openCommentSection());
@@ -1487,6 +1515,7 @@ body {
 
           // Dynamic comment elements (delegated events)
           $(document).off('click', '.comment-report-button').on('click', '.comment-report-button', (e) => {
+            if (this.VIDEO_CAN_REPORT === false) return;
             const commentId = $(e.target).data('comment-id');
             const timestamp = $(e.target).data('timestamp');
             this.showCommentReportModal(commentId, timestamp);
@@ -1495,13 +1524,21 @@ body {
           $(document).off('click', '.quotelink').on('click', '.quotelink', (e) => {
             e.preventDefault();
             const commentId = $(e.target).data('comment-id');
-            this.quote(commentId);
+            void this.navigateToComment(commentId);
           });
 
-          // Comment form cancel button (complex jQuery inline handler)
-          $(document).off('click', '#comment-input-form-dynamic-cancel-button-inner').on('click', '#comment-input-form-dynamic-cancel-button-inner', function() {
-            $('#comment-input-form-dynamic').remove();
-            $(this).parent().parent().parent().find('textarea').val('');
+          $(document).off('click', '.postNum a[href^="#p"]').on('click', '.postNum a[href^="#p"]', e => {
+            e.preventDefault();
+            const commentId=e.currentTarget.getAttribute('href').match(/^#p(\d+)$/)?.[1];
+            if(commentId)void this.navigateToComment(commentId);
+          });
+
+          $(document).off('click', '.comment-quote-button').on('click', '.comment-quote-button', e => {e.preventDefault();this.quote($(e.currentTarget).data('comment-id'));});
+
+          $(document).off('click', '.comment-input-form-dynamic-cancel-button').on('click', '.comment-input-form-dynamic-cancel-button', event => {
+            const restore=this.preserveCommentPosition();
+            $(event.currentTarget).closest('.comment-input-form-contextual').remove();
+            restore();
           });
 
           // Comment form submission
@@ -1547,7 +1584,7 @@ body {
         loadTags(recommendedVideos) {
           const tags = [];
           recommendedVideos.forEach(recommendedVideo => {
-            const tagsArray = recommendedVideo.tags.split(',');
+            const tagsArray = (recommendedVideo.tags ?? '').split(',');
             tagsArray.forEach(tag => {
               if (!tags.includes(tag)) {
                 tags.push(tag);
@@ -1555,7 +1592,8 @@ body {
             });
           });
           tags.forEach(tag => {
-            $('#recommended-videos-tag-slider').append('<div class="keen-slider__slide number-slide2"><button type="button" class="btn btn-outline-primary recommendation-category-button" data-tagterm="' + tag + '" style="white-space: nowrap;">' + tag + '</button></div>');
+            const button = $('<button type="button" class="btn btn-outline-primary recommendation-category-button" style="white-space: nowrap;"></button>').attr('data-tagterm',tag).text(tag);
+            $('#recommended-videos-tag-slider').append($('<div class="keen-slider__slide number-slide2"></div>').append(button));
           });
           const recommendationsSlider = new KeenSlider("#recommended-videos-tag-slider", {
             loop: false,
@@ -1585,9 +1623,9 @@ body {
           this.clearTimestampUpdateTracker();
           recommendedVideos.forEach(recommendedVideo => {
             if (updateCache) {
-              const tagsArray = recommendedVideo.tags.split(',');
+              const tagsArray = (recommendedVideo.tags ?? '').split(',');
               tagsArray.forEach(tag => {
-                if (!this.RECOMMENDED_VIDEOS_TAGS_CACHE.hasOwnProperty(tag)) {
+                if (!Object.hasOwn(this.RECOMMENDED_VIDEOS_TAGS_CACHE,tag)) {
                   this.RECOMMENDED_VIDEOS_TAGS_CACHE[tag] = [recommendedVideo];
                 } else {
                   this.RECOMMENDED_VIDEOS_TAGS_CACHE[tag].push(recommendedVideo);
@@ -1621,26 +1659,30 @@ body {
           }
           const element = $(
             '<li class="list-group-item ps-0 pe-0 mt-2 video-recommendation-card border-0">\
-              <a href="/watch?v=' + videoId + '" class="text-decoration-none">\
+              <a class="text-decoration-none">\
                 <div class="card video-recommendation-card border-0">\
                   <div class="row g-0 position-relative">\
                     <div class="col-6 position-relative">\
                       <div class="position-relative">\
-                        <img src="' + this.EXTERNAL_VIDEOS_BASE_URL + '/external/videos/' + videoId + '/images/preview.jpg" class="rounded ratio ratio-16x9" alt="..."/>\
+                        <img class="rounded ratio ratio-16x9" alt="..."/>\
                         <i class="video-streaming-timestamp">' + durationFormatted + '</i>\
                         ' + liveStreamIndicator + '\
                       </div>\
                     </div>\
                     <div class="col-6">\
                       <div class="h-100 ms-1">\
-                        <span class="video-recommendation-card-text" style="overflow: hidden;text-overflow: ellipsis;white-space: normal;-webkit-line-clamp: 2;display: -webkit-box;-webkit-box-orient: vertical;font-weight: 500;font-family: &quot;Roboto&quot;,&quot;Arial&quot;,sans-serif;">' + title + '</span>\
-                        <small class="video-recommendation-card-text"><span id="recommended-video-info-views-' + videoId + '">' + viewsFormatted + '</span> &#x2022 <span class="video-info-timestamp"></span></small>\
+                        <span class="video-recommendation-card-text" style="overflow: hidden;text-overflow: ellipsis;white-space: normal;-webkit-line-clamp: 2;display: -webkit-box;-webkit-box-orient: vertical;font-weight: 500;font-family: &quot;Roboto&quot;,&quot;Arial&quot;,sans-serif;"></span>\
+                        <small class="video-recommendation-card-text"><span class="recommended-video-info-views"></span> &#x2022 <span class="video-info-timestamp"></span></small>\
                       </div>\
                     </div>\
                   </div>\
                 </div>\
               </a>\
             </li>');
+          element.find('a').attr('href','/watch?v='+encodeURIComponent(videoId));
+          element.find('img').attr('src',this.EXTERNAL_VIDEOS_BASE_URL+'/external/videos/'+encodeURIComponent(videoId)+'/images/preview.jpg');
+          element.find('.video-recommendation-card-text').first().text(title);
+          element.find('.recommended-video-info-views').attr('id','recommended-video-info-views-'+videoId).text(viewsFormatted);
           $('#recommended-videos-list').append(element);
           this.applyTimestampUpdateTrackerToVideo(element, creationTimestamp, isStreaming);
         }
@@ -1697,7 +1739,7 @@ body {
             } else {
               this.setAttribute("style", "height:30px;overflow-y:hidden;resize:none;");
             }
-          }).on("input", function () {
+          }).off("input.commentAutosize").on("input.commentAutosize", function () {
             this.style.height = 0;
             this.style.height = (this.scrollHeight) + "px";
           });
@@ -1713,13 +1755,20 @@ body {
           const isPublishing = video.isPublishing;
           const isLive = video.isLive;
           const isStreaming = video.isStreaming;
+          this.COMMENT_CAN_POST = video.isCommentsEnabled !== false;
+          this.VIDEO_CAN_REPORT = video.isReportsEnabled !== false;
+          $('#video-like-button').prop('disabled',video.isLikesEnabled === false);
+          $('#video-dislike-button').prop('disabled',video.isDislikesEnabled === false);
+          $('#video-report-button').attr('aria-disabled',String(!this.VIDEO_CAN_REPORT)).attr('tabindex',this.VIDEO_CAN_REPORT ? '0' : '-1');
+          $('#comment-input-form-static textarea, #comment-input-form-static :submit').prop('disabled',!this.COMMENT_CAN_POST);
+          $('#comment-input-form-static-error-message').text(this.COMMENT_CAN_POST ? '' : 'New comments are disabled for this video.');
           const isStreamed = video.isStreamed;
           const creationTimestamp = video.creationTimestamp;
           const adaptiveSources = video.adaptiveSources;
           const progressiveSources = video.progressiveSources;
           this.DOWNLOADABLE_SOURCES = progressiveSources;
           this.IS_STREAMING = isStreaming;
-          if (isStreaming) {
+          if (isStreaming && video.isLiveChatEnabled !== false) {
             this.connectWebsocket();
           }
           document.title = title + ' - MoarTube';
@@ -1938,6 +1987,7 @@ body {
           const outerheight = $(chatMessagesContainer).outerHeight();
           const isScrolledBottom = (scrollheight - scrollTop - outerheight) <= 100;
           $(chatMessages).append(chatMessageElement);
+          MoarTubeMemory.pruneChildren(chatMessages[0], 500);
           if (isScrolledBottom || forceScrollBottom) {
             $(chatMessagesContainer).scrollTop(scrollheight);
           }
@@ -1984,16 +2034,23 @@ body {
 
         handleCommentSubmit(event, form) {
           event.preventDefault();
+          if (this.COMMENT_CAN_POST === false) return;
+          if(this.COMMENT_POST_PENDING || this.COMMENT_SUSPENDED)return;
           const commentFormType = $(form).data('commentformtype');
           const commentPlainText = $(form).find('textarea[name="commentPlainText"]').val();
           if (commentPlainText !== '') {
+            this.COMMENT_POST_PENDING=true;
+            const lifecycle=this.COMMENT_LIFECYCLE;
             this.disableFormInputs($(form), '...please wait...');
             this.getCloudflareTurnstileToken().then(cloudflareTurnstileToken => {
-              $.ajax({
+              if(this.COMMENT_SUSPENDED || this.COMMENT_LIFECYCLE!==lifecycle)return;
+              const totalVersion=this.COMMENT_TOTAL_VERSION;
+              this.COMMENT_POST_REQUEST = $.ajax({
                 type: 'POST',
                 url: '/videos/' + this.VIDEO_ID + '/comments/comment',
                 data: JSON.stringify({ commentPlainText: commentPlainText, timestamp: this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP, cloudflareTurnstileToken: cloudflareTurnstileToken }),
                 contentType: 'application/json; charset=utf-8',
+                timeout:15000,
               })
                 .done(data => {
                   if (data.isError) {
@@ -2004,17 +2061,24 @@ body {
                     } else if (commentFormType === 'static') {
                       $(form).find('textarea[name="commentPlainText"]').val('');
                     }
+                    this.clearCommentHighlights();
                     const commentId = data.commentId;
+                    this.COMMENT_STATE_CHECKED_AT = 0;
                     const comments = data.comments;
-                    this.loadComments(comments, true);
+                    const countNew=!Number.isSafeInteger(data.totalCount);
+                    this.loadComments(comments,true,'newer',Boolean(data.refreshIncomplete),countNew);
+                    if(data.comment && !this.COMMENT_ELEMENT_CACHE[data.comment.commentId])this.loadComments([data.comment],true,'newer',true,countNew);
+                    this.COMMENT_ELEMENT_CACHE[commentId]?.find('.post.reply').addClass('new-comment-highlight');
+                    this.updateCommentTotal(data.totalCount,totalVersion);
                   }
                   this.enableFormInputs($(form), 'submit');
                 })
-                .fail(() => {
-                  this.showAlert(true, 'unable to submit comment, please try again later');
+                .fail((_request,reason) => {
+                  if(reason!=='abort')this.showAlert(true, 'unable to submit comment, please try again later');
                   this.enableFormInputs($(form), 'submit');
-                });
+                }).always(()=>{this.COMMENT_POST_REQUEST=null;});
             }).catch(error => {
+              if(this.COMMENT_SUSPENDED || this.COMMENT_LIFECYCLE!==lifecycle)return;
               console.log(error);
               this.showAlert(true, 'Human verification failed. Please try again.');
               this.enableFormInputs($(form), 'submit');
@@ -2023,63 +2087,983 @@ body {
         }
 
         disableFormInputs(form, buttonText) {
-          form.find(':submit').prop('disabled', true);
+          form.find(':submit, .comment-input-form-dynamic-cancel-button').prop('disabled', true);
           form.find('textarea[name="commentPlainText"]').prop('disabled', true);
           form.find(':submit').html(buttonText);
         }
 
         enableFormInputs(form, buttonText) {
-          form.find(':submit').prop('disabled', false);
-          form.find('textarea[name="commentPlainText"]').prop('disabled', false);
+          this.COMMENT_POST_PENDING = false;
+          form.find(':submit, .comment-input-form-dynamic-cancel-button').prop('disabled', false);
+          form.find('textarea[name="commentPlainText"]').prop('disabled', this.COMMENT_CAN_POST === false);
+          if (this.COMMENT_CAN_POST === false) form.find(':submit').prop('disabled',true);
           form.find(':submit').html(buttonText);
         }
 
-        loadComments(comments, highlight) {
-          const commentsContainer = $('#comments-container');
-          commentsContainer.find('.post.reply').removeClass('new-comment-highlight');
-          if (comments.length > 0) {
-            $('.comments-navigation-button').removeClass('hidden-elem');
-            const commentSectionCounter = $('#comment-section-counter');
-            const commentSectionCounterDescriptor = $('#comment-section-counter-descriptor');
-            const expandCommentSectionCounter = $('#expand-comment-section-counter');
-            const expandCommentSectionCounterDescriptor = $('#expand-comment-section-counter-descriptor');
-            commentSectionCounter.text(parseInt($(commentSectionCounter).text()) + comments.length);
-            expandCommentSectionCounter.text(parseInt($(expandCommentSectionCounter).text()) + comments.length);
-            if (parseInt($(commentSectionCounter).text()) === 1) {
-              commentSectionCounterDescriptor.text('Comment');
-            } else {
-              commentSectionCounterDescriptor.text('Comments');
+        async loadInitialComments() {
+          // The HTML carries a small revision marker, never another copy of cached bodies.
+          const store = this.commentStore();
+          await store.ready;
+          try {
+            const state = this.INCOMING_PARAMETERS.commentsData.cdnEnabled
+              ? await this.readCommentState()
+              : { epoch: this.INCOMING_PARAMETERS.commentsData.cacheEpoch, version: this.INCOMING_PARAMETERS.commentsData.cacheVersion };
+            const epoch = state.epoch;
+            if (Number.isSafeInteger(state.totalCount)) {
+              this.updateCommentTotal(state.totalCount);
             }
-            if (parseInt($(expandCommentSectionCounter).text()) === 1) {
-              expandCommentSectionCounterDescriptor.html('Comment');
-            } else {
-              expandCommentSectionCounterDescriptor.html('Comments');
+            if (store.epoch !== epoch) {
+              await store.serial;
+              await store.clear();
+              store.epoch = epoch;
             }
-            comments.forEach((comment) => {
-              const commentId = comment.commentId;
-              const commentPlainTextSanitized = comment.commentPlainTextSanitized;
-              const timestamp = comment.timestamp;
-              if (timestamp > this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP) {
-                this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP = timestamp;
-              }
-              const formattedDate = this.getCreationTimestampFormatted(timestamp);
-              const commentTextHtml = this.convertCommentToHTML(commentPlainTextSanitized);
-              const replyToCommentIds = this.extractReplyToCommentIds(commentPlainTextSanitized);
-              const commentElement = this.generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, highlight);
-              this.COMMENT_ELEMENT_CACHE[commentId] = commentElement;
-              for (const replyToCommentId of replyToCommentIds) {
-                if (this.COMMENT_ELEMENT_CACHE.hasOwnProperty(replyToCommentId)) {
-                  $(this.COMMENT_ELEMENT_CACHE[replyToCommentId]).find('#bl_' + replyToCommentId).append('<a href="#p' + commentId + '" class="quotelink">&gt;&gt;' + commentId + '</a> ');
-                  this.attachQuotelinkListeners(this.COMMENT_ELEMENT_CACHE[replyToCommentId]);
-                }
-              }
-              $(commentsContainer).prepend(commentElement);
-              this.attachQuotelinkListeners(commentElement);
+            if (
+              store.version !== undefined &&
+              store.version !== state.version
+            )
+              await this.syncCommentCache(false);
+            if (store.version === undefined) {
+              store.version = state.version;
+              await this.cacheComments([]);
+            }
+            const result = await this.getCachedCommentPage({
+              timestamp: 32503680000000,
+              beforeId: Number.MAX_SAFE_INTEGER,
+              type: 'before',
+              sort: 'descending',
             });
+            this.COMMENT_HAS_MORE = result.hasMore;
+            this.COMMENT_INITIAL_CACHED = true;
+            this.loadComments(result.comments, false);
+          } catch {
+            this.setupCommentScrolling();
+            this.COMMENT_BOTTOM.replaceChildren();
+            const retry = document.createElement('button');
+            retry.className = 'btn btn-outline-primary';
+            retry.textContent = 'Retry loading comments';
+            retry.onclick = () => void this.loadInitialComments();
+            this.COMMENT_BOTTOM.append(retry);
+          }
+        }
+      
+        commentStore() {
+          if (this.COMMENT_STORE) return this.COMMENT_STORE;
+          this.COMMENT_STORE = new (class {
+            constructor(video) {
+              this.video = video;
+              this.memory = new Map();
+              this.memoryRanges = [];
+              this.memoryGeneration = 0;
+              this.pendingWrites = new Map();
+              this.writeQueue = [];
+              this.writing = false;
+              this.ranges = [];
+              this.pending = new Map();
+              this.serial = Promise.resolve();
+              this.ready = new Promise((resolve) => {
+                let request;
+                try {
+                  request = indexedDB.open('moartube-comments-v1', 2);
+                } catch {
+                  resolve(null);
+                  return;
+                }
+                request.onupgradeneeded = (event) => {
+                  const db = request.result;
+                  const comments =
+                    event.oldVersion === 0
+                      ? db.createObjectStore('comments', { keyPath: ['video', 'commentId'] })
+                      : request.transaction.objectStore('comments');
+                  if (event.oldVersion === 0) {
+                    comments.createIndex('order', ['video', 'timestamp', 'commentId']);
+                    db.createObjectStore('state', { keyPath: 'video' });
+                    db.createObjectStore('replies', { keyPath: ['video', 'id', 'cursor'] });
+                  }
+                  comments.createIndex('descending', ['video', 'sortTimestamp', 'sortId']);
+                  if (event.oldVersion > 0) {
+                    const cursor = comments.openCursor();
+                    cursor.onsuccess = () => {
+                      const c = cursor.result;
+                      if (c) {
+                        c.update({
+                          ...c.value,
+                          sortTimestamp: -c.value.timestamp,
+                          sortId: -c.value.commentId,
+                        });
+                        c.continue();
+                      }
+                    };
+                  }
+                };
+                request.onerror = request.onblocked = () => resolve(null);
+                request.onsuccess = () => {
+                  const db = request.result;
+                  db.onversionchange = () => db.close();
+                  resolve(db);
+                };
+              }).then(async (db) => {
+                this.db = db;
+                if (db)
+                  try {
+                    const states = await this.operation(['state'], 'readonly', (tx) =>
+                      tx.objectStore('state').getAll(),
+                    );
+                    const old = states
+                      .filter((s) => s.video !== video)
+                      .sort((a, b) => b.saved - a.saved)
+                      .filter((s, i) => i >= 19 || Date.now() - s.saved >= 7 * 86400000);
+                    if (old.length)
+                      await this.operation(['comments', 'state', 'replies'], 'readwrite', (tx) => {
+                        for (const state of old) {
+                          tx.objectStore('comments').delete(
+                            IDBKeyRange.bound([state.video, 0], [state.video, Number.MAX_SAFE_INTEGER]),
+                          );
+                          tx.objectStore('replies').delete(
+                            IDBKeyRange.bound(
+                              [state.video, 0, 0],
+                              [state.video, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+                            ),
+                          );
+                          tx.objectStore('state').delete(state.video);
+                        }
+                      });
+                    const state = await this.operation(['state'], 'readonly', (tx) =>
+                      tx.objectStore('state').get(video),
+                    );
+                    if (state && Date.now() - state.saved < 7 * 86400000) {
+                      this.ranges = state.ranges;
+                      this.version = state.version;
+                      this.epoch = state.epoch;
+                      this.closedHead = state.closedHead;
+                      this.hasIsolated = state.hasIsolated;
+                    } else {
+                      const fresh = new Map(this.memory);
+                      await this.clear();
+                      this.memory = fresh;
+                    }
+                  } catch (error) {
+                    this.storageError = String(error);
+                    this.db?.close();
+                    this.db = null;
+                  }
+              });
+            }
+            operation(stores, mode, action) {
+              return new Promise((resolve, reject) => {
+                let tx, result;
+                try {
+                  tx = this.db.transaction(stores, mode);
+                  tx.oncomplete = () => resolve(result?.result);
+                  tx.onerror = tx.onabort = () => reject(tx.error);
+                  result = action(tx);
+                } catch (error) {
+                  try {
+                    tx?.abort();
+                  } catch {}
+                  reject(error);
+                }
+              });
+            }
+            remember(row) {
+              this.memory.delete(row.commentId);
+              this.memory.set(row.commentId, row);
+              while (this.memory.size > 500) {
+                this.memory.delete(this.memory.keys().next().value);
+                this.memoryRanges = [];
+                this.memoryGeneration++;
+                if (!this.db) this.ranges = [];
+              }
+            }
+            mergeRanges(ranges, range) {
+              if (range) ranges.push(range.map((point) => [...point]));
+              ranges.sort((a, b) => this.compare(a[0], b[0]));
+              return ranges.reduce((out, r) => {
+                const last = out[out.length - 1];
+                if (last && this.compare(r[0], last[1]) <= 0) {
+                  if (this.compare(r[1], last[1]) > 0) last[1] = r[1];
+                } else out.push(r);
+                return out;
+              }, []);
+            }
+            put(rows, range = null, memoryCoverage = true) {
+              const changed = rows.filter((row) => this.memory.get(row.commentId) !== row);
+              for (const row of rows) this.remember(row);
+              const generation = this.memoryGeneration;
+              const prepared = this.ready.then(() => {
+                this.ranges = this.mergeRanges(this.ranges, range);
+                if (
+                  (typeof memoryCoverage === 'function' ? memoryCoverage() : memoryCoverage) &&
+                  generation === this.memoryGeneration
+                )
+                  this.memoryRanges = this.mergeRanges(this.memoryRanges, range);
+                // Snapshot coverage with its body batch so a later write cannot advertise
+                // records which have not committed yet.
+                return {
+                  video: this.video,
+                  ranges: this.ranges.map((r) => r.map((p) => [...p])),
+                  version: this.version,
+                  epoch: this.epoch,
+                  closedHead: this.closedHead,
+                  hasIsolated: this.hasIsolated,
+                  saved: Date.now(),
+                };
+              });
+              let finish;
+              const completion = new Promise((resolve) => {
+                finish = resolve;
+              });
+              this.serial = Promise.all([this.serial, completion]).then(() => {});
+              for (const row of changed) this.pendingWrites.set(row.commentId, completion);
+              prepared.then((state) => {
+                this.writeQueue.push({ state, rows: changed, finish });
+                void this.flushWrites();
+              });
+              completion.then(() => {
+                for (const row of changed)
+                  if (this.pendingWrites.get(row.commentId) === completion)
+                    this.pendingWrites.delete(row.commentId);
+              });
+              return prepared;
+            }
+            async flushWrites() {
+              if (this.writing) return;
+              this.writing = true;
+              while (this.writeQueue.length) {
+                // Coalesce pending batches into one transaction and one durable commit.
+                await new Promise((resolve) => setTimeout(resolve, 0));
+                const batch = this.writeQueue.splice(0),
+                  rows = new Map();
+                for (const item of batch) for (const row of item.rows) rows.set(row.commentId, row);
+                if (this.db)
+                  try {
+                    await this.operation(['comments', 'state'], 'readwrite', (tx) => {
+                      for (const row of rows.values())
+                        tx.objectStore('comments').put({
+                          ...row,
+                          video: this.video,
+                          sortTimestamp: -row.timestamp,
+                          sortId: -row.commentId,
+                        });
+                      tx.objectStore('state').put(batch[batch.length - 1].state);
+                    });
+                  } catch (error) {
+                    this.storageError = String(error);
+                    this.db?.close();
+                    this.db = null;
+                    this.ranges = [];
+                  }
+                for (const item of batch) item.finish();
+              }
+              this.writing = false;
+            }
+            compare(a, b) {
+              return a[0] - b[0] || a[1] - b[1];
+            }
+            point(row) {
+              return [row.timestamp, row.commentId];
+            }
+            async clear() {
+              this.memory.clear();
+              this.memoryRanges = [];
+              this.memoryGeneration++;
+              this.ranges = [];
+              this.version = undefined;
+              this.epoch = undefined;
+              this.closedHead = undefined;
+              if (this.db)
+                await this.operation(['comments', 'state', 'replies'], 'readwrite', (tx) => {
+                  tx.objectStore('replies').delete(
+                    IDBKeyRange.bound(
+                      [this.video, 0, 0],
+                      [this.video, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+                    ),
+                  );
+                  tx.objectStore('comments').delete(
+                    IDBKeyRange.bound([this.video, 0], [this.video, Number.MAX_SAFE_INTEGER]),
+                  );
+                  tx.objectStore('state').delete(this.video);
+                });
+            }
+            async get(id) {
+              if (this.memory.has(id)) return this.memory.get(id);
+              await this.ready;
+              if (this.pendingWrites.has(id)) await this.pendingWrites.get(id);
+              if (this.memory.has(id)) return this.memory.get(id);
+              if (this.db)
+                try {
+                  const row = await this.operation(['comments'], 'readonly', (tx) =>
+                    tx.objectStore('comments').get([this.video, id]),
+                  );
+                  if (row) this.remember(row);
+                  return row;
+                } catch (error) {
+                  this.storageError = String(error);
+                  this.db = null;
+                  this.ranges = [];
+                }
+            }
+            async remove(ids) {
+              await this.serial;
+              await this.ready;
+              for (const id of ids) this.memory.delete(id);
+              if (this.db)
+                try {
+                  await this.operation(['comments'], 'readwrite', (tx) => {
+                    for (const id of ids) tx.objectStore('comments').delete([this.video, id]);
+                  });
+                } catch {
+                  this.db = null;
+                  this.ranges = [];
+                }
+            }
+            async knownIds(cursor) {
+              await this.ready;
+              const before = cursor.type === 'before',
+                point = [cursor.timestamp, cursor.beforeId ?? cursor.afterId ?? 0];
+              let rows = [];
+              if (this.hasIsolated && this.db)
+                try {
+                  await Promise.all(
+                    [...this.pendingWrites]
+                      .filter(([id]) => !this.memory.has(id))
+                      .map(([, promise]) => promise),
+                  );
+                  const low = before ? [-point[0], -point[1]] : point,
+                    high = before ? [0, 0] : [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER];
+                  rows = await this.operation(['comments'], 'readonly', (tx) =>
+                    tx
+                      .objectStore('comments')
+                      .index(before ? 'descending' : 'order')
+                      .getAll(
+                        IDBKeyRange.bound([this.video, ...low], [this.video, ...high], true, false),
+                        100,
+                      ),
+                  );
+                } catch {
+                  this.db = null;
+                  this.ranges = [];
+                }
+              const candidates = new Map(rows.map((row) => [row.commentId, row]));
+              for (const row of this.memory.values()) candidates.set(row.commentId, row);
+              return [...candidates.values()]
+                .filter((row) => (before ? -1 : 1) * this.compare(this.point(row), point) > 0)
+                .sort((a, b) => (before ? -1 : 1) * this.compare(this.point(a), this.point(b)))
+                .slice(0, 100)
+                .map((row) => row.commentId);
+            }
+      
+            async page(cursor) {
+              await this.ready;
+              const before = cursor.type === 'before',
+                point = [cursor.timestamp, cursor.beforeId ?? cursor.afterId ?? 0];
+              const range = this.ranges.find(
+                (r) => this.compare(r[0], point) <= 0 && this.compare(r[1], point) >= 0,
+              );
+              if (!range) return null;
+              const boundary = before ? range[0] : range[1];
+              if (this.compare(boundary, point) === 0) return { partial: true, frontier: boundary };
+              const memoryRange = this.memoryRanges.find(
+                (r) => this.compare(r[0], point) <= 0 && this.compare(r[1], point) >= 0,
+              );
+              const fromMemory = (span) =>
+                [...this.memory.values()]
+                  .filter((row) => {
+                    const p = this.point(row),
+                      delta = this.compare(p, point);
+                    return (
+                      (before ? delta < 0 : delta > 0) &&
+                      this.compare(p, span[0]) >= 0 &&
+                      this.compare(p, span[1]) <= 0
+                    );
+                  })
+                  .sort((a, b) => (before ? -1 : 1) * this.compare(this.point(a), this.point(b)))
+                  .slice(0, 101);
+              if (memoryRange) {
+                const rows = fromMemory(memoryRange),
+                  end = before ? memoryRange[0] : memoryRange[1],
+                  complete =
+                    this.compare(
+                      end,
+                      before ? [0, 0] : [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+                    ) === 0;
+                if (rows.length >= 100 || complete)
+                  return { comments: rows.slice(0, 100), hasMore: rows.length > 100 || !complete };
+                if (this.compare(end, boundary) === 0) return { partial: true, frontier: boundary };
+              }
+              let rows = [];
+              if (this.db)
+                try {
+                  await this.serial;
+                  const low = before ? [-point[0], -point[1]] : point,
+                    high = before ? [-range[0][0], -range[0][1]] : range[1];
+                  rows = await this.operation(['comments'], 'readonly', (tx) =>
+                    tx
+                      .objectStore('comments')
+                      .index(before ? 'descending' : 'order')
+                      .getAll(
+                        IDBKeyRange.bound([this.video, ...low], [this.video, ...high], true, false),
+                        101,
+                      ),
+                  );
+                  for (const row of rows) this.remember(row);
+                } catch (error) {
+                  this.storageError = String(error);
+                  this.db?.close();
+                  this.db = null;
+                  this.ranges = [];
+                  return null;
+                }
+              else rows = fromMemory(range);
+              const end = before ? range[0] : range[1],
+                complete =
+                  this.compare(
+                    end,
+                    before ? [0, 0] : [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+                  ) === 0;
+              if (rows.length < 100 && !complete) return { partial: true, frontier: end };
+              return { comments: rows.slice(0, 100), hasMore: rows.length > 100 || !complete };
+            }
+          })(this.VIDEO_ID);
+          return this.COMMENT_STORE;
+        }
+      
+        async cacheComments(comments, range = null, memoryCoverage = true) {
+          const store = this.commentStore();
+          await store.put(comments, range, memoryCoverage);
+        }
+      
+        async updateCachedParentReplies(comments, store, generation) {
+          for (const comment of comments)
+            for (const parentId of new Set(
+              this.extractReplyToCommentIds(comment.commentPlainTextSanitized),
+            )) {
+              const parent = await store.get(parentId);
+              if (generation !== store.generation) return;
+              if (parent && !parent.replyIds?.includes(comment.commentId)) {
+                if (
+                  parent.hasMoreReplies &&
+                  parent.replyIds?.length === 100 &&
+                  comment.commentId < parent.replyIds[99]
+                )
+                  continue;
+                const ids = [...new Set([...(parent.replyIds ?? []), comment.commentId])].sort(
+                  (a, b) => b - a,
+                );
+                await store.put([
+                  {
+                    ...parent,
+                    replyIds: ids.slice(0, 100),
+                    hasMoreReplies: parent.hasMoreReplies || ids.length > 100,
+                  },
+                ]);
+              }
+            }
+        }
+      
+        async getCachedReplyPage(id, beforeReplyId = null) {
+          await this.ensureCommentFreshness();
+          const store = this.commentStore(),
+            generation = store.generation;
+          await store.ready;
+          if (beforeReplyId === null) {
+            const row = await store.get(id);
+            if (generation !== store.generation) return this.getCachedReplyPage(id, beforeReplyId);
+            if (row?.replyIds) return { replyIds: row.replyIds, hasMore: row.hasMoreReplies };
+          }
+          const key = [this.VIDEO_ID, id, beforeReplyId ?? 0];
+          if (store.db)
+            try {
+              const page = await store.operation(['replies'], 'readonly', (tx) =>
+                tx.objectStore('replies').get(key),
+              );
+              if (page) return page.response;
+            } catch (error) {
+              store.storageError = String(error);
+              store.db?.close();
+              store.db = null;
+              store.ranges = [];
+            }
+          const response = await this.commentRequest(
+            '/videos/' + this.VIDEO_ID + '/comments/' + id + '/replies',
+            beforeReplyId === null ? {} : { beforeReplyId },
+          );
+          if (generation !== store.generation) return this.getCachedReplyPage(id, beforeReplyId);
+          if (store.db)
+            try {
+              await store.operation(['replies'], 'readwrite', (tx) =>
+                tx
+                  .objectStore('replies')
+                  .put({ video: this.VIDEO_ID, id, cursor: beforeReplyId ?? 0, response }),
+              );
+            } catch (error) {
+              store.storageError = String(error);
+              store.db?.close();
+              store.db = null;
+              store.ranges = [];
+            }
+          return response;
+        }
+      
+        async readCommentState(fresh = false) {
+          if (this.COMMENT_STATE_TASK) {
+            await this.COMMENT_STATE_TASK;
+            if (!fresh) return this.COMMENT_CDN_STATE;
+          }
+          this.COMMENT_STATE_TASK = (async () => {
+            let state = await this.commentRequest('/videos/' + this.VIDEO_ID + '/comments/state', fresh ? { fresh: '1' } : {});
+            const store = this.commentStore();
+            // An old edge must not roll a newer tab or a replaced database backwards.
+            if (!fresh && store.epoch !== undefined &&
+                (state.epoch !== store.epoch || state.version < (store.version ?? 0)))
+              state = await this.commentRequest('/videos/' + this.VIDEO_ID + '/comments/state', { fresh: '1' });
+            this.COMMENT_CDN_STATE = state;
+            this.COMMENT_STATE_CHECKED_AT = Date.now() - Math.min(30000, (state.cacheAge ?? 0) * 1000);
+            return state;
+          })();
+          try { return await this.COMMENT_STATE_TASK; }
+          finally { this.COMMENT_STATE_TASK = null; }
+        }
+
+        async ensureCommentFreshness() {
+          if (this.COMMENT_SYNC_TASK) await this.COMMENT_SYNC_TASK;
+          if (this.INCOMING_PARAMETERS.commentsData?.cdnEnabled &&
+              Date.now() - (this.COMMENT_STATE_CHECKED_AT ?? 0) >= 30000) {
+            const totalVersion = this.COMMENT_TOTAL_VERSION;
+            const result = await this.syncCommentCache(false);
+            this.updateCommentTotal(result?.totalCount, totalVersion);
           }
         }
 
-        generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, highlight) {
+        commentRequest(url, data = {}) {
+          if (this.INCOMING_PARAMETERS.commentsData?.cdnEnabled && this.COMMENT_CDN_STATE && !url.endsWith('/state')) {
+            data = { epoch: this.COMMENT_CDN_STATE.epoch, revision: this.COMMENT_CDN_STATE.version, ...data };
+          }
+          // Stable query ordering gives identical reads identical CDN cache keys.
+          data = Object.fromEntries(Object.entries(data).sort(([a], [b]) => a.localeCompare(b)));
+          const store = this.commentStore(),
+            key =
+              url +
+              '?' +
+              JSON.stringify(
+                Object.fromEntries(Object.entries(data).sort(([a], [b]) => a.localeCompare(b))),
+              );
+          if (store.pending.has(key)) return store.pending.get(key);
+          const promise = new Promise((resolve, reject) => {
+            $.ajax({ type: 'GET', url, data, timeout: 15000 })
+              .done((result, _status, response) => {
+                if (url.endsWith('/state')) result.cacheAge = Math.max(0, Number(response.getResponseHeader('Age')) || 0);
+                result.isError ? reject(new Error('Unable to load comments')) : resolve(result);
+              })
+              .fail((response) => reject(response));
+          }).finally(() => store.pending.delete(key));
+          store.pending.set(key, promise);
+          return promise;
+        }
+      
+        async getCachedComment(id) {
+          await this.ensureCommentFreshness();
+          const store = this.commentStore(),
+            generation = store.generation;
+          const cached = await store.get(Number(id));
+          if (generation !== store.generation) return this.getCachedComment(id);
+          if (cached) return { comment: cached };
+          const result = await this.commentRequest('/videos/' + this.VIDEO_ID + '/comments/' + id);
+          if (generation !== store.generation) return this.getCachedComment(id);
+          if (result.comment) {
+            store.hasIsolated = true;
+            await this.cacheComments([result.comment]);
+          }
+          return result;
+        }
+      
+        async getCachedCommentPage(cursor) {
+          // An isolated cached hover record never establishes history coverage.
+          for (;;) {
+            await this.ensureCommentFreshness();
+            const store = this.commentStore(),
+              generation = store.generation;
+            const cached = await store.page(cursor);
+            if (generation !== store.generation) continue;
+            if (cached && !cached.partial) return cached;
+            let query = cursor;
+            if (cached?.partial) {
+              const [timestamp, id] = cached.frontier;
+              query = { ...cursor, timestamp, [cursor.type === 'before' ? 'beforeId' : 'afterId']: id };
+            }
+            // Bound records awaiting disk persistence even if scrolling outpaces storage.
+            if (store.pendingWrites.size >= 500) await store.serial;
+            const knownIds = await store.knownIds(query);
+            if (knownIds.length) query = { ...query, knownIds: knownIds.join(',') };
+            const result = await this.commentRequest('/videos/' + this.VIDEO_ID + '/comments', query);
+            if (generation !== store.generation) continue;
+            const point =
+                query.timestamp === 32503680000000 && query.beforeId === Number.MAX_SAFE_INTEGER
+                  ? [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]
+                  : [query.timestamp, query.beforeId ?? query.afterId ?? 0],
+              rows = result.comments;
+            if (!rows.length && !result.commentIds?.length) result.hasMore = false;
+            const last = result.pageEnd ?? rows[rows.length - 1],
+              end = last ? [last.timestamp, last.commentId] : point;
+            const range =
+              query.type === 'before'
+                ? [result.hasMore ? end : [0, 0], point]
+                : [point, result.hasMore ? end : [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]];
+            await this.cacheComments(
+              rows,
+              range,
+              () => !result.commentIds || result.commentIds.every((id) => store.memory.has(id)),
+            );
+            if (!cached?.partial && !result.commentIds) return result;
+          }
+        }
+      
+        syncCommentCache(fresh = true) {
+          if (this.COMMENT_SYNC_TASK) {
+            if (fresh && !this.COMMENT_SYNC_FRESH)
+              return this.COMMENT_SYNC_TASK.then(() => this.syncCommentCache(true));
+            return this.COMMENT_SYNC_TASK;
+          }
+          this.COMMENT_SYNC_FRESH = fresh;
+          this.COMMENT_SYNC_TASK = this.performCommentCacheSync(fresh).finally(() => {
+            this.COMMENT_SYNC_TASK = null;
+          });
+          return this.COMMENT_SYNC_TASK;
+        }
+      
+        async performCommentCacheSync(fresh = true) {
+          const store = this.commentStore();
+          await store.ready;
+          if (this.INCOMING_PARAMETERS.commentsData?.cdnEnabled) {
+            const state = await this.readCommentState(fresh);
+            if (store.version === undefined) {
+              store.epoch = state.epoch;
+              store.version = state.version;
+              await this.cacheComments([]);
+            }
+            if (store.epoch === state.epoch && store.version === state.version)
+              return { totalCount: state.totalCount };
+          }
+          if (store.version === undefined) return;
+          store.generation = (store.generation ?? 0) + 1;
+          let result;
+          do {
+            result = await this.commentRequest('/videos/' + this.VIDEO_ID + '/comments/cache', {
+              since: store.version,
+              ...(store.epoch === undefined ? {} : { epoch: store.epoch }),
+            });
+            if (result.reset) {
+              await store.serial;
+              await store.clear();
+              for (const row of Object.values(this.COMMENT_ELEMENT_CACHE))
+                this.cancelCommentBacklinks(row[0]);
+              this.COMMENT_ELEMENT_CACHE = {};
+              $('#comments-container').empty();
+              this.removeCommentGap();
+              this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP = 0;
+              this.MOST_RECENT_VISIBLE_COMMENT_ID = 0;
+            }
+            await store.remove(result.deletedIds);
+            for (const id of result.deletedIds) {
+              const row = this.COMMENT_ELEMENT_CACHE[id];
+              if (row) {
+                this.cancelCommentBacklinks(row[0]);
+                row.remove();
+                delete this.COMMENT_ELEMENT_CACHE[id];
+              }
+            }
+            if (store.db)
+              try {
+                await store.operation(['replies'], 'readwrite', (tx) => {
+                  for (const row of result.comments)
+                    tx.objectStore('replies').delete(
+                      IDBKeyRange.bound(
+                        [this.VIDEO_ID, row.commentId, 0],
+                        [this.VIDEO_ID, row.commentId, Number.MAX_SAFE_INTEGER],
+                      ),
+                    );
+                });
+              } catch (error) {
+                store.storageError = String(error);
+                store.db = null;
+                store.ranges = [];
+              }
+            await this.cacheComments(result.comments);
+            store.epoch = result.epoch;
+            store.version = result.version;
+            if (this.COMMENT_CDN_STATE && !result.hasMore) {
+              this.COMMENT_CDN_STATE = { ...this.COMMENT_CDN_STATE, epoch: result.epoch, version: result.version, totalCount: result.totalCount };
+            }
+            await this.cacheComments([]);
+            for (const comment of result.comments) {
+              const row = this.COMMENT_ELEMENT_CACHE[comment.commentId];
+              if (row) {
+                row
+                  .data(
+                    'replyToCommentIds',
+                    this.extractReplyToCommentIds(comment.commentPlainTextSanitized),
+                  )
+                  .data('serverReplyIds', comment.replyIds)
+                  .data('replyHasMore', comment.hasMoreReplies)
+                  .data('replyBefore', null)
+                  .data('replyError', false)
+                  .data('replyLoaded', true);
+                row
+                  .find('.postMessage')
+                  .html(this.convertCommentToHTML(comment.commentPlainTextSanitized));
+                this.renderCommentBacklinks(row[0]);
+              }
+            }
+          } while (result.hasMore);
+          if (store.closedHead) {
+            const head = store.closedHead;
+            store.closedHead = undefined;
+            await this.cacheComments([], [head, [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]]);
+          }
+          return { totalCount: result.totalCount };
+        }
+      
+        commentDeferred(promise) {
+          const result = $.Deferred();
+          promise.then(
+            (value) => {
+              result.resolve(value);
+            },
+            (error) => {
+              result.reject(error, 'error');
+            },
+          );
+          return Object.assign(result.promise(), { abort: () => result.reject({}, 'abort') });
+        }
+
+        setupCommentScrolling() {
+          const container = document.getElementById('comments-container');
+          if (!container || this.COMMENT_OBSERVER) return;
+          container.style.overflowAnchor = 'none';
+          this.COMMENT_TOP = document.createElement('div');
+          this.COMMENT_BOTTOM = document.createElement('div');
+          this.COMMENT_TOP.style.minHeight = this.COMMENT_BOTTOM.style.minHeight = '1px';
+          this.COMMENT_TOP.id = 'comments-newer-sentinel';
+          this.COMMENT_BOTTOM.id = 'comments-older-sentinel';
+          this.COMMENT_BOTTOM.setAttribute('role', 'status');
+          this.COMMENT_REPLY_QUEUE=[];this.COMMENT_REPLY_QUEUED=new Set();this.COMMENT_REPLY_PENDING=new Map();
+          // Reply metadata comes with each batch; only explicit reply-page controls fetch more.
+          container.before(this.COMMENT_TOP);
+          container.after(this.COMMENT_BOTTOM);
+          this.COMMENT_OBSERVER = new IntersectionObserver(entries => {
+            for (const entry of entries) if (entry.isIntersecting && !entry.target.querySelector('button')) {
+              if (entry.target === this.COMMENT_GAP) this.loadCommentHistory('gap');
+              else if (entry.target === this.COMMENT_BOTTOM) this.loadOlderComments();
+              else if (this.COMMENT_HAS_NEWER) this.loadCommentHistory('newer');
+            }
+          }, {rootMargin: '100px 0px'});
+          this.COMMENT_OBSERVER.observe(this.COMMENT_TOP);
+          this.COMMENT_OBSERVER.observe(this.COMMENT_BOTTOM);
+          window.addEventListener('pagehide', () => {
+            this.clearCommentCenter();
+            this.cancelCommentNavigation();
+            this.COMMENT_SUSPENDED = true;
+            this.COMMENT_LIFECYCLE++;
+            this.COMMENT_OBSERVER.disconnect();
+            this.COMMENT_REPLY_QUEUE=[];this.COMMENT_REPLY_QUEUED.clear();
+            for(const request of this.COMMENT_REPLY_PENDING.values())request.abort();
+            this.COMMENT_REQUEST?.abort();
+            this.COMMENT_REFRESH_REQUEST?.abort();
+            this.COMMENT_POST_REQUEST?.abort();
+            this.clearCommentPreview();
+            clearTimeout(this.COMMENT_UPDATE_TIMER);
+            $('.comment-input-form').each((_,form)=>this.enableFormInputs($(form),'submit'));
+          });
+          window.addEventListener('resize',()=>{this.clearCommentPreview();this.clearCommentCenter();});
+          for(const event of ['wheel','touchstart','pointerdown','keydown'])window.addEventListener(event,()=>{this.clearCommentCenter();this.cancelCommentNavigation();},{passive:true});
+          window.addEventListener('pageshow', () => {
+            this.COMMENT_SUSPENDED = false;
+            this.observeCommentSentinels();
+          });
+        }
+
+        observeCommentSentinels() {
+          if (this.COMMENT_SUSPENDED) return;
+          for (const target of [this.COMMENT_TOP,this.COMMENT_BOTTOM,this.COMMENT_GAP]) if (target?.isConnected) {
+            this.COMMENT_OBSERVER.unobserve(target); this.COMMENT_OBSERVER.observe(target);
+          }
+          // A sentinel can become visible while a cache load is still pending.
+          // Recheck after layout so browsers cannot consume that intersection and stall.
+          cancelAnimationFrame(this.COMMENT_SENTINEL_FRAME);
+          this.COMMENT_SENTINEL_FRAME=requestAnimationFrame(()=>{
+            if(this.COMMENT_LOADING||this.COMMENT_NAVIGATION||this.COMMENT_SUSPENDED)return;
+            for(const [target,direction] of [[this.COMMENT_GAP,'gap'],[this.COMMENT_BOTTOM,'older'],[this.COMMENT_TOP,'newer']]){
+              if(target?.isConnected&&target.getClientRects().length&&!target.querySelector('button')&&this.commentIsVisible(target))this.loadCommentHistory(direction);
+              if(this.COMMENT_LOADING)break;
+            }
+          });
+        }
+
+        loadOlderComments() { this.loadCommentHistory('older'); }
+
+        loadCommentHistory(direction) {
+          if (this.COMMENT_NAVIGATION || this.COMMENT_SUSPENDED || this.COMMENT_LOADING || (direction === 'gap' ? !this.COMMENT_GAP : direction === 'older' ? !this.COMMENT_HAS_MORE : !this.COMMENT_HAS_NEWER)) return;
+          const container = document.getElementById('comments-container');
+          const edge = direction === 'gap' ? document.getElementById('pc' + this.COMMENT_GAP_CURSOR.id) : direction === 'older' ? container.lastElementChild : container.firstElementChild;
+          if (!edge) return;
+          this.COMMENT_LOADING = true;
+          const status = direction === 'gap' ? this.COMMENT_GAP : direction === 'older' ? this.COMMENT_BOTTOM : this.COMMENT_TOP;
+          status.textContent = 'Loading comments…';
+          const cursor = {timestamp:Number(edge.dataset.timestamp),type:direction !== 'newer' ? 'before' : 'after',sort:direction !== 'newer' ? 'descending' : 'ascending'};
+          cursor[direction !== 'newer' ? 'beforeId' : 'afterId'] = Number(edge.id.slice(2));
+          const failed = () => {
+            status.replaceChildren();
+            const retry = document.createElement('button');
+            retry.type = 'button'; retry.textContent = 'Retry loading comments';
+            retry.className = 'btn btn-outline-primary';
+            retry.onclick = () => this.loadCommentHistory(direction);
+            status.append(retry);
+          };
+          const requestedGap = this.COMMENT_GAP;
+          let succeeded = false;
+          this.COMMENT_REQUEST = this.commentDeferred(this.getCachedCommentPage(cursor))
+            .done(data => {
+              if (this.COMMENT_SUSPENDED || (direction === 'gap' && this.COMMENT_GAP !== requestedGap)) return;
+              if (data.isError) { failed(); return; }
+              succeeded = true;
+              status.replaceChildren();
+              if (direction === 'older') this.COMMENT_HAS_MORE = data.hasMore;
+              else if (direction === 'newer') this.COMMENT_HAS_NEWER = data.hasMore;
+              if (direction === 'gap') {
+                const end = this.COMMENT_GAP_END;
+                const withinGap = comment => comment.timestamp > end.timestamp || (comment.timestamp === end.timestamp && comment.commentId > end.id);
+                const comments = data.comments.filter(withinGap);
+                this.loadComments(comments, false, 'gap');
+                if (!comments.length || !data.hasMore || data.comments.some(comment => !withinGap(comment))) this.removeCommentGap();
+                else if (comments.length && this.COMMENT_GAP) {
+                  const last = comments[comments.length - 1];
+                  this.COMMENT_GAP_CURSOR = {id:last.commentId,timestamp:last.timestamp};
+                }
+              } else this.loadComments(data.comments, false, direction);
+            })
+            .fail((_request, reason) => { if (reason !== 'abort') failed(); else if(status.isConnected) status.replaceChildren(); })
+            .always(() => {
+              this.COMMENT_LOADING = false; this.COMMENT_REQUEST = null;
+              if (succeeded) requestAnimationFrame(() => {
+                this.observeCommentSentinels();
+              });
+            });
+        }
+
+        removeCommentGap() {
+          if (!this.COMMENT_GAP) return;
+          this.COMMENT_OBSERVER.unobserve(this.COMMENT_GAP);
+          this.COMMENT_GAP.remove();
+          this.COMMENT_GAP = null;
+        }
+
+        preserveCommentPosition() {
+          const container = document.getElementById('comments-container');
+          let scrollRoot = container.parentElement;
+          while (scrollRoot && (!/(auto|scroll)/.test(getComputedStyle(scrollRoot).overflowY) || scrollRoot.scrollHeight <= scrollRoot.clientHeight)) scrollRoot = scrollRoot.parentElement;
+          const root = !scrollRoot || scrollRoot === document.body || scrollRoot === document.documentElement ? document.scrollingElement : scrollRoot;
+          root.style.overflowAnchor = 'none';
+          const top = root === document.scrollingElement ? 0 : root.getBoundingClientRect().top;
+          // Keep a visible header/form stable instead of following a comment below it.
+          if(container.getBoundingClientRect().top>=top)return ()=>{};
+          const anchor = [...container.children].find(element => element.classList.contains('postContainer') && element.getBoundingClientRect().bottom > top);
+          const offset = anchor?.getBoundingClientRect().top;
+          return () => {
+            if (anchor?.isConnected) {
+              const delta=anchor.getBoundingClientRect().top-offset;
+              if (!delta) return;
+              if (root === document.scrollingElement) window.scrollTo({top:window.scrollY+delta,behavior:'instant'});
+              else root.scrollTo({top:root.scrollTop+delta,behavior:'instant'});
+            }
+          };
+        }
+
+        loadComments(comments, highlight, placement = 'newer', forceGap = false, countNew = true) {
+          if(highlight)this.cancelCommentNavigation();
+          let range=null;
+          if(!this.COMMENT_INITIAL_CACHED && comments.length) {
+            const oldest=comments.reduce((a,b)=>a.timestamp<b.timestamp||(a.timestamp===b.timestamp&&a.commentId<b.commentId)?a:b);
+            range=[this.COMMENT_HAS_MORE?[oldest.timestamp,oldest.commentId]:[0,0],[Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER]];
+            this.COMMENT_INITIAL_CACHED=true;
+          }
+          if(highlight && comments.length && !this.COMMENT_SYNC_LOADING) {
+            const high=[this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP,this.MOST_RECENT_VISIBLE_COMMENT_ID];
+            const store=this.commentStore();
+            void store.ready.then(()=>{for(const spans of [store.ranges,store.memoryRanges])for(const r of spans)if(r[1][0]===Number.MAX_SAFE_INTEGER){store.closedHead??=high;r[1]=[...high];}});
+          }
+          if(highlight){const store=this.commentStore();void store.ready.then(()=>{store.hasIsolated=true;});}
+          void this.cacheComments(comments,range);
+          if(highlight&&!this.COMMENT_SYNC_LOADING){const store=this.commentStore();void this.updateCachedParentReplies(comments,store,store.generation).catch(()=>{});}
+          this.setupCommentScrolling();
+          const restorePosition = this.preserveCommentPosition();
+          const commentsContainer = $('#comments-container');
+          const existingFirst = commentsContainer.children('.postContainer')[0];
+          const historyWasTrimmed = this.COMMENT_HAS_NEWER && !this.COMMENT_ELEMENT_CACHE[this.MOST_RECENT_VISIBLE_COMMENT_ID];
+          const ids = new Set(Object.keys(this.COMMENT_ELEMENT_CACHE));
+          const unique = comments.filter(comment => {const id=String(comment.commentId);if(ids.has(id))return false;ids.add(id);return true;});
+          if (highlight && unique.length) {this.clearCommentHighlights();this.COMMENT_REQUEST?.abort();}
+          unique.sort((a,b) => b.timestamp - a.timestamp || b.commentId - a.commentId);
+          if (placement === 'newer') unique.reverse();
+          for (const comment of unique) {
+            const {commentId,commentPlainTextSanitized,timestamp} = comment;
+            if (timestamp > this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP) {
+              this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP = timestamp;
+              this.MOST_RECENT_VISIBLE_COMMENT_ID = commentId;
+            } else if (timestamp === this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP) {
+              this.MOST_RECENT_VISIBLE_COMMENT_ID = Math.max(this.MOST_RECENT_VISIBLE_COMMENT_ID, commentId);
+            }
+            const element = this.generateCommentElement(commentId,timestamp,this.getCreationTimestampFormatted(timestamp),this.convertCommentToHTML(commentPlainTextSanitized),highlight,comment.replyIds,comment.hasMoreReplies);
+            element.data('replyPreview',false).data('replyToCommentIds',this.extractReplyToCommentIds(commentPlainTextSanitized));
+            this.COMMENT_ELEMENT_CACHE[commentId] = element;
+            const sibling=commentsContainer.children('.postContainer').toArray().find(row=>Number(row.dataset.timestamp)<timestamp||(Number(row.dataset.timestamp)===timestamp&&Number(row.id.slice(2))<commentId));
+            if(sibling)sibling.before(element[0]);else commentsContainer.append(element);
+            this.attachQuotelinkListeners(element);
+          }
+          if (placement === 'gap' && this.COMMENT_GAP && unique.length) {
+            const oldest=unique[unique.length-1];
+            this.COMMENT_GAP_CURSOR={id:oldest.commentId,timestamp:oldest.timestamp};
+            document.getElementById('pc'+oldest.commentId).after(this.COMMENT_GAP);
+          }
+          if (highlight && placement === 'newer' && unique.length && existingFirst && (historyWasTrimmed || forceGap) && !this.COMMENT_GAP) {
+            this.COMMENT_GAP = document.createElement('div');
+            this.COMMENT_GAP.style.minHeight = '1px';
+            this.COMMENT_GAP.setAttribute('role','status');
+            existingFirst.before(this.COMMENT_GAP);
+            const oldest = unique[0];
+            this.COMMENT_GAP_CURSOR = {id:oldest.commentId,timestamp:oldest.timestamp};
+            this.COMMENT_GAP_END = {id:Number(existingFirst.id.slice(2)),timestamp:Number(existingFirst.dataset.timestamp)};
+            this.COMMENT_OBSERVER.observe(this.COMMENT_GAP);
+          }
+          if (highlight && placement === 'newer' && unique.length) this.COMMENT_HAS_NEWER = false;
+          const elements = commentsContainer.children('.postContainer');
+          const removed = placement === 'older' ? elements.slice(0,Math.max(0,elements.length-500)) : elements.slice(500);
+          if (removed.length) {
+            if (placement === 'older') this.COMMENT_HAS_NEWER = true;
+            else this.COMMENT_HAS_MORE = true;
+            removed.each((_,element) => {delete this.COMMENT_ELEMENT_CACHE[element.id.slice(2)];this.cancelCommentBacklinks(element);element.remove();});
+          }
+          if (this.COMMENT_GAP && (!this.COMMENT_ELEMENT_CACHE[this.COMMENT_GAP_CURSOR.id] || !this.COMMENT_ELEMENT_CACHE[this.COMMENT_GAP_END.id])) this.removeCommentGap();
+          if(this.QUOTE_LINK && !this.QUOTE_LINK.isConnected)this.clearCommentPreview();
+          const localBacklinks=new Map();
+          for(const [id,element] of Object.entries(this.COMMENT_ELEMENT_CACHE))for(const parent of element.data('replyToCommentIds')){
+            if(!localBacklinks.has(parent))localBacklinks.set(parent,[]);
+            localBacklinks.get(parent).push(Number(id));
+          }
+          for(const [id,element] of Object.entries(this.COMMENT_ELEMENT_CACHE)){
+            this.renderCommentBacklinks(element[0],localBacklinks.get(Number(id))||[],false);
+
+          }
+          if (highlight && countNew && unique.length) {this.COMMENT_TOTAL += unique.length;this.COMMENT_TOTAL_VERSION++;}
+          const count = this.COMMENT_TOTAL;
+          $('#comment-section-counter, #expand-comment-section-counter').text(String(count));
+          $('#comment-section-counter-descriptor, #expand-comment-section-counter-descriptor').text(count === 1 ? 'Comment' : 'Comments');
+          if (count) $('.comments-navigation-button').removeClass('hidden-elem');
+          if (!unique.length && placement === 'older') this.COMMENT_HAS_MORE = false;
+          if (!unique.length && !highlight && placement === 'newer') this.COMMENT_HAS_NEWER = false;
+          restorePosition();
+          return unique.length;
+        }
+
+        generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, highlight, replyIds, hasMoreReplies = false) {
           const commentElement = $(
             '<div class="postContainer replyContainer" id="pc' + commentId + '" data-timestamp="' + timestamp + '">\
               <div id="p' + commentId + '" class="post reply">\
@@ -2090,7 +3074,7 @@ body {
                   </span>\
                   <span class="dateTime postNum">(' + formattedDate + ')\
                     <a href="#p' + commentId + '" title="Link to this post">No.</a>\
-                    <a class="quotelink" data-comment-id="' + commentId + '" title="Reply to this post">' + commentId + '</a>\
+                    <a class="comment-quote-button" data-comment-id="' + commentId + '" title="Reply to this post">' + commentId + '</a>\
                   </span>\
                 </div>\
                 <div class="postInfo desktop" id="pi' + commentId + '">\
@@ -2100,7 +3084,7 @@ body {
                   <span class="dateTime">(' + formattedDate + ')</span>\
                   <span class="postNum desktop">\
                     <a class="tests" href="#p' + commentId + '" title="Link to this post">No.</a>\
-                    <a class="quotelink" data-comment-id="' + commentId + '" title="Reply to this post">' + commentId + '</a>\
+                    <a class="comment-quote-button" data-comment-id="' + commentId + '" title="Reply to this post">' + commentId + '</a>\
                   </span>\
                   <a class="postMenuBtn" title="Post menu" role="button" data-cmd="post-menu" data-bs-toggle="dropdown" aria-expanded="false" id="comment-' + commentId + '-dropdown-button">&#x25B6;</a>\
                   <ul class="dropdown-menu" aria-labelledby="comment-' + commentId + '-dropdown-button"><li><a class="dropdown-item comment-report-button" role="button" data-comment-id="' + commentId + '" data-timestamp="' + timestamp + '">Report</a></li></ul>\
@@ -2109,116 +3093,187 @@ body {
                 <blockquote class="postMessage text-break" id="m' + commentId + '">' + commentTextHtml + '</blockquote>\
               </div>\
             </div>');
+          if (this.COMMENT_CAN_POST === false) commentElement.find('.comment-quote-button').attr('aria-disabled','true').attr('tabindex','-1');
+          if (this.VIDEO_CAN_REPORT === false) commentElement.find('.comment-report-button').attr('aria-disabled','true');
+          commentElement.data('commentId',Number(commentId)).data('serverReplyIds',replyIds||[]).data('replyHasMore',hasMoreReplies).data('replyLoaded',replyIds!==undefined).data('replyPreview',replyIds!==undefined);
+          if(replyIds!==undefined)this.renderCommentBacklinks(commentElement[0],undefined,false);
           if (highlight) {
             commentElement.find('.post.reply').addClass('new-comment-highlight');
           }
+          if(this.COMMENT_HIGHLIGHT_ID!==undefined)commentElement.find('.post.reply').addClass('comment-unselected');
+          if(Number(commentId)===this.COMMENT_HIGHLIGHT_ID)commentElement.find('.post.reply').removeClass('comment-unselected').addClass('highlight');
           return commentElement;
         }
 
+        commentLineIsQuoted(line) {
+          const text = line.trimStart();
+          return text.startsWith('&gt;') && !/^&gt;&gt;[0-9]/.test(text);
+        }
+
         convertCommentToHTML(commentPlainTextSanitized) {
-          const lines = commentPlainTextSanitized.trim().split('\n');
-          const html = lines.map(line => {
-            const trimmedLine = line.trim();
-            if (trimmedLine.startsWith('&gt;&gt;')) {
-              const commentId = trimmedLine.substr(8);
-              const quoteLink = '<a href="#p' + commentId + '" class="quotelink">' + trimmedLine + '</a>';
-              return quoteLink;
-            } else if (trimmedLine.startsWith('&gt;')) {
-              const quotedText = '<span class="quote">' + trimmedLine + '</span>';
-              return quotedText;
-            } else {
-              return trimmedLine;
-            }
+          return commentPlainTextSanitized.trim().split('\n').map(line => {
+            const text = line.trim();
+            const html = text.replace(/(?:&gt;){2,}([0-9]+)/g, (reference, digits) => {
+              const id = Number(digits);
+              if (!Number.isSafeInteger(id) || id < 1) return reference;
+              // Keep nesting markers as quoted text; the final pair remains navigable.
+              const prefix = reference.slice(0, -digits.length - 8);
+              return prefix + '<a href="#p'+id+'" class="quotelink" data-comment-id="'+id+'">&gt;&gt;'+digits+'</a>';
+            });
+            return this.commentLineIsQuoted(line) ? '<span class="quote">'+html+'</span>' : html;
           }).join('<br>');
-          return html;
         }
 
         extractReplyToCommentIds(commentPlainTextSanitized) {
-          const regex = /&gt;&gt;(\d+)/g;
-          const matches = [];
-          let match;
-          while ((match = regex.exec(commentPlainTextSanitized)) !== null) {
-            matches.push(parseInt(match[1]));
+          const ids = [];
+          for (const line of commentPlainTextSanitized.split('\n')) {
+            if (this.commentLineIsQuoted(line)) continue;
+            for (const match of line.matchAll(/(?:&gt;){2,}([0-9]+)/g)) {
+              if (match[0].startsWith('&gt;&gt;&gt;')) continue;
+              const id = Number(match[1]);
+              if (Number.isSafeInteger(id) && id > 0) ids.push(id);
+            }
           }
-          return matches;
+          return ids;
+        }
+
+        queueCommentBacklinks(element, beforeReplyId = null, force = false) {
+          const data=$(element);
+          if(this.COMMENT_SUSPENDED || !element.isConnected || this.COMMENT_REPLY_PENDING.has(element) || this.COMMENT_REPLY_QUEUED.has(element))return;
+          if(!force && (data.data('replyLoaded') || data.data('replyError')))return;
+          data.data('replyRequestedBefore',beforeReplyId);
+          this.COMMENT_REPLY_QUEUED.add(element);
+          this.COMMENT_REPLY_QUEUE.push({element,beforeReplyId});
+          this.pumpCommentBacklinks();
+        }
+
+        pumpCommentBacklinks() {
+          if(this.COMMENT_SUSPENDED)return;
+          while(this.COMMENT_REPLY_PENDING.size<2 && this.COMMENT_REPLY_QUEUE.length) {
+            const {element,beforeReplyId}=this.COMMENT_REPLY_QUEUE.shift();
+            this.COMMENT_REPLY_QUEUED.delete(element);
+            if(!element.isConnected)continue;
+            const data=$(element), id=data.data('commentId');
+            const request=this.commentDeferred(this.getCachedReplyPage(Number(id),beforeReplyId));
+            this.COMMENT_REPLY_PENDING.set(element,request);
+            request.done(response=>{
+              if(!element.isConnected || this.COMMENT_SUSPENDED)return;
+              if(response.isError){data.data('replyError',true);this.renderCommentBacklinks(element);return;}
+              data.data('serverReplyIds',response.replyIds.slice(0,100)).data('replyHasMore',response.hasMore).data('replyBefore',beforeReplyId).data('replyLoaded',true).data('replyError',false);
+              this.renderCommentBacklinks(element);
+            }).fail((_response,reason)=>{
+              if(reason!=='abort' && element.isConnected){data.data('replyError',true);this.renderCommentBacklinks(element);}
+            }).always(()=>{
+              this.COMMENT_REPLY_PENDING.delete(element);
+              this.pumpCommentBacklinks();
+            });
+          }
+        }
+
+        cancelCommentBacklinks(element) {
+          if(this.COMMENT_CENTER_TARGET===element)this.clearCommentCenter();
+          this.COMMENT_REPLY_QUEUED?.delete(element);
+          if(this.COMMENT_REPLY_QUEUE)this.COMMENT_REPLY_QUEUE=this.COMMENT_REPLY_QUEUE.filter(item=>item.element!==element);
+          this.COMMENT_REPLY_PENDING?.get(element)?.abort();
+        }
+
+        renderCommentBacklinks(element, localIds, preserve = true) {
+          const restore=preserve && element.isConnected && !$(element).data('replyPreview')?this.preserveCommentPosition():()=>{};
+          const data=$(element), parent=Number(data.data('commentId'));
+          if(!localIds){
+            localIds=[];
+            for(const [id,row] of Object.entries(this.COMMENT_ELEMENT_CACHE))if((row.data('replyToCommentIds')||[]).includes(parent))localIds.push(Number(id));
+          }
+          const before=data.data('replyBefore');
+          const ids=[...new Set([...(data.data('serverReplyIds')||[]),...localIds])].filter(id=>Number.isSafeInteger(id)&&id>0&&(before==null||id<before)).sort((a,b)=>b-a);
+          const shown=ids.slice(0,100), links=data.find('#bl_'+parent).empty();
+          for(const id of shown)links.append($('<a>').attr({href:'#p'+id,'data-comment-id':id}).addClass('quotelink').text('>>'+id),' ');
+          const control=(label,cursor)=>{
+            const button=$('<button type="button" class="btn btn-link btn-sm">').text(label);
+            button.on('click',()=>this.queueCommentBacklinks(element,cursor,true));links.append(button);
+          };
+          if(data.data('replyError'))control('Retry replies',data.data('replyRequestedBefore')??null);
+          if(data.data('replyHasMore')||ids.length>100){
+            if(data.data('replyPreview'))links.append($('<span>').text('(more replies)'));
+            else control('Older replies',shown[shown.length-1]);
+          }
+          if(before!=null && !data.data('replyPreview'))control('Newest replies',null);
+          restore();
+          this.centerCommentTarget();
+        }
+
+        clearCommentPreview() {
+          this.QUOTE_LINK=null;
+          this.QUOTE_REQUEST?.abort();this.QUOTE_REQUEST=null;
+          const preview=document.getElementById('quote-preview');if(preview)this.cancelCommentBacklinks(preview);
+          $('#quote-preview').remove();
+          $('#comments-container .post.reply').removeClass('highlight highlight-anti');
+          this.restoreCommentHighlight();
+        }
+
+        commentIsVisible(element) {
+          const rect = element.getBoundingClientRect();
+          let top = 0, left = 0, bottom = window.innerHeight, right = window.innerWidth;
+          for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+            const style = getComputedStyle(ancestor), bounds = ancestor.getBoundingClientRect();
+            if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {top=Math.max(top,bounds.top);bottom=Math.min(bottom,bounds.bottom);}
+            if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {left=Math.max(left,bounds.left);right=Math.min(right,bounds.right);}
+          }
+          return rect.top >= top && rect.bottom <= bottom && rect.left >= left && rect.right <= right;
         }
 
         attachQuotelinkListeners(commentElement) {
-          $(commentElement).find('.quotelink').mouseenter((event) => {
-            const quotelink = event.target;
-            const commentId = $(quotelink).text().match(/\d+/g)[0];
-            const commentElement = $('#p' + commentId);
-            const div = document.getElementById('pc' + commentId);
-            if (div == null) {
-              const quotingTimestamp = $(quotelink).closest('.postContainer').data('timestamp');
-              $.ajax({ type: 'GET', url: '/videos/' + this.VIDEO_ID + '/comments/' + commentId, data: { timestamp: quotingTimestamp } })
-                .done((data, textStatus, xhr) => {
-                  if (data.isError) {
-                    console.log(data.message);
-                  } else {
-                    const commentData = data.comment;
-                    if (commentData == null) {
-                      $(quotelink).addClass('deadlink');
-                    } else {
-                      const commentId = commentData.commentId;
-                      const commentPlainTextSanitized = commentData.commentPlainTextSanitized;
-                      const timestamp = commentData.timestamp;
-                      const formattedDate = this.getCreationTimestampFormatted(timestamp);
-                      const commentTextHtml = this.convertCommentToHTML(commentPlainTextSanitized);
-                      const commentElement = this.generateCommentElement(commentId, timestamp, formattedDate, commentTextHtml, false)[0];
-                      this.showQuotePreview(commentElement, quotelink);
-                    }
-                  }
-                })
-                .fail(function () {
-                  console.log('unable to communicate with node');
-                });
-            } else {
-              const divOffset = div.getBoundingClientRect();
-              const divHeight = div.offsetHeight;
-              const windowHeight = window.innerHeight || document.documentElement.clientHeight;
-              const topLeftCornerAboveScreen = divOffset.top < 0;
-              const topRightCornerAboveScreen = (divOffset.top < 0) && ((divOffset.left + div.offsetWidth) > window.innerWidth || document.documentElement.clientWidth);
-              const bottomLeftCornerBelowScreen = (divOffset.top + divHeight) > windowHeight;
-              const bottomRightCornerBelowScreen = ((divOffset.top + divHeight) > windowHeight) && ((divOffset.left + div.offsetWidth) > window.innerWidth || document.documentElement.clientWidth);
-              if (topLeftCornerAboveScreen || topRightCornerAboveScreen || bottomLeftCornerBelowScreen || bottomRightCornerBelowScreen) {
-                const clonedElement = div.cloneNode(true);
-                this.showQuotePreview(clonedElement, quotelink);
+          $(commentElement).off('mouseenter.commentQuotes', '.quotelink').on('mouseenter.commentQuotes', '.quotelink', async event => {
+            const link = event.currentTarget;
+            const id = link.dataset.commentId || link.textContent.match(/\d+/)?.[0];
+            if (!id) return;
+            this.clearCommentPreview();
+            this.QUOTE_LINK = link;
+            if (this.INCOMING_PARAMETERS.commentsData?.cdnEnabled &&
+                (this.COMMENT_SYNC_TASK || Date.now() - (this.COMMENT_STATE_CHECKED_AT ?? 0) >= 30000)) {
+              try { await this.ensureCommentFreshness(); }
+              catch { return; }
+              if (this.QUOTE_LINK !== link || !link.isConnected || !link.matches(':hover')) return;
+            }
+            const element = document.getElementById('pc' + id);
+            if (element) {
+              if (this.commentIsVisible(element.querySelector('.post.reply'))) {
+                const post = element.querySelector('.post.reply');
+                const highlighted=post.classList.contains('highlight') || post.classList.contains('new-comment-highlight') || post.matches(':target:not(.comment-unselected)');
+                post.classList.add(highlighted ? 'highlight-anti' : 'highlight');
               } else {
-                if (commentElement.length) {
-                  if (commentElement.is(':target')) {
-                    $(commentElement).addClass('highlight-anti');
-                  } else {
-                    $(commentElement).addClass('highlight');
-                  }
-                } else {
-                  $(quotelink).addClass('deadlink');
-                }
+                const clone=element.cloneNode(true),original=$(element);
+                clone.querySelectorAll('.comment-input-form-contextual').forEach(form=>form.remove());
+                $(clone).data('commentId',Number(id)).data('serverReplyIds',original.data('serverReplyIds')||[]).data('replyHasMore',original.data('replyHasMore')).data('replyBefore',original.data('replyBefore')).data('replyPreview',true);
+                this.renderCommentBacklinks(clone,undefined,false);
+                this.showQuotePreview(clone,link);
+                if(!original.data('replyLoaded') || original.data('replyBefore')!=null)this.queueCommentBacklinks(clone);
               }
+              return;
             }
+            const request = this.commentDeferred(this.getCachedComment(Number(id)));
+            this.QUOTE_REQUEST = request;
+            request.done(data => {
+              if (this.QUOTE_LINK !== link || !link.isConnected || !link.matches(':hover')) return;
+              if(data.isError){console.log('Unable to load comment preview');return;}
+              if(!data.comment){link.classList.add('deadlink');link.title='Comment no longer available';return;}
+              if(link.classList.contains('deadlink')){link.classList.remove('deadlink');link.removeAttribute('title');}
+              const comment = data.comment;
+              const preview = this.generateCommentElement(comment.commentId,comment.timestamp,this.getCreationTimestampFormatted(comment.timestamp),this.convertCommentToHTML(comment.commentPlainTextSanitized),false,comment.replyIds||[],comment.hasMoreReplies)[0];
+              this.showQuotePreview(preview,link);
+            }).fail((response,reason) => {if(reason==='abort')return;if(response.status===404 && this.QUOTE_LINK===link && link.isConnected){link.classList.add('deadlink');link.title='Comment no longer available';}else console.log('Unable to load comment preview');})
+              .always(() => {if(this.QUOTE_REQUEST === request)this.QUOTE_REQUEST=null;});
           });
-          $(commentElement).find('.quotelink').mouseleave(function () {
-            $('#quote-preview').remove();
-            const commentId = $(this).text().match(/\d+/g)[0];
-            const comment = $('#p' + commentId);
-            if (comment.is(':target')) {
-              $(comment).removeClass('highlight-anti');
-            } else {
-              $(comment).removeClass('highlight');
+          $(commentElement).off('mouseleave.commentQuotes', '.quotelink').on('mouseleave.commentQuotes', '.quotelink', event => {
+            if (this.QUOTE_LINK === event.currentTarget) {
+              this.QUOTE_LINK = null;
+              this.QUOTE_REQUEST?.abort();
+              this.QUOTE_REQUEST = null;
             }
+            this.clearCommentPreview();
+
           });
-          $(commentElement).find('.quotelink').click((event) => {
-            $('#quote-preview').remove();
-            const commentId = $(event.target).text().match(/\d+/g)[0];
-            const comment = $('#p' + commentId);
-            this.HASH_VALUE = '#p' + commentId;
-            $('.post').removeClass('highlight');
-            if (comment.is(':target')) {
-              $(comment).removeClass('highlight-anti');
-            } else {
-              $(comment).removeClass('highlight');
-            }
-          });
+
         }
 
         showQuotePreview(quotePreview, quotelink) {
@@ -2230,39 +3285,56 @@ body {
           }
           $('#quote-preview').remove();
           $('body').append(quotePreview);
-          const quotelinkWidth = quotelink.offsetWidth;
-          const quotelinkHeight = quotelink.offsetHeight;
-          const targetElementHeight = quotePreview.offsetHeight;
-          const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-          quotePreview.style.position = 'absolute';
-          quotePreview.style.left = quotelink.getBoundingClientRect().left + quotelinkWidth + 5;
-          quotePreview.style.top = scrollY + quotelink.getBoundingClientRect().top - (targetElementHeight / 2) + (quotelinkHeight / 2);
+          const rect = quotelink.getBoundingClientRect();
+          quotePreview.style.position = 'fixed';
+          quotePreview.style.zIndex = '1100';
+          quotePreview.style.maxWidth = Math.max(0,Math.min(600,window.innerWidth-16)) + 'px';
+          quotePreview.style.maxHeight = Math.max(0,window.innerHeight-16) + 'px';
+          quotePreview.style.overflow = 'auto';
+          let bounds = quotePreview.getBoundingClientRect();
+          let left = rect.right+5, top = rect.top-bounds.height/2;
+          if (left+bounds.width > window.innerWidth-8) {
+            if (rect.left-bounds.width-5 >= 8) left=rect.left-bounds.width-5;
+            else {
+              const below=window.innerHeight-rect.bottom-16, above=rect.top-16;
+              const useBelow=below>=above;
+              quotePreview.style.maxHeight=Math.max(0,useBelow?below:above) + 'px';
+              bounds=quotePreview.getBoundingClientRect();
+              left=8; top=useBelow?rect.bottom+8:rect.top-bounds.height-8;
+            }
+          }
+          quotePreview.style.left = Math.max(8,Math.min(left,window.innerWidth-bounds.width-8)) + 'px';
+          quotePreview.style.top = Math.max(8,Math.min(top,window.innerHeight-bounds.height-8)) + 'px';
+        }
+
+        updateCommentTotal(total, version = this.COMMENT_TOTAL_VERSION) {
+          if(!Number.isSafeInteger(total)||total<0)return;
+          this.COMMENT_TOTAL=version===this.COMMENT_TOTAL_VERSION?total:Math.max(this.COMMENT_TOTAL,total);
+          this.COMMENT_TOTAL_VERSION++;
+          $('#comment-section-counter, #expand-comment-section-counter').text(String(this.COMMENT_TOTAL));
+          $('#comment-section-counter-descriptor, #expand-comment-section-counter-descriptor').text(this.COMMENT_TOTAL===1?'Comment':'Comments');
         }
 
         updateComments() {
+          if(this.COMMENT_NAVIGATION || this.COMMENT_REFRESH_REQUEST || this.COMMENT_SUSPENDED)return;
           $('#update-comments-button').addClass('hidden-elem');
           $('#update-comments-button-spinner').removeClass('hidden-elem');
-          const previousCommentCount = parseInt($('#comment-section-counter').text());
-          $.ajax({ type: 'GET', url: '/videos/' + this.VIDEO_ID + '/comments', data: { timestamp: this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP, type: 'after', sort: 'ascending' } })
-            .done(data => {
-              if (data.isError) {
-                console.log(data.message);
-              } else {
-                const comments = data.comments;
-                this.loadComments(comments, true);
-                const newCommentCount = parseInt($('#comment-section-counter').text());
-                $('#update-comments-button').removeClass('hidden-elem');
-                $('#update-comments-button-spinner').addClass('hidden-elem');
-                let commentCountDifference = newCommentCount - previousCommentCount;
-                if (commentCountDifference === 1) {
-                  $('#comment-section-update-descriptor').text('1 new comment');
-                } else {
-                  $('#comment-section-update-descriptor').text(commentCountDifference + ' new comments');
-                }
-                setTimeout(() => $('#comment-section-update-descriptor').text(''), 3000);
-              }
+          clearTimeout(this.COMMENT_UPDATE_TIMER);
+          const totalVersion=this.COMMENT_TOTAL_VERSION;
+          this.COMMENT_REFRESH_REQUEST=this.commentDeferred(this.syncCommentCache().then(async result=>{const cursor={timestamp:this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP,afterId:this.MOST_RECENT_VISIBLE_COMMENT_ID,includeTotal:'1',type:'after',sort:'ascending'};return result?{...await this.getCachedCommentPage(cursor),totalCount:result.totalCount}:this.commentRequest('/videos/'+this.VIDEO_ID+'/comments',cursor);}))
+            .done(data=>{
+              if(data.isError){$('#comment-section-update-descriptor').text(data.message||'Unable to refresh comments. Please retry.');return;}
+              const oldHead=[this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP,this.MOST_RECENT_VISIBLE_COMMENT_ID];
+              this.COMMENT_SYNC_LOADING=this.commentStore().version!==undefined;
+              const added=this.loadComments(data.comments,true,'newer',false,!Number.isSafeInteger(data.totalCount));
+              if(!this.COMMENT_SYNC_LOADING){const last=data.comments[data.comments.length-1];void this.cacheComments([],[oldHead,data.hasMore&&last?[last.timestamp,last.commentId]:[Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER]]);}
+              this.COMMENT_SYNC_LOADING=false;
+              this.updateCommentTotal(data.totalCount,totalVersion);
+              $('#comment-section-update-descriptor').text(added+' new comment'+(added===1?'':'s')+(data.hasMore?'; refresh again for more.':''));
+              this.COMMENT_UPDATE_TIMER=setTimeout(()=>$('#comment-section-update-descriptor').text(''),3000);
             })
-            .fail(() => console.log('unable to communicate with node'));
+            .fail((_request,reason)=>{if(reason!=='abort')$('#comment-section-update-descriptor').text('Unable to refresh comments. Please retry.');})
+            .always(()=>{this.COMMENT_REFRESH_REQUEST=null;$('#update-comments-button').removeClass('hidden-elem');$('#update-comments-button-spinner').addClass('hidden-elem');});
         }
 
         openCommentSection() {
@@ -2537,17 +3609,127 @@ body {
           });
         }
 
-        quote(commentId) {
-          const commentElement = $('#p' + commentId);
-          if (commentElement.length) {
-            const commentText = commentElement.find('.postMessage').text();
-            const quotedText = '>>' + commentId + '\n' + commentText.replace(/^/gm, '>') + '\n';
-            const textarea = $('#comment-input-form-static textarea');
-            textarea.val(textarea.val() + quotedText);
-            textarea[0].scrollTop = textarea[0].scrollHeight;
-            this.refreshTextAreas();
-            $('#comment-section').scrollTop($('#comment-section')[0].scrollHeight);
+        clearCommentHighlights() {
+          this.COMMENT_HIGHLIGHT_ID=null;
+          this.clearCommentCenter();
+          this.clearCommentPreview();
+          $('#comments-container .post.reply').removeClass('highlight highlight-anti new-comment-highlight').addClass('comment-unselected');
+        }
+
+        restoreCommentHighlight() {
+          if(this.COMMENT_HIGHLIGHT_ID)$('#comments-container #p'+this.COMMENT_HIGHLIGHT_ID).removeClass('comment-unselected').addClass('highlight');
+        }
+
+        clearCommentCenter() {
+          this.COMMENT_CENTER_OBSERVER?.disconnect();
+          this.COMMENT_CENTER_TARGET=null;
+        }
+
+        centerCommentTarget() {
+          const target=this.COMMENT_CENTER_TARGET;
+          if(target?.isConnected)target.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'});
+        }
+
+        cancelCommentNavigation() {
+          const navigation=this.COMMENT_NAVIGATION;
+          this.COMMENT_NAVIGATION=null;
+          if(navigation)for(const request of navigation.requests)request.abort();
+        }
+
+        async navigateToComment(commentId) {
+          commentId=Number(commentId);
+          if(!Number.isSafeInteger(commentId)||commentId<1||this.COMMENT_SUSPENDED)return;
+          this.clearCommentCenter();
+          this.cancelCommentNavigation();
+          this.clearCommentPreview();
+          this.COMMENT_REQUEST?.abort();
+          this.COMMENT_REFRESH_REQUEST?.abort();
+          const navigation={requests:new Set()};
+          this.COMMENT_NAVIGATION=navigation;
+          const active=()=>this.COMMENT_NAVIGATION===navigation && !this.COMMENT_SUSPENDED;
+          const get=(url,data={})=>Object.keys(data).length?this.getCachedCommentPage(data):this.getCachedComment(commentId);
+          try {
+            if (this.INCOMING_PARAMETERS.commentsData?.cdnEnabled) {
+              await this.ensureCommentFreshness();
+              if (!active()) return;
+            }
+            let target=document.querySelector('#comments-container > #pc'+commentId);
+            if(!target) {
+              const response=await get('/videos/'+this.VIDEO_ID+'/comments/'+commentId);
+              if(!active())return;
+              if(!response.comment)throw {status:404};
+              const comment=response.comment, base='/videos/'+this.VIDEO_ID+'/comments';
+              const [older,newer]=await Promise.all([
+                get(base,{timestamp:comment.timestamp,beforeId:commentId,type:'before',sort:'descending'}),
+                get(base,{timestamp:comment.timestamp,afterId:commentId,type:'after',sort:'ascending'})
+              ]);
+              if(!active())return;
+              this.COMMENT_OBSERVER.disconnect();
+              this.removeCommentGap();
+              for(const element of Object.values(this.COMMENT_ELEMENT_CACHE))this.cancelCommentBacklinks(element[0]);
+              this.COMMENT_ELEMENT_CACHE={};
+              $('#comments-container').empty();
+              this.COMMENT_TOP.replaceChildren();this.COMMENT_BOTTOM.replaceChildren();
+              this.loadComments([...newer.comments,comment,...older.comments],false,'newer',false,false);
+              this.COMMENT_HAS_MORE=older.hasMore;
+              const first=$('#comments-container').children('.postContainer')[0];
+              this.COMMENT_HAS_NEWER=newer.hasMore || Number(first.dataset.timestamp)<this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP || (Number(first.dataset.timestamp)===this.MOST_RECENT_VISIBLE_COMMENT_TIMESTAMP && Number(first.id.slice(2))<this.MOST_RECENT_VISIBLE_COMMENT_ID);
+              target=document.getElementById('pc'+commentId);
+            }
+            if(!active()||!target)return;
+            this.openCommentSection();
+            await new Promise(resolve=>requestAnimationFrame(resolve));
+            if(!active())return;
+            this.HASH_VALUE='#p'+commentId;
+            // Update :target only when needed. Replacing an already active fragment
+            // starts another browser anchor scroll that can race with centering.
+            if(window.location.hash!==this.HASH_VALUE || !target.querySelector('.post.reply').matches(':target')) {
+              window.location.replace(this.HASH_VALUE);
+              await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+              if(!active())return;
+            }
+            this.clearCommentHighlights();
+            this.COMMENT_HIGHLIGHT_ID=commentId;
+            this.restoreCommentHighlight();
+            this.COMMENT_CENTER_TARGET=target;
+            this.COMMENT_CENTER_OBSERVER=new ResizeObserver(()=>this.centerCommentTarget());
+            this.COMMENT_CENTER_OBSERVER.observe(target);
+            this.centerCommentTarget();
+            requestAnimationFrame(()=>requestAnimationFrame(()=>this.centerCommentTarget()));
+            $('#comment-section-update-descriptor').text('');
+          } catch(error) {
+            if(active())$('#comment-section-update-descriptor').text(error.status===404?'Comment unavailable.':'Unable to load comment. Please try again.');
+          } finally {
+            if(active()) {
+              this.cancelCommentNavigation();
+              this.observeCommentSentinels();
+            }
           }
+        }
+
+
+        quote(commentId) {
+          if (this.COMMENT_CAN_POST === false) return;
+          commentId=Number(commentId);
+          if(!Number.isSafeInteger(commentId)||commentId<1)return;
+          const row=$('#comments-container > #pc'+commentId);
+          if(!row.length)return;
+          let form=row.children('.comment-input-form-contextual');
+          if(!form.length) {
+            const restore=this.preserveCommentPosition();
+            form=this.COMMENT_INPUT_FORM_DYNAMIC.clone().attr('id','comment-input-form-dynamic-'+commentId).addClass('comment-input-form-contextual').attr('data-comment-id',commentId);
+            form.find('[id]').each((_,element)=>{element.id+='-'+commentId;});
+            const textarea=form.find('textarea')[0];
+            const body=row.children('.post.reply').find('.postMessage').clone().find('br').replaceWith('\n').end().text();
+            const quote='>>'+commentId+'\n'+body.replace(/^/gm,'> ')+'\n';
+            textarea.value=quote.slice(0,textarea.maxLength);
+            row.append(form);
+            this.refreshTextAreas();
+            restore();
+          }
+          const textarea=form.find('textarea')[0];
+          textarea.focus({preventScroll:true});
+          textarea.setSelectionRange(textarea.value.length,textarea.value.length);
         }
 
         likeVideo() {

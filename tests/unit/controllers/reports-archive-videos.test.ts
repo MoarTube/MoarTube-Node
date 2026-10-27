@@ -55,32 +55,43 @@ describe('ReportsArchiveVideosController', () => {
       ];
       mockReportsService.getArchivedVideoReports.mockResolvedValue(mockReports);
 
-      await controller.getAllArchives(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAllArchives(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReportsService.getArchivedVideoReports).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         isError: false,
         reports: mockReports,
+        hasMore: false,
       });
     });
 
     it('should return empty array when no archived reports', async () => {
       mockReportsService.getArchivedVideoReports.mockResolvedValue([]);
 
-      await controller.getAllArchives(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAllArchives(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         isError: false,
         reports: [],
+        hasMore: false,
       });
     });
 
     it('should return error on service failure', async () => {
       mockReportsService.getArchivedVideoReports.mockRejectedValue(new Error('Database error'));
 
-      await controller.getAllArchives(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAllArchives(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -95,7 +106,10 @@ describe('ReportsArchiveVideosController', () => {
       mockRequest.params = { archiveId: 1 };
       mockReportsService.deleteArchivedVideoReport.mockResolvedValue(undefined);
 
-      await controller.deleteArchive(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.deleteArchive(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReportsService.deleteArchivedVideoReport).toHaveBeenCalledWith(1);
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -105,7 +119,10 @@ describe('ReportsArchiveVideosController', () => {
       mockRequest.params = { archiveId: 1 };
       mockReportsService.deleteArchivedVideoReport.mockRejectedValue(new Error('Database error'));
 
-      await controller.deleteArchive(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.deleteArchive(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith({

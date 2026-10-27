@@ -3,6 +3,7 @@
  *
  * Routes for the main video watch page.
  */
+import { noStoreComments } from '@/utils/comment-cache.js';
 import type { FastifyInstance } from 'fastify';
 import { WatchController } from '@controllers/index.js';
 import type { Container } from '@core/index.js';
@@ -34,6 +35,7 @@ export function watchRoutes(
   fastify.get(
     '/',
     {
+      onRequest: noStoreComments,
       preHandler: [fastify.optionalAuthenticate],
       schema: {
         tags: ['Watch'],

@@ -7,6 +7,12 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { MultipartFile } from '@fastify/multipart';
 import fs from 'node:fs';
 import path from 'node:path';
+import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
+import { rm } from 'node:fs/promises';
+import { Readable } from 'node:stream';
+import { writeUpload } from '@/utils/stream-files.js';
+import { rewriteManifestFile } from '@/utils/manifest-transform.js';
 import { pipeline } from 'node:stream/promises';
 
 import { BaseController } from '@controllers/base.js';
@@ -202,7 +208,7 @@ export class SettingsController extends BaseController {
       }
 
       // Parse multipart data
-      const parts = request.parts();
+      const parts = request.parts({ limits: { fileSize: 20 * 1024 ** 2, files: 2, parts: 4 } });
 
       for await (const part of parts) {
         if (part.type === 'file') {
@@ -248,7 +254,7 @@ export class SettingsController extends BaseController {
       }
 
       // Parse multipart data
-      const parts = request.parts();
+      const parts = request.parts({ limits: { fileSize: 20 * 1024 ** 2, files: 2, parts: 4 } });
 
       let bannerFile: MultipartFile | undefined;
 
@@ -346,7 +352,7 @@ export class SettingsController extends BaseController {
     request: FastifyRequest,
     certsDir: string
   ): Promise<{ hasKeyFile: boolean; hasCertFile: boolean }> {
-    const parts = request.parts();
+    const parts = request.parts({ limits: { fileSize: 1024 ** 2, files: 12, parts: 14 } });
 
     let hasKeyFile = false;
     let hasCertFile = false;
@@ -522,10 +528,14 @@ export class SettingsController extends BaseController {
     if (nodeSettings.storageConfig.storageMode === 'filesystem') {
       const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
       const videosDirectoryPath = config.paths.videosDirectoryPath;
-      const videos = await this.videosService.getAllVideosData();
-
-      for (const video of videos) {
-        this.rewriteVideoManifests(video, videosDirectoryPath, externalVideosBaseUrl);
+      for (let offset = 0; ; offset += 100) {
+        const videos = await this.videosService.getAllVideosData({ limit: 100, offset });
+        for (const video of videos) {
+          await this.rewriteVideoManifests(video, videosDirectoryPath, externalVideosBaseUrl);
+        }
+        if (videos.length < 100) {
+          break;
+        }
       }
     }
   }
@@ -533,11 +543,11 @@ export class SettingsController extends BaseController {
   /**
    * Rewrite manifest URLs for a single video
    */
-  private rewriteVideoManifests(
+  private async rewriteVideoManifests(
     video: { videoId: string; outputs: VideoOutputs },
     videosDirectoryPath: string,
     externalVideosBaseUrl: string
-  ): void {
+  ): Promise<void> {
     const outputs = video.outputs as { m3u8: string[] };
 
     if (outputs.m3u8.length === 0) {
@@ -553,7 +563,7 @@ export class SettingsController extends BaseController {
       'manifest-master.m3u8'
     );
     if (fs.existsSync(masterManifestPath)) {
-      this.rewriteManifestUrls(masterManifestPath, externalVideosBaseUrl);
+      await this.rewriteManifestUrls(masterManifestPath, externalVideosBaseUrl);
     }
 
     // Update resolution-specific manifests
@@ -566,7 +576,7 @@ export class SettingsController extends BaseController {
         `manifest-${resolution}.m3u8`
       );
       if (fs.existsSync(manifestPath)) {
-        this.rewriteManifestUrls(manifestPath, externalVideosBaseUrl);
+        await this.rewriteManifestUrls(manifestPath, externalVideosBaseUrl);
       }
     }
   }
@@ -574,17 +584,16 @@ export class SettingsController extends BaseController {
   /**
    * Rewrites URLs in an HLS manifest file to use the new external base URL
    */
-  private rewriteManifestUrls(manifestPath: string, externalVideosBaseUrl: string): void {
+  private async rewriteManifestUrls(
+    manifestPath: string,
+    externalVideosBaseUrl: string
+  ): Promise<void> {
     try {
-      const oldManifest = fs.readFileSync(manifestPath, 'utf-8');
-      // Replace protocol://anything/external/ with newBaseUrl/external/
-      const newManifest = oldManifest.replaceAll(
-        /(https?:\/\/).*?(\/external\/)/g,
-        externalVideosBaseUrl + '$2'
+      await rewriteManifestFile(manifestPath, (line) =>
+        line.replaceAll(/(https?:\/\/).*?(\/external\/)/g, externalVideosBaseUrl + '$2')
       );
-      fs.writeFileSync(manifestPath, newManifest, 'utf-8');
     } catch (error) {
-      this.logger.error(`Failed to rewrite manifest: ${manifestPath}`, error);
+      this.logger.error('Failed to rewrite manifest', error);
     }
   }
 
@@ -969,54 +978,31 @@ export class SettingsController extends BaseController {
    * Removes auto-generated 'id' columns and normalizes boolean values
    * for cross-database compatibility (SQLite <-> PostgreSQL)
    */
-  exportDatabase = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  exportDatabase = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      // Fetch all data using the settings service
-      const data = await this.settingsService.exportAllData();
-
-      // Build database export structure
-      const database = [
-        { rows: data.videos as Record<string, unknown>[], tableName: 'videos' },
-        { rows: data.comments as Record<string, unknown>[], tableName: 'comments' },
-        { rows: data.videoReports as Record<string, unknown>[], tableName: 'videoreports' },
-        { rows: data.commentReports as Record<string, unknown>[], tableName: 'commentreports' },
-        {
-          rows: data.videoReportsArchives as Record<string, unknown>[],
-          tableName: 'videoreportsarchives',
-        },
-        {
-          rows: data.commentReportsArchives as Record<string, unknown>[],
-          tableName: 'commentreportsarchives',
-        },
-        { rows: data.liveChatMessages as Record<string, unknown>[], tableName: 'livechatmessages' },
-        {
-          rows: data.cryptoWalletAddresses as Record<string, unknown>[],
-          tableName: 'cryptowalletaddresses',
-        },
-        { rows: data.links as Record<string, unknown>[], tableName: 'links' },
-      ];
-
-      /*
-       * 1) Remove "id" column as it was generated by the database engine upon insertion.
-       *    Let the database engine generate a new "id" column during an import operation.
-       *    Note: The "id" column isn't used for anything.
-       *    Note: SQLite re-uses "id" numbers that were previously used by removed rows - Postgres does not.
-       *
-       * 2) Convert all 1/0 boolean to true/false boolean. The latter is agnostic for both SQLite and Postgres,
-       *    otherwise a cast exception will throw when importing an SQLite database export into a Postgres database.
-       */
-      for (const table of database) {
-        table.rows = table.rows.map((row) => {
-          Reflect.deleteProperty(row, 'id');
-
-          return row;
-        });
-      }
-
-      return await this.sendSuccess(reply, { database });
+      const backup = await this.settingsService.createDatabaseBackup();
+      const raw = (request.query as { download?: string } | undefined)?.download === '1';
+      const stream = Readable.from(
+        (async function* () {
+          try {
+            if (!raw) {
+              yield '{"isError":false,"database":';
+            }
+            yield* fs.createReadStream(backup.file);
+            if (!raw) {
+              yield '}';
+            }
+          } finally {
+            await backup.dispose();
+          }
+        })()
+      );
+      stream.on('close', () => {
+        void backup.dispose().catch(() => {});
+      });
+      return await reply.type('application/json').send(stream);
     } catch (error) {
       this.logger.error('Database export error', error);
-
       return await this.sendError(reply, 'error exporting database');
     }
   };
@@ -1029,32 +1015,30 @@ export class SettingsController extends BaseController {
    * Expects multipart form with 'databaseFile' field containing JSON
    */
   importDatabase = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    const temporary = path.join(tmpdir(), 'moartube-import-' + randomUUID() + '.json');
+    let found = false;
     try {
-      // Parse multipart data
-      const parts = request.parts();
-      let databaseFileContent: string | undefined;
-
-      for await (const part of parts) {
+      for await (const part of request.parts()) {
         if (part.type === 'file' && part.fieldname === 'databaseFile') {
-          // Collect chunks and convert to buffer
-          const buffer = await part.toBuffer();
-          databaseFileContent = buffer.toString('utf-8');
+          if (found) {
+            throw new Error('Only one database file is allowed');
+          }
+          found = true;
+          await writeUpload(part, temporary, 10 * 1024 ** 3);
+        } else if (part.type === 'file') {
+          (part as { file?: Readable }).file?.resume();
         }
       }
-
-      if (databaseFileContent === undefined) {
+      if (!found) {
         return await this.sendError(reply, 'database file is missing');
       }
-
-      await this.settingsService.importDatabase(databaseFileContent);
-
-      this.logger.info('database imported successfully');
-
+      await this.settingsService.restoreDatabaseBackup(temporary);
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Database import error', error);
-
       return await this.sendError(reply, 'error importing database');
+    } finally {
+      await rm(temporary, { force: true });
     }
   };
 

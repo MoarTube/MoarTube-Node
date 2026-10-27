@@ -24,9 +24,6 @@ vi.mock('@aws-sdk/client-s3', () => {
   class MockGetObjectCommand {
     constructor(public params: Record<string, unknown>) {}
   }
-  class MockPutObjectCommand {
-    constructor(public params: Record<string, unknown>) {}
-  }
   class MockDeleteObjectCommand {
     constructor(public params: Record<string, unknown>) {}
   }
@@ -45,7 +42,6 @@ vi.mock('@aws-sdk/client-s3', () => {
   return {
     S3Client: MockS3Client,
     GetObjectCommand: MockGetObjectCommand,
-    PutObjectCommand: MockPutObjectCommand,
     DeleteObjectCommand: MockDeleteObjectCommand,
     HeadObjectCommand: MockHeadObjectCommand,
     ListObjectsV2Command: MockListObjectsV2Command,
@@ -63,8 +59,6 @@ vi.mock('node:fs', () => ({
   default: {
     existsSync: vi.fn(),
     mkdirSync: vi.fn(),
-    writeFileSync: vi.fn(),
-    readFileSync: vi.fn(),
     rmSync: vi.fn(),
     statSync: vi.fn(),
     readdirSync: vi.fn(),
@@ -113,6 +107,7 @@ describe('StorageService', () => {
 
     vi.mocked(getConfig).mockReturnValue(mockConfig);
 
+    vi.mocked(fs.statSync).mockReturnValue({ size: 1024 } as never);
     service = new StorageService(mockLogger);
   });
 
@@ -120,8 +115,6 @@ describe('StorageService', () => {
     // Only reset the fs mocks, not the S3 mocks
     vi.mocked(fs.existsSync).mockReset();
     vi.mocked(fs.mkdirSync).mockReset();
-    vi.mocked(fs.writeFileSync).mockReset();
-    vi.mocked(fs.readFileSync).mockReset();
     vi.mocked(fs.rmSync).mockReset();
     vi.mocked(fs.statSync).mockReset();
     vi.mocked(fs.readdirSync).mockReset();
@@ -165,63 +158,12 @@ describe('StorageService', () => {
     });
   });
 
-  describe('saveFile (filesystem mode)', () => {
-    it('should save file to filesystem', async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-
-      await service.saveFile('test/file.txt', Buffer.from('content'));
-
-      expect(fs.writeFileSync).toHaveBeenCalledWith(
-        expect.stringContaining('file.txt'),
-        expect.any(Buffer)
-      );
-    });
-
-    it('should create directory if it does not exist', async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      await service.saveFile('test/nested/file.txt', Buffer.from('content'));
-
-      expect(fs.mkdirSync).toHaveBeenCalledWith(expect.any(String), { recursive: true });
-    });
-
-    it('should log and rethrow errors', async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {
-        throw new Error('Write failed');
-      });
-
-      await expect(service.saveFile('test.txt', Buffer.from('content'))).rejects.toThrow(
-        'Write failed'
-      );
-      expect(mockLogger.error).toHaveBeenCalled();
-    });
-  });
-
-  describe('getFile (filesystem mode)', () => {
-    it('should read file from filesystem', async () => {
-      const fileContent = Buffer.from('file content');
-      vi.mocked(fs.readFileSync).mockReturnValue(fileContent);
-
-      const result = await service.getFile('test/file.txt');
-
-      expect(result).toEqual(fileContent);
-    });
-
-    it('should log and rethrow errors', async () => {
-      vi.mocked(fs.readFileSync).mockImplementation(() => {
-        throw new Error('Read failed');
-      });
-
-      await expect(service.getFile('test.txt')).rejects.toThrow('Read failed');
-      expect(mockLogger.error).toHaveBeenCalled();
-    });
-  });
-
   describe('getFileStream (filesystem mode)', () => {
     it('should return a readable stream', async () => {
       const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as unknown as ReturnType<typeof fs.createReadStream>);
+      vi.mocked(fs.createReadStream).mockReturnValue(
+        mockStream as unknown as ReturnType<typeof fs.createReadStream>
+      );
 
       const result = await service.getFileStream('test/file.txt');
 
@@ -313,66 +255,6 @@ describe('StorageService', () => {
     });
   });
 
-  describe('listFiles (filesystem mode)', () => {
-    it('should list files in directory', async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockImplementation((path) => {
-        if (typeof path === 'string' && path.includes('file')) {
-          return { size: 100, mtime: new Date() } as unknown as ReturnType<typeof fs.statSync>;
-        }
-        return { isDirectory: () => true, isFile: () => false } as unknown as ReturnType<typeof fs.statSync>;
-      });
-      vi.mocked(fs.readdirSync).mockReturnValue([
-        { name: 'file1.txt', isFile: () => true, isDirectory: () => false },
-        { name: 'file2.txt', isFile: () => true, isDirectory: () => false },
-      ] as unknown as ReturnType<typeof fs.readdirSync>);
-
-      const result = await service.listFiles('test/');
-
-      expect(result).toHaveLength(2);
-    });
-
-    it('should return empty array for non-existent directory', async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      const result = await service.listFiles('nonexistent/');
-
-      expect(result).toEqual([]);
-    });
-
-    it('should skip directories when listing files', async () => {
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockImplementation((path) => {
-        // The first call checks if the directory exists
-        if (typeof path === 'string' && path.includes('test')) {
-          return { 
-            isDirectory: () => true,
-            size: 0,
-            mtime: new Date(),
-          } as unknown as ReturnType<typeof fs.statSync>;
-        }
-        // Calls for files return file stats
-        return { 
-          size: 100, 
-          mtime: new Date(),
-          isDirectory: () => false,
-        } as unknown as ReturnType<typeof fs.statSync>;
-      });
-      vi.mocked(fs.readdirSync).mockReturnValue([
-        { name: 'file1.txt', isFile: () => true, isDirectory: () => false },
-        { name: 'subdir', isFile: () => false, isDirectory: () => true },
-        { name: 'file2.txt', isFile: () => true, isDirectory: () => false },
-      ] as unknown as ReturnType<typeof fs.readdirSync>);
-
-      const result = await service.listFiles('test/');
-
-      // Only files should be returned, not directories
-      expect(result).toHaveLength(2);
-      expect(result[0].key).toContain('file1.txt');
-      expect(result[1].key).toContain('file2.txt');
-    });
-  });
-
   describe('deleteDirectory (filesystem mode)', () => {
     it('should delete directory and return file count', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
@@ -435,18 +317,11 @@ describe('StorageService', () => {
           },
         },
       };
-
       service = new StorageService(mockLogger);
     });
 
     it('should return s3provider storage mode', () => {
       expect(service.getStorageMode()).toBe('s3provider');
-    });
-
-    it('should throw when S3 operations fail due to client issues', async () => {
-      // Configure mock to throw an error
-      mockS3Send.mockRejectedValueOnce(new Error('S3 operation failed'));
-      await expect(service.saveFile('test.txt', Buffer.from('data'))).rejects.toThrow('S3 operation failed');
     });
 
     it('should return false when file existence check fails in S3 mode', async () => {
@@ -481,28 +356,10 @@ describe('StorageService', () => {
     });
   });
 
-  describe('S3 client not configured errors', () => {
-    it('should throw when S3 operations attempted without S3 config', async () => {
-      // Create service in filesystem mode
-      mockConfig.nodeSettings.storageConfig.storageMode = 'filesystem';
-      mockConfig.nodeSettings.storageConfig.s3Config = null;
-
-      service = new StorageService(mockLogger);
-
-      // Now change to S3 mode without reinitializing the client
-      mockConfig.nodeSettings.storageConfig.storageMode = 's3provider';
-
-      // Operations should fail because S3 client wasn't initialized
-      await expect(service.saveFile('test.txt', Buffer.from('data'))).rejects.toThrow(
-        'S3 client not configured'
-      );
-    });
-  });
-
   describe('deleteDirectory with nested files (filesystem mode)', () => {
     it('should count files in nested directories', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       // Mock readdirSync to return nested structure
       vi.mocked(fs.readdirSync).mockImplementation((dir) => {
         const dirStr = String(dir);
@@ -541,24 +398,6 @@ describe('StorageService', () => {
       vi.mocked(getConfig).mockReturnValue(mockConfig);
       mockS3Send.mockReset();
       service = new StorageService(mockLogger);
-    });
-
-    it('should save file to S3', async () => {
-      mockS3Send.mockResolvedValueOnce({});
-
-      await service.saveFile('test/file.txt', Buffer.from('content'), 'text/plain');
-
-      expect(mockS3Send).toHaveBeenCalled();
-    });
-
-    it('should get file from S3', async () => {
-      const { Readable } = await import('node:stream');
-      const mockStream = Readable.from([Buffer.from('file content')]);
-      mockS3Send.mockResolvedValueOnce({ Body: mockStream });
-
-      const result = await service.getFile('test/file.txt');
-
-      expect(result).toEqual(Buffer.from('file content'));
     });
 
     it('should get file stream from S3', async () => {
@@ -625,108 +464,6 @@ describe('StorageService', () => {
       const result = await service.getFileMetadata('test/file.txt');
 
       expect(result).toBeNull();
-    });
-
-    it('should list files from S3', async () => {
-      mockS3Send.mockResolvedValueOnce({
-        Contents: [
-          { Key: 'test/file1.txt', Size: 100, LastModified: new Date() },
-          { Key: 'test/file2.txt', Size: 200, LastModified: new Date() },
-        ],
-        IsTruncated: false,
-      });
-
-      const result = await service.listFiles('test/');
-
-      expect(result).toHaveLength(2);
-    });
-
-    it('should handle pagination when listing S3 files', async () => {
-      mockS3Send
-        .mockResolvedValueOnce({
-          Contents: [{ Key: 'test/file1.txt', Size: 100, LastModified: new Date() }],
-          IsTruncated: true,
-          NextContinuationToken: 'token123',
-        })
-        .mockResolvedValueOnce({
-          Contents: [{ Key: 'test/file2.txt', Size: 200, LastModified: new Date() }],
-          IsTruncated: false,
-        });
-
-      const result = await service.listFiles('test/');
-
-      expect(result).toHaveLength(2);
-      expect(mockS3Send).toHaveBeenCalledTimes(2);
-    });
-
-    it('should handle empty Contents in S3 list response', async () => {
-      mockS3Send.mockResolvedValueOnce({
-        Contents: undefined,
-        IsTruncated: false,
-      });
-
-      const result = await service.listFiles('test/');
-
-      expect(result).toEqual([]);
-    });
-
-    it('should skip empty keys in S3 list response', async () => {
-      mockS3Send.mockResolvedValueOnce({
-        Contents: [
-          { Key: 'test/file1.txt', Size: 100, LastModified: new Date() },
-          { Key: '', Size: 0, LastModified: new Date() },
-          { Key: undefined, Size: 0, LastModified: new Date() },
-        ],
-        IsTruncated: false,
-      });
-
-      const result = await service.listFiles('test/');
-
-      expect(result).toHaveLength(1);
-    });
-
-    it('should handle undefined Size and LastModified in S3 list', async () => {
-      mockS3Send.mockResolvedValueOnce({
-        Contents: [
-          { Key: 'test/file1.txt', Size: undefined, LastModified: undefined },
-        ],
-        IsTruncated: false,
-      });
-
-      const result = await service.listFiles('test/');
-
-      expect(result).toHaveLength(1);
-      expect(result[0].size).toBe(0);
-      expect(result[0].lastModified).toBeInstanceOf(Date);
-    });
-
-    it('should handle IsTruncated explicitly set to false', async () => {
-      // This test ensures the else branch for IsTruncated !== undefined is covered
-      mockS3Send.mockResolvedValueOnce({
-        Contents: [
-          { Key: 'test/file.txt', Size: 50, LastModified: new Date('2024-06-15') },
-        ],
-        IsTruncated: false as boolean, // Explicitly set as boolean false
-      });
-
-      const result = await service.listFiles('test/');
-
-      expect(result).toHaveLength(1);
-      expect(result[0].key).toBe('test/file.txt');
-    });
-
-    it('should handle undefined IsTruncated in S3 list response', async () => {
-      // This test covers the branch where IsTruncated === undefined (line 475)
-      mockS3Send.mockResolvedValueOnce({
-        Contents: [
-          { Key: 'test/file.txt', Size: 100, LastModified: new Date() },
-        ],
-        // IsTruncated is intentionally omitted (undefined)
-      });
-
-      const result = await service.listFiles('test/');
-
-      expect(result).toHaveLength(1);
     });
 
     it('should delete directory from S3', async () => {
@@ -804,5 +541,10 @@ describe('StorageService', () => {
 
       expect(result?.key).toBe('external/videos/test/file.mp4');
     });
+  });
+  it('rejects streaming reads when the S3 client is not configured', async () => {
+    mockConfig.nodeSettings.storageConfig = { storageMode: 's3provider' } as never;
+    service = new StorageService(mockLogger);
+    await expect(service.getFileStream('file.ts')).rejects.toThrow('S3 client not configured');
   });
 });

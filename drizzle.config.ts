@@ -12,7 +12,12 @@ import type { Config } from 'drizzle-kit';
  *   - Open Drizzle Studio: npm run db:studio
  */
 
-const dialect = (process.env['DATABASE_DIALECT'] ?? 'sqlite') as 'sqlite' | 'postgresql';
+const requestedDialect = process.env['DATABASE_DIALECT'] ?? 'sqlite';
+if (!['sqlite', 'postgres', 'postgresql'].includes(requestedDialect))
+  throw new Error('Unsupported DATABASE_DIALECT: ' + requestedDialect);
+const dialect = (requestedDialect === 'postgres' ? 'postgresql' : requestedDialect) as
+  | 'sqlite'
+  | 'postgresql';
 const schemaDialect = dialect === 'postgresql' ? 'postgres' : 'sqlite';
 const outDir = dialect === 'postgresql' ? './drizzle/postgres' : './drizzle/sqlite';
 

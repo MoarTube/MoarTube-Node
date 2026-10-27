@@ -1,3 +1,7 @@
+import { rewriteManifestFile } from '@/utils/manifest-transform.js';
+vi.mock('@/utils/manifest-transform.js', () => ({
+  rewriteManifestFile: vi.fn().mockResolvedValue(undefined),
+}));
 /**
  * Streams Service Tests
  *
@@ -132,28 +136,66 @@ describe('StreamsService', () => {
   describe('stream recovery and manifest handling', () => {
     beforeEach(async () => {
       const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockReturnValue({ paths: { videosDirectoryPath: '/data/videos', publicDirectoryPath: '/public' }, nodeSettings: { storageConfig: { storageMode: 'filesystem' } } } as never);
+      vi.mocked(getConfig).mockReturnValue({
+        paths: { videosDirectoryPath: '/data/videos', publicDirectoryPath: '/public' },
+        nodeSettings: { storageConfig: { storageMode: 'filesystem' } },
+      } as never);
     });
 
     it.each([true, false])('stops remote-recorded=%s streams correctly', async (recorded) => {
       const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockReturnValue({ paths: { videosDirectoryPath: '/data/videos' }, nodeSettings: { storageConfig: { storageMode: 's3provider' } } } as never);
-      vi.mocked(mockVideosRepository.findById).mockResolvedValue({ ...mockVideo, is_stream_recorded_remotely: recorded } as never);
+      vi.mocked(getConfig).mockReturnValue({
+        paths: { videosDirectoryPath: '/data/videos' },
+        nodeSettings: { storageConfig: { storageMode: 's3provider' } },
+      } as never);
+      vi.mocked(mockVideosRepository.findById).mockResolvedValue({
+        ...mockVideo,
+        is_stream_recorded_remotely: recorded,
+      } as never);
       await service.stopStream('video123');
-      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { is_streaming: false, is_streamed: true });
-      if (recorded) expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { is_published: true });
+      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', {
+        is_streaming: false,
+        is_streamed: true,
+      });
+      if (recorded)
+        expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', {
+          is_published: true,
+        });
     });
 
     it('retries generated video IDs until a unique ID is found', async () => {
-      vi.mocked(mockVideosRepository.findById).mockResolvedValueOnce(mockVideo).mockResolvedValueOnce(null);
-      await service.startNewStream({ title: 'Live', description: '', tags: '', rtmpPort: 1935, networkAddress: 'localhost', resolution: '720p', isRecordingStreamRemotely: false, isRecordingStreamLocally: false });
+      vi.mocked(mockVideosRepository.findById)
+        .mockResolvedValueOnce(mockVideo)
+        .mockResolvedValueOnce(null);
+      await service.startNewStream({
+        title: 'Live',
+        description: '',
+        tags: '',
+        rtmpPort: 1935,
+        networkAddress: 'localhost',
+        resolution: '720p',
+        isRecordingStreamRemotely: false,
+        isRecordingStreamLocally: false,
+      });
       expect(mockVideosRepository.findById).toHaveBeenCalledTimes(2);
       expect(mockVideosRepository.create).toHaveBeenCalledOnce();
     });
 
     it('rejects resuming a video that no longer exists', async () => {
       vi.mocked(mockVideosRepository.findById).mockResolvedValue(null);
-      await expect(service.startNewStream({ existingVideoId: 'missing', title: 'Live', description: '', tags: '', rtmpPort: 1935, networkAddress: 'localhost', resolution: '720p', isRecordingStreamRemotely: false, isRecordingStreamLocally: false })).rejects.toThrow('video with id does not exist');
+      await expect(
+        service.startNewStream({
+          existingVideoId: 'missing',
+          title: 'Live',
+          description: '',
+          tags: '',
+          rtmpPort: 1935,
+          networkAddress: 'localhost',
+          resolution: '720p',
+          isRecordingStreamRemotely: false,
+          isRecordingStreamLocally: false,
+        })
+      ).rejects.toThrow('video with id does not exist');
     });
 
     it('finalizes only remotely recorded streamed manifests during filesystem recovery', async () => {
@@ -166,9 +208,13 @@ describe('StreamsService', () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       await service.finalizeAllStreamedManifests();
       expect(fs.existsSync).toHaveBeenCalledExactlyOnceWith('/data/videos/recorded/adaptive/m3u8');
-      expect(mockLogger.info).toHaveBeenCalledWith('Finalized all streamed HLS manifests', { count: 1 });
+      expect(mockLogger.info).toHaveBeenCalledWith('Finalized all streamed HLS manifests', {
+        count: 1,
+      });
       const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockReturnValue({ nodeSettings: { storageConfig: { storageMode: 's3provider' } } } as never);
+      vi.mocked(getConfig).mockReturnValue({
+        nodeSettings: { storageConfig: { storageMode: 's3provider' } },
+      } as never);
       vi.mocked((mockVideosRepository as any).findAll).mockClear();
       await service.finalizeAllStreamedManifests();
       expect((mockVideosRepository as any).findAll).not.toHaveBeenCalled();
@@ -179,12 +225,22 @@ describe('StreamsService', () => {
       vi.mocked(fs.existsSync).mockImplementation((file) => !String(file).includes('missing'));
       vi.mocked(fs.readdirSync).mockReturnValue([
         ...['720p', '1080p', 'missing'].map((name) => ({ name, isDirectory: () => true })),
-        { name: 'notes.txt', isDirectory: () => false }, 'direct.m3u8', 'readme.txt',
+        { name: 'notes.txt', isDirectory: () => false },
+        'direct.m3u8',
+        'readme.txt',
       ] as never);
-      vi.mocked(fs.readFileSync).mockImplementation((file) => String(file).includes('1080p') ? '#EXTM3U\n#EXT-X-ENDLIST\n' : '#EXTM3U\n#EXT-X-PLAYLIST-TYPE:EVENT\n');
-      service.finalizeStreamManifests('video123');
-      expect(fs.writeFileSync).toHaveBeenCalledWith('/data/videos/video123/adaptive/m3u8/720p/manifest-720p.m3u8', '#EXTM3U\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-ENDLIST\n');
-      expect(fs.writeFileSync).toHaveBeenCalledTimes(2);
+      vi.mocked(fs.readFileSync).mockImplementation((file) =>
+        String(file).includes('1080p')
+          ? '#EXTM3U\n#EXT-X-ENDLIST\n'
+          : '#EXTM3U\n#EXT-X-PLAYLIST-TYPE:EVENT\n'
+      );
+      await service.finalizeStreamManifests('video123');
+      expect(rewriteManifestFile).toHaveBeenCalledWith(
+        '/data/videos/video123/adaptive/m3u8/720p/manifest-720p.m3u8',
+        expect.any(Function),
+        true
+      );
+      expect(rewriteManifestFile).toHaveBeenCalledTimes(3);
     });
   });
 
@@ -380,7 +436,9 @@ describe('StreamsService', () => {
           is_live: true,
         })
       );
-      expect(mockLogger.info).toHaveBeenCalledWith('New stream created', { videoId: result.videoId });
+      expect(mockLogger.info).toHaveBeenCalledWith('New stream created', {
+        videoId: result.videoId,
+      });
     });
 
     it('should resume existing stream when existingVideoId provided', async () => {
@@ -539,7 +597,7 @@ describe('StreamsService', () => {
       const fs = await import('node:fs');
       vi.mocked(fs.default.existsSync).mockReturnValue(false);
 
-      service.finalizeStreamManifests('video123');
+      await service.finalizeStreamManifests('video123');
 
       expect(mockLogger.info).toHaveBeenCalledWith('Stream manifests finalized', {
         videoId: 'video123',
@@ -550,7 +608,7 @@ describe('StreamsService', () => {
       const fs = await import('node:fs');
       vi.mocked(fs.default.existsSync).mockReturnValue(false);
 
-      service.finalizeStreamManifests('video123');
+      await service.finalizeStreamManifests('video123');
 
       expect(mockLogger.info).toHaveBeenCalledWith('Stream manifests finalized', {
         videoId: 'video123',
@@ -560,18 +618,24 @@ describe('StreamsService', () => {
     it('should end HLS manifests when directory exists with m3u8 files', async () => {
       const fs = await import('node:fs');
       vi.mocked(fs.default.existsSync).mockReturnValue(true);
-      vi.mocked(fs.default.readdirSync).mockReturnValue(['stream.m3u8', 'master.m3u8', 'other.txt'] as unknown as string[] & { [Symbol.iterator](): IterableIterator<string>; });
+      vi.mocked(fs.default.readdirSync).mockReturnValue([
+        'stream.m3u8',
+        'master.m3u8',
+        'other.txt',
+      ] as unknown as string[] & { [Symbol.iterator](): IterableIterator<string> });
       vi.mocked(fs.default.readFileSync).mockReturnValue('#EXTM3U\n#EXT-X-VERSION:3');
 
-      service.finalizeStreamManifests('video123');
+      await service.finalizeStreamManifests('video123');
 
-      expect(fs.default.writeFileSync).toHaveBeenCalledWith(
+      expect(rewriteManifestFile).toHaveBeenCalledWith(
         expect.stringContaining('stream.m3u8'),
-        expect.stringContaining('#EXT-X-ENDLIST')
+        expect.any(Function),
+        true
       );
-      expect(fs.default.writeFileSync).toHaveBeenCalledWith(
+      expect(rewriteManifestFile).toHaveBeenCalledWith(
         expect.stringContaining('master.m3u8'),
-        expect.stringContaining('#EXT-X-ENDLIST')
+        expect.any(Function),
+        true
       );
       expect(mockLogger.info).toHaveBeenCalledWith('Stream manifests finalized', {
         videoId: 'video123',
@@ -581,10 +645,14 @@ describe('StreamsService', () => {
     it('should not append ENDLIST if already present in manifest', async () => {
       const fs = await import('node:fs');
       vi.mocked(fs.default.existsSync).mockReturnValue(true);
-      vi.mocked(fs.default.readdirSync).mockReturnValue(['stream.m3u8'] as unknown as string[] & { [Symbol.iterator](): IterableIterator<string>; });
-      vi.mocked(fs.default.readFileSync).mockReturnValue('#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-ENDLIST');
+      vi.mocked(fs.default.readdirSync).mockReturnValue(['stream.m3u8'] as unknown as string[] & {
+        [Symbol.iterator](): IterableIterator<string>;
+      });
+      vi.mocked(fs.default.readFileSync).mockReturnValue(
+        '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-ENDLIST'
+      );
 
-      service.finalizeStreamManifests('video123');
+      await service.finalizeStreamManifests('video123');
 
       expect(fs.default.writeFileSync).not.toHaveBeenCalled();
     });
@@ -605,7 +673,7 @@ describe('StreamsService', () => {
         },
       });
 
-      service.finalizeStreamManifests('video123');
+      await service.finalizeStreamManifests('video123');
 
       expect(fs.default.existsSync).not.toHaveBeenCalled();
       expect(fs.default.readdirSync).not.toHaveBeenCalled();
@@ -650,5 +718,24 @@ describe('StreamsService', () => {
       expect(fs.default.mkdirSync).not.toHaveBeenCalled();
       expect(mockVideosRepository.create).toHaveBeenCalled();
     });
+  });
+  it('walks all recovery pages and uses the manifest identity transform', async () => {
+    vi.mocked((await import('@config/index.js')).getConfig).mockReturnValue({
+      paths: { videosDirectoryPath: '/data/videos' },
+      nodeSettings: { storageConfig: { storageMode: 'filesystem' } },
+    } as never);
+    (mockVideosRepository as any).findAll = vi
+      .fn()
+      .mockResolvedValueOnce(Array.from({ length: 100 }, () => ({ is_streamed: false }) as never))
+      .mockResolvedValueOnce([]);
+    await service.finalizeAllStreamedManifests();
+    expect(mockVideosRepository.findAll).toHaveBeenLastCalledWith({ limit: 100, offset: 100 });
+    const fs = (await import('node:fs')).default;
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readdirSync).mockReturnValue(['a.m3u8'] as never);
+    vi.mocked(rewriteManifestFile).mockImplementationOnce(async (_file, transform) => {
+      expect(transform('#EXTM3U')).toBe('#EXTM3U');
+    });
+    await service.finalizeStreamManifests('a');
   });
 });

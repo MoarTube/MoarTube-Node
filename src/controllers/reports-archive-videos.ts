@@ -3,6 +3,7 @@
  *
  * Handles archived video report management endpoints.
  */
+import { pageOptions } from '@/utils/pagination.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from '@controllers/base.js';
@@ -35,11 +36,17 @@ export class ReportsArchiveVideosController extends BaseController {
    *
    * Get all archived video reports
    */
-  getAllArchives = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  getAllArchives = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const reports = await this.reportsService.getArchivedVideoReports();
+      const reports = await this.reportsService.getArchivedVideoReports({
+        ...pageOptions(request.query),
+        search: ((request.query as { search?: string } | undefined)?.search ?? '').slice(0, 100),
+      });
 
-      return await this.sendSuccess(reply, { reports });
+      return await this.sendSuccess(reply, {
+        reports: reports.slice(0, 100),
+        hasMore: reports.length > 100,
+      });
     } catch (error) {
       this.logger.error('Failed to get all archived video reports', error);
 

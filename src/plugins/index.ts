@@ -20,6 +20,7 @@ import { getConfig } from '@config/index.js';
 import { createAppContainer } from '@core/index.js';
 import { getDatabase } from '@database/index.js';
 import { registerRoutes } from '@routes/index.js';
+import { compressTextResponse } from '@/utils/http-compression.js';
 import authenticationPlugin from '@plugins/authentication.js';
 import swaggerPlugin from '@plugins/swagger.js';
 
@@ -58,6 +59,8 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
     trustProxy: true,
   });
 
+  app.addHook('onSend', compressTextResponse);
+
   // Register CORS to allow any origin
   await app.register(fastifyCors, {
     origin: true, // Allow any origin
@@ -70,9 +73,9 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   // Register multipart support (for file uploads)
   await app.register(fastifyMultipart, {
     limits: {
-      parts: Infinity,
-      files: Infinity,
-      fileSize: Infinity,
+      parts: 1024,
+      files: 1000,
+      fileSize: 10 * 1024 ** 3,
     },
   });
 
@@ -101,6 +104,8 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   // Create DI container with database
   const db = getDatabase();
   const container = await createAppContainer(db);
+
+  app.addHook('onClose', async () => container.resolve('videosService').flushPendingViews());
 
   // Register routes with Zod type provider
   registerRoutes(app.withTypeProvider<ZodTypeProvider>(), container);

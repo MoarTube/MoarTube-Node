@@ -1,3 +1,7 @@
+vi.mock('@database/provisioning/comments.js', () => ({
+  provisionSQLiteComments: vi.fn(),
+  provisionPostgresComments: vi.fn(),
+}));
 /**
  * Unit tests for database/postgres-connection.ts
  *
@@ -99,7 +103,7 @@ describe('database/postgres-connection.ts', () => {
 
       // Verify the interface shape
       const config: DatabaseConfig = {
-        connectionString: 'postgres://localhost:5432/test'
+        connectionString: 'postgres://localhost:5432/test',
       };
 
       expect(config.connectionString).toBe('postgres://localhost:5432/test');
@@ -116,7 +120,7 @@ describe('database/postgres-connection.ts', () => {
       const { createDatabase } = await import('@database/postgres-connection.js');
 
       const config: DatabaseConfig = {
-        connectionString: 'postgres://user:pass@localhost:5432/testdb'
+        connectionString: 'postgres://user:pass@localhost:5432/testdb',
       };
 
       const result = createDatabase(config);
@@ -141,7 +145,7 @@ describe('database/postgres-connection.ts', () => {
       const { createDatabase } = await import('@database/postgres-connection.js');
 
       const config: DatabaseConfig = {
-        connectionString: ''
+        connectionString: '',
       };
 
       expect(() => createDatabase(config)).toThrow('PostgreSQL connection string is required');
@@ -156,7 +160,7 @@ describe('database/postgres-connection.ts', () => {
       const { createDatabase } = await import('@database/postgres-connection.js');
 
       const config: DatabaseConfig = {
-        connectionString: 'postgres://localhost:5432/test'
+        connectionString: 'postgres://localhost:5432/test',
       };
 
       expect(() => createDatabase(config)).toThrow('PostgreSQL connection failed');
@@ -185,10 +189,11 @@ describe('database/postgres-connection.ts', () => {
       vi.mocked(path.resolve).mockReturnValue('/project/drizzle/postgres');
       vi.mocked(migrate).mockResolvedValue(undefined);
 
-      const { createDatabase, initializeDatabaseSchema } = await import('@database/postgres-connection.js');
+      const { createDatabase, initializeDatabaseSchema } =
+        await import('@database/postgres-connection.js');
 
       const config: DatabaseConfig = {
-        connectionString: 'postgres://localhost:5432/test'
+        connectionString: 'postgres://localhost:5432/test',
       };
 
       createDatabase(config);
@@ -196,7 +201,7 @@ describe('database/postgres-connection.ts', () => {
       await initializeDatabaseSchema();
 
       expect(migrate).toHaveBeenCalledWith(mockDrizzleDb, {
-        migrationsFolder: '/project/drizzle/postgres'
+        migrationsFolder: '/project/drizzle/postgres',
       });
     });
 
@@ -212,10 +217,11 @@ describe('database/postgres-connection.ts', () => {
       vi.mocked(path.join).mockReturnValue('/project/dist/drizzle/postgres');
       vi.mocked(migrate).mockResolvedValue(undefined);
 
-      const { createDatabase, initializeDatabaseSchema } = await import('@database/postgres-connection.js');
+      const { createDatabase, initializeDatabaseSchema } =
+        await import('@database/postgres-connection.js');
 
       const config: DatabaseConfig = {
-        connectionString: 'postgres://localhost:5432/test'
+        connectionString: 'postgres://localhost:5432/test',
       };
 
       createDatabase(config);
@@ -224,7 +230,7 @@ describe('database/postgres-connection.ts', () => {
 
       expect(path.join).toHaveBeenCalledWith('/project/dist', 'drizzle', 'postgres');
       expect(migrate).toHaveBeenCalledWith(mockDrizzleDb, {
-        migrationsFolder: '/project/dist/drizzle/postgres'
+        migrationsFolder: '/project/dist/drizzle/postgres',
       });
     });
 
@@ -239,10 +245,11 @@ describe('database/postgres-connection.ts', () => {
       vi.mocked(path.resolve).mockReturnValue('/project/drizzle/postgres');
       vi.mocked(migrate).mockResolvedValue(undefined);
 
-      const { createDatabase, initializeDatabaseSchema } = await import('@database/postgres-connection.js');
+      const { createDatabase, initializeDatabaseSchema } =
+        await import('@database/postgres-connection.js');
 
       const config: DatabaseConfig = {
-        connectionString: 'postgres://localhost:5432/test'
+        connectionString: 'postgres://localhost:5432/test',
       };
 
       createDatabase(config);
@@ -267,10 +274,11 @@ describe('database/postgres-connection.ts', () => {
       vi.mocked(path.join).mockImplementation((...args) => args.join('/'));
       vi.mocked(migrate).mockRejectedValue(new Error('Migration failed'));
 
-      const { createDatabase, initializeDatabaseSchema } = await import('@database/postgres-connection.js');
+      const { createDatabase, initializeDatabaseSchema } =
+        await import('@database/postgres-connection.js');
 
       const config: DatabaseConfig = {
-        connectionString: 'postgres://localhost:5432/test'
+        connectionString: 'postgres://localhost:5432/test',
       };
 
       createDatabase(config);
@@ -291,18 +299,23 @@ describe('database/postgres-connection.ts', () => {
       vi.mocked(path.join).mockReturnValue('/project/drizzle/postgres');
 
       // Create a DrizzleQueryError with 'already exists' in the cause message
-      const alreadyExistsError = new DrizzleQueryError('Query failed', { message: 'relation already exists' });
+      const alreadyExistsError = new DrizzleQueryError('Query failed', {
+        message: 'relation already exists',
+      });
       vi.mocked(migrate).mockRejectedValue(alreadyExistsError);
 
-      const { createDatabase, initializeDatabaseSchema } = await import('@database/postgres-connection.js');
+      const { createDatabase, initializeDatabaseSchema } =
+        await import('@database/postgres-connection.js');
 
       const config: DatabaseConfig = {
-        connectionString: 'postgres://localhost:5432/test'
+        connectionString: 'postgres://localhost:5432/test',
       };
 
       createDatabase(config);
 
-      await expect(initializeDatabaseSchema()).rejects.toThrow('Failed to initialize PostgreSQL database schema');
+      await expect(initializeDatabaseSchema()).rejects.toThrow(
+        'Failed to initialize PostgreSQL database schema'
+      );
     });
   });
 
@@ -326,7 +339,7 @@ describe('database/postgres-connection.ts', () => {
       const { createDatabase, getDatabase } = await import('@database/postgres-connection.js');
 
       const config: DatabaseConfig = {
-        connectionString: 'postgres://localhost:5432/test'
+        connectionString: 'postgres://localhost:5432/test',
       };
 
       createDatabase(config);
@@ -344,7 +357,7 @@ describe('database/postgres-connection.ts', () => {
       const { createDatabase, getDatabase } = await import('@database/postgres-connection.js');
 
       const config: DatabaseConfig = {
-        connectionString: 'postgres://localhost:5432/test'
+        connectionString: 'postgres://localhost:5432/test',
       };
 
       createDatabase(config);
@@ -369,10 +382,11 @@ describe('database/postgres-connection.ts', () => {
       vi.mocked(path.join).mockImplementation((...args) => args.join('/'));
       vi.mocked(migrate).mockResolvedValue(undefined);
 
-      const { createDatabase, getDatabase, initializeDatabaseSchema } = await import('@database/postgres-connection.js');
+      const { createDatabase, getDatabase, initializeDatabaseSchema } =
+        await import('@database/postgres-connection.js');
 
       const config: DatabaseConfig = {
-        connectionString: 'postgres://localhost:5432/test'
+        connectionString: 'postgres://localhost:5432/test',
       };
 
       createDatabase(config);
@@ -380,6 +394,15 @@ describe('database/postgres-connection.ts', () => {
       const result = getDatabase();
 
       expect(result).toBe(mockDrizzleDb);
+    });
+  });
+  it('accepts an isolated migration folder for regenerated schema tests', async () => {
+    vi.resetModules();
+    const connection = await import('@database/postgres-connection.js');
+    connection.createDatabase({ connectionString: 'postgres://localhost/test' });
+    await connection.initializeDatabaseSchema({ migrationsFolder: '/isolated/migrations' });
+    expect(migrate).toHaveBeenCalledWith(expect.anything(), {
+      migrationsFolder: '/isolated/migrations',
     });
   });
 });

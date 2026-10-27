@@ -9,6 +9,7 @@ import type { FastifyReply } from 'fastify';
 import fs from 'node:fs';
 import { Readable } from 'node:stream';
 
+import { NotFoundError } from '@errors/index.js';
 import { BaseController } from '@controllers/base.js';
 
 // Mock the logger
@@ -50,6 +51,8 @@ class TestController extends BaseController {
   public testSendError(reply: FastifyReply, message: string, status?: number) {
     return this.sendError(reply, message, status);
   }
+
+  public testCaught(reply: FastifyReply,error:unknown){return this.sendCaughtError(reply,error,'fallback');}
 
   public testSendFile(reply: FastifyReply, filePath: string, contentType: string) {
     return this.sendFile(reply, filePath, contentType);
@@ -407,3 +410,5 @@ describe('BaseController', () => {
     });
   });
 });
+
+describe('caught application errors',()=>{it('retains typed status and hides unexpected errors',async()=>{const controller=new TestController();for(const [error,status,message] of [[new NotFoundError('gone'),404,'gone'],[new Error('private'),500,'fallback']] as const){const reply=createMockReply();await controller.testCaught(reply,error);expect(reply.status).toHaveBeenCalledWith(status);expect(reply.send).toHaveBeenCalledWith({isError:true,message});}});});

@@ -710,11 +710,11 @@ body {
       		}
       	}
 
-      	getVideos(searchTerm, sortTerm, tagTerm) {
+        getVideos(searchTerm, sortTerm, tagTerm, offset = 0) {
       		$('#videos-container').empty();
 
       		const data = {
-      			sortTerm: sortTerm,
+            sortTerm: sortTerm, offset: offset,
       		};
 
       		if(searchTerm !== '') {
@@ -731,7 +731,7 @@ body {
       					console.log(data.message);
       				}
       				else {
-      					this.loadVideos(data.searchResults);
+                this.catalogOffset = offset; this.catalogHasMore = data.hasMore; this.loadVideos(data.searchResults);
       				}
       			})
       			.fail(function () {
@@ -740,6 +740,16 @@ body {
       	}
 
       	loadVideos(videos) {
+        this.catalogOffset ??= this.INCOMING_PARAMETERS.searchResultsData.offset || 0;
+        this.catalogHasMore ??= this.INCOMING_PARAMETERS.searchResultsData.hasMore || false;
+        let navigation = document.getElementById('catalog-pages');
+        if (!navigation) { navigation = document.createElement('nav'); navigation.id = 'catalog-pages'; navigation.className = 'd-flex justify-content-center gap-3 p-3'; document.getElementById('videos-container').after(navigation); }
+        navigation.replaceChildren();
+        for (const [label, delta, disabled] of [['Previous', -100, this.catalogOffset === 0], ['Next', 100, !this.catalogHasMore]]) {
+          const button = document.createElement('button'); button.textContent = label; button.className = 'btn btn-outline-primary'; button.disabled = disabled;
+          button.onclick = () => this.getVideos(this.CURRENT_SEARCH_TERM, this.CURRENT_SORT_TERM, this.CURRENT_TAG_TERM, this.catalogOffset + delta);
+          navigation.append(button);
+        }
       		this.clearTimestampUpdateTracker();
 
       		videos.forEach((row) => {

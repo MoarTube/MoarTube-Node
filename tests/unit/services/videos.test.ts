@@ -75,8 +75,7 @@ vi.mock('@config/index.js', () => ({
       dataDirectoryPath: '/data',
       publicDirectoryPath: '/public',
     },
-    urls: {
-    },
+    urls: {},
     getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
   }),
 }));
@@ -101,6 +100,7 @@ const mockLogger = {
 const mockVideosRepository = {
   findById: vi.fn(),
   findAll: vi.fn(),
+  findTags: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
   delete: vi.fn(),
@@ -153,7 +153,7 @@ describe('VideosService', () => {
       mockCommentsRepository as never,
       mockStorageService as never,
       mockWebSocketService as never,
-      mockCloudflareService as never,
+      mockCloudflareService as never
     );
   });
 
@@ -163,8 +163,11 @@ describe('VideosService', () => {
 
   describe('video sources and concurrent output updates', () => {
     it.each([true, false])('builds sources for streaming=%s', async (isStreaming) => {
-      mockVideosRepository.findById.mockResolvedValue({ video_id: 'v', is_streaming: isStreaming,
-        outputs: JSON.stringify({ m3u8: ['720p'], mp4: ['480p'], webm: [], ogv: [] }) });
+      mockVideosRepository.findById.mockResolvedValue({
+        video_id: 'v',
+        is_streaming: isStreaming,
+        outputs: JSON.stringify({ m3u8: ['720p'], mp4: ['480p'], webm: [], ogv: [] }),
+      });
       const sources = await service.getVideoSources('v');
       expect(sources?.adaptiveSources).toHaveLength(2);
       expect(sources?.progressiveSources).toHaveLength(1);
@@ -179,8 +182,13 @@ describe('VideosService', () => {
     it('serializes output changes for the same video without losing either update', async () => {
       let outputs = JSON.stringify({ m3u8: [], mp4: [], webm: [], ogv: [] });
       mockVideosRepository.findById.mockImplementation(async () => ({ video_id: 'v', outputs }));
-      mockVideosRepository.update.mockImplementation(async (_id, data) => { outputs = data.outputs; });
-      await Promise.all([service.addOutputResolution('v', 'mp4', '720p'), service.addOutputResolution('v', 'mp4', '1080p')]);
+      mockVideosRepository.update.mockImplementation(async (_id, data) => {
+        outputs = data.outputs;
+      });
+      await Promise.all([
+        service.addOutputResolution('v', 'mp4', '720p'),
+        service.addOutputResolution('v', 'mp4', '1080p'),
+      ]);
       expect(JSON.parse(outputs).mp4).toEqual(['1080p', '720p']);
       mockVideosRepository.update.mockReset();
       mockVideosRepository.findById.mockReset();
@@ -456,7 +464,7 @@ describe('VideosService', () => {
       mockVideosRepository.findById.mockResolvedValue(null);
       mockVideosRepository.create.mockResolvedValue(undefined);
       vi.mocked(fs.default.mkdirSync).mockClear();
-      
+
       // Override config for this test
       const originalMock = vi.mocked(getConfig).getMockImplementation();
       vi.mocked(getConfig).mockReturnValue({
@@ -475,7 +483,7 @@ describe('VideosService', () => {
       // Should create video successfully but not call mkdirSync
       expect(result).toHaveProperty('videoId');
       expect(fs.default.mkdirSync).not.toHaveBeenCalled();
-      
+
       // Restore default mock behavior
       vi.mocked(getConfig).mockReturnValue({
         nodeSettings: {
@@ -496,8 +504,7 @@ describe('VideosService', () => {
           dataDirectoryPath: '/data',
           publicDirectoryPath: '/public',
         },
-        urls: {
-        },
+        urls: {},
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
     });
@@ -533,7 +540,9 @@ describe('VideosService', () => {
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
-      mockCloudflareService.purgeEmbedVideoPages.mockRejectedValueOnce(new Error('Cloudflare error'));
+      mockCloudflareService.purgeEmbedVideoPages.mockRejectedValueOnce(
+        new Error('Cloudflare error')
+      );
 
       const result = await service.updateVideo('video123', { title: 'Updated' });
 
@@ -554,10 +563,7 @@ describe('VideosService', () => {
 
       await service.updateVideo('video123', { title: 'New Title' });
 
-      expect(mockVideosRepository.update).toHaveBeenCalledWith(
-        'video123',
-        { title: 'New Title' }
-      );
+      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { title: 'New Title' });
     });
 
     it('should update description and tags', async () => {
@@ -567,9 +573,17 @@ describe('VideosService', () => {
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
 
-      await service.updateVideo('video123', { title: 'New Title', description: 'New Desc', tags: 'new,tags' });
+      await service.updateVideo('video123', {
+        title: 'New Title',
+        description: 'New Desc',
+        tags: 'new,tags',
+      });
 
-      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { title: 'New Title', description: 'New Desc', tags: 'new,tags' });
+      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', {
+        title: 'New Title',
+        description: 'New Desc',
+        tags: 'new,tags',
+      });
     });
 
     it('should update video visibility', async () => {
@@ -763,7 +777,9 @@ describe('VideosService', () => {
       const mockVideo = { video_id: 'video123' };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
-      mockCloudflareService.purgeEmbedVideoPages.mockRejectedValueOnce(new Error('Cloudflare error'));
+      mockCloudflareService.purgeEmbedVideoPages.mockRejectedValueOnce(
+        new Error('Cloudflare error')
+      );
 
       const result = await service.updateVideoMeta('video123', { field: 'value' });
 
@@ -838,17 +854,14 @@ describe('VideosService', () => {
           dataDirectoryPath: '/data',
           publicDirectoryPath: '/public',
         },
-        urls: {
-        },
+        urls: {},
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
 
       const result = await service.deleteVideo('video123');
 
       expect(result).toBe(true);
-      expect(mockStorageService.deleteDirectory).toHaveBeenCalledWith(
-        'external/videos/video123'
-      );
+      expect(mockStorageService.deleteDirectory).toHaveBeenCalledWith('external/videos/video123');
     });
 
     it('should skip rmSync when directory does not exist', async () => {
@@ -999,6 +1012,27 @@ describe('VideosService', () => {
       );
     });
 
+    it('flushes views within a fixed window even under continuous traffic and on shutdown',async()=>{
+      mockVideosRepository.findById.mockResolvedValue({video_id:'a',views:0});
+      mockVideosRepository.incrementViewsBy.mockResolvedValue(undefined);
+      for(let i=0;i<6;i++){await service.incrementViewsDebounced('a');await vi.advanceTimersByTimeAsync(100);}
+      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledWith('a',5);
+      await service.incrementViewsDebounced('b');await service.flushPendingViews();
+      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledWith('a',1);
+      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledWith('b',1);
+      const count=mockVideosRepository.incrementViewsBy.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(1000);expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledTimes(count);
+    });
+
+
+    it('waits for an in-flight view batch at shutdown',async()=>{
+      mockVideosRepository.findById.mockResolvedValue({video_id:'a',views:0});
+      let release!:()=>void;mockVideosRepository.incrementViewsBy.mockImplementationOnce(()=>new Promise<void>(resolve=>{release=resolve;}));
+      await service.incrementViewsDebounced('a');await vi.advanceTimersByTimeAsync(500);
+      let closed=false;const closing=service.flushPendingViews().then(()=>{closed=true;});
+      await Promise.resolve();expect(closed).toBe(false);release();await closing;expect(closed).toBe(true);
+    });
+
     it('should batch multiple debounced views', async () => {
       const mockVideo = { video_id: 'video123', views: 100 };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
@@ -1054,7 +1088,7 @@ describe('VideosService', () => {
       await vi.advanceTimersByTimeAsync(500);
 
       // Should have called incrementViewsBy with 0
-      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledWith('video123', 0);
+      expect(mockVideosRepository.incrementViewsBy).not.toHaveBeenCalled();
     });
   });
 
@@ -1092,7 +1126,9 @@ describe('VideosService', () => {
       await service.setError('video123', true);
 
       expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { is_error: true });
-      expect(mockLogger.warn).toHaveBeenCalledWith('Video marked as error', { videoId: 'video123' });
+      expect(mockLogger.warn).toHaveBeenCalledWith('Video marked as error', {
+        videoId: 'video123',
+      });
     });
 
     it('should clear error state without warning', async () => {
@@ -1226,9 +1262,15 @@ describe('VideosService', () => {
       const result = await service.getPublishStatus('video123');
 
       expect(result).toBeInstanceOf(Array);
-      expect(result.find(p => p.format === 'm3u8' && p.resolution === '1080p')?.isPublished).toBe(true);
-      expect(result.find(p => p.format === 'mp4' && p.resolution === '720p')?.isPublished).toBe(true);
-      expect(result.find(p => p.format === 'webm' && p.resolution === '1080p')?.isPublished).toBe(false);
+      expect(result.find((p) => p.format === 'm3u8' && p.resolution === '1080p')?.isPublished).toBe(
+        true
+      );
+      expect(result.find((p) => p.format === 'mp4' && p.resolution === '720p')?.isPublished).toBe(
+        true
+      );
+      expect(result.find((p) => p.format === 'webm' && p.resolution === '1080p')?.isPublished).toBe(
+        false
+      );
     });
 
     it('should throw when video not found', async () => {
@@ -1399,7 +1441,7 @@ describe('VideosService', () => {
 
       expect(result).toBeTruthy();
       expect(result?.isWebmAvailable).toBe(true);
-      expect(result?.progressiveSources.some(s => s.type === 'video/webm')).toBe(true);
+      expect(result?.progressiveSources.some((s) => s.type === 'video/webm')).toBe(true);
     });
 
     it('should include ogv progressive sources', async () => {
@@ -1425,7 +1467,7 @@ describe('VideosService', () => {
 
       expect(result).toBeTruthy();
       expect(result?.isOgvAvailable).toBe(true);
-      expect(result?.progressiveSources.some(s => s.type === 'video/ogg')).toBe(true);
+      expect(result?.progressiveSources.some((s) => s.type === 'video/ogg')).toBe(true);
     });
 
     it('should use dynamic manifest type when streaming', async () => {
@@ -1646,56 +1688,24 @@ describe('VideosService', () => {
       const result = await service.getRecommendedVideos();
 
       expect(result).toHaveLength(2);
-      expect(result.map(v => v.video_id)).toContain('video1');
-      expect(result.map(v => v.video_id)).toContain('video2');
-      expect(result.map(v => v.video_id)).not.toContain('video3');
+      expect(result.map((v) => v.video_id)).toContain('video1');
+      expect(result.map((v) => v.video_id)).toContain('video2');
+      expect(result.map((v) => v.video_id)).not.toContain('video3');
     });
   });
 
   describe('tags', () => {
-    it('should get published tags', async () => {
-      const mockVideos = [
-        { video_id: 'video1', is_published: true, is_live: false, tags: 'tag1,tag2' },
-        { video_id: 'video2', is_published: true, is_live: false, tags: 'tag2,tag3' },
-      ];
-      mockVideosRepository.findAll.mockResolvedValue(mockVideos);
-
-      const result = await service.getPublishedTags();
-
-      expect(result).toContain('tag1');
-      expect(result).toContain('tag2');
-      expect(result).toContain('tag3');
+    it('delegates published tag projection to the repository', async () => {
+      mockVideosRepository.findTags.mockResolvedValue(['tag1', 'tag2']);
+      expect(await service.getPublishedTags()).toEqual(['tag1', 'tag2']);
+      expect(mockVideosRepository.findTags).toHaveBeenCalledWith(true);
     });
-
-    it('should get all unique tags', async () => {
-      const mockVideos = [
-        { video_id: 'video1', tags: 'tag1,tag2' },
-        { video_id: 'video2', tags: 'tag2,tag3,tag1' },
-      ];
-      mockVideosRepository.findAll.mockResolvedValue(mockVideos);
-
-      const result = await service.getAllTags();
-
-      expect(result).toHaveLength(3);
-    });
-
-    it('should skip empty tags and null tags field', async () => {
-      const mockVideos = [
-        { video_id: 'video1', tags: 'tag1,,  ,tag2' }, // empty and whitespace tags
-        { video_id: 'video2', tags: null }, // null tags
-        { video_id: 'video3', tags: '' }, // empty string
-      ];
-      mockVideosRepository.findAll.mockResolvedValue(mockVideos);
-
-      const result = await service.getAllTags();
-
-      // Should only contain tag1 and tag2
-      expect(result).toHaveLength(2);
-      expect(result).toContain('tag1');
-      expect(result).toContain('tag2');
+    it('delegates all tag projection to the repository', async () => {
+      mockVideosRepository.findTags.mockResolvedValue(['tag1', 'tag2']);
+      expect(await service.getAllTags()).toEqual(['tag1', 'tag2']);
+      expect(mockVideosRepository.findTags).toHaveBeenCalledWith(false);
     });
   });
-
   describe('unpublishFormatResolution', () => {
     it('should remove resolution from outputs and delete files', async () => {
       const mockVideo = {
@@ -1906,7 +1916,13 @@ describe('VideosService', () => {
   describe('batch operations', () => {
     it('should delete inactive videos', async () => {
       mockVideosRepository.findById.mockImplementation((id) => {
-        if (id === 'video1') return Promise.resolve({ video_id: 'video1', is_importing: false, is_publishing: false, is_streaming: false, });
+        if (id === 'video1')
+          return Promise.resolve({
+            video_id: 'video1',
+            is_importing: false,
+            is_publishing: false,
+            is_streaming: false,
+          });
         if (id === 'video2') return Promise.resolve({ video_id: 'video2', is_importing: true }); // In active state
         return Promise.resolve(null);
       });
@@ -1936,7 +1952,13 @@ describe('VideosService', () => {
 
     it('should finalize inactive videos', async () => {
       mockVideosRepository.findById.mockImplementation((id) => {
-        if (id === 'video1') return Promise.resolve({ video_id: 'video1', is_importing: false, is_publishing: false, is_streaming: false, });
+        if (id === 'video1')
+          return Promise.resolve({
+            video_id: 'video1',
+            is_importing: false,
+            is_publishing: false,
+            is_streaming: false,
+          });
         return Promise.resolve(null);
       });
       mockVideosRepository.update.mockResolvedValue(undefined);
@@ -1982,12 +2004,7 @@ describe('VideosService', () => {
         return Promise.resolve(null);
       });
 
-      const result = await service.finalizeVideos([
-        'video1',
-        'video2',
-        'video3',
-        'video4',
-      ]);
+      const result = await service.finalizeVideos(['video1', 'video2', 'video3', 'video4']);
 
       expect(result.nonFinalizedVideoIds).toContain('video1');
       expect(result.nonFinalizedVideoIds).toContain('video2');
@@ -2032,8 +2049,7 @@ describe('VideosService', () => {
           dataDirectoryPath: '/data',
           publicDirectoryPath: '/public',
         },
-        urls: {
-        },
+        urls: {},
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
 
@@ -2056,7 +2072,7 @@ describe('VideosService', () => {
 
   describe('setVideoLength', () => {
     it('should update video length', async () => {
-      const mockVideo = { video_id: 'video123', };
+      const mockVideo = { video_id: 'video123' };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(undefined);
 
@@ -2069,7 +2085,7 @@ describe('VideosService', () => {
     });
 
     it('should update video duration', async () => {
-      const mockVideo = { video_id: 'video123', };
+      const mockVideo = { video_id: 'video123' };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(undefined);
 
@@ -2135,5 +2151,17 @@ describe('VideosService', () => {
         resolution: '720p',
       });
     });
+  });
+  it('passes page offsets and visibility filters through the query and count paths', async () => {
+    mockVideosRepository.findAll.mockResolvedValue([]);
+    mockVideosRepository.getCount.mockResolvedValue(0);
+    await service.getVideos({ limit: 100, offset: 200, visibleOnly: true });
+    expect(mockVideosRepository.findAll).toHaveBeenCalledWith(
+      expect.objectContaining({ offset: 200, visibleOnly: true })
+    );
+    await service.countVideos({ visibleOnly: true });
+    expect(mockVideosRepository.getCount).toHaveBeenCalledWith(
+      expect.objectContaining({ visibleOnly: true })
+    );
   });
 });

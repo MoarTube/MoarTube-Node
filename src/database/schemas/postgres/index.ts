@@ -63,3 +63,7 @@ export {
 
 // Links schema
 export { links, type DrizzleLink, type DrizzleNewLink } from '@database/schemas/postgres/links.js';
+
+export { commentEdges, commentChanges } from '@database/schemas/postgres/comment-cache.js';
+
+export { databaseMeta } from '@database/schemas/postgres/database-meta.js';

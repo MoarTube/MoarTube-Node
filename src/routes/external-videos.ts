@@ -28,6 +28,8 @@ export function externalVideosRoutes(
   const videosService = container.resolve('videosService');
   const controller = new ExternalVideosController(videosService);
 
+  fastify.addHook('onClose', async () => controller.flushBandwidth());
+
   // Get base URL - authenticated
   fastify.get(
     '/baseUrl',

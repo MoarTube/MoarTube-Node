@@ -1,6 +1,6 @@
 /**
  * WebSocket Manager Tests
- * 
+ *
  * Tests the core WebSocket manager functionality without mocking handlers.
  */
 
@@ -20,9 +20,7 @@ describe('WebSocketManager', () => {
   };
   let mockContainer: Container;
 
-  const createMockWebSocket = (
-    overrides: Partial<ExtendedWebSocket> = {}
-  ): WsWebSocket => {
+  const createMockWebSocket = (overrides: Partial<ExtendedWebSocket> = {}): WsWebSocket => {
     return {
       readyState: 1,
       send: vi.fn(),
@@ -411,10 +409,7 @@ describe('WebSocketManager', () => {
 
       manager.broadcastToAdmins(message);
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to send to admin',
-        expect.any(Error)
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to send to admin', expect.any(Error));
     });
   });
 
@@ -671,17 +666,17 @@ describe('WebSocketManager', () => {
       // The RegisterHandler catches JWT errors internally and logs them
       const ws = createMockWebSocket();
       const client = manager.addClient(ws);
-      
+
       // Send a register event with invalid JWT
-      const message = JSON.stringify({ 
+      const message = JSON.stringify({
         eventName: 'register',
         socketType: 'admin',
-        jwtToken: 'invalid-jwt-token'
+        jwtToken: 'invalid-jwt-token',
       });
 
       // Should not throw
       expect(() => manager.handleMessage(client, message)).not.toThrow();
-      
+
       // Client should be registered but not authenticated
       expect(client.socketType).toBe('admin');
       expect(client.isAuthenticated).toBe(false);
@@ -689,10 +684,10 @@ describe('WebSocketManager', () => {
 
     it('should handle chat message with chat disabled', () => {
       manager.setContainer(mockContainer);
-      
+
       const ws = createMockWebSocket();
       const client = manager.addClient(ws);
-      
+
       // Set up client as if they joined chat
       (client as ExtendedWebSocket).videoId = 'testvideo01';
       (client as ExtendedWebSocket).liveChatUsername = 'testuser';
@@ -705,7 +700,7 @@ describe('WebSocketManager', () => {
       };
 
       // Send a chat message - this uses the ChatMessageHandler
-      const message = JSON.stringify({ 
+      const message = JSON.stringify({
         eventName: 'chat',
         type: 'message',
         videoId: 'testvideo01',
@@ -747,7 +742,7 @@ describe('WebSocketManager', () => {
       const ws2 = createMockWebSocket();
       const client1 = manager.addClient(ws1);
       const client2 = manager.addClient(ws2);
-      
+
       // Set up clients with video IDs
       (client1 as ExtendedWebSocket).videoId = 'testvideo01';
       (client2 as ExtendedWebSocket).videoId = 'testvideo02';
@@ -755,10 +750,10 @@ describe('WebSocketManager', () => {
       // Trigger a video status message that uses broadcastToAdmins
       (client1 as ExtendedWebSocket).socketType = 'admin';
       (client2 as ExtendedWebSocket).socketType = 'admin';
-      
-      const message = JSON.stringify({ 
+
+      const message = JSON.stringify({
         eventName: 'video_importing',
-        videoId: 'testvideo01'
+        videoId: 'testvideo01',
       });
 
       manager.handleMessage(client1, message);
@@ -773,16 +768,16 @@ describe('WebSocketManager', () => {
       const ws2 = createMockWebSocket();
       const client1 = manager.addClient(ws1);
       const client2 = manager.addClient(ws2);
-      
+
       // Set up client as admin for echo permissions
       (client1 as ExtendedWebSocket).socketType = 'admin';
-      
-      const message = JSON.stringify({ 
+
+      const message = JSON.stringify({
         eventName: 'echo',
-        data: { 
-          eventName: 'test_broadcast', 
-          payload: { test: true } 
-        }
+        data: {
+          eventName: 'test_broadcast',
+          payload: { test: true },
+        },
       });
 
       manager.handleMessage(client1, message);
@@ -797,11 +792,11 @@ describe('WebSocketManager', () => {
       const ws2 = createMockWebSocket();
       const client1 = manager.addClient(ws1);
       const client2 = manager.addClient(ws2);
-      
+
       // Set up clients with different video IDs
       (client1 as ExtendedWebSocket).videoId = 'testvideo01';
       (client2 as ExtendedWebSocket).videoId = 'testvideo02';
-      
+
       // Create a custom handler that explicitly calls context.broadcast WITH videoId
       const broadcastWithVideoHandler = {
         name: 'BroadcastWithVideoHandler',
@@ -816,14 +811,18 @@ describe('WebSocketManager', () => {
         },
       };
 
-      manager.registerHandler(broadcastWithVideoHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler);
-      
+      manager.registerHandler(
+        broadcastWithVideoHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler
+      );
+
       const message = JSON.stringify({ eventName: 'broadcast_video' });
 
       manager.handleMessage(client1, message);
 
       // Only client1 should receive the broadcast (testvideo01)
-      expect(client1.send).toHaveBeenCalledWith(JSON.stringify({ eventName: 'video_broadcasted_message' }));
+      expect(client1.send).toHaveBeenCalledWith(
+        JSON.stringify({ eventName: 'video_broadcasted_message' })
+      );
       expect(client2.send).not.toHaveBeenCalled();
     });
 
@@ -832,7 +831,7 @@ describe('WebSocketManager', () => {
       const ws2 = createMockWebSocket();
       const client1 = manager.addClient(ws1);
       const client2 = manager.addClient(ws2);
-      
+
       // Create a custom handler that explicitly calls context.broadcast without videoId
       const broadcastHandler = {
         name: 'BroadcastHandler',
@@ -847,15 +846,21 @@ describe('WebSocketManager', () => {
         },
       };
 
-      manager.registerHandler(broadcastHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler);
-      
+      manager.registerHandler(
+        broadcastHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler
+      );
+
       const message = JSON.stringify({ eventName: 'broadcast_all' });
 
       manager.handleMessage(client1, message);
 
       // Both clients should receive the broadcast (no videoId filter)
-      expect(client1.send).toHaveBeenCalledWith(JSON.stringify({ eventName: 'broadcasted_message' }));
-      expect(client2.send).toHaveBeenCalledWith(JSON.stringify({ eventName: 'broadcasted_message' }));
+      expect(client1.send).toHaveBeenCalledWith(
+        JSON.stringify({ eventName: 'broadcasted_message' })
+      );
+      expect(client2.send).toHaveBeenCalledWith(
+        JSON.stringify({ eventName: 'broadcasted_message' })
+      );
     });
   });
 
@@ -871,7 +876,9 @@ describe('WebSocketManager', () => {
       };
 
       // Register the throwing handler
-      manager.registerHandler(throwingHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler);
+      manager.registerHandler(
+        throwingHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler
+      );
 
       const ws = createMockWebSocket();
       const client = manager.addClient(ws);
@@ -895,7 +902,9 @@ describe('WebSocketManager', () => {
         handle: () => Promise.reject(new Error('Async error from handler')),
       };
 
-      manager.registerHandler(asyncThrowingHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler);
+      manager.registerHandler(
+        asyncThrowingHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler
+      );
 
       const ws = createMockWebSocket();
       const client = manager.addClient(ws);
@@ -924,7 +933,9 @@ describe('WebSocketManager', () => {
         onConnect: vi.fn(),
       };
 
-      manager.registerHandler(onConnectHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler);
+      manager.registerHandler(
+        onConnectHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler
+      );
 
       const ws = createMockWebSocket();
       manager.addClient(ws);
@@ -940,7 +951,9 @@ describe('WebSocketManager', () => {
         onDisconnect: vi.fn(),
       };
 
-      manager.registerHandler(onDisconnectHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler);
+      manager.registerHandler(
+        onDisconnectHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler
+      );
 
       const ws = createMockWebSocket();
       const client = manager.addClient(ws);
@@ -957,7 +970,9 @@ describe('WebSocketManager', () => {
         onConnect: () => Promise.reject(new Error('onConnect failed')),
       };
 
-      manager.registerHandler(errorOnConnectHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler);
+      manager.registerHandler(
+        errorOnConnectHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler
+      );
 
       const ws = createMockWebSocket();
       manager.addClient(ws);
@@ -979,7 +994,9 @@ describe('WebSocketManager', () => {
         onDisconnect: () => Promise.reject(new Error('onDisconnect failed')),
       };
 
-      manager.registerHandler(errorOnDisconnectHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler);
+      manager.registerHandler(
+        errorOnDisconnectHandler as unknown as import('@websocket/handlers/base.js').WebSocketHandler
+      );
 
       const ws = createMockWebSocket();
       const client = manager.addClient(ws);
@@ -1018,7 +1035,9 @@ describe('WebSocketManager', () => {
       });
 
       expect(() => {
-        (managerWithoutContainer as unknown as { getLiveChatService: () => void }).getLiveChatService();
+        (
+          managerWithoutContainer as unknown as { getLiveChatService: () => void }
+        ).getLiveChatService();
       }).toThrow('Container not available');
 
       managerWithoutContainer.closeAll();
@@ -1030,7 +1049,9 @@ describe('WebSocketManager', () => {
       });
 
       expect(() => {
-        (managerWithoutContainer as unknown as { getCloudflareService: () => void }).getCloudflareService();
+        (
+          managerWithoutContainer as unknown as { getCloudflareService: () => void }
+        ).getCloudflareService();
       }).toThrow('Container not available');
 
       managerWithoutContainer.closeAll();
@@ -1043,14 +1064,32 @@ describe('WebSocketManager', () => {
 
       // Call registerServiceHandlers directly without setting container first
       // This should hit the early return at line 135
-      const registerServiceHandlers = (managerWithoutContainer as unknown as { 
-        registerServiceHandlers: () => void 
-      }).registerServiceHandlers;
-      
+      const registerServiceHandlers = (
+        managerWithoutContainer as unknown as {
+          registerServiceHandlers: () => void;
+        }
+      ).registerServiceHandlers;
+
       // Should not throw, just return early
       expect(() => registerServiceHandlers.call(managerWithoutContainer)).not.toThrow();
 
       managerWithoutContainer.closeAll();
     });
+  });
+  it('closes clients that exceed the in-flight handler budget', async () => {
+    let finish!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    manager.registerHandler({
+      name: 'slow',
+      canHandle: (message) => message.eventName === 'slow',
+      handle: () => pending,
+    } as never);
+    const client = manager.addClient(createMockWebSocket());
+    for (let i = 0; i < 5; i++) manager.handleMessage(client, Buffer.from('{"eventName":"slow"}'));
+    expect(client.close).toHaveBeenCalledWith(1013, 'Too much pending work');
+    finish();
+    await pending;
   });
 });

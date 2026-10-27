@@ -14,6 +14,8 @@
  * Options for filtering video queries
  */
 export interface GetVideosOptions {
+  offset?: number;
+  visibleOnly?: boolean;
   /** Sort field */
   sortBy?: 'creation_timestamp' | 'views' | 'likes' | 'title';
   /** Sort direction */

@@ -1,3 +1,7 @@
+vi.mock('@database/provisioning/comments.js', () => ({
+  provisionSQLiteComments: vi.fn(),
+  provisionPostgresComments: vi.fn(),
+}));
 /**
  * Unit tests for database/sqlite-connection.ts
  *
@@ -17,7 +21,7 @@ let constructorErrorMessage = '';
 // Mock better-sqlite3 with a class-like constructor
 vi.mock('better-sqlite3', () => {
   return {
-    default: function(_filepath: string) {
+    default: function (_filepath: string) {
       if (constructorShouldThrow) {
         throw new Error(constructorErrorMessage);
       }
@@ -92,7 +96,7 @@ describe('database/sqlite-connection.ts', () => {
 
       // Verify the interface shape
       const config: DatabaseConfig = {
-        filepath: '/path/to/db.sqlite'
+        filepath: '/path/to/db.sqlite',
       };
 
       expect(config.filepath).toBe('/path/to/db.sqlite');
@@ -109,7 +113,7 @@ describe('database/sqlite-connection.ts', () => {
       const { createDatabase } = await import('@database/sqlite-connection.js');
 
       const config: DatabaseConfig = {
-        filepath: '/path/to/db.sqlite'
+        filepath: '/path/to/db.sqlite',
       };
 
       const result = createDatabase(config);
@@ -135,7 +139,7 @@ describe('database/sqlite-connection.ts', () => {
       const { createDatabase } = await import('@database/sqlite-connection.js');
 
       const config: DatabaseConfig = {
-        filepath: ''
+        filepath: '',
       };
 
       expect(() => createDatabase(config)).toThrow('SQLite filepath is required');
@@ -150,7 +154,7 @@ describe('database/sqlite-connection.ts', () => {
       const { createDatabase } = await import('@database/sqlite-connection.js');
 
       const config: DatabaseConfig = {
-        filepath: '/path/to/db.sqlite'
+        filepath: '/path/to/db.sqlite',
       };
 
       expect(() => createDatabase(config)).toThrow('SQLite connection failed');
@@ -166,7 +170,7 @@ describe('database/sqlite-connection.ts', () => {
       const { createDatabase } = await import('@database/sqlite-connection.js');
 
       const config: DatabaseConfig = {
-        filepath: '/path/to/db.sqlite'
+        filepath: '/path/to/db.sqlite',
       };
 
       expect(() => createDatabase(config)).toThrow('VACUUM failed');
@@ -194,10 +198,11 @@ describe('database/sqlite-connection.ts', () => {
       // path.resolve is called with (__dirname, '..', '..', 'drizzle', 'sqlite')
       vi.mocked(path.resolve).mockReturnValue('/project/drizzle/sqlite');
 
-      const { createDatabase, initializeDatabaseSchema } = await import('@database/sqlite-connection.js');
+      const { createDatabase, initializeDatabaseSchema } =
+        await import('@database/sqlite-connection.js');
 
       const config: DatabaseConfig = {
-        filepath: '/path/to/db.sqlite'
+        filepath: '/path/to/db.sqlite',
       };
 
       createDatabase(config);
@@ -208,7 +213,7 @@ describe('database/sqlite-connection.ts', () => {
       initializeDatabaseSchema();
 
       expect(migrate).toHaveBeenCalledWith(mockDrizzleDb, {
-        migrationsFolder: '/project/drizzle/sqlite'
+        migrationsFolder: '/project/drizzle/sqlite',
       });
       // VACUUM is called after migration
       expect(mockExec).toHaveBeenCalledWith('VACUUM');
@@ -226,10 +231,11 @@ describe('database/sqlite-connection.ts', () => {
       vi.mocked(path.join).mockReturnValue('/project/dist/drizzle/sqlite');
       vi.mocked(migrate).mockImplementation(() => {});
 
-      const { createDatabase, initializeDatabaseSchema } = await import('@database/sqlite-connection.js');
+      const { createDatabase, initializeDatabaseSchema } =
+        await import('@database/sqlite-connection.js');
 
       const config: DatabaseConfig = {
-        filepath: '/path/to/db.sqlite'
+        filepath: '/path/to/db.sqlite',
       };
 
       createDatabase(config);
@@ -241,7 +247,7 @@ describe('database/sqlite-connection.ts', () => {
 
       expect(path.join).toHaveBeenCalledWith('/project/dist', 'drizzle', 'sqlite');
       expect(migrate).toHaveBeenCalledWith(mockDrizzleDb, {
-        migrationsFolder: '/project/dist/drizzle/sqlite'
+        migrationsFolder: '/project/dist/drizzle/sqlite',
       });
     });
 
@@ -258,10 +264,11 @@ describe('database/sqlite-connection.ts', () => {
         throw new Error('Migration failed');
       });
 
-      const { createDatabase, initializeDatabaseSchema } = await import('@database/sqlite-connection.js');
+      const { createDatabase, initializeDatabaseSchema } =
+        await import('@database/sqlite-connection.js');
 
       const config: DatabaseConfig = {
-        filepath: '/path/to/db.sqlite'
+        filepath: '/path/to/db.sqlite',
       };
 
       createDatabase(config);
@@ -294,10 +301,11 @@ describe('database/sqlite-connection.ts', () => {
       // Reset migrate mock to not throw
       vi.mocked(migrate).mockImplementation(() => {});
 
-      const { createDatabase, initializeDatabaseSchema } = await import('@database/sqlite-connection.js');
+      const { createDatabase, initializeDatabaseSchema } =
+        await import('@database/sqlite-connection.js');
 
       const config: DatabaseConfig = {
-        filepath: '/path/to/db.sqlite'
+        filepath: '/path/to/db.sqlite',
       };
 
       createDatabase(config);
@@ -328,7 +336,7 @@ describe('database/sqlite-connection.ts', () => {
       const { createDatabase, getDatabase } = await import('@database/sqlite-connection.js');
 
       const config: DatabaseConfig = {
-        filepath: '/path/to/db.sqlite'
+        filepath: '/path/to/db.sqlite',
       };
 
       createDatabase(config);
@@ -346,7 +354,7 @@ describe('database/sqlite-connection.ts', () => {
       const { createDatabase, getDatabase } = await import('@database/sqlite-connection.js');
 
       const config: DatabaseConfig = {
-        filepath: '/path/to/db.sqlite'
+        filepath: '/path/to/db.sqlite',
       };
 
       createDatabase(config);
@@ -372,10 +380,11 @@ describe('database/sqlite-connection.ts', () => {
       // Reset migrate mock to not throw
       vi.mocked(migrate).mockImplementation(() => {});
 
-      const { createDatabase, getDatabase, initializeDatabaseSchema } = await import('@database/sqlite-connection.js');
+      const { createDatabase, getDatabase, initializeDatabaseSchema } =
+        await import('@database/sqlite-connection.js');
 
       const config: DatabaseConfig = {
-        filepath: '/path/to/db.sqlite'
+        filepath: '/path/to/db.sqlite',
       };
 
       createDatabase(config);
@@ -383,6 +392,15 @@ describe('database/sqlite-connection.ts', () => {
       const result = getDatabase();
 
       expect(result).toBe(mockDrizzleDb);
+    });
+  });
+  it('accepts an isolated migration folder for regenerated schema tests', async () => {
+    vi.resetModules();
+    const connection = await import('@database/sqlite-connection.js');
+    connection.createDatabase({ filepath: ':memory:' });
+    connection.initializeDatabaseSchema({ migrationsFolder: '/isolated/migrations' });
+    expect(migrate).toHaveBeenCalledWith(expect.anything(), {
+      migrationsFolder: '/isolated/migrations',
     });
   });
 });

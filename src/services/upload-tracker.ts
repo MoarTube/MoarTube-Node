@@ -56,6 +56,13 @@ export class UploadTrackerService {
    * Add a request to the tracking
    */
   addRequest(videoId: string, request: FastifyRequest): void {
+    const raw = (request as { raw?: Partial<FastifyRequest['raw']> }).raw;
+    raw?.once?.('close', () => {
+      const current = this.tracker.get(videoId);
+      if (current) {
+        current.uploadRequests = current.uploadRequests.filter((active) => active !== request);
+      }
+    });
     const state = this.tracker.get(videoId);
     if (state) {
       state.uploadRequests.push(request);

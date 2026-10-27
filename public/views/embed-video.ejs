@@ -122,7 +122,7 @@
       </div>
     </div>
     <script>
-      const INCOMING_PARAMETERS = <%- JSON.stringify(model) %>;
+      const INCOMING_PARAMETERS = <%- JSON.stringify(model).replace(/</g, '\\u003c') %>;
 
       async function copyVideoLink(text) {
         try {

@@ -74,6 +74,14 @@ describe('PostgreSQL videos (real SQL)', () => {
     expect(await repository.findById('b')).toMatchObject({ views: 2 });
   });
 
+  it('adds bandwidth deltas atomically across batches and videos',async()=>{
+    await repository.createMany([video('a'),video('b')]);
+    await repository.updateBandwidth('a',1000);
+    await Promise.all([repository.updateBandwidth('a',500),repository.updateBandwidth('b',2000),repository.updateBandwidth('a',250)]);
+    expect((await repository.findById('a'))?.bandwidth).toBe(1750);
+    expect((await repository.findById('b'))?.bandwidth).toBe(2000);
+  });
+
   it('filters publication/streaming/finalization, timestamp boundaries, text, and tags', async () => {
     expect(await repository.getCount()).toBe(0);
     expect(await repository.getCount({ isPublished: true })).toBe(0);
@@ -156,5 +164,18 @@ describe('PostgreSQL videos (real SQL)', () => {
     await expect(repository.create(video('ignored'))).rejects.toThrow(
       'Failed to create video record'
     );
+  });
+  it('projects tags and paginates visible catalog rows', async () => {
+    await repository.createMany(
+      Array.from({ length: 202 }, (_, i) => ({
+        ...video('paged-' + i, i),
+        tags: i === 200 ? 'private' : i === 201 ? 'live' : 'common,, ',
+        is_published: i < 200,
+        is_live: i === 201,
+      }))
+    );
+    expect(await repository.findTags()).toEqual(['common', 'live', 'private']);
+    expect(await repository.findTags(true)).toEqual(['common', 'live']);
+    expect(await repository.findAll({ visibleOnly: true, limit: 10, offset: 200 })).toHaveLength(1);
   });
 });

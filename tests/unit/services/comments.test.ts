@@ -8,14 +8,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { CommentsService } from '@/services/comments.js';
 import type { Logger } from '@/utils/logger.js';
-import type { CommentsRepository, VideosRepository } from '@/database/repositories/index.js';
+import type { CommentsRepository } from '@/database/repositories/index.js';
 import type { DrizzleComment, DrizzleNewComment } from '@/database/schemas/sqlite/index.js';
 
 describe('CommentsService', () => {
   let service: CommentsService;
   let mockLogger: Logger;
   let mockCommentsRepository: CommentsRepository;
-  let mockVideosRepository: VideosRepository;
 
   const mockComment: DrizzleComment = {
     id: 1,
@@ -37,6 +36,11 @@ describe('CommentsService', () => {
 
     mockCommentsRepository = {
       findById: vi.fn(),
+      findByIds: vi.fn().mockResolvedValue([]),
+      getBacklinksForComments: vi.fn().mockResolvedValue([]),
+      getCacheEpoch: vi.fn().mockResolvedValue('11111111-1111-4111-8111-111111111111'),
+      getCacheVersion: vi.fn().mockResolvedValue(100),
+      getCacheChanges: vi.fn().mockResolvedValue([]),
       findByVideoIdWithTimestampFilter: vi.fn(),
       create: vi.fn(),
       delete: vi.fn(),
@@ -46,12 +50,7 @@ describe('CommentsService', () => {
       search: vi.fn(),
     } as unknown as CommentsRepository;
 
-    mockVideosRepository = {
-      incrementComments: vi.fn(),
-      decrementComments: vi.fn(),
-    } as unknown as VideosRepository;
-
-    service = new CommentsService(mockLogger, mockCommentsRepository, mockVideosRepository);
+    service = new CommentsService(mockLogger, mockCommentsRepository);
   });
 
   describe('constructor', () => {
@@ -167,7 +166,6 @@ describe('CommentsService', () => {
     it('should create a comment and increment video comment count', async () => {
       const newComment = { ...mockComment };
       vi.mocked(mockCommentsRepository.create).mockResolvedValue(newComment);
-      vi.mocked(mockVideosRepository.incrementComments).mockResolvedValue();
 
       const result = await service.createComment({
         videoId: 'video123',
@@ -176,17 +174,17 @@ describe('CommentsService', () => {
 
       expect(result).toEqual(newComment);
       expect(mockCommentsRepository.create).toHaveBeenCalled();
-      expect(mockVideosRepository.incrementComments).toHaveBeenCalledWith('video123');
     });
 
     it('should sanitize HTML in comment text', async () => {
-      vi.mocked(mockCommentsRepository.create).mockImplementation(async (data: DrizzleNewComment) => ({
-        id: 1,
-        video_id: data.video_id,
-        comment_plain_text_sanitized: data.comment_plain_text_sanitized,
-        timestamp: data.timestamp,
-      }));
-      vi.mocked(mockVideosRepository.incrementComments).mockResolvedValue();
+      vi.mocked(mockCommentsRepository.create).mockImplementation(
+        async (data: DrizzleNewComment) => ({
+          id: 1,
+          video_id: data.video_id,
+          comment_plain_text_sanitized: data.comment_plain_text_sanitized,
+          timestamp: data.timestamp,
+        })
+      );
 
       await service.createComment({
         videoId: 'video123',
@@ -202,13 +200,14 @@ describe('CommentsService', () => {
     });
 
     it('should set timestamp on new comment', async () => {
-      vi.mocked(mockCommentsRepository.create).mockImplementation(async (data: DrizzleNewComment) => ({
-        id: 1,
-        video_id: data.video_id,
-        comment_plain_text_sanitized: data.comment_plain_text_sanitized,
-        timestamp: data.timestamp,
-      }));
-      vi.mocked(mockVideosRepository.incrementComments).mockResolvedValue();
+      vi.mocked(mockCommentsRepository.create).mockImplementation(
+        async (data: DrizzleNewComment) => ({
+          id: 1,
+          video_id: data.video_id,
+          comment_plain_text_sanitized: data.comment_plain_text_sanitized,
+          timestamp: data.timestamp,
+        })
+      );
 
       const beforeTime = Date.now();
       await service.createComment({
@@ -241,13 +240,11 @@ describe('CommentsService', () => {
     it('should delete a comment and decrement video comment count', async () => {
       vi.mocked(mockCommentsRepository.findById).mockResolvedValue(mockComment);
       vi.mocked(mockCommentsRepository.delete).mockResolvedValue(true);
-      vi.mocked(mockVideosRepository.decrementComments).mockResolvedValue();
 
       const result = await service.deleteComment('video123', 1, 1704067200000);
 
       expect(result).toBe(true);
       expect(mockCommentsRepository.delete).toHaveBeenCalledWith('video123', 1, 1704067200000);
-      expect(mockVideosRepository.decrementComments).toHaveBeenCalledWith('video123');
     });
 
     it('should return false if comment not found', async () => {
@@ -257,7 +254,6 @@ describe('CommentsService', () => {
 
       expect(result).toBe(false);
       expect(mockCommentsRepository.delete).not.toHaveBeenCalled();
-      expect(mockVideosRepository.decrementComments).not.toHaveBeenCalled();
     });
 
     it('should log and rethrow errors', async () => {
@@ -382,5 +378,86 @@ describe('CommentsService', () => {
 
       expect(result).toEqual([]);
     });
+  });
+  it('queries bounded comment history pages and refresh cursors', async () => {
+    (mockCommentsRepository as any).findByVideoId = vi.fn().mockResolvedValue([]);
+    expect(await service.getRecentComments('video')).toEqual([]);
+    expect((mockCommentsRepository as any).findByVideoId).toHaveBeenCalledWith('video', {
+      limit: 101,
+      offset: 0,
+    });
+    vi.mocked(mockCommentsRepository.findByVideoIdWithTimestampFilter).mockResolvedValue([]);
+    expect(await service.getCommentsForVideo('video', 'after', 'ascending', 100, 5)).toEqual([]);
+    expect(mockCommentsRepository.findByVideoIdWithTimestampFilter).toHaveBeenCalledWith(
+      'video',
+      'after',
+      'ascending',
+      100,
+      5
+    );
+  });
+  it('resolves quote previews by video and ID without the quoting comment timestamp', async () => {
+    vi.mocked(mockCommentsRepository.findById).mockResolvedValue(mockComment);
+    expect(await service.getComment('video123', 1)).toEqual(mockComment);
+    expect(mockCommentsRepository.findById).toHaveBeenCalledWith('video123', 1, undefined);
+  });
+  it('uses indexed backlinks with bounded lookahead and cursor', async () => {
+    vi.mocked(mockCommentsRepository.getBacklinksForComments).mockResolvedValue(
+      Array.from({ length: 101 }, (_, i) => ({ parent_id: 5, reply_id: 300 - i }))
+    );
+    expect(await service.getCommentBacklinks('video', 5, 400)).toEqual({
+      replyIds: Array.from({ length: 100 }, (_, i) => 300 - i),
+      hasMore: true,
+    });
+    expect(mockCommentsRepository.getBacklinksForComments).toHaveBeenCalledWith('video', [5], 400);
+    vi.mocked(mockCommentsRepository.getBacklinksForComments).mockResolvedValue([]);
+    expect(await service.getCommentBacklinks('video', 5)).toEqual({ replyIds: [], hasMore: false });
+  });
+  it('batches metadata and caps each comment reply list', async () => {
+    vi.mocked(mockCommentsRepository.getBacklinksForComments).mockResolvedValue(
+      Array.from({ length: 101 }, (_, i) => ({ parent_id: 5, reply_id: 300 - i }))
+    );
+    const rows = await service.formatComments('video', [
+      { ...mockComment, comment_id: 5 },
+      { ...mockComment, comment_id: 6 },
+    ]);
+    expect(rows[0].replyIds).toHaveLength(100);
+    expect(rows[0].hasMoreReplies).toBe(true);
+    expect(rows[1]).toMatchObject({ replyIds: [], hasMoreReplies: false });
+  });
+  it('returns bounded sync pages, deletes, missing rows and reset markers', async () => {
+    vi.mocked(mockCommentsRepository.getCacheChanges).mockResolvedValue(
+      Array.from({ length: 101 }, (_, i) => ({ version: i + 1, comment_id: i + 1, deleted: i % 2 }))
+    );
+    vi.mocked(mockCommentsRepository.findById).mockResolvedValue(null);
+    expect(await service.getCacheChanges('video', 0)).toMatchObject({
+      version: 100,
+      hasMore: true,
+      reset: false,
+      comments: [],
+    });
+    vi.mocked(mockCommentsRepository.getCacheChanges).mockResolvedValue([
+      { version: 100, comment_id: 5, deleted: 0 },
+    ]);
+    vi.mocked(mockCommentsRepository.findByIds).mockResolvedValue([
+      { ...mockComment, comment_id: 5 },
+    ]);
+    expect(await service.getCacheChanges('video', 200)).toMatchObject({
+      version: 100,
+      reset: true,
+      hasMore: false,
+      comments: [{ commentId: 5 }],
+    });
+    expect(mockCommentsRepository.getCacheChanges).toHaveBeenLastCalledWith('video', 0);
+  });
+  it('resets caches on a different database identity even when revisions increase', async () => {
+    expect(await service.getCacheChanges('video', 1, 'old-database')).toMatchObject({
+      reset: true,
+      epoch: '11111111-1111-4111-8111-111111111111',
+    });
+    expect(mockCommentsRepository.getCacheChanges).toHaveBeenLastCalledWith('video', 0);
+    expect(
+      await service.getCacheChanges('video', 1, '11111111-1111-4111-8111-111111111111')
+    ).toMatchObject({ reset: false });
   });
 });

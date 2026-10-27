@@ -4,6 +4,7 @@ import type { PaginationOptions } from '@/types/index.js';
  * Options for querying videos
  */
 export interface VideoQueryOptions extends PaginationOptions {
+  visibleOnly?: boolean;
   /** Sort field */
   sortBy?: 'creation_timestamp' | 'views' | 'likes' | 'title';
   /** Sort direction */
@@ -27,6 +28,7 @@ export interface IVideosRepository<VideoType, NewVideoType> {
   findByDbId(id: number): Promise<VideoType | null>;
   findPublished(options?: VideoQueryOptions): Promise<VideoType[]>;
   findAll(options?: VideoQueryOptions): Promise<VideoType[]>;
+  findTags(visibleOnly?: boolean): Promise<string[]>;
   getCount(options?: VideoQueryOptions): Promise<number>;
   create(data: NewVideoType): Promise<VideoType>;
   update(videoId: string, data: Partial<NewVideoType>): Promise<VideoType | null>;
@@ -37,6 +39,7 @@ export interface IVideosRepository<VideoType, NewVideoType> {
   incrementDislikes(videoId: string): Promise<void>;
   incrementComments(videoId: string): Promise<void>;
   decrementComments(videoId: string): Promise<void>;
+  /** Atomically add a delivered-byte delta; never replace the lifetime total. */
   updateBandwidth(videoId: string, bandwidth: number): Promise<void>;
   findStreaming(): Promise<VideoType[]>;
   deleteAll(): Promise<number>;

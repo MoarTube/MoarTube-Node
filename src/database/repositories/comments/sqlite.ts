@@ -1,3 +1,4 @@
+import { inArray, sql, type SQL, or } from 'drizzle-orm';
 import type { ICommentsRepository } from '@database/repositories/comments/interface.js';
 import type { DrizzleComment, DrizzleNewComment } from '@database/schemas/sqlite/comments.js';
 import type { DatabaseClient } from '@database/sqlite-connection.js';
@@ -14,10 +15,20 @@ export class CommentsRepositorySQLite implements ICommentsRepository<
     this.db = db;
   }
 
+  async findByIds(videoId: string, ids: number[]): Promise<DrizzleComment[]> {
+    if (!ids.length) {
+      return [];
+    }
+    return this.db
+      .select()
+      .from(comments)
+      .where(and(eq(comments.video_id, videoId), inArray(comments.comment_id, ids.slice(0, 100))));
+  }
+
   async findById(
     videoId: string,
     commentId: number,
-    timestamp: number
+    timestamp?: number
   ): Promise<DrizzleComment | null> {
     const result = await this.db
       .select()
@@ -26,36 +37,114 @@ export class CommentsRepositorySQLite implements ICommentsRepository<
         and(
           eq(comments.comment_id, commentId),
           eq(comments.video_id, videoId),
-          eq(comments.timestamp, timestamp)
+          timestamp === undefined ? undefined : eq(comments.timestamp, timestamp)
         )
       )
       .limit(1);
     return result[0] ?? null;
   }
 
-  async findByVideoId(videoId: string): Promise<DrizzleComment[]> {
+  async findByVideoId(
+    videoId: string,
+    page = { limit: 101, offset: 0 }
+  ): Promise<DrizzleComment[]> {
     return this.db
       .select()
       .from(comments)
       .where(eq(comments.video_id, videoId))
-      .orderBy(desc(comments.timestamp));
+      .orderBy(desc(comments.timestamp), desc(comments.comment_id))
+      .offset(page.offset)
+      .limit(Math.min(page.limit, 101));
   }
 
   async findByVideoIdWithTimestampFilter(
     videoId: string,
     type: 'before' | 'after',
     sort: 'ascending' | 'descending',
-    timestamp: number
+    timestamp: number,
+    cursorId?: number
   ): Promise<DrizzleComment[]> {
     const timestampCondition =
-      type === 'before' ? lt(comments.timestamp, timestamp) : gt(comments.timestamp, timestamp);
+      type === 'before'
+        ? cursorId !== undefined
+          ? or(
+              lt(comments.timestamp, timestamp),
+              and(eq(comments.timestamp, timestamp), lt(comments.comment_id, cursorId))
+            )
+          : lt(comments.timestamp, timestamp)
+        : cursorId !== undefined
+          ? or(
+              gt(comments.timestamp, timestamp),
+              and(eq(comments.timestamp, timestamp), gt(comments.comment_id, cursorId))
+            )
+          : gt(comments.timestamp, timestamp);
     const orderBy = sort === 'ascending' ? comments.timestamp : desc(comments.timestamp);
 
     return this.db
       .select()
       .from(comments)
       .where(and(eq(comments.video_id, videoId), timestampCondition))
-      .orderBy(orderBy);
+      .orderBy(orderBy, sort === 'ascending' ? comments.comment_id : desc(comments.comment_id))
+      .limit(cursorId === undefined ? 100 : 101);
+  }
+
+  private cacheQuery<T>(query: SQL): Promise<T[]> {
+    return Promise.resolve(this.db.all<T>(query));
+  }
+
+  async getBacklinksForComments(
+    videoId: string,
+    ids: number[],
+    beforeReplyId?: number
+  ): Promise<{ parent_id: number; reply_id: number }[]> {
+    if (!ids.length) {
+      return [];
+    }
+    const parts = ids.slice(0, 100).map(
+      (id) => sql`SELECT parent_id,reply_id FROM (
+      SELECT parent_id,reply_id FROM comment_edges WHERE video_id=${videoId} AND parent_id=${id}
+      ${beforeReplyId === undefined ? sql`` : sql`AND reply_id<${beforeReplyId}`}
+      ORDER BY reply_id DESC LIMIT 101) limited`
+    );
+    const rows = await this.cacheQuery<{ parent_id: number | string; reply_id: number | string }>(
+      sql.join(parts, sql` UNION ALL `)
+    );
+    return rows.map((row) => ({
+      parent_id: Number(row.parent_id),
+      reply_id: Number(row.reply_id),
+    }));
+  }
+
+  async getCacheEpoch(): Promise<string> {
+    const rows = await this.cacheQuery<{ value: string }>(
+      sql`SELECT value FROM database_meta WHERE key='instance_id'`
+    );
+    return (rows as [{ value: string }])[0].value;
+  }
+
+  async getCacheVersion(videoId: string): Promise<number> {
+    const rows = await this.cacheQuery<{ version: number | string }>(
+      sql`SELECT COALESCE(MAX(version),0) AS version FROM comment_changes WHERE video_id=${videoId}`
+    );
+    return Number((rows as [{ version: number | string }])[0].version);
+  }
+
+  async getCacheChanges(
+    videoId: string,
+    since: number
+  ): Promise<{ version: number; comment_id: number; deleted: number }[]> {
+    const rows = await this.cacheQuery<{
+      version: number | string;
+      comment_id: number | string;
+      deleted: number;
+    }>(
+      sql`SELECT version,comment_id,deleted FROM comment_changes WHERE video_id=${videoId} AND version>${since} ORDER BY version LIMIT 101`
+    );
+    return rows.map((row) => ({
+      version: Number(row.version),
+      comment_id: Number(row.comment_id),
+      deleted: row.deleted,
+    }));
   }
 
   async countByVideoId(videoId: string): Promise<number> {

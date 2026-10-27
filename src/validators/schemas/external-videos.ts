@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import {
   videoIdSchema,
+  filenameSchema,
   formatSchema,
   resolutionSchema,
   manifestTypeSchema,
@@ -29,7 +30,7 @@ export const adaptiveManifestParamsSchema = z.object({
   videoId: videoIdSchema,
   format: formatSchema,
   type: manifestTypeSchema,
-  manifestName: z.string().min(1),
+  manifestName: filenameSchema,
 });
 
 /**
@@ -39,7 +40,7 @@ export const adaptiveSegmentParamsSchema = z.object({
   videoId: videoIdSchema,
   format: formatSchema,
   resolution: resolutionSchema,
-  segmentName: z.string().min(1),
+  segmentName: filenameSchema,
 });
 
 /**
@@ -48,5 +49,5 @@ export const adaptiveSegmentParamsSchema = z.object({
 export const progressiveVideoParamsSchema = z.object({
   videoId: videoIdSchema,
   format: formatSchema,
-  progressiveFilename: z.string().min(1),
+  progressiveFilename: filenameSchema,
 });

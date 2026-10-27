@@ -1,3 +1,20 @@
+CREATE TABLE `comment_changes` (
+	`version` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`video_id` text NOT NULL,
+	`comment_id` integer NOT NULL,
+	`deleted` integer DEFAULT 0 NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `comment_changes_identity` ON `comment_changes` (`video_id`,`comment_id`);--> statement-breakpoint
+CREATE INDEX `comment_changes_video` ON `comment_changes` (`video_id`,`version`);--> statement-breakpoint
+CREATE TABLE `comment_edges` (
+	`video_id` text NOT NULL,
+	`parent_id` integer NOT NULL,
+	`reply_id` integer NOT NULL,
+	PRIMARY KEY(`video_id`, `parent_id`, `reply_id`)
+);
+--> statement-breakpoint
+CREATE INDEX `comment_edges_source` ON `comment_edges` (`video_id`,`reply_id`,`parent_id`);--> statement-breakpoint
 CREATE TABLE `commentreports` (
 	`report_id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`timestamp` integer NOT NULL,
@@ -28,6 +45,7 @@ CREATE TABLE `comments` (
 	`timestamp` integer NOT NULL
 );
 --> statement-breakpoint
+CREATE INDEX `comments_history` ON `comments` (`video_id`,`timestamp`,`comment_id`);--> statement-breakpoint
 CREATE TABLE `cryptowalletaddresses` (
 	`wallet_address_id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`wallet_address` text NOT NULL,
@@ -35,6 +53,11 @@ CREATE TABLE `cryptowalletaddresses` (
 	`chain_id` text NOT NULL,
 	`currency` text NOT NULL,
 	`timestamp` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `database_meta` (
+	`key` text PRIMARY KEY NOT NULL,
+	`value` text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `links` (

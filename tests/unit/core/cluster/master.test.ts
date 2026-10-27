@@ -26,7 +26,6 @@ vi.mock('node:os', () => ({
   },
 }));
 
-
 vi.mock('@/utils/logger.js', () => ({
   Logger: {
     getInstance: vi.fn(() => ({
@@ -133,7 +132,9 @@ describe('ClusterMaster', () => {
 
     // Reset cluster mock
     (cluster.on as ReturnType<typeof vi.fn>).mockReset();
-    (cluster.fork as ReturnType<typeof vi.fn>).mockReset().mockReturnValue({ id: 1, kill: vi.fn() });
+    (cluster.fork as ReturnType<typeof vi.fn>)
+      .mockReset()
+      .mockReturnValue({ id: 1, kill: vi.fn() });
     (cluster as unknown as { workers: Record<string, unknown> }).workers = {};
 
     // Reset IPC mocks
@@ -336,7 +337,10 @@ describe('ClusterMaster', () => {
       await master.start();
 
       const wsMessage = { eventName: 'chat', videoId: 'vid123', data: 'message' };
-      ipcHandlers['websocket_broadcast_chat']?.({ cmd: 'websocket_broadcast_chat', message: wsMessage });
+      ipcHandlers['websocket_broadcast_chat']?.({
+        cmd: 'websocket_broadcast_chat',
+        message: wsMessage,
+      });
 
       expect(mockIpcBroadcast).toHaveBeenCalledWith({
         cmd: 'websocket_broadcast_chat_response',
@@ -469,11 +473,13 @@ describe('ClusterMaster', () => {
   describe('worker exit handling', () => {
     it('should fork replacement worker on worker exit', async () => {
       let exitHandler: Function = () => {};
-      (cluster.on as ReturnType<typeof vi.fn>).mockImplementation((event: string, handler: Function) => {
-        if (event === 'exit') {
-          exitHandler = handler;
+      (cluster.on as ReturnType<typeof vi.fn>).mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === 'exit') {
+            exitHandler = handler;
+          }
         }
-      });
+      );
 
       const master = new ClusterMaster(mockLogger as any, mockCloudflare as any);
       await master.start();
@@ -485,17 +491,22 @@ describe('ClusterMaster', () => {
       const deadWorker = { id: 1 };
       exitHandler(deadWorker, 1, 'SIGTERM');
 
-      expect(mockLogger.warn).toHaveBeenCalledWith('Worker 1 exited', { code: 1, signal: 'SIGTERM' });
+      expect(mockLogger.warn).toHaveBeenCalledWith('Worker 1 exited', {
+        code: 1,
+        signal: 'SIGTERM',
+      });
       expect(cluster.fork).toHaveBeenCalledTimes(1);
     });
 
     it('should not fork replacement worker when stopped', async () => {
       let exitHandler: Function = () => {};
-      (cluster.on as ReturnType<typeof vi.fn>).mockImplementation((event: string, handler: Function) => {
-        if (event === 'exit') {
-          exitHandler = handler;
+      (cluster.on as ReturnType<typeof vi.fn>).mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === 'exit') {
+            exitHandler = handler;
+          }
         }
-      });
+      );
 
       const master = new ClusterMaster(mockLogger as any, mockCloudflare as any);
       await master.start();
@@ -582,12 +593,14 @@ describe('ClusterMaster', () => {
   describe('error handlers', () => {
     it('should log uncaught exceptions', async () => {
       let uncaughtHandler: Function = () => {};
-      (process.on as ReturnType<typeof vi.fn>).mockImplementation((event: string, handler: Function) => {
-        if (event === 'uncaughtException') {
-          uncaughtHandler = handler;
+      (process.on as ReturnType<typeof vi.fn>).mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === 'uncaughtException') {
+            uncaughtHandler = handler;
+          }
+          return process;
         }
-        return process;
-      });
+      );
 
       const master = new ClusterMaster(mockLogger as any, mockCloudflare as any);
       await master.start();
@@ -600,12 +613,14 @@ describe('ClusterMaster', () => {
 
     it('should log unhandled rejections', async () => {
       let rejectionHandler: Function = () => {};
-      (process.on as ReturnType<typeof vi.fn>).mockImplementation((event: string, handler: Function) => {
-        if (event === 'unhandledRejection') {
-          rejectionHandler = handler;
+      (process.on as ReturnType<typeof vi.fn>).mockImplementation(
+        (event: string, handler: Function) => {
+          if (event === 'unhandledRejection') {
+            rejectionHandler = handler;
+          }
+          return process;
         }
-        return process;
-      });
+      );
 
       const master = new ClusterMaster(mockLogger as any, mockCloudflare as any);
       await master.start();
@@ -615,5 +630,15 @@ describe('ClusterMaster', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith('Unhandled rejection in master', reason);
     });
+  });
+  it.each(['1', '-1', 'invalid'])('bounds configured worker counts (%s)', async (value) => {
+    vi.stubEnv('MOARTUBE_WORKERS', value);
+    try {
+      const master = new ClusterMaster(mockLogger as any, mockCloudflare as any);
+      (master as unknown as { forkWorkers(): void }).forkWorkers();
+      expect(cluster.fork).toHaveBeenCalledTimes(value === '1' ? 1 : 2);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import postgres from 'postgres';
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -29,16 +29,21 @@ describe('PostgreSQL connections and shipped migrations (real SQL)', () => {
   it('runs migrations idempotently and persists timestamp data across independent connections', async () => {
     database = await openTestDatabase();
     const migrations = await database.client`SELECT * FROM drizzle.__drizzle_migrations`;
-    expect(migrations).toHaveLength(1);
+    const journal = JSON.parse(readFileSync('drizzle/postgres/meta/_journal.json', 'utf8'));
+    expect(journal.entries.length).toBeGreaterThan(0);
+    expect(migrations).toHaveLength(journal.entries.length);
     await connection.initializeDatabaseSchema();
     expect(connection.getDatabase()).toBe(database.db);
     const tables =
       await database.client`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`;
     expect(tables.map((row) => row['table_name']).sort()).toEqual([
+      'comment_changes',
+      'comment_edges',
       'commentreports',
       'commentreportsarchives',
       'comments',
       'cryptowalletaddresses',
+      'database_meta',
       'links',
       'livechatmessages',
       'videoreports',

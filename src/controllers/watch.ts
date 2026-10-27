@@ -13,6 +13,7 @@ import type {
   CommentsService,
 } from '@services/index.js';
 import type { SQLiteVideo, PostgresVideo } from '@database/index.js';
+import { COMMENT_STATE_CACHE_CONTROL } from '@/utils/comment-cache.js';
 import { getConfig } from '@config/index.js';
 
 /**
@@ -52,6 +53,11 @@ interface VideoData {
     likes: number;
     dislikes: number;
     isPublished: boolean;
+    isPublishing: boolean;
+    isLive: boolean;
+    isLikesEnabled: boolean;
+    isDislikesEnabled: boolean;
+    isLiveChatEnabled: boolean;
     isStreaming: boolean;
     isStreamed: boolean;
     isCommentsEnabled: boolean;
@@ -91,7 +97,12 @@ interface WatchPageData {
     }>;
   };
   commentsData: {
+    totalCount: number;
+    hasMore?: boolean;
     isError: false;
+    cdnEnabled: boolean;
+    cacheVersion: number;
+    cacheEpoch: string;
     comments: Array<{ commentId: number; timestamp: number; commentPlainTextSanitized: string }>;
   };
   externalVideosBaseUrl: string;
@@ -131,6 +142,7 @@ export class WatchController extends VideoControllerBase {
    * Render the video watch page
    */
   getWatchPage = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    reply.headers({ 'Cache-Control': 'no-store' });
     try {
       const { v: videoId } = request.query as WatchQuery;
 
@@ -141,6 +153,9 @@ export class WatchController extends VideoControllerBase {
       } else {
         const model = await this.buildPageData(video);
 
+        if (request.headers.authorization === undefined) {
+          reply.headers({ 'Cache-Control': COMMENT_STATE_CACHE_CONTROL });
+        }
         return await reply.view('watch.ejs', { model });
       }
     } catch (error) {
@@ -162,20 +177,16 @@ export class WatchController extends VideoControllerBase {
     const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
 
     // Fetch all data in parallel
-    const [videoCount, links, walletAddresses, recommendedVideosResult, comments] =
+    const [videoCount, links, walletAddresses, recommendedVideosResult, cacheVersion] =
       await Promise.all([
         this.videosService.countVideos({ isPublished: true }),
         this.linksService.getAllLinks(),
         this.monetizationService.getWalletAddresses(),
-        this.videosService.getVideos({
-          limit: 10,
-          sortBy: 'creation_timestamp',
-          sortDirection: 'desc',
-        }),
-        this.commentsService.getCommentsForVideo(video.video_id, 'before', 'ascending', Date.now()),
+        this.videosService.getRecommendedVideos({ limit: 10 }),
+        this.commentsService.getCacheVersion(video.video_id),
       ]);
 
-    const recommendedVideos = recommendedVideosResult.data;
+    const recommendedVideos = recommendedVideosResult;
 
     const { adaptiveSources, progressiveSources, sourcesFormatsAndResolutions } =
       this.buildVideoSources(video, externalVideosBaseUrl);
@@ -207,12 +218,13 @@ export class WatchController extends VideoControllerBase {
         })),
       },
       commentsData: {
+        totalCount: video.comments,
         isError: false as const,
-        comments: comments.map((c) => ({
-          commentId: c.comment_id,
-          timestamp: c.timestamp,
-          commentPlainTextSanitized: c.comment_plain_text_sanitized,
-        })),
+        hasMore: video.comments > 100,
+        cdnEnabled: nodeSettings.isCloudflareCdnEnabled,
+        cacheVersion,
+        cacheEpoch: await this.commentsService.getCacheEpoch(),
+        comments: [],
       },
       externalVideosBaseUrl,
       externalResourcesBaseUrl,
@@ -267,10 +279,15 @@ export class WatchController extends VideoControllerBase {
         likes: video.likes,
         dislikes: video.dislikes,
         isPublished: video.is_published,
+        isPublishing: video.is_publishing,
+        isLive: video.is_live,
+        isLikesEnabled: getConfig().nodeSettings.isLikesEnabled && video.is_likes_enabled,
+        isDislikesEnabled: getConfig().nodeSettings.isDislikesEnabled && video.is_dislikes_enabled,
+        isLiveChatEnabled: getConfig().nodeSettings.isLiveChatEnabled && video.is_live_chat_enabled,
         isStreaming: video.is_streaming,
         isStreamed: video.is_streamed,
-        isCommentsEnabled: video.is_comments_enabled,
-        isReportsEnabled: video.is_reports_enabled,
+        isCommentsEnabled: getConfig().nodeSettings.isCommentsEnabled && video.is_comments_enabled,
+        isReportsEnabled: getConfig().nodeSettings.isReportsEnabled && video.is_reports_enabled,
         creationTimestamp: video.creation_timestamp,
         isHlsAvailable: sourcesFormatsAndResolutions.m3u8.length > 0,
         isMp4Available: sourcesFormatsAndResolutions.mp4.length > 0,

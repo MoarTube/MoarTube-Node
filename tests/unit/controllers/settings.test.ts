@@ -1,3 +1,6 @@
+vi.mock('@/utils/manifest-transform.js', () => ({
+  rewriteManifestFile: vi.fn().mockResolvedValue(undefined),
+}));
 /**
  * Unit tests for SettingsController
  *
@@ -18,12 +21,15 @@ vi.mock('node:fs', () => ({
     existsSync: vi.fn(),
     mkdirSync: vi.fn(),
     createWriteStream: vi.fn(),
+    createReadStream: vi.fn(),
     readFileSync: vi.fn(),
     writeFileSync: vi.fn(),
     statSync: vi.fn(() => ({ size: 1024 })),
     rm: vi.fn(),
   },
 }));
+
+vi.mock('@/utils/stream-files.js', () => ({ writeUpload: vi.fn().mockResolvedValue(undefined) }));
 
 vi.mock('node:stream/promises', () => ({
   pipeline: vi.fn().mockResolvedValue(undefined),
@@ -64,6 +70,8 @@ vi.mock('@utils/index.js', () => ({
 
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import fs from 'node:fs';
+import { Readable } from 'node:stream';
+import { rewriteManifestFile } from '@/utils/manifest-transform.js';
 import { SettingsController } from '../../../src/controllers/settings.js';
 import { getConfig } from '@config/index.js';
 import { isCloudflareCredentialsValid } from '@utils/index.js';
@@ -83,8 +91,10 @@ describe('SettingsController', () => {
     clearCloudflareConfig: vi.fn(),
     updateDatabaseConfig: vi.fn(),
     updateStorageConfig: vi.fn(),
-    exportAllData: vi.fn(),
-    importDatabase: vi.fn(),
+
+    createDatabaseBackup: vi.fn(),
+    restoreDatabaseBackup: vi.fn(),
+
     isDockerEnvironment: vi.fn(),
   };
 
@@ -146,11 +156,16 @@ describe('SettingsController', () => {
 
   it('sends the server restart command through IPC after responding', async () => {
     const send = vi.fn();
-    vi.stubGlobal('setImmediate', (callback: () => void) => { callback(); });
+    vi.stubGlobal('setImmediate', (callback: () => void) => {
+      callback();
+    });
     const originalSend = process.send;
     process.send = send;
     try {
-      await controller.restartServer(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.restartServer(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(send).toHaveBeenCalledWith({ cmd: 'restart_server' });
     } finally {
@@ -161,11 +176,19 @@ describe('SettingsController', () => {
 
   it('returns a client error and does not schedule a restart when sending the response fails', async () => {
     const schedule = vi.spyOn(globalThis, 'setImmediate');
-    mockReply.send.mockImplementationOnce(() => { throw new Error('response failed'); });
+    mockReply.send.mockImplementationOnce(() => {
+      throw new Error('response failed');
+    });
     try {
-      await controller.restartServer(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.restartServer(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
       expect(mockReply.status).toHaveBeenLastCalledWith(400);
-      expect(mockReply.send).toHaveBeenLastCalledWith({ isError: true, message: 'error restarting the MoarTube node' });
+      expect(mockReply.send).toHaveBeenLastCalledWith({
+        isError: true,
+        message: 'error restarting the MoarTube node',
+      });
       expect(schedule).not.toHaveBeenCalled();
     } finally {
       schedule.mockRestore();
@@ -222,7 +245,10 @@ describe('SettingsController', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('image data'));
 
-      await controller.getAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAvatar(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockSettingsService.getAvatarFilePath).toHaveBeenCalled();
       // sendFile will be called, and the file path is validated
@@ -231,7 +257,10 @@ describe('SettingsController', () => {
     it('should return 404 when avatar not found', async () => {
       mockSettingsService.getAvatarFilePath.mockReturnValue(null);
 
-      await controller.getAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAvatar(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -245,7 +274,10 @@ describe('SettingsController', () => {
         throw new Error('File system error');
       });
 
-      await controller.getAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAvatar(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -261,7 +293,10 @@ describe('SettingsController', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(Buffer.from('banner data'));
 
-      await controller.getBanner(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getBanner(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockSettingsService.getBannerFilePath).toHaveBeenCalled();
       // sendFile will be called with the file path
@@ -270,7 +305,10 @@ describe('SettingsController', () => {
     it('should return 404 when banner not found', async () => {
       mockSettingsService.getBannerFilePath.mockReturnValue(null);
 
-      await controller.getBanner(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getBanner(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(404);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -284,7 +322,10 @@ describe('SettingsController', () => {
         throw new Error('File system error');
       });
 
-      await controller.getBanner(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getBanner(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -299,7 +340,10 @@ describe('SettingsController', () => {
       mockRequest.body = { nodeName: 'New Node Name' };
       mockSettingsService.updateNodeName.mockResolvedValue(undefined);
 
-      await controller.personalizeNodeName(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.personalizeNodeName(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockSettingsService.updateNodeName).toHaveBeenCalledWith('New Node Name');
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -309,7 +353,10 @@ describe('SettingsController', () => {
       mockRequest.body = { nodeName: 'Name' };
       mockSettingsService.updateNodeName.mockRejectedValue(new Error('Update failed'));
 
-      await controller.personalizeNodeName(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.personalizeNodeName(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -320,7 +367,10 @@ describe('SettingsController', () => {
       mockRequest.body = { nodeAbout: 'About this node' };
       mockSettingsService.updateNodeAbout.mockResolvedValue(undefined);
 
-      await controller.personalizeNodeAbout(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.personalizeNodeAbout(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockSettingsService.updateNodeAbout).toHaveBeenCalledWith('About this node');
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -330,7 +380,10 @@ describe('SettingsController', () => {
       mockRequest.body = { nodeAbout: 'About' };
       mockSettingsService.updateNodeAbout.mockRejectedValue(new Error('Update failed'));
 
-      await controller.personalizeNodeAbout(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.personalizeNodeAbout(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -341,7 +394,10 @@ describe('SettingsController', () => {
       mockRequest.body = { username: 'newuser', password: 'newpass' };
       mockSettingsService.updateCredentials.mockResolvedValue(undefined);
 
-      await controller.updateAccount(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.updateAccount(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockSettingsService.updateCredentials).toHaveBeenCalledWith('newuser', 'newpass');
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -351,7 +407,10 @@ describe('SettingsController', () => {
       mockRequest.body = { username: 'user', password: 'pass' };
       mockSettingsService.updateCredentials.mockRejectedValue(new Error('Credential error'));
 
-      await controller.updateAccount(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.updateAccount(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -362,10 +421,13 @@ describe('SettingsController', () => {
       mockRequest.body = { nodeListeningPort: 8080 };
       mockSettingsService.isDockerEnvironment.mockReturnValue(false);
 
-      await controller.networkInternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkInternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute (covers the if (process.send) falsy branch)
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       // The controller calls getConfig().updateNodeSettings - we just verify success response
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -379,10 +441,13 @@ describe('SettingsController', () => {
       const originalSend = process.send;
       process.send = vi.fn();
 
-      await controller.networkInternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkInternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(process.send).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -399,10 +464,13 @@ describe('SettingsController', () => {
       const originalSend = process.send;
       process.send = undefined;
 
-      await controller.networkInternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkInternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute (covers the if (process.send) falsy branch)
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
 
@@ -414,7 +482,10 @@ describe('SettingsController', () => {
       mockRequest.body = { nodeListeningPort: 8080 };
       mockSettingsService.isDockerEnvironment.mockReturnValue(true);
 
-      await controller.networkInternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkInternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -434,7 +505,10 @@ describe('SettingsController', () => {
         throw new Error('Config error');
       });
 
-      await controller.networkInternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkInternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -456,7 +530,10 @@ describe('SettingsController', () => {
       mockSettingsService.updateNetworkSettings.mockResolvedValue(undefined);
       mockVideosService.getAllVideosData.mockResolvedValue([]);
 
-      await controller.networkExternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkExternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockSettingsService.updateNetworkSettings).toHaveBeenCalledWith(
         'https',
@@ -491,7 +568,10 @@ describe('SettingsController', () => {
 
       mockSettingsService.updateNetworkSettings.mockResolvedValue(undefined);
 
-      await controller.networkExternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkExternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockSettingsService.updateNetworkSettings).toHaveBeenCalled();
       // Should NOT call getAllVideosData since we're not rewriting manifests
@@ -534,7 +614,10 @@ describe('SettingsController', () => {
         '#EXTM3U\nhttps://oldnode.example.com/external/videos/vid1/segment.ts'
       );
 
-      await controller.networkExternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkExternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockVideosService.getAllVideosData).toHaveBeenCalled();
       expect(fs.default.existsSync).toHaveBeenCalled();
@@ -569,7 +652,10 @@ describe('SettingsController', () => {
         { videoId: 'vid1', outputs: { m3u8: [] } }, // No m3u8 outputs
       ]);
 
-      await controller.networkExternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkExternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -609,7 +695,10 @@ describe('SettingsController', () => {
         throw new Error('Read error');
       });
 
-      await controller.networkExternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkExternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Should still succeed - errors in manifest rewriting are logged but not fatal
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -647,7 +736,10 @@ describe('SettingsController', () => {
       const fs = await import('node:fs');
       vi.mocked(fs.default.existsSync).mockReturnValue(false);
 
-      await controller.networkExternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkExternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Should still succeed
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -663,7 +755,10 @@ describe('SettingsController', () => {
       };
       mockSettingsService.updateNetworkSettings.mockRejectedValue(new Error('Network error'));
 
-      await controller.networkExternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.networkExternal(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -682,7 +777,10 @@ describe('SettingsController', () => {
       mockCloudflareService.addCdnDnsRecord.mockResolvedValue(undefined);
       mockCloudflareService.purgeEntireCacheWithCredentials.mockResolvedValue(undefined);
 
-      await controller.cloudflareConfigure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.cloudflareConfigure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(isCloudflareCredentialsValid).toHaveBeenCalledWith(
         'admin@example.com',
@@ -701,7 +799,10 @@ describe('SettingsController', () => {
       };
       vi.mocked(isCloudflareCredentialsValid).mockResolvedValue(false);
 
-      await controller.cloudflareConfigure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.cloudflareConfigure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -718,7 +819,10 @@ describe('SettingsController', () => {
       mockCloudflareService.resetCdn.mockResolvedValue(undefined);
       mockCloudflareService.purgeEntireCacheWithCredentials.mockResolvedValue(undefined);
 
-      await controller.cloudflareClear(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.cloudflareClear(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockSettingsService.clearCloudflareConfig).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -746,7 +850,10 @@ describe('SettingsController', () => {
       mockCloudflareService.resetCdn.mockResolvedValue(undefined);
       mockCloudflareService.purgeEntireCacheWithCredentials.mockResolvedValue(undefined);
 
-      await controller.cloudflareClear(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.cloudflareClear(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockCloudflareService.resetCdn).toHaveBeenCalledWith(
         'test@example.com',
@@ -763,7 +870,10 @@ describe('SettingsController', () => {
         throw new Error('Clear error');
       });
 
-      await controller.cloudflareClear(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.cloudflareClear(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -773,7 +883,10 @@ describe('SettingsController', () => {
     it('should toggle comments', async () => {
       mockRequest.body = { isEnabled: true };
 
-      await controller.commentsToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.commentsToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -786,7 +899,10 @@ describe('SettingsController', () => {
         throw new Error('Config error');
       });
 
-      await controller.commentsToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.commentsToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -794,7 +910,10 @@ describe('SettingsController', () => {
     it('should toggle likes', async () => {
       mockRequest.body = { isEnabled: false };
 
-      await controller.likesToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.likesToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -807,7 +926,10 @@ describe('SettingsController', () => {
         throw new Error('Config error');
       });
 
-      await controller.likesToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.likesToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -815,7 +937,10 @@ describe('SettingsController', () => {
     it('should toggle dislikes', async () => {
       mockRequest.body = { isEnabled: true };
 
-      await controller.dislikesToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.dislikesToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -828,7 +953,10 @@ describe('SettingsController', () => {
         throw new Error('Config error');
       });
 
-      await controller.dislikesToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.dislikesToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -836,7 +964,10 @@ describe('SettingsController', () => {
     it('should toggle reports', async () => {
       mockRequest.body = { isEnabled: false };
 
-      await controller.reportsToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.reportsToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -849,7 +980,10 @@ describe('SettingsController', () => {
         throw new Error('Config error');
       });
 
-      await controller.reportsToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.reportsToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -857,7 +991,10 @@ describe('SettingsController', () => {
     it('should toggle live chat', async () => {
       mockRequest.body = { isEnabled: true };
 
-      await controller.liveChatToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.liveChatToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -870,7 +1007,10 @@ describe('SettingsController', () => {
         throw new Error('Config error');
       });
 
-      await controller.liveChatToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.liveChatToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -889,10 +1029,13 @@ describe('SettingsController', () => {
       };
       mockSettingsService.updateDatabaseConfig.mockResolvedValue(undefined);
 
-      await controller.databaseConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.databaseConfigToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute (covers the if (process.send) falsy branch)
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockSettingsService.updateDatabaseConfig).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -910,10 +1053,13 @@ describe('SettingsController', () => {
       const originalSend = process.send;
       process.send = vi.fn();
 
-      await controller.databaseConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.databaseConfigToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(process.send).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -934,10 +1080,13 @@ describe('SettingsController', () => {
       const originalSend = process.send;
       process.send = undefined;
 
-      await controller.databaseConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.databaseConfigToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute (covers the if (process.send) falsy branch)
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
 
@@ -954,7 +1103,10 @@ describe('SettingsController', () => {
       };
       mockSettingsService.updateDatabaseConfig.mockRejectedValue(new Error('Connection failed'));
 
-      await controller.databaseConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.databaseConfigToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -974,10 +1126,13 @@ describe('SettingsController', () => {
         },
       };
 
-      await controller.storageConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.storageConfigToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute (covers the if (process.send) falsy branch)
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockSettingsService.updateStorageConfig).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -994,10 +1149,13 @@ describe('SettingsController', () => {
       const originalSend = process.send;
       process.send = vi.fn();
 
-      await controller.storageConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.storageConfigToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(process.send).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -1017,10 +1175,13 @@ describe('SettingsController', () => {
       const originalSend = process.send;
       process.send = undefined;
 
-      await controller.storageConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.storageConfigToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute (covers the if (process.send) falsy branch)
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
 
@@ -1056,7 +1217,10 @@ describe('SettingsController', () => {
       mockCloudflareService.addCdnDnsRecord.mockResolvedValue(undefined);
       mockCloudflareService.purgeEntireCacheWithCredentials.mockResolvedValue(undefined);
 
-      await controller.storageConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.storageConfigToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockCloudflareService.addCdnDnsRecord).toHaveBeenCalledWith(
         'test@example.com',
@@ -1083,53 +1247,39 @@ describe('SettingsController', () => {
         throw new Error('Storage error');
       });
 
-      await controller.storageConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.storageConfigToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
   });
 
   describe('exportDatabase', () => {
-    it('should export database', async () => {
-      mockSettingsService.exportAllData.mockResolvedValue({
-        videos: [{ videoId: 'vid1' }],
-        comments: [],
-        videoReports: [],
-        commentReports: [],
-        videoReportsArchives: [],
-        commentReportsArchives: [],
-        liveChatMessages: [],
-        cryptoWalletAddresses: [],
-        links: [],
+    it('returns a readable JSON download without materializing tables', async () => {
+      mockSettingsService.createDatabaseBackup.mockResolvedValue({
+        file: '/unused/export.json',
+        dispose: vi.fn(),
       });
-
-      await controller.exportDatabase(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockSettingsService.exportAllData).toHaveBeenCalled();
-      expect(mockReply.status).toHaveBeenCalledWith(200);
+      await controller.exportDatabase(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
+      expect(mockSettingsService.createDatabaseBackup).toHaveBeenCalled();
       expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({
-          isError: false,
-          database: expect.any(Array),
-        })
+        expect.objectContaining({ pipe: expect.any(Function) })
       );
     });
-
-    it('should return error on export failure', async () => {
-      mockSettingsService.exportAllData.mockRejectedValue(new Error('Export failed'));
-
-      await controller.exportDatabase(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({
-          isError: true,
-          message: 'error exporting database',
-        })
+    it('reports snapshot failures before sending a stream', async () => {
+      mockSettingsService.createDatabaseBackup.mockRejectedValue(new Error('snapshot failed'));
+      await controller.exportDatabase(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
       );
+      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ isError: true }));
     });
   });
-
   describe('cloudflareTurnstileConfigure', () => {
     it('should configure Cloudflare Turnstile', async () => {
       mockRequest.body = {
@@ -1138,7 +1288,10 @@ describe('SettingsController', () => {
       };
       mockCloudflareService.purgeAllWatchPages.mockResolvedValue(undefined);
 
-      await controller.cloudflareTurnstileConfigure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.cloudflareTurnstileConfigure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockWebSocketService.broadcastToChat).toHaveBeenCalledWith('all', {
         eventName: 'cloudflare_turnstile_information',
@@ -1152,7 +1305,10 @@ describe('SettingsController', () => {
     it('should clear Cloudflare Turnstile', async () => {
       mockCloudflareService.purgeAllWatchPages.mockResolvedValue(undefined);
 
-      await controller.cloudflareTurnstileClear(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.cloudflareTurnstileClear(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockWebSocketService.broadcastToChat).toHaveBeenCalledWith('all', {
         eventName: 'cloudflare_turnstile_information',
@@ -1169,7 +1325,10 @@ describe('SettingsController', () => {
     it('should disable HTTPS mode', async () => {
       mockRequest.query = { isSecure: false };
 
-      await controller.configureSecure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.configureSecure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -1177,7 +1336,7 @@ describe('SettingsController', () => {
     it('should return error when enabling HTTPS without key file', async () => {
       mockRequest.query = { isSecure: true };
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       // Mock request.parts() to return empty iterator (no files)
       const mockParts = {
         async *[Symbol.asyncIterator]() {
@@ -1186,7 +1345,10 @@ describe('SettingsController', () => {
       };
       (mockRequest as any).parts = () => mockParts;
 
-      await controller.configureSecure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.configureSecure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -1200,7 +1362,7 @@ describe('SettingsController', () => {
     it('should return error when cert file is missing but key file exists', async () => {
       mockRequest.query = { isSecure: true };
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       // Mock request.parts() to return only key file
       const mockKeyFile = { pipe: vi.fn() };
       const mockParts = {
@@ -1211,7 +1373,10 @@ describe('SettingsController', () => {
       (mockRequest as any).parts = () => mockParts;
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
 
-      await controller.configureSecure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.configureSecure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith(
@@ -1225,7 +1390,7 @@ describe('SettingsController', () => {
     it('should enable HTTPS mode with valid certificates', async () => {
       mockRequest.query = { isSecure: true };
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       // Mock the multipart file uploads
       const mockKeyFile = { pipe: vi.fn() };
       const mockCertFile = { pipe: vi.fn() };
@@ -1236,14 +1401,17 @@ describe('SettingsController', () => {
         },
       };
       (mockRequest as any).parts = () => mockParts;
-      
+
       // Mock fs.createWriteStream
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
 
-      await controller.configureSecure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.configureSecure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute (covers the if (process.send) falsy branch)
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -1251,7 +1419,7 @@ describe('SettingsController', () => {
     it('should enable HTTPS without triggering restart directly', async () => {
       mockRequest.query = { isSecure: true };
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       const mockKeyFile = { pipe: vi.fn() };
       const mockCertFile = { pipe: vi.fn() };
       const mockParts = {
@@ -1267,10 +1435,13 @@ describe('SettingsController', () => {
       const originalSend = process.send;
       process.send = vi.fn();
 
-      await controller.configureSecure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.configureSecure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(process.send).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -1282,7 +1453,7 @@ describe('SettingsController', () => {
     it('should not call process.send when it is undefined for secure config', async () => {
       mockRequest.query = { isSecure: true };
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       const mockKeyFile = { pipe: vi.fn() };
       const mockCertFile = { pipe: vi.fn() };
       const mockParts = {
@@ -1298,10 +1469,13 @@ describe('SettingsController', () => {
       const originalSend = process.send;
       process.send = undefined;
 
-      await controller.configureSecure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.configureSecure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Wait for setImmediate callback to execute (covers the if (process.send) falsy branch)
-      await new Promise(resolve => setImmediate(resolve));
+      await new Promise((resolve) => setImmediate(resolve));
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
 
@@ -1313,7 +1487,7 @@ describe('SettingsController', () => {
       mockRequest.query = { isSecure: true };
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.mkdirSync).mockReturnValue(undefined);
-      
+
       const mockKeyFile = { pipe: vi.fn() };
       const mockCertFile = { pipe: vi.fn() };
       const mockCaFile = { pipe: vi.fn() };
@@ -1327,7 +1501,10 @@ describe('SettingsController', () => {
       (mockRequest as any).parts = () => mockParts;
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
 
-      await controller.configureSecure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.configureSecure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(fs.mkdirSync).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -1336,7 +1513,7 @@ describe('SettingsController', () => {
     it('should skip non-file parts', async () => {
       mockRequest.query = { isSecure: true };
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       const mockKeyFile = { pipe: vi.fn() };
       const mockCertFile = { pipe: vi.fn() };
       const mockParts = {
@@ -1349,7 +1526,10 @@ describe('SettingsController', () => {
       (mockRequest as any).parts = () => mockParts;
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
 
-      await controller.configureSecure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.configureSecure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -1357,7 +1537,7 @@ describe('SettingsController', () => {
     it('should skip file parts with unknown fieldname', async () => {
       mockRequest.query = { isSecure: true };
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       const mockKeyFile = { pipe: vi.fn() };
       const mockCertFile = { pipe: vi.fn() };
       const mockUnknownFile = { pipe: vi.fn() };
@@ -1371,7 +1551,10 @@ describe('SettingsController', () => {
       (mockRequest as any).parts = () => mockParts;
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
 
-      await controller.configureSecure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.configureSecure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -1382,7 +1565,10 @@ describe('SettingsController', () => {
         throw new Error('Multipart error');
       };
 
-      await controller.configureSecure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.configureSecure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -1394,7 +1580,7 @@ describe('SettingsController', () => {
   describe('uploadAvatar', () => {
     it('should upload avatar image', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       const mockFile = { pipe: vi.fn() };
       const mockParts = {
         async *[Symbol.asyncIterator]() {
@@ -1405,7 +1591,10 @@ describe('SettingsController', () => {
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
       mockCloudflareService.purgeNodeImages.mockResolvedValue(undefined);
 
-      await controller.uploadAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.uploadAvatar(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -1413,7 +1602,7 @@ describe('SettingsController', () => {
     it('should create images directory if not exists', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.mkdirSync).mockReturnValue(undefined);
-      
+
       const mockFile = { pipe: vi.fn() };
       const mockParts = {
         async *[Symbol.asyncIterator]() {
@@ -1424,7 +1613,10 @@ describe('SettingsController', () => {
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
       mockCloudflareService.purgeNodeImages.mockResolvedValue(undefined);
 
-      await controller.uploadAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.uploadAvatar(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(fs.mkdirSync).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -1432,7 +1624,7 @@ describe('SettingsController', () => {
 
     it('should handle cloudflare purge error gracefully', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       const mockFile = { pipe: vi.fn() };
       const mockParts = {
         async *[Symbol.asyncIterator]() {
@@ -1443,7 +1635,10 @@ describe('SettingsController', () => {
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
       mockCloudflareService.purgeNodeImages.mockRejectedValue(new Error('Purge failed'));
 
-      await controller.uploadAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.uploadAvatar(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Should still succeed
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -1454,14 +1649,17 @@ describe('SettingsController', () => {
         throw new Error('Upload error');
       };
 
-      await controller.uploadAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.uploadAvatar(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
     });
 
     it('should skip non-file parts and unknown file fieldnames', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       const mockParts = {
         async *[Symbol.asyncIterator]() {
           // Non-file part
@@ -1473,7 +1671,10 @@ describe('SettingsController', () => {
       (mockRequest as any).parts = () => mockParts;
       mockCloudflareService.purgeNodeImages.mockResolvedValue(undefined);
 
-      await controller.uploadAvatar(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.uploadAvatar(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Should still succeed - just no files processed
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -1486,7 +1687,7 @@ describe('SettingsController', () => {
   describe('uploadBanner', () => {
     it('should upload banner image', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       const mockFile = { pipe: vi.fn() };
       const mockParts = {
         async *[Symbol.asyncIterator]() {
@@ -1497,7 +1698,10 @@ describe('SettingsController', () => {
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
       mockCloudflareService.purgeNodeImages.mockResolvedValue(undefined);
 
-      await controller.uploadBanner(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.uploadBanner(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
@@ -1505,7 +1709,7 @@ describe('SettingsController', () => {
     it('should create images directory if it does not exist', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(false);
       vi.mocked(fs.mkdirSync).mockReturnValue(undefined);
-      
+
       const mockFile = { pipe: vi.fn() };
       const mockParts = {
         async *[Symbol.asyncIterator]() {
@@ -1516,7 +1720,10 @@ describe('SettingsController', () => {
       vi.mocked(fs.createWriteStream).mockReturnValue({ on: vi.fn() } as any);
       mockCloudflareService.purgeNodeImages.mockResolvedValue(undefined);
 
-      await controller.uploadBanner(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.uploadBanner(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(fs.mkdirSync).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -1530,14 +1737,17 @@ describe('SettingsController', () => {
       };
       (mockRequest as any).parts = () => mockParts;
 
-      await controller.uploadBanner(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.uploadBanner(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
 
     it('should skip non-file parts', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
-      
+
       const mockParts = {
         async *[Symbol.asyncIterator]() {
           // Non-file part should be skipped
@@ -1546,7 +1756,10 @@ describe('SettingsController', () => {
       };
       (mockRequest as any).parts = () => mockParts;
 
-      await controller.uploadBanner(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.uploadBanner(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Should fail because no banner file was found
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -1557,7 +1770,10 @@ describe('SettingsController', () => {
         throw new Error('Upload error');
       };
 
-      await controller.uploadBanner(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.uploadBanner(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -1576,11 +1792,14 @@ describe('SettingsController', () => {
         },
       };
       (mockRequest as any).parts = () => mockParts;
-      mockSettingsService.importDatabase.mockResolvedValue(undefined);
+      mockSettingsService.restoreDatabaseBackup.mockResolvedValue(undefined);
 
-      await controller.importDatabase(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.importDatabase(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
-      expect(mockSettingsService.importDatabase).toHaveBeenCalled();
+      expect(mockSettingsService.restoreDatabaseBackup).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
@@ -1592,7 +1811,10 @@ describe('SettingsController', () => {
       };
       (mockRequest as any).parts = () => mockParts;
 
-      await controller.importDatabase(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.importDatabase(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -1605,7 +1827,10 @@ describe('SettingsController', () => {
       };
       (mockRequest as any).parts = () => mockParts;
 
-      await controller.importDatabase(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.importDatabase(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       // Should return error because databaseFile was not found
       expect(mockReply.status).toHaveBeenCalledWith(400);
@@ -1626,9 +1851,12 @@ describe('SettingsController', () => {
         },
       };
       (mockRequest as any).parts = () => mockParts;
-      mockSettingsService.importDatabase.mockRejectedValue(new Error('Import failed'));
+      mockSettingsService.restoreDatabaseBackup.mockRejectedValue(new Error('Import failed'));
 
-      await controller.importDatabase(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.importDatabase(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -1683,7 +1911,10 @@ describe('SettingsController', () => {
       };
       mockCloudflareService.purgeAllWatchPages.mockRejectedValue(new Error('Purge failed'));
 
-      await controller.cloudflareTurnstileConfigure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.cloudflareTurnstileConfigure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -1691,7 +1922,10 @@ describe('SettingsController', () => {
     it('should handle error in cloudflareTurnstileClear', async () => {
       mockCloudflareService.purgeAllWatchPages.mockRejectedValue(new Error('Purge failed'));
 
-      await controller.cloudflareTurnstileClear(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.cloudflareTurnstileClear(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
@@ -1704,9 +1938,74 @@ describe('SettingsController', () => {
       };
       vi.mocked(isCloudflareCredentialsValid).mockRejectedValue(new Error('Validation failed'));
 
-      await controller.cloudflareConfigure(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.cloudflareConfigure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
+  });
+  it.each([undefined, {}, { download: '1' }])(
+    'streams backup responses and cleans disk snapshots (%j)',
+    async (query) => {
+      const dispose = vi
+        .fn()
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValue(new Error('cleanup failure'));
+      mockSettingsService.createDatabaseBackup.mockResolvedValue({
+        file: '/tmp/snapshot.json',
+        dispose,
+      });
+      vi.mocked(fs.createReadStream).mockReturnValue(Readable.from(['[]']) as never);
+      mockRequest.query = query;
+      await controller.exportDatabase(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
+      const stream = mockReply.send.mock.calls[0][0];
+      let json = '';
+      for await (const chunk of stream) json += chunk;
+      expect(JSON.parse(json)).toEqual(
+        query?.download === '1' ? [] : { isError: false, database: [] }
+      );
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(dispose).toHaveBeenCalled();
+    }
+  );
+  it('rejects duplicate backup files and drains unrelated files', async () => {
+    const resume = vi.fn();
+    mockRequest.parts = vi.fn().mockReturnValue(
+      (async function* () {
+        yield { type: 'field' };
+        yield { type: 'file', fieldname: 'other', file: { resume } };
+        yield { type: 'file', fieldname: 'databaseFile' };
+        yield { type: 'file', fieldname: 'databaseFile' };
+      })()
+    );
+    await controller.importDatabase(
+      mockRequest as FastifyRequest,
+      mockReply as unknown as FastifyReply
+    );
+    expect(resume).toHaveBeenCalled();
+    expect(mockReply.status).toHaveBeenCalledWith(400);
+  });
+  it('awaits catalog maintenance pages and rewrites manifest URLs', async () => {
+    mockVideosService.getAllVideosData
+      .mockResolvedValueOnce(
+        Array.from({ length: 100 }, () => ({ videoId: 'a', outputs: { m3u8: [] } }))
+      )
+      .mockResolvedValueOnce([]);
+    await (controller as any).rewriteAllManifestUrls();
+    expect(mockVideosService.getAllVideosData).toHaveBeenLastCalledWith({
+      limit: 100,
+      offset: 100,
+    });
+    vi.mocked(rewriteManifestFile).mockImplementationOnce(async (_file, transform) => {
+      expect(transform('https://old/external/a')).toBe('https://new/external/a');
+    });
+    await (controller as any).rewriteManifestUrls('a', 'https://new');
+    vi.mocked(rewriteManifestFile).mockRejectedValueOnce(new Error('disk failure'));
+    await (controller as any).rewriteManifestUrls('a', 'https://new');
   });
 });

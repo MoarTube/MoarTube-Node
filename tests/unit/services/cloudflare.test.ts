@@ -107,6 +107,43 @@ describe('CloudflareService', () => {
     });
   });
 
+  it('activates and rotates purge credentials after settings change without a worker restart', async () => {
+    const first = { post: vi.fn().mockResolvedValue({ data: { success: true } }) };
+    const second = { post: vi.fn().mockResolvedValue({ data: { success: true } }) };
+    vi.mocked(axios.create)
+      .mockReturnValueOnce(first as unknown as ReturnType<typeof axios.create>)
+      .mockReturnValueOnce(second as unknown as ReturnType<typeof axios.create>);
+    mockConfig.nodeSettings.isCloudflareCdnEnabled = true;
+    mockConfig.nodeSettings.cloudflareGlobalApiKey = 'first-key';
+    mockConfig.nodeSettings.cloudflareEmailAddress = 'first@example.test';
+    mockConfig.nodeSettings.cloudflareZoneId = 'first-zone';
+    await service.purgeWatchPages(['video']);
+    await service.purgeWatchPages(['video']);
+    expect(first.post).toHaveBeenCalledTimes(2);
+    expect(axios.create).toHaveBeenCalledTimes(1);
+    mockConfig.nodeSettings.cloudflareGlobalApiKey = 'second-key';
+    mockConfig.nodeSettings.cloudflareEmailAddress = 'second@example.test';
+    mockConfig.nodeSettings.cloudflareZoneId = 'second-zone';
+    await service.purgeWatchPages(['video']);
+    expect(second.post).toHaveBeenCalledWith('/zones/second-zone/purge_cache', {
+      files: [
+        'https://example.com/watch?v=video',
+        'https://example.com/videos/video/comments/state',
+      ],
+    });
+    expect(axios.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'X-Auth-Key': 'second-key',
+          'X-Auth-Email': 'second@example.test',
+        }),
+      })
+    );
+    mockConfig.nodeSettings.isCloudflareCdnEnabled = false;
+    await service.purgeWatchPages(['video']);
+    expect(second.post).toHaveBeenCalledTimes(1);
+  });
+
   describe('isEnabled', () => {
     it('should return true when Cloudflare CDN is enabled', () => {
       mockConfig.nodeSettings.isCloudflareCdnEnabled = true;
@@ -360,7 +397,9 @@ describe('CloudflareService', () => {
         get: vi.fn().mockResolvedValue({ data: { success: true } }),
       };
 
-      vi.mocked(axios.create).mockReturnValue(mockHttpClient as unknown as ReturnType<typeof axios.create>);
+      vi.mocked(axios.create).mockReturnValue(
+        mockHttpClient as unknown as ReturnType<typeof axios.create>
+      );
       service = new CloudflareService(mockLogger, mockVideosRepository);
     });
 
@@ -396,17 +435,13 @@ describe('CloudflareService', () => {
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         '/zones/zone123/purge_cache',
         expect.objectContaining({
-          files: expect.arrayContaining([
-            expect.stringContaining('/watch/embed/video/video123'),
-          ]),
+          files: expect.arrayContaining([expect.stringContaining('/watch/embed/video/video123')]),
         })
       );
     });
 
     it('should purge all embed video pages', async () => {
-      vi.mocked(mockVideosRepository.findAll).mockResolvedValue([
-        { video_id: 'video1' },
-      ] as never);
+      vi.mocked(mockVideosRepository.findAll).mockResolvedValue([{ video_id: 'video1' }] as never);
 
       await service.purgeAllEmbedVideoPages();
 
@@ -448,9 +483,7 @@ describe('CloudflareService', () => {
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         '/zones/zone123/purge_cache',
         expect.objectContaining({
-          files: expect.arrayContaining([
-            expect.stringContaining('/adaptive/m3u8'),
-          ]),
+          files: expect.arrayContaining([expect.stringContaining('/adaptive/m3u8')]),
         })
       );
     });
@@ -475,9 +508,7 @@ describe('CloudflareService', () => {
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         '/zones/zone123/purge_cache',
         expect.objectContaining({
-          files: expect.arrayContaining([
-            expect.stringContaining('/images/preview.jpg'),
-          ]),
+          files: expect.arrayContaining([expect.stringContaining('/images/preview.jpg')]),
         })
       );
     });
@@ -488,9 +519,7 @@ describe('CloudflareService', () => {
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         '/zones/zone123/purge_cache',
         expect.objectContaining({
-          files: expect.arrayContaining([
-            expect.stringContaining('/images/poster.jpg'),
-          ]),
+          files: expect.arrayContaining([expect.stringContaining('/images/poster.jpg')]),
         })
       );
     });
@@ -501,9 +530,7 @@ describe('CloudflareService', () => {
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         '/zones/zone123/purge_cache',
         expect.objectContaining({
-          files: expect.arrayContaining([
-            expect.stringContaining('/images/thumbnail.jpg'),
-          ]),
+          files: expect.arrayContaining([expect.stringContaining('/images/thumbnail.jpg')]),
         })
       );
     });
@@ -604,11 +631,7 @@ describe('CloudflareService', () => {
     it('should purge entire cache with explicit credentials', async () => {
       vi.mocked(axios.post).mockResolvedValue({ data: { success: true } });
 
-      await service.purgeEntireCacheWithCredentials(
-        'email@example.com',
-        'zone123',
-        'api-key'
-      );
+      await service.purgeEntireCacheWithCredentials('email@example.com', 'zone123', 'api-key');
 
       expect(axios.post).toHaveBeenCalledWith(
         'https://api.cloudflare.com/client/v4/zones/zone123/purge_cache',
@@ -639,6 +662,7 @@ describe('CloudflareService', () => {
 
   describe('setCdnConfiguration', () => {
     it('should configure Cloudflare CDN settings', async () => {
+      vi.mocked(axios.post).mockResolvedValue({ data: { success: true } });
       vi.mocked(axios.put).mockResolvedValue({ data: { success: true } });
       vi.mocked(axios.patch).mockResolvedValue({ data: { success: true } });
 
@@ -646,10 +670,34 @@ describe('CloudflareService', () => {
 
       // Should create cache rules
       expect(axios.put).toHaveBeenCalledWith(
-        expect.stringContaining('/zones/zone123/rulesets/phases/http_request_cache_settings/entrypoint'),
+        expect.stringContaining(
+          '/zones/zone123/rulesets/phases/http_request_cache_settings/entrypoint'
+        ),
         expect.objectContaining({
           rules: expect.any(Array),
         }),
+        expect.any(Object)
+      );
+
+      const rules = vi.mocked(axios.put).mock.calls[0][1].rules;
+      expect(rules.length).toBeLessThanOrEqual(10);
+      const comments = rules.find((rule: { description: string }) =>
+        rule.description.includes('Node Comments')
+      );
+      expect(comments.action_parameters).toEqual({
+        cache: true,
+        edge_ttl: { mode: 'bypass_by_default' },
+        browser_ttl: { mode: 'respect_origin' },
+      });
+      expect(comments.expression).toContain('/comments');
+      const bypass = rules.at(-1);
+      expect(bypass.expression).toContain('fresh=1');
+      expect(bypass.expression).toContain('authorization');
+      expect(bypass.action_parameters.cache).toBe(false);
+      expect(JSON.stringify(rules)).not.toMatch(/cache_key|cache_tag|matches/);
+      expect(axios.patch).toHaveBeenCalledWith(
+        expect.stringContaining('/settings/cache_level'),
+        { value: 'aggressive' },
         expect.any(Object)
       );
 
@@ -847,7 +895,9 @@ describe('CloudflareService', () => {
         get: vi.fn().mockResolvedValue({ data: { success: true, result: [] } }),
       };
 
-      vi.mocked(axios.create).mockReturnValue(mockHttpClient as unknown as ReturnType<typeof axios.create>);
+      vi.mocked(axios.create).mockReturnValue(
+        mockHttpClient as unknown as ReturnType<typeof axios.create>
+      );
 
       service = new CloudflareService(mockLogger, mockVideosRepository);
     });
@@ -885,10 +935,7 @@ describe('CloudflareService', () => {
 
       await service.purgeNodePage();
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to purge node page',
-        expect.any(Error)
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to purge node page', expect.any(Error));
     });
 
     it('should handle purgeNodeImages errors when getExternalResourcesBaseUrl throws', async () => {
@@ -1032,8 +1079,24 @@ describe('CloudflareService', () => {
 
       await service.purgeWatchPages();
 
-      // Should be called twice: once for first 30, once for remaining 5
-      expect(mockHttpClient.post).toHaveBeenCalledTimes(2);
+      // Watch HTML and state markers total 70 URLs, purged in batches of 30.
+      expect(mockHttpClient.post).toHaveBeenCalledTimes(3);
     });
+  });
+  it('processes catalog invalidation in bounded pages', async () => {
+    mockConfig.nodeSettings.isCloudflareCdnEnabled = true;
+    mockConfig.nodeSettings.cloudflareGlobalApiKey = 'key';
+    mockConfig.nodeSettings.cloudflareEmailAddress = 'test@example.com';
+    service = new CloudflareService(mockLogger, mockVideosRepository);
+    vi.spyOn(service as any, 'purgeCache').mockResolvedValue(undefined);
+    for (const method of ['purgeWatchPages', 'purgeEmbedVideoPages'] as const) {
+      vi.mocked(mockVideosRepository.findAll)
+        .mockReset()
+        .mockResolvedValueOnce(Array.from({ length: 100 }, (_, i) => ({ video_id: String(i) })))
+        .mockResolvedValueOnce([{ video_id: 'last' }]);
+      await service[method]();
+      expect(mockVideosRepository.findAll).toHaveBeenNthCalledWith(2, { limit: 100, offset: 100 });
+      await service[method](Array.from({ length: 200 }, (_, i) => String(i)));
+    }
   });
 });

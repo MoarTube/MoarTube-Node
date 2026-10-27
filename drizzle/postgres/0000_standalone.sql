@@ -1,3 +1,17 @@
+CREATE TABLE "comment_changes" (
+	"version" bigserial PRIMARY KEY NOT NULL,
+	"video_id" text NOT NULL,
+	"comment_id" bigint NOT NULL,
+	"deleted" integer DEFAULT 0 NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "comment_edges" (
+	"video_id" text NOT NULL,
+	"parent_id" bigint NOT NULL,
+	"reply_id" bigint NOT NULL,
+	CONSTRAINT "comment_edges_video_id_parent_id_reply_id_pk" PRIMARY KEY("video_id","parent_id","reply_id")
+);
+--> statement-breakpoint
 CREATE TABLE "commentreports" (
 	"report_id" serial PRIMARY KEY NOT NULL,
 	"timestamp" bigint NOT NULL,
@@ -35,6 +49,11 @@ CREATE TABLE "cryptowalletaddresses" (
 	"chain_id" text NOT NULL,
 	"currency" text NOT NULL,
 	"timestamp" bigint NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "database_meta" (
+	"key" text PRIMARY KEY NOT NULL,
+	"value" text NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "links" (
@@ -111,3 +130,8 @@ CREATE TABLE "videos" (
 	"meta" text DEFAULT '{}' NOT NULL,
 	"creation_timestamp" bigint NOT NULL
 );
+--> statement-breakpoint
+CREATE UNIQUE INDEX "comment_changes_identity" ON "comment_changes" USING btree ("video_id","comment_id");--> statement-breakpoint
+CREATE INDEX "comment_changes_video" ON "comment_changes" USING btree ("video_id","version");--> statement-breakpoint
+CREATE INDEX "comment_edges_source" ON "comment_edges" USING btree ("video_id","reply_id","parent_id");--> statement-breakpoint
+CREATE INDEX "comments_history" ON "comments" USING btree ("video_id","timestamp","comment_id");

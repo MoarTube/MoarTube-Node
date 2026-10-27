@@ -108,14 +108,20 @@ async function performStartupProvisioning(
     }
 
     // Reset all in-progress flags
-    const allVideos = await videosRepository.findAll();
-    for (const video of allVideos) {
-      if (video.is_importing || video.is_publishing || video.is_streaming) {
-        await videosRepository.update(video.video_id, {
-          is_importing: false,
-          is_publishing: false,
-          is_streaming: false,
-        });
+    for (let offset = 0; ; offset += 100) {
+      const allVideos = await videosRepository.findAll({ limit: 100, offset });
+      for (const video of allVideos) {
+        if (video.is_importing || video.is_publishing || video.is_streaming) {
+          await videosRepository.update(video.video_id, {
+            is_importing: false,
+            is_publishing: false,
+            is_streaming: false,
+          });
+        }
+      }
+
+      if (allVideos.length < 100) {
+        break;
       }
     }
 

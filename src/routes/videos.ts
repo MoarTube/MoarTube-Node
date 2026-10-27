@@ -4,6 +4,7 @@
  * Routes for video-related endpoints.
  */
 import type { FastifyInstance } from 'fastify';
+import { noStoreComments } from '@/utils/comment-cache.js';
 import type { Container } from '@core/index.js';
 import { VideosController } from '@controllers/index.js';
 import {
@@ -12,6 +13,10 @@ import {
   videoAdaptiveManifestParamsSchema,
   videoSearchQuerySchema,
   videoCommentsQuerySchema,
+  videoCommentCacheQuerySchema,
+  videoCommentStateQuerySchema,
+  videoCommentQuerySchema,
+  videoCommentRepliesQuerySchema,
   videoCommentDeleteQuerySchema,
   videoUploadQuerySchema,
   videoImportBodySchema,
@@ -27,7 +32,6 @@ import {
   videoReportBodySchema,
   videoPermissionsBodySchema,
   videoMasterManifestBodySchema,
-  videoCommentGetQuerySchema,
 } from '@validators/index.js';
 
 /**
@@ -107,10 +111,39 @@ export function videosRoutes(
     controller.getAllTags.bind(controller)
   );
 
+  fastify.get(
+    '/:videoId/comments/state',
+    {
+      onRequest: noStoreComments,
+      preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Videos'],
+        params: videoIdParamsSchema,
+        querystring: videoCommentStateQuerySchema,
+      },
+    },
+    controller.getCommentState.bind(controller)
+  );
+
+  fastify.get(
+    '/:videoId/comments/cache',
+    {
+      onRequest: noStoreComments,
+      preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Videos'],
+        params: videoIdParamsSchema,
+        querystring: videoCommentCacheQuerySchema,
+      },
+    },
+    controller.getCommentCacheChanges.bind(controller)
+  );
+
   // Get comments
   fastify.get(
     '/:videoId/comments',
     {
+      onRequest: noStoreComments,
       preHandler: [fastify.optionalAuthenticate],
       schema: {
         tags: ['Videos'],
@@ -121,15 +154,30 @@ export function videosRoutes(
     controller.getComments.bind(controller)
   );
 
-  // Get single comment by ID
   fastify.get(
-    '/:videoId/comments/:commentId',
+    '/:videoId/comments/:commentId/replies',
     {
+      onRequest: noStoreComments,
       preHandler: [fastify.optionalAuthenticate],
       schema: {
         tags: ['Videos'],
         params: videoCommentIdParamsSchema,
-        querystring: videoCommentGetQuerySchema,
+        querystring: videoCommentRepliesQuerySchema,
+      },
+    },
+    controller.getCommentBacklinks.bind(controller)
+  );
+
+  // Get single comment by ID
+  fastify.get(
+    '/:videoId/comments/:commentId',
+    {
+      onRequest: noStoreComments,
+      preHandler: [fastify.optionalAuthenticate],
+      schema: {
+        tags: ['Videos'],
+        params: videoCommentIdParamsSchema,
+        querystring: videoCommentQuerySchema,
       },
     },
     controller.getComment.bind(controller)
@@ -244,6 +292,7 @@ export function videosRoutes(
   fastify.post(
     '/:videoId/comments/comment',
     {
+      onRequest: noStoreComments,
       preHandler: [fastify.optionalAuthenticate],
       schema: {
         tags: ['Videos'],
@@ -409,6 +458,7 @@ export function videosRoutes(
   fastify.delete(
     '/:videoId/comments/:commentId/delete',
     {
+      onRequest: noStoreComments,
       preHandler: [fastify.authenticate],
       schema: {
         tags: ['Videos'],

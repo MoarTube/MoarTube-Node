@@ -61,6 +61,7 @@ export class VideosService extends BaseService {
 
   // Debounced view counter - tracks pending views per video
   private readonly pendingViews: Map<string, number> = new Map();
+  private readonly viewWrites = new Set<Promise<void>>();
   private readonly viewTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
   private static readonly VIEW_DEBOUNCE_MS = 500;
 
@@ -110,6 +111,8 @@ export class VideosService extends BaseService {
         sortBy?: 'creation_timestamp' | 'views' | 'likes' | 'title';
         sortDirection?: 'asc' | 'desc';
         isPublished?: boolean;
+        visibleOnly?: boolean;
+        offset?: number;
         isStreaming?: boolean;
         isFinalized?: boolean;
         search?: string;
@@ -117,6 +120,13 @@ export class VideosService extends BaseService {
         timestamp?: number;
       } = {};
 
+      queryOptions.limit = limit;
+      if (options?.visibleOnly !== undefined) {
+        queryOptions.visibleOnly = options.visibleOnly;
+      }
+      if (options?.offset !== undefined) {
+        queryOptions.offset = options.offset;
+      }
       if (options?.limit !== undefined) {
         queryOptions.limit = options.limit;
       }
@@ -151,12 +161,17 @@ export class VideosService extends BaseService {
       // Build count options, omitting undefined values
       const countOptions: {
         isPublished?: boolean;
+        visibleOnly?: boolean;
+        offset?: number;
         isStreaming?: boolean;
         isFinalized?: boolean;
         search?: string;
         tagTerm?: string;
       } = {};
 
+      if (options?.visibleOnly !== undefined) {
+        countOptions.visibleOnly = options.visibleOnly;
+      }
       if (options?.isPublished !== undefined) {
         countOptions.isPublished = options.isPublished;
       }
@@ -194,12 +209,17 @@ export class VideosService extends BaseService {
       // Build count options, omitting undefined values
       const countOptions: {
         isPublished?: boolean;
+        visibleOnly?: boolean;
+        offset?: number;
         isStreaming?: boolean;
         isFinalized?: boolean;
         search?: string;
         tagTerm?: string;
       } = {};
 
+      if (options?.visibleOnly !== undefined) {
+        countOptions.visibleOnly = options.visibleOnly;
+      }
       if (options?.isPublished !== undefined) {
         countOptions.isPublished = options.isPublished;
       }
@@ -497,6 +517,39 @@ export class VideosService extends BaseService {
    * Batches multiple view increments into a single database write after 500ms.
    * Returns the current view count including pending views.
    */
+  private async flushViewCount(videoId: string): Promise<void> {
+    const count = this.pendingViews.get(videoId) ?? 0;
+    this.pendingViews.delete(videoId);
+    clearTimeout(this.viewTimers.get(videoId));
+    this.viewTimers.delete(videoId);
+    if (count === 0) {
+      return;
+    }
+    const write = this.writeViews(videoId, count);
+    this.viewWrites.add(write);
+    try {
+      await write;
+    } finally {
+      this.viewWrites.delete(write);
+    }
+  }
+
+  private async writeViews(videoId: string, count: number): Promise<void> {
+    try {
+      await this.videoRepository.incrementViewsBy(videoId, count);
+      this.logger.debug('Flushed pending views', { videoId, count });
+    } catch (error) {
+      this.logger.error('Failed to flush pending views', error, { videoId, count });
+    }
+  }
+
+  async flushPendingViews(): Promise<void> {
+    for (const videoId of this.pendingViews.keys()) {
+      await this.flushViewCount(videoId);
+    }
+    await Promise.all(this.viewWrites);
+  }
+
   async incrementViewsDebounced(videoId: string): Promise<{ views: number }> {
     return this.withErrorLogging('incrementViewsDebounced', async () => {
       // Increment pending views for this video
@@ -504,34 +557,14 @@ export class VideosService extends BaseService {
       const newPendingCount = currentPending + 1;
       this.pendingViews.set(videoId, newPendingCount);
 
-      // Clear existing timer for this video
-      const existingTimer = this.viewTimers.get(videoId);
-      if (existingTimer) {
-        clearTimeout(existingTimer);
+      if (!this.viewTimers.has(videoId)) {
+        this.viewTimers.set(
+          videoId,
+          setTimeout(() => {
+            void this.flushViewCount(videoId);
+          }, VideosService.VIEW_DEBOUNCE_MS)
+        );
       }
-
-      // Set new debounce timer
-      const timer = setTimeout(() => {
-        // pendingCount is guaranteed to be > 0 since we always set it before creating the timer
-        const pendingCount = this.pendingViews.get(videoId) ?? 0;
-
-        this.pendingViews.delete(videoId);
-        this.viewTimers.delete(videoId);
-
-        this.videoRepository
-          .incrementViewsBy(videoId, pendingCount)
-          .then(() => {
-            this.logger.debug('Flushed pending views', { videoId, count: pendingCount });
-          })
-          .catch((error: unknown) => {
-            this.logger.error('Failed to flush pending views', error, {
-              videoId,
-              count: pendingCount,
-            });
-          });
-      }, VideosService.VIEW_DEBOUNCE_MS);
-
-      this.viewTimers.set(videoId, timer);
 
       // Get current database view count
       const video = await this.videoRepository.findById(videoId);
@@ -978,9 +1011,12 @@ export class VideosService extends BaseService {
   /**
    * Get all videos data with formatted fields
    */
-  async getAllVideosData(): Promise<VideoData[]> {
+  async getAllVideosData(page: { limit?: number; offset?: number } = {}): Promise<VideoData[]> {
     return this.withErrorLogging('getAllVideosData', async () => {
-      const videos = await this.videoRepository.findAll({});
+      const videos = await this.videoRepository.findAll({
+        limit: Math.min(page.limit ?? 101, 101),
+        offset: page.offset ?? 0,
+      });
       return videos.map((video: SQLiteVideo | PostgresVideo) => this.formatVideoData(video));
     });
   }
@@ -1018,62 +1054,37 @@ export class VideosService extends BaseService {
   /**
    * Get recommended videos (published or live)
    */
-  async getRecommendedVideos(): Promise<(SQLiteVideo | PostgresVideo)[]> {
-    return this.withErrorLogging('getRecommendedVideos', async () => {
-      // Get all published or live videos, ordered by creation timestamp
-      const videos = await this.videoRepository.findAll({
+  async getRecommendedVideos(
+    page: { limit?: number; offset?: number } = {}
+  ): Promise<(SQLiteVideo | PostgresVideo)[]> {
+    return (
+      await this.videoRepository.findAll({
+        visibleOnly: true,
+        limit: Math.min(page.limit ?? 101, 101),
+        offset: page.offset ?? 0,
         sortBy: 'creation_timestamp',
         sortDirection: 'desc',
-      });
-
-      // Filter to only published or live videos
-      return videos.filter((v: SQLiteVideo | PostgresVideo) => v.is_published || v.is_live);
-    });
+      })
+    ).filter((video) => video.is_published || video.is_live);
   }
 
   /**
    * Get unique tags from published/live videos
    */
   async getPublishedTags(): Promise<string[]> {
-    return this.withErrorLogging('getPublishedTags', async () => {
-      const videos = await this.getRecommendedVideos();
-      return this.extractUniqueTags(videos);
-    });
+    return this.videoRepository.findTags(true);
   }
 
   /**
    * Get unique tags from all videos
    */
   async getAllTags(): Promise<string[]> {
-    return this.withErrorLogging('getAllTags', async () => {
-      const videos = await this.videoRepository.findAll({
-        sortBy: 'creation_timestamp',
-        sortDirection: 'desc',
-      });
-      return this.extractUniqueTags(videos);
-    });
+    return this.videoRepository.findTags(false);
   }
 
   /**
    * Extract unique tags from videos
    */
-  private extractUniqueTags(videos: (SQLiteVideo | PostgresVideo)[]): string[] {
-    const tagsSet = new Set<string>();
-
-    for (const video of videos) {
-      if (video.tags) {
-        const tags = video.tags.split(',');
-        for (const tag of tags) {
-          const trimmedTag = tag.trim();
-          if (trimmedTag) {
-            tagsSet.add(trimmedTag);
-          }
-        }
-      }
-    }
-
-    return Array.from(tagsSet);
-  }
 
   /**
    * Get all publish statuses for video formats/resolutions

@@ -3,7 +3,7 @@ import SQLite from 'better-sqlite3';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { tmpdir } from 'node:os';
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
 import { sql } from 'drizzle-orm';
 import { openTestDatabase } from './helpers.js';
@@ -33,13 +33,17 @@ describe('SQLite connection and shipped migrations (real SQL)', () => {
   it('runs migrations idempotently and persists data across native connections', async () => {
     database = openTestDatabase();
     sqliteConnection.initializeDatabaseSchema();
-    expect(database.client.prepare('SELECT * FROM __drizzle_migrations').all()).toHaveLength(1);
+    const journal = JSON.parse(readFileSync('drizzle/sqlite/meta/_journal.json', 'utf8'));
+    expect(journal.entries.length).toBeGreaterThan(0);
+    expect(database.client.prepare('SELECT * FROM __drizzle_migrations').all()).toHaveLength(
+      journal.entries.length
+    );
     expect(sqliteConnection.getDatabase()).toBe(database.db);
     expect(
       database.db.all(
         sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`
       )
-    ).toHaveLength(10);
+    ).toHaveLength(13);
     database.client.exec(
       "INSERT INTO links (url, svg_graphic, timestamp) VALUES ('persisted', '<svg/>', 100)"
     );

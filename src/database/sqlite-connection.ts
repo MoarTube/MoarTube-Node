@@ -1,3 +1,4 @@
+import { provisionSQLiteComments } from '@database/provisioning/comments.js';
 /**
  * SQLite database connection module for Drizzle ORM
  */
@@ -67,7 +68,7 @@ export function createDatabase(config: DatabaseConfig): BetterSQLite3Database<ty
  *
  * @throws Error if database is not initialized or migration fails
  */
-export function initializeDatabaseSchema(): void {
+export function initializeDatabaseSchema(options: { migrationsFolder?: string } = {}): void {
   if (!connection) {
     throw new Error('SQLite database not initialized. Call createDatabase() first.');
   }
@@ -76,8 +77,9 @@ export function initializeDatabaseSchema(): void {
     // Resolve migrations folder path
     // In development (tsx): src/database/sqlite-connection.ts -> ../../drizzle/sqlite
     // In production (bundled): dist/moartube-node.js -> ./drizzle/sqlite (copied by tsup)
-    const migrationsFolder = resolveMigrationsFolder(import.meta.url);
+    const migrationsFolder = options.migrationsFolder ?? resolveMigrationsFolder(import.meta.url);
     migrate(connection.db, { migrationsFolder });
+    provisionSQLiteComments(connection.client);
     connection.client.exec('VACUUM');
   } catch (error) {
     throw new Error(`Failed to initialize SQLite database schema: ${String(error)}`);

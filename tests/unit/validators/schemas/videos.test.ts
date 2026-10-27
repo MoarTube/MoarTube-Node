@@ -6,7 +6,6 @@ import {
   videoSearchQuerySchema,
   videoCommentsQuerySchema,
   videoCommentDeleteQuerySchema,
-  videoCommentGetQuerySchema,
 } from '@/validators/schemas/videos.js';
 
 describe('validators/schemas/videos.ts', () => {
@@ -158,12 +157,21 @@ describe('validators/schemas/videos.ts', () => {
       expect(videoCommentDeleteQuerySchema.parse(query)).toEqual({ timestamp: 1640995200000 });
     });
   });
+});
 
-  describe('videoCommentGetQuerySchema', () => {
-    it('should validate comment get query parameters', () => {
-      const query = { timestamp: 1640995200000 };
-      expect(() => videoCommentGetQuerySchema.parse(query)).not.toThrow();
-      expect(videoCommentGetQuerySchema.parse(query)).toEqual(query);
-    });
+describe('cached comment body exclusions', () => {
+  it('accepts bounded safe identities and rejects malformed or excessive lists', () => {
+    const base = { type: 'before', sort: 'descending', timestamp: 100 };
+    expect(
+      videoCommentsQuerySchema.safeParse({ ...base, knownIds: '1,2,9007199254740991' }).success
+    ).toBe(true);
+    for (const knownIds of [
+      '0',
+      'abc',
+      '9007199254740992',
+      Array.from({ length: 101 }, (_, i) => String(i + 1)).join(','),
+      '1'.repeat(1700),
+    ])
+      expect(videoCommentsQuerySchema.safeParse({ ...base, knownIds }).success).toBe(false);
   });
 });

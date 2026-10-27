@@ -170,7 +170,7 @@ describe('IPCChannel', () => {
     });
 
     it('should send message to master successfully', () => {
-      const mockSend = vi.fn();
+      const mockSend = vi.fn().mockReturnValue(true);
       (process as any).send = mockSend;
 
       const channel = new IPCChannel(mockLogger as any);
@@ -178,7 +178,7 @@ describe('IPCChannel', () => {
       const result = channel.sendToMaster(message);
 
       expect(result).toBe(true);
-      expect(mockSend).toHaveBeenCalledWith(message);
+      expect(mockSend).toHaveBeenCalledWith(message, expect.any(Function));
 
       (process as any).send = undefined;
     });
@@ -205,9 +205,16 @@ describe('IPCChannel', () => {
   describe('sendToWorker', () => {
     it('should return false when called from worker process', () => {
       const channel = new IPCChannel(mockLogger as any);
-      const mockWorker = { id: 1, isDead: vi.fn(() => false), send: vi.fn() } as unknown as Worker;
+      const mockWorker = {
+        id: 1,
+        isDead: vi.fn(() => false),
+        send: vi.fn().mockReturnValue(true),
+      } as unknown as Worker;
 
-      const result = channel.sendToWorker(mockWorker, { cmd: 'get_jwt_secret_response', jwtSecret: 'secret' });
+      const result = channel.sendToWorker(mockWorker, {
+        cmd: 'get_jwt_secret_response',
+        jwtSecret: 'secret',
+      });
 
       expect(result).toBe(false);
       expect(mockLogger.warn).toHaveBeenCalledWith('Cannot send to worker from worker process');
@@ -217,9 +224,16 @@ describe('IPCChannel', () => {
       (cluster as unknown as { isPrimary: boolean }).isPrimary = true;
 
       const channel = new IPCChannel(mockLogger as any);
-      const mockWorker = { id: 1, isDead: vi.fn(() => true), send: vi.fn() } as unknown as Worker;
+      const mockWorker = {
+        id: 1,
+        isDead: vi.fn(() => true),
+        send: vi.fn().mockReturnValue(true),
+      } as unknown as Worker;
 
-      const result = channel.sendToWorker(mockWorker, { cmd: 'get_jwt_secret_response', jwtSecret: 'secret' });
+      const result = channel.sendToWorker(mockWorker, {
+        cmd: 'get_jwt_secret_response',
+        jwtSecret: 'secret',
+      });
 
       expect(result).toBe(false);
       expect(mockLogger.warn).toHaveBeenCalledWith('Cannot send to dead worker', { workerId: 1 });
@@ -228,14 +242,18 @@ describe('IPCChannel', () => {
     it('should send message to worker successfully', () => {
       (cluster as unknown as { isPrimary: boolean }).isPrimary = true;
 
-      const mockWorker = { id: 1, isDead: vi.fn(() => false), send: vi.fn() } as unknown as Worker;
+      const mockWorker = {
+        id: 1,
+        isDead: vi.fn(() => false),
+        send: vi.fn().mockReturnValue(true),
+      } as unknown as Worker;
       const channel = new IPCChannel(mockLogger as any);
       const message = { cmd: 'get_jwt_secret_response' as const, jwtSecret: 'secret' };
 
       const result = channel.sendToWorker(mockWorker, message);
 
       expect(result).toBe(true);
-      expect(mockWorker.send).toHaveBeenCalledWith(message);
+      expect(mockWorker.send).toHaveBeenCalledWith(message, expect.any(Function));
     });
 
     it('should return false and log error when send fails', () => {
@@ -250,7 +268,10 @@ describe('IPCChannel', () => {
       } as unknown as Worker;
 
       const channel = new IPCChannel(mockLogger as any);
-      const result = channel.sendToWorker(mockWorker, { cmd: 'get_jwt_secret_response', jwtSecret: 'secret' });
+      const result = channel.sendToWorker(mockWorker, {
+        cmd: 'get_jwt_secret_response',
+        jwtSecret: 'secret',
+      });
 
       expect(result).toBe(false);
       expect(mockLogger.error).toHaveBeenCalledWith(
@@ -283,9 +304,21 @@ describe('IPCChannel', () => {
     it('should send message to all active workers', () => {
       (cluster as unknown as { isPrimary: boolean }).isPrimary = true;
 
-      const worker1 = { id: 1, isDead: vi.fn(() => false), send: vi.fn() } as unknown as Worker;
-      const worker2 = { id: 2, isDead: vi.fn(() => false), send: vi.fn() } as unknown as Worker;
-      const deadWorker = { id: 3, isDead: vi.fn(() => true), send: vi.fn() } as unknown as Worker;
+      const worker1 = {
+        id: 1,
+        isDead: vi.fn(() => false),
+        send: vi.fn().mockReturnValue(true),
+      } as unknown as Worker;
+      const worker2 = {
+        id: 2,
+        isDead: vi.fn(() => false),
+        send: vi.fn().mockReturnValue(true),
+      } as unknown as Worker;
+      const deadWorker = {
+        id: 3,
+        isDead: vi.fn(() => true),
+        send: vi.fn().mockReturnValue(true),
+      } as unknown as Worker;
 
       (cluster as unknown as { workers: Record<string, Worker> }).workers = {
         '1': worker1,
@@ -298,15 +331,19 @@ describe('IPCChannel', () => {
 
       channel.broadcast(message);
 
-      expect(worker1.send).toHaveBeenCalledWith(message);
-      expect(worker2.send).toHaveBeenCalledWith(message);
+      expect(worker1.send).toHaveBeenCalledWith(message, expect.any(Function));
+      expect(worker2.send).toHaveBeenCalledWith(message, expect.any(Function));
       expect(deadWorker.send).not.toHaveBeenCalled();
     });
 
     it('should skip undefined workers', () => {
       (cluster as unknown as { isPrimary: boolean }).isPrimary = true;
 
-      const worker1 = { id: 1, isDead: vi.fn(() => false), send: vi.fn() } as unknown as Worker;
+      const worker1 = {
+        id: 1,
+        isDead: vi.fn(() => false),
+        send: vi.fn().mockReturnValue(true),
+      } as unknown as Worker;
 
       (cluster as unknown as { workers: Record<string, Worker | undefined> }).workers = {
         '1': worker1,
@@ -450,10 +487,9 @@ describe('IPCChannel', () => {
 
       return new Promise<void>((resolve) => {
         setTimeout(() => {
-          expect(mockLogger.warn).toHaveBeenCalledWith(
-            'Received invalid IPC message',
-            { message: { invalid: 'message' } }
-          );
+          expect(mockLogger.warn).toHaveBeenCalledWith('Received invalid IPC message', {
+            message: { invalid: 'message' },
+          });
           processOnSpy.mockRestore();
           resolve();
         }, 10);
@@ -543,11 +579,13 @@ describe('IPCChannel', () => {
       (cluster as unknown as { isWorker: boolean }).isWorker = false;
 
       let messageCallback: Function = () => {};
-      (cluster.on as ReturnType<typeof vi.fn>).mockImplementation((event: string, callback: Function) => {
-        if (event === 'message') {
-          messageCallback = callback;
+      (cluster.on as ReturnType<typeof vi.fn>).mockImplementation(
+        (event: string, callback: Function) => {
+          if (event === 'message') {
+            messageCallback = callback;
+          }
         }
-      });
+      );
 
       const handler = vi.fn();
       const mockWorker = { id: 1 } as Worker;
@@ -567,11 +605,13 @@ describe('IPCChannel', () => {
       (cluster as unknown as { isWorker: boolean }).isWorker = false;
 
       let messageCallback: Function = () => {};
-      (cluster.on as ReturnType<typeof vi.fn>).mockImplementation((event: string, callback: Function) => {
-        if (event === 'message') {
-          messageCallback = callback;
+      (cluster.on as ReturnType<typeof vi.fn>).mockImplementation(
+        (event: string, callback: Function) => {
+          if (event === 'message') {
+            messageCallback = callback;
+          }
         }
-      });
+      );
 
       const mockWorker = { id: 1 } as Worker;
 
@@ -581,10 +621,9 @@ describe('IPCChannel', () => {
       // Simulate receiving an invalid message
       messageCallback(mockWorker, 'not an object');
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'Received invalid IPC message',
-        { message: 'not an object' }
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith('Received invalid IPC message', {
+        message: 'not an object',
+      });
     });
 
     it('should handle null messages', () => {
@@ -602,14 +641,33 @@ describe('IPCChannel', () => {
 
       return new Promise<void>((resolve) => {
         setTimeout(() => {
-          expect(mockLogger.warn).toHaveBeenCalledWith(
-            'Received invalid IPC message',
-            { message: null }
-          );
+          expect(mockLogger.warn).toHaveBeenCalledWith('Received invalid IPC message', {
+            message: null,
+          });
           processOnSpy.mockRestore();
           resolve();
         }, 10);
       });
     });
+  });
+  it('caps queued IPC bytes until the native send callback completes', () => {
+    (cluster as unknown as { isPrimary: boolean }).isPrimary = true;
+    let complete!: (error: null) => void;
+    const worker = {
+      id: 1,
+      isDead: () => false,
+      send: vi.fn((_message, callback) => {
+        complete = callback;
+        return true;
+      }),
+    } as unknown as Worker;
+    const channel = new IPCChannel(mockLogger as any);
+    const message = { cmd: 'get_jwt_secret_response' as const, jwtSecret: 'x'.repeat(400000) };
+    expect(channel.sendToWorker(worker, message)).toBe(true);
+    expect(channel.sendToWorker(worker, message)).toBe(true);
+    expect(channel.sendToWorker(worker, message)).toBe(false);
+    expect(worker.send).toHaveBeenCalledTimes(2);
+    complete(null);
+    expect(channel.sendToWorker(worker, message)).toBe(true);
   });
 });

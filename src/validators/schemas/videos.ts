@@ -73,7 +73,32 @@ export const videoSearchQuerySchema = z.object({
 /**
  * Video comments query parameters schema
  */
+const commentCacheKey = {
+  epoch: z.uuid().optional(),
+  revision: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+};
+
+export const videoCommentStateQuerySchema = z.object({ fresh: z.literal('1').optional() });
+export const videoCommentQuerySchema = z.object(commentCacheKey);
+
+export const videoCommentCacheQuerySchema = z.object({
+  ...commentCacheKey,
+  since: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+});
+
 export const videoCommentsQuerySchema = z.object({
+  ...commentCacheKey,
+  knownIds: z
+    .string()
+    .max(1699)
+    .regex(/^\d+(,\d+){0,99}$/)
+    .refine((text) =>
+      text.split(',').every((id) => Number.isSafeInteger(Number(id)) && Number(id) > 0)
+    )
+    .optional(),
+  includeTotal: z.literal('1').optional(),
+  afterId: z.coerce.number().int().min(0).optional(),
+  beforeId: z.coerce.number().int().min(0).optional(),
   type: z.enum(['before', 'after']),
   sort: sortDirectionSchema,
   timestamp: timestampSchema,
@@ -82,14 +107,12 @@ export const videoCommentsQuerySchema = z.object({
 /**
  * Video comment delete query parameters schema
  */
-export const videoCommentDeleteQuerySchema = z.object({
-  timestamp: timestampSchema,
+export const videoCommentRepliesQuerySchema = z.object({
+  ...commentCacheKey,
+  beforeReplyId: commentIdSchema.optional(),
 });
 
-/**
- * Video comment get query parameters schema
- */
-export const videoCommentGetQuerySchema = z.object({
+export const videoCommentDeleteQuerySchema = z.object({
   timestamp: timestampSchema,
 });
 

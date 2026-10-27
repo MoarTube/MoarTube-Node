@@ -29,7 +29,8 @@ vi.mock('@database/schemas/postgres/index.js', () => ({
 }));
 
 // Mock drizzle-orm operators
-vi.mock('drizzle-orm', () => ({
+vi.mock('drizzle-orm', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('drizzle-orm')>()),
   eq: vi.fn((field, value) => ({ type: 'eq', field, value })),
   desc: vi.fn((field) => ({ type: 'desc', field })),
   and: vi.fn((...conditions) => ({ type: 'and', conditions })),
@@ -39,7 +40,10 @@ vi.mock('drizzle-orm', () => ({
   count: vi.fn(() => ({ type: 'count' })),
 }));
 
-import { createCommentsRepository, type ICommentsRepository } from '@database/repositories/comments/index.js';
+import {
+  createCommentsRepository,
+  type ICommentsRepository,
+} from '@database/repositories/comments/index.js';
 import { comments as mockSQLiteCommentsTable } from '@database/schemas/sqlite/index.js';
 import { comments as mockPostgresCommentsTable } from '@database/schemas/postgres/index.js';
 
@@ -55,6 +59,7 @@ describe('database/repositories/comments.ts', () => {
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       orderBy: vi.fn().mockReturnThis(),
+      offset: vi.fn().mockReturnThis(),
       limit: vi.fn().mockResolvedValue([]),
       insert: vi.fn().mockReturnThis(),
       values: vi.fn().mockReturnThis(),
@@ -130,7 +135,7 @@ describe('database/repositories/comments.ts', () => {
             { comment_id: 1, video_id: 'v1' },
             { comment_id: 2, video_id: 'v1' },
           ];
-          mockDb.orderBy.mockResolvedValue(mockComments);
+          mockDb.limit.mockResolvedValue(mockComments);
 
           const result = await repository().findByVideoId('v1');
 
@@ -142,7 +147,7 @@ describe('database/repositories/comments.ts', () => {
         });
 
         it('should return empty array when no comments', async () => {
-          mockDb.orderBy.mockResolvedValue([]);
+          mockDb.limit.mockResolvedValue([]);
 
           const result = await repository().findByVideoId('v1');
 
@@ -162,7 +167,7 @@ describe('database/repositories/comments.ts', () => {
       describe(`${name} implementation`, () => {
         it('should find comments before timestamp in descending order', async () => {
           const mockComments = [{ comment_id: 1 }];
-          mockDb.orderBy.mockResolvedValue(mockComments);
+          mockDb.limit.mockResolvedValue(mockComments);
 
           const result = await repository().findByVideoIdWithTimestampFilter(
             'v1',
@@ -178,7 +183,7 @@ describe('database/repositories/comments.ts', () => {
 
         it('should find comments after timestamp in ascending order', async () => {
           const mockComments = [{ comment_id: 2 }];
-          mockDb.orderBy.mockResolvedValue(mockComments);
+          mockDb.limit.mockResolvedValue(mockComments);
 
           const result = await repository().findByVideoIdWithTimestampFilter(
             'v1',
@@ -562,4 +567,46 @@ describe('database/repositories/comments.ts', () => {
       });
     });
   });
+  it.each(['sqlite', 'postgres'])(
+    'looks up preview identities without requiring a timestamp (%s)',
+    async (dialect) => {
+      const repository = dialect === 'sqlite' ? sqliteRepository : postgresRepository;
+      mockDb.limit.mockResolvedValue([{ comment_id: 1 }]);
+      expect(await repository.findById('video', 1)).toEqual({ comment_id: 1 });
+    }
+  );
+  it.each(['sqlite', 'postgres'])(
+    'bounds indexed metadata and cache-change queries (%s)',
+    async (dialect) => {
+      const repository = dialect === 'sqlite' ? sqliteRepository : postgresRepository;
+      mockDb.all = vi.fn().mockResolvedValue([]);
+      mockDb.execute = vi.fn().mockResolvedValue([]);
+      expect(await repository.findByIds('video', [])).toEqual([]);
+      mockDb.where.mockResolvedValueOnce([]);
+      expect(await repository.findByIds('video', [5])).toEqual([]);
+      expect(await repository.getBacklinksForComments('video', [])).toEqual([]);
+      expect(await repository.getBacklinksForComments('video', [5])).toEqual([]);
+      expect(await repository.getBacklinksForComments('video', [5], 100)).toEqual([]);
+      mockDb.all.mockResolvedValueOnce([{ version: 0 }]);
+      mockDb.execute.mockResolvedValueOnce([{ version: '0' }]);
+      expect(await repository.getCacheVersion('video')).toBe(0);
+      expect(await repository.getCacheChanges('video', 0)).toEqual([]);
+      mockDb.all.mockResolvedValueOnce([{ value: 'epoch' }]);
+      mockDb.execute.mockResolvedValueOnce([{ value: 'epoch' }]);
+      expect(await repository.getCacheEpoch()).toBe('epoch');
+      mockDb.all.mockResolvedValue([
+        { version: 9, comment_id: 5, deleted: 1, parent_id: 5, reply_id: 8 },
+      ]);
+      mockDb.execute.mockResolvedValue([
+        { version: '9', comment_id: '5', deleted: 1, parent_id: '5', reply_id: '8' },
+      ]);
+      expect(await repository.getBacklinksForComments('video', [5])).toEqual([
+        { parent_id: 5, reply_id: 8 },
+      ]);
+      expect(await repository.getCacheVersion('video')).toBe(9);
+      expect(await repository.getCacheChanges('video', 0)).toEqual([
+        { version: 9, comment_id: 5, deleted: 1 },
+      ]);
+    }
+  );
 });

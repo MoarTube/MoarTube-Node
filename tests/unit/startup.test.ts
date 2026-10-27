@@ -109,4 +109,11 @@ describe('application startup provisioning', () => {
     expect(state.logger.error).toHaveBeenCalledWith('Startup provisioning failed', error);
     expect(state.masterStart).toHaveBeenCalledOnce();
   });
+  it('pages startup work rather than loading all videos', async () => {
+    state.findAll
+      .mockResolvedValueOnce(Array.from({ length: 100 }, (_, i) => ({ video_id: String(i) })))
+      .mockResolvedValueOnce([]);
+    await import('@/moartube-node.js');
+    expect(state.findAll).toHaveBeenNthCalledWith(2, { limit: 100, offset: 100 });
+  });
 });

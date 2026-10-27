@@ -15,6 +15,7 @@ vi.mock('@config/index.js', () => ({
       publicNodeProtocol: 'https',
       publicNodeAddress: 'example.com',
       publicNodePort: '443',
+      isCloudflareCdnEnabled: false,
       isCloudflareTurnstileEnabled: false,
       cloudflareTurnstileSiteKey: 'test-turnstile-key',
     },
@@ -23,6 +24,7 @@ vi.mock('@config/index.js', () => ({
   })),
 }));
 
+import { getConfig } from '@config/index.js';
 import { WatchController } from '@controllers/watch.js';
 
 // Mock services
@@ -30,6 +32,7 @@ const mockVideosService: Record<string, ReturnType<typeof vi.fn>> = {
   getVideo: vi.fn(),
   countVideos: vi.fn(),
   getVideos: vi.fn(),
+  getRecommendedVideos: vi.fn(),
 };
 
 const mockLinksService: Record<string, ReturnType<typeof vi.fn>> = {
@@ -41,7 +44,9 @@ const mockMonetizationService: Record<string, ReturnType<typeof vi.fn>> = {
 };
 
 const mockCommentsService: Record<string, ReturnType<typeof vi.fn>> = {
-  getCommentsForVideo: vi.fn(),
+  getRecentComments: vi.fn(),
+  getCacheEpoch: vi.fn().mockResolvedValue('11111111-1111-4111-8111-111111111111'),
+  getCacheVersion: vi.fn().mockResolvedValue(42),
 };
 
 describe('WatchController', () => {
@@ -67,6 +72,10 @@ describe('WatchController', () => {
     is_streaming: false,
     is_streamed: false,
     is_live: false,
+    is_publishing: false,
+    is_likes_enabled: true,
+    is_dislikes_enabled: true,
+    is_live_chat_enabled: true,
     is_comments_enabled: true,
     is_reports_enabled: true,
     creation_timestamp: 1704067200000,
@@ -80,6 +89,7 @@ describe('WatchController', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockVideosService.getRecommendedVideos.mockImplementation(async () => (await mockVideosService.getVideos())?.data ?? []);
 
     controller = new WatchController(
       mockVideosService as any,
@@ -88,9 +98,7 @@ describe('WatchController', () => {
       mockCommentsService as any
     );
 
-    mockRequest = {
-      query: { v: 'video123' },
-    };
+    mockRequest = { headers: {}, query: { v: 'video123' } };
 
     mockReply = {
       status: vi.fn().mockReturnThis(),
@@ -136,6 +144,21 @@ describe('WatchController', () => {
       });
     });
 
+    it('combines global and video permissions and exposes live/publishing state',async()=>{
+      const original=getConfig();
+      try{
+        for(const global of [false,true]){
+          vi.mocked(getConfig).mockReturnValue({...original,nodeSettings:{...original.nodeSettings,isLikesEnabled:global,isDislikesEnabled:global,isLiveChatEnabled:global,isCommentsEnabled:global,isReportsEnabled:global}} as any);
+          for(const local of [false,true]){
+            mockVideosService.getVideo.mockResolvedValue(createMockVideo({is_publishing:true,is_live:true,is_likes_enabled:local,is_dislikes_enabled:local,is_live_chat_enabled:local,is_comments_enabled:local,is_reports_enabled:local}));
+            await controller.getWatchPage(mockRequest as FastifyRequest,mockReply as any);
+            const model=mockReply.view.mock.calls.at(-1)?.[1].model;
+            expect(model.videoData.video).toMatchObject({isPublishing:true,isLive:true,isLikesEnabled:global&&local,isDislikesEnabled:global&&local,isLiveChatEnabled:global&&local,isCommentsEnabled:global&&local,isReportsEnabled:global&&local});
+          }
+        }
+      }finally{vi.mocked(getConfig).mockImplementation(()=>original);}
+    });
+
     it('should render watch page when video is found', async () => {
       const mockVideo = createMockVideo();
 
@@ -161,7 +184,7 @@ describe('WatchController', () => {
       mockMonetizationService.getWalletAddresses.mockResolvedValue([
         { id: 1, chain_id: 1, address: '0x123' },
       ]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([
+      mockCommentsService.getRecentComments.mockResolvedValue([
         { comment_id: 1, timestamp: 1704067200000, comment_plain_text_sanitized: 'Great video!' },
       ]);
 
@@ -171,23 +194,36 @@ describe('WatchController', () => {
       );
 
       expect(mockVideosService.getVideo).toHaveBeenCalledWith('video123');
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          informationData: expect.objectContaining({
-            isError: false,
-            information: expect.objectContaining({
-              nodeName: 'Test Node',
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            informationData: expect.objectContaining({
+              isError: false,
+              information: expect.objectContaining({
+                nodeName: 'Test Node',
+              }),
+            }),
+            videoData: expect.objectContaining({
+              isError: false,
+              video: expect.objectContaining({
+                videoId: 'video123',
+                title: 'Test Video',
+              }),
             }),
           }),
-          videoData: expect.objectContaining({
-            isError: false,
-            video: expect.objectContaining({
-              videoId: 'video123',
-              title: 'Test Video',
-            }),
-          }),
-        }),
-      }));
+        })
+      );
+    });
+
+    it('does not share watch HTML requested with Authorization', async () => {
+      mockVideosService.getVideo.mockResolvedValue(createMockVideo());
+      mockRequest.headers = { authorization: 'Bearer token' };
+      await controller.getWatchPage(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
+      expect(mockReply.headers).toHaveBeenLastCalledWith({ 'Cache-Control': 'no-store' });
     });
 
     it('should return 500 when an error occurs', async () => {
@@ -214,7 +250,7 @@ describe('WatchController', () => {
       mockVideosService.getVideos.mockResolvedValue({ data: [] });
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.getRecentComments.mockResolvedValue([]);
 
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
@@ -225,17 +261,8 @@ describe('WatchController', () => {
       expect(mockVideosService.countVideos).toHaveBeenCalledWith({ isPublished: true });
       expect(mockLinksService.getAllLinks).toHaveBeenCalled();
       expect(mockMonetizationService.getWalletAddresses).toHaveBeenCalled();
-      expect(mockCommentsService.getCommentsForVideo).toHaveBeenCalledWith(
-        'video123',
-        'before',
-        'ascending',
-        expect.any(Number)
-      );
-      expect(mockVideosService.getVideos).toHaveBeenCalledWith({
-        limit: 10,
-        sortBy: 'creation_timestamp',
-        sortDirection: 'desc',
-      });
+      expect(mockCommentsService.getCacheVersion).toHaveBeenCalledWith('video123');
+      expect(mockVideosService.getRecommendedVideos).toHaveBeenCalledWith({limit:10});
     });
 
     it('should include recommended videos in page data', async () => {
@@ -268,70 +295,64 @@ describe('WatchController', () => {
       mockVideosService.getVideos.mockResolvedValue({ data: recommendedVideos });
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.getRecentComments.mockResolvedValue([]);
 
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
         mockReply as unknown as FastifyReply
       );
 
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          recommendedVideosData: expect.objectContaining({
-            isError: false,
-            recommendedVideos: expect.arrayContaining([
-              expect.objectContaining({
-                videoId: 'rec1',
-                title: 'Recommended 1',
-              }),
-              expect.objectContaining({
-                videoId: 'rec2',
-                title: 'Recommended 2',
-                isLive: true,
-                isStreaming: true,
-              }),
-            ]),
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            recommendedVideosData: expect.objectContaining({
+              isError: false,
+              recommendedVideos: expect.arrayContaining([
+                expect.objectContaining({
+                  videoId: 'rec1',
+                  title: 'Recommended 1',
+                }),
+                expect.objectContaining({
+                  videoId: 'rec2',
+                  title: 'Recommended 2',
+                  isLive: true,
+                  isStreaming: true,
+                }),
+              ]),
+            }),
           }),
-        }),
-      }));
+        })
+      );
     });
 
-    it('should include comments in page data', async () => {
-      const mockVideo = createMockVideo();
-      const comments = [
-        { comment_id: 1, timestamp: 1704067200000, comment_plain_text_sanitized: 'First comment' },
-        { comment_id: 2, timestamp: 1704153600000, comment_plain_text_sanitized: 'Second comment' },
-      ];
-
-      mockVideosService.getVideo.mockResolvedValue(mockVideo);
+    it('includes a cache revision without retransmitting comment bodies in HTML', async () => {
+      mockVideosService.getVideo.mockResolvedValue(createMockVideo({ comments: 1008 }));
       mockVideosService.countVideos.mockResolvedValue(5);
       mockVideosService.getVideos.mockResolvedValue({ data: [] });
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue(comments);
-
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
         mockReply as unknown as FastifyReply
       );
-
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          commentsData: expect.objectContaining({
-            isError: false,
-            comments: expect.arrayContaining([
-              expect.objectContaining({
-                commentId: 1,
-                commentPlainTextSanitized: 'First comment',
-              }),
-              expect.objectContaining({
-                commentId: 2,
-                commentPlainTextSanitized: 'Second comment',
-              }),
-            ]),
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            commentsData: {
+              isError: false,
+              totalCount: 1008,
+              hasMore: true,
+              cdnEnabled: false,
+              cacheVersion: 42,
+              cacheEpoch: '11111111-1111-4111-8111-111111111111',
+              comments: [],
+            },
           }),
-        }),
-      }));
+        })
+      );
+      expect(mockCommentsService.getRecentComments).not.toHaveBeenCalled();
     });
 
     it('should build video sources with adaptive and progressive formats', async () => {
@@ -349,33 +370,36 @@ describe('WatchController', () => {
       mockVideosService.getVideos.mockResolvedValue({ data: [] });
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.getRecentComments.mockResolvedValue([]);
 
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
         mockReply as unknown as FastifyReply
       );
 
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          videoData: expect.objectContaining({
-            video: expect.objectContaining({
-              isHlsAvailable: true,
-              isMp4Available: true,
-              isWebmAvailable: true,
-              isOgvAvailable: true,
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            videoData: expect.objectContaining({
+              video: expect.objectContaining({
+                isHlsAvailable: true,
+                isMp4Available: true,
+                isWebmAvailable: true,
+                isOgvAvailable: true,
+              }),
             }),
+            adaptiveSources: expect.arrayContaining([
+              expect.objectContaining({ type: 'application/vnd.apple.mpegurl' }),
+            ]),
+            progressiveSources: expect.arrayContaining([
+              expect.objectContaining({ type: 'video/mp4' }),
+              expect.objectContaining({ type: 'video/webm' }),
+              expect.objectContaining({ type: 'video/ogg' }),
+            ]),
           }),
-          adaptiveSources: expect.arrayContaining([
-            expect.objectContaining({ type: 'application/vnd.apple.mpegurl' }),
-          ]),
-          progressiveSources: expect.arrayContaining([
-            expect.objectContaining({ type: 'video/mp4' }),
-            expect.objectContaining({ type: 'video/webm' }),
-            expect.objectContaining({ type: 'video/ogg' }),
-          ]),
-        }),
-      }));
+        })
+      );
     });
 
     it('should include external base URLs in page data', async () => {
@@ -386,19 +410,22 @@ describe('WatchController', () => {
       mockVideosService.getVideos.mockResolvedValue({ data: [] });
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.getRecentComments.mockResolvedValue([]);
 
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
         mockReply as unknown as FastifyReply
       );
 
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          externalVideosBaseUrl: 'https://videos.example.com',
-          externalResourcesBaseUrl: 'https://resources.example.com',
-        }),
-      }));
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            externalVideosBaseUrl: 'https://videos.example.com',
+            externalResourcesBaseUrl: 'https://resources.example.com',
+          }),
+        })
+      );
     });
 
     it('should include links and wallet addresses in page data', async () => {
@@ -417,31 +444,34 @@ describe('WatchController', () => {
       mockVideosService.getVideos.mockResolvedValue({ data: [] });
       mockLinksService.getAllLinks.mockResolvedValue(links);
       mockMonetizationService.getWalletAddresses.mockResolvedValue(walletAddresses);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.getRecentComments.mockResolvedValue([]);
 
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
         mockReply as unknown as FastifyReply
       );
 
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          linksData: expect.objectContaining({
-            isError: false,
-            links: expect.arrayContaining([
-              expect.objectContaining({ url: 'https://github.com' }),
-              expect.objectContaining({ url: 'https://twitter.com' }),
-            ]),
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            linksData: expect.objectContaining({
+              isError: false,
+              links: expect.arrayContaining([
+                expect.objectContaining({ url: 'https://github.com' }),
+                expect.objectContaining({ url: 'https://twitter.com' }),
+              ]),
+            }),
+            cryptoWalletAddressesData: expect.objectContaining({
+              isError: false,
+              cryptoWalletAddresses: expect.arrayContaining([
+                expect.objectContaining({ address: '0xETH' }),
+                expect.objectContaining({ address: '0xPOLY' }),
+              ]),
+            }),
           }),
-          cryptoWalletAddressesData: expect.objectContaining({
-            isError: false,
-            cryptoWalletAddresses: expect.arrayContaining([
-              expect.objectContaining({ address: '0xETH' }),
-              expect.objectContaining({ address: '0xPOLY' }),
-            ]),
-          }),
-        }),
-      }));
+        })
+      );
     });
 
     it('should handle video with no outputs gracefully', async () => {
@@ -456,27 +486,30 @@ describe('WatchController', () => {
       mockVideosService.getVideos.mockResolvedValue({ data: [] });
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.getRecentComments.mockResolvedValue([]);
 
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
         mockReply as unknown as FastifyReply
       );
 
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          videoData: expect.objectContaining({
-            video: expect.objectContaining({
-              isHlsAvailable: false,
-              isMp4Available: false,
-              isWebmAvailable: false,
-              isOgvAvailable: false,
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            videoData: expect.objectContaining({
+              video: expect.objectContaining({
+                isHlsAvailable: false,
+                isMp4Available: false,
+                isWebmAvailable: false,
+                isOgvAvailable: false,
+              }),
             }),
+            adaptiveSources: [],
+            progressiveSources: [],
           }),
-          adaptiveSources: [],
-          progressiveSources: [],
-        }),
-      }));
+        })
+      );
     });
 
     it('should handle format with null resolutions array', async () => {
@@ -493,7 +526,7 @@ describe('WatchController', () => {
       mockVideosService.getVideos.mockResolvedValue({ data: [] });
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.getRecentComments.mockResolvedValue([]);
 
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
@@ -501,13 +534,16 @@ describe('WatchController', () => {
       );
 
       // Should not throw and should handle mp4 correctly
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          progressiveSources: expect.arrayContaining([
-            expect.objectContaining({ type: 'video/mp4' }),
-          ]),
-        }),
-      }));
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            progressiveSources: expect.arrayContaining([
+              expect.objectContaining({ type: 'video/mp4' }),
+            ]),
+          }),
+        })
+      );
     });
 
     it('should skip unknown formats not in sourcesFormatsAndResolutions', async () => {
@@ -524,7 +560,7 @@ describe('WatchController', () => {
       mockVideosService.getVideos.mockResolvedValue({ data: [] });
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.getRecentComments.mockResolvedValue([]);
 
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
@@ -532,13 +568,16 @@ describe('WatchController', () => {
       );
 
       // Should handle mp4 but skip unknown format
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          progressiveSources: expect.arrayContaining([
-            expect.objectContaining({ type: 'video/mp4' }),
-          ]),
-        }),
-      }));
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            progressiveSources: expect.arrayContaining([
+              expect.objectContaining({ type: 'video/mp4' }),
+            ]),
+          }),
+        })
+      );
     });
 
     it('should include node information in page data', async () => {
@@ -549,29 +588,32 @@ describe('WatchController', () => {
       mockVideosService.getVideos.mockResolvedValue({ data: [] });
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.getRecentComments.mockResolvedValue([]);
 
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
         mockReply as unknown as FastifyReply
       );
 
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          informationData: expect.objectContaining({
-            isError: false,
-            information: expect.objectContaining({
-              nodeVideoCount: 42,
-              nodeName: 'Test Node',
-              nodeAbout: 'Test about',
-              publicNodeProtocol: 'https',
-              publicNodeAddress: 'example.com',
-              publicNodePort: '443',
-              cloudflareTurnstileSiteKey: 'test-turnstile-key',
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            informationData: expect.objectContaining({
+              isError: false,
+              information: expect.objectContaining({
+                nodeVideoCount: 42,
+                nodeName: 'Test Node',
+                nodeAbout: 'Test about',
+                publicNodeProtocol: 'https',
+                publicNodeAddress: 'example.com',
+                publicNodePort: '443',
+                cloudflareTurnstileSiteKey: 'test-turnstile-key',
+              }),
             }),
           }),
-        }),
-      }));
+        })
+      );
     });
 
     it('should handle streaming video with dynamic manifest', async () => {
@@ -587,22 +629,25 @@ describe('WatchController', () => {
       mockVideosService.getVideos.mockResolvedValue({ data: [] });
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.getRecentComments.mockResolvedValue([]);
 
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
         mockReply as unknown as FastifyReply
       );
 
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          adaptiveSources: expect.arrayContaining([
-            expect.objectContaining({
-              src: expect.stringContaining('/dynamic/manifests/'),
-            }),
-          ]),
-        }),
-      }));
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            adaptiveSources: expect.arrayContaining([
+              expect.objectContaining({
+                src: expect.stringContaining('/dynamic/manifests/'),
+              }),
+            ]),
+          }),
+        })
+      );
     });
 
     it('should skip unknown format types when building video sources', async () => {
@@ -621,7 +666,7 @@ describe('WatchController', () => {
       mockVideosService.getVideos.mockResolvedValue({ data: [] });
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
-      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.getRecentComments.mockResolvedValue([]);
 
       await controller.getWatchPage(
         mockRequest as FastifyRequest,
@@ -629,18 +674,21 @@ describe('WatchController', () => {
       );
 
       // Verify the unknown formats are not in progressiveSources
-      expect(mockReply.view).toHaveBeenCalledWith('watch.ejs', expect.objectContaining({
-        model: expect.objectContaining({
-          progressiveSources: expect.not.arrayContaining([
-            expect.objectContaining({ src: expect.stringContaining('/avi/') }),
-            expect.objectContaining({ src: expect.stringContaining('/mkv/') }),
-          ]),
-          // But the known formats should be there
-          adaptiveSources: expect.arrayContaining([
-            expect.objectContaining({ type: 'application/vnd.apple.mpegurl' }),
-          ]),
-        }),
-      }));
+      expect(mockReply.view).toHaveBeenCalledWith(
+        'watch.ejs',
+        expect.objectContaining({
+          model: expect.objectContaining({
+            progressiveSources: expect.not.arrayContaining([
+              expect.objectContaining({ src: expect.stringContaining('/avi/') }),
+              expect.objectContaining({ src: expect.stringContaining('/mkv/') }),
+            ]),
+            // But the known formats should be there
+            adaptiveSources: expect.arrayContaining([
+              expect.objectContaining({ type: 'application/vnd.apple.mpegurl' }),
+            ]),
+          }),
+        })
+      );
     });
   });
 });

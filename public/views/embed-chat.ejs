@@ -593,7 +593,8 @@
           ';}</style>'
       );
     </script>
-  </head>
+  <script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/memory-limits.js"></script>
+</head>
 
   <body>
     <div class="container-fluid h-100 w-100 p-0">
@@ -904,6 +905,7 @@
           const isScrolledBottom = scrollheight - scrollTop - outerheight <= 100;
 
           $(chatMessages).append(chatMessageElement);
+          MoarTubeMemory.pruneChildren(chatMessages[0], 500);
 
           if (isScrolledBottom || forceScrollBottom) {
             $(chatMessagesContainer).scrollTop(scrollheight);

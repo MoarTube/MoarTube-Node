@@ -1,3 +1,4 @@
+import { provisionPostgresComments } from '@database/provisioning/comments.js';
 /**
  * PostgreSQL database connection module for Drizzle ORM
  */
@@ -49,14 +50,20 @@ export function createDatabase(config: DatabaseConfig): PostgresJsDatabase<typeo
     throw new Error('PostgreSQL connection string is required');
   }
 
-  const databaseClient = postgresDatabase(config.connectionString);
+  const databaseClient = postgresDatabase(config.connectionString, {
+    max: 4,
+    idle_timeout: 20,
+    connect_timeout: 10,
+  });
   const drizzleDb = drizzle(databaseClient, { schema });
   connection = { db: drizzleDb, client: databaseClient };
 
   return drizzleDb;
 }
 
-export async function initializeDatabaseSchema(): Promise<void> {
+export async function initializeDatabaseSchema(
+  options: { migrationsFolder?: string } = {}
+): Promise<void> {
   if (!connection) {
     throw new Error('PostgreSQL database not initialized. Call createDatabase() first.');
   }
@@ -74,8 +81,9 @@ export async function initializeDatabaseSchema(): Promise<void> {
     // Resolve migrations folder path
     // In development (tsx): src/database/postgres-connection.ts -> ../../drizzle/postgres
     // In production (bundled): dist/moartube-node.js -> ./drizzle/postgres (copied by tsup)
-    const migrationsFolder = resolveMigrationsFolder(import.meta.url);
+    const migrationsFolder = options.migrationsFolder ?? resolveMigrationsFolder(import.meta.url);
     await migrate(connection.db, { migrationsFolder });
+    await provisionPostgresComments(connection.client);
   } catch (error) {
     throw new Error(`Failed to initialize PostgreSQL database schema: ${String(error)}`);
   }

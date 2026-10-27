@@ -1,4 +1,5 @@
 import { eq, desc, count, gt } from 'drizzle-orm';
+import { or, like } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { IReportsCommentsRepository } from './interface.js';
 import type {
@@ -39,10 +40,19 @@ export class ReportsCommentsRepositorySQLite implements IReportsCommentsReposito
   async findAll(options?: PaginationOptions): Promise<DrizzleCommentReport[]> {
     const { limit } = { limit: options?.limit };
 
-    const query = this.db.select().from(commentReports).orderBy(desc(commentReports.timestamp));
+    let query = this.db.select().from(commentReports).orderBy(desc(commentReports.timestamp));
+    if (options?.search) {
+      query = query.where(
+        or(
+          like(commentReports.message, '%' + options.search.slice(0, 100) + '%'),
+          like(commentReports.email, '%' + options.search.slice(0, 100) + '%')
+        )
+      ) as typeof query;
+    }
 
     if (limit !== undefined) {
-      return query.limit(limit);
+      const page = query.limit(limit);
+      return options?.offset !== undefined ? page.offset(options.offset) : page;
     }
 
     return query;

@@ -6,6 +6,7 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import fs from 'node:fs';
 import path from 'node:path';
+import { servePublicFile } from '@/utils/public-file.js';
 import { BaseController } from '@controllers/base.js';
 import { getConfig } from '@config/index.js';
 
@@ -31,21 +32,6 @@ export class ExternalResourcesController extends BaseController {
   }
 
   /**
-   * Serve a static file with proper content type using streams
-   */
-  private async serveStaticFile(
-    filePath: string,
-    contentType: string,
-    reply: FastifyReply
-  ): Promise<FastifyReply> {
-    if (!fs.existsSync(filePath)) {
-      return await this.sendError(reply, 'file not found', 404);
-    } else {
-      return await this.sendFile(reply, filePath, contentType);
-    }
-  }
-
-  /**
    * GET /external/resources/javascript/:filename
    *
    * Serve JavaScript files
@@ -56,9 +42,13 @@ export class ExternalResourcesController extends BaseController {
 
       const config = getConfig();
 
-      const filePath = path.join(config.paths.publicDirectoryPath, 'javascript', filename);
-
-      return await this.serveStaticFile(filePath, 'application/javascript', reply);
+      return await servePublicFile(
+        request,
+        reply,
+        config.paths.publicDirectoryPath,
+        ['javascript', filename],
+        'application/javascript'
+      );
     } catch (error) {
       this.logger.error('Error serving JavaScript file', error);
 
@@ -77,9 +67,13 @@ export class ExternalResourcesController extends BaseController {
 
       const config = getConfig();
 
-      const filePath = path.join(config.paths.publicDirectoryPath, 'css', filename);
-
-      return await this.serveStaticFile(filePath, 'text/css', reply);
+      return await servePublicFile(
+        request,
+        reply,
+        config.paths.publicDirectoryPath,
+        ['css', filename],
+        'text/css'
+      );
     } catch (error) {
       this.logger.error('Error serving CSS file', error);
 
@@ -98,8 +92,6 @@ export class ExternalResourcesController extends BaseController {
 
       const config = getConfig();
 
-      const filePath = path.join(config.paths.publicDirectoryPath, 'fonts', filename);
-
       // Determine content type based on extension
       const ext = path.extname(filename).toLowerCase();
 
@@ -117,7 +109,13 @@ export class ExternalResourcesController extends BaseController {
         contentType = 'application/vnd.ms-fontobject';
       }
 
-      return await this.serveStaticFile(filePath, contentType, reply);
+      return await servePublicFile(
+        request,
+        reply,
+        config.paths.publicDirectoryPath,
+        ['fonts', filename],
+        contentType
+      );
     } catch (error) {
       this.logger.error('Error serving font file', error);
 
@@ -137,17 +135,16 @@ export class ExternalResourcesController extends BaseController {
       const config = getConfig();
 
       // Check for custom node images first
-      let filePath: string;
+      let root = config.paths.publicDirectoryPath;
+      let parts = ['images', imageName];
 
       if (imageName === 'icon.png' || imageName === 'avatar.png' || imageName === 'banner.png') {
         // Check for custom image in data/images directory
         const customPath = path.join(config.paths.imagesDirectoryPath, imageName);
-        const defaultPath = path.join(config.paths.publicDirectoryPath, 'images', imageName);
-
-        filePath = fs.existsSync(customPath) ? customPath : defaultPath;
-      } else {
-        // Regular public images
-        filePath = path.join(config.paths.publicDirectoryPath, 'images', imageName);
+        if (fs.existsSync(customPath)) {
+          root = config.paths.imagesDirectoryPath;
+          parts = [imageName];
+        }
       }
 
       // Determine content type based on extension
@@ -168,7 +165,7 @@ export class ExternalResourcesController extends BaseController {
         contentType = 'image/x-icon';
       }
 
-      return await this.serveStaticFile(filePath, contentType, reply);
+      return await servePublicFile(request, reply, root, parts, contentType);
     } catch (error) {
       this.logger.error('Error serving image file', error);
 

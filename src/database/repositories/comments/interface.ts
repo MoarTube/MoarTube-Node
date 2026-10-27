@@ -1,12 +1,25 @@
 export interface ICommentsRepository<CommentType, NewCommentType> {
-  findById(videoId: string, commentId: number, timestamp: number): Promise<CommentType | null>;
-  findByVideoId(videoId: string): Promise<CommentType[]>;
+  findByIds(videoId: string, ids: number[]): Promise<CommentType[]>;
+  findById(videoId: string, commentId: number, timestamp?: number): Promise<CommentType | null>;
+  findByVideoId(videoId: string, page?: { limit: number; offset: number }): Promise<CommentType[]>;
   findByVideoIdWithTimestampFilter(
     videoId: string,
     type: 'before' | 'after',
     sort: 'ascending' | 'descending',
-    timestamp: number
+    timestamp: number,
+    cursorId?: number
   ): Promise<CommentType[]>;
+  getBacklinksForComments(
+    videoId: string,
+    ids: number[],
+    beforeReplyId?: number
+  ): Promise<{ parent_id: number; reply_id: number }[]>;
+  getCacheEpoch(): Promise<string>;
+  getCacheVersion(videoId: string): Promise<number>;
+  getCacheChanges(
+    videoId: string,
+    since: number
+  ): Promise<{ version: number; comment_id: number; deleted: number }[]>;
   countByVideoId(videoId: string): Promise<number>;
   findAll(): Promise<CommentType[]>;
   create(data: NewCommentType): Promise<CommentType>;

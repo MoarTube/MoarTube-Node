@@ -53,7 +53,11 @@
     "prepare": "husky install",
     "db:push": "tsx node_modules/drizzle-kit/bin.cjs push",
     "db:generate": "tsx node_modules/drizzle-kit/bin.cjs generate",
-    "db:migrate": "tsx node_modules/drizzle-kit/bin.cjs migrate"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "prebuild": "node scripts/ensure-migrations.mjs",
+    "predev": "node scripts/ensure-migrations.mjs",
+    "predev:start": "node scripts/ensure-migrations.mjs",
+    "predb:migrate": "node scripts/ensure-migrations.mjs"
   },
   "lint-staged": {
     "src/**/*.ts": [

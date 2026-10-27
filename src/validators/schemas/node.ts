@@ -27,6 +27,7 @@ export const contentTypeSchema = z.enum(['comments', 'videoReports', 'commentRep
  * Node search query parameters schema
  */
 export const nodeSearchQuerySchema = z.object({
+  offset: z.coerce.number().int().min(0).max(1_000_000_000).optional().default(0),
   searchTerm: searchTermSchemaOptional,
   sortTerm: sortTermSchema,
   tagTerm: tagTermSchemaOptional,

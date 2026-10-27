@@ -1,3 +1,4 @@
+import { rewriteManifestFile } from '@/utils/manifest-transform.js';
 /**
  * Stream Service
  *
@@ -159,7 +160,7 @@ export class StreamsService extends BaseService {
       await this.videoRepository.update(videoId, updateData);
 
       // Finalize HLS manifest files (filesystem mode only)
-      this.finalizeStreamManifests(videoId);
+      await this.finalizeStreamManifests(videoId);
 
       // Handle post-stream recording state
       if (video.is_stream_recorded_remotely) {
@@ -419,7 +420,7 @@ export class StreamsService extends BaseService {
   /**
    * Finalize stream HLS manifest files
    */
-  finalizeStreamManifests(videoId: string): void {
+  async finalizeStreamManifests(videoId: string): Promise<void> {
     const config = getConfig();
     const storageMode = config.nodeSettings.storageConfig.storageMode;
 
@@ -428,7 +429,7 @@ export class StreamsService extends BaseService {
       const adaptiveDir = path.join(videosDir, videoId, 'adaptive', 'm3u8');
 
       // End the HLS manifest files by appending #EXT-X-ENDLIST and converting EVENT to VOD
-      this.endHlsManifests(adaptiveDir);
+      await this.endHlsManifests(adaptiveDir);
     }
 
     this.logger.info('Stream manifests finalized', { videoId });
@@ -446,16 +447,22 @@ export class StreamsService extends BaseService {
       return;
     }
 
-    const videos = await this.videoRepository.findAll();
-    const streamedVideos = videos.filter((v) => v.is_streamed && v.is_stream_recorded_remotely);
-
-    for (const video of streamedVideos) {
-      const videosDir = config.paths.videosDirectoryPath;
-      const adaptiveDir = path.join(videosDir, video.video_id, 'adaptive', 'm3u8');
-      this.endHlsManifests(adaptiveDir);
+    let count = 0;
+    for (let offset = 0; ; offset += 100) {
+      const videos = await this.videoRepository.findAll({ limit: 100, offset });
+      for (const video of videos) {
+        if (video.is_streamed && video.is_stream_recorded_remotely) {
+          await this.endHlsManifests(
+            path.join(config.paths.videosDirectoryPath, video.video_id, 'adaptive', 'm3u8')
+          );
+          count++;
+        }
+      }
+      if (videos.length < 100) {
+        break;
+      }
     }
-
-    this.logger.info('Finalized all streamed HLS manifests', { count: streamedVideos.length });
+    this.logger.info('Finalized all streamed HLS manifests', { count });
   }
 
   // ============================================================================
@@ -511,44 +518,18 @@ export class StreamsService extends BaseService {
    * Legacy layout: manifests live in resolution subdirectories as manifest-{resolution}.m3u8
    * e.g., {adaptiveDir}/{resolution}/manifest-{resolution}.m3u8
    */
-  private endHlsManifests(adaptiveDir: string): void {
+  private async endHlsManifests(adaptiveDir: string): Promise<void> {
     if (!fs.existsSync(adaptiveDir)) {
       return;
     }
-
-    const HLS_END_LIST_TAG = '#EXT-X-ENDLIST';
-
-    // Traverse resolution subdirectories (e.g., 2160p, 1080p, 720p, etc.)
-    const entries = fs.readdirSync(adaptiveDir, { withFileTypes: true });
-    for (const entry of entries) {
-      const entryName = typeof entry === 'string' ? entry : entry.name;
-      const isDirectory = typeof entry === 'string' ? false : entry.isDirectory();
-
-      if (isDirectory) {
-        const resolutionDir = path.join(adaptiveDir, entryName);
-        const manifestPath = path.join(resolutionDir, `manifest-${entryName}.m3u8`);
-
-        if (fs.existsSync(manifestPath)) {
-          const content = fs.readFileSync(manifestPath, 'utf8');
-          if (!content.includes(HLS_END_LIST_TAG)) {
-            // Replace EVENT playlist type with VOD
-            let modified = content.replace(
-              '#EXT-X-PLAYLIST-TYPE:EVENT',
-              '#EXT-X-PLAYLIST-TYPE:VOD'
-            );
-            modified = modified.trim() + '\n' + HLS_END_LIST_TAG + '\n';
-            fs.writeFileSync(manifestPath, modified);
-          }
-        }
-      } else if (entryName.endsWith('.m3u8')) {
-        // Also handle manifests directly in the m3u8 directory (fallback)
-        const filePath = path.join(adaptiveDir, entryName);
-        const content = fs.readFileSync(filePath, 'utf8');
-        if (!content.includes(HLS_END_LIST_TAG)) {
-          let modified = content.replace('#EXT-X-PLAYLIST-TYPE:EVENT', '#EXT-X-PLAYLIST-TYPE:VOD');
-          modified = modified.trim() + '\n' + HLS_END_LIST_TAG + '\n';
-          fs.writeFileSync(filePath, modified);
-        }
+    for (const entry of fs.readdirSync(adaptiveDir, { withFileTypes: true })) {
+      const name = typeof entry === 'string' ? entry : entry.name;
+      const directory = typeof entry !== 'string' && entry.isDirectory();
+      const file = directory
+        ? path.join(adaptiveDir, name, 'manifest-' + name + '.m3u8')
+        : path.join(adaptiveDir, name);
+      if ((directory || name.endsWith('.m3u8')) && fs.existsSync(file)) {
+        await rewriteManifestFile(file, (line) => line, true);
       }
     }
   }

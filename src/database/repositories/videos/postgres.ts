@@ -58,13 +58,14 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
 
     const conditions = this.buildWhereConditions(options);
 
-    let query = this.db.select().from(videos).orderBy(sortDir(sortField));
+    let query = this.db.select().from(videos).orderBy(sortDir(sortField), desc(videos.id));
 
     // Apply where conditions only if they exist
     query = conditions !== undefined ? (query.where(conditions) as typeof query) : query;
 
     if (limit !== undefined) {
-      return query.limit(limit);
+      const page = query.limit(limit);
+      return options?.offset !== undefined ? page.offset(options.offset) : page;
     }
 
     return query;
@@ -73,6 +74,30 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
   /**
    * Counts total videos matching the criteria
    */
+  async findTags(visibleOnly = false): Promise<string[]> {
+    const tags = new Set<string>();
+    let offset = 0;
+    for (;;) {
+      const query = this.db.select({ tags: videos.tags }).from(videos).orderBy(asc(videos.id));
+      const filtered = visibleOnly
+        ? query.where(or(eq(videos.is_published, true), eq(videos.is_live, true)))
+        : query;
+      const rows = await filtered.limit(200).offset(offset);
+      for (const row of rows) {
+        for (const tag of row.tags.split(',')) {
+          if (tag.trim()) {
+            tags.add(tag.trim());
+          }
+        }
+      }
+      if (rows.length < 200) {
+        break;
+      }
+      offset += rows.length;
+    }
+    return [...tags].sort();
+  }
+
   async getCount(options?: VideoQueryOptions): Promise<number> {
     const conditions = this.buildWhereConditions(options);
 
@@ -178,10 +203,13 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
   }
 
   /**
-   * Updates the bandwidth for a video
+   * Adds a delivered-byte delta atomically for a video
    */
   async updateBandwidth(videoId: string, bandwidth: number): Promise<void> {
-    await this.db.update(videos).set({ bandwidth }).where(eq(videos.video_id, videoId));
+    await this.db
+      .update(videos)
+      .set({ bandwidth: sql`${videos.bandwidth} + ${bandwidth}` })
+      .where(eq(videos.video_id, videoId));
   }
 
   /**
@@ -245,6 +273,9 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
     }
 
     const conditions = [];
+    if (options.visibleOnly) {
+      conditions.push(or(eq(videos.is_published, true), eq(videos.is_live, true)));
+    }
 
     if (options.isPublished !== undefined) {
       conditions.push(eq(videos.is_published, options.isPublished));

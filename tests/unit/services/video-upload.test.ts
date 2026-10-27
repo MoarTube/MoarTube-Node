@@ -53,6 +53,8 @@ vi.mock('node:fs', () => {
 });
 
 import * as fs from 'node:fs';
+import { writeUpload } from '@/utils/stream-files.js';
+vi.mock('@/utils/stream-files.js', () => ({ writeUpload: vi.fn().mockResolvedValue(undefined) }));
 
 describe('VideoUploadService', () => {
   let service: VideoUploadService;
@@ -95,6 +97,7 @@ describe('VideoUploadService', () => {
       purgeAdaptiveVideos: vi.fn().mockResolvedValue(undefined),
       purgeNodePage: vi.fn().mockResolvedValue(undefined),
       purgeAllWatchPages: vi.fn().mockResolvedValue(undefined),
+      purgeWatchPages: vi.fn().mockResolvedValue(undefined),
       purgeVideoThumbnailImages: vi.fn().mockResolvedValue(undefined),
       purgeVideoPreviewImages: vi.fn().mockResolvedValue(undefined),
       purgeVideoPosterImages: vi.fn().mockResolvedValue(undefined),
@@ -187,7 +190,12 @@ describe('VideoUploadService', () => {
     });
 
     it('should return path for m3u8 segment file', () => {
-      const result = service.getVideoDestinationPath('video123', 'm3u8', '1080p', 'segment-0001.ts');
+      const result = service.getVideoDestinationPath(
+        'video123',
+        'm3u8',
+        '1080p',
+        'segment-0001.ts'
+      );
 
       expect(result).toBe('/data/videos/video123/adaptive/m3u8/1080p');
     });
@@ -452,9 +460,9 @@ describe('VideoUploadService', () => {
     });
 
     it('should return error result when image upload fails', async () => {
-      (mockCloudflareService.purgeVideoThumbnailImages as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        new Error('Purge failed')
-      );
+      (
+        mockCloudflareService.purgeVideoThumbnailImages as ReturnType<typeof vi.fn>
+      ).mockRejectedValueOnce(new Error('Purge failed'));
 
       const result = await service.handleImageUploadComplete({
         videoId: 'video123',
@@ -648,12 +656,10 @@ describe('VideoUploadService', () => {
 
       await service.saveUploadedFile(mockFile as any, '/data/videos/video123/progressive/mp4');
 
-      expect(fs.mkdirSync).toHaveBeenCalledWith('/data/videos/video123/progressive/mp4', {
-        recursive: true,
-      });
-      expect(fs.writeFileSync).toHaveBeenCalledWith(
+      expect(writeUpload).toHaveBeenCalledWith(
+        mockFile,
         '/data/videos/video123/progressive/mp4/video.mp4',
-        Buffer.from('video content')
+        10 * 1024 ** 3
       );
     });
 
@@ -671,4 +677,12 @@ describe('VideoUploadService', () => {
       });
     });
   });
+  it.each(['../escape.ts', 'folder\\escape.ts'])(
+    'rejects upload filenames outside the destination (%s)',
+    async (filename) => {
+      await expect(service.saveUploadedFile({ filename } as never, '/data/videos')).rejects.toThrow(
+        'Invalid filename'
+      );
+    }
+  );
 });

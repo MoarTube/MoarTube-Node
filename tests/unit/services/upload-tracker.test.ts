@@ -305,4 +305,17 @@ describe('UploadTrackerService', () => {
       expect(uploads).toContain('video2');
     });
   });
+  it('does not retain completed request objects until the whole publish finishes', async () => {
+    const { EventEmitter } = await import('node:events');
+    const closed = { raw: Object.assign(new EventEmitter(), { destroy: vi.fn() }) };
+    const active = { raw: Object.assign(new EventEmitter(), { destroy: vi.fn() }) };
+    service.startTracking('video');
+    service.addRequest('video', closed as never);
+    service.addRequest('video', active as never);
+    closed.raw.emit('close');
+    service.completeStop('video');
+    active.raw.emit('close');
+    expect(closed.raw.destroy).not.toHaveBeenCalled();
+    expect(active.raw.destroy).toHaveBeenCalledOnce();
+  });
 });

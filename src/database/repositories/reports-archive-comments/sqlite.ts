@@ -4,6 +4,7 @@
  * Provides data access methods for archived comment report records using Drizzle ORM with SQLite.
  */
 import { eq, desc, count } from 'drizzle-orm';
+import { or, like } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { IReportsArchiveCommentsRepository } from './interface.js';
 import type {
@@ -50,13 +51,22 @@ export class ReportsArchiveCommentsRepositorySQLite implements IReportsArchiveCo
   async findAll(options?: PaginationOptions): Promise<DrizzleCommentReportArchive[]> {
     const { limit } = { limit: options?.limit };
 
-    const query = this.db
+    let query = this.db
       .select()
       .from(commentReportsArchive)
-      .orderBy(desc(commentReportsArchive.timestamp));
+      .orderBy(desc(commentReportsArchive.timestamp), desc(commentReportsArchive.archive_id));
+    if (options?.search) {
+      query = query.where(
+        or(
+          like(commentReportsArchive.message, '%' + options.search.slice(0, 100) + '%'),
+          like(commentReportsArchive.email, '%' + options.search.slice(0, 100) + '%')
+        )
+      ) as typeof query;
+    }
 
     if (limit !== undefined) {
-      return query.limit(limit);
+      const page = query.limit(limit);
+      return options?.offset !== undefined ? page.offset(options.offset) : page;
     }
 
     return query;

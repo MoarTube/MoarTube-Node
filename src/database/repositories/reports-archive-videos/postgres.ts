@@ -4,6 +4,7 @@
  * Provides data access methods for archived video report records using Drizzle ORM with PostgreSQL.
  */
 import { eq, desc, count } from 'drizzle-orm';
+import { or, like } from 'drizzle-orm';
 import type { PaginationOptions } from '@/types/index.js';
 import type { IReportsArchiveVideosRepository } from './interface.js';
 import type {
@@ -50,13 +51,22 @@ export class ReportsArchiveVideosRepositoryPostgres implements IReportsArchiveVi
   async findAll(options?: PaginationOptions): Promise<DrizzleVideoReportArchive[]> {
     const { limit } = { limit: options?.limit };
 
-    const query = this.db
+    let query = this.db
       .select()
       .from(videoReportsArchive)
-      .orderBy(desc(videoReportsArchive.timestamp));
+      .orderBy(desc(videoReportsArchive.timestamp), desc(videoReportsArchive.archive_id));
+    if (options?.search) {
+      query = query.where(
+        or(
+          like(videoReportsArchive.message, '%' + options.search.slice(0, 100) + '%'),
+          like(videoReportsArchive.email, '%' + options.search.slice(0, 100) + '%')
+        )
+      ) as typeof query;
+    }
 
     if (limit !== undefined) {
-      return query.limit(limit);
+      const page = query.limit(limit);
+      return options?.offset !== undefined ? page.offset(options.offset) : page;
     }
 
     return query;

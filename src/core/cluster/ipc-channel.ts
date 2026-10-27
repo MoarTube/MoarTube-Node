@@ -1,3 +1,4 @@
+import { ByteBudget } from '@/utils/byte-budget.js';
 /**
  * IPC Channel
  *
@@ -42,6 +43,32 @@ function getDefaultLogger(): IPCLogger {
  * messages between master and worker processes.
  */
 export class IPCChannel {
+  private readonly sendBudgets = new WeakMap<object, ByteBudget>();
+  private sendBudgeted(
+    target: object,
+    message: object,
+    send: (done: (error: Error | null) => void) => boolean
+  ): boolean {
+    let budget = this.sendBudgets.get(target);
+    if (!budget) {
+      budget = new ByteBudget(1024 ** 2);
+      this.sendBudgets.set(target, budget);
+    }
+    const release = budget.reserve(Buffer.byteLength(JSON.stringify(message)));
+    if (!release) {
+      this.logger.warn('IPC channel byte budget exceeded');
+      return false;
+    }
+    try {
+      return send(() => {
+        release();
+      });
+    } catch (error) {
+      release();
+      throw error;
+    }
+  }
+
   private readonly handlers = new Map<IPCCommand, IPCHandler>();
   private readonly logger: IPCLogger;
   private isListening = false;
@@ -162,8 +189,8 @@ export class IPCChannel {
     }
 
     try {
-      process.send(message);
-      return true;
+      const send = process.send.bind(process);
+      return this.sendBudgeted(process, message, (done) => send(message, done));
     } catch (error) {
       this.logger.error('Failed to send message to master', error);
       return false;
@@ -186,8 +213,7 @@ export class IPCChannel {
     }
 
     try {
-      worker.send(message);
-      return true;
+      return this.sendBudgeted(worker, message, (done) => worker.send(message, done));
     } catch (error) {
       this.logger.error('Failed to send message to worker', error, {
         workerId: worker.id,

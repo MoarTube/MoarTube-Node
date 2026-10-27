@@ -11,6 +11,7 @@ import type { Container } from '@core/container.js';
 describe('External Videos Routes', () => {
   const mockFastify = {
     get: vi.fn(),
+    addHook: vi.fn(),
     optionalAuthenticate: vi.fn(),
     authenticate: vi.fn(),
   };

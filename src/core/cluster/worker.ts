@@ -116,6 +116,7 @@ export class ClusterWorker {
     this.wss = new WebSocketServer({
       noServer: true,
       perMessageDeflate: false,
+      maxPayload: 256 * 1024,
     });
 
     // Handle WebSocket connections

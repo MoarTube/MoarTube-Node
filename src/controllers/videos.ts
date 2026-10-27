@@ -5,7 +5,14 @@
  */
 
 import * as fs from 'node:fs';
+import { writeUpload } from '@/utils/stream-files.js';
 import * as path from 'node:path';
+import {
+  readCachedComments,
+  COMMENT_STATE_CACHE_CONTROL,
+  type CommentCacheState,
+} from '@/utils/comment-cache.js';
+import { pageOptions } from '@/utils/pagination.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { BaseController } from '@controllers/base.js';
 import type { ReportType } from '@services/interfaces.js';
@@ -67,6 +74,10 @@ interface VideoUpdateBody {
 }
 
 interface VideoCommentsQuery {
+  knownIds?: string;
+  includeTotal?: '1';
+  beforeId?: number;
+  afterId?: number;
   timestamp: number;
   type: 'before' | 'after';
   sort: 'ascending' | 'descending';
@@ -706,7 +717,7 @@ export class VideosController extends BaseController {
     } catch (error) {
       this.logger.error('VideosController.likeVideo failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendCaughtError(reply, error, 'error communicating with the MoarTube node');
     }
   };
 
@@ -757,7 +768,7 @@ export class VideosController extends BaseController {
     } catch (error) {
       this.logger.error('VideosController.dislikeVideo failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendCaughtError(reply, error, 'error communicating with the MoarTube node');
     }
   };
 
@@ -821,7 +832,31 @@ export class VideosController extends BaseController {
     } catch (error) {
       this.logger.error('VideosController.reportVideo failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendCaughtError(reply, error, 'error communicating with the MoarTube node');
+    }
+  };
+
+  private commentCacheState = async (videoId: string): Promise<CommentCacheState> => ({
+    epoch: await this.commentsService.getCacheEpoch(),
+    version: await this.commentsService.getCacheVersion(videoId),
+  });
+
+  getCommentState = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    reply.header('Cache-Control', 'no-store');
+    try {
+      const { videoId } = request.params as VideoIdParams;
+      const state = await this.commentCacheState(videoId);
+      const totalCount = await this.commentsService.countCommentsForVideo(videoId);
+      if (
+        (request.query as { fresh?: string }).fresh !== '1' &&
+        request.headers.authorization === undefined
+      ) {
+        reply.header('Cache-Control', COMMENT_STATE_CACHE_CONTROL);
+      }
+      return await this.sendSuccess(reply, { ...state, totalCount });
+    } catch (error) {
+      this.logger.error('Comment state failed', error);
+      return await this.sendError(reply, 'Unable to load comment state', 500);
     }
   };
 
@@ -832,26 +867,52 @@ export class VideosController extends BaseController {
   getComments = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { videoId } = request.params as VideoIdParams;
-      const { type, sort, timestamp } = request.query as VideoCommentsQuery;
+      const response = await readCachedComments(
+        request,
+        reply,
+        () => this.commentCacheState(videoId),
+        async () => {
+          const { type, sort, timestamp, beforeId, afterId, includeTotal, knownIds } =
+            request.query as VideoCommentsQuery;
+          const cursorId = type === 'before' ? beforeId : afterId;
+          const comments =
+            cursorId !== undefined
+              ? await this.commentsService.getCommentsForVideo(
+                  videoId,
+                  type,
+                  sort,
+                  timestamp,
+                  cursorId
+                )
+              : await this.commentsService.getCommentsForVideo(videoId, type, sort, timestamp);
 
-      const comments = await this.commentsService.getCommentsForVideo(
-        videoId,
-        type,
-        sort,
-        timestamp
+          const page = comments.slice(0, 100),
+            known = new Set(knownIds?.split(',').map(Number));
+          // Preserve logical page boundaries while omitting bodies the browser already holds.
+          const formattedComments = await this.commentsService.formatComments(
+            videoId,
+            page.filter((comment) => !known.has(comment.comment_id))
+          );
+
+          return {
+            comments: formattedComments,
+            commentIds: knownIds === undefined ? undefined : page.map((c) => c.comment_id),
+            pageEnd:
+              knownIds === undefined
+                ? undefined
+                : page
+                    .slice(-1)
+                    .map((c) => ({ commentId: c.comment_id, timestamp: c.timestamp }))[0],
+            hasMore: comments.length > 100,
+            totalCount:
+              includeTotal === '1'
+                ? await this.commentsService.countCommentsForVideo(videoId)
+                : undefined,
+            timestamp: timestamp,
+          };
+        }
       );
-
-      // Map comments to expected format
-      const formattedComments = comments.map((comment) => ({
-        commentId: comment.comment_id,
-        timestamp: comment.timestamp,
-        commentPlainTextSanitized: comment.comment_plain_text_sanitized,
-      }));
-
-      return await this.sendSuccess(reply, {
-        comments: formattedComments,
-        timestamp: timestamp,
-      });
+      return await this.sendSuccess(reply, response);
     } catch (error) {
       this.logger.error('VideosController.getComments failed', error);
 
@@ -915,32 +976,63 @@ export class VideosController extends BaseController {
         commentPlainText,
       });
 
-      // Get all comments (limited to recent ones for response)
-      const comments = await this.commentsService.getCommentsForVideo(
-        videoId,
-        'after',
-        'ascending',
-        timestamp
-      );
+      let comments = [comment];
+      let totalCount: number | undefined;
+      let refreshIncomplete = false;
+      try {
+        comments = await this.commentsService.getCommentsForVideo(
+          videoId,
+          'after',
+          'ascending',
+          timestamp
+        );
+        totalCount = await this.commentsService.countCommentsForVideo(videoId);
+      } catch (error) {
+        comments = [comment];
+        refreshIncomplete = true;
+        this.logger.warn('Comment saved; follow-up refresh unavailable', { error });
+      }
 
-      // Format comments for response (matching JS format)
-      const formattedComments = comments.map((c) => ({
-        commentId: c.comment_id,
-        commentPlainTextSanitized: c.comment_plain_text_sanitized,
-        timestamp: c.timestamp,
-      }));
+      // Metadata is part of the batch, including comments first seen while posting.
+      // A successful write remains successful if its follow-up metadata read fails.
+      let formattedComments;
+      try {
+        formattedComments = await this.commentsService.formatComments(
+          videoId,
+          comments.slice(0, 100)
+        );
+      } catch (error) {
+        refreshIncomplete = true;
+        this.logger.warn('Comment saved; reply metadata unavailable', { error });
+        formattedComments = comments.slice(0, 100).map((c) => ({
+          commentId: c.comment_id,
+          timestamp: c.timestamp,
+          commentPlainTextSanitized: c.comment_plain_text_sanitized,
+        }));
+      }
 
       // Purge Cloudflare cache
-      await this.cloudflareService.purgeWatchPages([videoId]);
+      try {
+        await this.cloudflareService.purgeWatchPages([videoId]);
+      } catch (error) {
+        this.logger.warn('Comment saved; cache invalidation unavailable', { error });
+      }
 
       return await this.sendSuccess(reply, {
         commentId: comment.comment_id,
+        comment: {
+          commentId: comment.comment_id,
+          timestamp: comment.timestamp,
+          commentPlainTextSanitized: comment.comment_plain_text_sanitized,
+        },
+        totalCount,
+        refreshIncomplete,
         comments: formattedComments,
       });
     } catch (error) {
       this.logger.error('VideosController.addComment failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendCaughtError(reply, error, 'error communicating with the MoarTube node');
     }
   };
 
@@ -966,7 +1058,7 @@ export class VideosController extends BaseController {
     } catch (error) {
       this.logger.error('VideosController.deleteComment failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      return await this.sendCaughtError(reply, error, 'error communicating with the MoarTube node');
     }
   };
 
@@ -1145,13 +1237,16 @@ export class VideosController extends BaseController {
    * GET /videos/data/all
    */
   getAllVideosData = async (
-    _request: FastifyRequest,
+    request: FastifyRequest,
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const videosData = await this.videosService.getAllVideosData();
+      const videosData = await this.videosService.getAllVideosData(pageOptions(request.query));
 
-      return await this.sendSuccess(reply, { videosData });
+      return await this.sendSuccess(reply, {
+        videosData: videosData.slice(0, 100),
+        hasMore: videosData.length > 100,
+      });
     } catch (error) {
       this.logger.error('VideosController.getAllVideosData failed', error);
 
@@ -1166,15 +1261,34 @@ export class VideosController extends BaseController {
   getComment = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const { videoId, commentId } = request.params as VideoIdParams & { commentId: number };
-      const { timestamp } = request.query as { timestamp: number };
 
-      const comment = await this.commentsService.getComment(videoId, commentId, timestamp);
+      const response = await readCachedComments(
+        request,
+        reply,
+        () => this.commentCacheState(videoId),
+        async () => {
+          const comment = await this.commentsService.getComment(videoId, commentId);
 
-      if (comment === null) {
-        throw new NotFoundError(`Comment not found`);
+          if (comment === null) {
+            return null;
+          }
+
+          const backlinks = await this.commentsService.getCommentBacklinks(videoId, commentId);
+          return {
+            comment: {
+              replyIds: backlinks.replyIds,
+              hasMoreReplies: backlinks.hasMore,
+              commentId: comment.comment_id,
+              timestamp: comment.timestamp,
+              commentPlainTextSanitized: comment.comment_plain_text_sanitized,
+            },
+          };
+        }
+      );
+      if (response === null) {
+        return await this.sendError(reply, 'Comment not found', 404);
       }
-
-      return await this.sendSuccess(reply, { comment });
+      return await this.sendSuccess(reply, response);
     } catch (error) {
       this.logger.error('VideosController.getComment failed', error);
 
@@ -1182,15 +1296,71 @@ export class VideosController extends BaseController {
     }
   };
 
+  getCommentCacheChanges = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    try {
+      const { videoId } = request.params as VideoIdParams;
+      const { since, epoch } = request.query as { since: number; epoch?: string };
+      const response = await readCachedComments(
+        request,
+        reply,
+        () => this.commentCacheState(videoId),
+        async () => ({
+          ...(await this.commentsService.getCacheChanges(videoId, since, epoch)),
+          totalCount: await this.commentsService.countCommentsForVideo(videoId),
+        })
+      );
+      return await this.sendSuccess(reply, response);
+    } catch (error) {
+      this.logger.error('Comment synchronization failed', error);
+      return await this.sendError(reply, 'Unable to synchronize comments', 500);
+    }
+  };
+
+  getCommentBacklinks = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    try {
+      const { videoId, commentId } = request.params as VideoIdParams & { commentId: number };
+      const { beforeReplyId } = request.query as { beforeReplyId?: number };
+      const response = await readCachedComments(
+        request,
+        reply,
+        () => this.commentCacheState(videoId),
+        async () => {
+          if ((await this.commentsService.getComment(videoId, commentId)) === null) {
+            return null;
+          }
+          return this.commentsService.getCommentBacklinks(videoId, commentId, beforeReplyId);
+        }
+      );
+      if (response === null) {
+        return await this.sendError(reply, 'Comment not found', 404);
+      }
+      return await this.sendSuccess(reply, response);
+    } catch (error) {
+      this.logger.error('Comment backlinks failed', error);
+      return await this.sendError(reply, 'Unable to load replies', 500);
+    }
+  };
+
   /**
    * Get recommended videos
    * GET /videos/recommended
    */
-  getRecommended = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  getRecommended = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const recommendedVideos = await this.videosService.getRecommendedVideos();
+      const recommendedVideos = await this.videosService.getRecommendedVideos(
+        pageOptions(request.query)
+      );
 
-      return await this.sendSuccess(reply, { recommendedVideos });
+      return await this.sendSuccess(reply, {
+        recommendedVideos: recommendedVideos.slice(0, 100),
+        hasMore: recommendedVideos.length > 100,
+      });
     } catch (error) {
       this.logger.error('VideosController.getRecommended failed', error);
 
@@ -1378,6 +1548,9 @@ export class VideosController extends BaseController {
           }
         }
 
+        if ((request.query as { finalBatch?: string }).finalBatch === 'false') {
+          return await this.sendSuccess(reply, { success: true, videoId, format, resolution });
+        }
         // Handle upload completion
         const result = await this.videoUploadService.handleVideoUploadComplete({
           videoId,
@@ -1585,8 +1758,7 @@ export class VideosController extends BaseController {
         // Save with correct filename
         const fileName = `${imageType}.jpg`;
         const filePath = path.join(destPath, fileName);
-        const buffer = await file.toBuffer();
-        fs.writeFileSync(filePath, buffer);
+        await writeUpload(file, filePath, 20 * 1024 ** 2);
       }
     }
 

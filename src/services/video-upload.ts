@@ -5,7 +5,7 @@
  * progress tracking, and WebSocket broadcasting.
  */
 
-import * as fs from 'node:fs';
+import { writeUpload } from '@/utils/stream-files.js';
 import * as path from 'node:path';
 import type { MultipartFile } from '@fastify/multipart';
 import type { FastifyRequest } from 'fastify';
@@ -209,7 +209,7 @@ export class VideoUploadService {
 
       // Purge Cloudflare cache
       await this.cloudflareService.purgeNodePage();
-      await this.cloudflareService.purgeAllWatchPages();
+      await this.cloudflareService.purgeWatchPages([videoId]);
 
       // Format-specific purge
       if (format === 'm3u8') {
@@ -303,13 +303,12 @@ export class VideoUploadService {
    * Save uploaded file to disk
    */
   async saveUploadedFile(file: MultipartFile, destinationPath: string): Promise<void> {
-    // Ensure directory exists
-    fs.mkdirSync(destinationPath, { recursive: true });
-
+    if (path.basename(file.filename) !== file.filename || /[\\/]/.test(file.filename)) {
+      throw new Error('Invalid filename');
+    }
     const filePath = path.join(destinationPath, file.filename);
-    const buffer = await file.toBuffer();
-
-    fs.writeFileSync(filePath, buffer);
+    const maxBytes = 10 * 1024 ** 3;
+    await writeUpload(file, filePath, maxBytes);
 
     this.logger.debug('Saved uploaded file', { filename: file.filename, path: filePath });
   }

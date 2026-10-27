@@ -4,6 +4,7 @@
  * Tests HTTP request handling for video-related operations.
  * Focuses on the core controller methods with properly matched service methods.
  */
+vi.mock('@/utils/stream-files.js', () => ({ writeUpload: vi.fn().mockResolvedValue(undefined) }));
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { FastifyRequest, FastifyReply, FastifyBaseLogger } from 'fastify';
 
@@ -157,11 +158,25 @@ describe('VideosController', () => {
     };
 
     mockCommentsService = {
+      getCacheEpoch: vi.fn().mockResolvedValue('11111111-1111-4111-8111-111111111111'),
+      getCacheVersion: vi.fn().mockResolvedValue(7),
       getVideoComments: vi.fn(),
       getCommentsForVideo: vi.fn(),
+      getCacheChanges: vi
+        .fn()
+        .mockResolvedValue({ comments: [], deletedIds: [], version: 1, hasMore: false }),
+      formatComments: vi.fn(async (_video, rows) =>
+        rows.map((c) => ({
+          commentId: c.comment_id,
+          timestamp: c.timestamp,
+          commentPlainTextSanitized: c.comment_plain_text_sanitized,
+        }))
+      ),
+      countCommentsForVideo: vi.fn().mockResolvedValue(0),
       addComment: vi.fn(),
       createComment: vi.fn(),
       getComment: vi.fn(),
+      getCommentBacklinks: vi.fn().mockResolvedValue({ replyIds: [], hasMore: false }),
       deleteComment: vi.fn(),
     };
 
@@ -218,16 +233,94 @@ describe('VideosController', () => {
     vi.restoreAllMocks();
   });
 
+  describe('CDN comment state and revisioned reads', () => {
+    it.each([{}, { fresh: '1' }])(
+      'serves the state marker with the appropriate freshness policy %j',
+      async (query) => {
+        await controller.getCommentState(
+          createMockRequest({ params: { videoId: 'video' }, query }),
+          mockReply
+        );
+        expect(mockReply.send).toHaveBeenCalledWith({
+          isError: false,
+          epoch: '11111111-1111-4111-8111-111111111111',
+          version: 7,
+          totalCount: 0,
+        });
+        expect(mockReply.header).toHaveBeenLastCalledWith(
+          'Cache-Control',
+          'fresh' in query ? 'no-store' : 'public, max-age=0, s-maxage=30, must-revalidate'
+        );
+      }
+    );
+    it('does not share authenticated state responses', async () => {
+      await controller.getCommentState(
+        createMockRequest({
+          params: { videoId: 'video' },
+          query: {},
+          headers: { authorization: 'Bearer token' },
+        }),
+        mockReply
+      );
+      expect(mockReply.header).toHaveBeenLastCalledWith('Cache-Control', 'no-store');
+    });
+    it('does not cache state failures', async () => {
+      mockCommentsService.getCacheVersion.mockRejectedValueOnce(new Error('offline'));
+      await controller.getCommentState(
+        createMockRequest({ params: { videoId: 'video' }, query: {} }),
+        mockReply
+      );
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.header).toHaveBeenLastCalledWith('Cache-Control', 'no-store');
+    });
+    it.each([
+      'getComments',
+      'getComment',
+      'getCommentBacklinks',
+      'getCommentCacheChanges',
+    ] as const)('shares stable public %s responses by revision', async (method) => {
+      mockCommentsService.getComment.mockResolvedValue({
+        comment_id: 1,
+        timestamp: 1,
+        comment_plain_text_sanitized: 'hello',
+      });
+      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      await controller[method](
+        createMockRequest({
+          params: { videoId: 'video', commentId: 1 },
+          query: {
+            epoch: '11111111-1111-4111-8111-111111111111',
+            revision: 7,
+            since: 1,
+            type: 'before',
+            sort: 'descending',
+            timestamp: 100,
+          },
+        }),
+        mockReply
+      );
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.header).toHaveBeenLastCalledWith(
+        'Cache-Control',
+        'public, max-age=0, s-maxage=3600, must-revalidate'
+      );
+    });
+  });
+
   describe('getVideoSources', () => {
     it.each(['found', 'missing', 'error'])('handles %s sources', async (scenario) => {
       mockVideosService.getVideoSources = vi.fn();
       const sources = { adaptiveSources: [], progressiveSources: [] };
-      if (scenario === 'error') mockVideosService.getVideoSources.mockRejectedValue(new Error('lookup failed'));
-      else mockVideosService.getVideoSources.mockResolvedValue(scenario === 'found' ? sources : null);
+      if (scenario === 'error')
+        mockVideosService.getVideoSources.mockRejectedValue(new Error('lookup failed'));
+      else
+        mockVideosService.getVideoSources.mockResolvedValue(scenario === 'found' ? sources : null);
       const request = createMockRequest({ params: { videoId: 'v' } });
       await controller.getVideoSources(request, mockReply);
       expect(mockVideosService.getVideoSources).toHaveBeenCalledWith('v');
-      expect(mockReply.status).toHaveBeenCalledWith(scenario === 'found' ? 200 : scenario === 'missing' ? 404 : 500);
+      expect(mockReply.status).toHaveBeenCalledWith(
+        scenario === 'found' ? 200 : scenario === 'missing' ? 404 : 500
+      );
     });
   });
 
@@ -421,7 +514,11 @@ describe('VideosController', () => {
 
       await controller.videoUploaded(mockRequest, mockReply);
 
-      expect(mockVideosService.notifyUploadComplete).toHaveBeenCalledWith('vid-123', 'mp4', '1080p');
+      expect(mockVideosService.notifyUploadComplete).toHaveBeenCalledWith(
+        'vid-123',
+        'mp4',
+        '1080p'
+      );
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
   });
@@ -475,7 +572,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when video not found', async () => {
+    it('should return 404 when video not found', async () => {
       mockVideosService.getVideo.mockResolvedValue(null);
 
       const mockRequest = createMockRequest({
@@ -583,7 +680,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when video not found', async () => {
+    it('should return 404 when video not found', async () => {
       mockVideosService.updateVideo.mockResolvedValue(null);
 
       const mockRequest = createMockRequest({
@@ -667,7 +764,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when video not found', async () => {
+    it('should return 404 when video not found', async () => {
       mockVideosService.deleteVideo.mockResolvedValue(false);
 
       const mockRequest = createMockRequest({
@@ -737,7 +834,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when likes globally disabled', async () => {
+    it('should return 403 when likes globally disabled', async () => {
       mockNodeSettings.isLikesEnabled = false;
 
       const mockRequest = createMockRequest({
@@ -747,7 +844,7 @@ describe('VideosController', () => {
 
       await controller.likeVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(403);
     });
 
     it('should like video when body is null', async () => {
@@ -902,7 +999,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when video not found', async () => {
+    it('should return 404 when video not found', async () => {
       mockVideosService.getPublishes.mockResolvedValue(null);
 
       const mockRequest = createMockRequest({
@@ -1197,7 +1294,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when reports are globally disabled', async () => {
+    it('should return 400 when reports are globally disabled', async () => {
       mockNodeSettings.isReportsEnabled = false;
 
       const mockRequest = createMockRequest({
@@ -1211,7 +1308,7 @@ describe('VideosController', () => {
 
       await controller.reportVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(400);
     });
 
     it('should return 500 when video not found', async () => {
@@ -1229,10 +1326,10 @@ describe('VideosController', () => {
 
       await controller.reportVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(404);
     });
 
-    it('should return 500 when video reports disabled', async () => {
+    it('should return 400 when video reports disabled', async () => {
       mockNodeSettings.isReportsEnabled = true;
       mockVideosService.getVideo.mockResolvedValue({
         id: 'vid-123',
@@ -1250,7 +1347,7 @@ describe('VideosController', () => {
 
       await controller.reportVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(400);
     });
 
     it('should validate turnstile when enabled', async () => {
@@ -1281,7 +1378,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when turnstile token missing', async () => {
+    it('should return 400 when turnstile token missing', async () => {
       mockNodeSettings.isReportsEnabled = true;
       mockNodeSettings.isCloudflareTurnstileEnabled = true;
       mockVideosService.getVideo.mockResolvedValue({
@@ -1300,10 +1397,10 @@ describe('VideosController', () => {
 
       await controller.reportVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(400);
     });
 
-    it('should return 500 when turnstile validation fails', async () => {
+    it('should return 400 when turnstile validation fails', async () => {
       mockNodeSettings.isReportsEnabled = true;
       mockNodeSettings.isCloudflareTurnstileEnabled = true;
       mockVideosService.getVideo.mockResolvedValue({
@@ -1325,7 +1422,7 @@ describe('VideosController', () => {
 
       await controller.reportVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(400);
     });
   });
 
@@ -1401,7 +1498,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when comments are globally disabled', async () => {
+    it('should return 400 when comments are globally disabled', async () => {
       mockNodeSettings.isCommentsEnabled = false;
 
       const mockRequest = createMockRequest({
@@ -1411,7 +1508,7 @@ describe('VideosController', () => {
 
       await controller.addComment(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(400);
     });
 
     it('should return 500 when video not found', async () => {
@@ -1425,10 +1522,10 @@ describe('VideosController', () => {
 
       await controller.addComment(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(404);
     });
 
-    it('should return 500 when video comments disabled', async () => {
+    it('should return 400 when video comments disabled', async () => {
       mockNodeSettings.isCommentsEnabled = true;
       mockVideosService.getVideo.mockResolvedValue({
         id: 'vid-123',
@@ -1442,10 +1539,10 @@ describe('VideosController', () => {
 
       await controller.addComment(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(400);
     });
 
-    it('should return 500 for empty comment', async () => {
+    it('should return 400 for empty comment', async () => {
       mockNodeSettings.isCommentsEnabled = true;
       mockVideosService.getVideo.mockResolvedValue({
         id: 'vid-123',
@@ -1459,7 +1556,7 @@ describe('VideosController', () => {
 
       await controller.addComment(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(400);
     });
 
     it('should validate turnstile when enabled for comments', async () => {
@@ -1490,7 +1587,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when turnstile token missing for comments', async () => {
+    it('should return 400 when turnstile token missing for comments', async () => {
       mockNodeSettings.isCommentsEnabled = true;
       mockNodeSettings.isCloudflareTurnstileEnabled = true;
       mockVideosService.getVideo.mockResolvedValue({
@@ -1510,10 +1607,10 @@ describe('VideosController', () => {
 
       await controller.addComment(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(400);
     });
 
-    it('should return 500 when turnstile validation fails for comments', async () => {
+    it('should return 400 when turnstile validation fails for comments', async () => {
       mockNodeSettings.isCommentsEnabled = true;
       mockNodeSettings.isCloudflareTurnstileEnabled = true;
       mockVideosService.getVideo.mockResolvedValue({
@@ -1535,7 +1632,7 @@ describe('VideosController', () => {
       await controller.addComment(mockRequest, mockReply);
 
       expect(mockCloudflareService.validateTurnstileToken).toHaveBeenCalled();
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(400);
     });
   });
 
@@ -1555,7 +1652,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when comment not found', async () => {
+    it('should return 404 when comment not found', async () => {
       mockCommentsService.deleteComment.mockResolvedValue(false);
 
       const mockRequest = createMockRequest({
@@ -1565,13 +1662,17 @@ describe('VideosController', () => {
 
       await controller.deleteComment(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(404);
     });
   });
 
   describe('getComment', () => {
     it('should get single comment', async () => {
-      const mockComment = { comment_id: 1, comment_plain_text_sanitized: 'Test' };
+      const mockComment = {
+        comment_id: 1,
+        timestamp: 123456,
+        comment_plain_text_sanitized: 'Test',
+      };
       mockCommentsService.getComment.mockResolvedValue(mockComment);
 
       const mockRequest = createMockRequest({
@@ -1581,11 +1682,21 @@ describe('VideosController', () => {
 
       await controller.getComment(mockRequest, mockReply);
 
-      expect(mockCommentsService.getComment).toHaveBeenCalledWith('vid-123', 1, 123456);
+      expect(mockCommentsService.getComment).toHaveBeenCalledWith('vid-123', 1);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        isError: false,
+        comment: {
+          commentId: 1,
+          commentPlainTextSanitized: 'Test',
+          timestamp: 123456,
+          replyIds: [],
+          hasMoreReplies: false,
+        },
+      });
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when comment not found', async () => {
+    it('should return 404 when comment not found', async () => {
       mockCommentsService.getComment.mockResolvedValue(null);
 
       const mockRequest = createMockRequest({
@@ -1595,7 +1706,7 @@ describe('VideosController', () => {
 
       await controller.getComment(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(404);
     });
   });
 
@@ -1728,7 +1839,7 @@ describe('VideosController', () => {
   // Dislike Tests
   // ==================
   describe('dislikeVideo', () => {
-    it('should return 500 when dislikes globally disabled', async () => {
+    it('should return 403 when dislikes globally disabled', async () => {
       mockNodeSettings.isDislikesEnabled = false;
 
       const mockRequest = createMockRequest({
@@ -1738,7 +1849,7 @@ describe('VideosController', () => {
 
       await controller.dislikeVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(403);
     });
 
     it('should return 500 when video not found', async () => {
@@ -1752,10 +1863,10 @@ describe('VideosController', () => {
 
       await controller.dislikeVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(404);
     });
 
-    it('should return 500 when video dislikes disabled', async () => {
+    it('should return 403 when video dislikes disabled', async () => {
       mockNodeSettings.isDislikesEnabled = true;
       mockVideosService.getVideo.mockResolvedValue({
         id: 'vid-123',
@@ -1769,7 +1880,7 @@ describe('VideosController', () => {
 
       await controller.dislikeVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(403);
     });
   });
 
@@ -1785,10 +1896,10 @@ describe('VideosController', () => {
 
       await controller.likeVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(404);
     });
 
-    it('should return 500 when video likes disabled', async () => {
+    it('should return 403 when video likes disabled', async () => {
       mockNodeSettings.isLikesEnabled = true;
       mockVideosService.getVideo.mockResolvedValue({
         id: 'vid-123',
@@ -1802,7 +1913,7 @@ describe('VideosController', () => {
 
       await controller.likeVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(403);
     });
 
     it('should validate turnstile when enabled for likes', async () => {
@@ -1830,7 +1941,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when turnstile token missing', async () => {
+    it('should return 403 when turnstile token missing', async () => {
       mockNodeSettings.isLikesEnabled = true;
       mockNodeSettings.isCloudflareTurnstileEnabled = true;
 
@@ -1842,10 +1953,10 @@ describe('VideosController', () => {
 
       await controller.likeVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(403);
     });
 
-    it('should return 500 when turnstile token is empty string', async () => {
+    it('should return 403 when turnstile token is empty string', async () => {
       mockNodeSettings.isLikesEnabled = true;
       mockNodeSettings.isCloudflareTurnstileEnabled = true;
 
@@ -1857,7 +1968,7 @@ describe('VideosController', () => {
 
       await controller.likeVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(403);
     });
 
     it('should handle missing request.ip in turnstile validation', async () => {
@@ -1886,7 +1997,7 @@ describe('VideosController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should return 500 when turnstile validation fails', async () => {
+    it('should return 403 when turnstile validation fails', async () => {
       mockNodeSettings.isLikesEnabled = true;
       mockNodeSettings.isCloudflareTurnstileEnabled = true;
       mockCloudflareService.validateTurnstileToken.mockResolvedValue(false);
@@ -1899,7 +2010,7 @@ describe('VideosController', () => {
 
       await controller.likeVideo(mockRequest, mockReply);
 
-      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.status).toHaveBeenCalledWith(403);
     });
   });
 
@@ -2426,7 +2537,9 @@ describe('VideosController', () => {
 
       const mockRequest = createMockRequest({
         params: { videoId: 'vid-123' },
-        parts: vi.fn().mockReturnValue({ [Symbol.asyncIterator]: () => ({ next: () => ({ done: true }) }) }),
+        parts: vi
+          .fn()
+          .mockReturnValue({ [Symbol.asyncIterator]: () => ({ next: () => ({ done: true }) }) }),
       });
 
       await controller.uploadThumbnail(mockRequest, mockReply);
@@ -2463,7 +2576,10 @@ describe('VideosController', () => {
       await controller.uploadThumbnail(mockRequest, mockReply);
 
       expect(mockVideoUploadService.isValidImageMimeType).toHaveBeenCalledWith('image/jpeg');
-      expect(mockVideoUploadService.getImageDestinationPath).toHaveBeenCalledWith('vid-123', 'thumbnail');
+      expect(mockVideoUploadService.getImageDestinationPath).toHaveBeenCalledWith(
+        'vid-123',
+        'thumbnail'
+      );
       expect(mockVideoUploadService.handleImageUploadComplete).toHaveBeenCalledWith({
         videoId: 'vid-123',
         imageType: 'thumbnail',
@@ -2584,7 +2700,9 @@ describe('VideosController', () => {
 
       const mockRequest = createMockRequest({
         params: { videoId: 'vid-123' },
-        parts: vi.fn().mockReturnValue({ [Symbol.asyncIterator]: () => ({ next: () => ({ done: true }) }) }),
+        parts: vi
+          .fn()
+          .mockReturnValue({ [Symbol.asyncIterator]: () => ({ next: () => ({ done: true }) }) }),
       });
 
       await controller.uploadPreview(mockRequest, mockReply);
@@ -2599,7 +2717,9 @@ describe('VideosController', () => {
 
       const mockRequest = createMockRequest({
         params: { videoId: 'vid-123' },
-        parts: vi.fn().mockReturnValue({ [Symbol.asyncIterator]: () => ({ next: () => ({ done: true }) }) }),
+        parts: vi
+          .fn()
+          .mockReturnValue({ [Symbol.asyncIterator]: () => ({ next: () => ({ done: true }) }) }),
       });
 
       await controller.uploadPoster(mockRequest, mockReply);
@@ -2845,5 +2965,236 @@ describe('VideosController', () => {
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
     });
+  });
+  it('supports bounded older-history and refresh cursors', async () => {
+    mockCommentsService.getCommentsForVideo.mockResolvedValue(
+      Array.from({ length: 101 }, (_, i) => ({
+        comment_id: i,
+        timestamp: 100,
+        comment_plain_text_sanitized: 'a',
+      }))
+    );
+    await controller.getComments(
+      createMockRequest({
+        params: { videoId: 'a' },
+        query: { type: 'before', sort: 'descending', timestamp: 100, beforeId: 200 },
+      }),
+      mockReply
+    );
+    expect(mockCommentsService.getCommentsForVideo).toHaveBeenCalledWith(
+      'a',
+      'before',
+      'descending',
+      100,
+      200
+    );
+    mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+    await controller.getComments(
+      createMockRequest({
+        params: { videoId: 'a' },
+        query: { type: 'after', sort: 'ascending', timestamp: 100, afterId: 12 },
+      }),
+      mockReply
+    );
+    expect(mockCommentsService.getCommentsForVideo).toHaveBeenCalledWith(
+      'a',
+      'after',
+      'ascending',
+      100,
+      12
+    );
+  });
+  it('defers upload completion until the final bounded multipart batch', async () => {
+    mockVideoUploadService.validateVideoUploadParams.mockReturnValue(true);
+    mockVideosService.getVideo.mockResolvedValue({ id: 'a' });
+    const request = createMockRequest({
+      params: { videoId: 'a' },
+      query: { format: 'mp4', resolution: '720p', finalBatch: 'false' },
+      parts: vi.fn().mockReturnValue((async function* () {})()),
+    });
+    await controller.uploadVideo(request, mockReply);
+    expect(mockVideoUploadService.handleVideoUploadComplete).not.toHaveBeenCalled();
+    expect(mockReply.status).toHaveBeenCalledWith(200);
+  });
+  it('includes the own post and authoritative total even when the new-comment batch is full', async () => {
+    mockVideosService.getVideo.mockResolvedValue({ is_comments_enabled: true });
+    mockCommentsService.createComment.mockResolvedValue({
+      comment_id: 451,
+      timestamp: 451,
+      comment_plain_text_sanitized: 'Own post',
+    });
+    mockCommentsService.getCommentsForVideo.mockResolvedValue(
+      Array.from({ length: 100 }, (_, i) => ({
+        comment_id: 251 + i,
+        timestamp: 251 + i,
+        comment_plain_text_sanitized: 'Earlier new comment',
+      }))
+    );
+    mockCommentsService.countCommentsForVideo.mockResolvedValue(451);
+    await controller.addComment(
+      createMockRequest({
+        params: { videoId: 'a' },
+        body: { commentPlainText: 'Own post', timestamp: 250 },
+      }),
+      mockReply
+    );
+    expect(mockReply.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        commentId: 451,
+        totalCount: 451,
+        comment: { commentId: 451, timestamp: 451, commentPlainTextSanitized: 'Own post' },
+        comments: expect.any(Array),
+      })
+    );
+    expect(mockCommentsService.countCommentsForVideo).toHaveBeenCalledWith('a');
+  });
+  it('returns a server error when a comment preview lookup fails', async () => {
+    mockCommentsService.getComment.mockRejectedValue(new Error('Database unavailable'));
+    await controller.getComment(
+      createMockRequest({ params: { videoId: 'a', commentId: 1 } }),
+      mockReply
+    );
+    expect(mockReply.status).toHaveBeenCalledWith(500);
+  });
+
+  it.each(['read', 'count', 'purge', 'metadata'])(
+    'keeps a saved comment successful when follow-up %s fails',
+    async (failure) => {
+      mockVideosService.getVideo.mockResolvedValue({ is_comments_enabled: true });
+      mockCommentsService.createComment.mockResolvedValue({
+        comment_id: 451,
+        timestamp: 451,
+        comment_plain_text_sanitized: 'Saved own comment',
+      });
+      mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+      mockCommentsService.countCommentsForVideo.mockResolvedValue(451);
+      if (failure === 'read')
+        mockCommentsService.getCommentsForVideo.mockRejectedValue(
+          new Error('Read failed after saving')
+        );
+      if (failure === 'count')
+        mockCommentsService.countCommentsForVideo.mockRejectedValue(
+          new Error('Count failed after saving')
+        );
+      if (failure === 'metadata') {
+        mockCommentsService.getCommentsForVideo.mockResolvedValue([
+          { comment_id: 451, timestamp: 451, comment_plain_text_sanitized: 'Saved own comment' },
+        ]);
+        mockCommentsService.formatComments.mockRejectedValue(new Error('Metadata unavailable'));
+      }
+      if (failure === 'purge')
+        mockCloudflareService.purgeWatchPages.mockRejectedValue(
+          new Error('Cache failed after saving')
+        );
+      await controller.addComment(
+        createMockRequest({
+          params: { videoId: 'a' },
+          body: { commentPlainText: 'Saved own comment', timestamp: 250 },
+        }),
+        mockReply
+      );
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isError: false,
+          commentId: 451,
+          comment: {
+            commentId: 451,
+            timestamp: 451,
+            commentPlainTextSanitized: 'Saved own comment',
+          },
+        })
+      );
+    }
+  );
+
+  it('counts comments on explicit refreshes without recounting every history batch', async () => {
+    mockCommentsService.getCommentsForVideo.mockResolvedValue([]);
+    mockCommentsService.countCommentsForVideo.mockResolvedValue(123);
+    await controller.getComments(
+      createMockRequest({
+        params: { videoId: 'a' },
+        query: { type: 'before', sort: 'descending', timestamp: 100, beforeId: 10 },
+      }),
+      mockReply
+    );
+    expect(mockCommentsService.countCommentsForVideo).not.toHaveBeenCalled();
+    await controller.getComments(
+      createMockRequest({
+        params: { videoId: 'a' },
+        query: { type: 'after', sort: 'ascending', timestamp: 100, afterId: 10, includeTotal: '1' },
+      }),
+      mockReply
+    );
+    expect(mockCommentsService.countCommentsForVideo).toHaveBeenCalledWith('a');
+    expect(mockReply.send).toHaveBeenLastCalledWith(expect.objectContaining({ totalCount: 123 }));
+  });
+  it('returns bounded backlinks using the requested reply-ID cursor', async () => {
+    mockCommentsService.getComment.mockResolvedValue({ comment_id: 5 });
+    mockCommentsService.getCommentBacklinks.mockResolvedValue({ replyIds: [750], hasMore: true });
+    await controller.getCommentBacklinks(
+      createMockRequest({ params: { videoId: 'a', commentId: 5 }, query: { beforeReplyId: 800 } }),
+      mockReply
+    );
+    expect(mockCommentsService.getCommentBacklinks).toHaveBeenCalledWith('a', 5, 800);
+    expect(mockReply.send).toHaveBeenCalledWith({ isError: false, replyIds: [750], hasMore: true });
+  });
+  it('returns 404 for backlinks of a missing parent comment', async () => {
+    mockCommentsService.getComment.mockResolvedValue(null);
+    await controller.getCommentBacklinks(
+      createMockRequest({ params: { videoId: 'a', commentId: 5 } }),
+      mockReply
+    );
+    expect(mockReply.status).toHaveBeenCalledWith(404);
+  });
+  it('returns an error when reverse-reference lookup fails', async () => {
+    mockCommentsService.getComment.mockResolvedValue({ comment_id: 5 });
+    mockCommentsService.getCommentBacklinks.mockRejectedValue(new Error('Database unavailable'));
+    await controller.getCommentBacklinks(
+      createMockRequest({ params: { videoId: 'a', commentId: 5 } }),
+      mockReply
+    );
+    expect(mockReply.status).toHaveBeenCalledWith(500);
+  });
+  it('synchronizes comment changes with an uncacheable response', async () => {
+    await controller.getCommentCacheChanges(
+      createMockRequest({ params: { videoId: 'a' }, query: { since: 42 } }),
+      mockReply
+    );
+    expect(mockCommentsService.getCacheChanges).toHaveBeenCalledWith('a', 42, undefined);
+    expect(mockReply.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
+    expect(mockReply.send).toHaveBeenCalledWith(
+      expect.objectContaining({ version: 1, comments: [], deletedIds: [] })
+    );
+  });
+  it('reports a synchronization failure', async () => {
+    mockCommentsService.getCacheChanges.mockRejectedValue(new Error('Unavailable'));
+    await controller.getCommentCacheChanges(
+      createMockRequest({ params: { videoId: 'a' }, query: { since: 0 } }),
+      mockReply
+    );
+    expect(mockReply.status).toHaveBeenCalledWith(500);
+  });
+  it('omits known bodies while retaining complete logical page boundaries', async () => {
+    mockCommentsService.getCommentsForVideo.mockResolvedValue([
+      { comment_id: 2, timestamp: 20, comment_plain_text_sanitized: 'Two' },
+      { comment_id: 1, timestamp: 10, comment_plain_text_sanitized: 'One' },
+    ]);
+    await controller.getComments(
+      createMockRequest({
+        params: { videoId: 'a' },
+        query: { type: 'before', sort: 'descending', timestamp: 30, beforeId: 3, knownIds: '1,2' },
+      }),
+      mockReply
+    );
+    expect(mockCommentsService.formatComments).toHaveBeenCalledWith('a', []);
+    expect(mockReply.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        comments: [],
+        commentIds: [2, 1],
+        pageEnd: { commentId: 1, timestamp: 10 },
+        hasMore: false,
+      })
+    );
   });
 });

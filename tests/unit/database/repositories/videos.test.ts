@@ -1080,7 +1080,7 @@ describe('database/repositories/videos.ts', () => {
       await repository.updateBandwidth('test123', 1024000);
 
       expect(mockDb.update).toHaveBeenCalledWith(mockVideosTable);
-      expect(mockDb.set).toHaveBeenCalledWith({ bandwidth: 1024000 });
+      expect(mockDb.set).toHaveBeenCalledWith({bandwidth:expect.objectContaining({type:'sql',values:[mockVideosTable.bandwidth,1024000]})});
     });
   });
 

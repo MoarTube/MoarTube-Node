@@ -41,6 +41,7 @@ export class CloudflareService extends BaseService {
     | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
     | IVideosRepository<PostgresVideo, PostgresNewVideo>;
   private httpClient: AxiosInstance | null = null;
+  private httpClientSettings: { email: string; key: string } | null = null;
 
   constructor(
     logger: Logger,
@@ -62,6 +63,12 @@ export class CloudflareService extends BaseService {
       const nodeSettings = config.nodeSettings;
 
       if (nodeSettings.isCloudflareCdnEnabled && nodeSettings.cloudflareGlobalApiKey) {
+        if (
+          this.httpClientSettings?.email === nodeSettings.cloudflareEmailAddress &&
+          this.httpClientSettings.key === nodeSettings.cloudflareGlobalApiKey
+        ) {
+          return;
+        }
         this.httpClient = axios.create({
           baseURL: CLOUDFLARE_API_BASE,
           headers: {
@@ -70,8 +77,17 @@ export class CloudflareService extends BaseService {
             'Content-Type': 'application/json',
           },
         });
+        this.httpClientSettings = {
+          email: nodeSettings.cloudflareEmailAddress,
+          key: nodeSettings.cloudflareGlobalApiKey,
+        };
+      } else {
+        this.httpClient = null;
+        this.httpClientSettings = null;
       }
     } catch {
+      this.httpClient = null;
+      this.httpClientSettings = null;
       this.logger.debug('Cloudflare client not configured');
     }
   }
@@ -80,6 +96,7 @@ export class CloudflareService extends BaseService {
    * Check if Cloudflare is enabled
    */
   isEnabled(): boolean {
+    this.initializeHttpClient();
     const config = getConfig();
     return config.nodeSettings.isCloudflareCdnEnabled;
   }
@@ -113,7 +130,7 @@ export class CloudflareService extends BaseService {
   }
 
   /**
-   * Purge watch pages cache
+   * Purge watch pages and their shared comment freshness markers
    */
   async purgeWatchPages(videoIds?: string[]): Promise<void> {
     if (!this.isEnabled() || !this.httpClient) {
@@ -124,15 +141,33 @@ export class CloudflareService extends BaseService {
       const config = getConfig();
       const nodeBaseUrl = config.getNodeBaseUrl();
 
-      const ids = videoIds ?? [];
-      if (ids.length === 0) {
-        // Get all videos if none specified
-        const videos = await this.videosRepository.findAll();
-        ids.push(...videos.map((v: VideoWithId) => v.video_id));
+      if (videoIds?.length) {
+        for (let offset = 0; offset < videoIds.length; offset += 100) {
+          await this.purgeCache(
+            videoIds
+              .slice(offset, offset + 100)
+              .flatMap((id) => [
+                nodeBaseUrl + '/watch?v=' + id,
+                nodeBaseUrl + '/videos/' + id + '/comments/state',
+              ]),
+            'purgeWatchPages'
+          );
+        }
+      } else {
+        for (let offset = 0; ; offset += 100) {
+          const videos = await this.videosRepository.findAll({ limit: 100, offset });
+          await this.purgeCache(
+            videos.flatMap((video: VideoWithId) => [
+              nodeBaseUrl + '/watch?v=' + video.video_id,
+              nodeBaseUrl + '/videos/' + video.video_id + '/comments/state',
+            ]),
+            'purgeWatchPages'
+          );
+          if (videos.length < 100) {
+            break;
+          }
+        }
       }
-
-      const files = ids.map((id) => `${nodeBaseUrl}/watch?v=${id}`);
-      await this.purgeCache(files, 'purgeWatchPages');
     } catch (error) {
       this.logger.error('Failed to purge watch pages', error);
     }
@@ -157,22 +192,22 @@ export class CloudflareService extends BaseService {
       const config = getConfig();
       const nodeBaseUrl = config.getNodeBaseUrl();
 
-      const ids = videoIds ?? [];
-      if (ids.length === 0) {
-        const videos = await this.videosRepository.findAll();
-        ids.push(...videos.map((v: VideoWithId) => v.video_id));
+      for (let offset = 0; ; offset += 100) {
+        const ids = videoIds?.length
+          ? videoIds.slice(offset, offset + 100)
+          : (await this.videosRepository.findAll({ limit: 100, offset })).map(
+              (video: VideoWithId) => video.video_id
+            );
+        const files = ids.flatMap((id) => [
+          nodeBaseUrl + '/watch/embed/video/' + id,
+          nodeBaseUrl + '/watch/embed/video/' + id + '?autostart=0',
+          nodeBaseUrl + '/watch/embed/video/' + id + '?autostart=1',
+        ]);
+        await this.purgeCache(files, 'purgeEmbedVideoPages');
+        if (ids.length < 100 || (videoIds?.length && offset + 100 >= videoIds.length)) {
+          break;
+        }
       }
-
-      const files: string[] = [];
-      for (const id of ids) {
-        files.push(
-          `${nodeBaseUrl}/watch/embed/video/${id}`,
-          `${nodeBaseUrl}/watch/embed/video/${id}?autostart=0`,
-          `${nodeBaseUrl}/watch/embed/video/${id}?autostart=1`
-        );
-      }
-
-      await this.purgeCache(files, 'purgeEmbedVideoPages');
     } catch (error) {
       this.logger.error('Failed to purge embed pages', error);
     }
@@ -503,11 +538,31 @@ export class CloudflareService extends BaseService {
           },
         },
         {
+          description: 'Node Comments - Revisioned Reads and Freshness State',
+          action: 'set_cache_settings',
+          enabled: true,
+          expression:
+            '(starts_with(http.request.uri.path, "/videos/")) and (http.request.uri.path contains "/comments") and (http.request.method in {"GET" "HEAD"})',
+          action_parameters: {
+            cache: true,
+            edge_ttl: { mode: 'bypass_by_default' },
+            browser_ttl: { mode: 'respect_origin' },
+          },
+        },
+        {
           description: 'Node External - Cache Bypass for Live (dynamic) HLS stream manifests',
           action: 'set_cache_settings',
           enabled: true,
           expression:
             '(http.request.uri.path contains "/adaptive/m3u8/dynamic/") and (http.request.method == "GET")',
+          action_parameters: { cache: false },
+        },
+        {
+          description: 'Node - Bypass Mutations, Authorization and Explicit Comment Refresh',
+          action: 'set_cache_settings',
+          enabled: true,
+          expression:
+            '(not http.request.method in {"GET" "HEAD"}) or (any(http.request.headers["authorization"][*] ne "")) or (http.request.uri.query contains "fresh=1")',
           action_parameters: { cache: false },
         },
       ],
@@ -520,7 +575,6 @@ export class CloudflareService extends BaseService {
     );
 
     this.logger.info('Created zone http_request_cache_settings phase ruleset');
-
     // Set Browser Cache TTL to "Respect Existing Headers"
     await axios.patch(
       `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/settings/browser_cache_ttl`,
@@ -529,6 +583,13 @@ export class CloudflareService extends BaseService {
     );
 
     this.logger.info('Set Browser Cache TTL to Respect Existing Headers');
+
+    // Keep complete query strings in cache keys (video ID, cursor, epoch, revision).
+    await axios.patch(
+      `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/settings/cache_level`,
+      { value: 'aggressive' },
+      { headers }
+    );
 
     // Enable Always Use HTTPS
     await axios.patch(

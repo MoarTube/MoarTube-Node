@@ -56,32 +56,43 @@ describe('ReportsVideosController', () => {
       ];
       mockReportsService.getVideoReports.mockResolvedValue(mockReports);
 
-      await controller.getAllReports(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAllReports(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReportsService.getVideoReports).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         isError: false,
         reports: mockReports,
+        hasMore: false,
       });
     });
 
     it('should return empty array when no reports', async () => {
       mockReportsService.getVideoReports.mockResolvedValue([]);
 
-      await controller.getAllReports(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAllReports(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(200);
       expect(mockReply.send).toHaveBeenCalledWith({
         isError: false,
         reports: [],
+        hasMore: false,
       });
     });
 
     it('should return error on service failure', async () => {
       mockReportsService.getVideoReports.mockRejectedValue(new Error('Database error'));
 
-      await controller.getAllReports(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getAllReports(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -96,7 +107,10 @@ describe('ReportsVideosController', () => {
       mockRequest.body = { reportId: 1 };
       mockReportsService.archiveVideoReport.mockResolvedValue(undefined);
 
-      await controller.archiveReport(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.archiveReport(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReportsService.archiveVideoReport).toHaveBeenCalledWith(1);
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -106,7 +120,10 @@ describe('ReportsVideosController', () => {
       mockRequest.body = { reportId: 1 };
       mockReportsService.archiveVideoReport.mockRejectedValue(new Error('Database error'));
 
-      await controller.archiveReport(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.archiveReport(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -121,7 +138,10 @@ describe('ReportsVideosController', () => {
       mockRequest.params = { reportId: 1 };
       mockReportsService.deleteVideoReport.mockResolvedValue(undefined);
 
-      await controller.deleteReport(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.deleteReport(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReportsService.deleteVideoReport).toHaveBeenCalledWith(1);
       expect(mockReply.status).toHaveBeenCalledWith(200);
@@ -131,7 +151,10 @@ describe('ReportsVideosController', () => {
       mockRequest.params = { reportId: 1 };
       mockReportsService.deleteVideoReport.mockRejectedValue(new Error('Database error'));
 
-      await controller.deleteReport(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.deleteReport(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
       expect(mockReply.send).toHaveBeenCalledWith({

@@ -1,586 +1,168 @@
-/**
- * ExternalVideosController Tests
- *
- * Tests for serving video content.
- */
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-
-// Mock node:fs module
-vi.mock('node:fs', () => ({
-  rm: vi.fn(),
-  default: {
-    existsSync: vi.fn(),
-    createReadStream: vi.fn(),
-    statSync: vi.fn(),
-    stat: vi.fn(),
-    rm: vi.fn(),
-  },
+vi.mock('@/utils/public-file.js', () => ({
+  servePublicFile: vi.fn(async (_request, reply) => reply),
 }));
+import { servePublicFile } from '@/utils/public-file.js';
+const request = (params: object) => ({ params, headers: {} }) as FastifyRequest;
+const reply = () =>
+  ({ status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() }) as unknown as FastifyReply;
 
-// Mock config
-vi.mock('@config/index.js', () => ({
-  getConfig: vi.fn(() => ({
-    paths: {
-      videosDirectoryPath: '/data/media/videos',
-    },
-    getExternalVideosBaseUrl: vi.fn(() => 'https://example.com'),
-  })),
+const config = vi.hoisted(() => ({
+  paths: { videosDirectoryPath: '/videos' },
+  getExternalVideosBaseUrl: vi.fn(() => 'https://example.com'),
 }));
-
+vi.mock('@config/index.js', () => ({ getConfig: () => config }));
 import { ExternalVideosController } from '@controllers/external-videos.js';
-import fs from 'node:fs';
-
-// Mock services
-const mockVideosService: Record<string, ReturnType<typeof vi.fn>> = {
-  getVideo: vi.fn(),
-  incrementViews: vi.fn(),
-  updateBandwidth: vi.fn(),
-};
-
-describe('ExternalVideosController', () => {
+describe('video delivery and bandwidth batching', () => {
   let controller: ExternalVideosController;
-  let mockRequest: Partial<FastifyRequest> & { headers?: Record<string, string> };
-  let mockReply: {
-    status: Mock;
-    send: Mock;
-    headers: Mock;
-    header: Mock;
-    type: Mock;
-    raw: { write: Mock; end: Mock };
-  };
-
+  const updateBandwidth = vi.fn();
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-
-    controller = new ExternalVideosController(mockVideosService as any);
-
-    mockRequest = {
-      params: {},
-      headers: {},
-    };
-
-    mockReply = {
-      status: vi.fn().mockReturnThis(),
-      send: vi.fn().mockReturnThis(),
-      headers: vi.fn().mockReturnThis(),
-      header: vi.fn().mockReturnThis(),
-      type: vi.fn().mockReturnThis(),
-      raw: { write: vi.fn(), end: vi.fn() },
-    };
+    updateBandwidth.mockResolvedValue(undefined);
+    vi.mocked(servePublicFile).mockImplementation(async (_req, res) => res);
+    controller = new ExternalVideosController({ updateBandwidth } as any);
   });
-
-  afterEach(() => {
-    vi.useRealTimers();
+  afterEach(() => vi.useRealTimers());
+  const cases = [
+    ['getThumbnail', { videoId: 'a' }, ['a', 'images', 'thumbnail.jpg'], 'image/jpeg'],
+    ['getPreview', { videoId: 'a' }, ['a', 'images', 'preview.jpg'], 'image/jpeg'],
+    ['getPoster', { videoId: 'a' }, ['a', 'images', 'poster.jpg'], 'image/jpeg'],
+    [
+      'getAdaptiveManifest',
+      { videoId: 'a', format: 'm3u8', manifestName: 'master.m3u8', type: 'static' },
+      ['a', 'adaptive', 'm3u8', 'master.m3u8'],
+      'application/vnd.apple.mpegurl',
+    ],
+    [
+      'getAdaptiveSegment',
+      { videoId: 'a', format: 'm3u8', resolution: '720p', segmentName: '0.ts' },
+      ['a', 'adaptive', 'm3u8', '720p', '0.ts'],
+      'video/mp2t',
+    ],
+    [
+      'getProgressive',
+      { videoId: 'a', format: 'mp4', progressiveFilename: '720p.mp4' },
+      ['a', 'progressive', 'mp4', '720p.mp4'],
+      'video/mp4',
+    ],
+    [
+      'getProgressive',
+      { videoId: 'a', format: 'ogv', progressiveFilename: '720p.ogv' },
+      ['a', 'progressive', 'ogv', '720p.ogv'],
+      'video/ogg',
+    ],
+  ] as const;
+  it.each(cases)('delegates %s safely', async (method, params, parts, type) => {
+    const req = request(params),
+      res = reply();
+    await controller[method](req, res);
+    expect(vi.mocked(servePublicFile).mock.calls[0]?.slice(0, 5)).toEqual([
+      req,
+      res,
+      '/videos',
+      parts,
+      type,
+    ]);
+    const options = vi.mocked(servePublicFile).mock.calls[0]?.[5];
+    if (options?.onBytes) options.onBytes(123);
+    await controller.flushBandwidth();
   });
-
-  describe('constructor', () => {
-    it('should create an ExternalVideosController instance', () => {
-      expect(controller).toBeInstanceOf(ExternalVideosController);
-    });
+  it.each(cases)('returns 500 for unexpected %s failure', async (method, params) => {
+    vi.mocked(servePublicFile).mockRejectedValue(new Error('disk'));
+    const res = reply();
+    await controller[method](request(params), res);
+    expect(res.status).toHaveBeenCalledWith(500);
   });
-
-  describe('getBaseUrl', () => {
-    it('should return external videos base URL', async () => {
-      await controller.getBaseUrl(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        isError: false,
-        externalVideosBaseUrl: 'https://example.com',
-      });
-    });
-
-    it('should return 400 error when getBaseUrl throws', async () => {
-      // Mock getConfig to throw to trigger the catch block
-      const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockImplementationOnce(() => {
-        throw new Error('Config error');
-      });
-
-      await controller.getBaseUrl(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        isError: true,
-        message: 'error communicating with the MoarTube node',
-      });
-    });
+  it('marks dynamic manifests as live', async () => {
+    await controller.getAdaptiveManifest(
+      request({ videoId: 'a', format: 'm3u8', manifestName: 'master.m3u8', type: 'dynamic' }),
+      reply()
+    );
+    expect(vi.mocked(servePublicFile).mock.calls[0]?.[5]).toEqual({ live: true });
   });
-
-  describe('getThumbnail', () => {
-    it('should return 404 when thumbnail does not exist', async () => {
-      mockRequest.params = { videoId: 'video123' };
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      await controller.getThumbnail(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        isError: true,
-        message: 'thumbnail not found',
-      });
-    });
-
-    it('should serve thumbnail when it exists', async () => {
-      mockRequest.params = { videoId: 'video123' };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 5000 } as any);
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      await controller.getThumbnail(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.header).toHaveBeenCalledWith('Content-Type', 'image/jpeg');
+  it('returns base URL', async () => {
+    const res = reply();
+    await controller.getBaseUrl(request({}), res);
+    expect(res.send).toHaveBeenCalledWith({
+      isError: false,
+      externalVideosBaseUrl: 'https://example.com',
     });
   });
-
-  describe('getPreview', () => {
-    it('should return 404 when preview does not exist', async () => {
-      mockRequest.params = { videoId: 'video123' };
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      await controller.getPreview(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(404);
+  it('handles base URL errors', async () => {
+    config.getExternalVideosBaseUrl.mockImplementationOnce(() => {
+      throw new Error('config');
     });
-
-    it('should serve preview when it exists', async () => {
-      mockRequest.params = { videoId: 'video123' };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 8000 } as any);
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      await controller.getPreview(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.header).toHaveBeenCalledWith('Content-Type', 'image/jpeg');
-    });
+    const res = reply();
+    await controller.getBaseUrl(request({}), res);
+    expect(res.status).toHaveBeenCalledWith(400);
   });
-
-  describe('getPoster', () => {
-    it('should return 404 when poster does not exist', async () => {
-      mockRequest.params = { videoId: 'video123' };
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      await controller.getPoster(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(404);
-    });
-
-    it('should serve poster when it exists', async () => {
-      mockRequest.params = { videoId: 'video123' };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 10000 } as any);
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      await controller.getPoster(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.header).toHaveBeenCalledWith('Content-Type', 'image/jpeg');
-    });
-  });
-
-  // ===============================
-  // Adaptive Manifest Tests
-  // ===============================
-  describe('getAdaptiveManifest', () => {
-    it('should return 404 when manifest does not exist', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'm3u8',
-        type: 'hls',
-        manifestName: 'master.m3u8',
-      };
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      await controller.getAdaptiveManifest(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.status).toHaveBeenCalledWith(404);
-    });
-
-    it('should serve manifest when it exists', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'm3u8',
-        type: 'hls',
-        manifestName: 'master.m3u8',
-      };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 500 } as any);
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      await controller.getAdaptiveManifest(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.header).toHaveBeenCalledWith('Content-Type', 'application/vnd.apple.mpegurl');
-    });
-
-    it('should return 500 on error', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'm3u8',
-        type: 'hls',
-        manifestName: 'master.m3u8',
-      };
-      vi.mocked(fs.existsSync).mockImplementation(() => {
-        throw new Error('File system error');
-      });
-
-      await controller.getAdaptiveManifest(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.status).toHaveBeenCalledWith(500);
-    });
-  });
-
-  // ===============================
-  // Adaptive Segment Tests
-  // ===============================
-  describe('getAdaptiveSegment', () => {
-    it('should return 404 when segment does not exist', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'm3u8',
-        resolution: '1080p',
-        segmentName: 'segment0.ts',
-      };
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
-      await controller.getAdaptiveSegment(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.status).toHaveBeenCalledWith(404);
-    });
-
-    it('should serve segment when it exists', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'm3u8',
-        resolution: '1080p',
-        segmentName: 'segment0.ts',
-      };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 50000 } as any);
-      // Mock fs.stat for bandwidth tracking
-      vi.mocked(fs.stat).mockImplementation((_path, callback) => {
-        (callback as (err: Error | null, stats: { size: number }) => void)(null, { size: 50000 });
-        return undefined as any;
-      });
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      await controller.getAdaptiveSegment(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.header).toHaveBeenCalledWith('Content-Type', 'video/mp2t');
-
-      // Trigger the debounced bandwidth update
-      vi.advanceTimersByTime(100);
-      expect(mockVideosService.updateBandwidth).toHaveBeenCalledWith('video123', 50000);
-    });
-
-    it('should return 500 on error', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'm3u8',
-        resolution: '1080p',
-        segmentName: 'segment0.ts',
-      };
-      vi.mocked(fs.existsSync).mockImplementation(() => {
-        throw new Error('File system error');
-      });
-
-      await controller.getAdaptiveSegment(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.status).toHaveBeenCalledWith(500);
-    });
-
-    it('should handle fs.stat error gracefully', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'm3u8',
-        resolution: '1080p',
-        segmentName: 'segment0.ts',
-      };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 50000 } as any);
-      // Mock fs.stat to return error
-      vi.mocked(fs.stat).mockImplementation((_path, callback) => {
-        (callback as (err: Error | null, stats: null) => void)(new Error('Stat error'), null);
-        return undefined as any;
-      });
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      await controller.getAdaptiveSegment(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      // Should still serve the segment
-      expect(mockReply.header).toHaveBeenCalledWith('Content-Type', 'video/mp2t');
-
-      // Bandwidth should not be updated due to stat error
-      vi.advanceTimersByTime(100);
-      expect(mockVideosService.updateBandwidth).not.toHaveBeenCalled();
-    });
-  });
-
-  // ===============================
-  // Progressive Download Tests
-  // ===============================
-  describe('getProgressive', () => {
-    it('should return 404 when progressive file does not exist', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'mp4',
-        progressiveFilename: 'video.mp4',
-      };
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
+  it('keeps traffic for different videos separate and flushes during sustained traffic', async () => {
+    for (const [id, bytes] of [
+      ['a', 1000],
+      ['b', 2000],
+      ['a', 500],
+    ] as const) {
       await controller.getProgressive(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
+        request({ videoId: id, format: 'mp4', progressiveFilename: 'x.mp4' }),
+        reply()
       );
-
-      expect(mockReply.status).toHaveBeenCalledWith(404);
-    });
-
-    it('should serve progressive file without range request', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'mp4',
-        progressiveFilename: 'video.mp4',
-      };
-      mockRequest.headers = {};
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 1000000 } as any);
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      await controller.getProgressive(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.header).toHaveBeenCalledWith('Content-Type', 'video/mp4');
-    });
-
-    it('should handle range request', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'mp4',
-        progressiveFilename: 'video.mp4',
-      };
-      mockRequest.headers = { range: 'bytes=0-999999' };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 2000000 } as any);
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      await controller.getProgressive(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      // Should set 206 status for partial content
-      expect(mockReply.status).toHaveBeenCalledWith(206);
-
-      // Trigger bandwidth update
-      vi.advanceTimersByTime(100);
-      expect(mockVideosService.updateBandwidth).toHaveBeenCalledWith('video123', 1000000);
-    });
-
-    it('should handle range request without end byte', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'mp4',
-        progressiveFilename: 'video.mp4',
-      };
-      mockRequest.headers = { range: 'bytes=500000-' };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 2000000 } as any);
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      await controller.getProgressive(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.status).toHaveBeenCalledWith(206);
-    });
-
-    it('should handle range request without start byte', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'mp4',
-        progressiveFilename: 'video.mp4',
-      };
-      mockRequest.headers = { range: 'bytes=-500000' };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 2000000 } as any);
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      await controller.getProgressive(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.status).toHaveBeenCalledWith(206);
-    });
-
-    it('should return 500 on error', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'mp4',
-        progressiveFilename: 'video.mp4',
-      };
-      vi.mocked(fs.existsSync).mockImplementation(() => {
-        throw new Error('File system error');
-      });
-
-      await controller.getProgressive(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.status).toHaveBeenCalledWith(500);
-    });
+      vi.mocked(servePublicFile).mock.calls.at(-1)?.[5]?.onBytes?.(bytes);
+      await vi.advanceTimersByTimeAsync(40);
+    }
+    expect(updateBandwidth).toHaveBeenCalledWith('a', 1500);
+    expect(updateBandwidth).toHaveBeenCalledWith('b', 2000);
+    expect(updateBandwidth).toHaveBeenCalledTimes(2);
   });
-
-  // ===============================
-  // Error Handling
-  // ===============================
-  describe('error handling', () => {
-    it('should return 500 when getThumbnail throws', async () => {
-      mockRequest.params = { videoId: 'video123' };
-      vi.mocked(fs.existsSync).mockImplementation(() => {
-        throw new Error('FS error');
-      });
-
-      await controller.getThumbnail(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(500);
-    });
-
-    it('should return 500 when getPreview throws', async () => {
-      mockRequest.params = { videoId: 'video123' };
-      vi.mocked(fs.existsSync).mockImplementation(() => {
-        throw new Error('FS error');
-      });
-
-      await controller.getPreview(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(500);
-    });
-
-    it('should return 500 when getPoster throws', async () => {
-      mockRequest.params = { videoId: 'video123' };
-      vi.mocked(fs.existsSync).mockImplementation(() => {
-        throw new Error('FS error');
-      });
-
-      await controller.getPoster(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(500);
-    });
+  it('ignores invalid byte counts and flushes remaining bytes at shutdown', async () => {
+    await controller.getProgressive(
+      request({ videoId: 'a', format: 'mp4', progressiveFilename: 'x.mp4' }),
+      reply()
+    );
+    const count = vi.mocked(servePublicFile).mock.calls[0]?.[5]?.onBytes;
+    for (const bytes of [0, -1, NaN, 1.2, Infinity]) count?.(bytes);
+    await controller.flushBandwidth();
+    expect(updateBandwidth).not.toHaveBeenCalled();
+    count?.(50);
+    count?.(100);
+    await controller.flushBandwidth();
+    expect(updateBandwidth).toHaveBeenCalledWith('a', 150);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(updateBandwidth).toHaveBeenCalledTimes(1);
   });
-
-  // ===============================
-  // Bandwidth Tracking
-  // ===============================
-  describe('bandwidth tracking', () => {
-    it('should debounce segment bandwidth updates', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'm3u8',
-        resolution: '1080p',
-        segmentName: 'segment0.ts',
-      };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 50000 } as any);
-      vi.mocked(fs.stat).mockImplementation((_path, callback) => {
-        (callback as (err: Error | null, stats: { size: number }) => void)(null, { size: 25000 });
-        return undefined as any;
-      });
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      // First request
-      await controller.getAdaptiveSegment(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      // Second request before timer fires (debouncing)
-      await controller.getAdaptiveSegment(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      // Third request
-      await controller.getAdaptiveSegment(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      // Advance timers to trigger debounced callback
-      vi.advanceTimersByTime(100);
-
-      // Should only have one call with accumulated bandwidth (3 * 25000)
-      expect(mockVideosService.updateBandwidth).toHaveBeenCalledTimes(1);
-      expect(mockVideosService.updateBandwidth).toHaveBeenCalledWith('video123', 75000);
+  it('contains database errors without unhandled timer rejections', async () => {
+    updateBandwidth.mockRejectedValue(new Error('db'));
+    await controller.getAdaptiveSegment(
+      request({ videoId: 'a', format: 'm3u8', resolution: '720p', segmentName: '0.ts' }),
+      reply()
+    );
+    vi.mocked(servePublicFile).mock.calls[0]?.[5]?.onBytes?.(100);
+    await vi.advanceTimersByTimeAsync(100);
+    expect(updateBandwidth).toHaveBeenCalledOnce();
+  });
+  it('waits for an already-running database write at shutdown', async () => {
+    let release!: () => void;
+    updateBandwidth.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve;
+        })
+    );
+    await controller.getProgressive(
+      request({ videoId: 'a', format: 'mp4', progressiveFilename: 'x.mp4' }),
+      reply()
+    );
+    vi.mocked(servePublicFile).mock.calls[0]?.[5]?.onBytes?.(100);
+    await vi.advanceTimersByTimeAsync(100);
+    let closed = false;
+    const closing = controller.flushBandwidth().then(() => {
+      closed = true;
     });
-
-    it('should debounce progressive bandwidth updates', async () => {
-      mockRequest.params = {
-        videoId: 'video123',
-        format: 'mp4',
-        progressiveFilename: 'video.mp4',
-      };
-      mockRequest.headers = { range: 'bytes=0-99999' };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.statSync).mockReturnValue({ size: 2000000 } as any);
-      const mockStream = { pipe: vi.fn() };
-      vi.mocked(fs.createReadStream).mockReturnValue(mockStream as any);
-
-      // First request
-      await controller.getProgressive(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      // Second request
-      await controller.getProgressive(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      vi.advanceTimersByTime(100);
-
-      // Should only call once with accumulated bandwidth
-      expect(mockVideosService.updateBandwidth).toHaveBeenCalledTimes(1);
-      // 2 requests of 100000 bytes each
-      expect(mockVideosService.updateBandwidth).toHaveBeenCalledWith('video123', 200000);
-    });
+    await Promise.resolve();
+    expect(closed).toBe(false);
+    release();
+    await closing;
+    expect(closed).toBe(true);
   });
 });

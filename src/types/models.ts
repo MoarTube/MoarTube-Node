@@ -11,6 +11,8 @@
  * Generic pagination options for database queries
  */
 export interface PaginationOptions {
+  offset?: number;
+  search?: string;
   limit?: number;
 }
 

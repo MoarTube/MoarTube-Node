@@ -4,8 +4,7 @@
  * Handles serving video content (thumbnails, previews, posters, adaptive streams, progressive downloads).
  */
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import fs from 'node:fs';
-import path from 'node:path';
+import { servePublicFile } from '@/utils/public-file.js';
 import { BaseController } from '@controllers/base.js';
 import type { VideosService } from '@services/index.js';
 import { getConfig } from '@config/index.js';
@@ -59,11 +58,9 @@ interface ProgressiveParams {
  * - Serve progressive video files (with range support)
  */
 export class ExternalVideosController extends BaseController {
-  // Bandwidth tracking state
-  private segmentBandwidthCounter = 0;
-  private segmentBandwidthTimer: ReturnType<typeof setTimeout> | null = null;
-  private progressiveBandwidthCounter = 0;
-  private progressiveBandwidthTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly bandwidth = new Map<string, number>();
+  private readonly bandwidthWrites = new Set<Promise<void>>();
+  private bandwidthTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly videosService: VideosService;
 
   constructor(videosService: VideosService) {
@@ -101,18 +98,13 @@ export class ExternalVideosController extends BaseController {
 
       const config = getConfig();
 
-      const thumbnailPath = path.join(
+      return await servePublicFile(
+        request,
+        reply,
         config.paths.videosDirectoryPath,
-        videoId,
-        'images',
-        'thumbnail.jpg'
+        [videoId, 'images', 'thumbnail.jpg'],
+        'image/jpeg'
       );
-
-      if (!fs.existsSync(thumbnailPath)) {
-        return await this.sendError(reply, 'thumbnail not found', 404);
-      } else {
-        return await this.sendFile(reply, thumbnailPath, 'image/jpeg');
-      }
     } catch (error) {
       this.logger.error('ExternalVideosController.getThumbnail failed', error);
 
@@ -131,18 +123,13 @@ export class ExternalVideosController extends BaseController {
 
       const config = getConfig();
 
-      const previewPath = path.join(
+      return await servePublicFile(
+        request,
+        reply,
         config.paths.videosDirectoryPath,
-        videoId,
-        'images',
-        'preview.jpg'
+        [videoId, 'images', 'preview.jpg'],
+        'image/jpeg'
       );
-
-      if (!fs.existsSync(previewPath)) {
-        return await this.sendError(reply, 'preview not found', 404);
-      } else {
-        return await this.sendFile(reply, previewPath, 'image/jpeg');
-      }
     } catch (error) {
       this.logger.error('ExternalVideosController.getPreview failed', error);
 
@@ -161,18 +148,13 @@ export class ExternalVideosController extends BaseController {
 
       const config = getConfig();
 
-      const posterPath = path.join(
+      return await servePublicFile(
+        request,
+        reply,
         config.paths.videosDirectoryPath,
-        videoId,
-        'images',
-        'poster.jpg'
+        [videoId, 'images', 'poster.jpg'],
+        'image/jpeg'
       );
-
-      if (!fs.existsSync(posterPath)) {
-        return await this.sendError(reply, 'poster not found', 404);
-      } else {
-        return await this.sendFile(reply, posterPath, 'image/jpeg');
-      }
     } catch (error) {
       this.logger.error('ExternalVideosController.getPoster failed', error);
 
@@ -194,19 +176,14 @@ export class ExternalVideosController extends BaseController {
 
       const config = getConfig();
 
-      const manifestPath = path.join(
+      return await servePublicFile(
+        request,
+        reply,
         config.paths.videosDirectoryPath,
-        videoId,
-        'adaptive',
-        format,
-        manifestName
+        [videoId, 'adaptive', format, manifestName],
+        'application/vnd.apple.mpegurl',
+        { live: (request.params as AdaptiveManifestParams).type === 'dynamic' }
       );
-
-      if (!fs.existsSync(manifestPath)) {
-        return await this.sendError(reply, 'report with id does not exist', 404);
-      } else {
-        return await this.sendFile(reply, manifestPath, 'application/vnd.apple.mpegurl');
-      }
     } catch (error) {
       this.logger.error('Get adaptive manifest failed', error);
 
@@ -228,22 +205,18 @@ export class ExternalVideosController extends BaseController {
 
       const config = getConfig();
 
-      const segmentPath = path.join(
+      return await servePublicFile(
+        request,
+        reply,
         config.paths.videosDirectoryPath,
-        videoId,
-        'adaptive',
-        format,
-        resolution,
-        segmentName
+        [videoId, 'adaptive', format, resolution, segmentName],
+        'video/mp2t',
+        {
+          onBytes: (bytes) => {
+            this.trackProgressiveBandwidth(bytes, videoId);
+          },
+        }
       );
-
-      if (!fs.existsSync(segmentPath)) {
-        return await this.sendError(reply, 'adaptive segment not found', 404);
-      } else {
-        this.trackSegmentBandwidth(segmentPath, videoId);
-
-        return await this.sendFile(reply, segmentPath, 'video/mp2t');
-      }
     } catch (error) {
       this.logger.error('Get adaptive segment failed', error);
 
@@ -262,46 +235,19 @@ export class ExternalVideosController extends BaseController {
 
       const config = getConfig();
 
-      const filePath = path.join(
+      return await servePublicFile(
+        request,
+        reply,
         config.paths.videosDirectoryPath,
-        videoId,
-        'progressive',
-        format,
-        progressiveFilename
-      );
-
-      if (!fs.existsSync(filePath)) {
-        return await this.sendError(reply, 'progressive video not found', 404);
-      } else {
-        const stat = fs.statSync(filePath);
-        const fileSize = stat.size;
-        const range = request.headers.range;
-
-        if (typeof range === 'string' && range.length > 0) {
-          const parts = range.replace(/bytes=/, '').split('-');
-          const startPart = parts[0];
-          const endPart = parts[1];
-          const start =
-            startPart !== undefined && startPart !== '' ? Number.parseInt(startPart, 10) : 0;
-          const end =
-            endPart !== undefined && endPart !== '' ? Number.parseInt(endPart, 10) : fileSize - 1;
-          const chunkSize = end - start + 1;
-
-          this.trackProgressiveBandwidth(chunkSize, videoId);
-
-          return await this.sendChunk(
-            reply,
-            filePath,
-            start,
-            end,
-            fileSize,
-            chunkSize,
-            `video/${format}`
-          );
-        } else {
-          return await this.sendFile(reply, filePath, `video/${format}`);
+        [videoId, 'progressive', format, progressiveFilename],
+        format === 'ogv' ? 'video/ogg' : `video/${format}`,
+        {
+          ranges: true,
+          onBytes: (bytes) => {
+            this.trackProgressiveBandwidth(bytes, videoId);
+          },
         }
-      }
+      );
     } catch (error) {
       this.logger.error('Get progressive video failed', error);
 
@@ -309,47 +255,38 @@ export class ExternalVideosController extends BaseController {
     }
   };
 
-  /**
-   * Track bandwidth for adaptive segments (debounced)
-   */
-  private trackSegmentBandwidth(segmentPath: string, videoId: string): void {
-    fs.stat(segmentPath, (error, stats) => {
-      if (error) {
-        return;
-      }
-
-      this.segmentBandwidthCounter += stats.size;
-
-      if (this.segmentBandwidthTimer) {
-        clearTimeout(this.segmentBandwidthTimer);
-      }
-
-      this.segmentBandwidthTimer = setTimeout(() => {
-        const bandwidth = this.segmentBandwidthCounter;
-        this.segmentBandwidthCounter = 0;
-
-        // Update bandwidth in database
-        void this.videosService.updateBandwidth(videoId, bandwidth);
-      }, 100);
-    });
+  private trackProgressiveBandwidth(bytes: number, videoId: string): void {
+    if (!Number.isSafeInteger(bytes) || bytes <= 0) {
+      return;
+    }
+    this.bandwidth.set(videoId, (this.bandwidth.get(videoId) ?? 0) + bytes);
+    this.bandwidthTimer ??= setTimeout(() => {
+      this.bandwidthTimer = undefined;
+      void this.flushBandwidth();
+    }, 100);
   }
 
-  /**
-   * Track bandwidth for progressive downloads (debounced)
-   */
-  private trackProgressiveBandwidth(chunkSize: number, videoId: string): void {
-    this.progressiveBandwidthCounter += chunkSize;
-
-    if (this.progressiveBandwidthTimer) {
-      clearTimeout(this.progressiveBandwidthTimer);
+  async flushBandwidth(): Promise<void> {
+    clearTimeout(this.bandwidthTimer);
+    this.bandwidthTimer = undefined;
+    const pending = [...this.bandwidth];
+    this.bandwidth.clear();
+    const write = this.writeBandwidth(pending);
+    this.bandwidthWrites.add(write);
+    try {
+      await Promise.all(this.bandwidthWrites);
+    } finally {
+      this.bandwidthWrites.delete(write);
     }
+  }
 
-    this.progressiveBandwidthTimer = setTimeout(() => {
-      const bandwidth = this.progressiveBandwidthCounter;
-      this.progressiveBandwidthCounter = 0;
-
-      // Update bandwidth in database
-      void this.videosService.updateBandwidth(videoId, bandwidth);
-    }, 100);
+  private async writeBandwidth(pending: [string, number][]): Promise<void> {
+    for (const [videoId, bytes] of pending) {
+      try {
+        await this.videosService.updateBandwidth(videoId, bytes);
+      } catch (error) {
+        this.logger.error('Bandwidth update failed', error);
+      }
+    }
   }
 }

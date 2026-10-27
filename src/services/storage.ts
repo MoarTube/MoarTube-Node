@@ -6,12 +6,10 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Readable } from 'node:stream';
 
 import {
   S3Client,
   GetObjectCommand,
-  PutObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
@@ -79,32 +77,6 @@ export class StorageService extends BaseService {
   }
 
   /**
-   * Save a file to storage
-   */
-  async saveFile(key: string, data: Buffer, contentType?: string): Promise<void> {
-    return this.withErrorLogging('saveFile', async () => {
-      if (this.getStorageMode() === 'filesystem') {
-        this.saveToFilesystem(key, data);
-      } else {
-        await this.saveToS3(key, data, contentType);
-      }
-    });
-  }
-
-  /**
-   * Get a file from storage
-   */
-  async getFile(key: string): Promise<Buffer> {
-    return this.withErrorLogging('getFile', async () => {
-      if (this.getStorageMode() === 'filesystem') {
-        return this.getFromFilesystem(key);
-      } else {
-        return this.getFromS3(key);
-      }
-    });
-  }
-
-  /**
    * Get a file stream from storage
    */
   async getFileStream(key: string): Promise<NodeJS.ReadableStream> {
@@ -158,19 +130,6 @@ export class StorageService extends BaseService {
     } catch {
       return null;
     }
-  }
-
-  /**
-   * List files in a directory/prefix
-   */
-  async listFiles(prefix: string): Promise<FileMetadata[]> {
-    return this.withErrorLogging('listFiles', async () => {
-      if (this.getStorageMode() === 'filesystem') {
-        return this.listFilesystemFiles(prefix);
-      } else {
-        return this.listS3Files(prefix);
-      }
-    });
   }
 
   /**
@@ -228,23 +187,6 @@ export class StorageService extends BaseService {
     return path.join(config.paths.dataDirectoryPath, key);
   }
 
-  private saveToFilesystem(key: string, data: Buffer): void {
-    const filePath = this.resolveFilePath(key);
-    const dir = path.dirname(filePath);
-
-    // Ensure directory exists
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    fs.writeFileSync(filePath, data);
-  }
-
-  private getFromFilesystem(key: string): Buffer {
-    const filePath = this.resolveFilePath(key);
-    return fs.readFileSync(filePath);
-  }
-
   private deleteFromFilesystem(key: string): boolean {
     const filePath = this.resolveFilePath(key);
     if (fs.existsSync(filePath)) {
@@ -266,30 +208,6 @@ export class StorageService extends BaseService {
       size: stats.size,
       lastModified: stats.mtime,
     };
-  }
-
-  private listFilesystemFiles(prefix: string): FileMetadata[] {
-    const dirPath = this.resolveFilePath(prefix);
-    if (!fs.existsSync(dirPath) || !fs.statSync(dirPath).isDirectory()) {
-      return [];
-    }
-
-    const files: FileMetadata[] = [];
-    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-
-    for (const entry of entries) {
-      if (entry.isFile()) {
-        const filePath = path.join(dirPath, entry.name);
-        const stats = fs.statSync(filePath);
-        files.push({
-          key: path.join(prefix, entry.name),
-          size: stats.size,
-          lastModified: stats.mtime,
-        });
-      }
-    }
-
-    return files;
   }
 
   private deleteFilesystemDirectory(prefix: string): number {
@@ -339,32 +257,6 @@ export class StorageService extends BaseService {
       throw new Error('S3 client not configured');
     }
     return { client: this.s3Client, config: this.s3Config };
-  }
-
-  private async saveToS3(key: string, data: Buffer, contentType?: string): Promise<void> {
-    const { client, config } = this.ensureS3Client();
-
-    await client.send(
-      new PutObjectCommand({
-        Bucket: config.bucketName,
-        Key: key,
-        Body: data,
-        ContentType: contentType,
-      })
-    );
-  }
-
-  private async getFromS3(key: string): Promise<Buffer> {
-    const { client, config } = this.ensureS3Client();
-
-    const response = await client.send(
-      new GetObjectCommand({
-        Bucket: config.bucketName,
-        Key: key,
-      })
-    );
-
-    return this.streamToBuffer(response.Body as Readable);
   }
 
   private async getStreamFromS3(key: string): Promise<NodeJS.ReadableStream> {
@@ -434,77 +326,35 @@ export class StorageService extends BaseService {
     }
   }
 
-  private async listS3Files(prefix: string): Promise<FileMetadata[]> {
+  private async deleteS3Directory(prefix: string): Promise<number> {
     const { client, config } = this.ensureS3Client();
 
-    const files: FileMetadata[] = [];
-    let continuationToken: string | undefined;
-    let isTruncated = true;
-
-    while (isTruncated) {
-      const response = await client.send(
+    let count = 0,
+      continuationToken: string | undefined;
+    do {
+      const page = await client.send(
         new ListObjectsV2Command({
           Bucket: config.bucketName,
           Prefix: prefix,
           ContinuationToken: continuationToken,
         })
       );
-
-      if (response.Contents !== undefined) {
-        for (const obj of response.Contents) {
-          if (obj.Key !== undefined && obj.Key !== '') {
-            let lastModified;
-
-            if (obj.LastModified !== undefined) {
-              lastModified = obj.LastModified;
-            } else {
-              lastModified = new Date();
-            }
-
-            files.push({
-              key: obj.Key,
-              size: obj.Size ?? 0,
-              lastModified: lastModified,
-            });
-          }
-        }
-      }
-
-      if (response.IsTruncated === undefined) {
-        isTruncated = false;
-      } else {
-        isTruncated = response.IsTruncated;
-      }
-
-      continuationToken = response.NextContinuationToken;
-    }
-
-    return files;
-  }
-
-  private async deleteS3Directory(prefix: string): Promise<number> {
-    const { client, config } = this.ensureS3Client();
-
-    const files = await this.listS3Files(prefix);
-    if (files.length === 0) {
-      return 0;
-    }
-
-    // Delete in batches of 1000 (S3 limit)
-    const batchSize = 1000;
-    for (let i = 0; i < files.length; i += batchSize) {
-      const batch = files.slice(i, i + batchSize);
-      await client.send(
-        new DeleteObjectsCommand({
-          Bucket: config.bucketName,
-          Delete: {
-            Objects: batch.map((f) => ({ Key: f.key })),
-          },
-        })
+      const keys = (page.Contents ?? []).flatMap((object) =>
+        object.Key ? [{ Key: object.Key }] : []
       );
-    }
-
-    return files.length;
+      if (keys.length) {
+        await client.send(
+          new DeleteObjectsCommand({ Bucket: config.bucketName, Delete: { Objects: keys } })
+        );
+        count += keys.length;
+      }
+      const next = page.IsTruncated ? page.NextContinuationToken : undefined;
+      if (page.IsTruncated && (!next || next === continuationToken)) {
+        throw new Error('Invalid S3 continuation token');
+      }
+      continuationToken = next;
+    } while (continuationToken);
+    return count;
   }
 
   private async copyS3File(sourceKey: string, destKey: string): Promise<void> {
@@ -517,16 +367,5 @@ export class StorageService extends BaseService {
         Key: destKey,
       })
     );
-  }
-
-  private async streamToBuffer(stream: Readable): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-      stream.on('end', () => {
-        resolve(Buffer.concat(chunks));
-      });
-      stream.on('error', reject);
-    });
   }
 }

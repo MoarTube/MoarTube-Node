@@ -1,3 +1,4 @@
+import { WorkPool } from '@/utils/work-pool.js';
 /**
  * WebSocket Manager
  *
@@ -14,6 +15,7 @@ import type {
   BroadcastOptions,
   LiveStreamWatchingCounts,
 } from '@/types/index.js';
+import { sendBounded } from '@/utils/socket-budget.js';
 import {
   type HandlerContext,
   type WebSocketHandler,
@@ -51,6 +53,7 @@ export interface WebSocketManagerOptions {
  * and provides broadcast functionality.
  */
 export class WebSocketManager {
+  private readonly incoming = new WeakMap<ExtendedWebSocket, WorkPool>();
   private readonly handlers: WebSocketHandler[] = [];
   private readonly clients: Set<ExtendedWebSocket> = new Set();
   private readonly logger: LoggerType;
@@ -293,14 +296,27 @@ export class WebSocketManager {
     for (const handler of this.handlers) {
       if (handler.canHandle(message)) {
         handled = true;
+        let pool = this.incoming.get(client);
+        if (!pool) {
+          pool = new WorkPool(4, 0);
+          this.incoming.set(client, pool);
+        }
+        const release = pool.tryAcquire();
+        if (!release) {
+          client.close(1013, 'Too much pending work');
+          return;
+        }
         try {
-          void Promise.resolve(handler.handle(client, message, context)).catch((error: unknown) => {
-            this.logger.error(`Handler ${handler.name} error`, error, {
-              eventName: message.eventName,
-            });
-          });
+          void Promise.resolve(handler.handle(client, message, context))
+            .catch((error: unknown) => {
+              this.logger.error('Handler ' + handler.name + ' error', error, {
+                eventName: message.eventName,
+              });
+            })
+            .finally(release);
         } catch (error) {
-          this.logger.error(`Handler ${handler.name} sync error`, error, {
+          release();
+          this.logger.error('Handler ' + handler.name + ' sync error', error, {
             eventName: message.eventName,
           });
         }
@@ -360,7 +376,7 @@ export class WebSocketManager {
       }
 
       try {
-        client.send(messageStr);
+        sendBounded(client, messageStr);
       } catch (error) {
         this.logger.error('Failed to send message to client', error, {
           clientId: client.clientId,
@@ -386,7 +402,7 @@ export class WebSocketManager {
         (client.socketType === 'admin' || client.isAuthenticated === true)
       ) {
         try {
-          client.send(JSON.stringify(message));
+          sendBounded(client, JSON.stringify(message));
         } catch (error) {
           this.logger.error('Failed to send to admin', error);
         }
@@ -403,7 +419,7 @@ export class WebSocketManager {
     }
 
     try {
-      client.send(JSON.stringify(message));
+      sendBounded(client, JSON.stringify(message));
     } catch (error) {
       this.logger.error('Failed to send message', error, {
         clientId: client.clientId,

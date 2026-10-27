@@ -3,6 +3,7 @@
  *
  * Handles video report management endpoints.
  */
+import { pageOptions } from '@/utils/pagination.js';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 
 import { BaseController } from '@controllers/base.js';
@@ -43,11 +44,17 @@ export class ReportsVideosController extends BaseController {
    *
    * Get all video reports
    */
-  getAllReports = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+  getAllReports = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const reports = await this.reportsService.getVideoReports();
+      const reports = await this.reportsService.getVideoReports({
+        ...pageOptions(request.query),
+        search: ((request.query as { search?: string } | undefined)?.search ?? '').slice(0, 100),
+      });
 
-      return await this.sendSuccess(reply, { reports });
+      return await this.sendSuccess(reply, {
+        reports: reports.slice(0, 100),
+        hasMore: reports.length > 100,
+      });
     } catch (error) {
       this.logger.error('Failed to get all video reports', error);
 

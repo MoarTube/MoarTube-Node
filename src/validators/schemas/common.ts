@@ -4,6 +4,7 @@
  * Reusable validation schemas for common field types across the application.
  */
 import { z } from 'zod';
+import { isPathSegment } from '@/utils/public-path.js';
 
 // ============================================================================
 // Basic Types
@@ -48,7 +49,7 @@ export const optionalBooleanSchema = booleanSchema.optional();
 /**
  * Filename schema
  */
-export const filenameSchema = z.string().min(1).max(255);
+export const filenameSchema = z.string().min(1).max(255).refine(isPathSegment, 'Invalid filename');
 
 // ============================================================================
 // Email Schemas
