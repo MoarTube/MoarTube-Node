@@ -483,6 +483,20 @@ describe('config/index.ts', () => {
   });
 
   describe('File watching', () => {
+    it('should retain settings during an incomplete write and reload the completed file', () => {
+      const config = Config.initialize(mockBaseDir);
+      const watchCallback = mockFs.watch.mock.calls[1][1];
+      mockFs.readFileSync.mockReturnValueOnce('');
+
+      expect(() => watchCallback('change')).not.toThrow();
+      expect(config.nodeSettings).toEqual(mockNodeSettings);
+
+      const updated = { ...mockNodeSettings, nodeName: 'Completed write' };
+      mockFs.readFileSync.mockReturnValueOnce(JSON.stringify(updated));
+      watchCallback('change');
+      expect(config.nodeSettings).toEqual(updated);
+    });
+
     it('should set up file watcher for settings file', () => {
       Config.initialize(mockBaseDir);
 

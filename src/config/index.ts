@@ -227,7 +227,13 @@ class Config {
    * Useful when settings file has been manually edited
    */
   reloadNodeSettings(): void {
-    this._nodeSettings = this.loadNodeSettings();
+    try {
+      // Another worker may still be writing when fs.watch reports a change.
+      // Keep the last valid settings until a subsequent change can be read.
+      this._nodeSettings = this.loadNodeSettings();
+    } catch (error) {
+      this.logger.error('Failed to reload node settings', error);
+    }
   }
 
   /**
