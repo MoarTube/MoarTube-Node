@@ -527,6 +527,7 @@ describe('config/schema.ts', () => {
     it('should export correct inferred types', () => {
       // Test that the types are properly inferred
       const nodeSettings: NodeSettingsValidated = {
+        isIndexing: false,
         nodeListeningPort: 8080,
         isSecure: false,
         publicNodeProtocol: 'https',

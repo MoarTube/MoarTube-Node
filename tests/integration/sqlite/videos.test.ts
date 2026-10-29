@@ -20,8 +20,8 @@ describe('SQLite videos (real SQL)', () => {
     expect(columns.map((column) => column.name).sort()).toEqual(
       Object.keys(getTableColumns(videos)).sort()
     );
-    expect(columns).toHaveLength(35);
-    for (const column of ['is_indexing', 'is_indexed', 'is_index_outdated']) {
+    expect(columns).toHaveLength(36);
+    for (const column of ['is_indexing', 'is_index_outdated']) {
       expect(getTableColumns(videos)).not.toHaveProperty(column);
     }
   });
@@ -32,6 +32,7 @@ describe('SQLite videos (real SQL)', () => {
       id: expect.any(Number),
       views: 0,
       is_published: false,
+      is_indexed: false,
       is_comments_enabled: true,
       source_file_extension: null,
       length_timestamp: null,
@@ -43,6 +44,7 @@ describe('SQLite videos (real SQL)', () => {
     expect(await repository.findById('missing')).toBeNull();
     expect(await repository.findByDbId(-1)).toBeNull();
     const changes = {
+      is_indexed: true,
       is_published: true,
       source_file_extension: 'mp4',
       outputs: JSON.stringify({ '1080p': '✓' }),

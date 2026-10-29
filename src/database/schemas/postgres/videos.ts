@@ -51,6 +51,7 @@ export const videos = pgTable('videos', {
   is_live: boolean('is_live').notNull().default(false),
 
   // Status flags
+  is_indexed: boolean('is_indexed').notNull().default(false),
   is_error: boolean('is_error').notNull().default(false),
   is_finalized: boolean('is_finalized').notNull().default(false),
   is_hidden: boolean('is_hidden').notNull().default(false),

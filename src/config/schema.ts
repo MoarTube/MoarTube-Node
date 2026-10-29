@@ -107,6 +107,7 @@ export const NodeSettingsSchema = z.object({
   cloudflareTurnstileSecretKey: z.string().default(''),
 
   // Feature Flags
+  isIndexing: z.boolean().default(false),
   isCommentsEnabled: z.boolean().default(true),
   isLikesEnabled: z.boolean().default(true),
   isDislikesEnabled: z.boolean().default(true),

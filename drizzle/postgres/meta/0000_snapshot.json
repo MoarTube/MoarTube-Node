@@ -1,5 +1,5 @@
 {
-  "id": "039d9f40-69a7-4d5f-9403-8c241c49e791",
+  "id": "4016d1c6-86c6-4e03-a97a-e90272a2e8ee",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -767,6 +767,13 @@
         },
         "is_live": {
           "name": "is_live",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_indexed": {
+          "name": "is_indexed",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

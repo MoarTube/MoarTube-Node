@@ -116,6 +116,7 @@ CREATE TABLE "videos" (
 	"is_stream_recorded_remotely" boolean DEFAULT false NOT NULL,
 	"is_stream_recorded_locally" boolean DEFAULT false NOT NULL,
 	"is_live" boolean DEFAULT false NOT NULL,
+	"is_indexed" boolean DEFAULT false NOT NULL,
 	"is_error" boolean DEFAULT false NOT NULL,
 	"is_finalized" boolean DEFAULT false NOT NULL,
 	"is_hidden" boolean DEFAULT false NOT NULL,

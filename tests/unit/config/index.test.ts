@@ -96,6 +96,7 @@ describe('config/index.ts', () => {
 
 
   const mockNodeSettings = {
+    isIndexing: false,
     nodeListeningPort: 8080,
     isSecure: false,
     publicNodeProtocol: 'https',

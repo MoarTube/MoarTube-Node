@@ -197,6 +197,7 @@ class Config {
       isDislikesEnabled: true,
       isReportsEnabled: true,
       isLiveChatEnabled: true,
+      isIndexing: false,
       databaseConfig: {
         databaseDialect: 'sqlite',
       },

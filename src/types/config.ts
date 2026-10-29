@@ -97,6 +97,7 @@ export interface NodeSettings {
   cloudflareTurnstileSecretKey: string;
 
   // Feature Flags
+  isIndexing: boolean;
   isCommentsEnabled: boolean;
   isLikesEnabled: boolean;
   isDislikesEnabled: boolean;

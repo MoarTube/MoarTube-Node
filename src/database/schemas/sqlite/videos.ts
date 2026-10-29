@@ -55,6 +55,7 @@ export const videos = sqliteTable('videos', {
   is_live: integer('is_live', { mode: 'boolean' }).notNull().default(false),
 
   // Status flags
+  is_indexed: integer('is_indexed', { mode: 'boolean' }).notNull().default(false),
   is_error: integer('is_error', { mode: 'boolean' }).notNull().default(false),
   is_finalized: integer('is_finalized', { mode: 'boolean' }).notNull().default(false),
   is_hidden: integer('is_hidden', { mode: 'boolean' }).notNull().default(false),

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "bdf19929-f0e6-427d-9e44-66f70032d125",
+  "id": "1811e2c3-a5fe-435c-8663-a81a3f917e7f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "comment_changes": {
@@ -753,6 +753,14 @@
         },
         "is_live": {
           "name": "is_live",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "is_indexed": {
+          "name": "is_indexed",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,

@@ -120,6 +120,7 @@ CREATE TABLE `videos` (
 	`is_stream_recorded_remotely` integer DEFAULT false NOT NULL,
 	`is_stream_recorded_locally` integer DEFAULT false NOT NULL,
 	`is_live` integer DEFAULT false NOT NULL,
+	`is_indexed` integer DEFAULT false NOT NULL,
 	`is_error` integer DEFAULT false NOT NULL,
 	`is_finalized` integer DEFAULT false NOT NULL,
 	`is_hidden` integer DEFAULT false NOT NULL,
