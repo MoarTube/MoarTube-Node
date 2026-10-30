@@ -33,6 +33,9 @@ export const archiveIdParamsSchema = z.object({
  */
 export const reportsQuerySchema = z.object({
   timestamp: timestampSchema.optional(),
+  search: z.string().max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(101).optional(),
+  offset: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
 });
 
 // ============================================================================

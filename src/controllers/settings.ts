@@ -1,3 +1,5 @@
+import cluster from 'node:cluster';
+import { getMemoryMetrics } from '@/utils/memory-metrics.js';
 /**
  * Settings Controller
  *
@@ -10,6 +12,7 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { rm } from 'node:fs/promises';
+import { getStorageMetrics, type StorageMetrics } from '@/utils/storage-metrics.js';
 import { Readable } from 'node:stream';
 import { writeUpload } from '@/utils/stream-files.js';
 import { rewriteManifestFile } from '@/utils/manifest-transform.js';
@@ -116,6 +119,54 @@ export interface SecureQuery {
  * - Database export/import
  */
 export class SettingsController extends BaseController {
+  public getMemoryMetrics = async (
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    reply.header('Cache-Control', 'no-store');
+    try {
+      // A worker reports the whole Node cluster, including the primary and sibling workers.
+      const rootPid = cluster.isWorker ? process.ppid : process.pid;
+      return await this.sendSuccess(reply, { metrics: await getMemoryMetrics(rootPid) });
+    } catch (error) {
+      this.logger.error('Failed to load memory metrics', error);
+      return await this.sendError(reply, 'Unable to load memory metrics', 500);
+    }
+  };
+
+  private metricsScan: Promise<StorageMetrics> | undefined;
+
+  public getMetrics = async (
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    reply.header('Cache-Control', 'no-store');
+    try {
+      const settings = this.settingsService.getNodeSettings() as {
+        storageConfig: { storageMode: string };
+      };
+      if (settings.storageConfig.storageMode === 's3provider') {
+        return await this.sendSuccess(reply, {
+          metrics: {
+            storageMode: 's3provider',
+            mediaBytes: null,
+            availableBytes: null,
+            totalBytes: null,
+          },
+        });
+      }
+      this.metricsScan ??= getStorageMetrics(
+        path.join(getConfig().paths.dataDirectoryPath, 'media')
+      ).finally(() => {
+        this.metricsScan = undefined;
+      });
+      return await this.sendSuccess(reply, { metrics: await this.metricsScan });
+    } catch (error) {
+      this.logger.error('Failed to load storage metrics', error);
+      return await this.sendError(reply, 'Unable to load storage metrics', 500);
+    }
+  };
+
   constructor(
     private readonly settingsService: SettingsService,
     private readonly videosService: VideosService,

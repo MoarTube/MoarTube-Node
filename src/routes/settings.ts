@@ -45,6 +45,18 @@ export function settingsRoutes(
   // Settings Root
   // ============================================================================
 
+  fastify.get(
+    '/metrics/disk',
+    { preHandler: [fastify.authenticate], schema: { tags: ['Settings'] } },
+    controller.getMetrics
+  );
+
+  fastify.get(
+    '/metrics/memory',
+    { preHandler: [fastify.authenticate], schema: { tags: ['Settings'] } },
+    controller.getMemoryMetrics
+  );
+
   // Get all settings
   fastify.get(
     '/',

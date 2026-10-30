@@ -1,3 +1,9 @@
+vi.mock('@/utils/memory-metrics.js', () => ({ getMemoryMetrics: vi.fn() }));
+import { getMemoryMetrics } from '@/utils/memory-metrics.js';
+import path from 'node:path';
+import cluster from 'node:cluster';
+vi.mock('@/utils/storage-metrics.js', () => ({ getStorageMetrics: vi.fn() }));
+import { getStorageMetrics } from '@/utils/storage-metrics.js';
 vi.mock('@/utils/manifest-transform.js', () => ({
   rewriteManifestFile: vi.fn().mockResolvedValue(undefined),
 }));
@@ -193,6 +199,68 @@ describe('SettingsController', () => {
     } finally {
       schedule.mockRestore();
     }
+  });
+
+  describe('getMemoryMetrics', () => {
+    it('measures the primary process tree when handling a request in a cluster worker', async () => {
+      const original = Object.getOwnPropertyDescriptor(cluster, 'isWorker')!;
+      Object.defineProperty(cluster, 'isWorker', { configurable: true, value: true });
+      const metrics = { appBytes: 123, availableBytes: 456, totalBytes: 789 };
+      vi.mocked(getMemoryMetrics).mockResolvedValueOnce(metrics);
+      try {
+        await controller.getMemoryMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+        expect(getMemoryMetrics).toHaveBeenCalledWith(process.ppid);
+        expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics });
+      } finally {
+        Object.defineProperty(cluster, 'isWorker', original);
+      }
+    });
+    it('returns RAM metrics independently of S3 storage', async () => {
+      const metrics = { appBytes: 123, availableBytes: 456, totalBytes: 789 };
+      vi.mocked(getMemoryMetrics).mockResolvedValueOnce(metrics);
+      await controller.getMemoryMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      expect(getMemoryMetrics).toHaveBeenCalledWith(process.pid);
+      expect(mockReply.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics });
+      expect(mockSettingsService.getNodeSettings).not.toHaveBeenCalled();
+    });
+    it('returns an error instead of a misleading zero when the OS query fails', async () => {
+      vi.mocked(getMemoryMetrics).mockRejectedValueOnce(new Error('Permission denied'));
+      await controller.getMemoryMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: true, message: 'Unable to load memory metrics' });
+    });
+  });
+
+  describe('getMetrics', () => {
+    it('returns filesystem metrics with no HTTP caching', async () => {
+      mockSettingsService.getNodeSettings.mockReturnValue({ storageConfig: { storageMode: 'filesystem' } });
+      const metrics = { storageMode: 'filesystem' as const, mediaBytes: 123, availableBytes: 456, totalBytes: 789 };
+      vi.mocked(getStorageMetrics).mockResolvedValueOnce(metrics);
+      vi.mocked(getConfig).mockReturnValueOnce({ paths: { dataDirectoryPath: '/data' } } as never);
+      await controller.getMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      expect(getStorageMetrics).toHaveBeenCalledWith(path.join('/data', 'media'));
+      expect(mockReply.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics });
+    });
+
+    it('reports elastic S3 capacity without reading local storage or listing the bucket', async () => {
+      mockSettingsService.getNodeSettings.mockReturnValue({ storageConfig: { storageMode: 's3provider' } });
+      await controller.getMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      expect(getStorageMetrics).not.toHaveBeenCalled();
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics: {
+        storageMode: 's3provider', mediaBytes: null, availableBytes: null, totalBytes: null,
+      } });
+    });
+
+    it('reports scan errors instead of zero usage', async () => {
+      mockSettingsService.getNodeSettings.mockReturnValue({ storageConfig: { storageMode: 'filesystem' } });
+      vi.mocked(getConfig).mockReturnValueOnce({ paths: { dataDirectoryPath: '/data' } } as never);
+      vi.mocked(getStorageMetrics).mockRejectedValueOnce(new Error('Permission denied'));
+      await controller.getMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: true, message: 'Unable to load storage metrics' });
+    });
   });
 
   describe('constructor', () => {
