@@ -56,14 +56,17 @@ export function parseMacProcessCpu(output: string): ProcessCpu[] {
       if (match === null) {
         return [];
       }
-      const clock = match[3] ?? '';
-      const [days, time] = clock.includes('-') ? clock.split('-') : ['0', clock];
-      const parts = (time ?? '').split(':').map(Number);
+      // A successful match always contains all four required capture groups.
+      const clock = match[3] as string;
+      const [days, time] = clock.includes('-')
+        ? (clock.split('-') as [string, string])
+        : ['0', clock];
+      const parts = time.split(':').map(Number);
       const seconds = parts.reduce((sum, part) => sum * 60 + part, 0) + Number(days) * 86400;
       const entry = {
         pid: Number(match[1]),
         parentPid: Number(match[2]),
-        started: match[4] ?? '',
+        started: match[4] as string,
         milliseconds: seconds * 1000,
       };
       return valid(entry) ? [entry] : [];
@@ -166,15 +169,13 @@ export function processTreeCpuDelta(
   const visited = new Set<number>();
   let milliseconds = 0;
   while (pending.length > 0) {
-    const pid = pending.pop();
-    if (pid === undefined || visited.has(pid) || pid === after.helperPid) {
+    // The queue is nonempty, and only contains PIDs from the current snapshot.
+    const pid = pending.pop() as number;
+    if (visited.has(pid) || pid === after.helperPid) {
       continue;
     }
     visited.add(pid);
-    const entry = current.get(pid);
-    if (entry === undefined) {
-      continue;
-    }
+    const entry = current.get(pid) as ProcessCpu;
     const old = previous.get(pid);
     // A new process or reused PID must not subtract the previous process's CPU time.
     const baseline = old?.started === entry.started ? old.milliseconds : 0;
