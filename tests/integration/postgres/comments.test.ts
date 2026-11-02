@@ -13,6 +13,24 @@ describe('PostgreSQL comments (real SQL)', () => {
   });
   afterEach(() => database?.close());
 
+  it('finds sanitized Unicode comments using their readable ampersand text', async () => {
+    const service = new CommentsService(
+      { info: () => {}, error: () => {} } as never,
+      repository as never
+    );
+    const created = await service.createComment({
+      videoId: 'encoded-search',
+      commentPlainText: 'Fish & chips <b>café</b>',
+    });
+    expect(created.comment_plain_text_sanitized).toBe('Fish &amp; chips café');
+    expect(
+      await service.search(10, 'descending', Date.now() + 1, 'encoded-search', 'Fish & chips café')
+    ).toEqual([created]);
+    expect(
+      await service.search(10, 'descending', Date.now() + 1, 'encoded-search', 'nonexistent')
+    ).toEqual([]);
+  });
+
   it('batches authoritative backlinks and synchronizes insert, edit, and deletion metadata', async () => {
     const first = await repository.create(comment('a', 100));
     const start = await repository.getCacheVersion('a');

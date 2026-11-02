@@ -1,4 +1,5 @@
 import cluster from 'node:cluster';
+import { getCpuMetrics } from '@/utils/cpu-metrics.js';
 import { getMemoryMetrics } from '@/utils/memory-metrics.js';
 /**
  * Settings Controller
@@ -28,6 +29,14 @@ import type {
 } from '@services/index.js';
 import { getConfig } from '@config/index.js';
 import { isCloudflareCredentialsValid } from '@utils/index.js';
+import {
+  distributionSignal,
+  withCloudflareDeadline,
+  withCloudflareRecovery,
+} from '@/utils/cloudflare-http.js';
+import { storageIdentity } from '@/utils/cdn-settings.js';
+import type { StorageConfig } from '@/types/config.js';
+import { withSettingsChange } from '@/utils/settings-change.js';
 
 /**
  * Request body interfaces
@@ -134,6 +143,20 @@ export class SettingsController extends BaseController {
     }
   };
 
+  public getCpuMetrics = async (
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    reply.header('Cache-Control', 'no-store');
+    try {
+      const rootPid = cluster.isWorker ? process.ppid : process.pid;
+      return await this.sendSuccess(reply, { metrics: await getCpuMetrics(rootPid) });
+    } catch (error) {
+      this.logger.error('Failed to load CPU metrics', error);
+      return await this.sendError(reply, 'Unable to load CPU metrics', 500);
+    }
+  };
+
   private metricsScan: Promise<StorageMetrics> | undefined;
 
   public getMetrics = async (
@@ -183,6 +206,7 @@ export class SettingsController extends BaseController {
    */
   getSettings = (_request: FastifyRequest, reply: FastifyReply): void => {
     try {
+      getConfig().reloadNodeSettings();
       const nodeSettings = this.settingsService.getNodeSettings();
       const version = this.settingsService.getVersion();
 
@@ -547,46 +571,143 @@ export class SettingsController extends BaseController {
    */
   networkExternal = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
-      const { publicNodeProtocol, publicNodeAddress, publicNodePort } =
-        request.body as NetworkExternalBody;
+      await this.changeDistributionSettings(async (config) => {
+        const { publicNodeProtocol, publicNodeAddress, publicNodePort } =
+          request.body as NetworkExternalBody;
 
-      // Update the standalone node network settings
-      await this.settingsService.updateNetworkSettings(
-        publicNodeProtocol,
-        publicNodeAddress,
-        publicNodePort
-      );
+        const previous = config.nodeSettings;
+        if (previous.isCloudflareCdnEnabled) {
+          await this.cloudflareService.validateCdnConfiguration(
+            previous.cloudflareEmailAddress,
+            previous.cloudflareZoneId,
+            previous.cloudflareGlobalApiKey,
+            { publicNodeAddress, storageConfig: previous.storageConfig }
+          );
+        }
 
-      // Rewrite HLS manifest URLs if using filesystem storage
-      await this.rewriteAllManifestUrls();
+        // Update the standalone node network settings
+        try {
+          await this.settingsService.updateNetworkSettings(
+            publicNodeProtocol,
+            publicNodeAddress,
+            publicNodePort
+          );
 
+          // Rewrite HLS manifest URLs if using filesystem storage
+          await this.rewriteAllManifestUrls(config);
+
+          await this.cloudflareService.purgeNodePage();
+          await this.cloudflareService.purgeAllWatchPages();
+        } catch (error) {
+          config.updateNodeSettings({
+            publicNodeProtocol: previous.publicNodeProtocol,
+            publicNodeAddress: previous.publicNodeAddress,
+            publicNodePort: previous.publicNodePort,
+          });
+          try {
+            await withCloudflareRecovery(() => this.rewriteAllManifestUrls(config));
+          } catch (recoveryError) {
+            throw new AggregateError(
+              [error, recoveryError],
+              'Network change failed and manifest recovery is incomplete.'
+            );
+          }
+          throw error;
+        }
+
+        return;
+      });
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error updating external network settings', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.distributionFailure(reply, error);
     }
   };
+
+  private async changeDistributionSettings<T>(
+    operation: (config: ReturnType<typeof getConfig>) => Promise<T>,
+    credentialRepair?: StorageConfig
+  ): Promise<T> {
+    const config = getConfig();
+    return withCloudflareDeadline(() =>
+      withSettingsChange(config.paths.nodeSettingsPath, async () => {
+        config.reloadNodeSettings();
+        for (let offset = 0; ; offset += 100) {
+          const videos = await this.videosService.getAllVideosData({ limit: 100, offset });
+          const draining = videos.some((video) => {
+            const meta: unknown = video.meta;
+            return (
+              typeof meta === 'object' &&
+              meta !== null &&
+              'streamCleanupAt' in meta &&
+              typeof meta.streamCleanupAt === 'number'
+            );
+          });
+          if (
+            draining &&
+            (credentialRepair === undefined ||
+              storageIdentity(credentialRepair) !==
+                storageIdentity(config.nodeSettings.storageConfig))
+          ) {
+            throw new Error(
+              'Wait for stopped streams to finish draining before changing distribution settings.'
+            );
+          }
+          if (videos.some((video) => video.isStreaming || video.isPublishing)) {
+            throw new Error(
+              'Stop active streams and publishing jobs before changing distribution settings.'
+            );
+          }
+          if (videos.length < 100) {
+            break;
+          }
+        }
+        return operation(config);
+      })
+    );
+  }
+
+  private async completeMediaMigration(config: ReturnType<typeof getConfig>): Promise<void> {
+    try {
+      await this.rewriteAllManifestUrls(config);
+    } catch (error) {
+      throw new Error(
+        'Settings saved, but media migration or invalidation is incomplete; reapply these settings to retry.',
+        { cause: error }
+      );
+    }
+  }
+
+  private async distributionFailure(reply: FastifyReply, error: unknown): Promise<FastifyReply> {
+    return await this.sendError(
+      reply,
+      error instanceof Error ? error.message : 'error communicating with the MoarTube node'
+    );
+  }
 
   /**
    * Rewrite all HLS manifest URLs if using filesystem storage
    */
-  private async rewriteAllManifestUrls(): Promise<void> {
-    const config = getConfig();
-
-    const nodeSettings = config.nodeSettings;
-
-    if (nodeSettings.storageConfig.storageMode === 'filesystem') {
-      const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
-      const videosDirectoryPath = config.paths.videosDirectoryPath;
-      for (let offset = 0; ; offset += 100) {
-        const videos = await this.videosService.getAllVideosData({ limit: 100, offset });
-        for (const video of videos) {
-          await this.rewriteVideoManifests(video, videosDirectoryPath, externalVideosBaseUrl);
+  private async rewriteAllManifestUrls(config = getConfig()): Promise<void> {
+    const settings = config.nodeSettings;
+    const base = config.getExternalVideosBaseUrl();
+    for (let offset = 0; ; offset += 100) {
+      const videos = await this.videosService.getAllVideosData({ limit: 100, offset });
+      for (const video of videos) {
+        if (settings.storageConfig.storageMode === 'filesystem') {
+          await this.rewriteVideoManifests(video, config.paths.videosDirectoryPath, base);
+          await this.cloudflareService.purgeAdaptiveVideos(video.videoId, undefined, true);
+        } else if (video.isPublished && video.outputs.m3u8.length > 0) {
+          await this.videosService.rewriteS3VideoManifests(video.videoId, video.outputs.m3u8, base);
+          await this.cloudflareService.purgeVideo(video.videoId);
+        } else {
+          continue;
         }
-        if (videos.length < 100) {
-          break;
-        }
+        await this.cloudflareService.purgeWatchPages([video.videoId], true);
+      }
+      if (videos.length < 100) {
+        break;
       }
     }
   }
@@ -605,7 +726,7 @@ export class SettingsController extends BaseController {
       return;
     }
 
-    // Update master manifest
+    // Publish the master only after all renditions have been rewritten successfully.
     const masterManifestPath = path.join(
       videosDirectoryPath,
       video.videoId,
@@ -613,10 +734,6 @@ export class SettingsController extends BaseController {
       'm3u8',
       'manifest-master.m3u8'
     );
-    if (fs.existsSync(masterManifestPath)) {
-      await this.rewriteManifestUrls(masterManifestPath, externalVideosBaseUrl);
-    }
-
     // Update resolution-specific manifests
     for (const resolution of outputs.m3u8) {
       const manifestPath = path.join(
@@ -630,6 +747,9 @@ export class SettingsController extends BaseController {
         await this.rewriteManifestUrls(manifestPath, externalVideosBaseUrl);
       }
     }
+    if (fs.existsSync(masterManifestPath)) {
+      await this.rewriteManifestUrls(masterManifestPath, externalVideosBaseUrl);
+    }
   }
 
   /**
@@ -640,11 +760,15 @@ export class SettingsController extends BaseController {
     externalVideosBaseUrl: string
   ): Promise<void> {
     try {
-      await rewriteManifestFile(manifestPath, (line) =>
-        line.replaceAll(/(https?:\/\/).*?(\/external\/)/g, externalVideosBaseUrl + '$2')
+      await rewriteManifestFile(
+        manifestPath,
+        (line) => line.replaceAll(/(https?:\/\/).*?(\/external\/)/g, externalVideosBaseUrl + '$2'),
+        false,
+        distributionSignal()
       );
     } catch (error) {
       this.logger.error('Failed to rewrite manifest', error);
+      throw error;
     }
   }
 
@@ -658,66 +782,100 @@ export class SettingsController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const { cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey } =
-        request.body as CloudflareConfigureBody;
+      await this.changeDistributionSettings(async (config) => {
+        const { cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey } =
+          request.body as CloudflareConfigureBody;
 
-      // Validate Cloudflare credentials
-      const isValid = await isCloudflareCredentialsValid(
-        cloudflareEmailAddress,
-        cloudflareZoneId,
-        cloudflareGlobalApiKey
-      );
+        // Validate Cloudflare credentials
+        const isValid = await isCloudflareCredentialsValid(
+          cloudflareEmailAddress,
+          cloudflareZoneId,
+          cloudflareGlobalApiKey
+        );
 
-      if (!isValid) {
-        return await this.sendError(reply, 'could not validate the Cloudflare credentials');
-      }
+        if (!isValid) {
+          throw new Error('could not validate the Cloudflare credentials');
+        }
 
-      // Get current storage config for DNS record setup
-      const config = getConfig();
+        // Get current storage config for DNS record setup
+        const storageConfig = config.nodeSettings.storageConfig;
+        await this.cloudflareService.validateCdnConfiguration(
+          cloudflareEmailAddress,
+          cloudflareZoneId,
+          cloudflareGlobalApiKey,
+          { publicNodeAddress: config.nodeSettings.publicNodeAddress, storageConfig }
+        );
 
-      const storageConfig = config.nodeSettings.storageConfig;
+        const previous = config.nodeSettings;
+        await this.cloudflareService.withConfigurationRollback(
+          cloudflareEmailAddress,
+          cloudflareZoneId,
+          cloudflareGlobalApiKey,
+          async () => {
+            // Set new CDN configuration
+            await this.cloudflareService.setCdnConfiguration(
+              cloudflareEmailAddress,
+              cloudflareZoneId,
+              cloudflareGlobalApiKey
+            );
 
-      // Reset any existing CDN configuration
-      await this.cloudflareService.resetCdn(
-        cloudflareEmailAddress,
-        cloudflareZoneId,
-        cloudflareGlobalApiKey
-      );
+            // Add CDN DNS record based on storage config
+            await this.cloudflareService.addCdnDnsRecord(
+              cloudflareEmailAddress,
+              cloudflareZoneId,
+              cloudflareGlobalApiKey,
+              storageConfig
+            );
 
-      // Set new CDN configuration
-      await this.cloudflareService.setCdnConfiguration(
-        cloudflareEmailAddress,
-        cloudflareZoneId,
-        cloudflareGlobalApiKey
-      );
+            // Purge entire cache
+            await this.cloudflareService.purgeEntireCacheWithCredentials(
+              cloudflareEmailAddress,
+              cloudflareZoneId,
+              cloudflareGlobalApiKey
+            );
 
-      // Add CDN DNS record based on storage config
-      await this.cloudflareService.addCdnDnsRecord(
-        cloudflareEmailAddress,
-        cloudflareZoneId,
-        cloudflareGlobalApiKey,
-        storageConfig
-      );
+            // Update Cloudflare configuration in settings
+            this.settingsService.updateCloudflareConfig(
+              cloudflareEmailAddress,
+              cloudflareZoneId,
+              cloudflareGlobalApiKey
+            );
+          }
+        );
 
-      // Purge entire cache
-      await this.cloudflareService.purgeEntireCacheWithCredentials(
-        cloudflareEmailAddress,
-        cloudflareZoneId,
-        cloudflareGlobalApiKey
-      );
+        await this.completeMediaMigration(config);
 
-      // Update Cloudflare configuration in settings
-      this.settingsService.updateCloudflareConfig(
-        cloudflareEmailAddress,
-        cloudflareZoneId,
-        cloudflareGlobalApiKey
-      );
+        if (previous.isCloudflareCdnEnabled && previous.cloudflareZoneId !== cloudflareZoneId) {
+          try {
+            await this.cloudflareService.withConfigurationRollback(
+              previous.cloudflareEmailAddress,
+              previous.cloudflareZoneId,
+              previous.cloudflareGlobalApiKey,
+              () =>
+                this.cloudflareService.resetCdn(
+                  previous.cloudflareEmailAddress,
+                  previous.cloudflareZoneId,
+                  previous.cloudflareGlobalApiKey
+                )
+            );
+          } catch (error) {
+            throw new Error(
+              'New CDN configuration applied, but previous-zone cleanup failed; retry cleanup.',
+              { cause: error }
+            );
+          }
+        }
 
+        return;
+      });
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Cloudflare configure error', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(
+        reply,
+        error instanceof Error ? error.message : 'Cloudflare configuration failed'
+      );
     }
   };
 
@@ -731,39 +889,48 @@ export class SettingsController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const config = getConfig();
+      await this.changeDistributionSettings(async (config) => {
+        const nodeSettings = config.nodeSettings;
 
-      const nodeSettings = config.nodeSettings;
+        // Only reset if Cloudflare CDN is currently enabled
+        if (nodeSettings.isCloudflareCdnEnabled) {
+          const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+          const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+          const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
 
-      // Only reset if Cloudflare CDN is currently enabled
-      if (nodeSettings.isCloudflareCdnEnabled) {
-        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+          await this.cloudflareService.withConfigurationRollback(
+            cloudflareEmailAddress,
+            cloudflareZoneId,
+            cloudflareGlobalApiKey,
+            async () => {
+              // Reset CDN configuration; media DNS stays available for old manifest references.
+              await this.cloudflareService.resetCdn(
+                cloudflareEmailAddress,
+                cloudflareZoneId,
+                cloudflareGlobalApiKey
+              );
 
-        // Reset CDN configuration
-        await this.cloudflareService.resetCdn(
-          cloudflareEmailAddress,
-          cloudflareZoneId,
-          cloudflareGlobalApiKey
-        );
+              // Purge entire cache
+              await this.cloudflareService.purgeEntireCacheWithCredentials(
+                cloudflareEmailAddress,
+                cloudflareZoneId,
+                cloudflareGlobalApiKey
+              );
+              this.settingsService.clearCloudflareConfig();
+            }
+          );
+        } else {
+          this.settingsService.clearCloudflareConfig();
+        }
 
-        // Purge entire cache
-        await this.cloudflareService.purgeEntireCacheWithCredentials(
-          cloudflareEmailAddress,
-          cloudflareZoneId,
-          cloudflareGlobalApiKey
-        );
-      }
-
-      // Clear configuration in settings
-      this.settingsService.clearCloudflareConfig();
-
+        await this.completeMediaMigration(config);
+        return;
+      });
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Cloudflare clear error', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.distributionFailure(reply, error);
     }
   };
 
@@ -984,41 +1151,59 @@ export class SettingsController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const { storageConfig } = request.body as StorageConfigBody;
+      await this.changeDistributionSettings(
+        async (config) => {
+          const { storageConfig } = request.body as StorageConfigBody;
 
-      // Update Cloudflare CDN DNS record if CDN is enabled
-      const config = getConfig();
+          // Update Cloudflare CDN DNS record if CDN is enabled
+          const nodeSettings = config.nodeSettings;
 
-      const nodeSettings = config.nodeSettings;
+          if (nodeSettings.isCloudflareCdnEnabled) {
+            const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
+            const cloudflareZoneId = nodeSettings.cloudflareZoneId;
+            const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+            await this.cloudflareService.validateCdnConfiguration(
+              cloudflareEmailAddress,
+              cloudflareZoneId,
+              cloudflareGlobalApiKey,
+              { publicNodeAddress: nodeSettings.publicNodeAddress, storageConfig }
+            );
+            await this.cloudflareService.withConfigurationRollback(
+              cloudflareEmailAddress,
+              cloudflareZoneId,
+              cloudflareGlobalApiKey,
+              async () => {
+                // Add/update CDN DNS record based on new storage config
+                await this.cloudflareService.addCdnDnsRecord(
+                  cloudflareEmailAddress,
+                  cloudflareZoneId,
+                  cloudflareGlobalApiKey,
+                  storageConfig
+                );
 
-      if (nodeSettings.isCloudflareCdnEnabled) {
-        const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-        const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-        const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
+                // Purge entire cache
+                await this.cloudflareService.purgeEntireCacheWithCredentials(
+                  cloudflareEmailAddress,
+                  cloudflareZoneId,
+                  cloudflareGlobalApiKey
+                );
+                this.settingsService.updateStorageConfig(storageConfig);
+              }
+            );
+          } else {
+            this.settingsService.updateStorageConfig(storageConfig);
+          }
 
-        // Add/update CDN DNS record based on new storage config
-        await this.cloudflareService.addCdnDnsRecord(
-          cloudflareEmailAddress,
-          cloudflareZoneId,
-          cloudflareGlobalApiKey,
-          storageConfig
-        );
-
-        // Purge entire cache
-        await this.cloudflareService.purgeEntireCacheWithCredentials(
-          cloudflareEmailAddress,
-          cloudflareZoneId,
-          cloudflareGlobalApiKey
-        );
-      }
-
-      this.settingsService.updateStorageConfig(storageConfig);
-
+          await this.completeMediaMigration(config);
+          return;
+        },
+        (request.body as StorageConfigBody).storageConfig
+      );
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Storage config toggle error', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.distributionFailure(reply, error);
     }
   };
 

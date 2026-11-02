@@ -140,7 +140,21 @@ export class StreamsController extends BaseController {
     try {
       const { videoId } = request.params as VideoIdParams;
 
-      await this.streamService.stopStream(videoId);
+      const drainSeconds = (request.body as { drainSeconds?: unknown } | undefined)?.drainSeconds;
+      if (
+        drainSeconds !== undefined &&
+        (typeof drainSeconds !== 'number' ||
+          !Number.isFinite(drainSeconds) ||
+          drainSeconds < 0 ||
+          drainSeconds > 172800)
+      ) {
+        return await this.sendError(reply, 'Invalid stopped-stream drain duration', 400);
+      }
+      if (drainSeconds === undefined) {
+        await this.streamService.stopStream(videoId);
+      } else {
+        await this.streamService.stopStream(videoId, drainSeconds);
+      }
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -176,8 +190,11 @@ export class StreamsController extends BaseController {
         if (fs.existsSync(segmentPath)) {
           fs.unlinkSync(segmentPath);
         }
-      } catch {
-        // Ignore file deletion errors
+      } catch (error) {
+        // A concurrent cleanup may have already removed it; other failures must be retried.
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error;
+        }
       }
 
       return await this.sendSuccess(reply);

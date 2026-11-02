@@ -6,9 +6,14 @@ vi.mock('@/utils/public-file.js', () => ({
 import { servePublicFile } from '@/utils/public-file.js';
 const request = (params: object) => ({ params, headers: {} }) as FastifyRequest;
 const reply = () =>
-  ({ status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() }) as unknown as FastifyReply;
+  ({
+    header: vi.fn().mockReturnThis(),
+    status: vi.fn().mockReturnThis(),
+    send: vi.fn().mockReturnThis(),
+  }) as unknown as FastifyReply;
 
 const config = vi.hoisted(() => ({
+  reloadNodeSettings:vi.fn(),
   paths: { videosDirectoryPath: '/videos' },
   getExternalVideosBaseUrl: vi.fn(() => 'https://example.com'),
 }));
@@ -74,6 +79,9 @@ describe('video delivery and bandwidth batching', () => {
     const res = reply();
     await controller[method](request(params), res);
     expect(res.status).toHaveBeenCalledWith(500);
+    if (method === 'getAdaptiveManifest') {
+      expect(res.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
+    }
   });
   it('marks dynamic manifests as live', async () => {
     await controller.getAdaptiveManifest(

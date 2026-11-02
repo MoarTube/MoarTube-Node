@@ -1,6 +1,6 @@
-import fs from 'node:fs';
+import type fs from 'node:fs';
 import { Readable } from 'node:stream';
-import { stat } from 'node:fs/promises';
+import { open, type FileHandle } from 'node:fs/promises';
 import { createGzip } from 'node:zlib';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { publicFilePath, isPathSegment } from './public-path.js';
@@ -46,96 +46,134 @@ export async function servePublicFile(
   if (!parts.every(isPathSegment)) {
     return reply.status(400).send({ isError: true, message: 'Invalid filename' });
   }
-  let file: string;
+  let handle: FileHandle | undefined;
   let info: fs.Stats;
   try {
-    file = await publicFilePath(root, parts);
-    info = await stat(file);
+    const file = await publicFilePath(root, parts);
+    handle = await open(file, 'r');
+    info = await handle.stat();
   } catch {
+    await handle?.close();
     return reply.status(404).send({ isError: true, message: 'File not found' });
   }
-  if (!info.isFile()) {
-    return reply.status(404).send({ isError: true, message: 'File not found' });
-  }
-  const etag = `W/"${info.size.toString(16)}-${info.mtimeMs.toString(16)}"`;
-  const modified = info.mtime.toUTCString();
-  reply.header('Content-Type', contentType).header('X-Content-Type-Options', 'nosniff');
-  const text = /^(?:text\/|application\/javascript|image\/svg)/.test(contentType);
-  if (text && info.size >= 1024) {
-    varyEncoding(reply);
-  }
-  if (!options.live) {
-    reply
-      .header('Cache-Control', 'public, max-age=0, must-revalidate')
-      .header('ETag', etag)
-      .header('Last-Modified', modified);
-    const tag = request.headers['if-none-match'];
-    const unchanged =
-      tag !== undefined
-        ? tag
-            .split(',')
-            .some(
-              (value) =>
-                value.trim() === '*' ||
-                value.trim().replace(/^W\//, '') === etag.replace(/^W\//, '')
-            )
-        : request.headers['if-modified-since'] !== undefined &&
-          Math.floor(info.mtimeMs / 1000) * 1000 <=
-            Date.parse(request.headers['if-modified-since']);
-    if (unchanged) {
-      return reply.status(304).send();
+  try {
+    if (!info.isFile()) {
+      return await reply.status(404).send({ isError: true, message: 'File not found' });
     }
-  }
-  let range: ByteRange | null | undefined;
-  if (options.ranges) {
-    reply.header('Accept-Ranges', 'bytes');
-    const header = request.headers['if-range'];
-    const ifRange = typeof header === 'string' ? header : undefined;
-    const useRange =
-      ifRange === undefined ||
-      (!ifRange.startsWith('W/') &&
-        !ifRange.startsWith('"') &&
-        Date.parse(ifRange) >= Math.floor(info.mtimeMs / 1000) * 1000);
-    if (request.method === 'GET' && useRange) {
-      range = byteRange(request.headers.range, info.size);
+    if (contentType === 'application/vnd.apple.mpegurl') {
+      const head = Buffer.alloc(Math.min(info.size, 8192));
+      await handle.read(head, 0, head.length, 0);
+      const master = head.includes(Buffer.from('#EXT-X-STREAM-INF:'));
+      const liveMaster = master && head.includes(Buffer.from('/dynamic/'));
+      const tail = Buffer.alloc(Math.min(info.size, 4096));
+      await handle.read(tail, 0, tail.length, Math.max(0, info.size - tail.length));
+      const ended = tail.toString('utf8').split(/\r?\n/).includes('#EXT-X-ENDLIST');
+      const header = head.toString('utf8');
+      // Both URL aliases resolve to this file; its lifecycle determines cache safety.
+      options = {
+        ...options,
+        live: options.live === true || (master ? liveMaster : !ended),
+      };
+      // Microcache complete live snapshots, never an empty startup file or terminal response.
+      // Browsers revalidate every reload; shared caches may reuse a snapshot for one second.
+      if (
+        options.live &&
+        !ended &&
+        /^#EXTM3U\r?\n/.test(header) &&
+        (master
+          ? liveMaster
+          : header.includes('#EXTINF:') && /^#EXT-X-TARGETDURATION:0*[1-9]\d*\r?$/m.test(header))
+      ) {
+        reply.header('Cache-Control', 'public, max-age=0, s-maxage=1, must-revalidate');
+      }
     }
-    if (range === null) {
-      return reply
-        .header('Content-Range', `bytes */${String(info.size)}`)
-        .header('Cache-Control', 'no-store')
-        .status(416)
-        .send();
+    const etag = `W/"${info.size.toString(16)}-${info.mtimeMs.toString(16)}"`;
+    const modified = info.mtime.toUTCString();
+    reply.header('Content-Type', contentType).header('X-Content-Type-Options', 'nosniff');
+    const text = /^(?:text\/|application\/javascript|image\/svg)/.test(contentType);
+    if (text && info.size >= 1024) {
+      varyEncoding(reply);
     }
-  }
-  const length = range ? range.end - range.start + 1 : info.size;
-  if (range) {
-    reply
-      .status(206)
-      .header(
-        'Content-Range',
-        `bytes ${String(range.start)}-${String(range.end)}/${String(info.size)}`
-      );
-  }
+    if (!options.live) {
+      reply
+        .header('Cache-Control', 'public, max-age=0, s-maxage=30, must-revalidate')
+        .header('ETag', etag)
+        .header('Last-Modified', modified);
+      const tag = request.headers['if-none-match'];
+      const unchanged =
+        tag !== undefined
+          ? tag
+              .split(',')
+              .some(
+                (value) =>
+                  value.trim() === '*' ||
+                  value.trim().replace(/^W\//, '') === etag.replace(/^W\//, '')
+              )
+          : request.headers['if-modified-since'] !== undefined &&
+            Math.floor(info.mtimeMs / 1000) * 1000 <=
+              Date.parse(request.headers['if-modified-since']);
+      if (unchanged) {
+        return await reply.status(304).send();
+      }
+    }
+    let range: ByteRange | null | undefined;
+    if (options.ranges) {
+      reply.header('Accept-Ranges', 'bytes');
+      const header = request.headers['if-range'];
+      const ifRange = typeof header === 'string' ? header : undefined;
+      const useRange =
+        ifRange === undefined ||
+        (!ifRange.startsWith('W/') &&
+          !ifRange.startsWith('"') &&
+          Date.parse(ifRange) >= Math.floor(info.mtimeMs / 1000) * 1000);
+      if (request.method === 'GET' && useRange) {
+        range = byteRange(request.headers.range, info.size);
+      }
+      if (range === null) {
+        return await reply
+          .header('Content-Range', `bytes */${String(info.size)}`)
+          .header('Cache-Control', 'no-store')
+          .status(416)
+          .send();
+      }
+    }
+    const length = range ? range.end - range.start + 1 : info.size;
+    if (range) {
+      reply
+        .status(206)
+        .header(
+          'Content-Range',
+          `bytes ${String(range.start)}-${String(range.end)}/${String(info.size)}`
+        );
+    }
 
-  const compress =
-    text && !range && info.size >= 1024 && acceptsGzip(request.headers['accept-encoding']);
-  if (compress) {
-    reply.header('Content-Encoding', 'gzip');
-  } else {
-    reply.header('Content-Length', length);
+    const compress =
+      text && !range && info.size >= 1024 && acceptsGzip(request.headers['accept-encoding']);
+    if (compress) {
+      reply.header('Content-Encoding', 'gzip');
+    } else {
+      reply.header('Content-Length', length);
+    }
+    if (request.method === 'HEAD') {
+      return await reply.send(Readable.from([]));
+    }
+    if (info.size === 0) {
+      return await reply.send(Readable.from([]));
+    }
+    // Metadata and body must refer to the same inode. Bound a growing file to its snapshot size.
+    const stream = handle.createReadStream(range ?? { start: 0, end: info.size - 1 });
+    handle = undefined; // The stream now owns and closes the descriptor.
+    if (options.onBytes) {
+      stream.once('close', () => options.onBytes?.(stream.bytesRead));
+    }
+    if (!compress) {
+      return await reply.send(stream);
+    }
+    const compressed = createGzip();
+    stream.on('error', (error) => compressed.destroy(error));
+    compressed.once('close', () => stream.destroy());
+    return await reply.send(stream.pipe(compressed));
+  } finally {
+    await handle?.close();
   }
-  if (request.method === 'HEAD') {
-    return reply.send(Readable.from([]));
-  }
-  const stream = fs.createReadStream(file, range ?? undefined);
-  if (options.onBytes) {
-    stream.once('close', () => options.onBytes?.(stream.bytesRead));
-  }
-  if (!compress) {
-    return reply.send(stream);
-  }
-  const compressed = createGzip();
-  stream.on('error', (error) => compressed.destroy(error));
-  compressed.once('close', () => stream.destroy());
-  return reply.send(stream.pipe(compressed));
 }

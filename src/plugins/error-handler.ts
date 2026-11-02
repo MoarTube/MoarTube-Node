@@ -47,6 +47,7 @@ function errorHandlerPlugin(fastify: FastifyInstance): void {
       reply: FastifyReply
     ) => {
       const logger = request.log;
+      reply.header('Cache-Control', 'no-store');
 
       // Custom application errors
       if (error instanceof AppError) {

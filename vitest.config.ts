@@ -7,6 +7,7 @@ const fullCoverage = { statements: 100, branches: 100, functions: 100, lines: 10
 export default defineConfig({
   test: {
     environment: 'node',
+    globalSetup: ['./tests/support/silo-global.mjs'],
     include: ['tests/unit/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     coverage: {
       enabled: true,

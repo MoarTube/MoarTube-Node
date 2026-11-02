@@ -162,15 +162,16 @@ describe('config/urls.ts', () => {
         isCloudflareCdnEnabled: false,
       };
 
-      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('http://my-bucket.s3.us-east-1.amazonaws.com');
+      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('https://my-bucket.s3.us-east-1.amazonaws.com');
     });
 
     it('should build S3 URL with Cloudflare CDN enabled', () => {
       const nodeSettings: Partial<NodeSettings> = {
+        publicNodeAddress: 'example.com',
         storageConfig: {
           storageMode: 's3provider',
           s3Config: {
-            bucketName: 'my-bucket',
+            bucketName: 'externalvideos.example.com',
             s3ProviderClientConfig: {
               region: 'us-east-1',
               forcePathStyle: false,
@@ -180,7 +181,7 @@ describe('config/urls.ts', () => {
         isCloudflareCdnEnabled: true,
       };
 
-      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('https://my-bucket');
+      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('https://externalvideos.example.com');
     });
 
     it('should build custom S3 URL with endpoint and virtual-hosted style', () => {
@@ -190,7 +191,7 @@ describe('config/urls.ts', () => {
           s3Config: {
             bucketName: 'my-bucket',
             s3ProviderClientConfig: {
-              endpoint: 'https://minio.example.com:9000',
+              endpoint: 'https://silo.example.com:9000',
               region: 'us-east-1',
               forcePathStyle: false,
             },
@@ -199,7 +200,7 @@ describe('config/urls.ts', () => {
         isCloudflareCdnEnabled: false,
       };
 
-      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('https://my-bucket.minio.example.com:9000');
+      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('https://my-bucket.silo.example.com:9000');
     });
 
     it('should build custom S3 URL with endpoint without port and virtual-hosted style', () => {
@@ -209,7 +210,7 @@ describe('config/urls.ts', () => {
           s3Config: {
             bucketName: 'my-bucket',
             s3ProviderClientConfig: {
-              endpoint: 'https://minio.example.com',
+              endpoint: 'https://silo.example.com',
               region: 'us-east-1',
               forcePathStyle: false,
             },
@@ -218,7 +219,7 @@ describe('config/urls.ts', () => {
         isCloudflareCdnEnabled: false,
       };
 
-      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('https://my-bucket.minio.example.com');
+      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('https://my-bucket.silo.example.com');
     });
 
     it('should build custom S3 URL with endpoint and path-style', () => {
@@ -228,7 +229,7 @@ describe('config/urls.ts', () => {
           s3Config: {
             bucketName: 'my-bucket',
             s3ProviderClientConfig: {
-              endpoint: 'https://minio.example.com:9000',
+              endpoint: 'https://silo.example.com:9000',
               region: 'us-east-1',
               forcePathStyle: true,
             },
@@ -237,7 +238,7 @@ describe('config/urls.ts', () => {
         isCloudflareCdnEnabled: false,
       };
 
-      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('https://minio.example.com:9000/my-bucket');
+      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('https://silo.example.com:9000/my-bucket');
     });
 
     it('should build AWS S3 path-style URL', () => {
@@ -325,7 +326,7 @@ describe('config/urls.ts', () => {
         isCloudflareCdnEnabled: false,
       };
 
-      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('http://my-bucket.s3.us-east-1.amazonaws.com');
+      expect(buildExternalVideosBaseUrl(nodeSettings as NodeSettings)).toBe('https://my-bucket.s3.us-east-1.amazonaws.com');
     });
   });
 });

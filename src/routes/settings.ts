@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Settings Routes
  *
  * Routes for node settings and configuration endpoints.
@@ -55,6 +55,12 @@ export function settingsRoutes(
     '/metrics/memory',
     { preHandler: [fastify.authenticate], schema: { tags: ['Settings'] } },
     controller.getMemoryMetrics
+  );
+
+  fastify.get(
+    '/metrics/cpu',
+    { preHandler: [fastify.authenticate], schema: { tags: ['Settings'] } },
+    controller.getCpuMetrics
   );
 
   // Get all settings

@@ -1,0 +1,1229 @@
+import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
+import { Readable } from 'node:stream';
+import Fastify from 'fastify';
+import axios from 'axios';
+import { CloudflareService } from '@/services/cloudflare.js';
+import { VideosController } from '@/controllers/videos.js';
+import { buildExternalVideosBaseUrl } from '@/config/urls.js';
+import { StreamsController } from '@/controllers/streams.js';
+import {
+  HeadObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+  PutObjectCommand,
+} from '@aws-sdk/client-s3';
+import { siloFixture, siloProxy, type SiloFixture } from '../../support/silo.js';
+import { StorageService } from '@/services/storage.js';
+import { StreamsService } from '@/services/streams.js';
+import { VideosService } from '@/services/videos.js';
+import { SettingsController } from '@/controllers/settings.js';
+import { withSettingsChange } from '@/utils/settings-change.js';
+import { withCloudflareDeadline } from '@/utils/cloudflare-http.js';
+
+const state = vi.hoisted(() => ({ config: {} as any, base: 'https://new.example' }));
+vi.mock('@config/index.js', () => ({ getConfig: () => state.config }));
+vi.mock('axios');
+let a: SiloFixture, b: SiloFixture, root: string, storage: StorageService, streams: StreamsService;
+let video: any;
+const logger = { error: vi.fn(), info: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+let repository: any;
+let cloudflare: any;
+const prefix = 'external/videos/video123/adaptive/m3u8/';
+beforeAll(async () => {
+  a = await siloFixture();
+  b = await siloFixture();
+});
+afterAll(async () => {
+  await a.close();
+  await b.close();
+});
+beforeEach(async () => {
+  vi.clearAllMocks();
+  for (const fixture of [a, b]) {
+    const page = await fixture.client.send(
+      new ListObjectsV2Command({ Bucket: fixture.config.bucketName })
+    );
+    if (page.Contents?.length)
+      await fixture.client.send(
+        new DeleteObjectsCommand({
+          Bucket: fixture.config.bucketName,
+          Delete: { Objects: page.Contents.map((object) => ({ Key: object.Key! })) },
+        })
+      );
+  }
+  root = await mkdtemp(path.join(tmpdir(), 'moartube-cdn-followup-'));
+  state.config = {
+    paths: {
+      nodeSettingsPath: path.join(root, 'settings.json'),
+      videosDirectoryPath: path.join(root, 'videos'),
+      publicDirectoryPath: path.join(root, 'public'),
+    },
+    nodeSettings: {
+      storageConfig: { storageMode: 's3provider', s3Config: a.config },
+      isCloudflareCdnEnabled: false,
+      publicNodeAddress: 'example.com',
+      publicNodeProtocol: 'https',
+      publicNodePort: '443',
+    },
+    reloadNodeSettings: vi.fn(),
+    getExternalVideosBaseUrl: () => state.base,
+  };
+  state.config.nodeSettings.cloudflareEmailAddress = 'email';
+  video = {
+    video_id: 'video123',
+    creation_timestamp: 123,
+    is_published: true,
+    is_stream_recorded_remotely: true,
+    is_streaming: false,
+    is_live: true,
+    outputs: JSON.stringify({ m3u8: ['720p'], mp4: [], webm: [], ogv: [] }),
+    meta: JSON.stringify({ streamGeneration: 'run-one' }),
+  };
+  repository = {
+    findById: vi.fn(async () => video),
+    findAll: vi.fn(async () => (video ? [video] : [])),
+    update: vi.fn(async (_id, patch) => {
+      video = { ...video, ...patch };
+      return video;
+    }),
+    delete: vi.fn(async () => {
+      video = undefined;
+      return true;
+    }),
+  };
+  cloudflare = {
+    purgeAdaptiveVideos: vi.fn(),
+    purgeVideo: vi.fn(),
+    purgeWatchPages: vi.fn(),
+    purgeAllWatchPages: vi.fn(),
+    purgeEmbedVideoPages: vi.fn(),
+    purgeNodePage: vi.fn(),
+    purgeProgressiveVideos: vi.fn(),
+    purgeVideoThumbnailImages: vi.fn(),
+    purgeVideoPreviewImages: vi.fn(),
+    purgeVideoPosterImages: vi.fn(),
+    getAdaptiveVideoUrls: vi.fn(async () => []),
+  };
+  storage = new StorageService(logger as never);
+  streams = new StreamsService(
+    logger as never,
+    repository,
+    { deleteByVideoId: async () => 0 } as never,
+    { deleteByVideoId: async () => 0 } as never,
+    { broadcastToNodes: () => {} } as never,
+    cloudflare,
+    storage
+  );
+});
+afterEach(async () => {
+  streams.close();
+  storage.close();
+  await rm(root, { recursive: true, force: true });
+});
+
+async function seed(recorded = true): Promise<void> {
+  video.is_stream_recorded_remotely = recorded;
+  video.is_streaming = true;
+  await a.put(prefix + '720p/segments/run-one-0.ts', 'first stream bytes');
+  await a.put(
+    prefix + 'dynamic/manifests/manifest-720p.m3u8',
+    '#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXTINF:2,\nhttps://old.example/external/videos/video123/adaptive/m3u8/720p/segments/run-one-0.ts\n'
+  );
+  await a.put(
+    prefix + 'dynamic/manifests/manifest-master.m3u8',
+    '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nhttps://old.example/external/videos/video123/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8\n'
+  );
+}
+
+async function expireJournal(): Promise<void> {
+  streams.close();
+  const directory = state.config.paths.nodeSettingsPath + '.stream-cleanup';
+  const name = (await readdir(directory))[0];
+  const file = path.join(directory, name ?? 'missing');
+  const job = JSON.parse(await readFile(file, 'utf8'));
+  job.deadline = Date.now() - 1;
+  const meta = JSON.parse(video.meta);
+  meta.streamCleanupAt = job.deadline;
+  video.meta = JSON.stringify(meta);
+  await writeFile(file, JSON.stringify(job));
+  streams = new StreamsService(
+    logger as never,
+    repository,
+    { deleteByVideoId: async () => 0 } as never,
+    {} as never,
+    { broadcastToNodes: () => {} } as never,
+    cloudflare,
+    storage
+  );
+  await streams.recoverStreamCleanup();
+  await vi.waitFor(async () => expect(await readdir(directory)).toHaveLength(0));
+}
+
+describe('follow-up storage fixes against real Silo', () => {
+  it.each([true, false])(
+    'stops an S3 stream before its first rendition arrives without publishing empty media (recorded=%s)',
+    async (recorded) => {
+      video.is_streaming = true;
+      video.is_published = false;
+      video.is_stream_recorded_remotely = recorded;
+      // Client publishes the dynamic master before starting the live encoder.
+      await a.put(
+        prefix + 'dynamic/manifests/manifest-master.m3u8',
+        '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nhttps://old.example/external/videos/video123/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8\n'
+      );
+      await streams.stopStream('video123');
+      expect(video.is_streaming).toBe(false);
+      expect(video.is_streamed).toBe(true);
+      expect(video.is_published).toBe(false);
+      expect(Number.isSafeInteger(JSON.parse(video.meta).streamCleanupAt)).toBe(true);
+      await expireJournal();
+      await expect(a.text(prefix + 'dynamic/manifests/manifest-master.m3u8')).rejects.toMatchObject(
+        { $metadata: { httpStatusCode: 404 } }
+      );
+    }
+  );
+  it('stops a completely empty S3 startup under a distribution deadline', async () => {
+    video.is_streaming = true;
+    video.is_stream_recorded_remotely = false;
+    await withCloudflareDeadline(() => streams.stopStream('video123'));
+    expect(video.is_streaming).toBe(false);
+    expect(video.is_published).toBe(false);
+    await expireJournal();
+  });
+  it.each([true, false])(
+    'does not publish an empty filesystem startup (recorded=%s)',
+    async (recorded) => {
+      state.config.nodeSettings.storageConfig = { storageMode: 'filesystem' };
+      video.is_streaming = true;
+      video.is_published = false;
+      video.is_stream_recorded_remotely = recorded;
+      const folder = path.join(state.config.paths.videosDirectoryPath, 'video123/adaptive/m3u8');
+      await mkdir(path.join(folder, '720p'), { recursive: true });
+      await writeFile(
+        path.join(folder, 'manifest-master.m3u8'),
+        '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nhttps://old.example/external/videos/video123/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8\n'
+      );
+      await streams.stopStream('video123');
+      expect(video.is_streaming).toBe(false);
+      expect(video.is_published).toBe(false);
+      expect(Number.isSafeInteger(JSON.parse(video.meta).streamCleanupAt)).toBe(true);
+      await expireJournal();
+      await expect(readFile(path.join(folder, 'manifest-master.m3u8'))).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    }
+  );
+  it.each(['720p/segment.ts', 'segment.ts'])(
+    'preserves partial filesystem media when its rendition is missing (%s)',
+    async (segment) => {
+      state.config.nodeSettings.storageConfig = { storageMode: 'filesystem' };
+      video.is_streaming = true;
+      const file = path.join(
+        state.config.paths.videosDirectoryPath,
+        'video123/adaptive/m3u8',
+        segment
+      );
+      await mkdir(path.dirname(file), { recursive: true });
+      await writeFile(file, 'partial recording bytes');
+      await expect(streams.stopStream('video123')).rejects.toThrow('missing');
+      expect(video.is_streaming).toBe(true);
+      expect(await readFile(file, 'utf8')).toBe('partial recording bytes');
+    }
+  );
+  it('retains a stream with actual S3 media when a rendition is unexpectedly missing', async () => {
+    await seed();
+    await a.client.send(
+      new DeleteObjectsCommand({
+        Bucket: a.config.bucketName,
+        Delete: { Objects: [{ Key: prefix + 'dynamic/manifests/manifest-720p.m3u8' }] },
+      })
+    );
+    await expect(streams.stopStream('video123')).rejects.toMatchObject({
+      $metadata: { httpStatusCode: 404 },
+    });
+    expect(video.is_streaming).toBe(true);
+    expect(await a.text(prefix + '720p/segments/run-one-0.ts')).toBe('first stream bytes');
+  });
+  it('preserves legacy recorded media whose output-resolution metadata is absent', async () => {
+    await seed(true);
+    video.outputs = '{}';
+    await streams.stopStream('video123');
+    expect(video.is_streaming).toBe(false);
+    expect(video.is_published).toBe(true);
+    expect(JSON.parse(video.meta).streamCleanupAt).toBeUndefined();
+    expect(await a.text(prefix + '720p/segments/run-one-0.ts')).toBe('first stream bytes');
+  });
+  it('does not mistake a truncated S3 inventory for an empty startup', async () => {
+    video.is_streaming = true;
+    await Promise.all(
+      ['one.ts', 'two.ts', 'three.ts'].map((name) => a.put(prefix + name, 'media'))
+    );
+    await expect(streams.stopStream('video123')).rejects.toMatchObject({
+      $metadata: { httpStatusCode: 404 },
+    });
+    expect(video.is_streaming).toBe(true);
+  });
+  it('does not hide an S3 inventory denial while checking an empty startup', async () => {
+    video.is_streaming = true;
+    const proxy = await siloProxy(a.config.s3ProviderClientConfig.endpoint, (req) => {
+      if (new URL(req.url ?? '/', 'http://localhost').searchParams.has('list-type')) {
+        req.headers.authorization = req.headers.authorization?.replace(
+          /Signature=[a-f0-9]+/,
+          'Signature=0'
+        );
+      }
+    });
+    state.config.nodeSettings.storageConfig.s3Config = {
+      ...a.config,
+      s3ProviderClientConfig: { ...a.config.s3ProviderClientConfig, endpoint: proxy.endpoint },
+    };
+    try {
+      await expect(streams.stopStream('video123')).rejects.toMatchObject({
+        $metadata: { httpStatusCode: 403 },
+      });
+      expect(video.is_streaming).toBe(true);
+    } finally {
+      await proxy.close();
+    }
+  });
+  it('propagates a rejected S3 finalization write instead of treating it as an empty startup', async () => {
+    await seed();
+    const proxy = await siloProxy(a.config.s3ProviderClientConfig.endpoint, (req) => {
+      if (req.method === 'PUT') {
+        req.headers.authorization = req.headers.authorization?.replace(
+          /Signature=[a-f0-9]+/,
+          'Signature=0'
+        );
+      }
+    });
+    state.config.nodeSettings.storageConfig.s3Config = {
+      ...a.config,
+      s3ProviderClientConfig: { ...a.config.s3ProviderClientConfig, endpoint: proxy.endpoint },
+    };
+    try {
+      await expect(streams.stopStream('video123')).rejects.toMatchObject({
+        $metadata: { httpStatusCode: 403 },
+      });
+      expect(video.is_streaming).toBe(true);
+      expect(await a.text(prefix + 'dynamic/manifests/manifest-720p.m3u8')).not.toContain(
+        'ENDLIST'
+      );
+    } finally {
+      await proxy.close();
+    }
+  });
+  it('finalizes filesystem media without inventing a missing master', async () => {
+    state.config.nodeSettings.storageConfig = { storageMode: 'filesystem' };
+    const folder = path.join(state.config.paths.videosDirectoryPath, 'video123/adaptive/m3u8');
+    await mkdir(folder, { recursive: true });
+    await writeFile(
+      path.join(folder, 'manifest-720p.m3u8'),
+      '#EXTM3U\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXTINF:2,\nsegment.ts\n'
+    );
+    await expect(streams.finalizeStreamManifests('video123')).resolves.toBe(10_000);
+    expect(await readFile(path.join(folder, 'manifest-720p.m3u8'), 'utf8')).toContain('ENDLIST');
+    await expect(readFile(path.join(folder, 'manifest-master.m3u8'))).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+  it('accepts a valid fractional viewer-drain advisory through the stop endpoint', async () => {
+    await seed(false);
+    const app = Fastify();
+    const controller = new StreamsController({} as never, {} as never, streams);
+    app.post('/streams/:videoId/stop', controller.stopStream);
+    try {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/streams/video123/stop',
+        payload: { drainSeconds: 90.0005 },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(video.is_streaming).toBe(false);
+      expect(Number.isSafeInteger(JSON.parse(video.meta).streamCleanupAt)).toBe(true);
+      expect(JSON.parse(video.meta).streamCleanupAt).toBeGreaterThan(Date.now() + 89_000);
+      await expireJournal();
+    } finally {
+      await app.close();
+    }
+  });
+  it('aborts a stalled real S3 inventory request and releases the transition lock', async () => {
+    state.config.nodeSettings.isCloudflareCdnEnabled = true;
+    state.config.nodeSettings.cloudflareGlobalApiKey = 'key';
+    state.config.nodeSettings.cloudflareZoneId = 'zone';
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const proxy = await siloProxy(a.config.s3ProviderClientConfig.endpoint, async (req) => {
+      if (req.url?.includes('list-type=')) await gate;
+    });
+    state.config.nodeSettings.storageConfig = {
+      storageMode: 's3provider',
+      s3Config: {
+        ...a.config,
+        s3ProviderClientConfig: { ...a.config.s3ProviderClientConfig, endpoint: proxy.endpoint },
+      },
+    };
+    vi.mocked(axios.create).mockReturnValue({
+      post: vi.fn().mockResolvedValue({ data: { success: true } }),
+    } as never);
+    const cdn = new CloudflareService(logger as never, repository);
+    try {
+      await expect(
+        withCloudflareDeadline(
+          () =>
+            withSettingsChange(state.config.paths.nodeSettingsPath, () =>
+              cdn.getAdaptiveVideoUrls('video123')
+            ),
+          50
+        )
+      ).rejects.toThrow();
+      await expect(
+        withSettingsChange(state.config.paths.nodeSettingsPath, async () => true)
+      ).resolves.toBe(true);
+    } finally {
+      release();
+      await proxy.close();
+    }
+  });
+  it('closes admission while the active-job scan is paused', async () => {
+    video.is_published = false;
+    let entered = false,
+      release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    repository.findAll.mockImplementationOnce(async () => {
+      entered = true;
+      await gate;
+      return [video];
+    });
+    const videos = new VideosService(
+      logger as never,
+      repository,
+      {} as never,
+      storage,
+      {} as never,
+      cloudflare
+    );
+    const controller = new SettingsController(
+      { updateStorageConfig: vi.fn() } as never,
+      videos,
+      cloudflare,
+      {} as never
+    );
+    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const operation = controller.storageConfigToggle(
+      { body: { storageConfig: state.config.nodeSettings.storageConfig } } as never,
+      reply as never
+    );
+    try {
+      await vi.waitFor(() => expect(entered).toBe(true));
+      await expect(videos.setPublishing('video123', true)).rejects.toThrow('in progress');
+    } finally {
+      release();
+      await operation;
+    }
+    expect(reply.status).toHaveBeenLastCalledWith(200);
+  });
+  it('provides fallback freshness for actual legacy media without changing new upload metadata or playlist policy', async () => {
+    const legacy = prefix + '720p/segments/legacy.ts',
+      fresh = prefix + '720p/segments/fresh.ts';
+    await a.put(legacy, 'legacy');
+    await a.client.send(
+      new PutObjectCommand({
+        Bucket: a.config.bucketName,
+        Key: fresh,
+        Body: 'fresh',
+        CacheControl: 'public, max-age=0, s-maxage=30, must-revalidate',
+      })
+    );
+    expect(
+      (await a.client.send(new HeadObjectCommand({ Bucket: a.config.bucketName, Key: legacy })))
+        .CacheControl
+    ).toBeUndefined();
+    expect(
+      (await a.client.send(new HeadObjectCommand({ Bucket: a.config.bucketName, Key: fresh })))
+        .CacheControl
+    ).toContain('s-maxage=30');
+    vi.mocked(axios.put).mockResolvedValue({ data: { success: true } });
+    vi.mocked(axios.patch).mockResolvedValue({ data: { success: true } });
+    const cdn = new CloudflareService(logger as never, repository);
+    await cdn.setCdnConfiguration('email', 'zone', 'key');
+    const rules = (vi.mocked(axios.put).mock.calls.at(-1)![1] as any).rules;
+    expect(rules[0].expression).toContain('"ts"');
+    expect(rules[0].expression).not.toContain('"m3u8"');
+    expect(rules[0].action_parameters.edge_ttl.default).toBe(30);
+    expect(rules[0].action_parameters.edge_ttl.status_code_ttl).toContainEqual({
+      status_code_range: { from: 201, to: 599 },
+      value: -1,
+    });
+    expect(
+      (await a.client.send(new HeadObjectCommand({ Bucket: a.config.bucketName, Key: legacy })))
+        .CacheControl
+    ).toBeUndefined();
+  });
+  it('keeps an older viewer snapshot playable after the HTTP stop contract ends a non-recorded stream', async () => {
+    await seed(false);
+    const snapshot = await a.text(prefix + 'dynamic/manifests/manifest-720p.m3u8');
+    const controller = new StreamsController({} as never, {} as never, streams);
+    const app = Fastify();
+    app.post('/streams/:videoId/stop', controller.stopStream);
+    await app.listen({ host: '127.0.0.1', port: 0 });
+    const address = app.server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing Node port');
+    try {
+      const response = await fetch(app.listeningOrigin + '/streams/video123/stop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ drainSeconds: 86 }),
+      });
+      expect(await response.json()).toEqual({ isError: false });
+      expect(snapshot).toContain('run-one-0.ts');
+      expect(await a.text(prefix + '720p/segments/run-one-0.ts')).toBe('first stream bytes');
+      expect(await a.text(prefix + 'dynamic/manifests/manifest-720p.m3u8')).toContain(
+        '#EXT-X-ENDLIST'
+      );
+      expect(video.is_published).toBe(false);
+      expect(JSON.parse(video.meta).streamCleanupAt).toBeGreaterThan(Date.now() + 80_000);
+      await expireJournal();
+      await expect(a.text(prefix + '720p/segments/run-one-0.ts')).rejects.toThrow();
+    } finally {
+      await app.close();
+    }
+  });
+  it('purges exact deleted watch/state URLs after the row is removed', async () => {
+    state.config.nodeSettings.isCloudflareCdnEnabled = true;
+    state.config.nodeSettings.cloudflareGlobalApiKey = 'key';
+    state.config.nodeSettings.cloudflareZoneId = 'zone';
+    state.config.getNodeBaseUrl = () => 'https://node.example.com';
+    const sent: string[] = [];
+    const statuses: boolean[] = [];
+    vi.mocked(axios.create).mockReturnValue({
+      post: vi.fn(async (_url, body) => {
+        sent.push(...body.files);
+        statuses.push(video === undefined);
+        return { data: { success: true } };
+      }),
+    } as never);
+    const cdn = new CloudflareService(logger as never, repository);
+    const videos = new VideosService(
+      logger as never,
+      repository,
+      { deleteByVideoId: async () => 0 } as never,
+      storage,
+      {} as never,
+      cdn
+    );
+    await a.put('external/videos/video123/data', 'bytes');
+    await videos.deleteVideo('video123');
+    expect(sent).toEqual(
+      expect.arrayContaining([
+        'https://node.example.com/watch?v=video123',
+        'https://node.example.com/videos/video123/comments/state',
+      ])
+    );
+    expect(statuses.every(Boolean)).toBe(true);
+  });
+  it('returns failure through the invalidation endpoint on a real second-page S3 listing denial, then recovers', async () => {
+    state.config.nodeSettings.isCloudflareCdnEnabled = true;
+    state.config.nodeSettings.cloudflareGlobalApiKey = 'key';
+    state.config.nodeSettings.cloudflareZoneId = 'zone';
+    state.config.getNodeBaseUrl = () => 'https://node.example.com';
+    const keys = Array.from(
+      { length: 1001 },
+      (_, index) => prefix + '720p/segments/run-' + index + '.ts'
+    );
+    for (let offset = 0; offset < keys.length; offset += 32)
+      await Promise.all(keys.slice(offset, offset + 32).map((key) => a.put(key, 'segment')));
+    let deny = true,
+      secondPages = 0;
+    const proxy = await siloProxy(a.config.s3ProviderClientConfig.endpoint, (req) => {
+      if (req.url?.includes('continuation-token=')) {
+        secondPages++;
+        if (deny) req.headers.authorization = (req.headers.authorization ?? '') + 'invalid';
+      }
+    });
+    state.config.nodeSettings.storageConfig = {
+      storageMode: 's3provider',
+      s3Config: {
+        ...a.config,
+        s3ProviderClientConfig: { ...a.config.s3ProviderClientConfig, endpoint: proxy.endpoint },
+      },
+    };
+    const sent: string[] = [];
+    vi.mocked(axios.create).mockReturnValue({
+      post: vi.fn(async (_url, body) => {
+        sent.push(...body.files);
+        return { data: { success: true } };
+      }),
+    } as never);
+    const cdn = new CloudflareService(logger as never, repository);
+    const controller = new VideosController(
+      {} as never,
+      {} as never,
+      {} as never,
+      cdn,
+      {} as never
+    );
+    const app = Fastify();
+    app.post('/videos/:videoId/cache/invalidate', controller.invalidateCache);
+    try {
+      const failed = await app.inject({ method: 'POST', url: '/videos/video123/cache/invalidate' });
+      expect(failed.statusCode).toBe(500);
+      expect(secondPages).toBe(1);
+      expect(sent).toContain(state.base + '/' + prefix + 'dynamic/manifests/manifest-master.m3u8');
+      deny = false;
+      const retried = await app.inject({
+        method: 'POST',
+        url: '/videos/video123/cache/invalidate',
+      });
+      expect(retried.statusCode).toBe(200);
+      expect(sent).toEqual(expect.arrayContaining(keys.map((key) => state.base + '/' + key)));
+      for (const fault of ['missing', 'empty', 'repeated']) {
+        const damaged = await siloProxy(
+          a.config.s3ProviderClientConfig.endpoint,
+          () => {},
+          (req, incoming, res) => {
+            const chunks: Buffer[] = [];
+            incoming.on('data', (chunk: Buffer) => chunks.push(chunk));
+            incoming.on('end', () => {
+              let body = Buffer.concat(chunks).toString();
+              const cursor = new URL(req.url ?? '/', 'http://localhost').searchParams.get(
+                'continuation-token'
+              );
+              if (fault === 'missing')
+                body = body.replace(/<NextContinuationToken>[^<]*<\/NextContinuationToken>/g, '');
+              else if (fault === 'empty')
+                body = body.replace(
+                  /<NextContinuationToken>[^<]*<\/NextContinuationToken>/g,
+                  '<NextContinuationToken></NextContinuationToken>'
+                );
+              else if (cursor !== null)
+                body = body.replace(
+                  '<IsTruncated>false</IsTruncated>',
+                  '<IsTruncated>true</IsTruncated><NextContinuationToken>' +
+                    cursor +
+                    '</NextContinuationToken>'
+                );
+              const headers = { ...incoming.headers };
+              delete headers['content-length'];
+              res.writeHead(incoming.statusCode ?? 502, headers);
+              res.end(body);
+            });
+            return true;
+          }
+        );
+        state.config.nodeSettings.storageConfig.s3Config.s3ProviderClientConfig.endpoint =
+          damaged.endpoint;
+        try {
+          await expect(cdn.getAdaptiveVideoUrls('video123')).rejects.toThrow('continuation token');
+          expect(
+            (await app.inject({ method: 'POST', url: '/videos/video123/cache/invalidate' }))
+              .statusCode
+          ).toBe(500);
+        } finally {
+          await damaged.close();
+        }
+      }
+    } finally {
+      await app.close();
+      await proxy.close();
+    }
+  }, 20_000);
+  it('rewrites real S3 manifests from CDN URLs to dotted-bucket HTTPS AWS path URLs when CDN is disabled', async () => {
+    await seed();
+    video.is_streaming = false;
+    await storage.finalizeS3Stream('video123', ['720p'], true);
+    state.config.nodeSettings.isCloudflareCdnEnabled = true;
+    state.config.nodeSettings.publicNodeAddress = a.config.bucketName.slice(
+      'externalvideos.'.length
+    );
+    state.config.getExternalVideosBaseUrl = () =>
+      buildExternalVideosBaseUrl({
+        ...state.config.nodeSettings,
+        storageConfig: {
+          storageMode: 's3provider',
+          s3Config: {
+            ...a.config,
+            s3ProviderClientConfig: { region: 'us-east-1', forcePathStyle: false },
+          },
+        },
+      });
+    const videos = new VideosService(
+      logger as never,
+      repository,
+      {} as never,
+      storage,
+      {} as never,
+      cloudflare
+    );
+    await videos.rewriteS3VideoManifests(
+      'video123',
+      ['720p'],
+      state.config.getExternalVideosBaseUrl()
+    );
+    expect(await a.text(prefix + 'static/manifests/manifest-720p.m3u8')).toContain(
+      'https://' + a.config.bucketName + '/external/'
+    );
+    cloudflare.withConfigurationRollback = async (
+      _email: unknown,
+      _zone: unknown,
+      _key: unknown,
+      operation: () => Promise<void>
+    ) => operation();
+    cloudflare.resetCdn = vi.fn();
+    cloudflare.purgeEntireCacheWithCredentials = vi.fn();
+    const controller = new SettingsController(
+      {
+        clearCloudflareConfig: () => {
+          state.config.nodeSettings.isCloudflareCdnEnabled = false;
+        },
+      } as never,
+      videos,
+      cloudflare,
+      {} as never
+    );
+    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    await controller.cloudflareClear({} as never, reply as never);
+    expect(reply.status).toHaveBeenLastCalledWith(200);
+    for (const name of ['720p', 'master'])
+      expect(await a.text(prefix + 'static/manifests/manifest-' + name + '.m3u8')).toContain(
+        'https://s3.us-east-1.amazonaws.com/' + a.config.bucketName + '/external/'
+      );
+  });
+  it('refreshes bucket, endpoint and credentials while older readers drain safely', async () => {
+    await a.put('same', 'old bucket');
+    await b.put('same', 'new bucket');
+    const first = await storage.getFileStream('same');
+    const second = await storage.getFileStream('same');
+    state.config.nodeSettings.storageConfig = { storageMode: 's3provider', s3Config: b.config };
+    expect((await storage.getFileMetadata('same'))?.size).toBe(10);
+    for (const stream of [first, second]) {
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream as Readable) chunks.push(Buffer.from(chunk));
+      expect(Buffer.concat(chunks).toString()).toBe('old bucket');
+    }
+    first.emit('close');
+    second.emit('close');
+    const proxy = await siloProxy(b.config.s3ProviderClientConfig.endpoint, () => {});
+    try {
+      state.config.nodeSettings.storageConfig = {
+        storageMode: 's3provider',
+        s3Config: {
+          ...b.config,
+          s3ProviderClientConfig: { ...b.config.s3ProviderClientConfig, endpoint: proxy.endpoint },
+        },
+      };
+      expect(await storage.fileExists('same')).toBe(true);
+      state.config.nodeSettings.storageConfig.s3Config.s3ProviderClientConfig.credentials = {
+        ...b.config.s3ProviderClientConfig.credentials,
+        secretAccessKey: 'wrong',
+      };
+      expect(await storage.fileExists('same')).toBe(false);
+      state.config.nodeSettings.storageConfig = { storageMode: 'filesystem' };
+      expect(storage.getStorageMode()).toBe('filesystem');
+      state.config.nodeSettings.storageConfig = { storageMode: 's3provider', s3Config: b.config };
+      expect(await storage.deleteDirectory('same')).toBe(1);
+      expect(await a.text('same')).toBe('old bucket');
+    } finally {
+      await proxy.close();
+    }
+    storage.close();
+    storage.close();
+  });
+  it('keeps metadata and comments until real origin deletion succeeds, then purges the deleted ID', async () => {
+    await a.put('external/videos/video123/data', 'retained');
+    const comments = { deleteByVideoId: vi.fn() };
+    const videos = new VideosService(
+      logger as never,
+      repository,
+      comments as never,
+      storage,
+      {} as never,
+      cloudflare
+    );
+    state.config.nodeSettings.storageConfig = {
+      storageMode: 's3provider',
+      s3Config: {
+        ...a.config,
+        s3ProviderClientConfig: {
+          ...a.config.s3ProviderClientConfig,
+          credentials: { ...a.config.s3ProviderClientConfig.credentials, secretAccessKey: 'wrong' },
+        },
+      },
+    };
+    await expect(videos.deleteVideo('video123')).rejects.toThrow();
+    expect(repository.delete).not.toHaveBeenCalled();
+    expect(comments.deleteByVideoId).not.toHaveBeenCalled();
+    state.config.nodeSettings.storageConfig = { storageMode: 's3provider', s3Config: a.config };
+    expect(await videos.deleteVideo('video123')).toBe(true);
+    expect(cloudflare.purgeWatchPages).toHaveBeenCalledWith(['video123']);
+    expect(repository.delete.mock.invocationCallOrder[0]).toBeLessThan(
+      cloudflare.purgeWatchPages.mock.invocationCallOrder[0]
+    );
+  });
+  it('rewrites S3 renditions before their master inside the settings/admission lock', async () => {
+    await seed();
+    video.is_streaming = false;
+    await storage.finalizeS3Stream('video123', ['720p'], true);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let entered = false;
+    const proxy = await siloProxy(a.config.s3ProviderClientConfig.endpoint, async (req) => {
+      if (req.method === 'PUT' && req.url?.includes('manifest-720p')) {
+        entered = true;
+        await gate;
+      }
+    });
+    const videos = new VideosService(
+      logger as never,
+      repository,
+      {} as never,
+      storage,
+      {} as never,
+      cloudflare
+    );
+    const settings = {
+      updateStorageConfig: (value: unknown) => {
+        state.config.nodeSettings.storageConfig = value;
+      },
+    };
+    const controller = new SettingsController(settings as never, videos, cloudflare, {} as never);
+    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const operation = controller.storageConfigToggle(
+      {
+        body: {
+          storageConfig: {
+            storageMode: 's3provider',
+            s3Config: {
+              ...a.config,
+              s3ProviderClientConfig: {
+                ...a.config.s3ProviderClientConfig,
+                endpoint: proxy.endpoint,
+              },
+            },
+          },
+        },
+      } as never,
+      reply as never
+    );
+    try {
+      await vi.waitFor(() => expect(entered).toBe(true));
+      const competing = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+      await controller.storageConfigToggle(
+        { body: { storageConfig: state.config.nodeSettings.storageConfig } } as never,
+        competing as never
+      );
+      expect(competing.send).toHaveBeenCalledWith(
+        expect.objectContaining({ isError: true, message: expect.stringContaining('in progress') })
+      );
+      await expect(videos.setPublishing('video123', true)).rejects.toThrow('in progress');
+      await expect(streams.startStream('video123')).rejects.toThrow('in progress');
+      await expect(
+        streams.startNewStream({
+          title: 'x',
+          description: '',
+          tags: '',
+          resolution: '720p',
+          rtmpPort: 1935,
+          networkAddress: 'localhost',
+          isRecordingStreamLocally: false,
+          isRecordingStreamRemotely: false,
+        })
+      ).rejects.toThrow('in progress');
+      release();
+      await operation;
+      expect(reply.status).toHaveBeenCalledWith(200);
+      expect(await a.text(prefix + 'static/manifests/manifest-720p.m3u8')).toContain(
+        'https://new.example/external/'
+      );
+      expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).toContain(
+        'https://new.example/external/'
+      );
+      expect(cloudflare.purgeWatchPages).toHaveBeenCalledWith(['video123'], true);
+      await expect(
+        withSettingsChange(state.config.paths.nodeSettingsPath, async () => true)
+      ).resolves.toBe(true);
+    } finally {
+      release();
+      await operation;
+      await proxy.close();
+    }
+  });
+  it('finishes migration and releases the lock after the HTTP client disconnects', async () => {
+    await seed();
+    video.is_streaming = false;
+    await storage.finalizeS3Stream('video123', ['720p'], true);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let entered = false;
+    const proxy = await siloProxy(a.config.s3ProviderClientConfig.endpoint, async (req) => {
+      if (req.method === 'PUT') {
+        entered = true;
+        await gate;
+      }
+    });
+    const videos = new VideosService(
+      logger as never,
+      repository,
+      {} as never,
+      storage,
+      {} as never,
+      cloudflare
+    );
+    const controller = new SettingsController(
+      {
+        updateStorageConfig: (value: unknown) => {
+          state.config.nodeSettings.storageConfig = value;
+        },
+      } as never,
+      videos,
+      cloudflare,
+      {} as never
+    );
+    const app = Fastify();
+    app.post('/settings/storageConfig/toggle', controller.storageConfigToggle);
+    await app.listen({ host: '127.0.0.1', port: 0 });
+    const abort = new AbortController();
+    const response = fetch(app.listeningOrigin + '/settings/storageConfig/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        storageConfig: {
+          storageMode: 's3provider',
+          s3Config: {
+            ...a.config,
+            s3ProviderClientConfig: {
+              ...a.config.s3ProviderClientConfig,
+              endpoint: proxy.endpoint,
+            },
+          },
+        },
+      }),
+      signal: abort.signal,
+    }).catch(() => undefined);
+    try {
+      await vi.waitFor(() => expect(entered).toBe(true));
+      abort.abort();
+      await response;
+      release();
+      // A disconnected FastifyReply can remain pending; it must not retain the settings lock.
+      await vi.waitFor(async () =>
+        expect(
+          await withSettingsChange(state.config.paths.nodeSettingsPath, async () => true)
+        ).toBe(true)
+      );
+      expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).toContain(
+        'https://new.example/'
+      );
+    } finally {
+      release();
+      await proxy.close();
+      await app.close();
+    }
+  });
+  it('reports incomplete migration and allows reapplying saved settings to retry', async () => {
+    await seed();
+    video.is_streaming = false;
+    await storage.finalizeS3Stream('video123', ['720p'], true);
+    const videos = new VideosService(
+      logger as never,
+      repository,
+      {} as never,
+      storage,
+      {} as never,
+      cloudflare
+    );
+    const controller = new SettingsController(
+      {
+        updateStorageConfig: (value: unknown) => {
+          state.config.nodeSettings.storageConfig = value;
+        },
+      } as never,
+      videos,
+      cloudflare,
+      {} as never
+    );
+    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    cloudflare.purgeVideo.mockRejectedValueOnce(new Error('purge failed'));
+    const request = { body: { storageConfig: state.config.nodeSettings.storageConfig } } as never;
+    await controller.storageConfigToggle(request, reply as never);
+    expect(reply.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        isError: true,
+        message: expect.stringContaining('reapply these settings'),
+      })
+    );
+    await controller.storageConfigToggle(request, reply as never);
+    expect(reply.status).toHaveBeenLastCalledWith(200);
+  });
+  it('blocks origin changes while draining, but permits repairing credentials for the same origin', async () => {
+    video.is_published = false;
+    video.meta = JSON.stringify({ streamCleanupAt: Date.now() + 60_000 });
+    const videos = new VideosService(
+      logger as never,
+      repository,
+      {} as never,
+      storage,
+      {} as never,
+      cloudflare
+    );
+    const controller = new SettingsController(
+      { updateStorageConfig: vi.fn() } as never,
+      videos,
+      cloudflare,
+      {} as never
+    );
+    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    await controller.storageConfigToggle(
+      { body: { storageConfig: { storageMode: 'filesystem' } } } as never,
+      reply as never
+    );
+    expect(reply.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({ message: expect.stringContaining('finish draining') })
+    );
+    await controller.cloudflareClear({} as never, reply as never);
+    expect(reply.send).toHaveBeenLastCalledWith(
+      expect.objectContaining({ message: expect.stringContaining('finish draining') })
+    );
+    await controller.storageConfigToggle(
+      { body: { storageConfig: state.config.nodeSettings.storageConfig } } as never,
+      reply as never
+    );
+    expect(reply.status).toHaveBeenLastCalledWith(200);
+  });
+  it.each(['-1', 'Infinity', '9'.repeat(310)])(
+    'rejects invalid segment durations before publishing a replacement: %s',
+    async (duration) => {
+      const key = prefix + 'static/manifests/manifest-720p.m3u8';
+      const original = '#EXTM3U\n#EXTINF:' + duration + ',\nold.ts\n';
+      await a.put(key, original);
+      await expect(storage.rewriteS3Manifest(key, 'https://new.example')).rejects.toThrow(
+        'Invalid playlist segment duration'
+      );
+      expect(await a.text(key)).toBe(original);
+    }
+  );
+  it('uses the stopped origin snapshot after a configuration switch and rejects missing credentials', async () => {
+    await a.put(prefix + 'old.ts', 'old');
+    await b.put(prefix + 'old.ts', 'new');
+    state.config.nodeSettings.storageConfig = { storageMode: 's3provider', s3Config: b.config };
+    await storage.deleteStoppedStream(
+      'video123',
+      { storageMode: 's3provider', s3Config: a.config },
+      root
+    );
+    await expect(a.text(prefix + 'old.ts')).rejects.toThrow();
+    expect(await b.text(prefix + 'old.ts')).toBe('new');
+    await expect(
+      storage.deleteStoppedStream('video123', { storageMode: 's3provider' }, root)
+    ).rejects.toThrow('Missing stopped-stream');
+  });
+  it('rejects finalization of a vanished stream and handles legacy empty outputs', async () => {
+    repository.findById.mockResolvedValueOnce(undefined);
+    await expect(streams.finalizeStreamManifests('video123')).rejects.toThrow('no longer exists');
+    await seed(false);
+    video.outputs = '{}';
+    await expect(streams.finalizeStreamManifests('video123')).resolves.toBe(0);
+  });
+  it('can publish a legacy video without metadata', async () => {
+    video = undefined;
+    const videos = new VideosService(
+      logger as never,
+      repository,
+      {} as never,
+      storage,
+      {} as never,
+      cloudflare
+    );
+    await videos.setPublishing('legacy', true);
+    expect(repository.update).toHaveBeenCalledWith(
+      'legacy',
+      expect.objectContaining({ is_publishing: true })
+    );
+  });
+  it('clears publishing admission after a cancelled job', async () => {
+    const videos = new VideosService(
+      logger as never,
+      repository,
+      {} as never,
+      storage,
+      {} as never,
+      cloudflare
+    );
+    await videos.setPublishing('video123', true);
+    expect(video.is_publishing).toBe(true);
+    await videos.setPublishing('video123', false);
+    expect(video.is_publishing).toBe(false);
+  });
+  it.each(['missing', 'finished', 'new-deadline', 'legacy'])(
+    'ignores obsolete cleanup jobs or finishes interrupted legacy stops: %s',
+    async (variant) => {
+      await seed(false);
+      const meta = variant === 'legacy' ? {} : { streamGeneration: 'run-one' };
+      video.meta = JSON.stringify(meta);
+      const job = {
+        videoId: 'video123',
+        generation: variant === 'legacy' ? '123' : 'run-one',
+        deadline: Date.now() - 1,
+        storageConfig: state.config.nodeSettings.storageConfig,
+        videosDirectory: state.config.paths.videosDirectoryPath,
+      };
+      if (variant === 'missing') video = undefined;
+      if (variant === 'finished') video.is_streaming = false;
+      if (variant === 'new-deadline')
+        video.meta = JSON.stringify({ ...meta, streamCleanupAt: job.deadline + 60_000 });
+      await (streams as any).cleanStoppedStream(job);
+      if (variant === 'legacy')
+        await expect(a.text(prefix + '720p/segments/run-one-0.ts')).rejects.toThrow();
+      else expect(await a.text(prefix + '720p/segments/run-one-0.ts')).toBe('first stream bytes');
+    }
+  );
+  it('logs and retains failed cleanup for a later retry', async () => {
+    await seed(false);
+    await streams.stopStream('video123');
+    streams.close();
+    state.config.nodeSettings.storageConfig.s3Config = {
+      ...a.config,
+      s3ProviderClientConfig: {
+        ...a.config.s3ProviderClientConfig,
+        credentials: { ...a.config.s3ProviderClientConfig.credentials, secretAccessKey: 'wrong' },
+      },
+    };
+    const directory = state.config.paths.nodeSettingsPath + '.stream-cleanup';
+    const name = (await readdir(directory))[0]!;
+    const file = path.join(directory, name);
+    const job = JSON.parse(await readFile(file, 'utf8'));
+    job.deadline = Date.now() - 1;
+    video.meta = JSON.stringify({ ...JSON.parse(video.meta), streamCleanupAt: job.deadline });
+    await writeFile(file, JSON.stringify(job));
+    streams = new StreamsService(
+      logger as never,
+      repository,
+      {} as never,
+      {} as never,
+      {} as never,
+      cloudflare,
+      storage
+    );
+    await streams.recoverStreamCleanup();
+    await vi.waitFor(() =>
+      expect(logger.error).toHaveBeenCalledWith(
+        'Stopped stream cleanup will retry',
+        expect.anything()
+      )
+    );
+    expect(await readdir(directory)).toContain(name);
+    expect(await a.text(prefix + '720p/segments/run-one-0.ts')).toBe('first stream bytes');
+  });
+  it('honors migration deadlines and retains the previous complete object after an aborted write', async () => {
+    const key = prefix + 'static/manifests/manifest-720p.m3u8';
+    const original = '#EXTM3U\n#EXTINF:2,\nhttps://old.example/external/a.ts\n';
+    await a.put(key, original);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const proxy = await siloProxy(a.config.s3ProviderClientConfig.endpoint, async (req) => {
+      if (req.method === 'PUT') await gate;
+    });
+    try {
+      state.config.nodeSettings.storageConfig = {
+        storageMode: 's3provider',
+        s3Config: {
+          ...a.config,
+          s3ProviderClientConfig: { ...a.config.s3ProviderClientConfig, endpoint: proxy.endpoint },
+        },
+      };
+      await expect(
+        withCloudflareDeadline(() => storage.rewriteS3Manifest(key, 'https://new.example'), 50)
+      ).rejects.toThrow();
+      expect(await a.text(key)).toBe(original);
+    } finally {
+      release();
+      await proxy.close();
+    }
+  });
+  it.each([true, false])(
+    'finalizes real S3 media and masters before marking stopped (recorded=%s)',
+    async (recorded) => {
+      await seed(recorded);
+      await streams.stopStream('video123', 90);
+      expect(video.is_streaming).toBe(false);
+      expect(video.is_published).toBe(recorded);
+      expect(await a.text(prefix + 'dynamic/manifests/manifest-720p.m3u8')).toContain('ENDLIST');
+      for (const name of ['720p', 'master'])
+        expect(
+          (
+            await a.client.send(
+              new HeadObjectCommand({
+                Bucket: a.config.bucketName,
+                Key: prefix + 'dynamic/manifests/manifest-' + name + '.m3u8',
+              })
+            )
+          ).CacheControl
+        ).toBe('no-store');
+      if (recorded) {
+        expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).toContain(
+          '/static/'
+        );
+      } else {
+        await expect(a.text(prefix + 'static/manifests/manifest-master.m3u8')).rejects.toThrow();
+        expect(JSON.parse(video.meta).streamCleanupAt).toBeGreaterThanOrEqual(Date.now() + 85_000);
+        expect(await a.text(prefix + '720p/segments/run-one-0.ts')).toBe('first stream bytes');
+        await expireJournal();
+        await expect(a.text(prefix + '720p/segments/run-one-0.ts')).rejects.toThrow();
+      }
+    }
+  );
+  it('does not delete a resumed stream or republished video from an old cleanup journal', async () => {
+    await seed(false);
+    await streams.stopStream('video123');
+    video.meta = JSON.stringify({ ...JSON.parse(video.meta), streamGeneration: 'run-two' });
+    video.is_streaming = true;
+    await expireJournal();
+    expect(await a.text(prefix + '720p/segments/run-one-0.ts')).toBe('first stream bytes');
+    video.is_streaming = false;
+    await streams.stopStream('video123');
+    const videos = new VideosService(
+      logger as never,
+      repository,
+      {} as never,
+      storage,
+      {} as never,
+      cloudflare
+    );
+    await expect(videos.setPublishing('video123', true)).rejects.toThrow('finish draining');
+    await expireJournal();
+    await videos.setPublishing('video123', true);
+    expect(JSON.parse(video.meta).streamGeneration).not.toBe('run-two');
+    await expect(a.text(prefix + '720p/segments/run-one-0.ts')).rejects.toThrow();
+  });
+  it('finalizes filesystem playlists and recovers their delayed cleanup after restart', async () => {
+    state.config.nodeSettings.storageConfig = { storageMode: 'filesystem' };
+    video.is_stream_recorded_remotely = false;
+    video.is_streaming = true;
+    const folder = path.join(root, 'videos', 'video123', 'adaptive', 'm3u8');
+    await mkdir(folder, { recursive: true });
+    await writeFile(path.join(folder, 'manifest-720p.m3u8'), '#EXTM3U\n#EXTINF:3,\nsegment.ts\n');
+    await writeFile(
+      path.join(folder, 'manifest-master.m3u8'),
+      '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nhttps://old/external/videos/video123/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8\n'
+    );
+    await streams.stopStream('video123');
+    expect(await readFile(path.join(folder, 'manifest-720p.m3u8'), 'utf8')).toContain('ENDLIST');
+    expect(await readFile(path.join(folder, 'manifest-master.m3u8'), 'utf8')).not.toContain(
+      'ENDLIST'
+    );
+    await expireJournal();
+    await expect(readdir(folder)).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+});

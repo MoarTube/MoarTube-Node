@@ -110,6 +110,13 @@ describe('VideosController', () => {
   let mockReportsService: Record<string, ReturnType<typeof vi.fn>>;
   let mockReply: FastifyReply;
 
+  it('invalidates only the requested video after manifest migration', async () => {
+    await controller.invalidateCache(createMockRequest({ params: { videoId: 'video' } }), mockReply);
+    expect(mockCloudflareService.purgeVideo).toHaveBeenCalledWith('video');
+    expect(mockCloudflareService.purgeWatchPages).toHaveBeenCalledWith(['video'], true);
+    expect(mockReply.status).toHaveBeenCalledWith(200);
+  });
+
   beforeEach(() => {
     // Initialize all mock services with common methods
     mockVideosService = {
@@ -200,6 +207,7 @@ describe('VideosController', () => {
     };
 
     mockCloudflareService = {
+      purgeVideo: vi.fn().mockResolvedValue(undefined),
       verifyTurnstileToken: vi.fn(),
       validateTurnstileToken: vi.fn(),
       purgeWatchPages: vi.fn(),

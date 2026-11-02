@@ -71,6 +71,12 @@ describe('Settings Routes', () => {
       { preHandler: [mockFastify.authenticate], schema: { tags: ['Settings'] } }, expect.any(Function));
   });
 
+  it('requires authentication for CPU metrics', () => {
+    settingsRoutes(mockFastify as any, mockContainer);
+    expect(mockFastify.get).toHaveBeenCalledWith('/metrics/cpu',
+      { preHandler: [mockFastify.authenticate], schema: { tags: ['Settings'] } }, expect.any(Function));
+  });
+
   // Settings Root
   it('should register GET / route', () => {
     settingsRoutes(mockFastify as any, mockContainer);
@@ -205,9 +211,9 @@ describe('Settings Routes', () => {
     expect(mockFastify.post).toHaveBeenCalledWith('/restart', expect.anything(), expect.any(Function));
   });
 
-  it('should register exactly 6 GET routes', () => {
+  it('should register exactly 7 GET routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.get).toHaveBeenCalledTimes(6);
+    expect(mockFastify.get).toHaveBeenCalledTimes(7);
   });
 
   it('should register exactly 21 POST routes', () => {

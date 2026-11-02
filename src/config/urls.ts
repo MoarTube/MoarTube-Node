@@ -4,6 +4,7 @@
  */
 
 import type { NodeSettings, StorageConfig } from '@/types/index.js';
+import { validateCdnSettings } from '@/utils/cdn-settings.js';
 
 /**
  * URL configuration interface
@@ -93,12 +94,19 @@ export function buildNodeBaseUrl(nodeSettings: NodeSettings): string {
 export function buildExternalVideosBaseUrl(nodeSettings: NodeSettings): string {
   const { storageConfig, isCloudflareCdnEnabled } = nodeSettings;
 
+  if (isCloudflareCdnEnabled) {
+    const hostname = validateCdnSettings(nodeSettings);
+    if (storageConfig.storageMode === 's3provider') {
+      return `https://${hostname}`;
+    }
+  }
+
   if (storageConfig.storageMode === 'filesystem') {
     return buildNodeBaseUrl(nodeSettings);
   }
 
   // S3 provider mode
-  return buildS3ExternalUrl(storageConfig, isCloudflareCdnEnabled);
+  return buildS3ExternalUrl(storageConfig);
 }
 
 /**
@@ -130,7 +138,7 @@ function buildCustomS3Url(endpoint: string, bucketName: string, forcePathStyle: 
   }
 }
 
-function buildS3ExternalUrl(storageConfig: StorageConfig, isCloudflareCdnEnabled: boolean): string {
+function buildS3ExternalUrl(storageConfig: StorageConfig): string {
   if (storageConfig.storageMode !== 's3provider' || !storageConfig.s3Config) {
     throw new Error('S3 config required for s3provider storage mode');
   }
@@ -138,23 +146,18 @@ function buildS3ExternalUrl(storageConfig: StorageConfig, isCloudflareCdnEnabled
   const { bucketName, s3ProviderClientConfig } = storageConfig.s3Config;
   const { endpoint, region, forcePathStyle } = s3ProviderClientConfig;
 
-  // If Cloudflare CDN is enabled, use bucket name as subdomain
-  if (isCloudflareCdnEnabled) {
-    return `https://${bucketName}`;
-  }
-
   // Custom endpoint (non-AWS S3 provider)
   if (endpoint !== undefined && endpoint !== '') {
     return buildCustomS3Url(endpoint, bucketName, forcePathStyle);
   }
 
   // AWS S3 (no custom endpoint)
-  if (forcePathStyle) {
-    // Path-style AWS URL
+  if (forcePathStyle || bucketName.includes('.')) {
+    // AWS wildcard TLS certificates cannot cover dotted virtual-hosted bucket names.
     return `https://s3.${region}.amazonaws.com/${bucketName}`;
   } else {
     // Virtual-hosted style AWS URL
-    return `http://${bucketName}.s3.${region}.amazonaws.com`;
+    return `https://${bucketName}.s3.${region}.amazonaws.com`;
   }
 }
 

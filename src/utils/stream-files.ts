@@ -10,7 +10,8 @@ import { pipeline } from 'node:stream/promises';
 export async function writeUpload(
   upload: { file: Readable & { truncated?: boolean } },
   destination: string,
-  maxBytes: number
+  maxBytes: number,
+  signal?: AbortSignal
 ): Promise<void> {
   await mkdir(path.dirname(destination), { recursive: true });
   const temporary = `${destination}.${randomUUID()}.part`;
@@ -22,7 +23,12 @@ export async function writeUpload(
     },
   });
   try {
-    await pipeline(upload.file, limit, createWriteStream(temporary, { flags: 'wx' }));
+    await pipeline(
+      upload.file,
+      limit,
+      createWriteStream(temporary, { flags: 'wx' }),
+      signal ? { signal } : {}
+    );
     if (upload.file.truncated) {
       throw new Error('Upload was truncated');
     }

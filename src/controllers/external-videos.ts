@@ -76,6 +76,7 @@ export class ExternalVideosController extends BaseController {
   getBaseUrl = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const config = getConfig();
+      config.reloadNodeSettings();
 
       const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
 
@@ -186,7 +187,7 @@ export class ExternalVideosController extends BaseController {
       );
     } catch (error) {
       this.logger.error('Get adaptive manifest failed', error);
-
+      reply.header('Cache-Control', 'no-store');
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
   };

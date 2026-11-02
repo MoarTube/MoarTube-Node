@@ -6,6 +6,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { Readable } from 'node:stream';
+import { writeUpload } from '@/utils/stream-files.js';
 
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
@@ -34,6 +36,8 @@ import type {
   PostgresNewComment,
 } from '@database/index.js';
 import { getConfig } from '@config/index.js';
+import { withSettingsChange } from '@/utils/settings-change.js';
+import { randomUUID } from 'node:crypto';
 import type { CloudflareService } from '@services/cloudflare.js';
 import type { StorageService } from '@services/storage.js';
 import type { WebSocketService } from '@services/websocket.js';
@@ -413,18 +417,23 @@ export class VideosService extends BaseService {
       }
 
       this.logger.info('Deleting video', { videoId });
-
-      // Delete comments for the video
-      await this.commentsRepository.deleteByVideoId(videoId);
+      const cachedSegments = await this.cloudflareService.getAdaptiveVideoUrls(videoId);
 
       // Delete storage directories
       await this.deleteVideoStorageDirectories(videoId);
 
+      // Retain the record and comments when origin cleanup needs a retry.
+      await this.commentsRepository.deleteByVideoId(videoId);
+
+      // Authoritative deletion precedes invalidation so misses cannot refill old HTML.
+      const deleted = await this.videoRepository.delete(videoId);
+
       try {
         await this.cloudflareService.purgeNodePage();
         await this.cloudflareService.purgeEmbedVideoPages([videoId]);
-        await this.cloudflareService.purgeAdaptiveVideos(videoId);
+        await this.cloudflareService.purgeAdaptiveVideos(videoId, cachedSegments);
         await this.cloudflareService.purgeProgressiveVideos(videoId);
+        await this.cloudflareService.purgeWatchPages([videoId]);
         await this.cloudflareService.purgeAllWatchPages();
         await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
         await this.cloudflareService.purgeVideoPreviewImages([videoId]);
@@ -436,8 +445,7 @@ export class VideosService extends BaseService {
         });
       }
 
-      // Delete video record
-      return this.videoRepository.delete(videoId);
+      return deleted;
     });
   }
 
@@ -462,7 +470,40 @@ export class VideosService extends BaseService {
    * Mark video as publishing
    */
   async setPublishing(videoId: string, isPublishing: boolean): Promise<void> {
-    await this.videoRepository.update(videoId, { is_publishing: isPublishing });
+    if (!isPublishing) {
+      await this.videoRepository.update(videoId, { is_publishing: false });
+      return;
+    }
+    await withSettingsChange(getConfig().paths.nodeSettingsPath, async () => {
+      getConfig().reloadNodeSettings();
+      const video = await this.videoRepository.findById(videoId);
+      const metadata = this.safeJsonParse<{ streamGeneration?: string; streamCleanupAt?: number }>(
+        video?.meta ?? '{}',
+        {}
+      );
+      if (metadata.streamCleanupAt !== undefined) {
+        throw new Error('Wait for the stopped stream to finish draining before publishing.');
+      }
+      metadata.streamGeneration = randomUUID();
+      delete metadata.streamCleanupAt;
+      await this.videoRepository.update(videoId, {
+        is_publishing: true,
+        meta: JSON.stringify(metadata),
+      });
+    });
+  }
+
+  async rewriteS3VideoManifests(
+    videoId: string,
+    resolutions: string[],
+    baseUrl: string
+  ): Promise<void> {
+    for (const resolution of [...resolutions, 'master']) {
+      await this.storageService.rewriteS3Manifest(
+        `external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-${resolution}.m3u8`,
+        baseUrl
+      );
+    }
   }
 
   /**
@@ -494,6 +535,7 @@ export class VideosService extends BaseService {
     });
 
     try {
+      await this.cloudflareService.purgeNodePage();
       await this.cloudflareService.purgeAllEmbedVideoPages();
       await this.cloudflareService.purgeAllWatchPages();
       await this.cloudflareService.purgeVideo(videoId);
@@ -1046,6 +1088,7 @@ export class VideosService extends BaseService {
       isFinalized: video.is_finalized,
       isStreamRecordedRemotely: video.is_stream_recorded_remotely,
       timestamp: video.creation_timestamp,
+      isPublishing: video.is_publishing,
       outputs,
       meta,
     };
@@ -1150,8 +1193,14 @@ export class VideosService extends BaseService {
 
         await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
 
-        // Delete the files from storage
+        // Capture cached segment identities before removing their origin files.
+        const cachedSegments = await this.cloudflareService.getAdaptiveVideoUrls(videoId);
         this.deleteFormatResolutionFiles(videoId, format, resolution);
+
+        await this.cloudflareService.purgeAdaptiveVideos(videoId, cachedSegments);
+        await this.cloudflareService.purgeProgressiveVideos(videoId);
+        await this.cloudflareService.purgeWatchPages([videoId]);
+        await this.cloudflareService.purgeNodePage();
 
         this.logger.info('Format/resolution unpublished', { videoId, format, resolution });
       });
@@ -1331,7 +1380,7 @@ export class VideosService extends BaseService {
    * {videosDir}/{videoId}/adaptive/m3u8/manifest-{type}.m3u8
    */
   async writeMasterManifest(videoId: string, manifestType: string, content: string): Promise<void> {
-    return this.withErrorLogging('writeMasterManifest', () => {
+    return this.withErrorLogging('writeMasterManifest', async () => {
       const config = getConfig();
       const storageMode = config.nodeSettings.storageConfig.storageMode;
 
@@ -1343,7 +1392,7 @@ export class VideosService extends BaseService {
         fs.mkdirSync(manifestDir, { recursive: true });
 
         const manifestPath = path.join(manifestDir, `manifest-master.m3u8`);
-        fs.writeFileSync(manifestPath, content);
+        await writeUpload({ file: Readable.from([content]) }, manifestPath, 128 * 1024);
 
         this.logger.debug('Wrote HLS master manifest', {
           videoId,
@@ -1440,7 +1489,8 @@ export class VideosService extends BaseService {
       }
     } catch (error) {
       this.logger.error('Failed to delete video directories', error, { videoId });
-      // Don't throw - video record deletion should still proceed
+      // Keep the record and its storage identity available for a safe retry.
+      throw error;
     }
   }
 

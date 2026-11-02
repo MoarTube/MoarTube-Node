@@ -9,6 +9,8 @@ vi.mock('node:fs', () => ({
     existsSync: vi.fn(),
     readFileSync: vi.fn(),
     writeFileSync: vi.fn(),
+    renameSync: vi.fn(),
+    rmSync: vi.fn(),
     mkdirSync: vi.fn(),
     watch: vi.fn(),
     rm: vi.fn(),
@@ -25,12 +27,14 @@ vi.mock('node:path', () => ({
   default: {
     join: vi.fn(),
     dirname: vi.fn(),
+    basename: vi.fn(() => '_node_settings.json'),
   },
 }));
 
 vi.mock('node:crypto', () => ({
   default: {
     randomBytes: vi.fn(),
+    randomUUID: vi.fn(() => 'test-generation'),
   },
 }));
 
@@ -325,8 +329,9 @@ describe('config/index.ts', () => {
 
       expect(validateNodeSettings).toHaveBeenCalledWith({ ...mockNodeSettings, ...updates });
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
-        mockPaths.nodeSettingsPath,
-        JSON.stringify({ ...mockNodeSettings, nodeName: 'Updated Node' }, null, 2)
+        mockPaths.nodeSettingsPath + '.test-generation.part',
+        JSON.stringify({ ...mockNodeSettings, nodeName: 'Updated Node' }, null, 2),
+        { flag: 'wx' }
       );
     });
 
@@ -484,6 +489,14 @@ describe('config/index.ts', () => {
   });
 
   describe('File watching', () => {
+    it('retains the previous in-memory settings when atomic persistence fails', () => {
+      const config = Config.initialize(mockBaseDir);
+      const previous = config.nodeSettings;
+      mockFs.writeFileSync.mockImplementationOnce(() => { throw new Error('disk full'); });
+      expect(() => config.updateNodeSettings({ nodeName: 'unsaved' })).toThrow('disk full');
+      expect(config.nodeSettings).toEqual(previous);
+      expect(mockFs.rmSync).toHaveBeenCalledWith(expect.stringContaining('.part'), { force: true });
+    });
     it('should retain settings during an incomplete write and reload the completed file', () => {
       const config = Config.initialize(mockBaseDir);
       const watchCallback = mockFs.watch.mock.calls[1][1];
@@ -501,7 +514,7 @@ describe('config/index.ts', () => {
     it('should set up file watcher for settings file', () => {
       Config.initialize(mockBaseDir);
 
-      expect(mockFs.watch).toHaveBeenCalledWith(mockPaths.nodeSettingsPath, expect.any(Function));
+      expect(mockFs.watch).toHaveBeenCalledWith(mockPath.dirname(mockPaths.nodeSettingsPath), expect.any(Function));
     });
 
     it('should reload settings when file changes', () => {
@@ -516,14 +529,14 @@ describe('config/index.ts', () => {
       expect(validateNodeSettings).toHaveBeenCalledTimes(2); // Once during init, once during reload
     });
 
-    it('should not reload settings for non-change events', () => {
+    it('should not reload settings when an unrelated file changes', () => {
       Config.initialize(mockBaseDir);
 
       // Get the watch callback for settings file (second call to fs.watch)
       const watchCallback = mockFs.watch.mock.calls[1][1];
 
       // Simulate non-change event
-      watchCallback('rename');
+      watchCallback('rename', 'unrelated.json');
 
       expect(validateNodeSettings).toHaveBeenCalledTimes(1); // Only during init
     });

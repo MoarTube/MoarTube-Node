@@ -273,12 +273,20 @@ export class CommentsService extends BaseService {
     videoId?: string,
     searchTerm?: string
   ): Promise<(SQLiteComment | PostgresComment)[]> {
+    // Search the same HTML-encoded representation used when comments are stored.
+    const storedSearchTerm =
+      searchTerm === undefined
+        ? undefined
+        : sanitizeHtml(searchTerm, {
+            allowedTags: [],
+            allowedAttributes: {},
+          });
     return await this.commentsRepository.search(
       limit,
       sortDirection,
       timestamp,
       videoId,
-      searchTerm
+      storedSearchTerm
     );
   }
 }

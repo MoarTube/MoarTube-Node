@@ -106,6 +106,12 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   const container = await createAppContainer(db);
 
   app.addHook('onClose', async () => container.resolve('videosService').flushPendingViews());
+  app.addHook('onReady', async () => container.resolve('streamsService').recoverStreamCleanup());
+  app.addHook('onClose', () => {
+    container.resolve('streamsService').close();
+    container.resolve('storageService').close();
+    return Promise.resolve();
+  });
 
   // Register routes with Zod type provider
   registerRoutes(app.withTypeProvider<ZodTypeProvider>(), container);

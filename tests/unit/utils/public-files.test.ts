@@ -1,4 +1,9 @@
 import fs from 'node:fs';
+import * as promises from 'node:fs/promises';
+vi.mock('node:fs/promises', async (original) => {
+  const actual = await original<typeof import('node:fs/promises')>();
+  return { ...actual, open: vi.fn(actual.open) };
+});
 import { Readable } from 'node:stream';
 import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, symlinkSync, utimesSync } from 'node:fs';
@@ -229,13 +234,183 @@ describe('public file HTTP boundaries and delivery', () => {
     ).toBe(200);
   });
 
+  it('does not grant VOD caching to a static alias of active media or master playlists', async () => {
+    const folder = path.join(root, `videos/${video}/adaptive/m3u8`);
+    writeFileSync(
+      path.join(folder, 'manifest-720p.m3u8'),
+      '#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:12\n#EXTINF:2,\nsegment-12.ts\n'
+    );
+    for (const type of ['static', 'dynamic']) {
+      const response = await app.inject(
+        `${media}/adaptive/m3u8/${type}/manifests/manifest-720p.m3u8`
+      );
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['cache-control']).toBe(
+        'public, max-age=0, s-maxage=1, must-revalidate'
+      );
+    }
+    writeFileSync(
+      path.join(folder, 'manifest-master.m3u8'),
+      '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nhttps://node/external/videos/id/adaptive/m3u8/dynamic/manifests/a.m3u8\n'
+    );
+    expect(
+      (await app.inject(`${media}/adaptive/m3u8/static/manifests/manifest-master.m3u8`)).headers[
+        'cache-control'
+      ]
+    ).toBe('public, max-age=0, s-maxage=1, must-revalidate');
+    writeFileSync(
+      path.join(folder, 'manifest-720p.m3u8'),
+      '#EXTM3U\n#EXTINF:2,\nsegment-12.ts\n#EXT-X-ENDLIST\n'
+    );
+    expect(
+      (await app.inject(`${media}/adaptive/m3u8/static/manifests/manifest-720p.m3u8`)).headers[
+        'cache-control'
+      ]
+    ).toContain('s-maxage=30');
+  });
+  it('microcaches GET and HEAD snapshots but never revalidates live files using static validators', async () => {
+    const file = path.join(root, `videos/${video}/adaptive/m3u8/manifest-720p.m3u8`);
+    const url = `${media}/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8`;
+    const active = '#EXTM3U\r\n#EXT-X-TARGETDURATION:2\r\n#EXTINF:2,\r\nsegment-run-0.ts\r\n';
+    writeFileSync(file, active);
+    for (const method of ['GET', 'HEAD'] as const) {
+      const response = await app.inject({
+        method,
+        url,
+        headers: {
+          'if-none-match': '*',
+          'if-modified-since': new Date(Date.now() + 10000).toUTCString(),
+        },
+      });
+      expect(response.statusCode).toBe(200);
+      expect(response.headers['cache-control']).toBe(
+        'public, max-age=0, s-maxage=1, must-revalidate'
+      );
+      expect(response.headers.etag).toBeUndefined();
+      expect(response.headers['last-modified']).toBeUndefined();
+      expect(response.body).toBe(method === 'HEAD' ? '' : active);
+    }
+    writeFileSync(file, active + '#EXT-X-ENDLIST\r\n');
+    const terminal = await app.inject(url);
+    expect(terminal.headers['cache-control']).toBe('no-store');
+    expect(terminal.body).toContain('ENDLIST');
+    writeFileSync(file, active.replace('segment-run-0', 'segment-next-0'));
+    const resumed = await app.inject(url);
+    expect(resumed.headers['cache-control']).toContain('s-maxage=1');
+    expect(resumed.body).toContain('segment-next-0');
+    expect(resumed.body).not.toContain('ENDLIST');
+  });
+  it('does not cache a finalized master through the dynamic alias', async () => {
+    writeFileSync(
+      path.join(root, `videos/${video}/adaptive/m3u8/manifest-master.m3u8`),
+      '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nhttps://node/external/videos/id/adaptive/m3u8/static/manifests/manifest-720p.m3u8\n'
+    );
+    const terminal = await app.inject(
+      `${media}/adaptive/m3u8/dynamic/manifests/manifest-master.m3u8`
+    );
+    expect(terminal.headers['cache-control']).toBe('no-store');
+    const vod = await app.inject(`${media}/adaptive/m3u8/static/manifests/manifest-master.m3u8`);
+    expect(vod.headers['cache-control']).toContain('s-maxage=30');
+  });
+  it('microcaches recorded Client playlists with fixed-width target durations', async () => {
+    const file = path.join(root, `videos/${video}/adaptive/m3u8/manifest-720p.m3u8`);
+    // PlaylistArchive emits this fixed-width integer header for recorded live streams.
+    const active =
+      '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-TARGETDURATION:0000000002\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXTINF:2,\nsegment-run-0.ts\n';
+    writeFileSync(file, active);
+    for (const type of ['static', 'dynamic']) {
+      for (const method of ['GET', 'HEAD'] as const) {
+        const response = await app.inject({
+          method,
+          url: `${media}/adaptive/m3u8/${type}/manifests/manifest-720p.m3u8`,
+        });
+        expect(response.statusCode).toBe(200);
+        expect(response.headers['cache-control']).toBe(
+          'public, max-age=0, s-maxage=1, must-revalidate'
+        );
+        expect(response.body).toBe(method === 'HEAD' ? '' : active);
+      }
+    }
+    writeFileSync(file, active + '#EXT-X-ENDLIST\n');
+    for (const method of ['GET', 'HEAD'] as const) {
+      const terminal = await app.inject({
+        method,
+        url: `${media}/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8`,
+      });
+      expect(terminal.headers['cache-control']).toBe('no-store');
+    }
+  });
+  it('keeps startup, invalid and missing playlist responses uncached', async () => {
+    const file = path.join(root, `videos/${video}/adaptive/m3u8/manifest-720p.m3u8`);
+    const url = `${media}/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8`;
+    for (const content of [
+      '',
+      '#EXTM3U\n',
+      '#EXTM3U\n#EXT-X-TARGETDURATION:2\n',
+      'invalid\n#EXT-X-TARGETDURATION:2\n#EXTINF:2,\nx.ts\n',
+      '#EXTM3U\n#EXTINF:2,\nx.ts\n',
+      ...['0', '0000000000', '-2', '2.0', '1e1'].map(
+        (target) => `#EXTM3U\n#EXT-X-TARGETDURATION:${target}\n#EXTINF:2,\nx.ts\n`
+      ),
+    ]) {
+      writeFileSync(file, content);
+      expect((await app.inject(url)).headers['cache-control']).toBe('no-store');
+    }
+    rmSync(file);
+    const missing = await app.inject(url);
+    expect(missing.statusCode).toBe(404);
+    expect(missing.headers['cache-control']).toBe('no-store');
+    const invalid = await app.inject(`${media}/adaptive/m3u8/invalid/manifests/manifest-720p.m3u8`);
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.headers['cache-control']).toBe('no-store');
+  });
+
+  it('streams the same file generation used for headers during atomic replacement', async () => {
+    const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+    const filename = path.join(root, `videos/${video}/progressive/mp4/720p.mp4`);
+    const replacement = filename + '.next';
+    writeFileSync(replacement, Buffer.alloc(2000, 99));
+    const snapshot = filename + '.snapshot';
+    await actual.copyFile(filename, snapshot);
+    vi.mocked(promises.open).mockImplementationOnce(async () => {
+      // Represent an already-open old generation without depending on Windows rename sharing.
+      const handle = await actual.open(snapshot, 'r');
+      await actual.rename(replacement, filename);
+      return handle;
+    });
+    const response = await app.inject(`${media}/progressive/mp4/720p.mp4`);
+    expect(response.headers['content-length']).toBe('1000');
+    expect(response.rawPayload).toHaveLength(1000);
+    expect(response.rawPayload[0]).toBe(0);
+    const next = await app.inject(`${media}/progressive/mp4/720p.mp4`);
+    expect(next.rawPayload).toEqual(Buffer.alloc(2000, 99));
+  });
+
+  it('closes and serves an empty static file correctly', async () => {
+    writeFileSync(path.join(root, 'public/javascript/app.js'), '');
+    const response = await app.inject('/external/resources/javascript/app.js');
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toBe('');
+    expect(response.headers['content-length']).toBe('0');
+  });
+
   it('forwards file read failures through the compression stream', async () => {
     const stream = new Readable({
       read() {
         this.destroy(new Error('read failed'));
       },
     });
-    const spy = vi.spyOn(fs, 'createReadStream').mockReturnValueOnce(stream as fs.ReadStream);
+    const originalOpen = (
+      await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+    ).open;
+    vi.mocked(promises.open).mockImplementationOnce(async (...args) => {
+      const handle = await originalOpen(...args);
+      vi.spyOn(handle, 'createReadStream').mockReturnValueOnce(stream as fs.ReadStream);
+      stream.once('close', () => {
+        void handle.close();
+      });
+      return handle;
+    });
     try {
       const response = await app.inject({
         url: '/external/resources/javascript/app.js',
@@ -243,7 +418,7 @@ describe('public file HTTP boundaries and delivery', () => {
       });
       expect(response.statusCode).toBe(500);
     } finally {
-      spy.mockRestore();
+      vi.mocked(promises.open).mockImplementation(originalOpen);
     }
   });
 });

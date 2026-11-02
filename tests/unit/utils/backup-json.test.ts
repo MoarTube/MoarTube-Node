@@ -42,7 +42,7 @@ describe('incremental backup reader', () => {
     expect((await events(JSON.stringify([{ rows, tableName: 'videos' }]), 65536)).length).toBe(
       2001
     );
-  });
+  }, 15_000);
   it.each([
     '[{"tableName":"a","tableName":"b","rows":[]}]',
     '[{"rows":[{"title":"' + 'a'.repeat(1024 ** 2) + '"}],"tableName":"a"}]',

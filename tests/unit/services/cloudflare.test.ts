@@ -52,6 +52,7 @@ describe('CloudflareService', () => {
         cloudflareZoneId: '',
         cloudflareTurnstileSiteKey: '',
         cloudflareTurnstileSecretKey: '',
+        publicNodeAddress: 'example.com',
       },
       getNodeBaseUrl: vi.fn().mockReturnValue('https://example.com'),
       getExternalResourcesBaseUrl: vi.fn().mockReturnValue('https://example.com'),
@@ -67,6 +68,7 @@ describe('CloudflareService', () => {
     } as unknown as ReturnType<typeof axios.create>);
 
     service = new CloudflareService(mockLogger, mockVideosRepository);
+    vi.spyOn(service, 'getAdaptiveVideoUrls').mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -84,6 +86,7 @@ describe('CloudflareService', () => {
       mockConfig.nodeSettings.cloudflareEmailAddress = 'test@example.com';
 
       service = new CloudflareService(mockLogger, mockVideosRepository);
+      vi.spyOn(service, 'getAdaptiveVideoUrls').mockResolvedValue([]);
 
       expect(axios.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -401,6 +404,7 @@ describe('CloudflareService', () => {
         mockHttpClient as unknown as ReturnType<typeof axios.create>
       );
       service = new CloudflareService(mockLogger, mockVideosRepository);
+      vi.spyOn(service, 'getAdaptiveVideoUrls').mockResolvedValue([]);
     });
 
     it('should purge watch pages for specific videos', async () => {
@@ -680,7 +684,36 @@ describe('CloudflareService', () => {
       );
 
       const rules = vi.mocked(axios.put).mock.calls[0][1].rules;
+      const assets = rules.find((rule: { description: string }) =>
+        rule.description.includes('JavaScript')
+      );
+      expect(assets.action_parameters.browser_ttl).toEqual({ mode: 'respect_origin' });
+      expect(assets.action_parameters.edge_ttl).toEqual({ mode: 'bypass_by_default' });
+      const catalog = rules.find((rule: { description: string }) =>
+        rule.description.startsWith('Node Page')
+      );
+      expect(catalog.action_parameters.edge_ttl).toEqual({ mode: 'bypass_by_default' });
       expect(rules.length).toBeLessThanOrEqual(10);
+      const playlists = rules.find((rule: { description: string }) =>
+        rule.description.includes('HLS Playlists')
+      );
+      expect(playlists.expression).toContain('/adaptive/m3u8/');
+      expect(playlists.expression).toContain('"GET" "HEAD"');
+      expect(playlists.action_parameters).toEqual({
+        cache: true,
+        edge_ttl: {
+          mode: 'bypass_by_default',
+          status_code_ttl: [{ status_code_range: { from: 400, to: 599 }, value: -1 }],
+        },
+        browser_ttl: { mode: 'respect_origin' },
+      });
+      expect(
+        rules.some(
+          (rule: { expression: string; action_parameters: { cache: boolean } }) =>
+            rule.expression.includes('/adaptive/m3u8/dynamic/') &&
+            rule.action_parameters.cache === false
+        )
+      ).toBe(false);
       const comments = rules.find((rule: { description: string }) =>
         rule.description.includes('Node Comments')
       );
@@ -794,7 +827,7 @@ describe('CloudflareService', () => {
       await service.addCdnDnsRecord('email@example.com', 'zone123', 'api-key', {
         storageMode: 's3provider',
         s3Config: {
-          bucketName: 'my-bucket',
+          bucketName: 'externalvideos.example.com',
           s3ProviderClientConfig: {
             region: 'us-east-1',
           },
@@ -805,8 +838,8 @@ describe('CloudflareService', () => {
         expect.stringContaining('/dns_records'),
         expect.objectContaining({
           type: 'CNAME',
-          name: 'my-bucket',
-          content: 'my-bucket.s3.us-east-1.amazonaws.com',
+          name: 'externalvideos.example.com',
+          content: 'externalvideos.example.com.s3.us-east-1.amazonaws.com',
           proxied: true,
         }),
         expect.any(Object)
@@ -820,10 +853,10 @@ describe('CloudflareService', () => {
       await service.addCdnDnsRecord('email@example.com', 'zone123', 'api-key', {
         storageMode: 's3provider',
         s3Config: {
-          bucketName: 'my-bucket',
+          bucketName: 'externalvideos.example.com',
           s3ProviderClientConfig: {
             region: 'us-east-1',
-            endpoint: 'https://minio.example.com',
+            endpoint: 'https://silo.example.com',
           },
         },
       });
@@ -831,7 +864,7 @@ describe('CloudflareService', () => {
       expect(axios.post).toHaveBeenCalledWith(
         expect.stringContaining('/dns_records'),
         expect.objectContaining({
-          content: 'my-bucket.minio.example.com',
+          content: 'externalvideos.example.com.silo.example.com',
         }),
         expect.any(Object)
       );

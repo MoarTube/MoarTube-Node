@@ -160,7 +160,7 @@ export class WatchController extends VideoControllerBase {
       }
     } catch (error) {
       this.logger.error('Get progressive video failed', error);
-
+      reply.headers({ 'Cache-Control': 'no-store' });
       return await this.sendError(reply, 'that video could not be loaded', 500);
     }
   };

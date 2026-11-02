@@ -5,54 +5,12 @@
  * for both filesystem and S3 backends.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { StorageService } from '@/services/storage.js';
 import type { Logger } from '@/utils/logger.js';
 import fs from 'node:fs';
-
-// Mock the S3 client - use hoisted mock
-const { mockS3Send } = vi.hoisted(() => ({
-  mockS3Send: vi.fn(),
-}));
-
-vi.mock('@aws-sdk/client-s3', () => {
-  // Define the class inside the factory to avoid hoisting issues
-  class MockS3Client {
-    send = mockS3Send;
-  }
-  // Each command must be a class since they're instantiated with 'new'
-  class MockGetObjectCommand {
-    constructor(public params: Record<string, unknown>) {}
-  }
-  class MockDeleteObjectCommand {
-    constructor(public params: Record<string, unknown>) {}
-  }
-  class MockHeadObjectCommand {
-    constructor(public params: Record<string, unknown>) {}
-  }
-  class MockListObjectsV2Command {
-    constructor(public params: Record<string, unknown>) {}
-  }
-  class MockCopyObjectCommand {
-    constructor(public params: Record<string, unknown>) {}
-  }
-  class MockDeleteObjectsCommand {
-    constructor(public params: Record<string, unknown>) {}
-  }
-  return {
-    S3Client: MockS3Client,
-    GetObjectCommand: MockGetObjectCommand,
-    DeleteObjectCommand: MockDeleteObjectCommand,
-    HeadObjectCommand: MockHeadObjectCommand,
-    ListObjectsV2Command: MockListObjectsV2Command,
-    CopyObjectCommand: MockCopyObjectCommand,
-    DeleteObjectsCommand: MockDeleteObjectsCommand,
-  };
-});
-
-vi.mock('@aws-sdk/s3-request-presigner', () => ({
-  getSignedUrl: vi.fn().mockResolvedValue('https://signed-url.example.com'),
-}));
+import { Readable } from 'node:stream';
+import { siloFixture, siloProxy, type SiloFixture } from '../../support/silo.js';
 
 // Mock node:fs
 vi.mock('node:fs', () => ({
@@ -75,13 +33,19 @@ vi.mock('@config/index.js', () => ({
 import { getConfig } from '@config/index.js';
 
 describe('StorageService', () => {
+  let fixture: SiloFixture;
+  beforeAll(async () => {
+    fixture = await siloFixture();
+  });
+  afterAll(async () => {
+    await fixture.close();
+  });
   let service: StorageService;
   let mockLogger: Logger;
   let mockConfig: ReturnType<typeof getConfig>;
 
   beforeEach(() => {
     // Reset mock call history but keep implementations
-    mockS3Send.mockReset();
 
     mockLogger = {
       info: vi.fn(),
@@ -112,7 +76,8 @@ describe('StorageService', () => {
   });
 
   afterEach(() => {
-    // Only reset the fs mocks, not the S3 mocks
+    (service as unknown as { s3Client: { destroy(): void } | null }).s3Client?.destroy();
+    // Filesystem tests retain their separate fixtures.
     vi.mocked(fs.existsSync).mockReset();
     vi.mocked(fs.mkdirSync).mockReset();
     vi.mocked(fs.rmSync).mockReset();
@@ -304,58 +269,6 @@ describe('StorageService', () => {
     });
   });
 
-  describe('S3 storage mode configuration', () => {
-    beforeEach(() => {
-      mockConfig.nodeSettings.storageConfig.storageMode = 's3provider';
-      mockConfig.nodeSettings.storageConfig.s3Config = {
-        bucketName: 'test-bucket',
-        s3ProviderClientConfig: {
-          region: 'us-east-1',
-          credentials: {
-            accessKeyId: 'test-key',
-            secretAccessKey: 'test-secret',
-          },
-        },
-      };
-      service = new StorageService(mockLogger);
-    });
-
-    it('should return s3provider storage mode', () => {
-      expect(service.getStorageMode()).toBe('s3provider');
-    });
-
-    it('should return false when file existence check fails in S3 mode', async () => {
-      // HeadObjectCommand throws NotFound for non-existent files
-      const notFoundError = new Error('NotFound');
-      notFoundError.name = 'NotFound';
-      mockS3Send.mockRejectedValueOnce(notFoundError);
-      const result = await service.fileExists('test.txt');
-      expect(result).toBe(false);
-    });
-
-    it('should return null when metadata retrieval fails in S3 mode', async () => {
-      const notFoundError = new Error('NotFound');
-      notFoundError.name = 'NotFound';
-      mockS3Send.mockRejectedValueOnce(notFoundError);
-      const result = await service.getFileMetadata('test.txt');
-      expect(result).toBeNull();
-    });
-
-    it('should handle delete file errors in S3 mode', async () => {
-      // Configure mock to throw an error on delete
-      mockS3Send.mockRejectedValueOnce(new Error('Delete failed'));
-      const result = await service.deleteFile('test.txt');
-      // deleteFromS3 returns false on error
-      expect(result).toBe(false);
-    });
-
-    it('should throw for presigned URL with invalid S3 client state', async () => {
-      // Test that presigned URLs work when properly configured
-      const result = await service.getPresignedUrl('test.txt');
-      expect(result).toBe('https://signed-url.example.com');
-    });
-  });
-
   describe('deleteDirectory with nested files (filesystem mode)', () => {
     it('should count files in nested directories', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
@@ -381,151 +294,104 @@ describe('StorageService', () => {
     });
   });
 
-  describe('S3 storage operations', () => {
-    beforeEach(() => {
-      mockConfig.nodeSettings.storageConfig.storageMode = 's3provider';
-      mockConfig.nodeSettings.storageConfig.s3Config = {
-        bucketName: 'test-bucket',
-        s3ProviderClientConfig: {
-          region: 'us-east-1',
-          credentials: {
-            accessKeyId: 'test-key',
-            secretAccessKey: 'test-secret',
+  describe('S3 storage operations against Silo', () => {
+    beforeEach(async () => {
+      mockConfig.nodeSettings.storageConfig = {
+        storageMode: 's3provider',
+        s3Config: fixture.config,
+      } as never;
+      service = new StorageService(mockLogger);
+      await fixture.put('test/file.txt', 'real Silo object', 'text/plain');
+    });
+    it('reads real object bytes from S3', async () => {
+      const stream = await service.getFileStream('test/file.txt');
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream as Readable) chunks.push(Buffer.from(chunk));
+      expect(Buffer.concat(chunks).toString()).toBe('real Silo object');
+    });
+    it('deletes a real object and confirms absence', async () => {
+      expect(await service.deleteFile('test/file.txt')).toBe(true);
+      expect(await service.fileExists('test/file.txt')).toBe(false);
+    });
+    it('returns false when Silo rejects delete credentials', async () => {
+      mockConfig.nodeSettings.storageConfig = {
+        storageMode: 's3provider',
+        s3Config: {
+          ...fixture.config,
+          s3ProviderClientConfig: {
+            ...fixture.config.s3ProviderClientConfig,
+            credentials: {
+              ...fixture.config.s3ProviderClientConfig.credentials,
+              secretAccessKey: 'invalid-test-secret',
+            },
           },
         },
-      };
-      // Ensure mock returns the updated config
-      vi.mocked(getConfig).mockReturnValue(mockConfig);
-      mockS3Send.mockReset();
+      } as never;
+      (service as unknown as { s3Client: { destroy(): void } }).s3Client.destroy();
       service = new StorageService(mockLogger);
+      expect(await service.deleteFile('test/file.txt')).toBe(false);
     });
-
-    it('should get file stream from S3', async () => {
-      const mockStream = { pipe: vi.fn() };
-      mockS3Send.mockResolvedValueOnce({ Body: mockStream });
-
-      const result = await service.getFileStream('test/file.txt');
-
-      expect(result).toBe(mockStream);
+    it('reports actual existence and missing object metadata', async () => {
+      expect(await service.fileExists('test/file.txt')).toBe(true);
+      expect(await service.fileExists('test/missing')).toBe(false);
+      expect(await service.getFileMetadata('test/missing')).toBeNull();
     });
-
-    it('should delete file from S3', async () => {
-      mockS3Send.mockResolvedValueOnce({});
-
-      const result = await service.deleteFile('test/file.txt');
-
-      expect(result).toBe(true);
-    });
-
-    it('should return false when S3 delete fails', async () => {
-      mockS3Send.mockRejectedValueOnce(new Error('Delete failed'));
-
-      const result = await service.deleteFile('test/file.txt');
-
-      expect(result).toBe(false);
-    });
-
-    it('should check file exists in S3', async () => {
-      mockS3Send.mockResolvedValueOnce({});
-
-      const result = await service.fileExists('test/file.txt');
-
-      expect(result).toBe(true);
-    });
-
-    it('should return false when file does not exist in S3', async () => {
-      mockS3Send.mockRejectedValueOnce(new Error('Not found'));
-
-      const result = await service.fileExists('test/file.txt');
-
-      expect(result).toBe(false);
-    });
-
-    it('should get file metadata from S3', async () => {
-      mockS3Send.mockResolvedValueOnce({
-        ContentLength: 1024,
-        LastModified: new Date('2024-01-01'),
-        ContentType: 'text/plain',
-      });
-
-      const result = await service.getFileMetadata('test/file.txt');
-
-      expect(result).toEqual({
+    it('reads real size, content type and modification time', async () => {
+      expect(await service.getFileMetadata('test/file.txt')).toEqual({
         key: 'test/file.txt',
-        size: 1024,
-        lastModified: new Date('2024-01-01'),
+        size: 16,
         contentType: 'text/plain',
-      });
-    });
-
-    it('should return null when S3 metadata fails', async () => {
-      mockS3Send.mockRejectedValueOnce(new Error('Not found'));
-
-      const result = await service.getFileMetadata('test/file.txt');
-
-      expect(result).toBeNull();
-    });
-
-    it('should delete directory from S3', async () => {
-      // First call lists files
-      mockS3Send.mockResolvedValueOnce({
-        Contents: [
-          { Key: 'test/file1.txt', Size: 100, LastModified: new Date() },
-          { Key: 'test/file2.txt', Size: 200, LastModified: new Date() },
-        ],
-        IsTruncated: false,
-      });
-      // Second call deletes files
-      mockS3Send.mockResolvedValueOnce({});
-
-      const result = await service.deleteDirectory('test/');
-
-      expect(result).toBe(2);
-    });
-
-    it('should return 0 when S3 directory is empty', async () => {
-      mockS3Send.mockResolvedValueOnce({
-        Contents: [],
-        IsTruncated: false,
-      });
-
-      const result = await service.deleteDirectory('test/');
-
-      expect(result).toBe(0);
-    });
-
-    it('should copy file in S3', async () => {
-      mockS3Send.mockResolvedValueOnce({});
-
-      await service.copyFile('source/file.txt', 'dest/file.txt');
-
-      expect(mockS3Send).toHaveBeenCalled();
-    });
-
-    it('should get presigned URL for S3 file', async () => {
-      const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
-
-      const result = await service.getPresignedUrl('test/file.txt', 7200);
-
-      expect(result).toBe('https://signed-url.example.com');
-      expect(getSignedUrl).toHaveBeenCalled();
-    });
-
-    it('should handle S3 metadata with missing optional fields', async () => {
-      mockS3Send.mockResolvedValueOnce({
-        ContentLength: undefined,
-        LastModified: undefined,
-        ContentType: undefined,
-      });
-
-      const result = await service.getFileMetadata('test/file.txt');
-
-      expect(result).toEqual({
-        key: 'test/file.txt',
-        size: 0,
         lastModified: expect.any(Date),
-        contentType: 'application/octet-stream',
       });
+    });
+    it('deletes a real prefix, leaving other objects intact', async () => {
+      await fixture.put('remove/a', 'a');
+      await fixture.put('remove/b', 'b');
+      expect(await service.deleteDirectory('remove/')).toBe(2);
+      expect(await service.deleteDirectory('remove/')).toBe(0);
+      expect(await service.fileExists('test/file.txt')).toBe(true);
+    });
+    it('copies a real object and fetches a real presigned URL', async () => {
+      await service.copyFile('test/file.txt', 'copy/file.txt');
+      const url = await service.getPresignedUrl('copy/file.txt', 7200);
+      const response = await fetch(url);
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe('real Silo object');
+    });
+    it('handles omitted optional HEAD headers over a real Silo HTTP connection', async () => {
+      const proxy = await siloProxy(
+        fixture.config.s3ProviderClientConfig.endpoint,
+        () => {},
+        (req, incoming) => {
+          if (req.method === 'HEAD') {
+            delete incoming.headers['content-length'];
+            delete incoming.headers['content-type'];
+            delete incoming.headers['last-modified'];
+          }
+        }
+      );
+      try {
+        (service as unknown as { s3Client: { destroy(): void } }).s3Client.destroy();
+        mockConfig.nodeSettings.storageConfig = {
+          storageMode: 's3provider',
+          s3Config: {
+            ...fixture.config,
+            s3ProviderClientConfig: {
+              ...fixture.config.s3ProviderClientConfig,
+              endpoint: proxy.endpoint,
+            },
+          },
+        } as never;
+        service = new StorageService(mockLogger);
+        expect(await service.getFileMetadata('test/file.txt')).toEqual({
+          key: 'test/file.txt',
+          size: 0,
+          lastModified: expect.any(Date),
+          contentType: 'application/octet-stream',
+        });
+      } finally {
+        await proxy.close();
+      }
     });
   });
 

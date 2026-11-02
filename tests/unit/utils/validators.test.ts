@@ -34,6 +34,7 @@ describe('utils/validators.ts', () => {
       expect(mockedAxios.get).toHaveBeenCalledWith(
         'https://api.cloudflare.com/client/v4/zones/zone123',
         {
+          timeout:10000,
           headers: {
             'X-Auth-Email': 'test@example.com',
             'X-Auth-Key': 'api_key_123',

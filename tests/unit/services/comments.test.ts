@@ -336,6 +336,17 @@ describe('CommentsService', () => {
   });
 
   describe('search', () => {
+    it('normalizes readable ampersands and markup to the stored comment representation', async () => {
+      vi.mocked(mockCommentsRepository.search).mockResolvedValue([]);
+      await service.search(10, 'descending', 1704067200000, 'video123', 'Fish & chips <b>café</b>');
+      expect(mockCommentsRepository.search).toHaveBeenCalledWith(
+        10,
+        'descending',
+        1704067200000,
+        'video123',
+        'Fish &amp; chips café'
+      );
+    });
     const mockSearchResults: DrizzleComment[] = [
       { ...mockComment, id: 1, comment_plain_text_sanitized: 'matching comment 1' },
       { ...mockComment, id: 2, comment_plain_text_sanitized: 'matching comment 2' },

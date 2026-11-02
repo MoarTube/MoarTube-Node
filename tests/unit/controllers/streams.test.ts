@@ -45,9 +45,7 @@ import fs from 'node:fs';
 import { StreamsController } from '@controllers/streams.js';
 
 // Create mock request/reply helpers
-function createMockRequest(
-  overrides: Partial<FastifyRequest> = {}
-): FastifyRequest {
+function createMockRequest(overrides: Partial<FastifyRequest> = {}): FastifyRequest {
   return {
     body: {},
     params: {},
@@ -219,6 +217,24 @@ describe('StreamsController', () => {
   // Stop Stream Tests
   // =================
   describe('stopStream', () => {
+    it.each(['10', NaN, Infinity, -1, 172801])(
+      'rejects an invalid drain duration: %s',
+      async (drainSeconds) => {
+        await controller.stopStream(
+          createMockRequest({ params: { videoId: 'vid-123' }, body: { drainSeconds } }),
+          mockReply
+        );
+        expect(mockReply.status).toHaveBeenCalledWith(400);
+        expect(mockStreamService.stopStream).not.toHaveBeenCalled();
+      }
+    );
+    it('passes a bounded drain duration to the service', async () => {
+      await controller.stopStream(
+        createMockRequest({ params: { videoId: 'vid-123' }, body: { drainSeconds: 30 } }),
+        mockReply
+      );
+      expect(mockStreamService.stopStream).toHaveBeenCalledWith('vid-123', 30);
+    });
     it('should stop a stream', async () => {
       mockStreamService.stopStream.mockResolvedValue(undefined);
 
@@ -291,7 +307,7 @@ describe('StreamsController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should succeed even if deletion throws', async () => {
+    it('reports a deletion failure so the Client retains the segment for retry', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.unlinkSync).mockImplementation(() => {
         throw new Error('Permission denied');
@@ -310,7 +326,24 @@ describe('StreamsController', () => {
 
       await controller.removeSegment(mockRequest, mockReply);
 
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ isError: true }));
+    });
+
+    it('acknowledges a segment removed by another cleanup after the existence check', async () => {
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.unlinkSync).mockImplementation(() => {
+        throw Object.assign(new Error('Already removed'), { code: 'ENOENT' });
+      });
+      await controller.removeSegment(
+        createMockRequest({
+          params: { videoId: 'vid-123', format: 'm3u8', resolution: '480p' },
+          body: { segmentName: 'segment_00003.ts' },
+        }),
+        mockReply
+      );
       expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: false });
     });
 
     it('should return 500 when outer try block throws', async () => {

@@ -6,6 +6,9 @@ import { rewriteManifestFile } from '@/utils/manifest-transform.js';
  * management, recording configuration, and live chat integration.
  */
 import fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { StreamCleanupQueue, type StreamCleanupJob } from '@/utils/stream-cleanup.js';
+import type { StorageService } from '@/services/storage.js';
 import path from 'node:path';
 
 import { BaseService } from '@services/base.js';
@@ -29,6 +32,7 @@ import type {
   PostgresNewLiveChatMessage,
 } from '@database/index.js';
 import { getConfig } from '@config/index.js';
+import { withSettingsChange } from '@/utils/settings-change.js';
 import { deleteDirectory } from '@/utils/index.js';
 import { type WebSocketService } from '@services/websocket.js';
 import { type CloudflareService } from '@services/cloudflare.js';
@@ -37,6 +41,8 @@ import { type CloudflareService } from '@services/cloudflare.js';
  * Stream metadata stored in video meta field
  */
 export interface StreamMeta {
+  streamGeneration?: string;
+  streamCleanupAt?: number;
   chatSettings?: {
     isChatHistoryEnabled: boolean;
     chatHistoryLimit: number;
@@ -86,6 +92,7 @@ export class StreamsService extends BaseService {
     | ICommentsRepository<PostgresComment, PostgresNewComment>;
   private readonly websocketService: WebSocketService;
   private readonly cloudflareService: CloudflareService;
+  private cleanup: StreamCleanupQueue | undefined;
 
   constructor(
     logger: Logger,
@@ -99,7 +106,8 @@ export class StreamsService extends BaseService {
       | ICommentsRepository<SQLiteComment, SQLiteNewComment>
       | ICommentsRepository<PostgresComment, PostgresNewComment>,
     websocketService: WebSocketService,
-    cloudflareService: CloudflareService
+    cloudflareService: CloudflareService,
+    private readonly storageService: StorageService
   ) {
     super('StreamService', logger);
     this.videoRepository = videosRepository;
@@ -113,91 +121,100 @@ export class StreamsService extends BaseService {
    * Start a new live stream or resume existing
    */
   async startStream(videoId: string, config?: StreamConfig): Promise<void> {
-    return this.withErrorLogging('startStream', async () => {
-      const video = await this.videoRepository.findById(videoId);
-      if (!video) {
-        throw new Error(`Video not found: ${videoId}`);
-      }
+    return withSettingsChange(getConfig().paths.nodeSettingsPath, () =>
+      this.withErrorLogging('startStream', async () => {
+        const video = await this.videoRepository.findById(videoId);
+        if (!video) {
+          throw new Error(`Video not found: ${videoId}`);
+        }
 
-      const isRecordedRemotely = config?.isRecordedRemotely ?? false;
-      const isRecordedLocally = config?.isRecordedLocally ?? false;
+        getConfig().reloadNodeSettings();
+        const isRecordedRemotely = config?.isRecordedRemotely ?? false;
+        const isRecordedLocally = config?.isRecordedLocally ?? false;
 
-      await this.videoRepository.update(videoId, {
-        is_streaming: true,
-        is_streamed: false,
-        is_stream_recorded_remotely: isRecordedRemotely,
-        is_stream_recorded_locally: isRecordedLocally,
-        is_error: false,
-      });
+        const metadata = this.safeJsonParse<StreamMeta>(video.meta, {});
+        metadata.streamGeneration = randomUUID();
+        delete metadata.streamCleanupAt;
+        await this.videoRepository.update(videoId, {
+          meta: JSON.stringify(metadata),
+          is_streaming: true,
+          is_streamed: false,
+          is_stream_recorded_remotely: isRecordedRemotely,
+          is_stream_recorded_locally: isRecordedLocally,
+          is_error: false,
+        });
 
-      this.logger.info('Stream started', { videoId, isRecordedRemotely, isRecordedLocally });
+        this.logger.info('Stream started', { videoId, isRecordedRemotely, isRecordedLocally });
 
-      // Broadcast stream start
-      this.broadcastStreamEvent('stream_started', {
-        videoId,
-        isLive: true,
-        isStreaming: true,
-      });
-    });
+        // Broadcast stream start
+        this.broadcastStreamEvent('stream_started', {
+          videoId,
+          isLive: true,
+          isStreaming: true,
+        });
+      })
+    );
   }
 
   /**
    * Stop an active live stream
    */
-  async stopStream(videoId: string): Promise<void> {
-    return this.withErrorLogging('stopStream', async () => {
-      const video = await this.videoRepository.findById(videoId);
-      if (!video) {
-        throw new Error(`Video not found: ${videoId}`);
-      }
-
-      // Update streaming flags
-      const updateData: Record<string, unknown> = {
-        is_streaming: false,
-        is_streamed: true,
-      };
-
-      await this.videoRepository.update(videoId, updateData);
-
-      // Finalize HLS manifest files (filesystem mode only)
-      await this.finalizeStreamManifests(videoId);
-
-      // Handle post-stream recording state
-      if (video.is_stream_recorded_remotely) {
-        // Stream was recorded remotely - mark as published
-        await this.videoRepository.update(videoId, {
-          is_published: true,
-        });
-      } else {
-        // Stream was not recorded - clean up m3u8 directory (filesystem mode only)
-        const config = getConfig();
-        if (config.nodeSettings.storageConfig.storageMode === 'filesystem') {
-          const m3u8DirectoryPath = path.join(
-            config.paths.videosDirectoryPath,
-            videoId,
-            'adaptive',
-            'm3u8'
-          );
-          await deleteDirectory(m3u8DirectoryPath);
+  async stopStream(videoId: string, drainSeconds = 0): Promise<void> {
+    return withSettingsChange(getConfig().paths.nodeSettingsPath, () =>
+      this.withErrorLogging('stopStream', async () => {
+        getConfig().reloadNodeSettings();
+        const video = await this.videoRepository.findById(videoId);
+        if (!video) {
+          throw new Error(`Video not found: ${videoId}`);
         }
-      }
 
-      // Delete live chat messages
-      const deletedCount = await this.liveChatMessageRepository.deleteByVideoId(videoId);
-      this.logger.debug('Deleted live chat messages on stream stop', { videoId, deletedCount });
+        // Update streaming flags
+        const updateData: Record<string, unknown> = {
+          is_streaming: false,
+          is_streamed: true,
+        };
 
-      // Purge Cloudflare cache
-      void this.cloudflareService.purgeAllWatchPages();
-      void this.cloudflareService.purgeNodePage();
+        // Finalize HLS manifest files (filesystem mode only)
+        const drain = await this.finalizeStreamManifests(videoId);
 
-      this.broadcastStreamEvent('stream_stopped', {
-        videoId,
-        isLive: false,
-        isStreaming: false,
-      });
+        updateData['is_published'] = video.is_stream_recorded_remotely && drain !== undefined;
+        if (!video.is_stream_recorded_remotely || drain === undefined) {
+          const config = getConfig();
+          const metadata = this.safeJsonParse<StreamMeta>(video.meta, {});
+          const generation = metadata.streamGeneration ?? String(video.creation_timestamp);
+          const deadline =
+            metadata.streamCleanupAt ??
+            Date.now() + Math.ceil(Math.max(drain ?? 0, drainSeconds * 1000, 6000));
+          metadata.streamCleanupAt = deadline;
+          // Journal before committing stopped flags: recovery can finish an interrupted stop.
+          await this.cleanupQueue().enqueue({
+            videoId,
+            generation,
+            deadline,
+            storageConfig: config.nodeSettings.storageConfig,
+            videosDirectory: config.paths.videosDirectoryPath,
+          });
+          updateData['meta'] = JSON.stringify(metadata);
+        }
+        await this.videoRepository.update(videoId, updateData);
 
-      this.logger.info('Stream stopped', { videoId });
-    });
+        // Delete live chat messages
+        const deletedCount = await this.liveChatMessageRepository.deleteByVideoId(videoId);
+        this.logger.debug('Deleted live chat messages on stream stop', { videoId, deletedCount });
+
+        // Purge Cloudflare cache
+        void this.cloudflareService.purgeAllWatchPages();
+        void this.cloudflareService.purgeNodePage();
+
+        this.broadcastStreamEvent('stream_stopped', {
+          videoId,
+          isLive: false,
+          isStreaming: false,
+        });
+
+        this.logger.info('Stream stopped', { videoId });
+      })
+    );
   }
 
   /**
@@ -219,173 +236,179 @@ export class StreamsService extends BaseService {
    * Start a new stream with full configuration
    */
   async startNewStream(options: StartStreamOptions): Promise<{ videoId: string }> {
-    return this.withErrorLogging('startNewStream', async () => {
-      let videoId = options.existingVideoId;
+    return withSettingsChange(getConfig().paths.nodeSettingsPath, () =>
+      this.withErrorLogging('startNewStream', async () => {
+        getConfig().reloadNodeSettings();
+        let videoId = options.existingVideoId;
 
-      const isResumingStream = videoId !== undefined;
+        const isResumingStream = videoId !== undefined;
 
-      // Generate new video ID if not resuming
-      if (videoId === undefined) {
-        videoId = this.generateId(11);
-        // Keep generating until unique
-        while (await this.videoRepository.findById(videoId)) {
+        // Generate new video ID if not resuming
+        if (videoId === undefined) {
           videoId = this.generateId(11);
-        }
-      }
-
-      const tagsSanitized = this.sanitizeWhitespace(options.tags);
-
-      // Create storage directories (remove if already present)
-      await this.createStreamStorageDirectories(videoId, options.resolution);
-
-      const outputs = JSON.stringify({
-        m3u8: [options.resolution],
-        mp4: [],
-        webm: [],
-        ogv: [],
-      });
-
-      const timestamp = this.getCurrentTimestampMs();
-
-      if (isResumingStream) {
-        // Retrieve existing video to preserve chatSettings
-        const existingVideo = await this.videoRepository.findById(videoId);
-        if (!existingVideo) {
-          throw new Error('video with id does not exist: ' + videoId);
+          // Keep generating until unique
+          while (await this.videoRepository.findById(videoId)) {
+            videoId = this.generateId(11);
+          }
         }
 
-        // Parse existing meta and preserve chatSettings while updating stream fields
-        const existingMeta = this.safeJsonParse<StreamMeta>(existingVideo.meta, {});
+        const tagsSanitized = this.sanitizeWhitespace(options.tags);
 
-        existingMeta.rtmpPort = options.rtmpPort;
-        existingMeta.networkAddress = options.networkAddress;
-        existingMeta.resolution = options.resolution;
-        existingMeta.isRecordingStreamRemotely = options.isRecordingStreamRemotely;
-        existingMeta.isRecordingStreamLocally = options.isRecordingStreamLocally;
+        // Create storage directories (remove if already present)
+        await this.createStreamStorageDirectories(videoId, options.resolution);
 
-        // Update existing video record
-        await this.videoRepository.update(videoId, {
-          title: options.title,
-          description: options.description,
-          tags: tagsSanitized,
-          length_seconds: 0,
-          length_timestamp: '',
-          views: 0,
-          comments: 0,
-          likes: 0,
-          dislikes: 0,
-          bandwidth: 0,
-          is_publishing: false,
-          is_published: false,
-          is_streaming: true,
-          is_streamed: false,
-          is_stream_recorded_remotely: options.isRecordingStreamRemotely,
-          is_stream_recorded_locally: options.isRecordingStreamLocally,
-          is_error: false,
-          outputs,
-          meta: JSON.stringify(existingMeta),
-          creation_timestamp: timestamp,
+        const outputs = JSON.stringify({
+          m3u8: [options.resolution],
+          mp4: [],
+          webm: [],
+          ogv: [],
         });
 
-        const deletedComments = await this.commentsRepository.deleteByVideoId(videoId);
-        this.logger.debug('Deleted comments on stream resume', { videoId, deletedComments });
+        const timestamp = this.getCurrentTimestampMs();
 
-        const deletedChatMessages = await this.liveChatMessageRepository.deleteByVideoId(videoId);
-        this.logger.debug('Deleted live chat messages on stream resume', {
+        if (isResumingStream) {
+          // Retrieve existing video to preserve chatSettings
+          const existingVideo = await this.videoRepository.findById(videoId);
+          if (!existingVideo) {
+            throw new Error('video with id does not exist: ' + videoId);
+          }
+
+          // Parse existing meta and preserve chatSettings while updating stream fields
+          const existingMeta = this.safeJsonParse<StreamMeta>(existingVideo.meta, {});
+
+          existingMeta.streamGeneration = randomUUID();
+          delete existingMeta.streamCleanupAt;
+          existingMeta.rtmpPort = options.rtmpPort;
+          existingMeta.networkAddress = options.networkAddress;
+          existingMeta.resolution = options.resolution;
+          existingMeta.isRecordingStreamRemotely = options.isRecordingStreamRemotely;
+          existingMeta.isRecordingStreamLocally = options.isRecordingStreamLocally;
+
+          // Update existing video record
+          await this.videoRepository.update(videoId, {
+            title: options.title,
+            description: options.description,
+            tags: tagsSanitized,
+            length_seconds: 0,
+            length_timestamp: '',
+            views: 0,
+            comments: 0,
+            likes: 0,
+            dislikes: 0,
+            bandwidth: 0,
+            is_publishing: false,
+            is_published: false,
+            is_streaming: true,
+            is_streamed: false,
+            is_stream_recorded_remotely: options.isRecordingStreamRemotely,
+            is_stream_recorded_locally: options.isRecordingStreamLocally,
+            is_error: false,
+            outputs,
+            meta: JSON.stringify(existingMeta),
+            creation_timestamp: timestamp,
+          });
+
+          const deletedComments = await this.commentsRepository.deleteByVideoId(videoId);
+          this.logger.debug('Deleted comments on stream resume', { videoId, deletedComments });
+
+          const deletedChatMessages = await this.liveChatMessageRepository.deleteByVideoId(videoId);
+          this.logger.debug('Deleted live chat messages on stream resume', {
+            videoId,
+            deletedChatMessages,
+          });
+
+          this.logger.info('Stream resumed', { videoId });
+        } else {
+          // Create new video record for stream
+          const newMeta: StreamMeta = {
+            streamGeneration: randomUUID(),
+            chatSettings: {
+              isChatHistoryEnabled: true,
+              chatHistoryLimit: 0,
+            },
+            rtmpPort: options.rtmpPort,
+            uuid: 'moartube',
+            networkAddress: options.networkAddress,
+            resolution: options.resolution,
+            isRecordingStreamRemotely: options.isRecordingStreamRemotely,
+            isRecordingStreamLocally: options.isRecordingStreamLocally,
+          };
+
+          const videoData: SQLiteNewVideo | PostgresNewVideo = {
+            video_id: videoId,
+            source_file_extension: '',
+            title: options.title,
+            description: options.description,
+            tags: tagsSanitized,
+            length_seconds: 0,
+            length_timestamp: '',
+            views: 0,
+            comments: 0,
+            likes: 0,
+            dislikes: 0,
+            bandwidth: 0,
+            is_importing: false,
+            is_imported: false,
+            is_publishing: false,
+            is_published: false,
+            is_streaming: true,
+            is_streamed: false,
+            is_stream_recorded_remotely: options.isRecordingStreamRemotely,
+            is_stream_recorded_locally: options.isRecordingStreamLocally,
+            is_live: true,
+            is_error: false,
+            is_finalized: false,
+            is_hidden: false,
+            is_passworded: false,
+            password: '',
+            is_comments_enabled: true,
+            is_likes_enabled: true,
+            is_dislikes_enabled: true,
+            is_reports_enabled: true,
+            is_live_chat_enabled: true,
+            outputs,
+            meta: JSON.stringify(newMeta),
+            creation_timestamp: timestamp,
+          };
+
+          await this.videoRepository.create(videoData);
+
+          this.logger.info('New stream created', { videoId });
+        }
+
+        this.broadcastStreamEvent('video_data', {
           videoId,
-          deletedChatMessages,
-        });
-
-        this.logger.info('Stream resumed', { videoId });
-      } else {
-        // Create new video record for stream
-        const newMeta: StreamMeta = {
-          chatSettings: {
-            isChatHistoryEnabled: true,
-            chatHistoryLimit: 0,
-          },
-          rtmpPort: options.rtmpPort,
-          uuid: 'moartube',
-          networkAddress: options.networkAddress,
-          resolution: options.resolution,
-          isRecordingStreamRemotely: options.isRecordingStreamRemotely,
-          isRecordingStreamLocally: options.isRecordingStreamLocally,
-        };
-
-        const videoData: SQLiteNewVideo | PostgresNewVideo = {
-          video_id: videoId,
-          source_file_extension: '',
+          thumbnail: '',
           title: options.title,
           description: options.description,
           tags: tagsSanitized,
-          length_seconds: 0,
-          length_timestamp: '',
+          lengthSeconds: 0,
+          lengthTimestamp: '',
           views: 0,
           comments: 0,
           likes: 0,
           dislikes: 0,
           bandwidth: 0,
-          is_importing: false,
-          is_imported: false,
-          is_publishing: false,
-          is_published: false,
-          is_streaming: true,
-          is_streamed: false,
-          is_stream_recorded_remotely: options.isRecordingStreamRemotely,
-          is_stream_recorded_locally: options.isRecordingStreamLocally,
-          is_live: true,
-          is_error: false,
-          is_finalized: false,
-          is_hidden: false,
-          is_passworded: false,
-          password: '',
-          is_comments_enabled: true,
-          is_likes_enabled: true,
-          is_dislikes_enabled: true,
-          is_reports_enabled: true,
-          is_live_chat_enabled: true,
-          outputs,
-          meta: JSON.stringify(newMeta),
-          creation_timestamp: timestamp,
-        };
+          isImporting: 0,
+          isImported: 0,
+          isPublishing: 0,
+          isPublished: 0,
+          isLive: 1,
+          isStreaming: 1,
+          isStreamed: 0,
+          isStreamRecordedRemotely: options.isRecordingStreamRemotely,
+          isStreamRecordedLocally: options.isRecordingStreamLocally,
+          isError: 0,
+          isFinalized: 0,
+        });
 
-        await this.videoRepository.create(videoData);
+        // Purge Cloudflare cache
+        void this.cloudflareService.purgeAllWatchPages();
+        void this.cloudflareService.purgeNodePage();
 
-        this.logger.info('New stream created', { videoId });
-      }
-
-      this.broadcastStreamEvent('video_data', {
-        videoId,
-        thumbnail: '',
-        title: options.title,
-        description: options.description,
-        tags: tagsSanitized,
-        lengthSeconds: 0,
-        lengthTimestamp: '',
-        views: 0,
-        comments: 0,
-        likes: 0,
-        dislikes: 0,
-        bandwidth: 0,
-        isImporting: 0,
-        isImported: 0,
-        isPublishing: 0,
-        isPublished: 0,
-        isLive: 1,
-        isStreaming: 1,
-        isStreamed: 0,
-        isStreamRecordedRemotely: options.isRecordingStreamRemotely,
-        isStreamRecordedLocally: options.isRecordingStreamLocally,
-        isError: 0,
-        isFinalized: 0,
-      });
-
-      // Purge Cloudflare cache
-      void this.cloudflareService.purgeAllWatchPages();
-      void this.cloudflareService.purgeNodePage();
-
-      return { videoId };
-    });
+        return { videoId };
+      })
+    );
   }
 
   /**
@@ -420,19 +443,25 @@ export class StreamsService extends BaseService {
   /**
    * Finalize stream HLS manifest files
    */
-  async finalizeStreamManifests(videoId: string): Promise<void> {
+  async finalizeStreamManifests(videoId: string): Promise<number | undefined> {
     const config = getConfig();
-    const storageMode = config.nodeSettings.storageConfig.storageMode;
-
-    if (storageMode === 'filesystem') {
-      const videosDir = config.paths.videosDirectoryPath;
-      const adaptiveDir = path.join(videosDir, videoId, 'adaptive', 'm3u8');
-
-      // End the HLS manifest files by appending #EXT-X-ENDLIST and converting EVENT to VOD
-      await this.endHlsManifests(adaptiveDir);
+    if (config.nodeSettings.storageConfig.storageMode === 'filesystem') {
+      const duration = await this.endHlsManifests(
+        path.join(config.paths.videosDirectoryPath, videoId, 'adaptive', 'm3u8')
+      );
+      this.logger.info('Stream manifests finalized', { videoId });
+      return duration;
     }
-
-    this.logger.info('Stream manifests finalized', { videoId });
+    const video = await this.videoRepository.findById(videoId);
+    if (!video) {
+      throw new Error('Stream no longer exists');
+    }
+    const outputs = this.safeJsonParse<{ m3u8?: string[] }>(video.outputs, {});
+    return this.storageService.finalizeS3Stream(
+      videoId,
+      outputs.m3u8 ?? [],
+      video.is_stream_recorded_remotely
+    );
   }
 
   /**
@@ -518,20 +547,115 @@ export class StreamsService extends BaseService {
    * Legacy layout: manifests live in resolution subdirectories as manifest-{resolution}.m3u8
    * e.g., {adaptiveDir}/{resolution}/manifest-{resolution}.m3u8
    */
-  private async endHlsManifests(adaptiveDir: string): Promise<void> {
+  private async endHlsManifests(adaptiveDir: string): Promise<number | undefined> {
+    let longest = 0;
+    let finalized = false;
     if (!fs.existsSync(adaptiveDir)) {
-      return;
+      return undefined;
     }
-    for (const entry of fs.readdirSync(adaptiveDir, { withFileTypes: true })) {
+    const entries = fs.readdirSync(adaptiveDir, { withFileTypes: true });
+    // Media playlists must exist in their final form before publishing the master.
+    for (const entry of entries) {
       const name = typeof entry === 'string' ? entry : entry.name;
       const directory = typeof entry !== 'string' && entry.isDirectory();
       const file = directory
         ? path.join(adaptiveDir, name, 'manifest-' + name + '.m3u8')
         : path.join(adaptiveDir, name);
-      if ((directory || name.endsWith('.m3u8')) && fs.existsSync(file)) {
-        await rewriteManifestFile(file, (line) => line, true);
+      if (
+        name !== 'manifest-master.m3u8' &&
+        (directory || name.endsWith('.m3u8')) &&
+        fs.existsSync(file)
+      ) {
+        let duration = 0,
+          maximum = 0;
+        await rewriteManifestFile(
+          file,
+          (line) => {
+            const match = /^#EXTINF:([0-9.]+)/.exec(line);
+            if (match) {
+              const value = Number(match[1]);
+              duration += value;
+              maximum = Math.max(maximum, value);
+            }
+            return line;
+          },
+          true
+        );
+        finalized = true;
+        longest = Math.max(longest, duration + maximum);
       }
     }
+    if (!finalized) {
+      const hasSegments = entries.some((entry) => {
+        const name = typeof entry === 'string' ? entry : entry.name;
+        return (
+          name.endsWith('.ts') ||
+          (typeof entry !== 'string' &&
+            entry.isDirectory() &&
+            fs.readdirSync(path.join(adaptiveDir, name)).some((file) => file.endsWith('.ts')))
+        );
+      });
+      if (hasSegments) {
+        throw new Error('Stream rendition is missing; existing media was retained.');
+      }
+      return undefined;
+    }
+    const master = path.join(adaptiveDir, 'manifest-master.m3u8');
+    if (fs.existsSync(master)) {
+      await rewriteManifestFile(master, (line) =>
+        line.trim() === '#EXT-X-ENDLIST' ? '' : line.replaceAll('/dynamic/', '/static/')
+      );
+    }
+    return Math.ceil((longest + 6) * 1000);
+  }
+
+  private cleanupQueue(): StreamCleanupQueue {
+    this.cleanup ??= new StreamCleanupQueue(
+      getConfig().paths.nodeSettingsPath + '.stream-cleanup',
+      (job) => this.cleanStoppedStream(job),
+      (error) => {
+        this.logger.error('Stopped stream cleanup will retry', error);
+      }
+    );
+    return this.cleanup;
+  }
+
+  private async cleanStoppedStream(job: StreamCleanupJob): Promise<void> {
+    await withSettingsChange(getConfig().paths.nodeSettingsPath, async () => {
+      getConfig().reloadNodeSettings();
+      const video = await this.videoRepository.findById(job.videoId);
+      if (!video) {
+        return;
+      }
+      const metadata = this.safeJsonParse<StreamMeta>(video.meta, {});
+      if ((metadata.streamGeneration ?? String(video.creation_timestamp)) !== job.generation) {
+        return;
+      }
+      if (metadata.streamCleanupAt === undefined && !video.is_streaming) {
+        return;
+      }
+      if (metadata.streamCleanupAt !== undefined && metadata.streamCleanupAt !== job.deadline) {
+        return;
+      }
+      await this.storageService.deleteStoppedStream(
+        job.videoId,
+        job.storageConfig,
+        job.videosDirectory
+      );
+      delete metadata.streamCleanupAt;
+      await this.videoRepository.update(job.videoId, {
+        is_streaming: false,
+        is_streamed: true,
+        meta: JSON.stringify(metadata),
+      });
+    });
+  }
+
+  async recoverStreamCleanup(): Promise<void> {
+    await this.cleanupQueue().recover();
+  }
+  close(): void {
+    this.cleanup?.close();
   }
 
   /**

@@ -1,6 +1,11 @@
+vi.mock('@/utils/cpu-metrics.js', () => ({ getCpuMetrics: vi.fn() }));
+import { getCpuMetrics } from '@/utils/cpu-metrics.js';
 vi.mock('@/utils/memory-metrics.js', () => ({ getMemoryMetrics: vi.fn() }));
 import { getMemoryMetrics } from '@/utils/memory-metrics.js';
 import path from 'node:path';
+vi.mock('@/utils/settings-change.js', () => ({
+  withSettingsChange: vi.fn(async (_path, operation) => operation()),
+}));
 import cluster from 'node:cluster';
 vi.mock('@/utils/storage-metrics.js', () => ({ getStorageMetrics: vi.fn() }));
 import { getStorageMetrics } from '@/utils/storage-metrics.js';
@@ -58,6 +63,7 @@ vi.mock('@config/index.js', () => ({
     },
     getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://example.com'),
     updateNodeSettings: vi.fn(),
+    reloadNodeSettings: vi.fn(),
     isDockerEnvironment: false,
   })),
 }));
@@ -106,9 +112,16 @@ describe('SettingsController', () => {
 
   const mockVideosService: Record<string, ReturnType<typeof vi.fn>> = {
     getAllVideosData: vi.fn(),
+    rewriteS3VideoManifests: vi.fn(),
   };
 
   const mockCloudflareService: Record<string, ReturnType<typeof vi.fn>> = {
+    validateCdnConfiguration: vi.fn().mockResolvedValue(undefined),
+    withConfigurationRollback: vi.fn(async (_email, _zone, _key, operation) => operation()),
+    purgeAdaptiveVideos: vi.fn(),
+    purgeVideo:vi.fn(),
+    purgeWatchPages:vi.fn(),
+    purgeNodePage: vi.fn(),
     purgeNodeImages: vi.fn(),
     resetCdn: vi.fn(),
     setCdnConfiguration: vi.fn(),
@@ -201,6 +214,45 @@ describe('SettingsController', () => {
     }
   });
 
+  describe('getCpuMetrics', () => {
+    it('measures the entire Node cluster when called from a worker', async () => {
+      const original = Object.getOwnPropertyDescriptor(cluster, 'isWorker')!;
+      Object.defineProperty(cluster, 'isWorker', { configurable: true, value: true });
+      vi.mocked(getCpuMetrics).mockResolvedValueOnce({ usedPercent: 37.5, appPercent: 12.5 });
+      try {
+        await controller.getCpuMetrics(
+          mockRequest as FastifyRequest,
+          mockReply as unknown as FastifyReply
+        );
+        expect(getCpuMetrics).toHaveBeenCalledWith(process.ppid);
+      } finally {
+        Object.defineProperty(cluster, 'isWorker', original);
+      }
+    });
+    it('returns system CPU utilization without caching', async () => {
+      const metrics = { usedPercent: 37.5, appPercent: 12.5 };
+      vi.mocked(getCpuMetrics).mockResolvedValueOnce(metrics);
+      await controller.getCpuMetrics(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
+      expect(mockReply.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics });
+    });
+    it('reports CPU measurement failures', async () => {
+      vi.mocked(getCpuMetrics).mockRejectedValueOnce(new Error('CPU unavailable'));
+      await controller.getCpuMetrics(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
+      expect(mockReply.status).toHaveBeenCalledWith(500);
+      expect(mockReply.send).toHaveBeenCalledWith({
+        isError: true,
+        message: 'Unable to load CPU metrics',
+      });
+    });
+  });
+
   describe('getMemoryMetrics', () => {
     it('measures the primary process tree when handling a request in a cluster worker', async () => {
       const original = Object.getOwnPropertyDescriptor(cluster, 'isWorker')!;
@@ -208,7 +260,10 @@ describe('SettingsController', () => {
       const metrics = { appBytes: 123, availableBytes: 456, totalBytes: 789 };
       vi.mocked(getMemoryMetrics).mockResolvedValueOnce(metrics);
       try {
-        await controller.getMemoryMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+        await controller.getMemoryMetrics(
+          mockRequest as FastifyRequest,
+          mockReply as unknown as FastifyReply
+        );
         expect(getMemoryMetrics).toHaveBeenCalledWith(process.ppid);
         expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics });
       } finally {
@@ -218,7 +273,10 @@ describe('SettingsController', () => {
     it('returns RAM metrics independently of S3 storage', async () => {
       const metrics = { appBytes: 123, availableBytes: 456, totalBytes: 789 };
       vi.mocked(getMemoryMetrics).mockResolvedValueOnce(metrics);
-      await controller.getMemoryMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getMemoryMetrics(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
       expect(getMemoryMetrics).toHaveBeenCalledWith(process.pid);
       expect(mockReply.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
       expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics });
@@ -226,40 +284,75 @@ describe('SettingsController', () => {
     });
     it('returns an error instead of a misleading zero when the OS query fails', async () => {
       vi.mocked(getMemoryMetrics).mockRejectedValueOnce(new Error('Permission denied'));
-      await controller.getMemoryMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getMemoryMetrics(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({ isError: true, message: 'Unable to load memory metrics' });
+      expect(mockReply.send).toHaveBeenCalledWith({
+        isError: true,
+        message: 'Unable to load memory metrics',
+      });
     });
   });
 
   describe('getMetrics', () => {
     it('returns filesystem metrics with no HTTP caching', async () => {
-      mockSettingsService.getNodeSettings.mockReturnValue({ storageConfig: { storageMode: 'filesystem' } });
-      const metrics = { storageMode: 'filesystem' as const, mediaBytes: 123, availableBytes: 456, totalBytes: 789 };
+      mockSettingsService.getNodeSettings.mockReturnValue({
+        storageConfig: { storageMode: 'filesystem' },
+      });
+      const metrics = {
+        storageMode: 'filesystem' as const,
+        mediaBytes: 123,
+        availableBytes: 456,
+        totalBytes: 789,
+      };
       vi.mocked(getStorageMetrics).mockResolvedValueOnce(metrics);
       vi.mocked(getConfig).mockReturnValueOnce({ paths: { dataDirectoryPath: '/data' } } as never);
-      await controller.getMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getMetrics(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
       expect(getStorageMetrics).toHaveBeenCalledWith(path.join('/data', 'media'));
       expect(mockReply.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
       expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics });
     });
 
     it('reports elastic S3 capacity without reading local storage or listing the bucket', async () => {
-      mockSettingsService.getNodeSettings.mockReturnValue({ storageConfig: { storageMode: 's3provider' } });
-      await controller.getMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      mockSettingsService.getNodeSettings.mockReturnValue({
+        storageConfig: { storageMode: 's3provider' },
+      });
+      await controller.getMetrics(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
       expect(getStorageMetrics).not.toHaveBeenCalled();
-      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics: {
-        storageMode: 's3provider', mediaBytes: null, availableBytes: null, totalBytes: null,
-      } });
+      expect(mockReply.send).toHaveBeenCalledWith({
+        isError: false,
+        metrics: {
+          storageMode: 's3provider',
+          mediaBytes: null,
+          availableBytes: null,
+          totalBytes: null,
+        },
+      });
     });
 
     it('reports scan errors instead of zero usage', async () => {
-      mockSettingsService.getNodeSettings.mockReturnValue({ storageConfig: { storageMode: 'filesystem' } });
+      mockSettingsService.getNodeSettings.mockReturnValue({
+        storageConfig: { storageMode: 'filesystem' },
+      });
       vi.mocked(getConfig).mockReturnValueOnce({ paths: { dataDirectoryPath: '/data' } } as never);
       vi.mocked(getStorageMetrics).mockRejectedValueOnce(new Error('Permission denied'));
-      await controller.getMetrics(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getMetrics(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
       expect(mockReply.status).toHaveBeenCalledWith(500);
-      expect(mockReply.send).toHaveBeenCalledWith({ isError: true, message: 'Unable to load storage metrics' });
+      expect(mockReply.send).toHaveBeenCalledWith({
+        isError: true,
+        message: 'Unable to load storage metrics',
+      });
     });
   });
 
@@ -631,6 +724,7 @@ describe('SettingsController', () => {
         },
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://s3node.example.com'),
         updateNodeSettings: vi.fn(),
+        reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
       }));
 
@@ -643,7 +737,7 @@ describe('SettingsController', () => {
 
       expect(mockSettingsService.updateNetworkSettings).toHaveBeenCalled();
       // Should NOT call getAllVideosData since we're not rewriting manifests
-      expect(mockVideosService.getAllVideosData).not.toHaveBeenCalled();
+      expect(rewriteManifestFile).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
@@ -667,6 +761,7 @@ describe('SettingsController', () => {
         },
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
         updateNodeSettings: vi.fn(),
+        reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
       }));
 
@@ -712,6 +807,7 @@ describe('SettingsController', () => {
         },
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
         updateNodeSettings: vi.fn(),
+        reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
       }));
 
@@ -748,6 +844,7 @@ describe('SettingsController', () => {
         },
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
         updateNodeSettings: vi.fn(),
+        reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
       }));
 
@@ -792,6 +889,7 @@ describe('SettingsController', () => {
         },
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
         updateNodeSettings: vi.fn(),
+        reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
       }));
 
@@ -913,6 +1011,7 @@ describe('SettingsController', () => {
         },
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://example.com'),
         updateNodeSettings: vi.fn(),
+        reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
       }));
       mockCloudflareService.resetCdn.mockResolvedValue(undefined);
@@ -1280,6 +1379,7 @@ describe('SettingsController', () => {
         },
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://example.com'),
         updateNodeSettings: vi.fn(),
+        reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
       }));
       mockCloudflareService.addCdnDnsRecord.mockResolvedValue(undefined);
@@ -2074,6 +2174,139 @@ describe('SettingsController', () => {
     });
     await (controller as any).rewriteManifestUrls('a', 'https://new');
     vi.mocked(rewriteManifestFile).mockRejectedValueOnce(new Error('disk failure'));
-    await (controller as any).rewriteManifestUrls('a', 'https://new');
+    await expect((controller as any).rewriteManifestUrls('a', 'https://new')).rejects.toThrow(
+      'disk failure'
+    );
+  });
+
+  it('rejects distribution changes during active publishing or streaming before any mutation', async () => {
+    for (const flags of [{ isStreaming: true }, { isPublishing: true }]) {
+      mockSettingsService.updateStorageConfig.mockClear();
+      mockVideosService.getAllVideosData.mockResolvedValueOnce([{ videoId: 'active', ...flags }]);
+      mockRequest.body = { storageConfig: { storageMode: 'filesystem' } };
+      await controller.storageConfigToggle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
+      expect(mockSettingsService.updateStorageConfig).not.toHaveBeenCalled();
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+    }
+  });
+
+  it('returns a safe generic error for an untyped storage failure', async () => {
+    mockRequest.body = { storageConfig: { storageMode: 'filesystem' } };
+    mockSettingsService.updateStorageConfig.mockImplementationOnce(() => { throw 'offline'; });
+    await controller.storageConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+    expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ isError: true, message: 'error communicating with the MoarTube node' }));
+  });
+
+  it('walks all active-job pages before applying a distribution change', async () => {
+    mockVideosService.getAllVideosData
+      .mockResolvedValueOnce(
+        Array.from({ length: 100 }, () => ({ isStreaming: false, isPublishing: false }))
+      )
+      .mockResolvedValueOnce([]);
+    mockRequest.body = { storageConfig: { storageMode: 'filesystem' } };
+    await controller.storageConfigToggle(
+      mockRequest as FastifyRequest,
+      mockReply as unknown as FastifyReply
+    );
+    expect(mockVideosService.getAllVideosData).toHaveBeenCalledWith({ limit: 100, offset: 100 });
+    expect(mockSettingsService.updateStorageConfig).toHaveBeenCalled();
+  });
+
+  it('validates CDN domain and bucket settings before a network change', async () => {
+    const config = getConfig();
+    vi.mocked(getConfig).mockReturnValueOnce({
+      ...config,
+      nodeSettings: { ...config.nodeSettings, isCloudflareCdnEnabled: true },
+    } as never);
+    mockCloudflareService.validateCdnConfiguration.mockRejectedValueOnce(
+      new Error('IP addresses unsupported')
+    );
+    mockRequest.body = {
+      publicNodeProtocol: 'https',
+      publicNodeAddress: '127.0.0.1',
+      publicNodePort: 443,
+    };
+    await controller.networkExternal(
+      mockRequest as FastifyRequest,
+      mockReply as unknown as FastifyReply
+    );
+    expect(mockSettingsService.updateNetworkSettings).not.toHaveBeenCalled();
+    expect(mockCloudflareService.addCdnDnsRecord).not.toHaveBeenCalled();
+  });
+
+  it('reports incomplete manifest recovery after a failed network change', async () => {
+    const config = getConfig();
+    vi.mocked(getConfig).mockReturnValueOnce(config);
+    mockRequest.body = {
+      publicNodeProtocol: 'https',
+      publicNodeAddress: 'example.com',
+      publicNodePort: 443,
+    };
+    mockVideosService.getAllVideosData.mockResolvedValue([
+      { videoId: 'id', outputs: { m3u8: ['720p'] } },
+    ]);
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(rewriteManifestFile)
+      .mockRejectedValueOnce(new Error('rewrite failed'))
+      .mockRejectedValueOnce(new Error('recovery failed'));
+    await controller.networkExternal(
+      mockRequest as FastifyRequest,
+      mockReply as unknown as FastifyReply
+    );
+    expect(config.updateNodeSettings).toHaveBeenCalledWith({
+      publicNodeProtocol: config.nodeSettings.publicNodeProtocol,
+      publicNodeAddress: config.nodeSettings.publicNodeAddress,
+      publicNodePort: config.nodeSettings.publicNodePort,
+    });
+    expect(mockReply.status).toHaveBeenCalledWith(400);
+  });
+
+  it.each([false, true])(
+    'cleans up the previous zone after switching zones (cleanup failure=%s)',
+    async (fails) => {
+      const config = getConfig();
+      vi.mocked(getConfig).mockReturnValueOnce({
+        ...config,
+        nodeSettings: {
+          ...config.nodeSettings,
+          isCloudflareCdnEnabled: true,
+          cloudflareZoneId: 'previous-zone',
+        },
+      } as never);
+      vi.mocked(isCloudflareCredentialsValid).mockResolvedValue(true);
+      mockRequest.body = {
+        cloudflareEmailAddress: 'email',
+        cloudflareZoneId: 'new-zone',
+        cloudflareGlobalApiKey: 'key',
+      };
+      mockCloudflareService.resetCdn.mockImplementationOnce(() =>
+        fails ? Promise.reject(new Error('cleanup failed')) : Promise.resolve()
+      );
+      await controller.cloudflareConfigure(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
+      expect(mockCloudflareService.resetCdn).toHaveBeenCalled();
+      expect(mockReply.status).toHaveBeenCalledWith(fails ? 400 : 200);
+    }
+  );
+
+  it('reports a non-Error setup failure without claiming completion', async () => {
+    vi.mocked(isCloudflareCredentialsValid).mockRejectedValueOnce('offline');
+    mockRequest.body = {
+      cloudflareEmailAddress: 'email',
+      cloudflareZoneId: 'zone',
+      cloudflareGlobalApiKey: 'key',
+    };
+    await controller.cloudflareConfigure(
+      mockRequest as FastifyRequest,
+      mockReply as unknown as FastifyReply
+    );
+    expect(mockReply.send).toHaveBeenCalledWith(
+      expect.objectContaining({ isError: true, message: 'Cloudflare configuration failed' })
+    );
   });
 });

@@ -368,6 +368,13 @@ export class VideosController extends BaseController {
     }
   };
 
+  invalidateCache = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    const { videoId } = request.params as VideoIdParams;
+    await this.cloudflareService.purgeVideo(videoId);
+    await this.cloudflareService.purgeWatchPages([videoId], true);
+    return this.sendSuccess(reply);
+  };
+
   /**
    * Notify video stream complete
    * POST /videos/:videoId/stream

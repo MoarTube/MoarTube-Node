@@ -74,6 +74,7 @@ export class NodeController extends BaseController {
    * Render the main node page
    */
   getNodePage = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    reply.header('Cache-Control', 'no-store');
     try {
       const { searchTerm, sortTerm, tagTerm, offset = 0 } = request.query as NodeQuery;
 
@@ -124,11 +125,14 @@ export class NodeController extends BaseController {
         externalResourcesBaseUrl,
       };
 
+      if (!request.headers.authorization) {
+        reply.header('Cache-Control', 'public, max-age=0, s-maxage=30, must-revalidate');
+      }
       // Render the node page
       return await reply.view('node', { model });
     } catch (error) {
       this.logger.error('Node page rendering failed', error);
-
+      reply.header('Cache-Control', 'no-store');
       return await reply.status(500).send('node page rendering error');
     }
   };

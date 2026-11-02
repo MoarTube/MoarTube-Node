@@ -485,6 +485,15 @@ export function videosRoutes(
 
   // Upload video files (HLS segments, MP4, WebM, OGV)
   fastify.post(
+    '/:videoId/cache/invalidate',
+    {
+      preHandler: [fastify.authenticate],
+      schema: { params: videoIdParamsSchema },
+    },
+    controller.invalidateCache
+  );
+
+  fastify.post(
     '/:videoId/upload',
     {
       preHandler: [fastify.authenticate],

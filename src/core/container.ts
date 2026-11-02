@@ -251,7 +251,11 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
   // Register services (singletons for shared state)
   appContainer.register({
     accountService: asClass(AccountService).singleton(),
-    storageService: asClass(StorageService).singleton(),
+    storageService: asClass(StorageService)
+      .singleton()
+      .disposer((service) => {
+        service.close();
+      }),
     websocketService: asClass(WebSocketService).singleton(),
     cloudflareService: asClass(CloudflareService).singleton(),
     videosService: asClass(VideosService).singleton(),

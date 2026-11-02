@@ -212,6 +212,7 @@ vi.mock('@services/account.js', () => ({
 vi.mock('@services/storage.js', () => ({
   StorageService: class StorageService {
     constructor() {}
+    close=vi.fn();
   },
 }));
 
@@ -411,6 +412,12 @@ describe('Container', () => {
   });
 
   describe('ContainerCradle interface', () => {
+    it('disposes the singleton storage connection when the container closes',async()=>{
+      const {createAppContainer}=await import('@core/container.js');
+      const container=await createAppContainer({execute:vi.fn()} as any);
+      const storage=container.resolve('storageService');
+      await container.dispose();expect(storage.close).toHaveBeenCalledOnce();
+    });
     it('should contain all expected properties in the cradle', async () => {
       const { createAppContainer } = await import('@core/container.js');
       

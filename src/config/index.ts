@@ -89,11 +89,17 @@ class Config {
    * Set up file watcher for automatic settings reload
    */
   private setupSettingsFileWatcher(): void {
-    this._nodeSettingsWatcher = fs.watch(this._paths.nodeSettingsPath, (eventType) => {
-      if (eventType === 'change') {
-        this.reloadNodeSettings();
+    this._nodeSettingsWatcher = fs.watch(
+      path.dirname(this._paths.nodeSettingsPath),
+      (_eventType, filename) => {
+        if (
+          typeof filename !== 'string' ||
+          filename === path.basename(this._paths.nodeSettingsPath)
+        ) {
+          this.reloadNodeSettings();
+        }
       }
-    });
+    );
   }
 
   /**
@@ -219,8 +225,14 @@ class Config {
    */
   updateNodeSettings(updates: Partial<NodeSettings>): void {
     const merged = { ...this._nodeSettings, ...updates };
+    const previous = this._nodeSettings;
     this._nodeSettings = validateNodeSettings(merged);
-    this.persistNodeSettings();
+    try {
+      this.persistNodeSettings();
+    } catch (error) {
+      this._nodeSettings = previous;
+      throw error;
+    }
   }
 
   /**
@@ -252,7 +264,13 @@ class Config {
   }
 
   private persistNodeSettings(): void {
-    fs.writeFileSync(this._paths.nodeSettingsPath, JSON.stringify(this._nodeSettings, null, 2));
+    const temporary = this._paths.nodeSettingsPath + '.' + crypto.randomUUID() + '.part';
+    try {
+      fs.writeFileSync(temporary, JSON.stringify(this._nodeSettings, null, 2), { flag: 'wx' });
+      fs.renameSync(temporary, this._paths.nodeSettingsPath);
+    } finally {
+      fs.rmSync(temporary, { force: true });
+    }
   }
 
   // ============================================

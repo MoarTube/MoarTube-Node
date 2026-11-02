@@ -45,7 +45,7 @@ export interface S3ProviderClientConfig {
   forcePathStyle: boolean;
   region: string;
   credentials: S3Credentials;
-  endpoint?: string;
+  endpoint?: string | undefined;
 }
 
 /**
@@ -61,7 +61,7 @@ export interface S3Config {
  */
 export interface StorageConfig {
   storageMode: 'filesystem' | 's3provider';
-  s3Config?: S3Config;
+  s3Config?: S3Config | undefined;
 }
 
 // ============================================

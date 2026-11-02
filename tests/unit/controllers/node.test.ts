@@ -90,6 +90,7 @@ describe('NodeController', () => {
     );
 
     mockRequest = {
+      headers: {},
       body: {},
       query: {},
       params: {},
@@ -118,6 +119,7 @@ describe('NodeController', () => {
 
   describe('getNodePage', () => {
     it('should render the node page successfully', async () => {
+      mockRequest.headers = { authorization: 'Bearer test' };
       mockRequest.query = {
         searchTerm: '',
         sortTerm: 'latest',

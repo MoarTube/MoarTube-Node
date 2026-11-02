@@ -406,14 +406,14 @@ describe('SettingsService', () => {
               accessKeyId: 'access-key',
               secretAccessKey: 'secret-key',
             },
-            endpoint: 'https://minio.example.com',
+            endpoint: 'https://silo.example.com',
           },
         },
       });
 
       const call = vi.mocked(mockConfig.updateNodeSettings).mock.calls[0][0];
       expect(call.storageConfig.s3Config.s3ProviderClientConfig.endpoint).toBe(
-        'https://minio.example.com'
+        'https://silo.example.com'
       );
     });
 

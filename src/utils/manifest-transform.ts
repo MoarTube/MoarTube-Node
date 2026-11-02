@@ -49,14 +49,16 @@ export async function* transformManifest(
 export async function rewriteManifestFile(
   file: string,
   transform: (line: string) => string,
-  finalize = false
+  finalize = false,
+  signal?: AbortSignal
 ): Promise<void> {
   const input = fs.createReadStream(file);
   try {
     await writeUpload(
       { file: Readable.from(transformManifest(input, transform, finalize)) },
       file,
-      10 * 1024 ** 3
+      10 * 1024 ** 3,
+      signal
     );
   } finally {
     input.destroy();

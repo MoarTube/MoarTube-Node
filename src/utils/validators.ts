@@ -1,3 +1,4 @@
+import { cloudflareOptions } from './cloudflare-http.js';
 /**
  * Validators Module
  *
@@ -22,12 +23,10 @@ export async function isCloudflareCredentialsValid(
 
     const response = await axios.get<{ success: boolean }>(
       `https://api.cloudflare.com/client/v4/zones/${cloudflareZoneId}`,
-      {
-        headers: {
-          'X-Auth-Email': cloudflareEmailAddress,
-          'X-Auth-Key': cloudflareGlobalApiKey,
-        },
-      }
+      cloudflareOptions({
+        'X-Auth-Email': cloudflareEmailAddress,
+        'X-Auth-Key': cloudflareGlobalApiKey,
+      })
     );
 
     return response.data.success;

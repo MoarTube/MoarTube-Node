@@ -85,6 +85,9 @@ export function externalVideosRoutes(
   fastify.get(
     '/:videoId/adaptive/:format/:type/manifests/:manifestName',
     {
+      onRequest: async (_request, reply) => {
+        reply.header('Cache-Control', 'no-store');
+      },
       preHandler: [fastify.optionalAuthenticate],
       schema: {
         tags: ['External-Videos'],
