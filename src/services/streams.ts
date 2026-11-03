@@ -145,6 +145,8 @@ export class StreamsService extends BaseService {
         });
 
         this.logger.info('Stream started', { videoId, isRecordedRemotely, isRecordedLocally });
+        await this.invalidateStreamMedia(videoId);
+        await this.cloudflareService.purgeNodePage();
 
         // Broadcast stream start
         this.broadcastStreamEvent('stream_started', {
@@ -203,8 +205,8 @@ export class StreamsService extends BaseService {
         this.logger.debug('Deleted live chat messages on stream stop', { videoId, deletedCount });
 
         // Purge Cloudflare cache
-        void this.cloudflareService.purgeAllWatchPages();
-        void this.cloudflareService.purgeNodePage();
+        await this.cloudflareService.purgeAllWatchPages();
+        await this.cloudflareService.purgeNodePage();
 
         this.broadcastStreamEvent('stream_stopped', {
           videoId,
@@ -403,8 +405,9 @@ export class StreamsService extends BaseService {
         });
 
         // Purge Cloudflare cache
-        void this.cloudflareService.purgeAllWatchPages();
-        void this.cloudflareService.purgeNodePage();
+        await this.invalidateStreamMedia(videoId);
+        await this.cloudflareService.purgeAllWatchPages();
+        await this.cloudflareService.purgeNodePage();
 
         return { videoId };
       })
@@ -450,6 +453,7 @@ export class StreamsService extends BaseService {
         path.join(config.paths.videosDirectoryPath, videoId, 'adaptive', 'm3u8')
       );
       this.logger.info('Stream manifests finalized', { videoId });
+      await this.invalidateStreamMedia(videoId);
       return duration;
     }
     const video = await this.videoRepository.findById(videoId);
@@ -457,11 +461,13 @@ export class StreamsService extends BaseService {
       throw new Error('Stream no longer exists');
     }
     const outputs = this.safeJsonParse<{ m3u8?: string[] }>(video.outputs, {});
-    return this.storageService.finalizeS3Stream(
+    const duration = await this.storageService.finalizeS3Stream(
       videoId,
       outputs.m3u8 ?? [],
       video.is_stream_recorded_remotely
     );
+    await this.invalidateStreamMedia(videoId);
+    return duration;
   }
 
   /**
@@ -648,11 +654,16 @@ export class StreamsService extends BaseService {
         is_streamed: true,
         meta: JSON.stringify(metadata),
       });
+      await this.invalidateStreamMedia(job.videoId);
+      await this.cloudflareService.purgeNodePage();
     });
   }
 
   async recoverStreamCleanup(): Promise<void> {
     await this.cleanupQueue().recover();
+  }
+  async invalidateStreamMedia(videoId: string): Promise<void> {
+    await this.cloudflareService.purgeAdaptiveVideos(videoId);
   }
   close(): void {
     this.cleanup?.close();

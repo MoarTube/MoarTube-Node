@@ -10,6 +10,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 vi.mock('@config/index.js', () => ({
   getConfig: vi.fn(() => ({
     nodeSettings: {
+      isLiveChatEnabled: true,
       nodeName: 'Test Node',
       nodeAbout: 'Test about',
       publicNodeProtocol: 'https',
@@ -45,6 +46,7 @@ describe('WatchEmbedController', () => {
     status: Mock;
     send: Mock;
     headers: Mock;
+    header: Mock;
     type: Mock;
     view: Mock;
   };
@@ -60,9 +62,11 @@ describe('WatchEmbedController', () => {
 
     mockRequest = {
       params: {},
+      headers: {},
     };
 
     mockReply = {
+      header: vi.fn().mockReturnThis(),
       status: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
       headers: vi.fn().mockReturnThis(),
@@ -82,7 +86,10 @@ describe('WatchEmbedController', () => {
       mockRequest.params = { videoId: 'nonexistent' };
       mockVideosService.getVideo.mockResolvedValue(null);
 
-      await controller.getEmbedVideo(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getEmbedVideo(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockVideosService.getVideo).toHaveBeenCalledWith('nonexistent');
       expect(mockReply.status).toHaveBeenCalledWith(404);
@@ -112,7 +119,10 @@ describe('WatchEmbedController', () => {
 
       mockVideosService.getVideo.mockResolvedValue(mockVideo);
 
-      await controller.getEmbedVideo(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getEmbedVideo(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.view).toHaveBeenCalledWith(
         'embed-video.ejs',
@@ -132,7 +142,10 @@ describe('WatchEmbedController', () => {
       mockRequest.params = { videoId: 'video123' };
       mockVideosService.getVideo.mockRejectedValue(new Error('Database error'));
 
-      await controller.getEmbedVideo(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getEmbedVideo(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({
@@ -147,7 +160,10 @@ describe('WatchEmbedController', () => {
       mockRequest.params = { videoId: 'nonexistent' };
       mockVideosService.getVideo.mockResolvedValue(null);
 
-      await controller.getEmbedChat(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getEmbedChat(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockVideosService.getVideo).toHaveBeenCalledWith('nonexistent');
       expect(mockReply.status).toHaveBeenCalledWith(404);
@@ -172,7 +188,10 @@ describe('WatchEmbedController', () => {
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
 
-      await controller.getEmbedChat(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getEmbedChat(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.view).toHaveBeenCalledWith(
         'embed-chat',
@@ -204,7 +223,10 @@ describe('WatchEmbedController', () => {
       mockLinksService.getAllLinks.mockResolvedValue(mockLinks);
       mockMonetizationService.getWalletAddresses.mockResolvedValue(mockWallets);
 
-      await controller.getEmbedChat(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getEmbedChat(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.view).toHaveBeenCalledWith(
         'embed-chat',
@@ -221,7 +243,10 @@ describe('WatchEmbedController', () => {
       mockRequest.params = { videoId: 'video123' };
       mockVideosService.getVideo.mockRejectedValue(new Error('Database error'));
 
-      await controller.getEmbedChat(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getEmbedChat(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockReply.status).toHaveBeenCalledWith(500);
       expect(mockReply.send).toHaveBeenCalledWith({

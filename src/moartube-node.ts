@@ -130,6 +130,13 @@ async function performStartupProvisioning(
 
     // Finalize any streamed HLS manifest files
     await streamsService.finalizeAllStreamedManifests();
+    await streamsService.recoverStreamCleanup();
+    const cloudflare = container.resolve('cloudflareService');
+    await cloudflare.purgePublicPages();
+    await cloudflare.purgePrefixes([
+      getConfig().getExternalResourcesBaseUrl() + '/external/resources/',
+      getConfig().getExternalVideosBaseUrl() + '/external/videos/',
+    ]);
 
     logger.info('Startup provisioning completed');
   } catch (error) {

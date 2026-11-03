@@ -14,6 +14,7 @@ import axios, { type AxiosInstance } from 'axios';
 import { setTimeout as delay } from 'node:timers/promises';
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { purgeOutbox, type PurgeEntry } from '@/utils/purge-outbox.js';
 import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { validateCdnSettings, cdnDnsTarget } from '@/utils/cdn-settings.js';
 import type { NodeSettings, StorageConfig } from '@/types/config.js';
@@ -59,6 +60,87 @@ export class CloudflareService extends BaseService {
   private purgeGeneration = 0;
   private readonly pendingAdaptiveInventories = new Map<string, Set<string>>();
   private readonly purgeNotBefore = new Map<string, number>();
+  private retrying = false;
+
+  private outbox(): ReturnType<typeof purgeOutbox> | undefined {
+    const config: { paths?: { nodeSettingsPath?: string } } = getConfig();
+    const settingsPath = config.paths?.nodeSettingsPath;
+    return settingsPath ? purgeOutbox(settingsPath + '.purges.sqlite') : undefined;
+  }
+
+  /** Prefix purges include every query variant and all embed routes below /watch. */
+  async purgePublicPages(strict = false): Promise<void> {
+    if (!this.isEnabled() || !this.httpClient) {
+      return;
+    }
+    await this.purgePrefixes(
+      ['/watch', '/videos', '/node/search'].map((route) => getConfig().getNodeBaseUrl() + route),
+      strict
+    );
+  }
+
+  async purgePrefixes(urls: string[], strict = false): Promise<void> {
+    if (!this.isEnabled() || !this.httpClient) {
+      return;
+    }
+    try {
+      const targets = this.prefixTargets(urls);
+      await this.purgeCache(targets, 'purgePrefixes');
+    } catch (error) {
+      this.logger.error('Prefix invalidation incomplete; retained for retry', error);
+      if (strict) {
+        throw error;
+      }
+    }
+  }
+
+  private prefixTargets(urls: string[]): string[] {
+    return urls.map((value) => {
+      const url = new URL(value);
+      return 'prefix:' + url.host + url.pathname;
+    });
+  }
+
+  /** Called by the master, including after restart, to drain all workers' durable work. */
+  async retryPendingPurges(): Promise<void> {
+    if (this.retrying) {
+      return;
+    }
+    this.retrying = true;
+    try {
+      const enabled = this.isEnabled() && this.httpClient !== null;
+      const failures: unknown[] = [];
+      if (enabled) {
+        try {
+          await this.purgeCache([], 'retryPendingPurges');
+        } catch (error) {
+          failures.push(error);
+        }
+      }
+      const journal = this.outbox();
+      const previous = journal?.pendingCredentials() ?? [];
+      journal?.close();
+      for (const credentials of previous) {
+        if (enabled && credentials.zone === getConfig().nodeSettings.cloudflareZoneId) {
+          continue;
+        }
+        try {
+          await this.purgeEntireCacheWithCredentials(
+            credentials.email,
+            credentials.zone,
+            credentials.key
+          );
+        } catch (error) {
+          failures.push(error);
+        }
+      }
+      if (failures.length) {
+        throw new AggregateError(failures, 'Pending invalidation incomplete');
+      }
+    } finally {
+      this.retrying = false;
+    }
+  }
 
   async validateCdnConfiguration(
     email: string,
@@ -346,15 +428,20 @@ export class CloudflareService extends BaseService {
       const config = getConfig();
       const nodeBaseUrl = config.getNodeBaseUrl();
 
+      const prefixes = this.prefixTargets([nodeBaseUrl + '/watch', nodeBaseUrl + '/videos']);
+
       if (videoIds?.length) {
         for (let offset = 0; offset < videoIds.length; offset += 100) {
           await this.purgeCache(
-            videoIds
-              .slice(offset, offset + 100)
-              .flatMap((id) => [
-                nodeBaseUrl + '/watch?v=' + id,
-                nodeBaseUrl + '/videos/' + id + '/comments/state',
-              ]),
+            [
+              ...prefixes,
+              ...videoIds
+                .slice(offset, offset + 100)
+                .flatMap((id) => [
+                  nodeBaseUrl + '/watch?v=' + id,
+                  nodeBaseUrl + '/videos/' + id + '/comments/state',
+                ]),
+            ],
             'purgeWatchPages'
           );
         }
@@ -362,10 +449,13 @@ export class CloudflareService extends BaseService {
         for (let offset = 0; ; offset += 100) {
           const videos = await this.videosRepository.findAll({ limit: 100, offset });
           await this.purgeCache(
-            videos.flatMap((video: VideoWithId) => [
-              nodeBaseUrl + '/watch?v=' + video.video_id,
-              nodeBaseUrl + '/videos/' + video.video_id + '/comments/state',
-            ]),
+            [
+              ...prefixes,
+              ...videos.flatMap((video: VideoWithId) => [
+                nodeBaseUrl + '/watch?v=' + video.video_id,
+                nodeBaseUrl + '/videos/' + video.video_id + '/comments/state',
+              ]),
+            ],
             'purgeWatchPages'
           );
           if (videos.length < 100) {
@@ -451,7 +541,15 @@ export class CloudflareService extends BaseService {
         `${nodeBaseUrl}/node/search?searchTerm=&sortTerm=oldest&tagTerm=`,
       ];
 
-      await this.purgeCache(files, 'purgeNodePage');
+      await this.purgeCache(
+        [
+          ...files,
+          ...this.prefixTargets(
+            ['/watch', '/videos', '/node/search'].map((route) => nodeBaseUrl + route)
+          ),
+        ],
+        'purgeNodePage'
+      );
     } catch (error) {
       this.logger.error('Failed to purge node page', error);
     }
@@ -475,7 +573,7 @@ export class CloudflareService extends BaseService {
         `${baseUrl}/external/resources/images/banner.png`,
       ];
 
-      await this.purgeCache(files, 'purgeNodeImages');
+      await this.purgeCache([...files, ...this.prefixTargets(files)], 'purgeNodeImages');
     } catch (error) {
       this.logger.error('Failed to purge node images', error);
     }
@@ -582,6 +680,11 @@ export class CloudflareService extends BaseService {
       )
     );
     try {
+      await this.purgePrefixes([base + '/external/videos/' + videoId + '/adaptive/'], true);
+    } catch (error) {
+      failures.push(error);
+    }
+    try {
       await this.purgeCache(manifests, 'purgeAdaptiveVideos');
     } catch (error) {
       failures.push(error);
@@ -637,7 +740,13 @@ export class CloudflareService extends BaseService {
         }
       }
 
-      await this.purgeCache(files, 'purgeProgressiveVideos');
+      await this.purgeCache(
+        [
+          ...files,
+          ...this.prefixTargets([baseUrl + '/external/videos/' + videoId + '/progressive/']),
+        ],
+        'purgeProgressiveVideos'
+      );
     } catch (error) {
       this.logger.error('Failed to purge progressive videos', error, { videoId });
     }
@@ -658,7 +767,7 @@ export class CloudflareService extends BaseService {
       const files = videoIds.map(
         (videoId) => `${baseUrl}/external/videos/${videoId}/images/preview.jpg`
       );
-      await this.purgeCache(files, 'purgeVideoPreviewImages');
+      await this.purgeCache([...files, ...this.prefixTargets(files)], 'purgeVideoPreviewImages');
     } catch (error) {
       this.logger.error('Failed to purge preview images', error, { videoIds });
     }
@@ -679,7 +788,7 @@ export class CloudflareService extends BaseService {
       const files = videoIds.map(
         (videoId) => `${baseUrl}/external/videos/${videoId}/images/poster.jpg`
       );
-      await this.purgeCache(files, 'purgeVideoPosterImages');
+      await this.purgeCache([...files, ...this.prefixTargets(files)], 'purgeVideoPosterImages');
     } catch (error) {
       this.logger.error('Failed to purge poster images', error, { videoIds });
     }
@@ -700,7 +809,7 @@ export class CloudflareService extends BaseService {
       const files = videoIds.map(
         (videoId) => `${baseUrl}/external/videos/${videoId}/images/thumbnail.jpg`
       );
-      await this.purgeCache(files, 'purgeVideoThumbnailImages');
+      await this.purgeCache([...files, ...this.prefixTargets(files)], 'purgeVideoThumbnailImages');
     } catch (error) {
       this.logger.error('Failed to purge thumbnail images', error, { videoIds });
     }
@@ -710,6 +819,10 @@ export class CloudflareService extends BaseService {
    * Purge entire video cache (all formats and images)
    */
   async purgeVideo(videoId: string): Promise<void> {
+    await this.purgePrefixes(
+      [getConfig().getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/'],
+      true
+    );
     const adaptive = await Promise.allSettled([this.purgeAdaptiveVideos(videoId, undefined, true)]);
     await this.purgeProgressiveVideos(videoId);
     await this.purgeVideoPreviewImages([videoId]);
@@ -738,12 +851,7 @@ export class CloudflareService extends BaseService {
     }
 
     try {
-      const config = getConfig();
-      const zoneId = config.nodeSettings.cloudflareZoneId;
-
-      await this.httpClient.post(`/zones/${zoneId}/purge_cache`, {
-        purge_everything: true,
-      });
+      await this.purgeCache(['everything'], 'purgeEntireCache');
 
       this.logger.info('Entire cache purged');
     } catch (error) {
@@ -759,8 +867,19 @@ export class CloudflareService extends BaseService {
     cloudflareZoneId: string,
     cloudflareGlobalApiKey: string
   ): Promise<void> {
+    const journal = this.outbox();
+    let entries: PurgeEntry[] = [];
     try {
-      await axios.post(
+      journal?.enqueue(cloudflareZoneId, ['everything'], {
+        zone: cloudflareZoneId,
+        email: cloudflareEmailAddress,
+        key: cloudflareGlobalApiKey,
+      });
+      if ((journal?.notBefore(cloudflareZoneId) ?? 0) > Date.now()) {
+        throw new Error('Cloudflare purge deferred until Retry-After expires');
+      }
+      entries = journal?.snapshot(cloudflareZoneId) ?? [];
+      const response = await axios.post(
         `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/purge_cache`,
         { purge_everything: true },
         {
@@ -771,11 +890,27 @@ export class CloudflareService extends BaseService {
           }),
         }
       );
+      const result = response as { data?: { success?: boolean } } | undefined;
+      if (result?.data?.success === false) {
+        throw new Error('Cloudflare rejected whole-zone purge');
+      }
+      journal?.acknowledge(cloudflareZoneId, entries);
 
       this.logger.info('Entire cache purged with explicit credentials');
     } catch (error) {
+      const header = (error as { response?: { headers?: Record<string, string> } }).response
+        ?.headers?.['retry-after'];
+      const seconds = Number(header);
+      const until = Number.isFinite(seconds)
+        ? Date.now() + seconds * 1000
+        : Date.parse(header ?? '');
+      if (Number.isFinite(until) && until > Date.now()) {
+        journal?.defer(cloudflareZoneId, until);
+      }
       this.logger.error('Failed to purge entire cache with credentials', error);
       throw error;
+    } finally {
+      journal?.close();
     }
   }
 
@@ -814,7 +949,7 @@ export class CloudflareService extends BaseService {
                 { status_code_range: { from: 201, to: 599 }, value: -1 },
               ],
             },
-            browser_ttl: { mode: 'bypass' },
+            browser_ttl: { mode: 'bypass_by_default' },
           },
         },
         {
@@ -826,7 +961,7 @@ export class CloudflareService extends BaseService {
           action_parameters: {
             cache: true,
             edge_ttl: { mode: 'bypass_by_default' },
-            browser_ttl: { mode: 'bypass' },
+            browser_ttl: { mode: 'bypass_by_default' },
           },
         },
         {
@@ -849,7 +984,7 @@ export class CloudflareService extends BaseService {
           action_parameters: {
             cache: true,
             edge_ttl: { mode: 'bypass_by_default' },
-            browser_ttl: { mode: 'bypass' },
+            browser_ttl: { mode: 'bypass_by_default' },
           },
         },
         {
@@ -860,7 +995,7 @@ export class CloudflareService extends BaseService {
           action_parameters: {
             cache: true,
             edge_ttl: { mode: 'respect_origin' },
-            browser_ttl: { mode: 'bypass' },
+            browser_ttl: { mode: 'bypass_by_default' },
           },
         },
         {
@@ -871,7 +1006,7 @@ export class CloudflareService extends BaseService {
           action_parameters: {
             cache: true,
             edge_ttl: { mode: 'bypass_by_default' },
-            browser_ttl: { mode: 'bypass' },
+            browser_ttl: { mode: 'bypass_by_default' },
           },
         },
         {
@@ -883,7 +1018,7 @@ export class CloudflareService extends BaseService {
           action_parameters: {
             cache: true,
             edge_ttl: { mode: 'bypass_by_default' },
-            browser_ttl: { mode: 'bypass' },
+            browser_ttl: { mode: 'bypass_by_default' },
           },
         },
         {
@@ -891,7 +1026,7 @@ export class CloudflareService extends BaseService {
           action: 'set_cache_settings',
           enabled: true,
           expression:
-            '(starts_with(http.request.uri.path, "/videos/")) and (http.request.uri.path contains "/comments") and (http.request.method in {"GET" "HEAD"})',
+            '(starts_with(http.request.uri.path, "/videos/")) and (http.request.uri.path contains "/comments") and (http.request.method in {"GET" "HEAD" "PURGE"})',
           action_parameters: {
             cache: true,
             edge_ttl: { mode: 'bypass_by_default' },
@@ -903,7 +1038,7 @@ export class CloudflareService extends BaseService {
           action: 'set_cache_settings',
           enabled: true,
           expression:
-            '(http.request.uri.path contains "/adaptive/m3u8/") and (ends_with(http.request.uri.path, ".m3u8")) and (http.request.method in {"GET" "HEAD"})',
+            '(http.request.uri.path contains "/adaptive/m3u8/") and (ends_with(http.request.uri.path, ".m3u8")) and (http.request.method in {"GET" "HEAD" "PURGE"})',
           action_parameters: {
             cache: true,
             edge_ttl: {
@@ -918,7 +1053,7 @@ export class CloudflareService extends BaseService {
           action: 'set_cache_settings',
           enabled: true,
           expression:
-            '(not http.request.method in {"GET" "HEAD"}) or (any(http.request.headers["authorization"][*] ne "")) or (http.request.uri.query contains "fresh=1")',
+            '(not http.request.method in {"GET" "HEAD" "PURGE"}) or (any(http.request.headers["authorization"][*] ne "")) or (http.request.uri.query contains "fresh=1")',
           action_parameters: { cache: false },
         },
       ],
@@ -1172,12 +1307,29 @@ export class CloudflareService extends BaseService {
    * Purge specific files from Cloudflare cache
    */
   private async purgeCache(files: string[], operation: string): Promise<void> {
-    if (!this.httpClient || files.length === 0) {
+    if (!this.httpClient) {
       return;
     }
 
     const client = this.httpClient;
     const zoneId = getConfig().nodeSettings.cloudflareZoneId;
+    const outbox = this.outbox();
+    let durable: PurgeEntry[];
+    try {
+      const settings = getConfig().nodeSettings;
+      outbox?.enqueue(zoneId, files, {
+        zone: zoneId,
+        email: settings.cloudflareEmailAddress,
+        key: settings.cloudflareGlobalApiKey,
+      });
+      durable = outbox?.snapshot(zoneId) ?? [];
+      this.purgeNotBefore.set(
+        zoneId,
+        Math.max(this.purgeNotBefore.get(zoneId) ?? 0, outbox?.notBefore(zoneId) ?? 0)
+      );
+    } finally {
+      outbox?.close();
+    }
     const versions = this.purgeVersions.get(zoneId) ?? new Map<string, number>();
     this.purgeVersions.set(zoneId, versions);
     const pending = this.pendingPurges.get(zoneId) ?? new Set<string>();
@@ -1186,52 +1338,85 @@ export class CloudflareService extends BaseService {
       pending.add(file);
       versions.set(file, ++this.purgeGeneration);
     });
+    durable.forEach(({ target }) => {
+      if (!pending.has(target)) {
+        pending.add(target);
+        versions.set(target, ++this.purgeGeneration);
+      }
+    });
     const failures: unknown[] = [];
+    const kind = (target: string): number =>
+      target === 'everything' ? 2 : target.startsWith('prefix:') ? 1 : 0;
     const snapshot = [...pending];
     const capturedVersions = new Map(versions);
-    for (let offset = 0; offset < snapshot.length; offset += 30) {
-      if ((this.purgeNotBefore.get(zoneId) ?? 0) > Date.now()) {
-        failures.push(new Error('Cloudflare purge deferred until Retry-After expires'));
-        break;
-      }
-      const batch = snapshot.slice(offset, offset + 30);
-      for (let attempt = 0; attempt < 3; attempt++) {
-        try {
-          const signal = distributionSignal();
-          const response = signal
-            ? await client.post(`/zones/${zoneId}/purge_cache`, { files: batch }, { signal })
-            : await client.post(`/zones/${zoneId}/purge_cache`, { files: batch });
-          const result = response as { data?: { success?: boolean } } | undefined;
-          if (result?.data?.success === false) {
-            throw new Error('Cloudflare rejected purge');
-          }
-          batch.forEach((file) => {
-            if (versions.get(file) === capturedVersions.get(file)) {
-              pending.delete(file);
-              versions.delete(file);
-            }
-          });
+    for (const type of [0, 1, 2]) {
+      const targets = snapshot.filter((target) => kind(target) === type);
+      for (let offset = 0; offset < targets.length; offset += 30) {
+        if (Number(this.purgeNotBefore.get(zoneId)) > Date.now()) {
+          failures.push(new Error('Cloudflare purge deferred until Retry-After expires'));
           break;
-        } catch (error) {
-          const status = (error as { response?: { status?: number } }).response?.status;
-          if (attempt === 2 || (status !== undefined && status !== 429 && status < 500)) {
-            failures.push(error);
+        }
+        // Keep file and prefix requests separate: Cloudflare accepts one purge type per body.
+        const batch = targets.slice(offset, offset + 30);
+        const body =
+          type === 2
+            ? { purge_everything: true }
+            : type === 1
+              ? { prefixes: batch.map((target) => target.slice(7)) }
+              : { files: batch };
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const signal = distributionSignal();
+            const response = signal
+              ? await client.post(`/zones/${zoneId}/purge_cache`, body, { signal })
+              : await client.post(`/zones/${zoneId}/purge_cache`, body);
+            const result = response as { data?: { success?: boolean } } | undefined;
+            if (result?.data?.success === false) {
+              throw new Error('Cloudflare rejected purge');
+            }
+            batch.forEach((file) => {
+              if (versions.get(file) === capturedVersions.get(file)) {
+                pending.delete(file);
+                versions.delete(file);
+              }
+            });
+            const journal = this.outbox();
+            try {
+              journal?.acknowledge(
+                zoneId,
+                durable.filter((entry) => batch.includes(entry.target))
+              );
+            } finally {
+              journal?.close();
+            }
             break;
+          } catch (error) {
+            const status = (error as { response?: { status?: number } }).response?.status;
+            if (attempt === 2 || (status !== undefined && status !== 429 && status < 500)) {
+              failures.push(error);
+              break;
+            }
+            const retryHeader = (error as { response?: { headers?: Record<string, string> } })
+              .response?.headers?.['retry-after'];
+            const seconds = Number(retryHeader);
+            const retryAfter = Number.isFinite(seconds)
+              ? seconds
+              : (Date.parse(retryHeader ?? '') - Date.now()) / 1000;
+            if (Number.isFinite(retryAfter) && retryAfter > 1) {
+              this.purgeNotBefore.set(zoneId, Date.now() + retryAfter * 1000);
+              const journal = this.outbox();
+              try {
+                journal?.defer(zoneId, Date.now() + retryAfter * 1000);
+              } finally {
+                journal?.close();
+              }
+              failures.push(error);
+              break;
+            }
+            await delay(
+              Math.min(1000, Number.isFinite(retryAfter) ? retryAfter * 1000 : 100 * 2 ** attempt)
+            );
           }
-          const retryHeader = (error as { response?: { headers?: Record<string, string> } })
-            .response?.headers?.['retry-after'];
-          const seconds = Number(retryHeader);
-          const retryAfter = Number.isFinite(seconds)
-            ? seconds
-            : (Date.parse(retryHeader ?? '') - Date.now()) / 1000;
-          if (Number.isFinite(retryAfter) && retryAfter > 1) {
-            this.purgeNotBefore.set(zoneId, Date.now() + retryAfter * 1000);
-            failures.push(error);
-            break;
-          }
-          await delay(
-            Math.min(1000, Number.isFinite(retryAfter) ? retryAfter * 1000 : 100 * 2 ** attempt)
-          );
         }
       }
     }

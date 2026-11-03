@@ -92,6 +92,7 @@ describe('VideoUploadService', () => {
     } as unknown as UploadTrackerService;
 
     mockCloudflareService = {
+      purgePrefixes: vi.fn().mockResolvedValue(undefined),
       isEnabled: vi.fn().mockReturnValue(false),
       purgeProgressiveVideos: vi.fn().mockResolvedValue(undefined),
       purgeAdaptiveVideos: vi.fn().mockResolvedValue(undefined),

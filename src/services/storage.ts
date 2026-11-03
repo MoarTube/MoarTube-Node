@@ -32,6 +32,7 @@ import type { StorageMode, FileMetadata } from '@services/interfaces.js';
 import { getConfig } from '@config/index.js';
 import type { StorageConfig } from '@/types/config.js';
 import { storageIdentity } from '@/utils/cdn-settings.js';
+import { withoutRendition } from '@/utils/hls-rendition.js';
 
 /**
  * S3 configuration for the storage service
@@ -311,6 +312,63 @@ export class StorageService extends BaseService {
       [{ key, cache: 'public, max-age=0, s-maxage=30, must-revalidate' }],
       (line) => line.replaceAll(/(https?:[/][/]).*?([/]external[/])/g, baseUrl + '$2')
     );
+  }
+
+  async writeS3MasterManifest(videoId: string, type: string, content: string): Promise<void> {
+    await this.withS3Client(async (client, config) => {
+      await client.send(
+        new PutObjectCommand({
+          Bucket: config.bucketName,
+          Key: `external/videos/${videoId}/adaptive/m3u8/${type}/manifests/manifest-master.m3u8`,
+          Body: Buffer.from(content),
+          ContentType: 'application/vnd.apple.mpegurl',
+          CacheControl: `public, max-age=0, s-maxage=${type === 'dynamic' ? '1' : '30'}, must-revalidate`,
+        })
+      );
+    });
+  }
+
+  /** Update master references before deleting a withdrawn rendition at the S3 origin. */
+  async removeS3Resolution(videoId: string, format: string, resolution: string): Promise<void> {
+    const root = `external/videos/${videoId}/`;
+    if (format === 'm3u8') {
+      for (const type of ['static', 'dynamic']) {
+        const key = `${root}adaptive/m3u8/${type}/manifests/manifest-master.m3u8`;
+        try {
+          await this.replaceS3Manifest(
+            key,
+            [
+              {
+                key,
+                cache:
+                  type === 'dynamic'
+                    ? 'no-store'
+                    : 'public, max-age=0, s-maxage=30, must-revalidate',
+              },
+            ],
+            withoutRendition(resolution)
+          );
+        } catch (error) {
+          if (
+            (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode !== 404
+          ) {
+            throw error;
+          }
+        }
+      }
+      await this.deleteDirectory(root + `adaptive/m3u8/${resolution}/`);
+    }
+    const keys =
+      format === 'm3u8'
+        ? ['static', 'dynamic'].map(
+            (type) => `${root}adaptive/m3u8/${type}/manifests/manifest-${resolution}.m3u8`
+          )
+        : [`${root}progressive/${format}/${resolution}.${format}`];
+    await this.withS3Client(async (client, config) => {
+      for (const key of keys) {
+        await client.send(new DeleteObjectCommand({ Bucket: config.bucketName, Key: key }));
+      }
+    });
   }
 
   async finalizeS3Stream(

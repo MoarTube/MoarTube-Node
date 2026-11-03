@@ -309,8 +309,36 @@ export class VideoUploadService {
     const filePath = path.join(destinationPath, file.filename);
     const maxBytes = 10 * 1024 ** 3;
     await writeUpload(file, filePath, maxBytes);
-
     this.logger.debug('Saved uploaded file', { filename: file.filename, path: filePath });
+    if (!this.cloudflareService.isEnabled()) {
+      return;
+    }
+
+    const config = getConfig();
+    const relative = path
+      .relative(config.paths.videosDirectoryPath, filePath)
+      .split(path.sep)
+      .join('/');
+    const manifest = /^([^/]+)\/adaptive\/m3u8\/(manifest-[\w-]+\.m3u8)$/.exec(relative);
+    const segment = /^([^/]+)\/adaptive\/m3u8\/([^/]+)\/([\w-]+\.ts)$/.exec(relative);
+    const progressive = /^([^/]+)\/progressive\/(mp4|webm|ogv)\/([\w.-]+)$/.exec(relative);
+    const base = config.getExternalVideosBaseUrl();
+    const group = (match: RegExpExecArray, index: number): string => String(match[index]);
+    const urls = manifest
+      ? ['static', 'dynamic'].map(
+          (type) =>
+            `${base}/external/videos/${group(manifest, 1)}/adaptive/m3u8/${type}/manifests/${group(manifest, 2)}`
+        )
+      : segment
+        ? [
+            `${base}/external/videos/${group(segment, 1)}/adaptive/m3u8/${group(segment, 2)}/segments/${group(segment, 3)}`,
+          ]
+        : progressive
+          ? [`${base}/external/videos/${relative}`]
+          : [];
+    if (urls.length) {
+      await this.cloudflareService.purgePrefixes(urls);
+    }
   }
 
   /**

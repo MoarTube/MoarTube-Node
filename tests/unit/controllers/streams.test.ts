@@ -90,6 +90,7 @@ describe('StreamsController', () => {
     };
 
     mockStreamService = {
+      invalidateStreamMedia: vi.fn().mockResolvedValue(undefined),
       startNewStream: vi.fn(),
       stopStream: vi.fn(),
     };

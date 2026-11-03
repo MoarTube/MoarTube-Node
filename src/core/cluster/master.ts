@@ -267,6 +267,13 @@ export class ClusterMaster {
     }, 1000);
 
     this.intervalHandles.push(temp2, temp3);
+    this.intervalHandles.push(
+      setInterval(() => {
+        void this.cloudflare.retryPendingPurges().catch((error: unknown) => {
+          this.logger.error('Pending Cloudflare invalidation failed', error);
+        });
+      }, 10_000)
+    );
 
     // Cloudflare purge task (every 10 minutes)
     this.intervalHandles.push(

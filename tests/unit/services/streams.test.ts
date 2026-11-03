@@ -131,6 +131,7 @@ describe('StreamsService', () => {
     } as unknown as WebSocketService;
 
     mockCloudflareService = {
+      purgeAdaptiveVideos: vi.fn().mockResolvedValue(undefined),
       purgeAllWatchPages: vi.fn(),
       purgeNodePage: vi.fn(),
     } as unknown as CloudflareService;

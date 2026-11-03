@@ -163,6 +163,72 @@ async function expireJournal(): Promise<void> {
 }
 
 describe('follow-up storage fixes against real Silo', () => {
+  it.each([false, true])(
+    'commits a regenerated S3 master before output confirmation purges its public cache (streaming=%s)',
+    async (streaming) => {
+      video.is_streaming = streaming;
+      const type = streaming ? 'dynamic' : 'static';
+      video.outputs = JSON.stringify({ m3u8: [], mp4: [], webm: [], ogv: [] });
+      await a.put(prefix + type + '/manifests/manifest-master.m3u8', 'stale master');
+      cloudflare.purgeVideo.mockImplementation(async () => {
+        const master = await a.text(prefix + type + '/manifests/manifest-master.m3u8');
+        expect(master).toContain(
+          'https://new.example/external/videos/video123/adaptive/m3u8/' +
+            type +
+            '/manifests/manifest-720p.m3u8'
+        );
+        expect(master).not.toContain('stale master');
+      });
+      const videos = new VideosService(
+        logger as never,
+        repository,
+        {} as never,
+        storage,
+        {} as never,
+        cloudflare
+      );
+      await videos.markFormatResolutionPublished('video123', 'm3u8', '720p');
+      expect(cloudflare.purgeVideo).toHaveBeenCalledWith('video123');
+      expect(JSON.parse(video.outputs).m3u8).toEqual(['720p']);
+    }
+  );
+  it('tolerates absent masters during withdrawal but propagates origin access failures', async () => {
+    await storage.removeS3Resolution('video123', 'm3u8', '720p');
+    state.config.nodeSettings.storageConfig.s3Config = {
+      ...a.config,
+      s3ProviderClientConfig: {
+        ...a.config.s3ProviderClientConfig,
+        credentials: { ...a.config.s3ProviderClientConfig.credentials, secretAccessKey: 'wrong' },
+      },
+    };
+    await expect(storage.removeS3Resolution('video123', 'm3u8', '720p')).rejects.toThrow();
+    state.config.nodeSettings.storageConfig.s3Config = a.config;
+  });
+  it('withdraws a rendition at the S3 origin and removes its master entry before cache refill', async () => {
+    const master =
+      '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=200\nmanifest-1080p.m3u8\n';
+    for (const type of ['static', 'dynamic']) {
+      await a.put(prefix + type + '/manifests/manifest-master.m3u8', master);
+      await a.put(prefix + type + '/manifests/manifest-720p.m3u8', 'withdrawn');
+    }
+    await a.put(prefix + '720p/segments/old.ts', 'old bytes');
+    await a.put(prefix + '1080p/segments/retained.ts', 'retained bytes');
+    await storage.removeS3Resolution('video123', 'm3u8', '720p');
+    for (const type of ['static', 'dynamic']) {
+      const updated = await a.text(prefix + type + '/manifests/manifest-master.m3u8');
+      expect(updated).not.toContain('720p');
+      expect(updated).not.toContain('BANDWIDTH=100');
+      expect(updated).toContain('BANDWIDTH=200\nmanifest-1080p.m3u8');
+      expect(await storage.fileExists(prefix + type + '/manifests/manifest-720p.m3u8')).toBe(false);
+    }
+    expect(await storage.fileExists(prefix + '720p/segments/old.ts')).toBe(false);
+    expect(await a.text(prefix + '1080p/segments/retained.ts')).toBe('retained bytes');
+    await a.put('external/videos/video123/progressive/mp4/720p.mp4', 'withdrawn');
+    await storage.removeS3Resolution('video123', 'mp4', '720p');
+    expect(await storage.fileExists('external/videos/video123/progressive/mp4/720p.mp4')).toBe(
+      false
+    );
+  });
   it.each([true, false])(
     'stops an S3 stream before its first rendition arrives without publishing empty media (recorded=%s)',
     async (recorded) => {
@@ -504,7 +570,7 @@ describe('follow-up storage fixes against real Silo', () => {
     const statuses: boolean[] = [];
     vi.mocked(axios.create).mockReturnValue({
       post: vi.fn(async (_url, body) => {
-        sent.push(...body.files);
+        sent.push(...(body.files ?? []));
         statuses.push(video === undefined);
         return { data: { success: true } };
       }),
@@ -557,7 +623,7 @@ describe('follow-up storage fixes against real Silo', () => {
     const sent: string[] = [];
     vi.mocked(axios.create).mockReturnValue({
       post: vi.fn(async (_url, body) => {
-        sent.push(...body.files);
+        sent.push(...(body.files ?? []));
         return { data: { success: true } };
       }),
     } as never);

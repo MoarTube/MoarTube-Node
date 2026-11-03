@@ -122,7 +122,7 @@ describe('CloudflareService', () => {
     mockConfig.nodeSettings.cloudflareZoneId = 'first-zone';
     await service.purgeWatchPages(['video']);
     await service.purgeWatchPages(['video']);
-    expect(first.post).toHaveBeenCalledTimes(2);
+    expect(first.post).toHaveBeenCalledTimes(4);
     expect(axios.create).toHaveBeenCalledTimes(1);
     mockConfig.nodeSettings.cloudflareGlobalApiKey = 'second-key';
     mockConfig.nodeSettings.cloudflareEmailAddress = 'second@example.test';
@@ -144,7 +144,7 @@ describe('CloudflareService', () => {
     );
     mockConfig.nodeSettings.isCloudflareCdnEnabled = false;
     await service.purgeWatchPages(['video']);
-    expect(second.post).toHaveBeenCalledTimes(1);
+    expect(second.post).toHaveBeenCalledTimes(2);
   });
 
   describe('isEnabled', () => {
@@ -1112,8 +1112,8 @@ describe('CloudflareService', () => {
 
       await service.purgeWatchPages();
 
-      // Watch HTML and state markers total 70 URLs, purged in batches of 30.
-      expect(mockHttpClient.post).toHaveBeenCalledTimes(3);
+      // Watch prefix plus 70 canonical HTML/state URLs in batches of 30.
+      expect(mockHttpClient.post).toHaveBeenCalledTimes(4);
     });
   });
   it('processes catalog invalidation in bounded pages', async () => {

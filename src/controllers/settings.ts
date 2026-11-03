@@ -663,7 +663,42 @@ export class SettingsController extends BaseController {
             break;
           }
         }
-        return operation(config);
+        const previous = config.nodeSettings;
+        let outcome: { value: T } | { error: unknown };
+        try {
+          outcome = { value: await operation(config) };
+        } catch (error) {
+          outcome = { error };
+        }
+        // Purge after final writes, including partial migrations and rollback.
+        const zones = new Map<string, typeof previous>();
+        for (const settings of [previous, config.nodeSettings]) {
+          if (settings.isCloudflareCdnEnabled) {
+            zones.set(settings.cloudflareZoneId, settings);
+          }
+        }
+        const failures: unknown[] = [];
+        for (const settings of zones.values()) {
+          try {
+            await this.cloudflareService.purgeEntireCacheWithCredentials(
+              settings.cloudflareEmailAddress,
+              settings.cloudflareZoneId,
+              settings.cloudflareGlobalApiKey
+            );
+          } catch (error) {
+            failures.push(error);
+          }
+        }
+        if (failures.length) {
+          throw new AggregateError(
+            'error' in outcome ? [outcome.error, ...failures] : failures,
+            'Distribution cache invalidation incomplete; retry work remains queued.'
+          );
+        }
+        if ('error' in outcome) {
+          throw outcome.error;
+        }
+        return outcome.value;
       })
     );
   }
@@ -964,6 +999,7 @@ export class SettingsController extends BaseController {
       });
 
       await this.cloudflareService.purgeAllWatchPages();
+      await this.cloudflareService.purgeNodePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1001,6 +1037,7 @@ export class SettingsController extends BaseController {
 
       // Purge all watch pages from Cloudflare cache
       await this.cloudflareService.purgeAllWatchPages();
+      await this.cloudflareService.purgeNodePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1022,6 +1059,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isCommentsEnabled: isEnabled });
+      await this.cloudflareService.purgeNodePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1043,6 +1081,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isLikesEnabled: isEnabled });
+      await this.cloudflareService.purgeNodePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1064,6 +1103,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isDislikesEnabled: isEnabled });
+      await this.cloudflareService.purgeNodePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1085,6 +1125,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isReportsEnabled: isEnabled });
+      await this.cloudflareService.purgeNodePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1106,6 +1147,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isLiveChatEnabled: isEnabled });
+      await this.cloudflareService.purgeNodePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1269,6 +1311,7 @@ export class SettingsController extends BaseController {
         return await this.sendError(reply, 'database file is missing');
       }
       await this.settingsService.restoreDatabaseBackup(temporary);
+      await this.cloudflareService.purgeNodePage();
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Database import error', error);

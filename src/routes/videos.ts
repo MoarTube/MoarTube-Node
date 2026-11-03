@@ -4,6 +4,7 @@
  * Routes for video-related endpoints.
  */
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { noStoreComments } from '@/utils/comment-cache.js';
 import type { Container } from '@core/index.js';
 import { VideosController } from '@controllers/index.js';
@@ -488,7 +489,25 @@ export function videosRoutes(
     '/:videoId/cache/invalidate',
     {
       preHandler: [fastify.authenticate],
-      schema: { params: videoIdParamsSchema },
+      schema: {
+        params: videoIdParamsSchema,
+        body: z
+          .object({
+            paths: z
+              .array(
+                z
+                  .string()
+                  .max(512)
+                  .regex(
+                    /^(?:images\/(?:thumbnail|preview|poster)\.jpg|adaptive\/m3u8\/|adaptive\/m3u8\/(?:static|dynamic)\/manifests\/manifest-(?:master|240p|360p|480p|720p|1080p|1440p|2160p)\.m3u8|adaptive\/m3u8\/(?:240p|360p|480p|720p|1080p|1440p|2160p)\/segments\/[A-Za-z0-9_-]+\.ts|progressive\/(?:mp4|webm|ogv)\/(?:240p|360p|480p|720p|1080p|1440p|2160p)\.(?:mp4|webm|ogv))$/
+                  )
+              )
+              .min(1)
+              .max(64)
+              .optional(),
+          })
+          .optional(),
+      },
     },
     controller.invalidateCache
   );

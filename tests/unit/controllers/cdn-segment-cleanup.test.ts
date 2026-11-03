@@ -11,7 +11,11 @@ let root: string, app: FastifyInstance;
 beforeEach(async () => {
   root = await mkdtemp(path.join(tmpdir(), 'moartube-segment-cleanup-'));
   state.videosDirectoryPath = root;
-  const controller = new StreamsController({} as never, {} as never, {} as never);
+  const controller = new StreamsController(
+    {} as never,
+    {} as never,
+    { invalidateStreamMedia: vi.fn().mockResolvedValue(undefined) } as never
+  );
   app = Fastify();
   app.post('/:videoId/:format/:resolution/remove', controller.removeSegment);
 });

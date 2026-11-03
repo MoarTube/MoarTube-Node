@@ -1,10 +1,15 @@
-vi.mock('@/utils/settings-change.js', () => ({ withSettingsChange: vi.fn(async (_path,operation) => operation()) }));
+vi.mock('@/utils/settings-change.js', () => ({
+  withSettingsChange: vi.fn(async (_path, operation) => operation()),
+}));
 /**
  * Unit tests for VideosService
  *
  * Tests the video-related business logic including CRUD operations,
  * publishing workflows, metadata management and view tracking.
  */
+vi.mock('@/utils/manifest-transform.js', () => ({
+  rewriteManifestFile: vi.fn().mockResolvedValue(undefined),
+}));
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('@/utils/stream-files.js', () => ({ writeUpload: vi.fn().mockResolvedValue(undefined) }));
 
@@ -120,6 +125,8 @@ const mockCommentsRepository = {
 };
 
 const mockStorageService = {
+  writeS3MasterManifest: vi.fn().mockResolvedValue(undefined),
+  removeS3Resolution: vi.fn().mockResolvedValue(undefined),
   saveFile: vi.fn(),
   getFile: vi.fn(),
   deleteDirectory: vi.fn(),
@@ -167,13 +174,22 @@ describe('VideosService', () => {
 
   it('captures segment URLs before deletion and purges watch HTML only after record deletion', async () => {
     mockVideosRepository.findById.mockResolvedValue({ video_id: 'id' });
-    const segments = ['https://cdn.example.com/external/videos/id/adaptive/m3u8/720p/segments/old.ts'];
+    const segments = [
+      'https://cdn.example.com/external/videos/id/adaptive/m3u8/720p/segments/old.ts',
+    ];
     mockCloudflareService.getAdaptiveVideoUrls.mockResolvedValueOnce(segments);
     let deleted = false;
-    mockVideosRepository.delete.mockImplementationOnce(async () => { deleted = true; return true; });
-    mockCloudflareService.purgeAllWatchPages.mockImplementationOnce(async () => { expect(deleted).toBe(true); });
+    mockVideosRepository.delete.mockImplementationOnce(async () => {
+      deleted = true;
+      return true;
+    });
+    mockCloudflareService.purgeAllWatchPages.mockImplementationOnce(async () => {
+      expect(deleted).toBe(true);
+    });
     await service.deleteVideo('id');
-    expect(mockCloudflareService.getAdaptiveVideoUrls.mock.invocationCallOrder[0]).toBeLessThan(mockVideosRepository.delete.mock.invocationCallOrder[0]);
+    expect(mockCloudflareService.getAdaptiveVideoUrls.mock.invocationCallOrder[0]).toBeLessThan(
+      mockVideosRepository.delete.mock.invocationCallOrder[0]
+    );
     expect(mockCloudflareService.purgeAdaptiveVideos).toHaveBeenCalledWith('id', segments);
   });
 
@@ -491,7 +507,7 @@ describe('VideosService', () => {
       const originalMock = vi.mocked(getConfig).getMockImplementation();
       vi.mocked(getConfig).mockReturnValue({
         reloadNodeSettings: vi.fn(),
-    nodeSettings: {
+        nodeSettings: {
           storageConfig: { storageMode: 's3' },
         },
         paths: { videosDirectoryPath: '/data/videos' },
@@ -510,7 +526,7 @@ describe('VideosService', () => {
       // Restore default mock behavior
       vi.mocked(getConfig).mockReturnValue({
         reloadNodeSettings: vi.fn(),
-    nodeSettings: {
+        nodeSettings: {
           nodeName: 'Test Node',
           nodeAbout: 'Test node description',
           publicNodeProtocol: 'https',
@@ -861,7 +877,7 @@ describe('VideosService', () => {
       const { getConfig } = await import('@config/index.js');
       vi.mocked(getConfig).mockReturnValueOnce({
         reloadNodeSettings: vi.fn(),
-    nodeSettings: {
+        nodeSettings: {
           nodeName: 'Test Node',
           nodeAbout: 'Test node description',
           publicNodeProtocol: 'https',
@@ -948,7 +964,10 @@ describe('VideosService', () => {
 
       await service.setPublishing('video123', true);
 
-      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', { is_publishing: true,meta:expect.any(String) });
+      expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', {
+        is_publishing: true,
+        meta: expect.any(String),
+      });
     });
 
     it('should publish video', async () => {
@@ -1035,25 +1054,43 @@ describe('VideosService', () => {
       );
     });
 
-    it('flushes views within a fixed window even under continuous traffic and on shutdown',async()=>{
-      mockVideosRepository.findById.mockResolvedValue({video_id:'a',views:0});
+    it('flushes views within a fixed window even under continuous traffic and on shutdown', async () => {
+      mockVideosRepository.findById.mockResolvedValue({ video_id: 'a', views: 0 });
       mockVideosRepository.incrementViewsBy.mockResolvedValue(undefined);
-      for(let i=0;i<6;i++){await service.incrementViewsDebounced('a');await vi.advanceTimersByTimeAsync(100);}
-      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledWith('a',5);
-      await service.incrementViewsDebounced('b');await service.flushPendingViews();
-      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledWith('a',1);
-      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledWith('b',1);
-      const count=mockVideosRepository.incrementViewsBy.mock.calls.length;
-      await vi.advanceTimersByTimeAsync(1000);expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledTimes(count);
+      for (let i = 0; i < 6; i++) {
+        await service.incrementViewsDebounced('a');
+        await vi.advanceTimersByTimeAsync(100);
+      }
+      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledWith('a', 5);
+      await service.incrementViewsDebounced('b');
+      await service.flushPendingViews();
+      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledWith('a', 1);
+      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledWith('b', 1);
+      const count = mockVideosRepository.incrementViewsBy.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(mockVideosRepository.incrementViewsBy).toHaveBeenCalledTimes(count);
     });
 
-
-    it('waits for an in-flight view batch at shutdown',async()=>{
-      mockVideosRepository.findById.mockResolvedValue({video_id:'a',views:0});
-      let release!:()=>void;mockVideosRepository.incrementViewsBy.mockImplementationOnce(()=>new Promise<void>(resolve=>{release=resolve;}));
-      await service.incrementViewsDebounced('a');await vi.advanceTimersByTimeAsync(500);
-      let closed=false;const closing=service.flushPendingViews().then(()=>{closed=true;});
-      await Promise.resolve();expect(closed).toBe(false);release();await closing;expect(closed).toBe(true);
+    it('waits for an in-flight view batch at shutdown', async () => {
+      mockVideosRepository.findById.mockResolvedValue({ video_id: 'a', views: 0 });
+      let release!: () => void;
+      mockVideosRepository.incrementViewsBy.mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            release = resolve;
+          })
+      );
+      await service.incrementViewsDebounced('a');
+      await vi.advanceTimersByTimeAsync(500);
+      let closed = false;
+      const closing = service.flushPendingViews().then(() => {
+        closed = true;
+      });
+      await Promise.resolve();
+      expect(closed).toBe(false);
+      release();
+      await closing;
+      expect(closed).toBe(true);
     });
 
     it('should batch multiple debounced views', async () => {
@@ -1794,7 +1831,9 @@ describe('VideosService', () => {
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(undefined);
       // manifest doesn't exist, segments dir exists
-      vi.mocked(fs.default.existsSync).mockReturnValueOnce(false).mockReturnValueOnce(true);
+      vi.mocked(fs.default.existsSync).mockImplementation(
+        (name) => !String(name).endsWith('.m3u8')
+      );
 
       await service.unpublishFormatResolution('video123', 'm3u8', '720p');
 
@@ -1802,7 +1841,7 @@ describe('VideosService', () => {
       expect(fs.default.rmSync).toHaveBeenCalled();
     });
 
-    it('should skip file operations in S3 storage mode', async () => {
+    it('should withdraw the S3 rendition without filesystem operations', async () => {
       const fs = await import('node:fs');
       const { getConfig } = await import('@config/index.js');
       vi.mocked(fs.default.existsSync).mockClear();
@@ -1816,7 +1855,7 @@ describe('VideosService', () => {
       mockVideosRepository.update.mockResolvedValue(undefined);
       vi.mocked(getConfig).mockReturnValueOnce({
         reloadNodeSettings: vi.fn(),
-    nodeSettings: {
+        nodeSettings: {
           storageConfig: { storageMode: 's3' },
         },
         paths: { videosDirectoryPath: '/data/videos' },
@@ -1906,7 +1945,7 @@ describe('VideosService', () => {
       expect(fs.default.unlinkSync).not.toHaveBeenCalled();
     });
 
-    it('should log error but not throw when file deletion fails', async () => {
+    it('should retain published outputs and report failure when origin deletion fails', async () => {
       const fs = await import('node:fs');
       // Reset and set up mocks properly
       vi.mocked(fs.default.existsSync).mockReset().mockReturnValue(true);
@@ -1921,8 +1960,10 @@ describe('VideosService', () => {
         throw new Error('Permission denied');
       });
 
-      // Should not throw
-      await service.unpublishFormatResolution('video123', 'mp4', '720p');
+      await expect(service.unpublishFormatResolution('video123', 'mp4', '720p')).rejects.toThrow(
+        'Permission denied'
+      );
+      expect(mockVideosRepository.update).not.toHaveBeenCalled();
 
       // Should have logged the error
       expect(mockLogger.error).toHaveBeenCalledWith(
@@ -2043,25 +2084,31 @@ describe('VideosService', () => {
       const fs = await import('node:fs');
       const content = '#EXTM3U\n#EXT-X-VERSION:3';
       const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockReturnValueOnce({ reloadNodeSettings: vi.fn(),
-    nodeSettings: { storageConfig: { storageMode: 'filesystem' } },
-        paths: { videosDirectoryPath: '/data/videos' } } as never);
+      vi.mocked(getConfig).mockReturnValueOnce({
+        reloadNodeSettings: vi.fn(),
+        nodeSettings: { storageConfig: { storageMode: 'filesystem' } },
+        paths: { videosDirectoryPath: '/data/videos' },
+      } as never);
 
       await service.writeMasterManifest('video123', 'static', content);
 
       expect(fs.default.mkdirSync).toHaveBeenCalled();
       const { writeUpload } = await import('@/utils/stream-files.js');
-      expect(writeUpload).toHaveBeenCalledWith({ file: expect.anything() }, '/data/videos/video123/adaptive/m3u8/manifest-master.m3u8', 128 * 1024);
+      expect(writeUpload).toHaveBeenCalledWith(
+        { file: expect.anything() },
+        '/data/videos/video123/adaptive/m3u8/manifest-master.m3u8',
+        128 * 1024
+      );
     });
 
-    it('should throw when writing manifest in non-filesystem storage mode', async () => {
+    it('delegates S3 master writes to storage and purges the adaptive cache', async () => {
       const content = '#EXTM3U\n#EXT-X-VERSION:3';
 
       // Mock S3 storage mode
       const { getConfig } = await import('@config/index.js');
       vi.mocked(getConfig).mockReturnValueOnce({
         reloadNodeSettings: vi.fn(),
-    nodeSettings: {
+        nodeSettings: {
           nodeName: 'Test Node',
           nodeAbout: 'Test node description',
           publicNodeProtocol: 'https',
@@ -2083,8 +2130,11 @@ describe('VideosService', () => {
         getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
 
-      await expect(service.writeMasterManifest('video123', 'static', content)).rejects.toThrow(
-        'Master manifest writing is handled directly by MoarTube Client when MoarTube Node is in s3provider mode.'
+      await service.writeMasterManifest('video123', 'static', content);
+      expect(mockStorageService.writeS3MasterManifest).toHaveBeenCalledWith(
+        'video123',
+        'static',
+        content
       );
       expect(mockStorageService.saveFile).not.toHaveBeenCalled();
     });

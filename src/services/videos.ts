@@ -38,6 +38,8 @@ import type {
 import { getConfig } from '@config/index.js';
 import { withSettingsChange } from '@/utils/settings-change.js';
 import { randomUUID } from 'node:crypto';
+import { rewriteManifestFile } from '@/utils/manifest-transform.js';
+import { withoutRendition } from '@/utils/hls-rendition.js';
 import type { CloudflareService } from '@services/cloudflare.js';
 import type { StorageService } from '@services/storage.js';
 import type { WebSocketService } from '@services/websocket.js';
@@ -472,6 +474,7 @@ export class VideosService extends BaseService {
   async setPublishing(videoId: string, isPublishing: boolean): Promise<void> {
     if (!isPublishing) {
       await this.videoRepository.update(videoId, { is_publishing: false });
+      await this.cloudflareService.purgeNodePage();
       return;
     }
     await withSettingsChange(getConfig().paths.nodeSettingsPath, async () => {
@@ -490,6 +493,7 @@ export class VideosService extends BaseService {
         is_publishing: true,
         meta: JSON.stringify(metadata),
       });
+      await this.cloudflareService.purgeNodePage();
     });
   }
 
@@ -551,6 +555,7 @@ export class VideosService extends BaseService {
    */
   async incrementViews(videoId: string): Promise<void> {
     await this.videoRepository.incrementViews(videoId);
+    await this.cloudflareService.purgeNodePage();
   }
 
   /**
@@ -579,6 +584,7 @@ export class VideosService extends BaseService {
   private async writeViews(videoId: string, count: number): Promise<void> {
     try {
       await this.videoRepository.incrementViewsBy(videoId, count);
+      await this.cloudflareService.purgeNodePage();
       this.logger.debug('Flushed pending views', { videoId, count });
     } catch (error) {
       this.logger.error('Failed to flush pending views', error, { videoId, count });
@@ -680,6 +686,7 @@ export class VideosService extends BaseService {
     };
 
     await this.videoRepository.update(videoId, updates);
+    await this.cloudflareService.purgeNodePage();
   }
 
   /**
@@ -689,6 +696,7 @@ export class VideosService extends BaseService {
     await this.videoRepository.update(videoId, {
       outputs: JSON.stringify(outputs),
     });
+    await this.cloudflareService.purgeNodePage();
   }
 
   /**
@@ -857,6 +865,35 @@ export class VideosService extends BaseService {
         }
 
         await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
+        if (format === 'm3u8') {
+          const type = video.is_streaming ? 'dynamic' : 'static';
+          const sizes: Record<string, [number, string]> = {
+            '240p': [250000, '426x240'],
+            '360p': [500000, '640x360'],
+            '480p': [1000000, '854x480'],
+            '720p': [3000000, '1280x720'],
+            '1080p': [6000000, '1920x1080'],
+            '1440p': [8000000, '2560x1440'],
+            '2160p': [16000000, '3840x2160'],
+          };
+          const base = getConfig().getExternalVideosBaseUrl();
+          const master =
+            '#EXTM3U\n#EXT-X-VERSION:3\n' +
+            outputs.m3u8
+              .flatMap((item) => {
+                const size = sizes[item];
+                if (!size) {
+                  return [];
+                }
+                return [
+                  `#EXT-X-STREAM-INF:BANDWIDTH=${String(size[0])},RESOLUTION=${size[1]}\n${base}/external/videos/${videoId}/adaptive/m3u8/${type}/manifests/manifest-${item}.m3u8\n`,
+                ];
+              })
+              .join('');
+          await this.writeMasterManifest(videoId, type, master);
+        }
+        await this.cloudflareService.purgeVideo(videoId);
+        await this.cloudflareService.purgeNodePage();
         this.logger.debug('Format/resolution published', { videoId, format, resolution });
       });
     });
@@ -1191,11 +1228,10 @@ export class VideosService extends BaseService {
         // Remove resolution from format
         outputs[format] = outputs[format].filter((item: string) => item !== resolution);
 
-        await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
-
         // Capture cached segment identities before removing their origin files.
         const cachedSegments = await this.cloudflareService.getAdaptiveVideoUrls(videoId);
-        this.deleteFormatResolutionFiles(videoId, format, resolution);
+        await this.deleteFormatResolutionFiles(videoId, format, resolution);
+        await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
 
         await this.cloudflareService.purgeAdaptiveVideos(videoId, cachedSegments);
         await this.cloudflareService.purgeProgressiveVideos(videoId);
@@ -1210,11 +1246,11 @@ export class VideosService extends BaseService {
   /**
    * Delete format/resolution files from storage
    */
-  private deleteFormatResolutionFiles(
+  private async deleteFormatResolutionFiles(
     videoId: string,
     format: VideoFormat,
     resolution: string
-  ): void {
+  ): Promise<void> {
     try {
       const config = getConfig();
       const storageMode = config.nodeSettings.storageConfig.storageMode;
@@ -1223,6 +1259,10 @@ export class VideosService extends BaseService {
         const videosDir = config.paths.videosDirectoryPath;
 
         if (format === 'm3u8') {
+          const master = path.join(videosDir, videoId, 'adaptive', 'm3u8', 'manifest-master.m3u8');
+          if (fs.existsSync(master)) {
+            await rewriteManifestFile(master, withoutRendition(resolution));
+          }
           // Delete manifest and segments
           const manifestPath = path.join(
             videosDir,
@@ -1254,15 +1294,16 @@ export class VideosService extends BaseService {
         }
 
         this.logger.debug('Deleted format/resolution files', { videoId, format, resolution });
+      } else {
+        await this.storageService.removeS3Resolution(videoId, format, resolution);
       }
-      // For S3, use storage service
     } catch (error) {
       this.logger.error('Failed to delete format/resolution files', error, {
         videoId,
         format,
         resolution,
       });
-      // Don't throw - record update should still succeed
+      throw error;
     }
   }
 
@@ -1393,6 +1434,7 @@ export class VideosService extends BaseService {
 
         const manifestPath = path.join(manifestDir, `manifest-master.m3u8`);
         await writeUpload({ file: Readable.from([content]) }, manifestPath, 128 * 1024);
+        await this.cloudflareService.purgeAdaptiveVideos(videoId);
 
         this.logger.debug('Wrote HLS master manifest', {
           videoId,
@@ -1400,9 +1442,8 @@ export class VideosService extends BaseService {
           path: manifestPath,
         });
       } else {
-        throw new Error(
-          'Master manifest writing is handled directly by MoarTube Client when MoarTube Node is in s3provider mode.'
-        );
+        await this.storageService.writeS3MasterManifest(videoId, manifestType, content);
+        await this.cloudflareService.purgeAdaptiveVideos(videoId);
       }
     });
   }

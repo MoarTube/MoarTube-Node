@@ -13,6 +13,9 @@ const state = vi.hoisted(() => ({
   update: vi.fn(),
   deleteAll: vi.fn(),
   finalize: vi.fn(),
+  recover: vi.fn(),
+  purgePages: vi.fn(),
+  purgeAssets: vi.fn(),
 }));
 vi.mock('dotenv/config', () => ({}));
 vi.mock('node:cluster', () => ({
@@ -27,6 +30,8 @@ vi.mock('@config/index.js', () => ({
   getConfig: () => ({
     nodeSettings: { databaseConfig: { databaseDialect: 'sqlite' } },
     paths: { databaseFilePath: '/test.sqlite' },
+    getExternalResourcesBaseUrl: () => 'https://node.example',
+    getExternalVideosBaseUrl: () => 'https://media.example',
   }),
 }));
 vi.mock('@utils/index.js', () => ({
@@ -51,7 +56,13 @@ vi.mock('@core/container.js', () => ({
     resolve(name: string) {
       if (name === 'videosRepository')
         return { findStreaming: state.findStreaming, findAll: state.findAll, update: state.update };
-      if (name === 'streamsService') return { finalizeAllStreamedManifests: state.finalize };
+      if (name === 'streamsService')
+        return {
+          finalizeAllStreamedManifests: state.finalize,
+          recoverStreamCleanup: state.recover,
+        };
+      if (name === 'cloudflareService')
+        return { purgePublicPages: state.purgePages, purgePrefixes: state.purgeAssets };
       if (name === 'liveChatMessagesRepository') return { deleteAll: state.deleteAll };
       return {};
     },

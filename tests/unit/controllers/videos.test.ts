@@ -34,6 +34,7 @@ const mockNodeSettings = {
 vi.mock('@config/index.js', () => ({
   getConfig: vi.fn(() => ({
     nodeSettings: mockNodeSettings,
+    getExternalVideosBaseUrl: () => 'https://media.example',
     updateNodeSettings: vi.fn(),
   })),
 }));
@@ -110,11 +111,28 @@ describe('VideosController', () => {
   let mockReportsService: Record<string, ReturnType<typeof vi.fn>>;
   let mockReply: FastifyReply;
 
-  it('invalidates only the requested video after manifest migration', async () => {
-    await controller.invalidateCache(createMockRequest({ params: { videoId: 'video' } }), mockReply);
+  it('invalidates media and dependent public pages after manifest migration', async () => {
+    await controller.invalidateCache(
+      createMockRequest({ params: { videoId: 'video' } }),
+      mockReply
+    );
     expect(mockCloudflareService.purgeVideo).toHaveBeenCalledWith('video');
     expect(mockCloudflareService.purgeWatchPages).toHaveBeenCalledWith(['video'], true);
     expect(mockReply.status).toHaveBeenCalledWith(200);
+  });
+
+  it('invalidates only the supplied media paths after direct Client writes', async () => {
+    mockCloudflareService.purgePrefixes = vi.fn().mockResolvedValue(undefined);
+    await controller.invalidateCache(
+      createMockRequest({ params: { videoId: 'video' }, body: { paths: ['images/preview.jpg'] } }),
+      mockReply
+    );
+    expect(mockCloudflareService.purgePrefixes).toHaveBeenCalledWith(
+      [expect.stringContaining('/external/videos/video/images/preview.jpg')],
+      true
+    );
+    expect(mockCloudflareService.purgeVideo).not.toHaveBeenCalled();
+    expect(mockCloudflareService.purgeWatchPages).not.toHaveBeenCalled();
   });
 
   beforeEach(() => {
@@ -207,6 +225,7 @@ describe('VideosController', () => {
     };
 
     mockCloudflareService = {
+      purgeNodePage: vi.fn().mockResolvedValue(undefined),
       purgeVideo: vi.fn().mockResolvedValue(undefined),
       verifyTurnstileToken: vi.fn(),
       validateTurnstileToken: vi.fn(),

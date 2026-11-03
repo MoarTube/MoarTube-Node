@@ -12,6 +12,7 @@ import {
 import type { VideosService, LinksService, MonetizationService } from '@services/index.js';
 import type { SQLiteVideo, PostgresVideo } from '@database/index.js';
 import { getConfig } from '@config/index.js';
+import { COMMENT_STATE_CACHE_CONTROL } from '@/utils/comment-cache.js';
 
 /**
  * Route params for video/chat endpoints
@@ -72,6 +73,7 @@ export class WatchEmbedController extends VideoControllerBase {
    * Render embedded video player page
    */
   getEmbedVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    reply.header('Cache-Control', 'no-store');
     try {
       const { videoId } = request.params as VideoIdParams;
 
@@ -81,11 +83,14 @@ export class WatchEmbedController extends VideoControllerBase {
         return await this.sendError(reply, 'video not found', 404);
       } else {
         const model = this.buildPageData(video);
-
+        if (request.headers.authorization === undefined) {
+          reply.header('Cache-Control', COMMENT_STATE_CACHE_CONTROL);
+        }
         return await reply.view('embed-video.ejs', { model });
       }
     } catch (error) {
       this.logger.error('WatchEmbedController.getEmbedVideo failed', error);
+      reply.header('Cache-Control', 'no-store');
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }
@@ -97,6 +102,7 @@ export class WatchEmbedController extends VideoControllerBase {
    * Render embedded chat page
    */
   getEmbedChat = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    reply.header('Cache-Control', 'no-store');
     try {
       const { videoId } = request.params as VideoIdParams;
 
@@ -121,7 +127,7 @@ export class WatchEmbedController extends VideoControllerBase {
 
       const model = {
         videoId: video.video_id,
-        isLiveChatEnabled: video.is_live_chat_enabled,
+        isLiveChatEnabled: nodeSettings.isLiveChatEnabled && video.is_live_chat_enabled,
         isLive: video.is_live,
         isStreaming: video.is_streaming,
         externalResourcesBaseUrl,
@@ -138,9 +144,13 @@ export class WatchEmbedController extends VideoControllerBase {
         },
       };
 
+      if (request.headers.authorization === undefined) {
+        reply.header('Cache-Control', COMMENT_STATE_CACHE_CONTROL);
+      }
       return await replyWithView.view('embed-chat', { model });
     } catch (error) {
       this.logger.error('WatchEmbedController.getEmbedChat failed', error);
+      reply.header('Cache-Control', 'no-store');
 
       return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
     }

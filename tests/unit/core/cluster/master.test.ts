@@ -117,6 +117,7 @@ describe('ClusterMaster', () => {
     };
 
     mockCloudflare = {
+      retryPendingPurges: vi.fn().mockResolvedValue(undefined),
       purgeAllWatchPages: vi.fn().mockResolvedValue(undefined),
       purgeNodePage: vi.fn().mockResolvedValue(undefined),
     };
@@ -557,6 +558,7 @@ describe('ClusterMaster', () => {
 
     it('should run cloudflare purge task when cloudflare is configured', async () => {
       const testCloudflare = {
+        retryPendingPurges: vi.fn().mockResolvedValue(undefined),
         purgeAllWatchPages: vi.fn().mockResolvedValue(undefined),
         purgeNodePage: vi.fn().mockResolvedValue(undefined),
       };
@@ -573,6 +575,7 @@ describe('ClusterMaster', () => {
 
     it('should handle cloudflare purge errors', async () => {
       const testCloudflare = {
+        retryPendingPurges: vi.fn().mockRejectedValue(new Error('Retry failed')),
         purgeAllWatchPages: vi.fn().mockRejectedValue(new Error('Purge failed')),
         purgeNodePage: vi.fn().mockResolvedValue(undefined),
       };
@@ -585,6 +588,10 @@ describe('ClusterMaster', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Cloudflare purge task failed',
+        expect.any(Error)
+      );
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'Pending Cloudflare invalidation failed',
         expect.any(Error)
       );
     });

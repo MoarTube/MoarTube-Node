@@ -231,6 +231,9 @@ export const videoPermissionsBodySchema = z.object({
  * Video master manifest request body schema
  */
 export const videoMasterManifestBodySchema = z.object({
-  masterManifest: z.string().min(1, 'Master manifest content is required'),
+  masterManifest: z
+    .string()
+    .min(1, 'Master manifest content is required')
+    .max(128 * 1024),
 });
 export type VideoMasterManifestBody = z.infer<typeof videoMasterManifestBodySchema>;

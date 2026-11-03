@@ -370,8 +370,31 @@ export class VideosController extends BaseController {
 
   invalidateCache = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     const { videoId } = request.params as VideoIdParams;
-    await this.cloudflareService.purgeVideo(videoId);
-    await this.cloudflareService.purgeWatchPages([videoId], true);
+    const paths = (request.body as { paths?: string[] } | undefined)?.paths;
+    if (paths !== undefined) {
+      await this.cloudflareService.purgePrefixes(
+        paths.map(
+          (relative) =>
+            getConfig().getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/' + relative
+        ),
+        true
+      );
+      return this.sendSuccess(reply);
+    }
+    const results = await Promise.allSettled([
+      this.cloudflareService.purgeVideo(videoId),
+      this.cloudflareService.purgeWatchPages([videoId], true),
+      this.cloudflareService.purgeNodePage(),
+    ]);
+    const failures = results
+      .filter((result) => result.status === 'rejected')
+      .map((result) => result.reason as unknown);
+    if (failures.length) {
+      throw new AggregateError(
+        failures,
+        'Cache invalidation incomplete; retry work remains queued.'
+      );
+    }
     return this.sendSuccess(reply);
   };
 
