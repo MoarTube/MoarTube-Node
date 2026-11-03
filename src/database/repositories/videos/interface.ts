@@ -28,7 +28,7 @@ export interface IVideosRepository<VideoType, NewVideoType> {
   findByDbId(id: number): Promise<VideoType | null>;
   findPublished(options?: VideoQueryOptions): Promise<VideoType[]>;
   findAll(options?: VideoQueryOptions): Promise<VideoType[]>;
-  findTags(visibleOnly?: boolean): Promise<string[]>;
+  findTags(visibleOnly?: boolean, options?: VideoQueryOptions): Promise<string[]>;
   getCount(options?: VideoQueryOptions): Promise<number>;
   create(data: NewVideoType): Promise<VideoType>;
   update(videoId: string, data: Partial<NewVideoType>): Promise<VideoType | null>;

@@ -152,6 +152,8 @@ export class NodeController extends BaseController {
         searchResults: data.searchResults,
         hasMore: data.hasMore,
         offset: data.offset,
+        nextOffset: data.nextOffset,
+        tagGroups: data.tagGroups,
       });
     } catch (error) {
       this.logger.error('Search failed', error);
@@ -251,136 +253,56 @@ export class NodeController extends BaseController {
     searchResults: (SQLiteVideo | PostgresVideo)[];
     hasMore: boolean;
     offset: number;
+    nextOffset: number;
+    tagGroups: { tag: string; videos: (SQLiteVideo | PostgresVideo)[] }[];
   }> {
-    const videos = await this.fetchAndMergeVideos(searchTerm, sortTerm, tagTerm, offset);
-    const hasMore = videos.length > 100;
-    const sortedVideos = this.sortVideos(videos.slice(0, 100), sortTerm);
-    const searchResults = this.filterByTag(sortedVideos, tagTerm);
-
-    return { isError: false, searchResults, hasMore, offset };
-  }
-
-  /**
-   * Fetch published and live videos, merge and deduplicate
-   */
-  private async fetchAndMergeVideos(
-    searchTerm: string | undefined,
-    sortTerm: string,
-    tagTerm: string | undefined,
-    offset: number
-  ): Promise<(SQLiteVideo | PostgresVideo)[]> {
-    const result = await this.videosService.getVideos({
+    offset = Number.isSafeInteger(offset) && offset >= 0 ? offset : 0;
+    const query = {
       visibleOnly: true,
-      limit: 101,
-      offset: Number.isSafeInteger(offset) && offset >= 0 ? offset : 0,
-      ...(searchTerm ? { search: searchTerm } : {}),
-      ...(tagTerm ? { tagTerm } : {}),
-      sortBy: sortTerm === 'popular' ? 'views' : 'creation_timestamp',
-      sortDirection: sortTerm === 'oldest' ? 'asc' : 'desc',
+      ...(searchTerm !== undefined && searchTerm !== '' ? { search: searchTerm } : {}),
+      sortBy: sortTerm === 'popular' ? ('views' as const) : ('creation_timestamp' as const),
+      sortDirection: sortTerm === 'oldest' ? ('asc' as const) : ('desc' as const),
+    };
+    if (tagTerm !== undefined && tagTerm !== '') {
+      const result = await this.videosService.getVideos({ ...query, tagTerm, limit: 13, offset });
+      const videos = result.data;
+      return {
+        isError: false,
+        searchResults: videos.slice(0, 12),
+        tagGroups: [],
+        hasMore: videos.length > 12,
+        offset,
+        nextOffset: offset + Math.min(videos.length, 12),
+      };
+    }
+
+    // Page matching tags independently so a prolific tag cannot hide other rows.
+    const tags = await this.videosService.getPublishedTags(searchTerm, {
+      limit: 5,
+      offset,
+      sortTerm,
     });
-    return result.data;
-  }
-
-  /**
-   * Sort videos by the given sort term
-   */
-  private sortVideos(
-    videos: (SQLiteVideo | PostgresVideo)[],
-    sortTerm: string
-  ): (SQLiteVideo | PostgresVideo)[] {
-    const sorted = [...videos];
-
-    if (sortTerm === 'latest') {
-      sorted.sort((a, b) => b.creation_timestamp - a.creation_timestamp);
-    } else if (sortTerm === 'popular') {
-      sorted.sort((a, b) => b.views - a.views);
-    } else if (sortTerm === 'oldest') {
-      sorted.sort((a, b) => a.creation_timestamp - b.creation_timestamp);
-    }
-
-    return sorted;
-  }
-
-  /**
-   * Filter videos by tag with optional tag limit
-   */
-  private filterByTag(
-    videos: (SQLiteVideo | PostgresVideo)[],
-    tagTerm: string | undefined
-  ): (SQLiteVideo | PostgresVideo)[] {
-    if (tagTerm !== undefined && tagTerm.length > 0) {
-      return this.filterBySpecificTag(videos, tagTerm);
-    }
-
-    return this.filterWithTagLimit(videos);
-  }
-
-  /**
-   * Filter videos that have a specific tag
-   */
-  private filterBySpecificTag(
-    videos: (SQLiteVideo | PostgresVideo)[],
-    tagTerm: string
-  ): (SQLiteVideo | PostgresVideo)[] {
-    const results: (SQLiteVideo | PostgresVideo)[] = [];
-
-    for (const video of videos) {
-      const tagsArray = video.tags.split(',').map((t: string) => t.trim());
-      if (tagsArray.includes(tagTerm) && !results.includes(video)) {
-        results.push(video);
-      }
-    }
-
-    return results;
-  }
-
-  /**
-   * Filter videos with a limit per tag
-   */
-  private filterWithTagLimit(
-    videos: (SQLiteVideo | PostgresVideo)[]
-  ): (SQLiteVideo | PostgresVideo)[] {
-    const tagLimit = 4;
-    const tagLimitCounter: Record<string, number> = {};
-    const results: (SQLiteVideo | PostgresVideo)[] = [];
-
-    for (const video of videos) {
-      if (this.shouldAddVideoByTagLimit(video, tagLimitCounter, tagLimit)) {
-        results.push(video);
-      }
-    }
-
-    return results;
-  }
-
-  /**
-   * Check if video should be added based on tag limit
-   */
-  private shouldAddVideoByTagLimit(
-    video: SQLiteVideo | PostgresVideo,
-    tagLimitCounter: Record<string, number>,
-    tagLimit: number
-  ): boolean {
-    const tagsArray = video.tags.split(',');
-
-    for (const tag of tagsArray) {
-      const trimmedTag = tag.trim();
-      if (trimmedTag === '') {
-        continue;
-      }
-
-      if (!(trimmedTag in tagLimitCounter)) {
-        tagLimitCounter[trimmedTag] = 0;
-      }
-
-      const currentCount = tagLimitCounter[trimmedTag];
-
-      if (currentCount !== undefined && currentCount < tagLimit) {
-        tagLimitCounter[trimmedTag] = currentCount + 1;
-        return true;
-      }
-    }
-
-    return false;
+    const tagGroups = await Promise.all(
+      tags.slice(0, 4).map(async (tag) => {
+        const result = await this.videosService.getVideos({
+          ...query,
+          tagTerm: tag,
+          limit: 4,
+          offset: 0,
+        });
+        return { tag, videos: result.data.slice(0, 4) };
+      })
+    );
+    const unique = new Map(
+      tagGroups.flatMap((group) => group.videos).map((video) => [video.video_id, video])
+    );
+    return {
+      isError: false,
+      searchResults: [...unique.values()],
+      tagGroups,
+      hasMore: tags.length > 4,
+      offset,
+      nextOffset: offset + Math.min(tags.length, 4),
+    };
   }
 }

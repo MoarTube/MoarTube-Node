@@ -32,7 +32,7 @@ describe('VideosRepositoryPostgres private/protected methods', () => {
     // search only
     expect(repo.testBuildWhereConditions({ search: 'foo' })).toEqual(expect.objectContaining({ type: 'or', conditions: expect.any(Array) }));
     // tagTerm only
-    expect(repo.testBuildWhereConditions({ tagTerm: 'bar' })).toEqual(expect.objectContaining({ type: 'like', field: expect.objectContaining({ name: 'tags' }), pattern: expect.any(String) }));
+    expect(repo.testBuildWhereConditions({ tagTerm: 'bar' })).toEqual(expect.objectContaining({ type: 'sql', values: [expect.objectContaining({ name: 'tags' }), 'bar'] }));
     // timestamp only
     expect(repo.testBuildWhereConditions({ timestamp: 123 })).toEqual(expect.objectContaining({ type: 'lt', field: expect.objectContaining({ name: 'creation_timestamp' }), value: 123 }));
     // empty search/tagTerm
@@ -1369,7 +1369,7 @@ describe('database/repositories/videos.ts', () => {
         mockDb.where.mockReturnThis();
         mockDb.limit.mockResolvedValue([]);
         await repository.findAll({ tagTerm: 'bar', limit: 1 });
-        expect(mockDb.where).toHaveBeenCalledWith(expect.objectContaining({ type: 'like', field: expect.objectContaining({ name: 'tags' }), pattern: expect.any(String) }));
+        expect(mockDb.where).toHaveBeenCalledWith(expect.objectContaining({ type: 'sql', values: [expect.objectContaining({ name: 'tags' }), 'bar'] }));
       });
 
       it('should call .where with timestamp', async () => {

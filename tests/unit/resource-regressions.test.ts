@@ -144,6 +144,8 @@ function builder(pages: Record<string, unknown>[][]) {
   const query = {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockReturnThis(),
+    groupBy: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
@@ -182,19 +184,27 @@ describe('bounded query builder contracts', () => {
     const Repository = Object.values(module).find((value) => typeof value === 'function') as new (
       db: never
     ) => {
-      findTags(visible?: boolean): Promise<string[]>;
+      findTags(visible?: boolean, options?: object): Promise<string[]>;
       findAll(options: object): Promise<unknown[]>;
     };
-    const db = builder([
-      Array.from({ length: 200 }, () => ({ tags: 'a,, b' })),
-      [{ tags: 'c' }],
-      [],
-    ]);
+    const db = builder([[{ tag: 'a' }, { tag: 'b' }, { tag: 'c' }], [], [{ tag: 'c' }], []]);
     const repository = new Repository(db as never);
     expect(await repository.findTags()).toEqual(['a', 'b', 'c']);
     expect(await repository.findTags(true)).toEqual([]);
+    expect(await repository.findTags(true, { limit: 5, offset: 4 })).toEqual(['c']);
+    expect(db.groupBy).toHaveBeenCalled();
+    expect(db.limit).toHaveBeenCalledWith(5);
+    expect(db.offset).toHaveBeenCalledWith(4);
+    expect(
+      await repository.findTags(true, {
+        sortBy: 'creation_timestamp',
+        sortDirection: 'asc',
+        limit: 1,
+      })
+    ).toEqual([]);
+    expect(await repository.findTags(true, { sortBy: 'views', limit: 2, offset: 1 })).toEqual([]);
     await repository.findAll({ limit: 10, offset: 100, visibleOnly: true });
-    expect(db.offset).toHaveBeenCalledWith(200);
+    expect(db.offset).toHaveBeenCalledWith(100);
   });
   it('applies the comment ID refresh cursor in PostgreSQL queries', async () => {
     const { CommentsRepositoryPostgres } =

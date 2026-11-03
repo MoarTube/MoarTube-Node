@@ -77,8 +77,45 @@ describe('NodeController', () => {
     view: Mock;
   };
 
+  function setVideos(
+    rows: { video_id: string; tags: string; views: number; creation_timestamp: number }[]
+  ) {
+    mockVideosService.getPublishedTags.mockImplementation(async (_search, page) => {
+      const tags = [
+        ...new Set(
+          rows.flatMap((row) =>
+            row.tags
+              .split(',')
+              .map((tag) => tag.trim())
+              .filter(Boolean)
+          )
+        ),
+      ].sort();
+      return page ? tags.slice(page.offset, page.offset + page.limit) : tags;
+    });
+    mockVideosService.getVideos.mockImplementation(async (options) => {
+      let data = rows.filter(
+        (row) =>
+          !options.tagTerm ||
+          row.tags
+            .split(',')
+            .map((tag) => tag.trim())
+            .includes(options.tagTerm)
+      );
+      data = [...data].sort((a, b) =>
+        options.sortBy === 'views'
+          ? b.views - a.views
+          : options.sortDirection === 'asc'
+            ? a.creation_timestamp - b.creation_timestamp
+            : b.creation_timestamp - a.creation_timestamp
+      );
+      return { data: data.slice(options.offset || 0, (options.offset || 0) + options.limit) };
+    });
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockVideosService.getPublishedTags.mockResolvedValue(['tag1', 'tag2']);
 
     controller = new NodeController(
       mockVideosService as any,
@@ -143,7 +180,7 @@ describe('NodeController', () => {
         },
       ];
       mockVideosService.countVideos.mockResolvedValue(2);
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockLinksService.getAllLinks.mockResolvedValue([
         { id: 1, name: 'Link', url: 'https://example.com' },
       ]);
@@ -187,7 +224,7 @@ describe('NodeController', () => {
           views: 100,
         },
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
       await controller.getNodePage(
@@ -240,7 +277,7 @@ describe('NodeController', () => {
         { video_id: 'vid2', title: 'Video 2', tags: '  ,  ', creation_timestamp: 1000, views: 50 },
       ];
       mockVideosService.countVideos.mockResolvedValue(2);
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockLinksService.getAllLinks.mockResolvedValue([]);
       mockMonetizationService.getWalletAddresses.mockResolvedValue([]);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
@@ -292,7 +329,7 @@ describe('NodeController', () => {
           creation_timestamp: 2000,
         },
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -318,7 +355,7 @@ describe('NodeController', () => {
         },
         { video_id: 'vid2', title: 'New Video', tags: 'tag1', views: 50, creation_timestamp: 2000 },
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -345,7 +382,7 @@ describe('NodeController', () => {
         },
         { video_id: 'vid2', title: 'New Video', tags: 'tag1', views: 50, creation_timestamp: 2000 },
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -366,7 +403,7 @@ describe('NodeController', () => {
         { video_id: 'vid1', title: 'Video 1', tags: 'tag1', views: 100, creation_timestamp: 1000 },
         { video_id: 'vid2', title: 'Video 2', tags: 'tag2', views: 50, creation_timestamp: 2000 },
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -400,7 +437,7 @@ describe('NodeController', () => {
           creation_timestamp: 2000,
         },
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -433,7 +470,7 @@ describe('NodeController', () => {
           creation_timestamp: 2000,
         },
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -463,7 +500,7 @@ describe('NodeController', () => {
           creation_timestamp: 3000,
         },
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: [...mockVideos, ...mockLiveStreams] });
+      setVideos([...mockVideos, ...mockLiveStreams]);
       mockStreamsService.getActiveStreams.mockResolvedValue(mockLiveStreams);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -491,7 +528,7 @@ describe('NodeController', () => {
           creation_timestamp: 1000,
         },
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockStreamsService.getActiveStreams.mockResolvedValue(mockLiveStreams);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -515,7 +552,7 @@ describe('NodeController', () => {
         views: 100 - i,
         creation_timestamp: 6000 - i * 1000,
       }));
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -558,7 +595,7 @@ describe('NodeController', () => {
           creation_timestamp: 3000,
         }, // Only empty tags - will be excluded
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -615,7 +652,7 @@ describe('NodeController', () => {
           creation_timestamp: 1000,
         }, // Should be excluded - tag at limit
       ];
-      mockVideosService.getVideos.mockResolvedValue({ data: mockVideos });
+      setVideos(mockVideos);
       mockStreamsService.getActiveStreams.mockResolvedValue([]);
 
       await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
@@ -643,6 +680,81 @@ describe('NodeController', () => {
         isError: true,
         message: 'error communicating with the MoarTube node',
       });
+    });
+  });
+
+  describe('infinite catalog pages', () => {
+    it('loads four complete tag rows, then the remaining tags', async () => {
+      const rows = Array.from({ length: 6 }, (_, tag) =>
+        Array.from({ length: 6 }, (_, i) => ({
+          video_id: tag + '-' + i,
+          tags: 'tag' + tag,
+          views: 100 - i,
+          creation_timestamp: i,
+        }))
+      ).flat();
+      setVideos(rows);
+      mockRequest.query = { sortTerm: 'popular', searchTerm: 'query', offset: 0 };
+      await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      const first = mockReply.send.mock.calls.at(-1)![0];
+      expect(first.tagGroups).toHaveLength(4);
+      expect(
+        first.tagGroups.every((group: { videos: unknown[] }) => group.videos.length === 4)
+      ).toBe(true);
+      expect(first).toMatchObject({ hasMore: true, nextOffset: 4 });
+      expect(mockVideosService.getPublishedTags).toHaveBeenCalledWith('query', {
+        limit: 5,
+        offset: 0,
+        sortTerm: 'popular',
+      });
+      expect(mockVideosService.getVideos).toHaveBeenCalledWith(
+        expect.objectContaining({ search: 'query', limit: 4, sortBy: 'views' })
+      );
+      mockRequest.query = { sortTerm: 'popular', searchTerm: 'query', offset: 4 };
+      await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      const second = mockReply.send.mock.calls.at(-1)![0];
+      expect(second.tagGroups).toHaveLength(2);
+      expect(second).toMatchObject({ hasMore: false, nextOffset: 6 });
+      expect(
+        new Set([...first.tagGroups, ...second.tagGroups].map((group) => group.tag)).size
+      ).toBe(6);
+    });
+
+    it('returns twelve videos per selected-tag load and detects the last page', async () => {
+      setVideos(
+        Array.from({ length: 29 }, (_, i) => ({
+          video_id: 'video-' + i,
+          tags: 'music',
+          views: i,
+          creation_timestamp: i,
+        }))
+      );
+      const ids = [];
+      for (const [offset, length, hasMore] of [
+        [0, 12, true],
+        [12, 12, true],
+        [24, 5, false],
+      ] as const) {
+        mockRequest.query = { sortTerm: 'oldest', tagTerm: 'music', searchTerm: 'song', offset };
+        await controller.search(
+          mockRequest as FastifyRequest,
+          mockReply as unknown as FastifyReply
+        );
+        const page = mockReply.send.mock.calls.at(-1)![0];
+        expect(page.searchResults).toHaveLength(length);
+        expect(page).toMatchObject({ hasMore, nextOffset: offset + length, tagGroups: [] });
+        ids.push(...page.searchResults.map((row: { video_id: string }) => row.video_id));
+      }
+      expect(new Set(ids).size).toBe(29);
+      expect(mockVideosService.getVideos).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tagTerm: 'music',
+          search: 'song',
+          sortDirection: 'asc',
+          limit: 13,
+          offset: 24,
+        })
+      );
     });
   });
 
@@ -777,11 +889,11 @@ describe('NodeController', () => {
     });
   });
   it('bounds malformed discovery offsets', async () => {
-    mockRequest.query = { offset: -1, sortTerm: 'latest' };
+    mockRequest.query = { offset: -1, sortTerm: 'latest', tagTerm: 'tag1' };
     mockVideosService.getVideos.mockResolvedValue({ data: [] });
     await controller.search(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
     expect(mockVideosService.getVideos).toHaveBeenCalledWith(
-      expect.objectContaining({ offset: 0, limit: 101 })
+      expect.objectContaining({ offset: 0, limit: 13 })
     );
   });
 });

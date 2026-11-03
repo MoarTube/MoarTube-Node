@@ -25,6 +25,91 @@ describe('bounded catalog queries against SQLite', () => {
     }
   });
 });
+describe('catalog tag discovery', () => {
+  it('filters before paging tags and matches entire tags before paging videos', async () => {
+    const fixture = openTestDatabase();
+    try {
+      const repository = new VideosRepositorySQLite(fixture.db);
+      for (let i = 0; i < 10; i++) {
+        await repository.create({
+          ...video('match-' + i, i),
+          title: 'matching title',
+          tags: ' tag' + i + ' , music ',
+          is_published: true,
+          views: i,
+        });
+      }
+      await repository.create({
+        ...video('substring', 100),
+        title: 'matching title',
+        tags: 'music-video',
+        is_published: true,
+      });
+      await repository.create({
+        ...video('hidden', 200),
+        title: 'matching title',
+        tags: 'private',
+      });
+      await repository.create({
+        ...video('unrelated', 300),
+        title: 'unrelated',
+        tags: 'other',
+        is_published: true,
+      });
+      const options = {
+        visibleOnly: true,
+        search: 'matching',
+        tagTerm: 'music',
+        limit: 4,
+        offset: 0,
+        sortBy: 'creation_timestamp' as const,
+      };
+      const first = await repository.findAll(options);
+      const second = await repository.findAll({ ...options, offset: 4 });
+      expect(first.map((row) => row.video_id)).toEqual([
+        'match-9',
+        'match-8',
+        'match-7',
+        'match-6',
+      ]);
+      expect(second.map((row) => row.video_id)).toEqual([
+        'match-5',
+        'match-4',
+        'match-3',
+        'match-2',
+      ]);
+      expect(await repository.getCount(options)).toBe(10);
+      const tags = await repository.findTags(true, { search: 'matching', limit: 8, offset: 0 });
+      const rest = await repository.findTags(true, { search: 'matching', limit: 8, offset: 8 });
+      expect(tags).toHaveLength(8);
+      expect(rest).toHaveLength(4);
+      expect(new Set([...tags, ...rest]).size).toBe(12);
+      expect([...tags, ...rest]).not.toContain('private');
+      expect([...tags, ...rest]).not.toContain('other');
+      expect(
+        await repository.findTags(true, {
+          search: 'matching',
+          sortBy: 'creation_timestamp',
+          limit: 3,
+        })
+      ).toEqual(['music-video', 'music', 'tag9']);
+      expect(
+        await repository.findTags(true, {
+          search: 'matching',
+          sortBy: 'creation_timestamp',
+          sortDirection: 'asc',
+          limit: 3,
+        })
+      ).toEqual(['music', 'tag0', 'tag1']);
+      expect(
+        await repository.findTags(true, { search: 'matching', sortBy: 'views', limit: 2 })
+      ).toEqual(['music', 'tag9']);
+      expect(await repository.findTags(true, { search: 'absent', limit: 8 })).toEqual([]);
+    } finally {
+      fixture.close();
+    }
+  });
+});
 
 describe('comment history pages', () => {
   it('keeps comments with tied timestamps accessible on separate pages', async () => {

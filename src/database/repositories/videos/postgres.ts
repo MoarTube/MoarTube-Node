@@ -72,30 +72,29 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
   }
 
   /**
-   * Counts total videos matching the criteria
+   * Find matching tags, ordered by their first video when a sort is selected.
    */
-  async findTags(visibleOnly = false): Promise<string[]> {
-    const tags = new Set<string>();
-    let offset = 0;
-    for (;;) {
-      const query = this.db.select({ tags: videos.tags }).from(videos).orderBy(asc(videos.id));
-      const filtered = visibleOnly
-        ? query.where(or(eq(videos.is_published, true), eq(videos.is_live, true)))
-        : query;
-      const rows = await filtered.limit(200).offset(offset);
-      for (const row of rows) {
-        for (const tag of row.tags.split(',')) {
-          if (tag.trim()) {
-            tags.add(tag.trim());
-          }
-        }
-      }
-      if (rows.length < 200) {
-        break;
-      }
-      offset += rows.length;
-    }
-    return [...tags].sort();
+  async findTags(visibleOnly = false, options?: VideoQueryOptions): Promise<string[]> {
+    const tag = sql<string>`trim(catalog_tag.value)`;
+    const conditions = this.buildWhereConditions({ ...options, visibleOnly });
+    const sortDir = options?.sortDirection === 'asc' ? asc : desc;
+    const sortField = this.getSortField(options?.sortBy ?? 'creation_timestamp');
+    const rank = options?.sortDirection === 'asc' ? sql`min(${sortField})` : sql`max(${sortField})`;
+    const query = this.db
+      .select({ tag })
+      .from(videos)
+      .innerJoin(
+        sql`lateral unnest(string_to_array(${videos.tags}, ',')) as catalog_tag(value)`,
+        sql`true`
+      )
+      .where(and(conditions, sql`${tag} <> ''`))
+      .groupBy(tag)
+      .orderBy(...(options?.sortBy ? [sortDir(rank), asc(tag)] : [asc(tag)]));
+    const rows =
+      options?.limit === undefined
+        ? await query
+        : await query.limit(options.limit).offset(options.offset ?? 0);
+    return rows.map((row) => row.tag);
   }
 
   async getCount(options?: VideoQueryOptions): Promise<number> {
@@ -301,8 +300,9 @@ export class VideosRepositoryPostgres implements IVideosRepository<DrizzleVideo,
     }
 
     if (options.tagTerm !== undefined && options.tagTerm !== '') {
-      const tagPattern = `%${options.tagTerm}%`;
-      conditions.push(like(videos.tags, tagPattern));
+      conditions.push(
+        sql`exists (select 1 from unnest(string_to_array(${videos.tags}, ',')) as tag(value) where trim(value) = ${options.tagTerm})`
+      );
     }
 
     if (options.timestamp !== undefined) {

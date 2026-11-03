@@ -1151,8 +1151,25 @@ export class VideosService extends BaseService {
   /**
    * Get unique tags from published/live videos
    */
-  async getPublishedTags(): Promise<string[]> {
-    return this.videoRepository.findTags(true);
+  async getPublishedTags(
+    search?: string,
+    page?: { limit: number; offset: number; sortTerm?: string }
+  ): Promise<string[]> {
+    if ((search ?? '') === '' && page === undefined) {
+      return this.videoRepository.findTags(true);
+    }
+    return this.videoRepository.findTags(true, {
+      ...(search !== undefined && search !== '' ? { search } : {}),
+      ...(page
+        ? {
+            limit: page.limit,
+            offset: page.offset,
+            sortBy:
+              page.sortTerm === 'popular' ? ('views' as const) : ('creation_timestamp' as const),
+            sortDirection: page.sortTerm === 'oldest' ? ('asc' as const) : ('desc' as const),
+          }
+        : {}),
+    });
   }
 
   /**

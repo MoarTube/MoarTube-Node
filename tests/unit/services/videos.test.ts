@@ -1760,6 +1760,47 @@ describe('VideosService', () => {
       expect(await service.getPublishedTags()).toEqual(['tag1', 'tag2']);
       expect(mockVideosRepository.findTags).toHaveBeenCalledWith(true);
     });
+    it.each([
+      ['popular', 'views', 'desc'],
+      ['oldest', 'creation_timestamp', 'asc'],
+      ['latest', 'creation_timestamp', 'desc'],
+    ] as const)(
+      'passes %s sorting and paging to matching tag discovery',
+      async (sortTerm, sortBy, sortDirection) => {
+        mockVideosRepository.findTags.mockResolvedValue(['tag1']);
+        expect(await service.getPublishedTags('city', { limit: 5, offset: 4, sortTerm })).toEqual([
+          'tag1',
+        ]);
+        expect(mockVideosRepository.findTags).toHaveBeenCalledWith(true, {
+          search: 'city',
+          limit: 5,
+          offset: 4,
+          sortBy,
+          sortDirection,
+        });
+      }
+    );
+    it('supports tag searches without paging and paging without a search', async () => {
+      mockVideosRepository.findTags.mockResolvedValue([]);
+      await service.getPublishedTags('city');
+      expect(mockVideosRepository.findTags).toHaveBeenLastCalledWith(true, { search: 'city' });
+      await service.getPublishedTags(undefined, { limit: 5, offset: 0 });
+      expect(mockVideosRepository.findTags).toHaveBeenLastCalledWith(true, {
+        limit: 5,
+        offset: 0,
+        sortBy: 'creation_timestamp',
+        sortDirection: 'desc',
+      });
+      await service.getPublishedTags('', { limit: 5, offset: 0 });
+      expect(mockVideosRepository.findTags).toHaveBeenLastCalledWith(true, {
+        limit: 5,
+        offset: 0,
+        sortBy: 'creation_timestamp',
+        sortDirection: 'desc',
+      });
+      await service.getPublishedTags('');
+      expect(mockVideosRepository.findTags).toHaveBeenLastCalledWith(true);
+    });
     it('delegates all tag projection to the repository', async () => {
       mockVideosRepository.findTags.mockResolvedValue(['tag1', 'tag2']);
       expect(await service.getAllTags()).toEqual(['tag1', 'tag2']);

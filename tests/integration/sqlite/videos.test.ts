@@ -77,10 +77,14 @@ describe('SQLite videos (real SQL)', () => {
     expect(await repository.findById('b')).toMatchObject({ views: 2 });
   });
 
-  it('adds bandwidth deltas atomically across batches and videos',async()=>{
-    await repository.createMany([video('a'),video('b')]);
-    await repository.updateBandwidth('a',1000);
-    await Promise.all([repository.updateBandwidth('a',500),repository.updateBandwidth('b',2000),repository.updateBandwidth('a',250)]);
+  it('adds bandwidth deltas atomically across batches and videos', async () => {
+    await repository.createMany([video('a'), video('b')]);
+    await repository.updateBandwidth('a', 1000);
+    await Promise.all([
+      repository.updateBandwidth('a', 500),
+      repository.updateBandwidth('b', 2000),
+      repository.updateBandwidth('a', 250),
+    ]);
     expect((await repository.findById('a'))?.bandwidth).toBe(1750);
     expect((await repository.findById('b'))?.bandwidth).toBe(2000);
   });
@@ -180,6 +184,29 @@ describe('SQLite videos (real SQL)', () => {
     );
     expect(await repository.findTags()).toEqual(['common', 'live', 'private']);
     expect(await repository.findTags(true)).toEqual(['common', 'live']);
+    expect(await repository.findTags(true, { sortBy: 'creation_timestamp', limit: 1 })).toEqual([
+      'live',
+    ]);
+    expect(
+      await repository.findTags(true, {
+        sortBy: 'creation_timestamp',
+        sortDirection: 'asc',
+        limit: 1,
+        offset: 1,
+      })
+    ).toEqual(['live']);
+    expect(await repository.findTags(true, { sortBy: 'views', limit: 2 })).toEqual([
+      'common',
+      'live',
+    ]);
+    expect(await repository.findTags(true, { search: 'missing', limit: 4 })).toEqual([]);
+    expect(await repository.findTags(false, { sortDirection: 'asc' })).toEqual([
+      'common',
+      'live',
+      'private',
+    ]);
+    expect(await repository.findTags(false, { limit: 2, offset: 1 })).toEqual(['live', 'private']);
+
     expect(await repository.findAll({ visibleOnly: true, limit: 10, offset: 200 })).toHaveLength(1);
   });
 });
