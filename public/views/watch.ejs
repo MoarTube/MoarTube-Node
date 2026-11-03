@@ -1050,7 +1050,7 @@ body {
                 <div id="stats-section" class="container-fluid w-100">
                   <div class="row align-items-center">
                     <div class="col-xl-6 col-md-12">
-                      <a href="/"
+                      <a href="/videos"
                         ><img
                           src="<%=model.externalResourcesBaseUrl%>/external/resources/images/icon.png"
                           style="border-radius: 50%; width: 40px; height: 40px"
@@ -1558,7 +1558,8 @@ body {
           } else if (this.NODE_PROTOCOL === 'https') {
             port = this.NODE_PORT == 443 ? '' : ':' + this.NODE_PORT;
           }
-          this.NODE_BASE_URL = this.NODE_PROTOCOL + '://' + this.NODE_ADDRESS + port;
+          const host = this.NODE_ADDRESS.includes(':') && !this.NODE_ADDRESS.startsWith('[') ? '[' + this.NODE_ADDRESS + ']' : this.NODE_ADDRESS;
+          this.NODE_BASE_URL = this.NODE_PROTOCOL + '://' + host + port;
           this.CLOUDFLARE_TURNSTILE_SITE_KEY = information.cloudflareTurnstileSiteKey;
         }
 

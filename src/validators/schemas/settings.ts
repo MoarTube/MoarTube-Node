@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import {
   protocolSchema,
-  addressSchema,
+  publicNodeAddressSchema,
   portSchema,
   booleanSchema,
   usernameSchema,
@@ -82,7 +82,7 @@ export const networkInternalBodySchema = z.object({
  */
 export const networkExternalBodySchema = z.object({
   publicNodeProtocol: protocolSchema,
-  publicNodeAddress: addressSchema,
+  publicNodeAddress: publicNodeAddressSchema,
   publicNodePort: portSchema,
 });
 

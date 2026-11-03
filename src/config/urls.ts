@@ -3,6 +3,7 @@
  * Centralized management of all external service URLs
  */
 
+import { isIP } from 'node:net';
 import type { NodeSettings, StorageConfig } from '@/types/index.js';
 import { validateCdnSettings } from '@/utils/cdn-settings.js';
 
@@ -85,7 +86,9 @@ export function buildNodeBaseUrl(nodeSettings: NodeSettings): string {
     portSuffix = `:${String(port)}`;
   }
 
-  return `${publicNodeProtocol}://${publicNodeAddress}${portSuffix}`;
+  const address = publicNodeAddress.trim();
+  const host = isIP(address) === 6 ? `[${address}]` : address;
+  return `${publicNodeProtocol}://${host}${portSuffix}`;
 }
 
 /**

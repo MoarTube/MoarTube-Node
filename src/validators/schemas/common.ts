@@ -4,6 +4,7 @@
  * Reusable validation schemas for common field types across the application.
  */
 import { z } from 'zod';
+import { isValidPublicHost } from '@/utils/public-host.js';
 import { isPathSegment } from '@/utils/public-path.js';
 
 // ============================================================================
@@ -169,6 +170,13 @@ export const addressSchema = z
   .string()
   .min(1, 'Address is required')
   .max(253, 'Address must be less than 253 characters');
+
+export const publicNodeAddressSchema = addressSchema
+  .refine(
+    isValidPublicHost,
+    'Address must be a domain or IP address without a protocol, port, or path'
+  )
+  .transform((value) => value.trim());
 
 /**
  * Port schema
