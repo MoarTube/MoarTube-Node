@@ -1,0 +1,10 @@
+node_modules
+data
+dist
+*.log
+.env
+.env.*
+coverage/
+.nyc_output/
+*.tsbuildinfo
+eslint-report.json

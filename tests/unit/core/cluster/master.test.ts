@@ -638,12 +638,23 @@ describe('ClusterMaster', () => {
       expect(mockLogger.error).toHaveBeenCalledWith('Unhandled rejection in master', reason);
     });
   });
-  it.each(['1', '-1', 'invalid'])('bounds configured worker counts (%s)', async (value) => {
+  it.each([
+    [undefined, 8],
+    ['0', 8],
+    ['1', 1],
+    ['3', 3],
+    ['99', 8],
+    ['-1', 1],
+    ['invalid', 1],
+    ['1.5', 1],
+  ] as const)('uses %s to select %i workers on an eight-CPU system', async (value, expected) => {
     vi.stubEnv('MOARTUBE_WORKERS', value);
     try {
+      const os = (await import('node:os')).default;
+      vi.mocked(os.cpus).mockReturnValueOnce(Array.from({ length: 8 }, () => os.cpus()[0]!));
       const master = new ClusterMaster(mockLogger as any, mockCloudflare as any);
       (master as unknown as { forkWorkers(): void }).forkWorkers();
-      expect(cluster.fork).toHaveBeenCalledTimes(value === '1' ? 1 : 2);
+      expect(cluster.fork).toHaveBeenCalledTimes(expected);
     } finally {
       vi.unstubAllEnvs();
     }

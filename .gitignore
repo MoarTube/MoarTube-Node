@@ -2,7 +2,6 @@ node_modules
 data
 dist
 *.log
-.env
 coverage/
 .nyc_output/
 *.tsbuildinfo

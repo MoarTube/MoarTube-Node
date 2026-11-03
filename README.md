@@ -213,6 +213,10 @@ adapt the check if enabling HTTPS directly on the node.
 
 `IS_DOCKER_ENVIRONMENT=true` is set by the image and selects `/data`. You do not
 need to edit or pass the checkout's `.env`; it is excluded from the build context.
+`MOARTUBE_WORKERS=0` is the image default and uses all logical CPUs. Set a positive
+number to limit workers (capped at the CPU count). For Compose, edit
+`environment.MOARTUBE_WORKERS` in `compose.yaml`; for `docker run`, pass
+`-e MOARTUBE_WORKERS=4` before the image name to use four workers.
 `MOARTUBE_DATA_DIR`, if explicitly supplied, overrides this path and requires a
 matching writable volume mount. Avoid passing a development `.env` with
 `IS_DOCKER_ENVIRONMENT=false`, which would bypass the `/data` default.
@@ -264,6 +268,24 @@ And run from the command-line globally:
 ```bash
 moartube-node
 ```
+
+The npm runtime defaults to `MOARTUBE_WORKERS=0`, which uses all logical CPUs.
+Set a positive number to limit workers (capped at the CPU count). For example,
+to run four workers in PowerShell:
+
+```powershell
+$env:MOARTUBE_WORKERS = '4'
+moartube-node
+```
+
+Or in Bash:
+
+```bash
+MOARTUBE_WORKERS=4 moartube-node
+```
+
+Environment variables take precedence over `.env`. A source checkout's `.env`
+sets four workers for development; `.env` is excluded from the npm package.
 
 <br>
 

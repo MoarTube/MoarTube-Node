@@ -11,6 +11,10 @@ import { createAppContainer } from '@core/container.js';
 import { Logger, getLogger } from '@utils/index.js';
 import { createDatabase, initializeDatabaseSchema, getDatabase } from '@database/index.js';
 
+// Default npm installations to all CPUs after dotenv has loaded development settings.
+// Explicit environment variables and the checkout's .env take precedence.
+process.env['MOARTUBE_WORKERS'] ??= '0';
+
 /**
  * Initialize configuration
  */

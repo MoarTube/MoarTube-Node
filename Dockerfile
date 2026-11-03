@@ -24,7 +24,8 @@ FROM node:24.22.1-bookworm-slim AS production
 WORKDIR /moartube-node
 
 ENV NODE_ENV=production \
-    IS_DOCKER_ENVIRONMENT=true
+    IS_DOCKER_ENVIRONMENT=true \
+    MOARTUBE_WORKERS=0
 
 RUN groupadd --gid 1001 nodejs \
     && useradd --uid 1001 --gid nodejs --create-home moartube \
