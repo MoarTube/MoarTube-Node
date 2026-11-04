@@ -1762,7 +1762,6 @@ body {
           $('#video-dislike-button').prop('disabled',video.isDislikesEnabled === false);
           $('#video-report-button').attr('aria-disabled',String(!this.VIDEO_CAN_REPORT)).attr('tabindex',this.VIDEO_CAN_REPORT ? '0' : '-1');
           $('#comment-input-form-static textarea, #comment-input-form-static :submit').prop('disabled',!this.COMMENT_CAN_POST);
-          $('#comment-input-form-static-error-message').text(this.COMMENT_CAN_POST ? '' : 'New comments are disabled for this video.');
           const isStreamed = video.isStreamed;
           const creationTimestamp = video.creationTimestamp;
           const adaptiveSources = video.adaptiveSources;
