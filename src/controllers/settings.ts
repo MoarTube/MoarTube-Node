@@ -32,7 +32,7 @@ import type {
 import { getConfig } from '@config/index.js';
 import { isCloudflareCredentialsValid } from '@utils/index.js';
 import { requestTunnelOperation } from '@/services/cloudflare-tunnel-runtime.js';
-import { cloudflareTunnelNameSchema } from '@/config/cloudflare-tunnel.js';
+import { cloudflareConfigureBodySchema } from '@/validators/schemas/settings.js';
 import {
   distributionSignal,
   withCloudflareDeadline,
@@ -70,7 +70,6 @@ export interface NetworkExternalBody {
 }
 
 export interface CloudflareConfigureBody {
-  cloudflareTunnelName: string;
   cloudflareEmailAddress: string;
   cloudflareZoneId: string;
   cloudflareGlobalApiKey: string;
@@ -914,17 +913,14 @@ export class SettingsController extends BaseController {
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     reply.header('Cache-Control', 'no-store');
-    const parsedName = cloudflareTunnelNameSchema.safeParse(
-      (request.body as Partial<CloudflareConfigureBody> | null)?.cloudflareTunnelName
-    );
-    if (!parsedName.success || parsedName.data.length === 0) {
-      return await this.sendError(reply, 'A valid Cloudflare Tunnel Name is required', 400);
+    const parsed = cloudflareConfigureBodySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return await this.sendError(reply, 'Cloudflare credentials are required', 400);
     }
     const progress = { settingsSaved: false };
     try {
       await this.changeDistributionSettings(async (config) => {
-        const { cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey } =
-          request.body as CloudflareConfigureBody;
+        const { cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey } = parsed.data;
 
         // Validate Cloudflare credentials
         const isValid = await isCloudflareCredentialsValid(
@@ -947,6 +943,15 @@ export class SettingsController extends BaseController {
         );
 
         const previous = config.nodeSettings;
+        // Reuse an existing named tunnel for same-zone reconfiguration. Quick names
+        // belong to Cloudflare and must not become the new managed tunnel label.
+        const savedName = previous.cloudflareTunnelName ?? '';
+        const tunnelName =
+          previous.isCloudflareCdnEnabled &&
+          previous.cloudflareZoneId === cloudflareZoneId &&
+          savedName !== ''
+            ? savedName
+            : `moartube-${randomUUID()}`;
         const changingZone =
           previous.isCloudflareCdnEnabled && previous.cloudflareZoneId !== cloudflareZoneId;
         const applyConfiguration = async (): Promise<void> => {
@@ -984,7 +989,7 @@ export class SettingsController extends BaseController {
                 cloudflareEmailAddress,
                 cloudflareZoneId,
                 cloudflareGlobalApiKey,
-                parsedName.data
+                tunnelName
               );
               progress.settingsSaved = true;
             }

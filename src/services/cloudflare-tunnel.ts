@@ -256,7 +256,7 @@ export class CloudflareTunnelManager {
       this.state = { mode: mode === 'none' ? 'named' : mode, status: 'starting', name: '' };
       if (mode === 'none') {
         this.fail(
-          'Cloudflare CDN is enabled but its tunnel name is missing. Configure CDN with a tunnel name.'
+          'Cloudflare CDN is enabled but its tunnel name is missing. Reconfigure CDN to generate a tunnel name automatically.'
         );
         return;
       }

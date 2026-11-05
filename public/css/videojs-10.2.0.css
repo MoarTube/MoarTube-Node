@@ -1,5 +1,6 @@
 @charset "UTF-8";
 /* Shared Video.js 10 skin for watch and embedded video pages. */
+#video-player-container { background-color: #000; }
 .mt-video-player { display: contents; color: #fff; font: 12px Arial, sans-serif; }
 .mt-player-surface { display: block; position: absolute; inset: 0; width: 100%; height: 100%; background: #000; overflow: hidden; color: #fff; --media-object-fit: contain; }
 .mt-player-surface:fullscreen { width: 100vw; height: 100vh; }

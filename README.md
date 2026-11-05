@@ -335,6 +335,16 @@ By default, MoarTube Node listens on port 9090, including with the Docker exampl
 
 ## Cloudflare
 
+Cloudflare Tunnels can be switched on or off in Client settings. With CDN disabled,
+Node uses a quick tunnel and saves Cloudflare's randomly generated name in
+`cloudflareTunnelName` in the Node settings JSON. Enabling CDN requires only
+the Cloudflare email address, zone ID, and global API key; Node generates a named
+tunnel label in the format `moartube-<UUID>` and saves it in the same setting.
+The saved named label is reused on restarts and same-zone reconfiguration.
+Tunnel names are managed internally and are not displayed in the CDN modal.
+Enabling CDN preserves the separate Cloudflare Tunnels toggle, so a disabled
+tunnel stays disabled.
+
 At this point, you should probably look into creating a free [Cloudflare account](https://www.cloudflare.com/network/) so that you can [give your node CDN capabilities](https://www.moartube.com/guides/how-to-enable-cloudflare-integration). With its global network, Cloudflare will distribute most of your node's videos and live streams.
 
 ## Get MoarTube Client

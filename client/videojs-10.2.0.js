@@ -20,6 +20,7 @@ import '@videojs/html/ui/gesture';
 import '@videojs/html/ui/hotkey';
 import '@videojs/html/media/hlsjs-video';
 import { restoredTime, sourceSelection, supportedSources } from './videojs-10.2.0-sources.js';
+import { initializeWatchModes } from './videojs-10.2.0-modes.js';
 
 const { PlayerElement } = createPlayer({ features: [...videoFeatures, orientationLockFeature] });
 customElements.define('moartube-video-player', PlayerElement);
@@ -41,8 +42,6 @@ const icons = {
 /** Shared Video.js 10 player for watch and embedded video pages. */
 export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSources, isStreaming, timeParameter, videoId, copyText, embedded = false, autoStart = true, onError = console.error }) {
   const wrapper = placeholder.parentElement;
-  const home = wrapper.parentElement;
-  const nextSibling = wrapper.nextSibling;
   const player = document.createElement('moartube-video-player');
   player.id = 'video-player';
   player.className = 'mt-video-player';
@@ -110,7 +109,7 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
   const listen = (target, event, handler) => target.addEventListener(event, handler, { signal: lifetime.signal });
   const sources = supportedSources(adaptiveSources, progressiveSources, document.createElement('video'));
   let media, mediaLifetime, currentSource, pendingRestore, selected, sourceIndex = 0, initialSeekDone = false, hasPlayed = false;
-  let theaterActive = false, streamerActive = false, playbackRequested = autoStart, preferredRate = 1;
+  let playbackRequested = autoStart, preferredRate = 1;
   player.classList.toggle('mt-is-live', isStreaming);
   streamer.hidden = embedded || !isStreaming;
 
@@ -267,19 +266,16 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
 
   listen(watchLink, 'click', () => media?.pause());
   listen(settings, 'click', () => menu.hidden ? showMenu() : setMenusClosed(true));
-  listen(theater, 'click', () => {
-    theaterActive = !theaterActive;
-    wrapper.classList.toggle('mt-theater-wrapper', theaterActive);
-    if (theaterActive) document.querySelector('#theater-container').append(wrapper);
-    else home.insertBefore(wrapper, nextSibling);
-    theater.setAttribute('aria-pressed', String(theaterActive));
-    theater.innerHTML = theaterActive ? icons.small : icons.theater;
-  });
-  listen(streamer, 'click', () => {
-    streamerActive = !streamerActive;
-    document.querySelector('#main-container').classList.toggle('w-100', streamerActive);
-    streamer.setAttribute('aria-pressed', String(streamerActive));
-    streamer.innerHTML = streamerActive ? icons.exit : icons.fullscreen;
+  const resetModes = initializeWatchModes({
+    wrapper, theater, streamer, isStreaming, embedded, icons, listen,
+    onMove(move) {
+      // Older browsers pause media when it is reparented. Resume only if it was playing.
+      const wasPlaying = media && !media.paused;
+      const focused = document.activeElement;
+      move();
+      if (focused && player.contains(focused)) focused.focus({ preventScroll: true });
+      if (wasPlaying) void play();
+    },
   });
   listen(document, 'pointerdown', event => {
     if (!event.composedPath().some(node => node === menu || node === context || node === settings)) setMenusClosed();
@@ -317,7 +313,11 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
     context.style.top = `${Math.max(0, Math.min(event.clientY - bounds.top, Math.min(bounds.height, innerHeight - bounds.top) - context.offsetHeight))}px`;
     context.querySelector('button')?.focus();
   });
-  const fullscreenChanged = () => { setMenusClosed(); theater.hidden = embedded || !!document.fullscreenElement; };
+  const fullscreenChanged = () => {
+    setMenusClosed();
+    theater.hidden = embedded || !!document.fullscreenElement;
+    streamer.hidden = embedded || !isStreaming || !!document.fullscreenElement;
+  };
   listen(document, 'fullscreenchange', fullscreenChanged);
   listen(window, 'resize', () => { if (!context.hidden) setMenusClosed(); });
   if (overlay) {
@@ -340,6 +340,7 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
     destroy() {
       lifetime.abort(); mediaLifetime?.abort();
       media?.pause();
+      resetModes();
       player.remove();
     },
   };

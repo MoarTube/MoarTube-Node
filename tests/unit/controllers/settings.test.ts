@@ -1,4 +1,6 @@
-vi.mock('@/services/cloudflare-tunnel-runtime.js', () => ({ requestTunnelOperation: vi.fn().mockResolvedValue({ mode: 'none', status: 'stopped', name: '' }) }));
+vi.mock('@/services/cloudflare-tunnel-runtime.js', () => ({
+  requestTunnelOperation: vi.fn().mockResolvedValue({ mode: 'none', status: 'stopped', name: '' }),
+}));
 vi.mock('@/utils/cpu-metrics.js', () => ({ getCpuMetrics: vi.fn() }));
 import { getCpuMetrics } from '@/utils/cpu-metrics.js';
 vi.mock('@/utils/memory-metrics.js', () => ({ getMemoryMetrics: vi.fn() }));
@@ -121,8 +123,8 @@ describe('SettingsController', () => {
     validateCdnConfiguration: vi.fn().mockResolvedValue(undefined),
     withConfigurationRollback: vi.fn(async (_email, _zone, _key, operation) => operation()),
     purgeAdaptiveVideos: vi.fn(),
-    purgeVideo:vi.fn(),
-    purgeWatchPages:vi.fn(),
+    purgeVideo: vi.fn(),
+    purgeWatchPages: vi.fn(),
     purgeNodePage: vi.fn(),
     purgeNodeImages: vi.fn(),
     resetCdn: vi.fn(),
@@ -725,7 +727,7 @@ describe('SettingsController', () => {
           storageConfig: { storageMode: 's3provider' },
         },
         getNodeBaseUrl: vi.fn(() => 'https://old'),
-    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://s3node.example.com'),
+        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://s3node.example.com'),
         updateNodeSettings: vi.fn(),
         reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
@@ -763,7 +765,7 @@ describe('SettingsController', () => {
           storageConfig: { storageMode: 'filesystem' },
         },
         getNodeBaseUrl: vi.fn(() => 'https://old'),
-    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
+        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
         updateNodeSettings: vi.fn(),
         reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
@@ -810,7 +812,7 @@ describe('SettingsController', () => {
           storageConfig: { storageMode: 'filesystem' },
         },
         getNodeBaseUrl: vi.fn(() => 'https://old'),
-    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
+        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
         updateNodeSettings: vi.fn(),
         reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
@@ -848,7 +850,7 @@ describe('SettingsController', () => {
           storageConfig: { storageMode: 'filesystem' },
         },
         getNodeBaseUrl: vi.fn(() => 'https://old'),
-    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
+        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
         updateNodeSettings: vi.fn(),
         reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
@@ -894,7 +896,7 @@ describe('SettingsController', () => {
           storageConfig: { storageMode: 'filesystem' },
         },
         getNodeBaseUrl: vi.fn(() => 'https://old'),
-    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
+        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://newnode.example.com'),
         updateNodeSettings: vi.fn(),
         reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
@@ -940,7 +942,7 @@ describe('SettingsController', () => {
   describe('cloudflareConfigure', () => {
     it('should configure Cloudflare CDN', async () => {
       mockRequest.body = {
-        cloudflareTunnelName: 'named-tunnel', cloudflareEmailAddress: 'admin@example.com',
+        cloudflareEmailAddress: 'admin@example.com',
         cloudflareZoneId: 'zone123',
         cloudflareGlobalApiKey: 'apikey456',
       };
@@ -966,7 +968,7 @@ describe('SettingsController', () => {
 
     it('should return error when credentials invalid', async () => {
       mockRequest.body = {
-        cloudflareTunnelName: 'named-tunnel', cloudflareEmailAddress: 'bad@email.com',
+        cloudflareEmailAddress: 'bad@email.com',
         cloudflareZoneId: 'zone',
         cloudflareGlobalApiKey: 'key',
       };
@@ -1017,7 +1019,7 @@ describe('SettingsController', () => {
           storageConfig: { storageMode: 'filesystem' },
         },
         getNodeBaseUrl: vi.fn(() => 'https://old'),
-    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://example.com'),
+        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://example.com'),
         updateNodeSettings: vi.fn(),
         reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
@@ -1386,7 +1388,7 @@ describe('SettingsController', () => {
           storageConfig: { storageMode: 'filesystem' },
         },
         getNodeBaseUrl: vi.fn(() => 'https://old'),
-    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://example.com'),
+        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://example.com'),
         updateNodeSettings: vi.fn(),
         reloadNodeSettings: vi.fn(),
         isDockerEnvironment: false,
@@ -2109,7 +2111,7 @@ describe('SettingsController', () => {
 
     it('should handle error in cloudflareConfigure', async () => {
       mockRequest.body = {
-        cloudflareTunnelName: 'named-tunnel', cloudflareEmailAddress: 'admin@example.com',
+        cloudflareEmailAddress: 'admin@example.com',
         cloudflareZoneId: 'zone123',
         cloudflareGlobalApiKey: 'apikey456',
       };
@@ -2179,13 +2181,21 @@ describe('SettingsController', () => {
       offset: 100,
     });
     vi.mocked(rewriteManifestFile).mockImplementationOnce(async (_file, transform) => {
-      expect(transform('https://new/external/videos/a/adaptive/m3u8/720p/segments/0.ts')).toBe('../../720p/segments/0.ts');
+      expect(transform('https://new/external/videos/a/adaptive/m3u8/720p/segments/0.ts')).toBe(
+        '../../720p/segments/0.ts'
+      );
     });
-    await (controller as any).rewriteManifestUrls('/videos/a/adaptive/m3u8/manifest-720p.m3u8', 'https://new');
-    vi.mocked(rewriteManifestFile).mockRejectedValueOnce(new Error('disk failure'));
-    await expect((controller as any).rewriteManifestUrls('/videos/a/adaptive/m3u8/manifest-720p.m3u8', 'https://new')).rejects.toThrow(
-      'disk failure'
+    await (controller as any).rewriteManifestUrls(
+      '/videos/a/adaptive/m3u8/manifest-720p.m3u8',
+      'https://new'
     );
+    vi.mocked(rewriteManifestFile).mockRejectedValueOnce(new Error('disk failure'));
+    await expect(
+      (controller as any).rewriteManifestUrls(
+        '/videos/a/adaptive/m3u8/manifest-720p.m3u8',
+        'https://new'
+      )
+    ).rejects.toThrow('disk failure');
   });
 
   it('rejects distribution changes during active publishing or streaming before any mutation', async () => {
@@ -2204,9 +2214,19 @@ describe('SettingsController', () => {
 
   it('returns a safe generic error for an untyped storage failure', async () => {
     mockRequest.body = { storageConfig: { storageMode: 'filesystem' } };
-    mockSettingsService.updateStorageConfig.mockImplementationOnce(() => { throw 'offline'; });
-    await controller.storageConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-    expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ isError: true, message: 'error communicating with the MoarTube node' }));
+    mockSettingsService.updateStorageConfig.mockImplementationOnce(() => {
+      throw 'offline';
+    });
+    await controller.storageConfigToggle(
+      mockRequest as FastifyRequest,
+      mockReply as unknown as FastifyReply
+    );
+    expect(mockReply.send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isError: true,
+        message: 'error communicating with the MoarTube node',
+      })
+    );
   });
 
   it('walks all active-job pages before applying a distribution change', async () => {
@@ -2287,7 +2307,7 @@ describe('SettingsController', () => {
       } as never);
       vi.mocked(isCloudflareCredentialsValid).mockResolvedValue(true);
       mockRequest.body = {
-        cloudflareTunnelName: 'named-tunnel', cloudflareEmailAddress: 'email',
+        cloudflareEmailAddress: 'email',
         cloudflareZoneId: 'new-zone',
         cloudflareGlobalApiKey: 'key',
       };
@@ -2306,7 +2326,7 @@ describe('SettingsController', () => {
   it('reports a non-Error setup failure without claiming completion', async () => {
     vi.mocked(isCloudflareCredentialsValid).mockRejectedValueOnce('offline');
     mockRequest.body = {
-      cloudflareTunnelName: 'named-tunnel', cloudflareEmailAddress: 'email',
+      cloudflareEmailAddress: 'email',
       cloudflareZoneId: 'zone',
       cloudflareGlobalApiKey: 'key',
     };

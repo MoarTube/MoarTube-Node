@@ -25,28 +25,68 @@ const payload = {
   cloudflareEmailAddress: 'email@example.com',
   cloudflareZoneId: 'zone',
   cloudflareGlobalApiKey: 'key',
-  cloudflareTunnelName: '  My Named Tunnel  ',
 };
 
-it.each([undefined,{cloudflareTunnelName:''}])('validates raw configure calls even without route schema: %o',async body=>{
- const controller=new SettingsController({} as never,{} as never,{} as never,{} as never);
- const reply={header:vi.fn().mockReturnThis(),status:vi.fn().mockReturnThis(),send:vi.fn().mockReturnThis()};
- await controller.cloudflareConfigure({body} as never,reply as never);expect(reply.status).toHaveBeenCalledWith(400);
- expect(reply.send).toHaveBeenCalledWith(expect.objectContaining({isError:true,message:expect.stringContaining('Name')}));
+it.each([
+  undefined,
+  null,
+  {},
+  { ...payload, cloudflareEmailAddress: '' },
+  { ...payload, cloudflareZoneId: '' },
+  { ...payload, cloudflareGlobalApiKey: '' },
+])('validates raw configure calls even without route schema: %o', async (body) => {
+  const controller = new SettingsController({} as never, {} as never, {} as never, {} as never);
+  const reply = {
+    header: vi.fn().mockReturnThis(),
+    status: vi.fn().mockReturnThis(),
+    send: vi.fn().mockReturnThis(),
+  };
+  await controller.cloudflareConfigure({ body } as never, reply as never);
+  expect(reply.status).toHaveBeenCalledWith(400);
+  expect(reply.send).toHaveBeenCalledWith(
+    expect.objectContaining({ isError: true, message: expect.stringContaining('credentials') })
+  );
 });
 
-it('returns conflict when another distribution operation holds admission during clear',async()=>{
- let release!:()=>void;let entered!:()=>void;const ready=new Promise<void>(resolve=>{entered=resolve});
- const config=mocks.config();const pending=withSettingsChange(config.paths.nodeSettingsPath,async()=>{entered();await new Promise<void>(resolve=>{release=resolve})});
- await ready;try{expect((await clear()).statusCode).toBe(409);}finally{release();await pending;}
+it('returns conflict when another distribution operation holds admission during clear', async () => {
+  let release!: () => void;
+  let entered!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    entered = resolve;
+  });
+  const config = mocks.config();
+  const pending = withSettingsChange(config.paths.nodeSettingsPath, async () => {
+    entered();
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+  });
+  await ready;
+  try {
+    expect((await clear()).statusCode).toBe(409);
+  } finally {
+    release();
+    await pending;
+  }
 });
 
-it('rejects a missing configure body and reports persisted configuration when snapshot IPC fails',async()=>{
-  const invalid=await app.inject({method:'POST',url:'/settings/cloudflare/configure'});
+it('rejects a missing configure body and reports persisted configuration when snapshot IPC fails', async () => {
+  const invalid = await app.inject({ method: 'POST', url: '/settings/cloudflare/configure' });
   expect(invalid.statusCode).toBe(400);
-  mocks.operation.mockRejectedValue(new Error('IPC lost'));delete settings.cloudflareTunnelName;
-  const result=await app.inject({method:'POST',url:'/settings/cloudflare/clear',payload:{},headers:{authorization:'Bearer test'}});
-  expect(result.statusCode).toBe(502);expect(result.json()).toMatchObject({settingsSaved:true,cloudflareTunnelName:'',tunnel:{status:'error'}});
+  mocks.operation.mockRejectedValue(new Error('IPC lost'));
+  delete settings.cloudflareTunnelName;
+  const result = await app.inject({
+    method: 'POST',
+    url: '/settings/cloudflare/clear',
+    payload: {},
+    headers: { authorization: 'Bearer test' },
+  });
+  expect(result.statusCode).toBe(502);
+  expect(result.json()).toMatchObject({
+    settingsSaved: true,
+    cloudflareTunnelName: '',
+    tunnel: { status: 'error' },
+  });
 });
 
 beforeEach(async () => {
@@ -166,6 +206,28 @@ const clear = () =>
   });
 
 describe('CDN and tunnel transition integration', () => {
+  it('reuses the saved name for same-zone CDN reconfiguration', async () => {
+    await configure();
+    const name = settings.cloudflareTunnelName;
+    expect((await configure()).statusCode).toBe(200);
+    expect(settings.cloudflareTunnelName).toBe(name);
+  });
+  it.each([undefined, ''])(
+    'repairs a missing named label during reconfiguration: %s',
+    async (name) => {
+      await configure();
+      settings.cloudflareTunnelName = name;
+      expect((await configure()).statusCode).toBe(200);
+      expect(settings.cloudflareTunnelName).toMatch(/^moartube-[0-9a-f-]{36}$/);
+    }
+  );
+  it('generates a fresh label when moving to a different zone', async () => {
+    await configure();
+    const oldName = settings.cloudflareTunnelName;
+    expect((await configure({ ...payload, cloudflareZoneId: 'new-zone' })).statusCode).toBe(200);
+    expect(settings.cloudflareTunnelName).toMatch(/^moartube-[0-9a-f-]{36}$/);
+    expect(settings.cloudflareTunnelName).not.toBe(oldName);
+  });
   it('rejects overlapping toggle/CDN changes under admission and retains the committed off choice after rollback', async () => {
     let release!: () => void;
     const blocked = new Promise<void>((resolve) => {
@@ -212,12 +274,14 @@ describe('CDN and tunnel transition integration', () => {
     expect(settings).toMatchObject({
       cloudflareZoneId: 'zone',
       cloudflareGlobalApiKey: 'key',
-      cloudflareTunnelName: 'My Named Tunnel',
+      cloudflareTunnelName: expect.stringMatching(
+        /^moartube-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      ),
       isCloudflareTunnelEnabled: false,
     });
   });
   it.each([true, false])(
-    'saves the modal name and reconciles while preserving tunnel preference %s',
+    'generates and saves a managed name while preserving tunnel preference %s',
     async (enabled) => {
       settings.isCloudflareTunnelEnabled = enabled;
       const response = await configure();
@@ -225,7 +289,9 @@ describe('CDN and tunnel transition integration', () => {
       expect(settings).toMatchObject({
         isCloudflareCdnEnabled: true,
         isCloudflareTunnelEnabled: enabled,
-        cloudflareTunnelName: 'My Named Tunnel',
+        cloudflareTunnelName: expect.stringMatching(
+          /^moartube-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+        ),
         cloudflareGlobalApiKey: 'key',
       });
       expect(response.json()).toMatchObject({
@@ -252,19 +318,23 @@ describe('CDN and tunnel transition integration', () => {
         isCloudflareCdnEnabled: false,
         isCloudflareTunnelEnabled: enabled,
         cloudflareGlobalApiKey: '',
-        cloudflareTunnelName: enabled ? 'new-generated-quick' : 'My Named Tunnel',
+        cloudflareTunnelName: enabled
+          ? 'new-generated-quick'
+          : expect.stringMatching(
+              /^moartube-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+            ),
       });
       expect(response.json().tunnel.mode).toBe(enabled ? 'quick' : 'none');
     }
   );
   it.each([undefined, '', '  ', null, 'https://invalid', 'x'.repeat(101)])(
-    'rejects invalid modal name %s before changing anything',
+    'ignores legacy caller-provided names %s and generates its own name',
     async (name) => {
       const response = await configure({ ...payload, cloudflareTunnelName: name });
-      expect(response.statusCode).toBe(400);
-      expect(settings.cloudflareTunnelName).toBe('old-quick');
-      expect(mocks.credentials).not.toHaveBeenCalled();
-      expect(mocks.operation).not.toHaveBeenCalled();
+      expect(response.statusCode).toBe(200);
+      expect(settings.cloudflareTunnelName).toMatch(/^moartube-[0-9a-f-]{36}$/);
+      expect(settings.cloudflareTunnelName).not.toBe(name);
+      expect(mocks.operation).toHaveBeenCalledWith('reconcile');
     }
   );
   it('does not save or reconcile after CDN validation fails', async () => {
@@ -281,7 +351,9 @@ describe('CDN and tunnel transition integration', () => {
       isError: true,
       settingsSaved: true,
       isCloudflareCdnEnabled: true,
-      cloudflareTunnelName: 'My Named Tunnel',
+      cloudflareTunnelName: expect.stringMatching(
+        /^moartube-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      ),
     });
     expect(response.body).not.toContain('"cloudflareGlobalApiKey"');
   });
@@ -303,7 +375,9 @@ describe('CDN and tunnel transition integration', () => {
     expect(response.statusCode).toBe(400);
     expect(settings).toMatchObject({
       isCloudflareCdnEnabled: true,
-      cloudflareTunnelName: 'My Named Tunnel',
+      cloudflareTunnelName: expect.stringMatching(
+        /^moartube-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+      ),
       cloudflareGlobalApiKey: 'key',
     });
     expect(mocks.operation.mock.calls.map(([operation]) => operation)).toEqual([
