@@ -10,6 +10,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 vi.mock('@config/index.js', () => ({
   getConfig: vi.fn(() => ({
     nodeSettings: {
+      storageConfig: { storageMode: 'filesystem' },
       isLiveChatEnabled: true,
       nodeName: 'Test Node',
       nodeAbout: 'Test about',

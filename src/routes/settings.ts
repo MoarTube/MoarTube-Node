@@ -5,6 +5,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import type { Container } from '@core/index.js';
+import { cloudflareTunnelToggleBodySchema } from '@/config/cloudflare-tunnel.js';
 import { SettingsController } from '@controllers/index.js';
 import {
   personalizeNodeNameBodySchema,
@@ -61,6 +62,23 @@ export function settingsRoutes(
     '/metrics/cpu',
     { preHandler: [fastify.authenticate], schema: { tags: ['Settings'] } },
     controller.getCpuMetrics
+  );
+
+  // Read-only Cloudflare Tunnel runtime status
+  fastify.post(
+    '/cloudflare/tunnel/toggle',
+    {
+      preHandler: [fastify.authenticate],
+      schema: { tags: ['Settings'], body: cloudflareTunnelToggleBodySchema },
+    },
+    controller.cloudflareTunnelToggle
+  );
+
+  // Read-only Cloudflare Tunnel runtime status
+  fastify.get(
+    '/cloudflare/tunnel',
+    { preHandler: [fastify.authenticate], schema: { tags: ['Settings'] } },
+    controller.getCloudflareTunnel
   );
 
   // Get all settings

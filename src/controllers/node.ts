@@ -1,3 +1,4 @@
+import { viewerMediaBase, pageCanonicalOrigin } from '@/utils/viewer-urls.js';
 /**
  * Node Controller
  *
@@ -111,8 +112,9 @@ export class NodeController extends BaseController {
       // Get search results
       const searchResultsData = await this.performSearch(searchTerm, sortTerm, tagTerm, offset);
 
-      const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
-      const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
+      const externalVideosBaseUrl = viewerMediaBase(config.nodeSettings);
+      const externalResourcesBaseUrl = '';
+      const canonicalOrigin = await pageCanonicalOrigin(request);
 
       // Build model object for template JavaScript access
       const model = {
@@ -123,6 +125,7 @@ export class NodeController extends BaseController {
         searchResultsData,
         externalVideosBaseUrl,
         externalResourcesBaseUrl,
+        canonicalOrigin,
       };
 
       if (!request.headers.authorization) {

@@ -239,12 +239,15 @@ class Config {
    * Reload node settings from disk
    * Useful when settings file has been manually edited
    */
-  reloadNodeSettings(): void {
+  reloadNodeSettings(strict = false): void {
     try {
       // Another worker may still be writing when fs.watch reports a change.
       // Keep the last valid settings until a subsequent change can be read.
       this._nodeSettings = this.loadNodeSettings();
     } catch (error) {
+      if (strict) {
+        throw error;
+      }
       this.logger.error('Failed to reload node settings', error);
     }
   }

@@ -365,12 +365,14 @@ export class SettingsService extends BaseService {
   updateCloudflareConfig(
     cloudflareEmailAddress: string,
     cloudflareZoneId: string,
-    cloudflareGlobalApiKey: string
+    cloudflareGlobalApiKey: string,
+    cloudflareTunnelName: string
   ): void {
     const config = getConfig();
 
     config.updateNodeSettings({
       isCloudflareCdnEnabled: true,
+      cloudflareTunnelName,
       cloudflareEmailAddress: cloudflareEmailAddress,
       cloudflareZoneId: cloudflareZoneId,
       cloudflareGlobalApiKey: cloudflareGlobalApiKey,

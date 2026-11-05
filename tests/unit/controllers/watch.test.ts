@@ -10,6 +10,7 @@ import type { FastifyRequest, FastifyReply } from 'fastify';
 vi.mock('@config/index.js', () => ({
   getConfig: vi.fn(() => ({
     nodeSettings: {
+      storageConfig: { storageMode: 'filesystem' },
       nodeName: 'Test Node',
       nodeAbout: 'Test about',
       publicNodeProtocol: 'https',
@@ -421,8 +422,8 @@ describe('WatchController', () => {
         'watch.ejs',
         expect.objectContaining({
           model: expect.objectContaining({
-            externalVideosBaseUrl: 'https://videos.example.com',
-            externalResourcesBaseUrl: 'https://resources.example.com',
+            externalVideosBaseUrl: '',
+            externalResourcesBaseUrl: '',
           }),
         })
       );

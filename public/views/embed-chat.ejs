@@ -657,10 +657,8 @@
             $('#live-stream-chat-container').removeClass('hidden-elem');
 
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const hostname = window.location.hostname;
-            const port = window.location.port;
 
-            const ws = new WebSocket(protocol + '//' + hostname + ':' + port);
+            const ws = new WebSocket(protocol + '//' + window.location.host);
 
             ws.onopen = () => {
               ws.send(JSON.stringify({ eventName: 'register', socketType: 'node_peer' }));

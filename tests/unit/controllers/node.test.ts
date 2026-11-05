@@ -9,6 +9,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 vi.mock('@config/index.js', () => ({
   getConfig: vi.fn(() => ({
     nodeSettings: {
+      storageConfig: { storageMode: 'filesystem' },
       nodeName: 'Test Node',
       nodeAbout: 'A test node',
       publicNodeProtocol: 'https',

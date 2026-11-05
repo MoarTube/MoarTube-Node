@@ -11,7 +11,7 @@ import { WatchController } from '@/controllers/watch.js';
 
 vi.mock('@config/index.js', () => ({
   getConfig: () => ({
-    nodeSettings: { publicNodePort: '443' },
+    nodeSettings: { publicNodeProtocol: 'https', publicNodeAddress: 'node.example.com', publicNodePort: '443', storageConfig: { storageMode: 'filesystem' } },
     getExternalVideosBaseUrl: () => 'https://media.example.com',
     getExternalResourcesBaseUrl: () => 'https://node.example.com',
   }),

@@ -432,10 +432,10 @@ describe('SettingsService', () => {
 
   describe('updateCloudflareConfig', () => {
     it('should update Cloudflare configuration', () => {
-      service.updateCloudflareConfig('email@example.com', 'zone123', 'api-key');
+      service.updateCloudflareConfig('email@example.com', 'zone123', 'api-key', 'named-tunnel');
 
       expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({
-        isCloudflareCdnEnabled: true,
+        isCloudflareCdnEnabled: true, cloudflareTunnelName: 'named-tunnel',
         cloudflareEmailAddress: 'email@example.com',
         cloudflareZoneId: 'zone123',
         cloudflareGlobalApiKey: 'api-key',

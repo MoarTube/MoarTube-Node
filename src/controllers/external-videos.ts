@@ -1,3 +1,5 @@
+import { managedMediaBases } from '@/utils/media-url-origins.js';
+import { relativeHlsLine, hlsPlaylistPath } from '@/utils/hls-urls.js';
 /**
  * External Videos Controller
  *
@@ -78,7 +80,10 @@ export class ExternalVideosController extends BaseController {
       const config = getConfig();
       config.reloadNodeSettings();
 
-      const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
+      const externalVideosBaseUrl =
+        config.nodeSettings.storageConfig.storageMode === 'filesystem'
+          ? ''
+          : config.getExternalVideosBaseUrl();
 
       return await this.sendSuccess(reply, { externalVideosBaseUrl });
     } catch (error) {
@@ -176,6 +181,8 @@ export class ExternalVideosController extends BaseController {
       const { videoId, format, manifestName } = request.params as AdaptiveManifestParams;
 
       const config = getConfig();
+      const bases = managedMediaBases(config);
+      const playlistPath = hlsPlaylistPath(videoId, manifestName);
 
       return await servePublicFile(
         request,
@@ -183,7 +190,10 @@ export class ExternalVideosController extends BaseController {
         config.paths.videosDirectoryPath,
         [videoId, 'adaptive', format, manifestName],
         'application/vnd.apple.mpegurl',
-        { live: (request.params as AdaptiveManifestParams).type === 'dynamic' }
+        {
+          live: (request.params as AdaptiveManifestParams).type === 'dynamic',
+          manifestTransform: (line) => relativeHlsLine(line, playlistPath, bases),
+        }
       );
     } catch (error) {
       this.logger.error('Get adaptive manifest failed', error);

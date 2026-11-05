@@ -89,6 +89,9 @@ export interface NodeSettings {
 
   // Cloudflare Settings
   isCloudflareCdnEnabled: boolean;
+  /** Defaults to true; independently controls quick and named tunnel lifecycle. */
+  isCloudflareTunnelEnabled?: boolean;
+  cloudflareTunnelName?: string;
   cloudflareEmailAddress: string;
   cloudflareZoneId: string;
   cloudflareGlobalApiKey: string;

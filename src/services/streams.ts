@@ -609,7 +609,9 @@ export class StreamsService extends BaseService {
     const master = path.join(adaptiveDir, 'manifest-master.m3u8');
     if (fs.existsSync(master)) {
       await rewriteManifestFile(master, (line) =>
-        line.trim() === '#EXT-X-ENDLIST' ? '' : line.replaceAll('/dynamic/', '/static/')
+        ['#EXT-X-ENDLIST', '#MOARTUBE-LIVE'].includes(line.trim())
+          ? ''
+          : line.replaceAll('/dynamic/', '/static/')
       );
     }
     return Math.ceil((longest + 6) * 1000);

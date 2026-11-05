@@ -57,7 +57,10 @@
     "prebuild": "node scripts/ensure-migrations.mjs",
     "predev": "node scripts/ensure-migrations.mjs",
     "predev:start": "node scripts/ensure-migrations.mjs",
-    "predb:migrate": "node scripts/ensure-migrations.mjs"
+    "predb:migrate": "node scripts/ensure-migrations.mjs",
+    "prepack": "npm run build",
+    "install:cloudflared": "node scripts/install-npm-cloudflared.mjs",
+    "postinstall": "node scripts/install-npm-cloudflared.mjs --optional"
   },
   "lint-staged": {
     "src/**/*.ts": [
@@ -123,5 +126,17 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.53.0",
     "vitest": "^4.0.17"
-  }
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "scripts/install-npm-cloudflared.mjs",
+    "scripts/install-cloudflared.mjs",
+    "scripts/cloudflared-release.mjs",
+    "scripts/cloudflared-archive.mjs",
+    "resources/cloudflared/LICENSE",
+    "resources/cloudflared/README.md",
+    "docs/cloudflare-tunnel.md",
+    "LICENSE.md"
+  ]
 }

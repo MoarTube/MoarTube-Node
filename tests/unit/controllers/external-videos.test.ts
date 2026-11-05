@@ -14,12 +14,18 @@ const reply = () =>
 
 const config = vi.hoisted(() => ({
   reloadNodeSettings:vi.fn(),
+  nodeSettings: { storageConfig: { storageMode: 's3provider' } },
   paths: { videosDirectoryPath: '/videos' },
   getExternalVideosBaseUrl: vi.fn(() => 'https://example.com'),
 }));
 vi.mock('@config/index.js', () => ({ getConfig: () => config }));
 import { ExternalVideosController } from '@controllers/external-videos.js';
 describe('video delivery and bandwidth batching', () => {
+  it('returns a viewer-relative base for filesystem storage',async()=>{
+    config.nodeSettings.storageConfig.storageMode='filesystem';const res=reply();
+    try{await controller.getBaseUrl(request({}),res);expect(res.send).toHaveBeenCalledWith(expect.objectContaining({externalVideosBaseUrl:''}));}
+    finally{config.nodeSettings.storageConfig.storageMode='s3provider';}
+  });
   let controller: ExternalVideosController;
   const updateBandwidth = vi.fn();
   beforeEach(() => {
@@ -88,7 +94,7 @@ describe('video delivery and bandwidth batching', () => {
       request({ videoId: 'a', format: 'm3u8', manifestName: 'master.m3u8', type: 'dynamic' }),
       reply()
     );
-    expect(vi.mocked(servePublicFile).mock.calls[0]?.[5]).toEqual({ live: true });
+    expect(vi.mocked(servePublicFile).mock.calls[0]?.[5]).toEqual({ live: true, manifestTransform: expect.any(Function) });
   });
   it('returns base URL', async () => {
     const res = reply();

@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { cloudflareTunnelNameSchema } from './cloudflare-tunnel.js';
 
 // ============================================
 // Database Configuration Schemas
@@ -99,6 +100,8 @@ export const NodeSettingsSchema = z.object({
 
   // Cloudflare Settings
   isCloudflareCdnEnabled: z.boolean().default(false),
+  isCloudflareTunnelEnabled: z.boolean().default(true),
+  cloudflareTunnelName: cloudflareTunnelNameSchema.optional(),
   cloudflareEmailAddress: z.string().default(''),
   cloudflareZoneId: z.string().default(''),
   cloudflareGlobalApiKey: z.string().default(''),

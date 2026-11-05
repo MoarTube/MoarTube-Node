@@ -190,6 +190,12 @@ describe('config/index.ts', () => {
   });
 
   describe('tracker reload and watcher lifecycle', () => {
+    it('throws on a strict settings reload failure while retaining the last valid settings', () => {
+      const config = Config.initialize(mockBaseDir);
+      mockFs.readFileSync.mockReturnValueOnce('{broken');
+      expect(() => config.reloadNodeSettings(true)).toThrow();
+      expect(config.nodeSettings).toEqual(mockNodeSettings);
+    });
     it('reloads tracker changes, ignores rename events, and closes watchers once', () => {
       const config = Config.initialize(mockBaseDir);
       const callback = mockFs.watch.mock.calls.find(([file]) => file === mockPaths.lastCheckedContentTrackerPath)![1] as Function;
@@ -389,6 +395,29 @@ describe('config/index.ts', () => {
         mockPaths.lastCheckedContentTrackerPath,
         JSON.stringify({ ...mockContentTracker, ...updates })
       );
+    });
+  });
+
+  describe('Cloudflare tunnel name persistence', () => {
+    it('persists tunnel enablement and preserves its name and unrelated settings', () => {
+      const config = Config.initialize(mockBaseDir);
+      for (const enabled of [false, true]) {
+        const name = 'random-generated-label';
+        config.updateNodeSettings({ cloudflareTunnelName: name, isCloudflareTunnelEnabled: enabled });
+        const expected = { ...mockNodeSettings, cloudflareTunnelName: name, isCloudflareTunnelEnabled: enabled };
+        expect(config.nodeSettings).toEqual(expected);
+        expect(mockFs.writeFileSync).toHaveBeenLastCalledWith(
+          mockPaths.nodeSettingsPath + '.test-generation.part',
+          JSON.stringify(expected, null, 2),
+          { flag: 'wx' }
+        );
+        expect(mockFs.renameSync).toHaveBeenLastCalledWith(
+          mockPaths.nodeSettingsPath + '.test-generation.part', mockPaths.nodeSettingsPath
+        );
+        mockFs.readFileSync.mockReturnValueOnce(JSON.stringify(expected));
+        config.reloadNodeSettings();
+        expect(config.nodeSettings.cloudflareTunnelName).toBe(name);
+      }
     });
   });
 

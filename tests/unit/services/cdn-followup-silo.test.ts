@@ -1,3 +1,4 @@
+vi.mock('@/services/cloudflare-tunnel-runtime.js', () => ({ requestTunnelOperation: vi.fn(async () => ({ mode: 'none', status: 'stopped', name: '' })) }));
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -55,8 +56,10 @@ beforeEach(async () => {
       );
   }
   root = await mkdtemp(path.join(tmpdir(), 'moartube-cdn-followup-'));
+  await writeFile(path.join(root, '_media_url_origins.json'), JSON.stringify(['https://old.example', 'https://old']));
   state.config = {
     paths: {
+      dataDirectoryPath: root,
       nodeSettingsPath: path.join(root, 'settings.json'),
       videosDirectoryPath: path.join(root, 'videos'),
       publicDirectoryPath: path.join(root, 'public'),
@@ -173,9 +176,7 @@ describe('follow-up storage fixes against real Silo', () => {
       cloudflare.purgeVideo.mockImplementation(async () => {
         const master = await a.text(prefix + type + '/manifests/manifest-master.m3u8');
         expect(master).toContain(
-          'https://new.example/external/videos/video123/adaptive/m3u8/' +
-            type +
-            '/manifests/manifest-720p.m3u8'
+          'manifest-720p.m3u8'
         );
         expect(master).not.toContain('stale master');
       });
@@ -481,7 +482,7 @@ describe('follow-up storage fixes against real Silo', () => {
       cloudflare,
       {} as never
     );
-    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
     const operation = controller.storageConfigToggle(
       { body: { storageConfig: state.config.nodeSettings.storageConfig } } as never,
       reply as never
@@ -732,9 +733,7 @@ describe('follow-up storage fixes against real Silo', () => {
       ['720p'],
       state.config.getExternalVideosBaseUrl()
     );
-    expect(await a.text(prefix + 'static/manifests/manifest-720p.m3u8')).toContain(
-      'https://' + a.config.bucketName + '/external/'
-    );
+    expect(await a.text(prefix + 'static/manifests/manifest-720p.m3u8')).toContain('../../720p/segments/');
     cloudflare.withConfigurationRollback = async (
       _email: unknown,
       _zone: unknown,
@@ -753,13 +752,11 @@ describe('follow-up storage fixes against real Silo', () => {
       cloudflare,
       {} as never
     );
-    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
     await controller.cloudflareClear({} as never, reply as never);
     expect(reply.status).toHaveBeenLastCalledWith(200);
     for (const name of ['720p', 'master'])
-      expect(await a.text(prefix + 'static/manifests/manifest-' + name + '.m3u8')).toContain(
-        'https://s3.us-east-1.amazonaws.com/' + a.config.bucketName + '/external/'
-      );
+      expect(await a.text(prefix + 'static/manifests/manifest-' + name + '.m3u8')).not.toMatch(/^https?:\/\//m);
   });
   it('refreshes bucket, endpoint and credentials while older readers drain safely', async () => {
     await a.put('same', 'old bucket');
@@ -861,7 +858,7 @@ describe('follow-up storage fixes against real Silo', () => {
       },
     };
     const controller = new SettingsController(settings as never, videos, cloudflare, {} as never);
-    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
     const operation = controller.storageConfigToggle(
       {
         body: {
@@ -906,11 +903,9 @@ describe('follow-up storage fixes against real Silo', () => {
       release();
       await operation;
       expect(reply.status).toHaveBeenCalledWith(200);
-      expect(await a.text(prefix + 'static/manifests/manifest-720p.m3u8')).toContain(
-        'https://new.example/external/'
-      );
+      expect(await a.text(prefix + 'static/manifests/manifest-720p.m3u8')).not.toMatch(/^https?:\/\//m);
       expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).toContain(
-        'https://new.example/external/'
+        'manifest-720p.m3u8'
       );
       expect(cloudflare.purgeWatchPages).toHaveBeenCalledWith(['video123'], true);
       await expect(
@@ -987,9 +982,7 @@ describe('follow-up storage fixes against real Silo', () => {
           await withSettingsChange(state.config.paths.nodeSettingsPath, async () => true)
         ).toBe(true)
       );
-      expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).toContain(
-        'https://new.example/'
-      );
+      expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).not.toMatch(/^https?:\/\//m);
     } finally {
       release();
       await proxy.close();
@@ -1018,7 +1011,7 @@ describe('follow-up storage fixes against real Silo', () => {
       cloudflare,
       {} as never
     );
-    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
     cloudflare.purgeVideo.mockRejectedValueOnce(new Error('purge failed'));
     const request = { body: { storageConfig: state.config.nodeSettings.storageConfig } } as never;
     await controller.storageConfigToggle(request, reply as never);
@@ -1048,7 +1041,7 @@ describe('follow-up storage fixes against real Silo', () => {
       cloudflare,
       {} as never
     );
-    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
     await controller.storageConfigToggle(
       { body: { storageConfig: { storageMode: 'filesystem' } } } as never,
       reply as never
@@ -1058,7 +1051,7 @@ describe('follow-up storage fixes against real Silo', () => {
     );
     await controller.cloudflareClear({} as never, reply as never);
     expect(reply.send).toHaveBeenLastCalledWith(
-      expect.objectContaining({ message: expect.stringContaining('finish draining') })
+      expect.objectContaining({ message: expect.stringContaining('could not be cleared') })
     );
     await controller.storageConfigToggle(
       { body: { storageConfig: state.config.nodeSettings.storageConfig } } as never,
@@ -1222,6 +1215,8 @@ describe('follow-up storage fixes against real Silo', () => {
     'finalizes real S3 media and masters before marking stopped (recorded=%s)',
     async (recorded) => {
       await seed(recorded);
+      const master=prefix+'dynamic/manifests/manifest-master.m3u8';
+      await a.put(master,(await a.text(master)).replace('#EXTM3U','#EXTM3U\n#MOARTUBE-LIVE'));
       await streams.stopStream('video123', 90);
       expect(video.is_streaming).toBe(false);
       expect(video.is_published).toBe(recorded);
@@ -1238,6 +1233,7 @@ describe('follow-up storage fixes against real Silo', () => {
           ).CacheControl
         ).toBe('no-store');
       if (recorded) {
+        expect(await a.text(prefix+'static/manifests/manifest-master.m3u8')).not.toContain('#MOARTUBE-LIVE');
         expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).toContain(
           '/static/'
         );

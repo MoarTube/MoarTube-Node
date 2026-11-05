@@ -1,4 +1,5 @@
 import type fs from 'node:fs';
+import { transformManifest } from './manifest-transform.js';
 import { Readable } from 'node:stream';
 import { open, type FileHandle } from 'node:fs/promises';
 import { createGzip } from 'node:zlib';
@@ -40,7 +41,12 @@ export async function servePublicFile(
   root: string,
   parts: string[],
   contentType: string,
-  options: { live?: boolean; ranges?: boolean; onBytes?: (bytes: number) => void } = {}
+  options: {
+    live?: boolean;
+    ranges?: boolean;
+    onBytes?: (bytes: number) => void;
+    manifestTransform?: (line: string) => string;
+  } = {}
 ): Promise<FastifyReply> {
   reply.header('Cache-Control', 'no-store');
   if (!parts.every(isPathSegment)) {
@@ -64,7 +70,9 @@ export async function servePublicFile(
       const head = Buffer.alloc(Math.min(info.size, 8192));
       await handle.read(head, 0, head.length, 0);
       const master = head.includes(Buffer.from('#EXT-X-STREAM-INF:'));
-      const liveMaster = master && head.includes(Buffer.from('/dynamic/'));
+      const liveMaster =
+        master &&
+        (head.includes(Buffer.from('/dynamic/')) || head.includes(Buffer.from('#MOARTUBE-LIVE')));
       const tail = Buffer.alloc(Math.min(info.size, 4096));
       await handle.read(tail, 0, tail.length, Math.max(0, info.size - tail.length));
       const ended = tail.toString('utf8').split(/\r?\n/).includes('#EXT-X-ENDLIST');
@@ -87,7 +95,7 @@ export async function servePublicFile(
         reply.header('Cache-Control', 'public, max-age=0, s-maxage=1, must-revalidate');
       }
     }
-    const etag = `W/"${info.size.toString(16)}-${info.mtimeMs.toString(16)}"`;
+    const etag = `W/"${info.size.toString(16)}-${info.mtimeMs.toString(16)}${options.manifestTransform ? '-relative-v1' : ''}"`;
     const modified = info.mtime.toUTCString();
     reply.header('Content-Type', contentType).header('X-Content-Type-Options', 'nosniff');
     const text = /^(?:text\/|application\/javascript|image\/svg)/.test(contentType);
@@ -109,7 +117,8 @@ export async function servePublicFile(
                   value.trim() === '*' ||
                   value.trim().replace(/^W\//, '') === etag.replace(/^W\//, '')
               )
-          : request.headers['if-modified-since'] !== undefined &&
+          : options.manifestTransform === undefined &&
+            request.headers['if-modified-since'] !== undefined &&
             Math.floor(info.mtimeMs / 1000) * 1000 <=
               Date.parse(request.headers['if-modified-since']);
       if (unchanged) {
@@ -151,7 +160,7 @@ export async function servePublicFile(
       text && !range && info.size >= 1024 && acceptsGzip(request.headers['accept-encoding']);
     if (compress) {
       reply.header('Content-Encoding', 'gzip');
-    } else {
+    } else if (options.manifestTransform === undefined) {
       reply.header('Content-Length', length);
     }
     if (request.method === 'HEAD') {
@@ -161,16 +170,23 @@ export async function servePublicFile(
       return await reply.send(Readable.from([]));
     }
     // Metadata and body must refer to the same inode. Bound a growing file to its snapshot size.
-    const stream = handle.createReadStream(range ?? { start: 0, end: info.size - 1 });
+    const rawStream = handle.createReadStream(range ?? { start: 0, end: info.size - 1 });
+    const stream =
+      options.manifestTransform === undefined
+        ? rawStream
+        : Readable.from(transformManifest(rawStream, options.manifestTransform));
+    if (stream !== rawStream) {
+      stream.once('close', () => rawStream.destroy());
+    }
     handle = undefined; // The stream now owns and closes the descriptor.
     if (options.onBytes) {
-      stream.once('close', () => options.onBytes?.(stream.bytesRead));
+      stream.once('close', () => options.onBytes?.(rawStream.bytesRead));
     }
     if (!compress) {
       return await reply.send(stream);
     }
     const compressed = createGzip();
-    stream.on('error', (error) => compressed.destroy(error));
+    stream.on('error', (error: Error) => compressed.destroy(error));
     compressed.once('close', () => stream.destroy());
     return await reply.send(stream.pipe(compressed));
   } finally {

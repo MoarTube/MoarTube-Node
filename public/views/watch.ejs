@@ -9,7 +9,7 @@
     <meta name="twitter:description" content="<%=model.videoData.video.description%>" />
     <meta
       name="twitter:image"
-      content="<%=model.externalVideosBaseUrl%>/external/videos/<%=model.videoData.video.videoId%>/thumbnail"
+      content="<%=model.externalVideosBaseUrl || model.canonicalOrigin%>/external/videos/<%=model.videoData.video.videoId%>/thumbnail"
     />
 
     <meta property="og:site_name" content="MoarTube" />
@@ -18,7 +18,7 @@
     <meta property="og:type" content="desktopprofile" />
     <meta
       property="og:image"
-      content="<%=model.externalVideosBaseUrl%>/external/videos/<%=model.videoData.video.videoId%>/thumbnail"
+      content="<%=model.externalVideosBaseUrl || model.canonicalOrigin%>/external/videos/<%=model.videoData.video.videoId%>/thumbnail"
     />
 
     <title>MoarTube</title>
@@ -1549,17 +1549,7 @@ body {
 
         loadInformation(information) {
           this.NODE_NAME = information.nodeName;
-          this.NODE_PROTOCOL = information.publicNodeProtocol;
-          this.NODE_ADDRESS = information.publicNodeAddress;
-          this.NODE_PORT = information.publicNodePort;
-          let port;
-          if (this.NODE_PROTOCOL === 'http') {
-            port = this.NODE_PORT == 80 ? '' : ':' + this.NODE_PORT;
-          } else if (this.NODE_PROTOCOL === 'https') {
-            port = this.NODE_PORT == 443 ? '' : ':' + this.NODE_PORT;
-          }
-          const host = this.NODE_ADDRESS.includes(':') && !this.NODE_ADDRESS.startsWith('[') ? '[' + this.NODE_ADDRESS + ']' : this.NODE_ADDRESS;
-          this.NODE_BASE_URL = this.NODE_PROTOCOL + '://' + host + port;
+          this.NODE_BASE_URL = this.INCOMING_PARAMETERS.canonicalOrigin || '';
           this.CLOUDFLARE_TURNSTILE_SITE_KEY = information.cloudflareTurnstileSiteKey;
         }
 
@@ -1868,9 +1858,7 @@ body {
               let LIVE_CHAT_USERNAME_COLOR_CODE;
               $('#live-stream-chat-container').removeClass('hidden-elem');
               const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-              const hostname = window.location.hostname;
-              const port = window.location.port;
-              let ws = new WebSocket(protocol + '//' + hostname + ':' + port);
+              let ws = new WebSocket(protocol + '//' + window.location.host);
               ws.onopen = () => {
                 ws.send(JSON.stringify({ eventName: 'register', socketType: 'node_peer' }));
               };
@@ -3368,7 +3356,8 @@ body {
 
         shareVideo() {
           const videoId = this.VIDEO_ID;
-          const nodeVideoUrl = this.NODE_BASE_URL + '/watch?v=' + videoId;
+          if (!this.NODE_BASE_URL) { Swal.fire({ icon: 'error', text: 'A valid public or local Node address is required for sharing.' }); return; }
+          const nodeVideoUrl = this.NODE_BASE_URL + '/watch?v=' + encodeURIComponent(videoId);
           const embedUrl = this.NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0';
           const embedHtml_1 = '<iframe class="w-100" src="' + this.NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0" style="aspect-ratio: 16/9;" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="clipboard-write"></iframe>';
           const embedHtml_2 = '<iframe src="' + this.NODE_BASE_URL + '/watch/embed/video/' + videoId + '?autostart=0" title="MoarTube video player" frameborder="0" allowfullscreen="true" webkitallowfullscreen="true" mozallowfullscreen="true" allow="clipboard-write"></iframe>';
@@ -3388,6 +3377,7 @@ body {
 
           Swal.fire({
             title: 'share',
+            footer: this.INCOMING_PARAMETERS.canonicalIsLocal ? 'This link uses a local address and may not work outside your network.' : undefined,
             html: html,
             showConfirmButton: false,
             showCloseButton: true,

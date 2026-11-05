@@ -78,6 +78,12 @@ describe('Settings Routes', () => {
   });
 
   // Settings Root
+  it('requires authentication for credential-free tunnel status', () => {
+    settingsRoutes(mockFastify as any, mockContainer);
+    expect(mockFastify.get).toHaveBeenCalledWith('/cloudflare/tunnel',
+      { preHandler: [mockFastify.authenticate], schema: { tags: ['Settings'] } }, expect.any(Function));
+  });
+
   it('should register GET / route', () => {
     settingsRoutes(mockFastify as any, mockContainer);
     expect(mockFastify.get).toHaveBeenCalledWith('/', expect.anything(), expect.any(Function));
@@ -211,13 +217,13 @@ describe('Settings Routes', () => {
     expect(mockFastify.post).toHaveBeenCalledWith('/restart', expect.anything(), expect.any(Function));
   });
 
-  it('should register exactly 7 GET routes', () => {
+  it('should register exactly 8 GET routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.get).toHaveBeenCalledTimes(7);
+    expect(mockFastify.get).toHaveBeenCalledTimes(8);
   });
 
-  it('should register exactly 21 POST routes', () => {
+  it('should register exactly 22 POST routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(21);
+    expect(mockFastify.post).toHaveBeenCalledTimes(22);
   });
 });

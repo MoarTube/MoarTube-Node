@@ -1,3 +1,7 @@
+import { managedMediaBases } from '@/utils/media-url-origins.js';
+import { relativeHlsLine, hlsPlaylistPath } from '@/utils/hls-urls.js';
+import { transformManifest } from '@/utils/manifest-transform.js';
+import { Readable } from 'node:stream';
 /**
  * Video Upload Service
  *
@@ -308,7 +312,20 @@ export class VideoUploadService {
     }
     const filePath = path.join(destinationPath, file.filename);
     const maxBytes = 10 * 1024 ** 3;
-    await writeUpload(file, filePath, maxBytes);
+    const managed = /^([\w-]+)\/adaptive\/m3u8\/(manifest-[\w-]+\.m3u8)$/.exec(
+      path.relative(getConfig().paths.videosDirectoryPath, filePath).split(path.sep).join('/')
+    );
+    const bases = managed ? managedMediaBases(getConfig()) : [];
+    const source = managed
+      ? {
+          file: Readable.from(
+            transformManifest(file.file, (line) =>
+              relativeHlsLine(line, hlsPlaylistPath(String(managed[1]), String(managed[2])), bases)
+            )
+          ),
+        }
+      : file;
+    await writeUpload(source, filePath, maxBytes);
     this.logger.debug('Saved uploaded file', { filename: file.filename, path: filePath });
     if (!this.cloudflareService.isEnabled()) {
       return;

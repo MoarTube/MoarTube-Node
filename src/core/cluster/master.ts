@@ -18,6 +18,9 @@ import { IPCChannel, type IPCLogger } from '@core/cluster/ipc-channel.js';
 import { getConfig } from '@config/index.js';
 import { createDatabase, initializeDatabaseSchema } from '@database/index.js';
 import type { CloudflareService } from '@services/cloudflare.js';
+import { primaryTunnelManager } from '@/services/cloudflare-tunnel-runtime.js';
+import type { CloudflareTunnelManager } from '@/services/cloudflare-tunnel.js';
+import type { CloudflareTunnelRequestMessage } from '@/types/ipc.js';
 
 /**
  * Cluster Master Process Manager
@@ -32,6 +35,9 @@ export class ClusterMaster {
   private liveStreamWatchingCountsTracker: LiveStreamWatchingCountsTracker = {};
   private intervalHandles: NodeJS.Timeout[] = [];
   private isRunning = false;
+  private tunnel?: CloudflareTunnelManager;
+  private originPort?: string;
+  private stopping?: Promise<void>;
 
   constructor(logger: IPCLogger, cloudflare: CloudflareService) {
     this.logger = logger;
@@ -83,6 +89,9 @@ export class ClusterMaster {
    * Stop the cluster master
    */
   stop(): Promise<void> {
+    if (this.stopping !== undefined) {
+      return this.stopping;
+    }
     if (!this.isRunning) {
       return Promise.resolve();
     }
@@ -95,19 +104,37 @@ export class ClusterMaster {
     }
     this.intervalHandles = [];
 
-    // Gracefully shut down workers
-    for (const worker of this.ipc.getWorkers()) {
-      worker.kill('SIGTERM');
-    }
-
+    // Mark stopped before any exit event can fork replacement workers.
     this.isRunning = false;
-    return Promise.resolve();
+    this.stopping = (async (): Promise<void> => {
+      try {
+        await this.tunnel?.shutdown();
+      } finally {
+        for (const worker of this.ipc.getWorkers()) {
+          worker.kill('SIGTERM');
+        }
+      }
+    })();
+    return this.stopping;
   }
 
   /**
    * Set up global error handlers
    */
   private setupErrorHandlers(): void {
+    const shutdown = (): void => {
+      void this.stop()
+        .then(() => {
+          getConfig().cleanup();
+          process.exit(0);
+        })
+        .catch(() => {
+          this.logger.error('Node shutdown failed');
+          process.exit(1);
+        });
+    };
+    process.once('SIGINT', shutdown);
+    process.once('SIGTERM', shutdown);
     process.on('uncaughtException', (error) => {
       this.logger.error('Uncaught exception in master', error);
     });
@@ -154,6 +181,49 @@ export class ClusterMaster {
    * Set up IPC message handlers
    */
   private setupIPCHandlers(): void {
+    this.ipc.on('worker_http_ready', (message) => {
+      const port = String((message as { port: number | string }).port);
+      if (!this.isRunning || this.originPort === port) {
+        return;
+      }
+      this.originPort = port;
+      this.tunnel ??= primaryTunnelManager();
+      // Tunnel failures are isolated from worker HTTP availability.
+      void this.tunnel.reconcile().catch(() => {
+        this.logger.warn('Cloudflare Tunnel reconciliation failed');
+      });
+    });
+    this.ipc.on<CloudflareTunnelRequestMessage>(
+      'cloudflare_tunnel_request',
+      async (message, worker) => {
+        if (worker === undefined) {
+          return;
+        }
+        this.tunnel ??= primaryTunnelManager();
+        try {
+          const tunnel =
+            message.operation === 'snapshot' || !this.isRunning || this.originPort === undefined
+              ? this.tunnel.snapshot()
+              : await (message.operation === 'restart'
+                  ? this.tunnel.restart()
+                  : message.operation === 'prepare_cdn_clear'
+                    ? this.tunnel.prepareCdnClear()
+                    : this.tunnel.reconcile());
+          this.ipc.sendToWorker(worker, {
+            cmd: 'cloudflare_tunnel_response',
+            requestId: message.requestId,
+            tunnel,
+          });
+        } catch {
+          this.ipc.sendToWorker(worker, {
+            cmd: 'cloudflare_tunnel_response',
+            requestId: message.requestId,
+            tunnel: this.tunnel.snapshot(),
+            error: 'Cloudflare Tunnel operation failed.',
+          });
+        }
+      }
+    );
     // JWT secret request
     this.ipc.on('get_jwt_secret', (_message, worker) => {
       if (worker !== undefined) {

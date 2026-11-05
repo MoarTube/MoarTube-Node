@@ -1,3 +1,4 @@
+vi.mock('@/utils/media-url-origins.js', () => ({ managedMediaBases: (config: any) => [config.getExternalVideosBaseUrl()] }));
 vi.mock('@/utils/settings-change.js', () => ({
   withSettingsChange: vi.fn(async (_path, operation) => operation()),
 }));
@@ -84,6 +85,7 @@ vi.mock('@config/index.js', () => ({
       publicDirectoryPath: '/public',
     },
     urls: {},
+    getNodeBaseUrl: vi.fn(() => 'https://test.example.com'),
     getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
   }),
 }));
@@ -200,6 +202,14 @@ describe('VideosService', () => {
   });
 
   describe('video sources and concurrent output updates', () => {
+    it('keeps external S3 media origins in both source and watch-data responses',async()=>{
+      const {getConfig}=await import('@config/index.js');const config=getConfig();
+      vi.mocked(getConfig).mockReturnValueOnce({...config,nodeSettings:{...config.nodeSettings,storageConfig:{storageMode:'s3provider'}},getExternalVideosBaseUrl:()=> 'https://media.example/bucket'} as never);
+      mockVideosRepository.findById.mockResolvedValue({video_id:'v',outputs:JSON.stringify({m3u8:['720p'],mp4:[],webm:[],ogv:[]})});
+      const sources=await service.getVideoSources('v');expect(sources?.adaptiveSources[0]?.src).toContain('https://media.example/bucket/');
+      vi.mocked(getConfig).mockReturnValueOnce({...config,nodeSettings:{...config.nodeSettings,storageConfig:{storageMode:'s3provider'}},getExternalVideosBaseUrl:()=> 'https://media.example/bucket'} as never);
+      const watch=await service.getWatchData('v');expect(watch?.adaptiveSources[0]?.src).toContain('https://media.example/bucket/');
+    });
     it.each([true, false])('builds sources for streaming=%s', async (isStreaming) => {
       mockVideosRepository.findById.mockResolvedValue({
         video_id: 'v',
@@ -545,7 +555,8 @@ describe('VideosService', () => {
           publicDirectoryPath: '/public',
         },
         urls: {},
-        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
+        getNodeBaseUrl: vi.fn(() => 'https://test.example.com'),
+    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
     });
   });
@@ -896,7 +907,8 @@ describe('VideosService', () => {
           publicDirectoryPath: '/public',
         },
         urls: {},
-        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
+        getNodeBaseUrl: vi.fn(() => 'https://test.example.com'),
+    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
 
       const result = await service.deleteVideo('video123');
@@ -2128,6 +2140,7 @@ describe('VideosService', () => {
       vi.mocked(getConfig).mockReturnValueOnce({
         reloadNodeSettings: vi.fn(),
         nodeSettings: { storageConfig: { storageMode: 'filesystem' } },
+        getExternalVideosBaseUrl: () => '',
         paths: { videosDirectoryPath: '/data/videos' },
       } as never);
 
@@ -2168,7 +2181,8 @@ describe('VideosService', () => {
           publicDirectoryPath: '/public',
         },
         urls: {},
-        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
+        getNodeBaseUrl: vi.fn(() => 'https://test.example.com'),
+    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
 
       await service.writeMasterManifest('video123', 'static', content);

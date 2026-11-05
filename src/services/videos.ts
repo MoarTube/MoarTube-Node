@@ -1,3 +1,5 @@
+import { managedMediaBases } from '@/utils/media-url-origins.js';
+import { relativeHlsLine, hlsPlaylistPath } from '@/utils/hls-urls.js';
 /**
  * Videos Service
  *
@@ -500,12 +502,14 @@ export class VideosService extends BaseService {
   async rewriteS3VideoManifests(
     videoId: string,
     resolutions: string[],
-    baseUrl: string
+    baseUrl: string,
+    previousBases: string[] = []
   ): Promise<void> {
     for (const resolution of [...resolutions, 'master']) {
       await this.storageService.rewriteS3Manifest(
         `external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-${resolution}.m3u8`,
-        baseUrl
+        baseUrl,
+        previousBases
       );
     }
   }
@@ -876,7 +880,6 @@ export class VideosService extends BaseService {
             '1440p': [8000000, '2560x1440'],
             '2160p': [16000000, '3840x2160'],
           };
-          const base = getConfig().getExternalVideosBaseUrl();
           const master =
             '#EXTM3U\n#EXT-X-VERSION:3\n' +
             outputs.m3u8
@@ -886,7 +889,7 @@ export class VideosService extends BaseService {
                   return [];
                 }
                 return [
-                  `#EXT-X-STREAM-INF:BANDWIDTH=${String(size[0])},RESOLUTION=${size[1]}\n${base}/external/videos/${videoId}/adaptive/m3u8/${type}/manifests/manifest-${item}.m3u8\n`,
+                  `#EXT-X-STREAM-INF:BANDWIDTH=${String(size[0])},RESOLUTION=${size[1]}\nmanifest-${item}.m3u8\n`,
                 ];
               })
               .join('');
@@ -962,7 +965,10 @@ export class VideosService extends BaseService {
 
       // Get external videos base URL
       const config = getConfig();
-      const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
+      const externalVideosBaseUrl =
+        config.nodeSettings.storageConfig.storageMode === 'filesystem'
+          ? ''
+          : config.getExternalVideosBaseUrl();
 
       const sourcesFormatsAndResolutions: SourcesFormatsAndResolutions = {
         m3u8: [],
@@ -1008,7 +1014,10 @@ export class VideosService extends BaseService {
 
       // Get external videos base URL
       const config = getConfig();
-      const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
+      const externalVideosBaseUrl =
+        config.nodeSettings.storageConfig.storageMode === 'filesystem'
+          ? ''
+          : config.getExternalVideosBaseUrl();
 
       const sourcesFormatsAndResolutions: SourcesFormatsAndResolutions = {
         m3u8: [],
@@ -1441,6 +1450,20 @@ export class VideosService extends BaseService {
     return this.withErrorLogging('writeMasterManifest', async () => {
       const config = getConfig();
       const storageMode = config.nodeSettings.storageConfig.storageMode;
+      const bases = managedMediaBases(config);
+      content = content
+        .split('\n')
+        .map((line) =>
+          relativeHlsLine(
+            line,
+            hlsPlaylistPath(videoId, 'manifest-master.m3u8', manifestType),
+            bases
+          )
+        )
+        .join('\n');
+      if (manifestType === 'dynamic' && !content.includes('#MOARTUBE-LIVE')) {
+        content = content.replace('#EXTM3U', '#EXTM3U\n#MOARTUBE-LIVE');
+      }
 
       if (storageMode === 'filesystem') {
         const videosDir = config.paths.videosDirectoryPath;

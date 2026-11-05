@@ -1,3 +1,4 @@
+import { viewerMediaBase, pageCanonicalOrigin } from '@/utils/viewer-urls.js';
 /**
  * Watch Embed Controller
  *
@@ -25,6 +26,7 @@ interface VideoIdParams {
  * Page data for embedded video page
  */
 interface EmbedPageData {
+  canonicalOrigin: string;
   videoData: {
     video: {
       title: string;
@@ -82,7 +84,7 @@ export class WatchEmbedController extends VideoControllerBase {
       if (!video) {
         return await this.sendError(reply, 'video not found', 404);
       } else {
-        const model = this.buildPageData(video);
+        const model = await this.buildPageData(video, request);
         if (request.headers.authorization === undefined) {
           reply.header('Cache-Control', COMMENT_STATE_CACHE_CONTROL);
         }
@@ -120,7 +122,8 @@ export class WatchEmbedController extends VideoControllerBase {
       const links = await this.linksService.getAllLinks();
       const cryptoWalletAddresses = await this.monetizationService.getWalletAddresses();
 
-      const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
+      const externalResourcesBaseUrl = '';
+      const canonicalOrigin = await pageCanonicalOrigin(request);
 
       // Render the embedded chat template using view engine
       const replyWithView = reply as FastifyReplyWithView;
@@ -131,6 +134,7 @@ export class WatchEmbedController extends VideoControllerBase {
         isLive: video.is_live,
         isStreaming: video.is_streaming,
         externalResourcesBaseUrl,
+        canonicalOrigin,
         links,
         cryptoWalletAddresses,
         nodeSettings: {
@@ -159,11 +163,15 @@ export class WatchEmbedController extends VideoControllerBase {
   /**
    * Build all data needed for the embedded video page
    */
-  private buildPageData(video: SQLiteVideo | PostgresVideo): EmbedPageData {
+  private async buildPageData(
+    video: SQLiteVideo | PostgresVideo,
+    request: FastifyRequest
+  ): Promise<EmbedPageData> {
     const config = getConfig();
 
-    const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
-    const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
+    const externalVideosBaseUrl = viewerMediaBase(config.nodeSettings);
+    const externalResourcesBaseUrl = '';
+    const canonicalOrigin = await pageCanonicalOrigin(request);
 
     // Build video sources
     const { adaptiveSources, progressiveSources, sourcesFormatsAndResolutions } =
@@ -189,6 +197,7 @@ export class WatchEmbedController extends VideoControllerBase {
       },
       externalVideosBaseUrl,
       externalResourcesBaseUrl,
+      canonicalOrigin,
     };
   }
 }

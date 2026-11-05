@@ -56,7 +56,7 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   // Create Fastify instance with pino-pretty logger
   const app = Fastify({
     logger: getLoggerConfig(),
-    trustProxy: true,
+    trustProxy: 'loopback',
   });
 
   app.addHook('onSend', compressTextResponse);

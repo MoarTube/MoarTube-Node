@@ -8,6 +8,7 @@ import type {
   LiveStreamWatchingCounts,
   LiveStreamWatchingCountsTracker,
 } from './websocket.js';
+import type { TunnelSnapshot } from './cloudflare-tunnel.js';
 
 // Re-export for convenience
 export type { LiveStreamWatchingCounts, LiveStreamWatchingCountsTracker } from './websocket.js';
@@ -20,6 +21,8 @@ export type { LiveStreamWatchingCounts, LiveStreamWatchingCountsTracker } from '
  * Commands sent from worker processes to master
  */
 export type IPCCommandToMaster =
+  | 'worker_http_ready'
+  | 'cloudflare_tunnel_request'
   | 'get_jwt_secret'
   | 'update_node_name'
   | 'websocket_broadcast'
@@ -32,6 +35,7 @@ export type IPCCommandToMaster =
  * Commands sent from master process to workers
  */
 export type IPCCommandToWorker =
+  | 'cloudflare_tunnel_response'
   | 'get_jwt_secret_response'
   | 'update_node_name_response'
   | 'websocket_broadcast_response'
@@ -55,6 +59,24 @@ export type IPCCommand = IPCCommandToMaster | IPCCommandToWorker;
  */
 export interface IPCMessageBase {
   cmd: IPCCommand;
+}
+
+export interface WorkerHttpReadyMessage extends IPCMessageBase {
+  cmd: 'worker_http_ready';
+  port: number | string;
+}
+
+export interface CloudflareTunnelRequestMessage extends IPCMessageBase {
+  cmd: 'cloudflare_tunnel_request';
+  requestId: string;
+  operation: 'reconcile' | 'restart' | 'snapshot' | 'prepare_cdn_clear';
+}
+
+export interface CloudflareTunnelResponseMessage extends IPCMessageBase {
+  cmd: 'cloudflare_tunnel_response';
+  requestId: string;
+  tunnel: TunnelSnapshot;
+  error?: string;
 }
 
 // ============================================
@@ -189,6 +211,8 @@ export interface RestartDatabaseResponseMessage extends IPCMessageBase {
  * All messages from worker to master
  */
 export type IPCMessageToMaster =
+  | WorkerHttpReadyMessage
+  | CloudflareTunnelRequestMessage
   | GetJwtSecretMessage
   | UpdateNodeNameMessage
   | WebSocketBroadcastMessage
@@ -201,6 +225,7 @@ export type IPCMessageToMaster =
  * All messages from master to worker
  */
 export type IPCMessageToWorker =
+  | CloudflareTunnelResponseMessage
   | GetJwtSecretResponseMessage
   | UpdateNodeNameResponseMessage
   | WebSocketBroadcastResponseMessage

@@ -1,3 +1,5 @@
+import { managedMediaBases } from '@/utils/media-url-origins.js';
+import { relativeHlsLine } from '@/utils/hls-urls.js';
 /**
  * Storage Service
  *
@@ -306,11 +308,16 @@ export class StorageService extends BaseService {
     this.clientKey = '';
   }
 
-  async rewriteS3Manifest(key: string, baseUrl: string): Promise<void> {
+  async rewriteS3Manifest(
+    key: string,
+    baseUrl: string,
+    previousBases: string[] = []
+  ): Promise<void> {
+    const bases = [baseUrl, ...previousBases, ...managedMediaBases(getConfig())];
     await this.replaceS3Manifest(
       key,
       [{ key, cache: 'public, max-age=0, s-maxage=30, must-revalidate' }],
-      (line) => line.replaceAll(/(https?:[/][/]).*?([/]external[/])/g, baseUrl + '$2')
+      (line) => relativeHlsLine(line, '/' + key, bases)
     );
   }
 
@@ -410,7 +417,8 @@ export class StorageService extends BaseService {
               cache: 'public, max-age=0, s-maxage=30, must-revalidate',
             },
           ],
-          (line) => line.replaceAll('/dynamic/', '/static/')
+          (line) =>
+            line.trim() === '#MOARTUBE-LIVE' ? '' : line.replaceAll('/dynamic/', '/static/')
         );
       }
       await this.replaceS3Manifest(
@@ -455,6 +463,7 @@ export class StorageService extends BaseService {
     finalize = false
   ): Promise<number> {
     return this.withS3Client(async (client, config) => {
+      const bases = managedMediaBases(getConfig());
       const signal = distributionSignal();
       const directory = await mkdtemp(path.join(tmpdir(), 'moartube-manifest-'));
       const file = path.join(directory, 'manifest.m3u8');
@@ -483,7 +492,7 @@ export class StorageService extends BaseService {
               duration += value;
               maximum = Math.max(maximum, value);
             }
-            return transform(line);
+            return relativeHlsLine(transform(line), '/' + key, bases);
           },
           finalize,
           signal

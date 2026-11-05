@@ -8,9 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 
 COPY package*.json .npmrc ./
 COPY bin/ ./bin/
-RUN HUSKY=0 npm ci
-
 COPY scripts/ ./scripts/
+RUN HUSKY=0 MOARTUBE_SKIP_CLOUDFLARED_INSTALL=1 npm ci
+
 COPY client/ ./client/
 COPY src/ ./src/
 COPY public/ ./public/
@@ -20,6 +20,9 @@ RUN npm run build
 # Do not rerun prepare (Husky) after removing development dependencies.
 RUN npm prune --omit=dev --ignore-scripts
 
+ARG TARGETARCH
+RUN node scripts/install-cloudflared.mjs "$TARGETARCH" /app/cloudflared
+
 FROM node:24.22.1-bookworm-slim AS production
 WORKDIR /moartube-node
 
@@ -27,13 +30,16 @@ ENV NODE_ENV=production \
     IS_DOCKER_ENVIRONMENT=true \
     MOARTUBE_WORKERS=0
 
-RUN groupadd --gid 1001 nodejs \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 1001 nodejs \
     && useradd --uid 1001 --gid nodejs --create-home moartube \
     && mkdir /data && chown moartube:nodejs /data
 
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules/
 COPY --from=builder /app/bin ./bin/
+COPY --from=builder /app/cloudflared /usr/local/bin/cloudflared
 # The build includes the generated player, public assets, and DB migrations.
 COPY --from=builder /app/dist ./dist/
 

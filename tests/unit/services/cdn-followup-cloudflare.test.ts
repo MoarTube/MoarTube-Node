@@ -122,7 +122,7 @@ describe('follow-up Cloudflare correctness', () => {
       service,
       {} as never
     );
-    const reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
     try {
       await withCloudflareDeadline(
         () =>
@@ -132,6 +132,7 @@ describe('follow-up Cloudflare correctness', () => {
                 cloudflareEmailAddress: 'email',
                 cloudflareZoneId: 'zone',
                 cloudflareGlobalApiKey: 'key',
+                cloudflareTunnelName: 'deadline-test',
               },
             } as never,
             reply as never
@@ -142,7 +143,7 @@ describe('follow-up Cloudflare correctness', () => {
       expect(recoverySignal).not.toBe(stalledSignal);
       expect(recoverySignal!.aborted).toBe(false);
       expect(reply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ isError: true, message: expect.stringContaining('restored') })
+        expect.objectContaining({ isError: true, message: 'Cloudflare configuration failed' })
       );
       await expect(
         withSettingsChange(state.config.paths.nodeSettingsPath, async () => true)

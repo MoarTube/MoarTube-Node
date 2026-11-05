@@ -1,3 +1,4 @@
+vi.mock('@/services/cloudflare-tunnel-runtime.js', () => ({ requestTunnelOperation: vi.fn(async () => ({ mode: 'none', status: 'stopped', name: '' })) }));
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -10,7 +11,7 @@ import { withSettingsChange } from '@/utils/settings-change.js';
 const state = vi.hoisted(() => ({ config: {} as any }));
 vi.mock('@config/index.js', () => ({ getConfig: () => state.config }));
 let root: string, folder: string, controller: SettingsController;
-let reply: { status: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> };
+let reply: { header: ReturnType<typeof vi.fn>; status: ReturnType<typeof vi.fn>; send: ReturnType<typeof vi.fn> };
 const media =
   '#EXTM3U\n#EXTINF:2,\nhttps://old.example/external/videos/video/adaptive/m3u8/720p/segments/one.ts\n';
 const master =
@@ -27,7 +28,7 @@ beforeEach(async () => {
       nodeSettingsPath: path.join(root, 'settings.json'),
       videosDirectoryPath: path.join(root, 'videos'),
     },
-    nodeSettings: { isCloudflareCdnEnabled: false, storageConfig: { storageMode: 'filesystem' } },
+    nodeSettings: { publicNodeProtocol: 'https', publicNodeAddress: 'old.example', publicNodePort: 443, isCloudflareCdnEnabled: false, storageConfig: { storageMode: 'filesystem' } },
     reloadNodeSettings: vi.fn(),
     getExternalVideosBaseUrl: () => 'https://new.example',
   };
@@ -39,7 +40,7 @@ beforeEach(async () => {
     { purgeAdaptiveVideos: vi.fn(), purgeWatchPages: vi.fn() } as never,
     {} as never
   );
-  reply = { status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+  reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
 });
 afterEach(async () => {
   await rm(root, { recursive: true, force: true });
@@ -61,11 +62,9 @@ describe('filesystem CDN migration failure paths', () => {
     await controller.cloudflareClear({} as never, reply as never);
     expect(reply.send).toHaveBeenLastCalledWith(expect.objectContaining({ isError: false }));
     expect(await readFile(path.join(folder, 'manifest-720p.m3u8'), 'utf8')).toContain(
-      'https://new.example/external/'
+      '../'
     );
-    expect(await readFile(path.join(folder, 'manifest-master.m3u8'), 'utf8')).toContain(
-      'https://new.example/external/'
-    );
+    expect(await readFile(path.join(folder, 'manifest-master.m3u8'), 'utf8')).toContain('manifest-720p.m3u8');
   });
   it('honors an expired transition deadline, preserves complete files and releases admission', async () => {
     await withCloudflareDeadline(async () => {
@@ -129,8 +128,8 @@ describe('filesystem CDN migration failure paths', () => {
       })
     );
     expect(state.config.nodeSettings.publicNodeAddress).toBe('old.example');
-    expect(await readFile(path.join(folder, 'manifest-master.m3u8'), 'utf8')).toBe(master);
-    expect(await readFile(path.join(folder, 'manifest-720p.m3u8'), 'utf8')).toBe(media);
+    expect(await readFile(path.join(folder, 'manifest-master.m3u8'), 'utf8')).toContain('manifest-720p.m3u8');
+    expect(await readFile(path.join(folder, 'manifest-720p.m3u8'), 'utf8')).toContain('../../720p/segments/one.ts');
     await expect(
       withSettingsChange(state.config.paths.nodeSettingsPath, async () => true)
     ).resolves.toBe(true);

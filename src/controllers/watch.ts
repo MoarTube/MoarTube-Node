@@ -1,3 +1,4 @@
+import { viewerMediaBase, pageCanonicalOrigin, localHostname } from '@/utils/viewer-urls.js';
 /**
  * Watch Controller
  *
@@ -82,6 +83,8 @@ interface VideoData {
  * Page data for watch page
  */
 interface WatchPageData {
+  canonicalOrigin: string;
+  canonicalIsLocal: boolean;
   informationData: NodeInformationData;
   linksData: { isError: false; links: unknown[] };
   cryptoWalletAddressesData: { isError: false; cryptoWalletAddresses: unknown[] };
@@ -151,7 +154,7 @@ export class WatchController extends VideoControllerBase {
       if (!video) {
         return await this.sendError(reply, 'that video could not be loaded', 404);
       } else {
-        const model = await this.buildPageData(video);
+        const model = await this.buildPageData(video, request);
 
         if (request.headers.authorization === undefined) {
           reply.headers({ 'Cache-Control': COMMENT_STATE_CACHE_CONTROL });
@@ -168,13 +171,17 @@ export class WatchController extends VideoControllerBase {
   /**
    * Build all data needed for the watch page
    */
-  private async buildPageData(video: SQLiteVideo | PostgresVideo): Promise<WatchPageData> {
+  private async buildPageData(
+    video: SQLiteVideo | PostgresVideo,
+    request: FastifyRequest
+  ): Promise<WatchPageData> {
     const config = getConfig();
 
     const nodeSettings = config.nodeSettings;
 
-    const externalVideosBaseUrl = config.getExternalVideosBaseUrl();
-    const externalResourcesBaseUrl = config.getExternalResourcesBaseUrl();
+    const externalVideosBaseUrl = viewerMediaBase(config.nodeSettings);
+    const externalResourcesBaseUrl = '';
+    const canonicalOrigin = await pageCanonicalOrigin(request);
 
     // Fetch all data in parallel
     const [videoCount, links, walletAddresses, recommendedVideosResult, cacheVersion] =
@@ -228,6 +235,8 @@ export class WatchController extends VideoControllerBase {
       },
       externalVideosBaseUrl,
       externalResourcesBaseUrl,
+      canonicalOrigin,
+      canonicalIsLocal: canonicalOrigin !== '' && localHostname(new URL(canonicalOrigin).hostname),
       adaptiveSources,
       progressiveSources,
     };

@@ -105,6 +105,7 @@ export class ClusterWorker {
     }
 
     this.isRunning = true;
+    this.ipc.sendToMaster({ cmd: 'worker_http_ready', port });
     this.logger.info('Worker started');
   }
 
@@ -386,6 +387,7 @@ export class ClusterWorker {
     const port = config.nodeSettings.nodeListeningPort;
 
     await this.app.listen({ port, host: '0.0.0.0' });
+    this.ipc.sendToMaster({ cmd: 'worker_http_ready', port });
     this.logger.info(`Worker ${String(cluster.worker?.id ?? 0)} restarted on port ${String(port)}`);
   }
 }

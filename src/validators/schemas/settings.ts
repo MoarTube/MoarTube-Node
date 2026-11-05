@@ -4,6 +4,7 @@
  * Zod schemas for node settings API endpoints.
  */
 import { z } from 'zod';
+import { cloudflareTunnelNameSchema } from '@/config/cloudflare-tunnel.js';
 import {
   protocolSchema,
   publicNodeAddressSchema,
@@ -90,6 +91,10 @@ export const networkExternalBodySchema = z.object({
  * Cloudflare configuration request body schema
  */
 export const cloudflareConfigureBodySchema = z.object({
+  cloudflareTunnelName: cloudflareTunnelNameSchema.refine(
+    (name) => name.length > 0,
+    'Cloudflare Tunnel Name is required'
+  ),
   cloudflareEmailAddress: z.string().min(1),
   cloudflareZoneId: z.string().min(1),
   cloudflareGlobalApiKey: z.string().min(1),
