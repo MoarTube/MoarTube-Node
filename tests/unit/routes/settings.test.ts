@@ -227,8 +227,8 @@ describe('Settings Routes', () => {
     expect(mockFastify.get).toHaveBeenCalledTimes(8);
   });
 
-  it('should register exactly 24 POST routes', () => {
+  it('should register exactly 26 POST routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(24);
+    expect(mockFastify.post).toHaveBeenCalledTimes(26);
   });
 });

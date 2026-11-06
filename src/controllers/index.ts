@@ -58,6 +58,8 @@ export {
   type PersonalizeNodeNameBody,
   type PersonalizeNodeHeadlineBody,
   type PersonalizeNodeAboutBody,
+  type PersonalizeNodeBulletinBody,
+  type PersonalizeNodeNeighborsBody,
   type AccountBody,
   type NetworkInternalBody,
   type NetworkExternalBody,

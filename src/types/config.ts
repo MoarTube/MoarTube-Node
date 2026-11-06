@@ -1,3 +1,8 @@
+export interface NodeNeighbor {
+  url: string;
+  description: string;
+}
+
 /**
  * Configuration type definitions
  * Complete type definitions for all configuration structures used in MoarTube-Node
@@ -89,6 +94,8 @@ export interface NodeSettings {
   nodeName: string;
   nodeHeadline: string;
   nodeAbout: string;
+  nodeBulletin: string[];
+  nodeNeighbors: NodeNeighbor[];
 
   // Authentication (Base64 encoded bcrypt hashes)
   username: string;

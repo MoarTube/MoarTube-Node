@@ -1,3 +1,5 @@
+import { nodeBulletinSchema } from '@/config/node-bulletin.js';
+import { nodeNeighborsSchema } from '@/config/node-neighbors.js';
 /**
  * Settings Service
  *
@@ -12,7 +14,7 @@ import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type { UpdateNodeSettingsInput } from '@services/interfaces.js';
 import { getConfig } from '@config/index.js';
-import type { DatabaseConfig, StorageConfig } from '@/types/index.js';
+import type { DatabaseConfig, StorageConfig, NodeNeighbor } from '@/types/index.js';
 import type {
   ICommentsRepository,
   IReportsVideosRepository,
@@ -186,6 +188,12 @@ export class SettingsService extends BaseService {
     if (data.nodeHeadline !== undefined) {
       updates['nodeHeadline'] = data.nodeHeadline;
     }
+    if (data.nodeBulletin !== undefined) {
+      updates['nodeBulletin'] = nodeBulletinSchema.parse(data.nodeBulletin);
+    }
+    if (data.nodeNeighbors !== undefined) {
+      updates['nodeNeighbors'] = nodeNeighborsSchema.parse(data.nodeNeighbors);
+    }
     if (data.nodeAbout !== undefined) {
       updates['nodeAbout'] = data.nodeAbout;
     }
@@ -245,6 +253,22 @@ export class SettingsService extends BaseService {
     }
 
     this.logger.info('Node headline updated', { nodeHeadline });
+  }
+
+  /** Replace the bulletin in stored order; an empty array clears it. */
+  updateNodeBulletin(nodeBulletin: string[]): string[] {
+    const bulletin = nodeBulletinSchema.parse(nodeBulletin);
+    getConfig().updateNodeSettings({ nodeBulletin: bulletin });
+    this.logger.info('Node bulletin updated', { itemCount: bulletin.length });
+    return bulletin;
+  }
+
+  /** Replace the neighbors in stored order; an empty array clears it. */
+  updateNodeNeighbors(nodeNeighbors: NodeNeighbor[]): NodeNeighbor[] {
+    const neighbors = nodeNeighborsSchema.parse(nodeNeighbors);
+    getConfig().updateNodeSettings({ nodeNeighbors: neighbors });
+    this.logger.info('Node neighbors updated', { itemCount: neighbors.length });
+    return neighbors;
   }
 
   /**

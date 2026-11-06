@@ -4,6 +4,8 @@
  * Zod schemas for node settings API endpoints.
  */
 import { z } from 'zod';
+import { nodeBulletinSchema } from '@/config/node-bulletin.js';
+import { nodeNeighborsSchema } from '@/config/node-neighbors.js';
 import {
   protocolSchema,
   publicNodeAddressSchema,
@@ -71,8 +73,20 @@ export const personalizeNodeHeadlineBodySchema = z.object({
 });
 
 /**
- * Node about personalization request body schema
+ * Node bulletin personalization request body schema
  */
+export const personalizeNodeBulletinBodySchema = z.object({
+  nodeBulletin: nodeBulletinSchema,
+});
+
+/**
+ * Node neighbors personalization request body schema
+ */
+export const personalizeNodeNeighborsBodySchema = z.object({
+  nodeNeighbors: nodeNeighborsSchema,
+});
+
+/** Node about personalization request body schema. */
 export const personalizeNodeAboutBodySchema = z.object({
   nodeAbout: nodeAboutSchema,
 });

@@ -8,6 +8,7 @@ export type {
   DatabaseConfig,
   StorageConfig,
   NodeSettings,
+  NodeNeighbor,
   LastCheckedContentTracker,
 } from './config.js';
 

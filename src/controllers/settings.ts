@@ -1,3 +1,4 @@
+import type { NodeNeighbor } from '@/types/config.js';
 import {
   readCdnJournal,
   writeCdnJournal,
@@ -67,6 +68,14 @@ export interface PersonalizeNodeNameBody {
 
 export interface PersonalizeNodeHeadlineBody {
   nodeHeadline: string;
+}
+
+export interface PersonalizeNodeBulletinBody {
+  nodeBulletin: string[];
+}
+
+export interface PersonalizeNodeNeighborsBody {
+  nodeNeighbors: NodeNeighbor[];
 }
 
 export interface PersonalizeNodeAboutBody {
@@ -611,6 +620,36 @@ export class SettingsController extends BaseController {
       this.logger.error('Error updating node headline', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node');
+    }
+  };
+
+  /** POST /settings/personalize/bulletin */
+  personalizeNodeBulletin = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    try {
+      const { nodeBulletin } = request.body as PersonalizeNodeBulletinBody;
+      const saved = this.settingsService.updateNodeBulletin(nodeBulletin);
+      return await this.sendSuccess(reply, { nodeBulletin: saved });
+    } catch (error) {
+      this.logger.error('Error updating node bulletin', error);
+      return await this.sendCaughtError(reply, error, 'Unable to save bulletin');
+    }
+  };
+
+  /** POST /settings/personalize/neighbors */
+  personalizeNodeNeighbors = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    try {
+      const { nodeNeighbors } = request.body as PersonalizeNodeNeighborsBody;
+      const saved = this.settingsService.updateNodeNeighbors(nodeNeighbors);
+      return await this.sendSuccess(reply, { nodeNeighbors: saved });
+    } catch (error) {
+      this.logger.error('Error updating node neighbors', error);
+      return await this.sendCaughtError(reply, error, 'Unable to save neighbors');
     }
   };
 

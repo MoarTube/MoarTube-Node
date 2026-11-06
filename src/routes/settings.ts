@@ -11,6 +11,8 @@ import {
   personalizeNodeNameBodySchema,
   personalizeNodeHeadlineBodySchema,
   personalizeNodeAboutBodySchema,
+  personalizeNodeBulletinBodySchema,
+  personalizeNodeNeighborsBodySchema,
   updateAccountBodySchema,
   networkInternalBodySchema,
   networkExternalBodySchema,
@@ -174,6 +176,26 @@ export function settingsRoutes(
       },
     },
     controller.personalizeNodeHeadline.bind(controller)
+  );
+
+  // Replace the ordered node bulletin.
+  fastify.post(
+    '/personalize/bulletin',
+    {
+      preHandler: [fastify.authenticate],
+      schema: { tags: ['Settings'], body: personalizeNodeBulletinBodySchema },
+    },
+    controller.personalizeNodeBulletin
+  );
+
+  // Replace the ordered node neighbors.
+  fastify.post(
+    '/personalize/neighbors',
+    {
+      preHandler: [fastify.authenticate],
+      schema: { tags: ['Settings'], body: personalizeNodeNeighborsBodySchema },
+    },
+    controller.personalizeNodeNeighbors
   );
 
   // Update node about

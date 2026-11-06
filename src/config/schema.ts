@@ -4,6 +4,8 @@
  */
 
 import { z } from 'zod';
+import { nodeBulletinSchema } from './node-bulletin.js';
+import { nodeNeighborsSchema } from './node-neighbors.js';
 import { cloudflareTunnelNameSchema } from './cloudflare-tunnel.js';
 
 // ============================================
@@ -94,6 +96,8 @@ export const NodeSettingsSchema = z.object({
   nodeName: z.string().default('MoarTube Node'),
   nodeHeadline: z.string().default('MoarTube Node'),
   nodeAbout: z.string().default('A MoarTube Node'),
+  nodeBulletin: nodeBulletinSchema.default([]),
+  nodeNeighbors: nodeNeighborsSchema.default([]),
 
   // Authentication (Base64 encoded bcrypt hashes)
   username: z.string().min(1, 'Username hash is required'),

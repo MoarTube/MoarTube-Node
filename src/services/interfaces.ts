@@ -1,3 +1,4 @@
+import type { NodeNeighbor } from '@/types/config.js';
 /**
  * Service Layer Interfaces
  *
@@ -279,6 +280,8 @@ export interface CreateCommentReportInput {
 export interface UpdateNodeSettingsInput {
   nodeName?: string;
   nodeHeadline?: string;
+  nodeBulletin?: string[];
+  nodeNeighbors?: NodeNeighbor[];
   nodeAbout?: string;
   publicNodeProtocol?: 'http' | 'https';
   publicNodeAddress?: string;
