@@ -340,8 +340,30 @@ Node uses a quick tunnel and saves Cloudflare's randomly generated name in
 `cloudflareTunnelName` in the Node settings JSON. Enabling CDN requires only
 the Cloudflare email address, zone ID, and global API key; Node generates a named
 tunnel label in the format `moartube-<UUID>` and saves it in the same setting.
-The saved named label is reused on restarts and same-zone reconfiguration.
+Each CDN configuration generates a fresh managed label. Restarts retain the saved label.
 Tunnel names are managed internally and are not displayed in the CDN modal.
+
+CDN activation always adopts the selected zone's root domain with HTTPS on port 443.
+The previous public protocol, address, and port are saved and restored when CDN
+is disabled. Reconfiguring CDN does not replace that original backup.
+
+CDN changes require no active imports, publishing jobs, streams, stopped-stream
+cleanup, or outstanding media/storage writes. Client Settings displays an incomplete
+transition and offers Retry setup/removal. New CDN toggles and distribution changes
+are refused until recovery completes. Retry resumes the saved transition ID without
+new credentials or a new managed tunnel name. Private recovery state retains old-zone
+purge credentials and original zone settings until the required work finishes.
+
+Settings writes reload and merge under cross-process admission. HTTP media writes
+hold a lease until completion; direct Client storage writes have durable activity
+records. Cancellation waits for local work to drain before clearing Node activity.
+Node restart preserves active job flags until Client completion or explicit stop
+acknowledgement; it does not assume that a separate Client stopped writing.
+An uncertain direct write after a Client crash stays blocked for operator
+reconciliation; it is never declared finished solely because a process disappeared.
+Existing installations without original provider snapshots or a complete recovery
+record require explicit repair; recovery does not invent the missing original values.
+
 Enabling CDN preserves the separate Cloudflare Tunnels toggle, so a disabled
 tunnel stays disabled.
 

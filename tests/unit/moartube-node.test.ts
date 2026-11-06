@@ -1,3 +1,4 @@
+vi.mock('@/utils/cdn-journal.js', () => ({ rewindCdnAfterRestart: vi.fn() }));
 /**
  * MoarTube-Node Entry Point Tests
  *

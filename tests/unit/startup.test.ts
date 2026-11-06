@@ -1,3 +1,4 @@
+vi.mock('@/utils/cdn-journal.js', () => ({ rewindCdnAfterRestart: vi.fn() }));
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
@@ -86,7 +87,7 @@ describe('application startup provisioning', () => {
     else process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = originalTls;
   });
 
-  it('clears stale flags, removes chat, and finalizes manifests before starting the master', async () => {
+  it('retains uncertain Client flags, removes chat, and recovers stopped media before starting the master', async () => {
     state.findStreaming.mockResolvedValue([{ video_id: 'live' }]);
     state.findAll.mockResolvedValue([
       { video_id: 'import', is_importing: true },
@@ -95,15 +96,11 @@ describe('application startup provisioning', () => {
       { video_id: 'idle', is_importing: false, is_publishing: false, is_streaming: false },
     ]);
     await import('@/moartube-node.js');
-    expect(state.update).toHaveBeenCalledWith('live', { is_streamed: true });
-    for (const id of ['import', 'publish', 'stream']) {
-      expect(state.update).toHaveBeenCalledWith(id, {
-        is_importing: false,
-        is_publishing: false,
-        is_streaming: false,
-      });
-    }
-    expect(state.update).toHaveBeenCalledTimes(4);
+    expect(state.update).not.toHaveBeenCalled();
+    expect(state.logger.info).toHaveBeenCalledWith(
+      expect.stringContaining('Retained Client activity'),
+      { videoId: 'publish' }
+    );
     expect(state.deleteAll).toHaveBeenCalledOnce();
     expect(state.finalize).toHaveBeenCalledOnce();
     expect(state.masterStart).toHaveBeenCalledOnce();

@@ -1,3 +1,4 @@
+import { withSettingsWrite } from '@/utils/settings-change.js';
 /**
  * Centralized Configuration System
  * Main configuration singleton that coordinates all configuration subsystems
@@ -224,15 +225,17 @@ class Config {
    * Update node settings and persist to disk
    */
   updateNodeSettings(updates: Partial<NodeSettings>): void {
-    const merged = { ...this._nodeSettings, ...updates };
-    const previous = this._nodeSettings;
-    this._nodeSettings = validateNodeSettings(merged);
-    try {
-      this.persistNodeSettings();
-    } catch (error) {
-      this._nodeSettings = previous;
-      throw error;
-    }
+    withSettingsWrite(this._paths.nodeSettingsPath, () => {
+      // File watchers are advisory. Every patch merges against disk under the writer lock.
+      const previous = this._nodeSettings;
+      this._nodeSettings = validateNodeSettings({ ...this.loadNodeSettings(), ...updates });
+      try {
+        this.persistNodeSettings();
+      } catch (error) {
+        this._nodeSettings = previous;
+        throw error;
+      }
+    });
   }
 
   /**

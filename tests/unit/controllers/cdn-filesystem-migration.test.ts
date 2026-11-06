@@ -1,3 +1,4 @@
+import { readCdnJournal } from '@/utils/cdn-journal.js';
 vi.mock('@/services/cloudflare-tunnel-runtime.js', () => ({ requestTunnelOperation: vi.fn(async () => ({ mode: 'none', status: 'stopped', name: '' })) }));
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
@@ -28,7 +29,8 @@ beforeEach(async () => {
       nodeSettingsPath: path.join(root, 'settings.json'),
       videosDirectoryPath: path.join(root, 'videos'),
     },
-    nodeSettings: { publicNodeProtocol: 'https', publicNodeAddress: 'old.example', publicNodePort: 443, isCloudflareCdnEnabled: false, storageConfig: { storageMode: 'filesystem' } },
+    nodeSettings: { publicNodeProtocol: 'https', publicNodeAddress: 'old.example', publicNodePort: 443, isCloudflareCdnEnabled: false, isCloudflareTunnelEnabled: false, storageConfig: { storageMode: 'filesystem' } },
+    updateNodeSettings: (patch: object) => { Object.assign(state.config.nodeSettings, patch); },
     reloadNodeSettings: vi.fn(),
     getExternalVideosBaseUrl: () => 'https://new.example',
   };
@@ -37,7 +39,7 @@ beforeEach(async () => {
     {
       getAllVideosData: async () => [{ videoId: 'video', meta: {}, outputs: { m3u8: ['720p'] } }],
     } as never,
-    { purgeAdaptiveVideos: vi.fn(), purgeWatchPages: vi.fn() } as never,
+    { purgeAdaptiveVideos: vi.fn(), purgeWatchPages: vi.fn(), retryPendingPurges: vi.fn() } as never,
     {} as never
   );
   reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
@@ -59,7 +61,7 @@ describe('filesystem CDN migration failure paths', () => {
     );
     expect((await readdir(folder)).some((name) => name.endsWith('.part'))).toBe(false);
     await writeFile(path.join(folder, 'manifest-720p.m3u8'), media);
-    await controller.cloudflareClear({} as never, reply as never);
+    await controller.cloudflareRetry({ body: { transitionId: readCdnJournal(state.config.paths.nodeSettingsPath).current!.id } } as never, reply as never);
     expect(reply.send).toHaveBeenLastCalledWith(expect.objectContaining({ isError: false }));
     expect(await readFile(path.join(folder, 'manifest-720p.m3u8'), 'utf8')).toContain(
       '../'
@@ -105,7 +107,7 @@ describe('filesystem CDN migration failure paths', () => {
       {
         getAllVideosData: async () => [{ videoId: 'video', meta: {}, outputs: { m3u8: ['720p'] } }],
       } as never,
-      { purgeAdaptiveVideos: vi.fn(), purgeWatchPages: vi.fn() } as never,
+      { purgeAdaptiveVideos: vi.fn(), purgeWatchPages: vi.fn(), retryPendingPurges: vi.fn() } as never,
       {} as never
     );
     await withCloudflareDeadline(async () => {

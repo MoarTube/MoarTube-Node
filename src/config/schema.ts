@@ -102,6 +102,15 @@ export const NodeSettingsSchema = z.object({
   isCloudflareCdnEnabled: z.boolean().default(false),
   isCloudflareTunnelEnabled: z.boolean().default(true),
   cloudflareTunnelName: cloudflareTunnelNameSchema.optional(),
+  cloudflarePublicAddressBackup: z
+    .object({
+      publicNodeProtocol: z.enum(['http', 'https', '']),
+      publicNodeAddress: z.string(),
+      publicNodePort: z.union([z.number(), z.string()]),
+    })
+    .nullable()
+    .optional(),
+  cloudflareAddressMigrationPending: z.boolean().default(false),
   cloudflareEmailAddress: z.string().default(''),
   cloudflareZoneId: z.string().default(''),
   cloudflareGlobalApiKey: z.string().default(''),

@@ -430,34 +430,6 @@ describe('SettingsService', () => {
     });
   });
 
-  describe('updateCloudflareConfig', () => {
-    it('should update Cloudflare configuration', () => {
-      service.updateCloudflareConfig('email@example.com', 'zone123', 'api-key', 'named-tunnel');
-
-      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({
-        isCloudflareCdnEnabled: true, cloudflareTunnelName: 'named-tunnel',
-        cloudflareEmailAddress: 'email@example.com',
-        cloudflareZoneId: 'zone123',
-        cloudflareGlobalApiKey: 'api-key',
-      });
-      expect(mockLogger.info).toHaveBeenCalledWith('Cloudflare configuration updated');
-    });
-  });
-
-  describe('clearCloudflareConfig', () => {
-    it('should clear Cloudflare configuration', () => {
-      service.clearCloudflareConfig();
-
-      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({
-        isCloudflareCdnEnabled: false,
-        cloudflareEmailAddress: '',
-        cloudflareGlobalApiKey: '',
-        cloudflareZoneId: '',
-      });
-      expect(mockLogger.info).toHaveBeenCalledWith('Cloudflare configuration cleared');
-    });
-  });
-
   describe('getAvatarFilePath', () => {
     it('should return custom avatar path when exists', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);

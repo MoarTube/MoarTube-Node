@@ -1,3 +1,13 @@
+import {
+  readCdnJournal,
+  writeCdnJournal,
+  cdnStatus,
+  hasPendingCdn,
+  publicAddressOf,
+  type CdnTransition,
+  type CdnCredentials,
+} from '@/utils/cdn-journal.js';
+import { withDistributionTransition } from '@/utils/distribution-admission.js';
 import { managedMediaBases } from '@/utils/media-url-origins.js';
 import { relativeHlsLine, hlsPlaylistPath } from '@/utils/hls-urls.js';
 import cluster from 'node:cluster';
@@ -42,6 +52,11 @@ import { storageIdentity } from '@/utils/cdn-settings.js';
 import type { StorageConfig } from '@/types/config.js';
 import { withSettingsChange } from '@/utils/settings-change.js';
 import { withTunnelAdmission } from '@/utils/tunnel-admission.js';
+
+interface CdnResponse {
+  status: number;
+  data: Record<string, unknown>;
+}
 
 /**
  * Request body interfaces
@@ -219,6 +234,10 @@ export class SettingsController extends BaseController {
       this.sendSuccess(reply, {
         nodeSettings: {
           ...nodeSettings,
+          cloudflareAddressMigrationPending:
+            nodeSettings['cloudflareAddressMigrationPending'] === true ||
+            hasPendingCdn(getConfig().paths.nodeSettingsPath),
+          cdnTransition: cdnStatus(getConfig().paths.nodeSettingsPath),
           version,
         },
       });
@@ -702,83 +721,101 @@ export class SettingsController extends BaseController {
 
   private async changeDistributionSettings<T>(
     operation: (config: ReturnType<typeof getConfig>) => Promise<T>,
-    credentialRepair?: StorageConfig
+    credentialRepair?: StorageConfig,
+    transitionHeld = false,
+    automaticPurge = true
   ): Promise<T> {
     const config = getConfig();
-    return withCloudflareDeadline(() =>
-      withTunnelAdmission(config.paths.nodeSettingsPath, () =>
-        withSettingsChange(config.paths.nodeSettingsPath, async () => {
-          config.reloadNodeSettings(true);
-          for (let offset = 0; ; offset += 100) {
-            const videos = await this.videosService.getAllVideosData({ limit: 100, offset });
-            const draining = videos.some((video) => {
-              const meta: unknown = video.meta;
-              return (
-                typeof meta === 'object' &&
-                meta !== null &&
-                'streamCleanupAt' in meta &&
-                typeof meta.streamCleanupAt === 'number'
-              );
-            });
+    const operationWithLocks = (): Promise<T> =>
+      withCloudflareDeadline(() =>
+        withTunnelAdmission(config.paths.nodeSettingsPath, () =>
+          withSettingsChange(config.paths.nodeSettingsPath, async () => {
+            config.reloadNodeSettings(true);
             if (
-              draining &&
-              (credentialRepair === undefined ||
-                storageIdentity(credentialRepair) !==
-                  storageIdentity(config.nodeSettings.storageConfig))
+              !transitionHeld &&
+              (config.nodeSettings['cloudflareAddressMigrationPending'] ||
+                hasPendingCdn(config.paths.nodeSettingsPath))
             ) {
               throw new Error(
-                'Wait for stopped streams to finish draining before changing distribution settings.'
+                'Finish the pending CDN transition before changing distribution settings.'
               );
             }
-            if (videos.some((video) => video.isStreaming || video.isPublishing)) {
-              throw new Error(
-                'Stop active streams and publishing jobs before changing distribution settings.'
-              );
+            for (let offset = 0; ; offset += 100) {
+              const videos = await this.videosService.getAllVideosData({ limit: 100, offset });
+              const draining = videos.some((video) => {
+                const meta: unknown = video.meta;
+                return (
+                  typeof meta === 'object' &&
+                  meta !== null &&
+                  'streamCleanupAt' in meta &&
+                  typeof meta.streamCleanupAt === 'number'
+                );
+              });
+              if (
+                draining &&
+                (credentialRepair === undefined ||
+                  storageIdentity(credentialRepair) !==
+                    storageIdentity(config.nodeSettings.storageConfig))
+              ) {
+                throw new Error(
+                  'Wait for stopped streams to finish draining before changing distribution settings.'
+                );
+              }
+              if (
+                videos.some(
+                  (video) =>
+                    video.isImporting === true || video.isStreaming || video.isPublishing === true
+                )
+              ) {
+                throw new Error(
+                  'Stop active imports, publishing jobs, and streams before changing distribution settings.'
+                );
+              }
+              if (videos.length < 100) {
+                break;
+              }
             }
-            if (videos.length < 100) {
-              break;
-            }
-          }
-          const previous = config.nodeSettings;
-          this.previousMediaBases = managedMediaBases(config, true);
-          let outcome: { value: T } | { error: unknown };
-          try {
-            outcome = { value: await operation(config) };
-          } catch (error) {
-            outcome = { error };
-          }
-          // Purge after final writes, including partial migrations and rollback.
-          const zones = new Map<string, typeof previous>();
-          for (const settings of [previous, config.nodeSettings]) {
-            if (settings.isCloudflareCdnEnabled) {
-              zones.set(settings.cloudflareZoneId, settings);
-            }
-          }
-          const failures: unknown[] = [];
-          for (const settings of zones.values()) {
+            const previous = config.nodeSettings;
+            this.previousMediaBases = managedMediaBases(config, true);
+            let outcome: { value: T } | { error: unknown };
             try {
-              await this.cloudflareService.purgeEntireCacheWithCredentials(
-                settings.cloudflareEmailAddress,
-                settings.cloudflareZoneId,
-                settings.cloudflareGlobalApiKey
-              );
+              outcome = { value: await operation(config) };
             } catch (error) {
-              failures.push(error);
+              outcome = { error };
             }
-          }
-          if (failures.length) {
-            throw new AggregateError(
-              'error' in outcome ? [outcome.error, ...failures] : failures,
-              'Distribution cache invalidation incomplete; retry work remains queued.'
-            );
-          }
-          if ('error' in outcome) {
-            throw outcome.error;
-          }
-          return outcome.value;
-        })
-      )
-    );
+            // Purge after final writes, including partial migrations and rollback.
+            const zones = new Map<string, typeof previous>();
+            for (const settings of [previous, config.nodeSettings]) {
+              if (settings.isCloudflareCdnEnabled) {
+                zones.set(settings.cloudflareZoneId, settings);
+              }
+            }
+            const failures: unknown[] = [];
+            for (const settings of automaticPurge ? zones.values() : []) {
+              try {
+                await this.cloudflareService.purgeEntireCacheWithCredentials(
+                  settings.cloudflareEmailAddress,
+                  settings.cloudflareZoneId,
+                  settings.cloudflareGlobalApiKey
+                );
+              } catch (error) {
+                failures.push(error);
+              }
+            }
+            if (failures.length) {
+              throw new AggregateError(
+                'error' in outcome ? [outcome.error, ...failures] : failures,
+                'Distribution cache invalidation incomplete; retry work remains queued.'
+              );
+            }
+            if ('error' in outcome) {
+              throw outcome.error;
+            }
+            return outcome.value;
+          })
+        )
+      );
+    return transitionHeld ? operationWithLocks() : withDistributionTransition(operationWithLocks);
   }
 
   private async completeMediaMigration(config: ReturnType<typeof getConfig>): Promise<void> {
@@ -915,218 +952,364 @@ export class SettingsController extends BaseController {
     reply.header('Cache-Control', 'no-store');
     const parsed = cloudflareConfigureBodySchema.safeParse(request.body);
     if (!parsed.success) {
-      return await this.sendError(reply, 'Cloudflare credentials are required', 400);
+      return this.sendError(reply, 'Cloudflare credentials are required', 400);
     }
-    const progress = { settingsSaved: false };
-    try {
-      await this.changeDistributionSettings(async (config) => {
-        const { cloudflareEmailAddress, cloudflareZoneId, cloudflareGlobalApiKey } = parsed.data;
-
-        // Validate Cloudflare credentials
-        const isValid = await isCloudflareCredentialsValid(
-          cloudflareEmailAddress,
-          cloudflareZoneId,
-          cloudflareGlobalApiKey
-        );
-
-        if (!isValid) {
-          throw new Error('could not validate the Cloudflare credentials');
-        }
-
-        // Get current storage config for DNS record setup
-        const storageConfig = config.nodeSettings.storageConfig;
-        await this.cloudflareService.validateCdnConfiguration(
-          cloudflareEmailAddress,
-          cloudflareZoneId,
-          cloudflareGlobalApiKey,
-          { publicNodeAddress: config.nodeSettings.publicNodeAddress, storageConfig }
-        );
-
-        const previous = config.nodeSettings;
-        // Reuse an existing named tunnel for same-zone reconfiguration. Quick names
-        // belong to Cloudflare and must not become the new managed tunnel label.
-        const savedName = previous.cloudflareTunnelName ?? '';
-        const tunnelName =
-          previous.isCloudflareCdnEnabled &&
-          previous.cloudflareZoneId === cloudflareZoneId &&
-          savedName !== ''
-            ? savedName
-            : `moartube-${randomUUID()}`;
-        const changingZone =
-          previous.isCloudflareCdnEnabled && previous.cloudflareZoneId !== cloudflareZoneId;
-        const applyConfiguration = async (): Promise<void> => {
-          await this.cloudflareService.withConfigurationRollback(
-            cloudflareEmailAddress,
-            cloudflareZoneId,
-            cloudflareGlobalApiKey,
-            async () => {
-              await this.cloudflareService.setCdnConfiguration(
-                cloudflareEmailAddress,
-                cloudflareZoneId,
-                cloudflareGlobalApiKey
-              );
-              await this.cloudflareService.addCdnDnsRecord(
-                cloudflareEmailAddress,
-                cloudflareZoneId,
-                cloudflareGlobalApiKey,
-                storageConfig
-              );
-              await this.cloudflareService.purgeEntireCacheWithCredentials(
-                cloudflareEmailAddress,
-                cloudflareZoneId,
-                cloudflareGlobalApiKey
-              );
-              if (changingZone) {
-                // Old credentials remain authoritative until both provider changes can commit.
-                await requestTunnelOperation('prepare_cdn_clear');
-                await this.cloudflareService.resetCdn(
-                  previous.cloudflareEmailAddress,
-                  previous.cloudflareZoneId,
-                  previous.cloudflareGlobalApiKey
-                );
-              }
-              this.settingsService.updateCloudflareConfig(
-                cloudflareEmailAddress,
-                cloudflareZoneId,
-                cloudflareGlobalApiKey,
-                tunnelName
-              );
-              progress.settingsSaved = true;
-            }
-          );
-        };
-        if (changingZone) {
-          await this.cloudflareService.withConfigurationRollback(
-            previous.cloudflareEmailAddress,
-            previous.cloudflareZoneId,
-            previous.cloudflareGlobalApiKey,
-            applyConfiguration
-          );
-        } else {
-          await applyConfiguration();
-        }
-        await this.completeMediaMigration(config);
-
-        return;
-      });
-      return await this.finishCloudflareChange(reply);
-    } catch (error) {
-      if (progress.settingsSaved) {
-        return await this.finishCloudflareChange(reply, true);
-      }
-      const busy =
-        error instanceof Error &&
-        error.message === 'Another settings change or job admission is in progress.';
-      return await this.sendError(reply, 'Cloudflare configuration failed', busy ? 409 : 400);
-    }
+    return this.runCdnChange(reply, true, parsed.data);
   };
 
-  /**
-   * POST /settings/cloudflare/clear
-   *
-   * Clear Cloudflare configuration
-   */
   cloudflareClear = async (
     _request: FastifyRequest,
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     reply.header('Cache-Control', 'no-store');
-    const progress = { settingsSaved: false };
-    try {
-      await this.changeDistributionSettings(async (config) => {
-        const nodeSettings = config.nodeSettings;
-
-        // Only reset if Cloudflare CDN is currently enabled
-        if (nodeSettings.isCloudflareCdnEnabled) {
-          const cloudflareEmailAddress = nodeSettings.cloudflareEmailAddress;
-          const cloudflareZoneId = nodeSettings.cloudflareZoneId;
-          const cloudflareGlobalApiKey = nodeSettings.cloudflareGlobalApiKey;
-
-          await this.cloudflareService.withConfigurationRollback(
-            cloudflareEmailAddress,
-            cloudflareZoneId,
-            cloudflareGlobalApiKey,
-            async () => {
-              // Reset CDN configuration; media DNS stays available for old manifest references.
-              await this.cloudflareService.resetCdn(
-                cloudflareEmailAddress,
-                cloudflareZoneId,
-                cloudflareGlobalApiKey
-              );
-
-              // Purge entire cache
-              await this.cloudflareService.purgeEntireCacheWithCredentials(
-                cloudflareEmailAddress,
-                cloudflareZoneId,
-                cloudflareGlobalApiKey
-              );
-              await requestTunnelOperation('prepare_cdn_clear');
-              this.settingsService.clearCloudflareConfig();
-              progress.settingsSaved = true;
-            }
-          );
-        } else {
-          this.settingsService.clearCloudflareConfig();
-          progress.settingsSaved = true;
-        }
-
-        await this.completeMediaMigration(config);
-        return;
-      });
-      return await this.finishCloudflareChange(reply);
-    } catch (error) {
-      if (progress.settingsSaved) {
-        return await this.finishCloudflareChange(reply, true);
-      }
-      const busy =
-        error instanceof Error &&
-        error.message === 'Another settings change or job admission is in progress.';
-      return await this.sendError(
-        reply,
-        'Cloudflare configuration could not be cleared',
-        busy ? 409 : 400
-      );
-    }
+    return this.runCdnChange(reply, false);
   };
 
-  private async finishCloudflareChange(
+  cloudflareRetry = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    reply.header('Cache-Control', 'no-store');
+    const id = (request.body as { transitionId?: unknown } | undefined)?.transitionId;
+    if (typeof id !== 'string' || id.length > 100) {
+      return this.sendError(reply, 'A CDN transition ID is required.', 400);
+    }
+    return this.runCdnChange(reply, null, undefined, id);
+  };
+
+  private async runCdnChange(
     reply: FastifyReply,
-    distributionError = false
+    enabled: boolean | null,
+    credentials?: {
+      cloudflareEmailAddress: string;
+      cloudflareZoneId: string;
+      cloudflareGlobalApiKey: string;
+    },
+    expectedId?: string
   ): Promise<FastifyReply> {
     const config = getConfig();
+    const progress = { admitted: false };
+    let response: CdnResponse;
+    const reject = (message: string, status: number): CdnResponse => ({
+      status,
+      data: { isError: true, message },
+    });
     try {
-      // Distribution admission has been released; quick startup may now save its generated name.
-      const tunnel = await requestTunnelOperation('reconcile');
-      config.reloadNodeSettings();
-      const settings = config.nodeSettings;
-      const isError = distributionError || tunnel.status === 'error';
-      return await reply.status(isError ? 502 : 200).send({
+      response = await withDistributionTransition(async () => {
+        config.reloadNodeSettings(true);
+        let state = readCdnJournal(config.paths.nodeSettingsPath);
+        const current = state.current;
+        // Completed retries are status reads; they never start untracked work.
+        if (
+          enabled === null &&
+          current !== null &&
+          current.id === expectedId &&
+          current.stage === 'complete'
+        ) {
+          config.reloadNodeSettings(true);
+          return this.cdnReply(false);
+        }
+        if (enabled === null && (!current || current.id !== expectedId)) {
+          return reject(
+            'This CDN recovery request is stale. Refresh Settings before retrying.',
+            409
+          );
+        }
+        if (
+          enabled !== null &&
+          ((current !== null && current.stage !== 'complete') ||
+            config.nodeSettings.cloudflareAddressMigrationPending)
+        ) {
+          return reject('Finish the pending CDN transition before changing CDN settings.', 409);
+        }
+        try {
+          await this.changeDistributionSettings(
+            async () => {
+              state = readCdnJournal(config.paths.nodeSettingsPath);
+              if (enabled !== null) {
+                const previous = config.nodeSettings;
+                let target: CdnCredentials | null = null;
+                let publicAddress = publicAddressOf(
+                  previous.cloudflarePublicAddressBackup ?? previous
+                );
+                if (enabled) {
+                  if (!credentials) {
+                    throw new Error('Cloudflare credentials are required.');
+                  }
+                  const {
+                    cloudflareEmailAddress: email,
+                    cloudflareZoneId: zone,
+                    cloudflareGlobalApiKey: key,
+                  } = credentials;
+                  if (!(await isCloudflareCredentialsValid(email, zone, key))) {
+                    throw new Error('Could not validate Cloudflare credentials.');
+                  }
+                  const domain = await this.cloudflareService.resolveCdnPublicAddress(
+                    email,
+                    zone,
+                    key
+                  );
+                  await this.cloudflareService.validateCdnConfiguration(email, zone, key, {
+                    publicNodeAddress: domain,
+                    storageConfig: previous.storageConfig,
+                  });
+                  target = { email, zone, key };
+                  publicAddress = {
+                    publicNodeProtocol: 'https',
+                    publicNodeAddress: domain,
+                    publicNodePort: 443,
+                  };
+                }
+                state.current = {
+                  id: randomUUID(),
+                  targetEnabled: enabled,
+                  stage: 'provider',
+                  target,
+                  source: previous.isCloudflareCdnEnabled
+                    ? {
+                        email: previous.cloudflareEmailAddress,
+                        zone: previous.cloudflareZoneId,
+                        key: previous.cloudflareGlobalApiKey,
+                      }
+                    : null,
+                  publicAddress,
+                  originalAddress: publicAddressOf(
+                    previous.cloudflarePublicAddressBackup ?? previous
+                  ),
+                  tunnelName: enabled
+                    ? `moartube-${randomUUID()}`
+                    : (previous.cloudflareTunnelName ?? ''),
+                  storageIdentity: storageIdentity(previous.storageConfig),
+                };
+                // Journal first: even a subsequent settings write failure leaves admission blocked.
+                writeCdnJournal(config.paths.nodeSettingsPath, state);
+                progress.admitted = true;
+                config.updateNodeSettings({ cloudflareAddressMigrationPending: true });
+              } else {
+                progress.admitted = true;
+              }
+              const transition = state.current;
+              if (!transition) {
+                throw new Error('CDN recovery state is missing.');
+              }
+              if (
+                storageIdentity(config.nodeSettings.storageConfig) !== transition.storageIdentity
+              ) {
+                throw new Error(
+                  'Storage changed during CDN recovery. Restore its saved configuration before retrying.'
+                );
+              }
+              const advance = (stage: CdnTransition['stage']): void => {
+                transition.stage = stage;
+                writeCdnJournal(config.paths.nodeSettingsPath, state);
+              };
+              if (
+                ['media', 'purge', 'tunnel'].includes(transition.stage) &&
+                !this.cdnSettingsMatch(transition)
+              ) {
+                // The saved intent is authoritative after an interrupted settings commit.
+                // Re-apply it and repeat media writes/purging rather than using a divergent origin.
+                advance('settings');
+              }
+              if (transition.stage === 'provider') {
+                const source = transition.source;
+                const target = transition.target;
+                if (target) {
+                  let original = state.originals[target.zone];
+                  if (!original) {
+                    if (source?.zone === target.zone) {
+                      throw new Error(
+                        'Original Cloudflare zone settings are unavailable for this legacy configuration. Restore the original zone settings before retrying.'
+                      );
+                    }
+                    original = {
+                      credentials: target,
+                      before: await this.cloudflareService.captureCdnSnapshot(target),
+                      applied: this.cloudflareService.managedCdnSnapshot(),
+                    };
+                    state.originals[target.zone] = original;
+                    writeCdnJournal(config.paths.nodeSettingsPath, state);
+                  }
+                  await this.cloudflareService.verifyCdnChange(
+                    target,
+                    original.before,
+                    original.applied
+                  );
+                  await this.cloudflareService.setCdnConfiguration(
+                    target.email,
+                    target.zone,
+                    target.key
+                  );
+                  await this.cloudflareService.addCdnDnsRecord(
+                    target.email,
+                    target.zone,
+                    target.key,
+                    config.nodeSettings.storageConfig,
+                    transition.publicAddress.publicNodeAddress
+                  );
+                  await this.cloudflareService.verifyCdnSnapshot(target, original.applied);
+                }
+                if (source && source.zone !== target?.zone) {
+                  const original = state.originals[source.zone];
+                  if (!original) {
+                    throw new Error(
+                      'Original Cloudflare zone settings are unavailable. Repair the saved provider snapshot before retrying removal.'
+                    );
+                  }
+                  await requestTunnelOperation('prepare_cdn_clear');
+                  await this.cloudflareService.restoreCdnSnapshot(
+                    source,
+                    original.before,
+                    original.applied
+                  );
+                }
+                advance('settings');
+              }
+              if (transition.stage === 'settings') {
+                config.updateNodeSettings({
+                  ...transition.publicAddress,
+                  cloudflareAddressMigrationPending: true,
+                  cloudflarePublicAddressBackup: transition.originalAddress,
+                  isCloudflareCdnEnabled: transition.targetEnabled,
+                  cloudflareEmailAddress: transition.target?.email ?? '',
+                  cloudflareZoneId: transition.target?.zone ?? '',
+                  cloudflareGlobalApiKey: transition.target?.key ?? '',
+                  cloudflareTunnelName: transition.tunnelName,
+                });
+                advance('media');
+              }
+              if (transition.stage === 'media') {
+                await this.completeMediaMigration(config);
+                advance('purge');
+              }
+              if (transition.stage === 'purge') {
+                const zones = new Map<string, CdnCredentials>();
+                for (const zone of [transition.source, transition.target]) {
+                  if (zone) {
+                    zones.set(zone.zone, zone);
+                  }
+                }
+                for (const zone of zones.values()) {
+                  await this.cloudflareService.purgeEntireCacheWithCredentials(
+                    zone.email,
+                    zone.zone,
+                    zone.key
+                  );
+                }
+                await this.cloudflareService.retryPendingPurges();
+                advance('tunnel');
+              }
+            },
+            undefined,
+            true,
+            false
+          );
+          return await this.finishCloudflareChange();
+        } catch (error) {
+          this.logger.error('CDN transition remains incomplete', error);
+          if (progress.admitted) {
+            return this.cdnReply(true);
+          }
+          return reject(
+            error instanceof Error ? error.message : 'CDN transition could not start.',
+            400
+          );
+        }
+      });
+    } catch (error) {
+      response = reject(
+        error instanceof Error ? error.message : 'Another distribution operation is in progress.',
+        409
+      );
+    }
+    return await reply.status(response.status).send(response.data);
+  }
+
+  private cdnSettingsMatch(transition: CdnTransition): boolean {
+    const expected = {
+      ...transition.publicAddress,
+      isCloudflareCdnEnabled: transition.targetEnabled,
+      cloudflareEmailAddress: transition.target?.email ?? '',
+      cloudflareZoneId: transition.target?.zone ?? '',
+      cloudflareGlobalApiKey: transition.target?.key ?? '',
+      ...(transition.targetEnabled ? { cloudflareTunnelName: transition.tunnelName } : {}),
+    };
+    const settings = getConfig().nodeSettings;
+    return Object.entries(expected).every(
+      ([key, value]) => settings[key as keyof typeof settings] === value
+    );
+  }
+
+  private cdnReply(isError: boolean): CdnResponse {
+    const config = getConfig();
+    const status = cdnStatus(config.paths.nodeSettingsPath);
+    return {
+      status: isError ? 502 : 200,
+      data: {
         isError,
         settingsSaved: true,
-        isCloudflareCdnEnabled: settings.isCloudflareCdnEnabled,
-        isCloudflareTunnelEnabled: settings.isCloudflareTunnelEnabled,
-        cloudflareTunnelName: settings.cloudflareTunnelName ?? '',
-        tunnel,
+        cloudflareAddressMigrationPending:
+          hasPendingCdn(config.paths.nodeSettingsPath) ||
+          config.nodeSettings.cloudflareAddressMigrationPending,
+        cdnTransition: status,
+        ...publicAddressOf(config.nodeSettings),
+        isCloudflareCdnEnabled: config.nodeSettings.isCloudflareCdnEnabled,
+        isCloudflareTunnelEnabled: config.nodeSettings.isCloudflareTunnelEnabled,
+        cloudflareTunnelName: config.nodeSettings.cloudflareTunnelName ?? '',
         ...(isError
           ? {
               message:
-                'CDN settings saved, but distribution or tunnel reconciliation is incomplete.',
+                'CDN transition is incomplete. Retry its saved direction from Settings. If recovery continues to fail, check the Node log for the required repair.',
             }
           : {}),
+      },
+    };
+  }
+
+  private async finishCloudflareChange(): Promise<CdnResponse> {
+    const config = getConfig();
+    const state = readCdnJournal(config.paths.nodeSettingsPath);
+    const transition = state.current;
+    if (transition?.stage !== 'tunnel') {
+      return this.cdnReply(true);
+    }
+    try {
+      const tunnel = await requestTunnelOperation('reconcile');
+      config.reloadNodeSettings(true);
+      const preference = config.nodeSettings.isCloudflareTunnelEnabled;
+      const ready = !preference
+        ? tunnel.status === 'stopped'
+        : tunnel.status === 'running' &&
+          tunnel.mode === (transition.targetEnabled ? 'named' : 'quick') &&
+          (!transition.targetEnabled || tunnel.name === transition.tunnelName);
+      if (!ready) {
+        return this.cdnReply(true);
+      }
+      await withSettingsChange(config.paths.nodeSettingsPath, () => {
+        config.reloadNodeSettings(true);
+        if (
+          config.nodeSettings.isCloudflareTunnelEnabled !== preference ||
+          !this.cdnSettingsMatch(transition) ||
+          readCdnJournal(config.paths.nodeSettingsPath).current?.id !== transition.id
+        ) {
+          throw new Error('CDN transition was superseded.');
+        }
+        config.updateNodeSettings({
+          cloudflareAddressMigrationPending: false,
+          ...(!transition.targetEnabled ? { cloudflarePublicAddressBackup: null } : {}),
+        });
+        state.originals = Object.fromEntries(
+          Object.entries(state.originals).filter(
+            ([zone]) => transition.targetEnabled && zone === transition.target?.zone
+          )
+        );
+        transition.stage = 'complete';
+        transition.source = null;
+        transition.target = null;
+        writeCdnJournal(config.paths.nodeSettingsPath, state);
+        return Promise.resolve();
       });
-    } catch {
-      config.reloadNodeSettings();
-      const settings = config.nodeSettings;
-      return reply.status(502).send({
-        isError: true,
-        settingsSaved: true,
-        isCloudflareCdnEnabled: settings.isCloudflareCdnEnabled,
-        isCloudflareTunnelEnabled: settings.isCloudflareTunnelEnabled,
-        cloudflareTunnelName: settings.cloudflareTunnelName ?? '',
-        tunnel: { mode: 'none', status: 'error', name: '' },
-        message:
-          'CDN settings saved, but tunnel state could not be confirmed. Refresh settings before retrying.',
-      });
+      return this.cdnReply(false);
+    } catch (error) {
+      this.logger.error('CDN tunnel reconciliation remains incomplete', error);
+      return this.cdnReply(true);
     }
   }
 

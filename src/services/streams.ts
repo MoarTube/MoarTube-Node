@@ -1,3 +1,4 @@
+import { withJobAdmission } from '@/utils/distribution-admission.js';
 import { rewriteManifestFile } from '@/utils/manifest-transform.js';
 /**
  * Stream Service
@@ -121,7 +122,7 @@ export class StreamsService extends BaseService {
    * Start a new live stream or resume existing
    */
   async startStream(videoId: string, config?: StreamConfig): Promise<void> {
-    return withSettingsChange(getConfig().paths.nodeSettingsPath, () =>
+    return withJobAdmission(() =>
       this.withErrorLogging('startStream', async () => {
         const video = await this.videoRepository.findById(videoId);
         if (!video) {
@@ -238,7 +239,7 @@ export class StreamsService extends BaseService {
    * Start a new stream with full configuration
    */
   async startNewStream(options: StartStreamOptions): Promise<{ videoId: string }> {
-    return withSettingsChange(getConfig().paths.nodeSettingsPath, () =>
+    return withJobAdmission(() =>
       this.withErrorLogging('startNewStream', async () => {
         getConfig().reloadNodeSettings();
         let videoId = options.existingVideoId;
@@ -486,7 +487,7 @@ export class StreamsService extends BaseService {
     for (let offset = 0; ; offset += 100) {
       const videos = await this.videoRepository.findAll({ limit: 100, offset });
       for (const video of videos) {
-        if (video.is_streamed && video.is_stream_recorded_remotely) {
+        if (!video.is_streaming && video.is_streamed && video.is_stream_recorded_remotely) {
           await this.endHlsManifests(
             path.join(config.paths.videosDirectoryPath, video.video_id, 'adaptive', 'm3u8')
           );

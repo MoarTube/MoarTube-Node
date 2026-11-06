@@ -486,6 +486,15 @@ export function videosRoutes(
 
   // Upload video files (HLS segments, MP4, WebM, OGV)
   fastify.post(
+    '/:videoId/activity',
+    {
+      preHandler: [fastify.authenticate],
+      schema: { params: videoIdParamsSchema, body: z.object({ activityId: z.uuid() }) },
+    },
+    controller.beginStorageActivity
+  );
+
+  fastify.post(
     '/:videoId/cache/invalidate',
     {
       preHandler: [fastify.authenticate],
@@ -493,6 +502,7 @@ export function videosRoutes(
         params: videoIdParamsSchema,
         body: z
           .object({
+            activityId: z.uuid().optional(),
             paths: z
               .array(
                 z

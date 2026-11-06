@@ -1133,3 +1133,25 @@ describe('CloudflareService', () => {
     }
   });
 });
+
+describe('CDN public hostname selection', () => {
+  const logger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+  it.each(['example.com', 'EXAMPLE.COM.'])('uses the zone root %s', async (name) => {
+    vi.mocked(axios.get).mockResolvedValueOnce({
+      data: { success: true, result: { name } },
+    });
+    const service = new CloudflareService(logger as never, {} as never);
+    expect(await service.resolveCdnPublicAddress('email', 'zone', 'key')).toBe('example.com');
+  });
+  it.each([
+    { success: false },
+    { success: true, result: { name: '' } },
+    { success: true, result: { name: 'http://bad' } },
+  ])('rejects invalid provider zone data %o', async (data) => {
+    vi.mocked(axios.get).mockResolvedValueOnce({ data });
+    const service = new CloudflareService(logger as never, {} as never);
+    await expect(
+      service.resolveCdnPublicAddress('email', 'zone', 'key')
+    ).rejects.toThrow();
+  });
+});

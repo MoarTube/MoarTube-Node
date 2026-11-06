@@ -124,27 +124,12 @@ describe('follow-up Cloudflare correctness', () => {
     );
     const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
     try {
-      await withCloudflareDeadline(
-        () =>
-          controller.cloudflareConfigure(
-            {
-              body: {
-                cloudflareEmailAddress: 'email',
-                cloudflareZoneId: 'zone',
-                cloudflareGlobalApiKey: 'key',
-                cloudflareTunnelName: 'deadline-test',
-              },
-            } as never,
-            reply as never
-          ),
-        50
-      );
+      await expect(withCloudflareDeadline(
+        () => withSettingsChange(state.config.paths.nodeSettingsPath, () => service.withConfigurationRollback('email', 'zone', 'key', () => service.setCdnConfiguration('email', 'zone', 'key'))), 50
+      )).rejects.toThrow('previous zone configuration was restored');
       expect(stalledSignal!.aborted).toBe(true);
       expect(recoverySignal).not.toBe(stalledSignal);
       expect(recoverySignal!.aborted).toBe(false);
-      expect(reply.send).toHaveBeenCalledWith(
-        expect.objectContaining({ isError: true, message: 'Cloudflare configuration failed' })
-      );
       await expect(
         withSettingsChange(state.config.paths.nodeSettingsPath, async () => true)
       ).resolves.toBe(true);

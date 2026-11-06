@@ -1,3 +1,6 @@
+vi.mock('@/utils/distribution-admission.js', () => ({
+  withJobAdmission: (operation: () => Promise<unknown>) => operation(),
+}));
 const cleanupJobs = vi.hoisted(() => ({
   enqueue: vi.fn().mockResolvedValue(undefined),
   recover: vi.fn().mockResolvedValue(undefined),
@@ -230,6 +233,12 @@ describe('StreamsService', () => {
     it('finalizes only remotely recorded streamed manifests during filesystem recovery', async () => {
       const fs = (await import('node:fs')).default;
       (mockVideosRepository as any).findAll = vi.fn().mockResolvedValue([
+        {
+          video_id: 'still-active',
+          is_streaming: true,
+          is_streamed: true,
+          is_stream_recorded_remotely: true,
+        },
         { video_id: 'recorded', is_streamed: true, is_stream_recorded_remotely: true },
         { video_id: 'local', is_streamed: true, is_stream_recorded_remotely: false },
         { video_id: 'not-streamed', is_streamed: false, is_stream_recorded_remotely: true },

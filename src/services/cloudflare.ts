@@ -1,3 +1,9 @@
+import { isDeepStrictEqual } from 'node:util';
+import {
+  providerSnapshotSchema,
+  type ProviderSnapshot,
+  type CdnCredentials,
+} from '@/utils/cdn-journal.js';
 /**
  * Cloudflare Service
  *
@@ -142,6 +148,22 @@ export class CloudflareService extends BaseService {
     }
   }
 
+  /** Resolve and validate the selected zone root as the CDN public address. */
+  async resolveCdnPublicAddress(email: string, zoneId: string, key: string): Promise<string> {
+    const response = await axios.get<{ success: boolean; result?: { name?: string } }>(
+      `${CLOUDFLARE_API_BASE}/zones/${zoneId}`,
+      cloudflareOptions({ 'X-Auth-Email': email, 'X-Auth-Key': key })
+    );
+    const name = response.data.result?.name;
+    if (!response.data.success || typeof name !== 'string' || name.trim() === '') {
+      throw new Error('Could not validate the Cloudflare zone.');
+    }
+    const zone = name.trim().toLowerCase().replace(/\.$/, '');
+    // Validate provider data before using it as a persisted public address.
+    validateCdnSettings({ publicNodeAddress: zone, storageConfig: { storageMode: 'filesystem' } });
+    return zone;
+  }
+
   async validateCdnConfiguration(
     email: string,
     zoneId: string,
@@ -206,6 +228,148 @@ export class CloudflareService extends BaseService {
         );
       }
     }
+  }
+
+  /** Persist the values we change before activation; no DNS ownership is transferred here. */
+  async captureCdnSnapshot(credentials: CdnCredentials): Promise<ProviderSnapshot> {
+    const base = `${CLOUDFLARE_API_BASE}/zones/${credentials.zone}`;
+    const options = cloudflareOptions({
+      'X-Auth-Email': credentials.email,
+      'X-Auth-Key': credentials.key,
+    });
+    let rules: Array<Record<string, unknown>> | null = null;
+    try {
+      const result = await axios.get<{
+        success: boolean;
+        result: { rules: Array<Record<string, unknown>> };
+      }>(`${base}/rulesets/phases/http_request_cache_settings/entrypoint`, options);
+      if (!result.data.success) {
+        throw new Error('Could not read CDN cache rules.');
+      }
+      rules = result.data.result.rules.map((rule) => this.editableCdnRule(rule));
+    } catch (error) {
+      if ((error as { response?: { status?: number } }).response?.status !== 404) {
+        throw error;
+      }
+    }
+    const settings = [];
+    for (const endpoint of [
+      'settings/browser_cache_ttl',
+      'settings/cache_level',
+      'settings/always_use_https',
+      'argo/tiered_caching',
+      'cache/tiered_cache_smart_topology_enable',
+    ]) {
+      const response = await axios.get<{ success: boolean; result: { value: unknown } }>(
+        `${base}/${endpoint}`,
+        options
+      );
+      if (!response.data.success) {
+        throw new Error('Could not read CDN zone settings.');
+      }
+      settings.push({ endpoint, value: response.data.result.value });
+    }
+    return providerSnapshotSchema.parse({ rules, settings });
+  }
+
+  private editableCdnRule(rule: Record<string, unknown>): Record<string, unknown> {
+    return Object.fromEntries(
+      Object.entries(rule).filter(([field]) =>
+        [
+          'action',
+          'action_parameters',
+          'expression',
+          'description',
+          'enabled',
+          'logging',
+          'ref',
+        ].includes(field)
+      )
+    );
+  }
+
+  /** Refuse to overwrite a provider edit made outside this transition. */
+  async verifyCdnSnapshot(credentials: CdnCredentials, expected: ProviderSnapshot): Promise<void> {
+    if (!isDeepStrictEqual(await this.captureCdnSnapshot(credentials), expected)) {
+      throw new Error(
+        'Cloudflare settings changed outside MoarTube. Resolve the zone conflict before retrying.'
+      );
+    }
+  }
+
+  /** Each value is conditional and restart-idempotent: already-restored fields are skipped. */
+  async restoreCdnSnapshot(
+    credentials: CdnCredentials,
+    before: ProviderSnapshot,
+    applied: ProviderSnapshot
+  ): Promise<void> {
+    const current = await this.captureCdnSnapshot(credentials);
+    const base = `${CLOUDFLARE_API_BASE}/zones/${credentials.zone}`;
+    const options = cloudflareOptions({
+      'X-Auth-Email': credentials.email,
+      'X-Auth-Key': credentials.key,
+    });
+    const check = (actual: unknown, original: unknown, managed: unknown): void => {
+      if (!isDeepStrictEqual(actual, original) && !isDeepStrictEqual(actual, managed)) {
+        throw new Error(
+          'Cloudflare settings changed outside MoarTube. Resolve the zone conflict before retrying.'
+        );
+      }
+    };
+    // Validate every field before making the first restoring write.
+    check(current.rules, before.rules, applied.rules);
+    for (const setting of before.settings) {
+      check(
+        current.settings.find((item) => item.endpoint === setting.endpoint)?.value,
+        setting.value,
+        applied.settings.find((item) => item.endpoint === setting.endpoint)?.value
+      );
+    }
+    if (!isDeepStrictEqual(current.rules, before.rules)) {
+      if (before.rules === null) {
+        const response = await axios.get<{ success: boolean; result: { id: string } }>(
+          `${base}/rulesets/phases/http_request_cache_settings/entrypoint`,
+          options
+        );
+        if (!response.data.success) {
+          throw new Error('Could not locate managed CDN rules.');
+        }
+        const removed = await axios.delete<{ success: boolean }>(
+          `${base}/rulesets/${response.data.result.id}`,
+          options
+        );
+        if (!removed.data.success) {
+          throw new Error('Could not restore CDN rules.');
+        }
+      } else {
+        const response = await axios.put<{ success: boolean }>(
+          `${base}/rulesets/phases/http_request_cache_settings/entrypoint`,
+          { rules: before.rules },
+          options
+        );
+        if (!response.data.success) {
+          throw new Error('Could not restore CDN rules.');
+        }
+      }
+    }
+    for (const setting of before.settings) {
+      if (
+        !isDeepStrictEqual(
+          current.settings.find((item) => item.endpoint === setting.endpoint)?.value,
+          setting.value
+        )
+      ) {
+        const response = await axios.patch<{ success: boolean }>(
+          `${base}/${setting.endpoint}`,
+          { value: setting.value },
+          options
+        );
+        if (!response.data.success) {
+          throw new Error('Could not restore CDN zone settings.');
+        }
+      }
+    }
+    await this.verifyCdnSnapshot(credentials, before);
   }
 
   /** Snapshot before touching a dedicated zone, and restore it on any required-step failure. */
@@ -917,21 +1081,8 @@ export class CloudflareService extends BaseService {
   /**
    * Set CDN configuration - creates cache rules, enables tiered caching, etc.
    */
-  async setCdnConfiguration(
-    cloudflareEmailAddress: string,
-    cloudflareZoneId: string,
-    cloudflareGlobalApiKey: string
-  ): Promise<void> {
-    const headers = {
-      'X-Auth-Email': cloudflareEmailAddress,
-      'X-Auth-Key': cloudflareGlobalApiKey,
-      'Content-Type': 'application/json',
-    };
-
-    this.logger.info('Setting Cloudflare CDN configuration for MoarTube Node');
-
-    // Create http_request_cache_settings phase ruleset
-    const newZoneRuleSet = {
+  private cdnRuleSet(): { rules: Array<Record<string, unknown>> } {
+    return {
       rules: [
         {
           description: 'Node External - Legacy Public Media Freshness',
@@ -1056,8 +1207,61 @@ export class CloudflareService extends BaseService {
             '(not http.request.method in {"GET" "HEAD" "PURGE"}) or (any(http.request.headers["authorization"][*] ne "")) or (http.request.uri.query contains "fresh=1")',
           action_parameters: { cache: false },
         },
+      ].map((rule, index) => ({ ...rule, ref: `moartube_cdn_${String(index)}` })),
+    };
+  }
+
+  managedCdnSnapshot(): ProviderSnapshot {
+    return {
+      rules: this.cdnRuleSet().rules.map((rule) => this.editableCdnRule(rule)),
+      settings: [
+        { endpoint: 'settings/browser_cache_ttl', value: 0 },
+        { endpoint: 'settings/cache_level', value: 'aggressive' },
+        { endpoint: 'settings/always_use_https', value: 'on' },
+        { endpoint: 'argo/tiered_caching', value: 'on' },
+        { endpoint: 'cache/tiered_cache_smart_topology_enable', value: 'on' },
       ],
     };
+  }
+
+  async verifyCdnChange(
+    credentials: CdnCredentials,
+    before: ProviderSnapshot,
+    applied: ProviderSnapshot
+  ): Promise<void> {
+    const current = await this.captureCdnSnapshot(credentials);
+    const check = (value: unknown, old: unknown, target: unknown): void => {
+      if (!isDeepStrictEqual(value, old) && !isDeepStrictEqual(value, target)) {
+        throw new Error(
+          'Cloudflare settings changed outside MoarTube. Resolve the zone conflict before retrying.'
+        );
+      }
+    };
+    check(current.rules, before.rules, applied.rules);
+    for (const setting of before.settings) {
+      check(
+        current.settings.find((item) => item.endpoint === setting.endpoint)?.value,
+        setting.value,
+        applied.settings.find((item) => item.endpoint === setting.endpoint)?.value
+      );
+    }
+  }
+
+  async setCdnConfiguration(
+    cloudflareEmailAddress: string,
+    cloudflareZoneId: string,
+    cloudflareGlobalApiKey: string
+  ): Promise<void> {
+    const headers = {
+      'X-Auth-Email': cloudflareEmailAddress,
+      'X-Auth-Key': cloudflareGlobalApiKey,
+      'Content-Type': 'application/json',
+    };
+
+    this.logger.info('Setting Cloudflare CDN configuration for MoarTube Node');
+
+    // Create http_request_cache_settings phase ruleset
+    const newZoneRuleSet = this.cdnRuleSet();
 
     await axios.put(
       `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/rulesets/phases/http_request_cache_settings/entrypoint`,
@@ -1192,7 +1396,8 @@ export class CloudflareService extends BaseService {
             };
           }
         | undefined;
-    }
+    },
+    publicNodeAddress = getConfig().nodeSettings.publicNodeAddress
   ): Promise<void> {
     const headers = {
       'X-Auth-Email': cloudflareEmailAddress,
@@ -1202,7 +1407,7 @@ export class CloudflareService extends BaseService {
 
     if (storageConfig.storageMode === 's3provider' && storageConfig.s3Config) {
       const recordName = validateCdnSettings({
-        publicNodeAddress: getConfig().nodeSettings.publicNodeAddress,
+        publicNodeAddress,
         storageConfig: storageConfig as StorageConfig,
       });
       const recordContent = cdnDnsTarget(storageConfig as StorageConfig);

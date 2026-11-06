@@ -1,3 +1,8 @@
+// CDN lifecycle behavior is covered by cloudflare-cdn-tunnel.test.ts with real journals and admission.
+vi.mock('@/utils/cdn-journal.js', () => ({ hasPendingCdn: () => false, cdnStatus: () => null }));
+vi.mock('@/utils/distribution-admission.js', () => ({
+  withDistributionTransition: (operation: () => Promise<unknown>) => operation(),
+}));
 vi.mock('@/services/cloudflare-tunnel-runtime.js', () => ({
   requestTunnelOperation: vi.fn().mockResolvedValue({ mode: 'none', status: 'stopped', name: '' }),
 }));
@@ -58,6 +63,7 @@ vi.mock('@config/index.js', () => ({
     },
     nodeSettings: {
       isCloudflareCdnEnabled: false,
+      isCloudflareTunnelEnabled: false,
       isSecure: false,
       cloudflareEmailAddress: '',
       cloudflareZoneId: '',
@@ -120,6 +126,7 @@ describe('SettingsController', () => {
   };
 
   const mockCloudflareService: Record<string, ReturnType<typeof vi.fn>> = {
+    resolveCdnPublicAddress: vi.fn().mockResolvedValue('example.com'),
     validateCdnConfiguration: vi.fn().mockResolvedValue(undefined),
     withConfigurationRollback: vi.fn(async (_email, _zone, _key, operation) => operation()),
     purgeAdaptiveVideos: vi.fn(),
@@ -384,6 +391,8 @@ describe('SettingsController', () => {
         nodeSettings: {
           nodeName: 'My Node',
           isSecure: false,
+          cdnTransition: null,
+          cloudflareAddressMigrationPending: false,
           version: '2.0.0',
         },
       });
@@ -931,123 +940,6 @@ describe('SettingsController', () => {
       mockSettingsService.updateNetworkSettings.mockRejectedValue(new Error('Network error'));
 
       await controller.networkExternal(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.status).toHaveBeenCalledWith(400);
-    });
-  });
-
-  describe('cloudflareConfigure', () => {
-    it('should configure Cloudflare CDN', async () => {
-      mockRequest.body = {
-        cloudflareEmailAddress: 'admin@example.com',
-        cloudflareZoneId: 'zone123',
-        cloudflareGlobalApiKey: 'apikey456',
-      };
-      vi.mocked(isCloudflareCredentialsValid).mockResolvedValue(true);
-      mockCloudflareService.resetCdn.mockResolvedValue(undefined);
-      mockCloudflareService.setCdnConfiguration.mockResolvedValue(undefined);
-      mockCloudflareService.addCdnDnsRecord.mockResolvedValue(undefined);
-      mockCloudflareService.purgeEntireCacheWithCredentials.mockResolvedValue(undefined);
-
-      await controller.cloudflareConfigure(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(isCloudflareCredentialsValid).toHaveBeenCalledWith(
-        'admin@example.com',
-        'zone123',
-        'apikey456'
-      );
-      expect(mockSettingsService.updateCloudflareConfig).toHaveBeenCalled();
-      expect(mockReply.status).toHaveBeenCalledWith(200);
-    });
-
-    it('should return error when credentials invalid', async () => {
-      mockRequest.body = {
-        cloudflareEmailAddress: 'bad@email.com',
-        cloudflareZoneId: 'zone',
-        cloudflareGlobalApiKey: 'key',
-      };
-      vi.mocked(isCloudflareCredentialsValid).mockResolvedValue(false);
-
-      await controller.cloudflareConfigure(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith(
-        expect.objectContaining({
-          isError: true,
-          message: 'Cloudflare configuration failed',
-        })
-      );
-    });
-  });
-
-  describe('cloudflareClear', () => {
-    it('should clear Cloudflare configuration', async () => {
-      mockCloudflareService.resetCdn.mockResolvedValue(undefined);
-      mockCloudflareService.purgeEntireCacheWithCredentials.mockResolvedValue(undefined);
-
-      await controller.cloudflareClear(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockSettingsService.clearCloudflareConfig).toHaveBeenCalled();
-      expect(mockReply.status).toHaveBeenCalledWith(200);
-    });
-
-    it('should reset CDN when Cloudflare CDN is enabled', async () => {
-      const { getConfig } = await import('@config/index.js');
-      vi.mocked(getConfig).mockImplementationOnce(() => ({
-        paths: {
-          imagesDirectoryPath: '/data/images',
-          certificatesDirectoryPath: '/data/certificates',
-          videosDirectoryPath: '/data/media/videos',
-        },
-        nodeSettings: {
-          isCloudflareCdnEnabled: true,
-          cloudflareEmailAddress: 'test@example.com',
-          cloudflareZoneId: 'zone123',
-          cloudflareGlobalApiKey: 'apikey123',
-          storageConfig: { storageMode: 'filesystem' },
-        },
-        getNodeBaseUrl: vi.fn(() => 'https://old'),
-        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://example.com'),
-        updateNodeSettings: vi.fn(),
-        reloadNodeSettings: vi.fn(),
-        isDockerEnvironment: false,
-      }));
-      mockCloudflareService.resetCdn.mockResolvedValue(undefined);
-      mockCloudflareService.purgeEntireCacheWithCredentials.mockResolvedValue(undefined);
-
-      await controller.cloudflareClear(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockCloudflareService.resetCdn).toHaveBeenCalledWith(
-        'test@example.com',
-        'zone123',
-        'apikey123'
-      );
-      expect(mockCloudflareService.purgeEntireCacheWithCredentials).toHaveBeenCalled();
-      expect(mockSettingsService.clearCloudflareConfig).toHaveBeenCalled();
-      expect(mockReply.status).toHaveBeenCalledWith(200);
-    });
-
-    it('should return error on failure', async () => {
-      mockSettingsService.clearCloudflareConfig.mockImplementation(() => {
-        throw new Error('Clear error');
-      });
-
-      await controller.cloudflareClear(
         mockRequest as FastifyRequest,
         mockReply as unknown as FastifyReply
       );
@@ -2108,22 +2000,6 @@ describe('SettingsController', () => {
 
       expect(mockReply.status).toHaveBeenCalledWith(400);
     });
-
-    it('should handle error in cloudflareConfigure', async () => {
-      mockRequest.body = {
-        cloudflareEmailAddress: 'admin@example.com',
-        cloudflareZoneId: 'zone123',
-        cloudflareGlobalApiKey: 'apikey456',
-      };
-      vi.mocked(isCloudflareCredentialsValid).mockRejectedValue(new Error('Validation failed'));
-
-      await controller.cloudflareConfigure(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-
-      expect(mockReply.status).toHaveBeenCalledWith(400);
-    });
   });
   it.each([undefined, {}, { download: '1' }])(
     'streams backup responses and cleans disk snapshots (%j)',
@@ -2291,51 +2167,5 @@ describe('SettingsController', () => {
       publicNodePort: config.nodeSettings.publicNodePort,
     });
     expect(mockReply.status).toHaveBeenCalledWith(400);
-  });
-
-  it.each([false, true])(
-    'cleans up the previous zone after switching zones (cleanup failure=%s)',
-    async (fails) => {
-      const config = getConfig();
-      vi.mocked(getConfig).mockReturnValueOnce({
-        ...config,
-        nodeSettings: {
-          ...config.nodeSettings,
-          isCloudflareCdnEnabled: true,
-          cloudflareZoneId: 'previous-zone',
-        },
-      } as never);
-      vi.mocked(isCloudflareCredentialsValid).mockResolvedValue(true);
-      mockRequest.body = {
-        cloudflareEmailAddress: 'email',
-        cloudflareZoneId: 'new-zone',
-        cloudflareGlobalApiKey: 'key',
-      };
-      mockCloudflareService.resetCdn.mockImplementationOnce(() =>
-        fails ? Promise.reject(new Error('cleanup failed')) : Promise.resolve()
-      );
-      await controller.cloudflareConfigure(
-        mockRequest as FastifyRequest,
-        mockReply as unknown as FastifyReply
-      );
-      expect(mockCloudflareService.resetCdn).toHaveBeenCalled();
-      expect(mockReply.status).toHaveBeenCalledWith(fails ? 400 : 200);
-    }
-  );
-
-  it('reports a non-Error setup failure without claiming completion', async () => {
-    vi.mocked(isCloudflareCredentialsValid).mockRejectedValueOnce('offline');
-    mockRequest.body = {
-      cloudflareEmailAddress: 'email',
-      cloudflareZoneId: 'zone',
-      cloudflareGlobalApiKey: 'key',
-    };
-    await controller.cloudflareConfigure(
-      mockRequest as FastifyRequest,
-      mockReply as unknown as FastifyReply
-    );
-    expect(mockReply.send).toHaveBeenCalledWith(
-      expect.objectContaining({ isError: true, message: 'Cloudflare configuration failed' })
-    );
   });
 });

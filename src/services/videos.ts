@@ -1,3 +1,4 @@
+import { withJobAdmission } from '@/utils/distribution-admission.js';
 import { managedMediaBases } from '@/utils/media-url-origins.js';
 import { relativeHlsLine, hlsPlaylistPath } from '@/utils/hls-urls.js';
 /**
@@ -38,7 +39,6 @@ import type {
   PostgresNewComment,
 } from '@database/index.js';
 import { getConfig } from '@config/index.js';
-import { withSettingsChange } from '@/utils/settings-change.js';
 import { randomUUID } from 'node:crypto';
 import { rewriteManifestFile } from '@/utils/manifest-transform.js';
 import { withoutRendition } from '@/utils/hls-rendition.js';
@@ -254,94 +254,96 @@ export class VideosService extends BaseService {
    * Creates video record and sets up storage directories
    */
   async createVideo(data: CreateVideoInput): Promise<{ videoId: string }> {
-    return this.withErrorLogging('createVideo', async () => {
-      // Generate unique video ID
-      const videoId = await this.generateUniqueVideoId();
-      const creationTimestamp = this.getCurrentTimestampMs();
+    return withJobAdmission(() =>
+      this.withErrorLogging('createVideo', async () => {
+        // Generate unique video ID
+        const videoId = await this.generateUniqueVideoId();
+        const creationTimestamp = this.getCurrentTimestampMs();
 
-      // Sanitize input
-      const tagsSanitized = this.sanitizeWhitespace(data.tags);
+        // Sanitize input
+        const tagsSanitized = this.sanitizeWhitespace(data.tags);
 
-      // Initialize outputs structure
-      const outputs = JSON.stringify({ m3u8: [], mp4: [], webm: [], ogv: [] });
-      const meta = JSON.stringify({});
+        // Initialize outputs structure
+        const outputs = JSON.stringify({ m3u8: [], mp4: [], webm: [], ogv: [] });
+        const meta = JSON.stringify({});
 
-      this.logger.info('Creating new video', { videoId, title: data.title });
+        this.logger.info('Creating new video', { videoId, title: data.title });
 
-      // Create storage directories if using filesystem
-      this.createVideoStorageDirectories(videoId);
+        // Create storage directories if using filesystem
+        this.createVideoStorageDirectories(videoId);
 
-      // Create video record
-      const videoData: SQLiteNewVideo | PostgresNewVideo = {
-        video_id: videoId,
-        source_file_extension: '',
-        title: data.title,
-        description: data.description,
-        tags: tagsSanitized,
-        length_seconds: 0,
-        length_timestamp: '',
-        views: 0,
-        comments: 0,
-        likes: 0,
-        dislikes: 0,
-        bandwidth: 0,
-        is_importing: true,
-        is_imported: false,
-        is_publishing: false,
-        is_published: false,
-        is_streaming: false,
-        is_streamed: false,
-        is_stream_recorded_remotely: false,
-        is_stream_recorded_locally: false,
-        is_live: false,
-        is_error: false,
-        is_finalized: false,
-        is_hidden: false,
-        is_passworded: false,
-        password: '',
-        is_comments_enabled: true,
-        is_likes_enabled: true,
-        is_dislikes_enabled: true,
-        is_reports_enabled: true,
-        is_live_chat_enabled: true,
-        outputs,
-        meta,
-        creation_timestamp: creationTimestamp,
-      };
+        // Create video record
+        const videoData: SQLiteNewVideo | PostgresNewVideo = {
+          video_id: videoId,
+          source_file_extension: '',
+          title: data.title,
+          description: data.description,
+          tags: tagsSanitized,
+          length_seconds: 0,
+          length_timestamp: '',
+          views: 0,
+          comments: 0,
+          likes: 0,
+          dislikes: 0,
+          bandwidth: 0,
+          is_importing: true,
+          is_imported: false,
+          is_publishing: false,
+          is_published: false,
+          is_streaming: false,
+          is_streamed: false,
+          is_stream_recorded_remotely: false,
+          is_stream_recorded_locally: false,
+          is_live: false,
+          is_error: false,
+          is_finalized: false,
+          is_hidden: false,
+          is_passworded: false,
+          password: '',
+          is_comments_enabled: true,
+          is_likes_enabled: true,
+          is_dislikes_enabled: true,
+          is_reports_enabled: true,
+          is_live_chat_enabled: true,
+          outputs,
+          meta,
+          creation_timestamp: creationTimestamp,
+        };
 
-      await this.videoRepository.create(videoData);
+        await this.videoRepository.create(videoData);
 
-      // Broadcast video creation event
-      this.broadcastVideoEvent('video_data', {
-        videoId,
-        thumbnail: '',
-        title: data.title,
-        description: data.description,
-        tags: tagsSanitized,
-        lengthSeconds: 0,
-        lengthTimestamp: '',
-        views: 0,
-        comments: 0,
-        likes: 0,
-        dislikes: 0,
-        bandwidth: 0,
-        isImporting: 1,
-        isImported: 0,
-        isPublishing: 0,
-        isPublished: 0,
-        isLive: 0,
-        isStreaming: 0,
-        isStreamed: 0,
-        isStreamRecordedRemotely: 0,
-        isStreamRecordedLocally: 0,
-        isError: 0,
-        isFinalized: 0,
-        meta,
-        creationTimestamp,
-      });
+        // Broadcast video creation event
+        this.broadcastVideoEvent('video_data', {
+          videoId,
+          thumbnail: '',
+          title: data.title,
+          description: data.description,
+          tags: tagsSanitized,
+          lengthSeconds: 0,
+          lengthTimestamp: '',
+          views: 0,
+          comments: 0,
+          likes: 0,
+          dislikes: 0,
+          bandwidth: 0,
+          isImporting: 1,
+          isImported: 0,
+          isPublishing: 0,
+          isPublished: 0,
+          isLive: 0,
+          isStreaming: 0,
+          isStreamed: 0,
+          isStreamRecordedRemotely: 0,
+          isStreamRecordedLocally: 0,
+          isError: 0,
+          isFinalized: 0,
+          meta,
+          creationTimestamp,
+        });
 
-      return { videoId };
-    });
+        return { videoId };
+      })
+    );
   }
 
   /**
@@ -457,7 +459,13 @@ export class VideosService extends BaseService {
    * Mark video as importing
    */
   async setImporting(videoId: string, isImporting: boolean): Promise<void> {
-    await this.videoRepository.update(videoId, { is_importing: isImporting });
+    if (isImporting) {
+      await withJobAdmission(() =>
+        this.videoRepository.update(videoId, { is_importing: true }).then(() => undefined)
+      );
+    } else {
+      await this.videoRepository.update(videoId, { is_importing: false });
+    }
   }
 
   /**
@@ -479,7 +487,7 @@ export class VideosService extends BaseService {
       await this.cloudflareService.purgeNodePage();
       return;
     }
-    await withSettingsChange(getConfig().paths.nodeSettingsPath, async () => {
+    await withJobAdmission(async () => {
       getConfig().reloadNodeSettings();
       const video = await this.videoRepository.findById(videoId);
       const metadata = this.safeJsonParse<{ streamGeneration?: string; streamCleanupAt?: number }>(
@@ -1135,6 +1143,7 @@ export class VideosService extends BaseService {
       isStreamRecordedRemotely: video.is_stream_recorded_remotely,
       timestamp: video.creation_timestamp,
       isPublishing: video.is_publishing,
+      isImporting: video.is_importing,
       outputs,
       meta,
     };

@@ -1,3 +1,4 @@
+vi.mock('@/utils/settings-change.js', () => ({ withSettingsWrite: (_path: string, operation: () => unknown) => operation() }));
 import { describe, it, expect, vi, beforeEach, afterEach, type MockedFunction } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';

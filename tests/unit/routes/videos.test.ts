@@ -426,9 +426,9 @@ describe('Videos Routes', () => {
     expect(mockFastify.get).toHaveBeenCalledTimes(17);
   });
 
-  it('should register exactly 26 POST routes', () => {
+  it('should register exactly 27 POST routes', () => {
     videosRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(26);
+    expect(mockFastify.post).toHaveBeenCalledTimes(27);
   });
 
   it('should register exactly 1 DELETE route', () => {

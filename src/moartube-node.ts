@@ -1,3 +1,4 @@
+import { rewindCdnAfterRestart } from '@/utils/cdn-journal.js';
 import '../bin/check-node-version.js';
 import 'dotenv/config';
 
@@ -77,6 +78,9 @@ async function startMaster(): Promise<void> {
   const db = getDatabase();
   const container = await createAppContainer(db);
 
+  // Re-arm invalidation before startup changes any recorded media.
+  rewindCdnAfterRestart(getConfig().paths.nodeSettingsPath);
+
   // Startup provisioning: reset stale streaming/importing flags, clean up chat messages, finalize manifests
   await performStartupProvisioning(logger, container);
 
@@ -91,7 +95,7 @@ async function startMaster(): Promise<void> {
 /**
  * Startup provisioning
  *
- * Ensures database state is clean after a potential crash mid-stream.
+ * Preserves uncertain Client activity and recovers only known stopped-stream work.
  * Legacy equivalent: database.js provisioning at startup.
  */
 async function performStartupProvisioning(
@@ -103,27 +107,20 @@ async function performStartupProvisioning(
     const videosRepository = container.resolve('videosRepository');
     const liveChatMessagesRepository = container.resolve('liveChatMessagesRepository');
 
-    // Mark any currently-streaming videos as streamed
+    // Client processes can outlive this Node process. Preserve their activity
+    // until completion or an explicit stop acknowledgement proves they drained.
     const streamingVideos = await videosRepository.findStreaming();
-    for (const video of streamingVideos) {
-      await videosRepository.update(video.video_id, {
-        is_streamed: true,
-      });
-    }
-
-    // Reset all in-progress flags
+    logger.debug('Retained stream activity during restart', { count: streamingVideos.length });
     for (let offset = 0; ; offset += 100) {
       const allVideos = await videosRepository.findAll({ limit: 100, offset });
       for (const video of allVideos) {
         if (video.is_importing || video.is_publishing || video.is_streaming) {
-          await videosRepository.update(video.video_id, {
-            is_importing: false,
-            is_publishing: false,
-            is_streaming: false,
-          });
+          logger.info(
+            'Retained Client activity during restart; completion or stop acknowledgement is required',
+            { videoId: video.video_id }
+          );
         }
       }
-
       if (allVideos.length < 100) {
         break;
       }

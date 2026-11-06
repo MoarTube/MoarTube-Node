@@ -360,44 +360,6 @@ export class SettingsService extends BaseService {
   }
 
   /**
-   * Update Cloudflare configuration
-   */
-  updateCloudflareConfig(
-    cloudflareEmailAddress: string,
-    cloudflareZoneId: string,
-    cloudflareGlobalApiKey: string,
-    cloudflareTunnelName: string
-  ): void {
-    const config = getConfig();
-
-    config.updateNodeSettings({
-      isCloudflareCdnEnabled: true,
-      cloudflareTunnelName,
-      cloudflareEmailAddress: cloudflareEmailAddress,
-      cloudflareZoneId: cloudflareZoneId,
-      cloudflareGlobalApiKey: cloudflareGlobalApiKey,
-    });
-
-    this.logger.info('Cloudflare configuration updated');
-  }
-
-  /**
-   * Clear Cloudflare configuration
-   */
-  clearCloudflareConfig(): void {
-    const config = getConfig();
-
-    config.updateNodeSettings({
-      isCloudflareCdnEnabled: false,
-      cloudflareEmailAddress: '',
-      cloudflareGlobalApiKey: '',
-      cloudflareZoneId: '',
-    });
-
-    this.logger.info('Cloudflare configuration cleared');
-  }
-
-  /**
    * Get avatar image stream
    */
   getAvatarFilePath(): string | null {

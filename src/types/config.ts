@@ -71,6 +71,12 @@ export interface StorageConfig {
 /**
  * Complete node settings stored in _node_settings.json
  */
+export interface PublicNodeAddress {
+  publicNodeProtocol: 'http' | 'https' | '';
+  publicNodeAddress: string;
+  publicNodePort: number | string;
+}
+
 export interface NodeSettings {
   // Server Configuration
   nodeListeningPort: number | string;
@@ -92,6 +98,9 @@ export interface NodeSettings {
   /** Defaults to true; independently controls quick and named tunnel lifecycle. */
   isCloudflareTunnelEnabled?: boolean;
   cloudflareTunnelName?: string;
+  /** Preserved until CDN disable and its media migration finish successfully. */
+  cloudflarePublicAddressBackup?: PublicNodeAddress | null;
+  cloudflareAddressMigrationPending?: boolean;
   cloudflareEmailAddress: string;
   cloudflareZoneId: string;
   cloudflareGlobalApiKey: string;

@@ -1,23 +1,47 @@
 import Database from 'better-sqlite3';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
-/** OS-backed writer lock: released automatically on process death; no PID-file reclamation. */
+const held = new AsyncLocalStorage<ReadonlyMap<string, { active: boolean }>>();
+function acquire(settingsPath: string): Database.Database {
+  const lock = new Database(settingsPath + '.change-lock.sqlite', { timeout: 0 });
+  try {
+    lock.exec('BEGIN IMMEDIATE');
+    return lock;
+  } catch (error) {
+    lock.close();
+    if ((error as { code?: string }).code === 'SQLITE_BUSY') {
+      throw new Error('Another settings change or job admission is in progress.');
+    }
+    throw error;
+  }
+}
+
+/** Synchronous settings patches share an enclosing settings transaction when present. */
+export function withSettingsWrite<T>(settingsPath: string, operation: () => T): T {
+  if (held.getStore()?.get(settingsPath)?.active === true) {
+    return operation();
+  }
+  const lock = acquire(settingsPath);
+  try {
+    return operation();
+  } finally {
+    lock.close();
+  }
+}
+
+/** OS-backed writer admission, automatically released on process death. */
 export async function withSettingsChange<T>(
   settingsPath: string,
   operation: () => Promise<T>
 ): Promise<T> {
-  const lock = new Database(settingsPath + '.change-lock.sqlite', { timeout: 0 });
+  const lock = acquire(settingsPath);
+  const ownership = { active: true };
+  const context = new Map(held.getStore());
+  context.set(settingsPath, ownership);
   try {
-    try {
-      lock.exec('BEGIN IMMEDIATE');
-    } catch (error) {
-      if ((error as { code?: string }).code === 'SQLITE_BUSY') {
-        throw new Error('Another settings change or job admission is in progress.');
-      }
-      throw error;
-    }
-    return await operation();
+    return await held.run(context, operation);
   } finally {
-    // Closing rolls back the empty transaction and releases its OS lock, even after failure.
+    ownership.active = false;
     lock.close();
   }
 }

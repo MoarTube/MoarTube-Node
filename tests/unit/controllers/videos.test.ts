@@ -1,3 +1,4 @@
+vi.mock('@/utils/distribution-admission.js', () => ({ withMediaWrite: (operation: () => Promise<unknown>) => operation() }));
 /**
  * Unit tests for VideosController
  *

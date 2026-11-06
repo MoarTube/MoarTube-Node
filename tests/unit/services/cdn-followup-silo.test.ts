@@ -1,3 +1,4 @@
+import { writeCdnJournal } from '@/utils/cdn-journal.js';
 vi.mock('@/services/cloudflare-tunnel-runtime.js', () => ({ requestTunnelOperation: vi.fn(async () => ({ mode: 'none', status: 'stopped', name: '' })) }));
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
@@ -703,6 +704,8 @@ describe('follow-up storage fixes against real Silo', () => {
   }, 20_000);
   it('rewrites real S3 manifests from CDN URLs to dotted-bucket HTTPS AWS path URLs when CDN is disabled', async () => {
     await seed();
+    state.config.nodeSettings.isCloudflareTunnelEnabled = false;
+    state.config.updateNodeSettings = (patch: object) => { Object.assign(state.config.nodeSettings, patch); };
     video.is_streaming = false;
     await storage.finalizeS3Stream('video123', ['720p'], true);
     state.config.nodeSettings.isCloudflareCdnEnabled = true;
@@ -742,6 +745,17 @@ describe('follow-up storage fixes against real Silo', () => {
     ) => operation();
     cloudflare.resetCdn = vi.fn();
     cloudflare.purgeEntireCacheWithCredentials = vi.fn();
+    Object.assign(state.config.nodeSettings, { cloudflareEmailAddress: 'email', cloudflareZoneId: 'zone', cloudflareGlobalApiKey: 'key' });
+    state.config.nodeSettings.publicNodeProtocol = 'https';
+    state.config.nodeSettings.publicNodePort = 443;
+    cloudflare.restoreCdnSnapshot = vi.fn();
+    cloudflare.retryPendingPurges = vi.fn();
+    writeCdnJournal(state.config.paths.nodeSettingsPath, { version: 1, current: null, originals: {
+      [state.config.nodeSettings.cloudflareZoneId]: {
+        credentials: { email: state.config.nodeSettings.cloudflareEmailAddress, zone: state.config.nodeSettings.cloudflareZoneId, key: state.config.nodeSettings.cloudflareGlobalApiKey },
+        before: { rules: null, settings: [] }, applied: { rules: [], settings: [] },
+      },
+    } });
     const controller = new SettingsController(
       {
         clearCloudflareConfig: () => {
@@ -1051,7 +1065,7 @@ describe('follow-up storage fixes against real Silo', () => {
     );
     await controller.cloudflareClear({} as never, reply as never);
     expect(reply.send).toHaveBeenLastCalledWith(
-      expect.objectContaining({ message: expect.stringContaining('could not be cleared') })
+      expect.objectContaining({ message: expect.stringContaining('finish draining') })
     );
     await controller.storageConfigToggle(
       { body: { storageConfig: state.config.nodeSettings.storageConfig } } as never,

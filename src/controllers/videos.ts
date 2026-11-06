@@ -1,3 +1,8 @@
+import {
+  withMediaWrite,
+  beginRemoteWrite,
+  finishRemoteWrite,
+} from '@/utils/distribution-admission.js';
 /**
  * Videos Controller
  *
@@ -148,6 +153,37 @@ export class VideosController extends BaseController {
     this.reportsService = reportsService;
   }
 
+  /** Do not keep a write lease while Fastify waits for a disconnected response. */
+  private async withMediaResponse(
+    reply: FastifyReply,
+    operation: (buffer: FastifyReply) => Promise<FastifyReply>
+  ): Promise<FastifyReply> {
+    let status = 200;
+    let data: unknown;
+    const buffer = {
+      status(code: number) {
+        status = code;
+        return buffer;
+      },
+      send(value: unknown) {
+        data = value;
+        return buffer;
+      },
+    };
+    try {
+      await withMediaWrite(async () => {
+        await operation(buffer as unknown as FastifyReply);
+      });
+    } catch {
+      return await this.sendError(
+        reply,
+        'A distribution transition is in progress. Retry after it finishes.',
+        409
+      );
+    }
+    return await reply.status(status).send(data);
+  }
+
   /**
    * Import a new video
    * POST /videos/import
@@ -241,17 +277,19 @@ export class VideosController extends BaseController {
    * POST /videos/:videoId/imported
    */
   videoImported = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        const { videoId } = request.params as VideoIdParams;
 
-      await this.videosService.setImported(videoId);
+        await this.videosService.setImported(videoId);
 
-      return await this.sendSuccess(reply, { videoId });
-    } catch (error) {
-      this.logger.error('VideosController.videoImported failed', error);
+        return await this.sendSuccess(reply, { videoId });
+      } catch (error) {
+        this.logger.error('VideosController.videoImported failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
   };
 
   /**
@@ -295,18 +333,20 @@ export class VideosController extends BaseController {
    * POST /videos/:videoId/published
    */
   videoPublished = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        const { videoId } = request.params as VideoIdParams;
 
-      await this.videosService.setPublishing(videoId, false);
-      await this.videosService.publishVideo(videoId);
+        await this.videosService.setPublishing(videoId, false);
+        await this.videosService.publishVideo(videoId);
 
-      return await this.sendSuccess(reply, { videoId });
-    } catch (error) {
-      this.logger.error('VideosController.videoPublished failed', error);
+        return await this.sendSuccess(reply, { videoId });
+      } catch (error) {
+        this.logger.error('VideosController.videoPublished failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
   };
 
   /**
@@ -317,18 +357,20 @@ export class VideosController extends BaseController {
     request: FastifyRequest,
     reply: FastifyReply
   ): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
-      const { format, resolution } = request.body as FormatResolutionBody;
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        const { videoId } = request.params as VideoIdParams;
+        const { format, resolution } = request.body as FormatResolutionBody;
 
-      await this.videosService.markFormatResolutionPublished(videoId, format, resolution);
+        await this.videosService.markFormatResolutionPublished(videoId, format, resolution);
 
-      return await this.sendSuccess(reply, { videoId, format, resolution });
-    } catch (error) {
-      this.logger.error('VideosController.formatResolutionPublished failed', error);
+        return await this.sendSuccess(reply, { videoId, format, resolution });
+      } catch (error) {
+        this.logger.error('VideosController.formatResolutionPublished failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
   };
 
   /**
@@ -354,23 +396,44 @@ export class VideosController extends BaseController {
    * POST /videos/:videoId/upload
    */
   videoUploaded = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        const { videoId } = request.params as VideoIdParams;
+        const { format, resolution } = request.body as FormatResolutionBody;
+
+        await this.videosService.notifyUploadComplete(videoId, format, resolution);
+
+        return await this.sendSuccess(reply, { videoId });
+      } catch (error) {
+        this.logger.error('VideosController.videoUploaded failed', error);
+
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
+  };
+
+  beginStorageActivity = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    const { videoId } = request.params as VideoIdParams;
+    const { activityId } = request.body as { activityId: string };
     try {
-      const { videoId } = request.params as VideoIdParams;
-      const { format, resolution } = request.body as FormatResolutionBody;
-
-      await this.videosService.notifyUploadComplete(videoId, format, resolution);
-
-      return await this.sendSuccess(reply, { videoId });
-    } catch (error) {
-      this.logger.error('VideosController.videoUploaded failed', error);
-
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      await beginRemoteWrite(videoId, activityId);
+      return await this.sendSuccess(reply);
+    } catch {
+      return await this.sendError(
+        reply,
+        'Storage writes are blocked by distribution recovery or another admission.',
+        409
+      );
     }
   };
 
   invalidateCache = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     const { videoId } = request.params as VideoIdParams;
-    const paths = (request.body as { paths?: string[] } | undefined)?.paths;
+    const body = request.body as { paths?: string[]; activityId?: string } | undefined;
+    const paths = body?.paths;
     if (paths !== undefined) {
       await this.cloudflareService.purgePrefixes(
         paths.map(
@@ -379,6 +442,9 @@ export class VideosController extends BaseController {
         ),
         true
       );
+      if (body?.activityId !== undefined) {
+        finishRemoteWrite(videoId, body.activityId);
+      }
       return this.sendSuccess(reply);
     }
     const results = await Promise.allSettled([
@@ -395,6 +461,10 @@ export class VideosController extends BaseController {
         'Cache invalidation incomplete; retry work remains queued.'
       );
     }
+    if (body?.activityId !== undefined) {
+      await this.cloudflareService.retryPendingPurges();
+      finishRemoteWrite(videoId, body.activityId);
+    }
     return this.sendSuccess(reply);
   };
 
@@ -403,18 +473,20 @@ export class VideosController extends BaseController {
    * POST /videos/:videoId/stream
    */
   videoStreamed = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
-      const { format, resolution } = request.body as FormatResolutionBody;
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        const { videoId } = request.params as VideoIdParams;
+        const { format, resolution } = request.body as FormatResolutionBody;
 
-      await this.videosService.notifyStreamComplete(videoId, format, resolution);
+        await this.videosService.notifyStreamComplete(videoId, format, resolution);
 
-      return await this.sendSuccess(reply, { videoId });
-    } catch (error) {
-      this.logger.error('VideosController.videoStreamed failed', error);
+        return await this.sendSuccess(reply, { videoId });
+      } catch (error) {
+        this.logger.error('VideosController.videoStreamed failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
   };
 
   /**
@@ -531,18 +603,20 @@ export class VideosController extends BaseController {
     request: FastifyRequest,
     reply: FastifyReply
   ): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
-      const { format, resolution } = request.body as FormatResolutionBody;
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        const { videoId } = request.params as VideoIdParams;
+        const { format, resolution } = request.body as FormatResolutionBody;
 
-      await this.videosService.unpublishFormatResolution(videoId, format, resolution);
+        await this.videosService.unpublishFormatResolution(videoId, format, resolution);
 
-      return await this.sendSuccess(reply, { videoId, format, resolution });
-    } catch (error) {
-      this.logger.error('VideosController.unpublishFormatResolution failed', error);
+        return await this.sendSuccess(reply, { videoId, format, resolution });
+      } catch (error) {
+        this.logger.error('VideosController.unpublishFormatResolution failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
   };
 
   /**
@@ -644,21 +718,23 @@ export class VideosController extends BaseController {
    * POST /videos/:videoId/delete
    */
   deleteVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        const { videoId } = request.params as VideoIdParams;
 
-      const deleted = await this.videosService.deleteVideo(videoId);
+        const deleted = await this.videosService.deleteVideo(videoId);
 
-      if (!deleted) {
-        throw new NotFoundError(`Video not found`);
+        if (!deleted) {
+          throw new NotFoundError(`Video not found`);
+        }
+
+        return await this.sendSuccess(reply, { videoId });
+      } catch (error) {
+        this.logger.error('VideosController.deleteVideo failed', error);
+
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
       }
-
-      return await this.sendSuccess(reply, { videoId });
-    } catch (error) {
-      this.logger.error('VideosController.deleteVideo failed', error);
-
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+    });
   };
 
   /**
@@ -666,17 +742,19 @@ export class VideosController extends BaseController {
    * POST /videos/:videoId/finalize
    */
   finalizeVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        const { videoId } = request.params as VideoIdParams;
 
-      await this.videosService.finalizeVideo(videoId);
+        await this.videosService.finalizeVideo(videoId);
 
-      return await this.sendSuccess(reply, { videoId });
-    } catch (error) {
-      this.logger.error('VideosController.finalizeVideo failed', error);
+        return await this.sendSuccess(reply, { videoId });
+      } catch (error) {
+        this.logger.error('VideosController.finalizeVideo failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
   };
 
   /**
@@ -1435,20 +1513,22 @@ export class VideosController extends BaseController {
    * POST /videos/delete
    */
   batchDelete = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoIds } = request.body as { videoIds: string[] };
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        const { videoIds } = request.body as { videoIds: string[] };
 
-      const result = await this.videosService.deleteVideos(videoIds);
+        const result = await this.videosService.deleteVideos(videoIds);
 
-      return await this.sendSuccess(reply, {
-        deletedVideoIds: result.deletedVideoIds,
-        nonDeletedVideoIds: result.nonDeletedVideoIds,
-      });
-    } catch (error) {
-      this.logger.error('VideosController.batchDelete failed', error);
+        return await this.sendSuccess(reply, {
+          deletedVideoIds: result.deletedVideoIds,
+          nonDeletedVideoIds: result.nonDeletedVideoIds,
+        });
+      } catch (error) {
+        this.logger.error('VideosController.batchDelete failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
   };
 
   /**
@@ -1456,20 +1536,22 @@ export class VideosController extends BaseController {
    * POST /videos/finalize
    */
   batchFinalize = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoIds } = request.body as { videoIds: string[] };
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        const { videoIds } = request.body as { videoIds: string[] };
 
-      const result = await this.videosService.finalizeVideos(videoIds);
+        const result = await this.videosService.finalizeVideos(videoIds);
 
-      return await this.sendSuccess(reply, {
-        finalizedVideoIds: result.finalizedVideoIds,
-        nonFinalizedVideoIds: result.nonFinalizedVideoIds,
-      });
-    } catch (error) {
-      this.logger.error('VideosController.batchFinalize failed', error);
+        return await this.sendSuccess(reply, {
+          finalizedVideoIds: result.finalizedVideoIds,
+          nonFinalizedVideoIds: result.nonFinalizedVideoIds,
+        });
+      } catch (error) {
+        this.logger.error('VideosController.batchFinalize failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
   };
 
   /**
@@ -1502,24 +1584,26 @@ export class VideosController extends BaseController {
     request: FastifyRequest,
     reply: FastifyReply
   ): Promise<FastifyReply> => {
-    try {
-      const { videoId, manifestType } = request.params as VideoAdaptiveManifestParams;
-      const { masterManifest } = request.body as VideoMasterManifestBody;
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        const { videoId, manifestType } = request.params as VideoAdaptiveManifestParams;
+        const { masterManifest } = request.body as VideoMasterManifestBody;
 
-      const video = await this.videosService.getVideo(videoId);
+        const video = await this.videosService.getVideo(videoId);
 
-      if (video === null) {
-        throw new NotFoundError(`Video not found`);
+        if (video === null) {
+          throw new NotFoundError(`Video not found`);
+        }
+
+        await this.videosService.writeMasterManifest(videoId, manifestType, masterManifest);
+
+        return await this.sendSuccess(reply, { videoId });
+      } catch (error) {
+        this.logger.error('VideosController.writeMasterManifest failed', error);
+
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
       }
-
-      await this.videosService.writeMasterManifest(videoId, manifestType, masterManifest);
-
-      return await this.sendSuccess(reply, { videoId });
-    } catch (error) {
-      this.logger.error('VideosController.writeMasterManifest failed', error);
-
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+    });
   };
 
   /**
@@ -1527,82 +1611,84 @@ export class VideosController extends BaseController {
    * POST /videos/:videoId/upload
    */
   uploadVideo = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
-      const { format, resolution } = request.query as UploadQueryParams;
-
-      // Validate parameters
-      if (!this.videoUploadService.validateVideoUploadParams(format, resolution)) {
-        await this.videosService.setError(videoId, true);
-
-        throw new BadRequestError('Invalid format or resolution');
-      }
-
-      // Validate video exists
-      const video = await this.videosService.getVideo(videoId);
-
-      if (!video) {
-        throw new NotFoundError(`Video not found`);
-      }
-
-      // Track upload progress
-      this.videoUploadService.trackProgress(request, videoId, format, resolution);
-
+    return this.withMediaResponse(reply, async (reply) => {
       try {
-        // Process multipart upload
-        const parts = request.parts();
+        const { videoId } = request.params as VideoIdParams;
+        const { format, resolution } = request.query as UploadQueryParams;
 
-        for await (const part of parts) {
-          if (part.type === 'file') {
-            const file = part;
+        // Validate parameters
+        if (!this.videoUploadService.validateVideoUploadParams(format, resolution)) {
+          await this.videosService.setError(videoId, true);
 
-            // Validate mime type
-            if (!this.videoUploadService.isValidVideoMimeType(file.mimetype)) {
-              throw new BadRequestError(`Unsupported file type: ${file.mimetype}`);
+          throw new BadRequestError('Invalid format or resolution');
+        }
+
+        // Validate video exists
+        const video = await this.videosService.getVideo(videoId);
+
+        if (!video) {
+          throw new NotFoundError(`Video not found`);
+        }
+
+        // Track upload progress
+        this.videoUploadService.trackProgress(request, videoId, format, resolution);
+
+        try {
+          // Process multipart upload
+          const parts = request.parts();
+
+          for await (const part of parts) {
+            if (part.type === 'file') {
+              const file = part;
+
+              // Validate mime type
+              if (!this.videoUploadService.isValidVideoMimeType(file.mimetype)) {
+                throw new BadRequestError(`Unsupported file type: ${file.mimetype}`);
+              }
+
+              // Get destination path
+              const destPath = this.videoUploadService.getVideoDestinationPath(
+                videoId,
+                format,
+                resolution,
+                file.filename
+              );
+
+              if (destPath === null || destPath === '') {
+                throw new BadRequestError(`Invalid filename: ${file.filename}`);
+              }
+
+              // Save file
+              await this.videoUploadService.saveUploadedFile(file, destPath);
             }
-
-            // Get destination path
-            const destPath = this.videoUploadService.getVideoDestinationPath(
-              videoId,
-              format,
-              resolution,
-              file.filename
-            );
-
-            if (destPath === null || destPath === '') {
-              throw new BadRequestError(`Invalid filename: ${file.filename}`);
-            }
-
-            // Save file
-            await this.videoUploadService.saveUploadedFile(file, destPath);
           }
-        }
 
-        if ((request.query as { finalBatch?: string }).finalBatch === 'false') {
-          return await this.sendSuccess(reply, { success: true, videoId, format, resolution });
-        }
-        // Handle upload completion
-        const result = await this.videoUploadService.handleVideoUploadComplete({
-          videoId,
-          format,
-          resolution,
-        });
+          if ((request.query as { finalBatch?: string }).finalBatch === 'false') {
+            return await this.sendSuccess(reply, { success: true, videoId, format, resolution });
+          }
+          // Handle upload completion
+          const result = await this.videoUploadService.handleVideoUploadComplete({
+            videoId,
+            format,
+            resolution,
+          });
 
-        return await this.sendSuccess(reply, result);
+          return await this.sendSuccess(reply, result);
+        } catch (error) {
+          this.logger.error('Video upload error', error, { videoId });
+
+          this.videoUploadService.handleUploadError(videoId);
+
+          await this.videosService.setError(videoId, true);
+
+          throw error;
+        }
       } catch (error) {
-        this.logger.error('Video upload error', error, { videoId });
+        this.logger.error('VideosController.uploadVideo failed', error);
 
-        this.videoUploadService.handleUploadError(videoId);
-
-        await this.videosService.setError(videoId, true);
-
-        throw error;
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
       }
-    } catch (error) {
-      this.logger.error('VideosController.uploadVideo failed', error);
-
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+    });
   };
 
   /**
@@ -1610,72 +1696,74 @@ export class VideosController extends BaseController {
    * POST /videos/:videoId/stream
    */
   uploadStream = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      const { videoId } = request.params as VideoIdParams;
-      const { format, resolution } = request.query as UploadQueryParams;
-
-      // Validate parameters
-      if (!this.videoUploadService.validateVideoUploadParams(format, resolution)) {
-        await this.videosService.setError(videoId, true);
-
-        throw new BadRequestError('Invalid format or resolution');
-      }
-
-      // Validate video exists
-      const video = await this.videosService.getVideo(videoId);
-
-      if (!video) {
-        throw new NotFoundError(`Video not found`);
-      }
-
+    return this.withMediaResponse(reply, async (reply) => {
       try {
-        // Process multipart upload
-        const parts = request.parts();
+        const { videoId } = request.params as VideoIdParams;
+        const { format, resolution } = request.query as UploadQueryParams;
 
-        for await (const part of parts) {
-          if (part.type === 'file') {
-            const file = part;
+        // Validate parameters
+        if (!this.videoUploadService.validateVideoUploadParams(format, resolution)) {
+          await this.videosService.setError(videoId, true);
 
-            // Validate mime type (only m3u8 and ts for streams)
-            if (!this.videoUploadService.isValidStreamMimeType(file.mimetype)) {
-              throw new BadRequestError(`Unsupported stream file type: ${file.mimetype}`);
-            }
-
-            // Get destination path
-            const destPath = this.videoUploadService.getStreamDestinationPath(
-              videoId,
-              format,
-              resolution,
-              file.filename
-            );
-
-            if (destPath === null || destPath === '') {
-              throw new BadRequestError(`Invalid filename: ${file.filename}`);
-            }
-
-            // Save file
-            await this.videoUploadService.saveUploadedFile(file, destPath);
-          }
+          throw new BadRequestError('Invalid format or resolution');
         }
 
-        // Handle stream upload completion
-        const result = this.videoUploadService.handleStreamUploadComplete({
-          videoId,
-          format,
-          resolution,
-        });
+        // Validate video exists
+        const video = await this.videosService.getVideo(videoId);
 
-        return await this.sendSuccess(reply, result);
+        if (!video) {
+          throw new NotFoundError(`Video not found`);
+        }
+
+        try {
+          // Process multipart upload
+          const parts = request.parts();
+
+          for await (const part of parts) {
+            if (part.type === 'file') {
+              const file = part;
+
+              // Validate mime type (only m3u8 and ts for streams)
+              if (!this.videoUploadService.isValidStreamMimeType(file.mimetype)) {
+                throw new BadRequestError(`Unsupported stream file type: ${file.mimetype}`);
+              }
+
+              // Get destination path
+              const destPath = this.videoUploadService.getStreamDestinationPath(
+                videoId,
+                format,
+                resolution,
+                file.filename
+              );
+
+              if (destPath === null || destPath === '') {
+                throw new BadRequestError(`Invalid filename: ${file.filename}`);
+              }
+
+              // Save file
+              await this.videoUploadService.saveUploadedFile(file, destPath);
+            }
+          }
+
+          // Handle stream upload completion
+          const result = this.videoUploadService.handleStreamUploadComplete({
+            videoId,
+            format,
+            resolution,
+          });
+
+          return await this.sendSuccess(reply, result);
+        } catch (error) {
+          await this.videosService.setError(videoId, true);
+
+          throw error;
+        }
       } catch (error) {
-        await this.videosService.setError(videoId, true);
+        this.logger.error('VideosController.uploadStream failed', error);
 
-        throw error;
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
       }
-    } catch (error) {
-      this.logger.error('VideosController.uploadStream failed', error);
-
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+    });
   };
 
   /**
@@ -1683,13 +1771,15 @@ export class VideosController extends BaseController {
    * POST /videos/:videoId/images/thumbnail
    */
   uploadThumbnail = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      return await this.handleImageUpload(request, reply, 'thumbnail', 'thumbnailFile');
-    } catch (error) {
-      this.logger.error('VideosController.uploadThumbnail failed', error);
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        return await this.handleImageUpload(request, reply, 'thumbnail', 'thumbnailFile');
+      } catch (error) {
+        this.logger.error('VideosController.uploadThumbnail failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
   };
 
   /**
@@ -1697,13 +1787,15 @@ export class VideosController extends BaseController {
    * POST /videos/:videoId/images/preview
    */
   uploadPreview = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      return await this.handleImageUpload(request, reply, 'preview', 'previewFile');
-    } catch (error) {
-      this.logger.error('VideosController.uploadPreview failed', error);
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        return await this.handleImageUpload(request, reply, 'preview', 'previewFile');
+      } catch (error) {
+        this.logger.error('VideosController.uploadPreview failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
   };
 
   /**
@@ -1711,13 +1803,15 @@ export class VideosController extends BaseController {
    * POST /videos/:videoId/images/poster
    */
   uploadPoster = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
-    try {
-      return await this.handleImageUpload(request, reply, 'poster', 'posterFile');
-    } catch (error) {
-      this.logger.error('VideosController.uploadPoster failed', error);
+    return this.withMediaResponse(reply, async (reply) => {
+      try {
+        return await this.handleImageUpload(request, reply, 'poster', 'posterFile');
+      } catch (error) {
+        this.logger.error('VideosController.uploadPoster failed', error);
 
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
-    }
+        return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      }
+    });
   };
 
   /**

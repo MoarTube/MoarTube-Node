@@ -264,6 +264,15 @@ export function settingsRoutes(
     controller.cloudflareClear.bind(controller)
   );
 
+  fastify.post(
+    '/cloudflare/retry',
+    {
+      preHandler: [fastify.authenticate],
+      schema: { tags: ['Settings'] },
+    },
+    controller.cloudflareRetry.bind(controller)
+  );
+
   // Configure Cloudflare Turnstile
   fastify.post(
     '/cloudflare/turnstile/configure',
