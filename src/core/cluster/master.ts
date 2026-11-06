@@ -243,6 +243,15 @@ export class ClusterMaster {
       });
     });
 
+    // Node headline update
+    this.ipc.on('update_node_headline', (message) => {
+      const nodeHeadline = (message as { nodeHeadline: string }).nodeHeadline;
+      this.ipc.broadcast({
+        cmd: 'update_node_headline_response',
+        nodeHeadline,
+      });
+    });
+
     // WebSocket broadcast
     this.ipc.on('websocket_broadcast', (message) => {
       const wsMessage = (message as { message: unknown }).message;

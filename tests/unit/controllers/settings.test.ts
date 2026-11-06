@@ -106,6 +106,7 @@ describe('SettingsController', () => {
     getAvatarFilePath: vi.fn(),
     getBannerFilePath: vi.fn(),
     updateNodeName: vi.fn(),
+    updateNodeHeadline: vi.fn(),
     updateNodeAbout: vi.fn(),
     updateCredentials: vi.fn(),
     updateNetworkSettings: vi.fn(),
@@ -178,7 +179,7 @@ describe('SettingsController', () => {
     };
 
     // Default mock implementations
-    mockSettingsService.getNodeSettings.mockReturnValue({ nodeName: 'Test Node' });
+    mockSettingsService.getNodeSettings.mockReturnValue({ nodeHeadline: 'Test Node' });
     mockSettingsService.getVersion.mockReturnValue('1.0.0');
     mockSettingsService.isDockerEnvironment.mockReturnValue(false);
     mockVideosService.getAllVideosData.mockResolvedValue([]);
@@ -376,7 +377,7 @@ describe('SettingsController', () => {
   describe('getSettings', () => {
     it('should get all node settings', () => {
       mockSettingsService.getNodeSettings.mockReturnValue({
-        nodeName: 'My Node',
+        nodeHeadline: 'My Node',
         isSecure: false,
       });
       mockSettingsService.getVersion.mockReturnValue('2.0.0');
@@ -389,7 +390,7 @@ describe('SettingsController', () => {
       expect(mockReply.send).toHaveBeenCalledWith({
         isError: false,
         nodeSettings: {
-          nodeName: 'My Node',
+          nodeHeadline: 'My Node',
           isSecure: false,
           cdnTransition: null,
           cloudflareAddressMigrationPending: false,
@@ -528,6 +529,33 @@ describe('SettingsController', () => {
       mockSettingsService.updateNodeName.mockRejectedValue(new Error('Update failed'));
 
       await controller.personalizeNodeName(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
+
+      expect(mockReply.status).toHaveBeenCalledWith(400);
+    });
+  });
+
+  describe('personalizeNodeHeadline', () => {
+    it('should update node headline', async () => {
+      mockRequest.body = { nodeHeadline: 'New Node Headline' };
+      mockSettingsService.updateNodeHeadline.mockResolvedValue(undefined);
+
+      await controller.personalizeNodeHeadline(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
+
+      expect(mockSettingsService.updateNodeHeadline).toHaveBeenCalledWith('New Node Headline');
+      expect(mockReply.status).toHaveBeenCalledWith(200);
+    });
+
+    it('should return error on failure', async () => {
+      mockRequest.body = { nodeHeadline: 'Name' };
+      mockSettingsService.updateNodeHeadline.mockRejectedValue(new Error('Update failed'));
+
+      await controller.personalizeNodeHeadline(
         mockRequest as FastifyRequest,
         mockReply as unknown as FastifyReply
       );

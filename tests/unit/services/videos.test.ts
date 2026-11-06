@@ -68,7 +68,7 @@ vi.mock('@config/index.js', () => ({
   getConfig: vi.fn().mockReturnValue({
     reloadNodeSettings: vi.fn(),
     nodeSettings: {
-      nodeName: 'Test Node',
+      nodeHeadline: 'Test Node',
       nodeAbout: 'Test node description',
       publicNodeProtocol: 'https',
       publicNodeAddress: 'test.example.com',
@@ -538,7 +538,7 @@ describe('VideosService', () => {
       vi.mocked(getConfig).mockReturnValue({
         reloadNodeSettings: vi.fn(),
         nodeSettings: {
-          nodeName: 'Test Node',
+          nodeHeadline: 'Test Node',
           nodeAbout: 'Test node description',
           publicNodeProtocol: 'https',
           publicNodeAddress: 'test.example.com',
@@ -890,7 +890,7 @@ describe('VideosService', () => {
       vi.mocked(getConfig).mockReturnValueOnce({
         reloadNodeSettings: vi.fn(),
         nodeSettings: {
-          nodeName: 'Test Node',
+          nodeHeadline: 'Test Node',
           nodeAbout: 'Test node description',
           publicNodeProtocol: 'https',
           publicNodeAddress: 'test.example.com',
@@ -2164,7 +2164,7 @@ describe('VideosService', () => {
       vi.mocked(getConfig).mockReturnValueOnce({
         reloadNodeSettings: vi.fn(),
         nodeSettings: {
-          nodeName: 'Test Node',
+          nodeHeadline: 'Test Node',
           nodeAbout: 'Test node description',
           publicNodeProtocol: 'https',
           publicNodeAddress: 'test.example.com',

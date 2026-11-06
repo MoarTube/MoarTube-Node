@@ -12,6 +12,7 @@ vi.mock('@config/index.js', () => ({
     nodeSettings: {
       storageConfig: { storageMode: 'filesystem' },
       nodeName: 'Test Node',
+      nodeHeadline: 'Test Node',
       nodeAbout: 'Test about',
       publicNodeProtocol: 'https',
       publicNodeAddress: 'example.com',
@@ -203,6 +204,7 @@ describe('WatchController', () => {
               isError: false,
               information: expect.objectContaining({
                 nodeName: 'Test Node',
+                nodeHeadline: 'Test Node',
               }),
             }),
             videoData: expect.objectContaining({
@@ -605,6 +607,7 @@ describe('WatchController', () => {
               information: expect.objectContaining({
                 nodeVideoCount: 42,
                 nodeName: 'Test Node',
+                nodeHeadline: 'Test Node',
                 nodeAbout: 'Test about',
                 publicNodeProtocol: 'https',
                 publicNodeAddress: 'example.com',

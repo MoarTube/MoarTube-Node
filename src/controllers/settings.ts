@@ -65,6 +65,10 @@ export interface PersonalizeNodeNameBody {
   nodeName: string;
 }
 
+export interface PersonalizeNodeHeadlineBody {
+  nodeHeadline: string;
+}
+
 export interface PersonalizeNodeAboutBody {
   nodeAbout: string;
 }
@@ -567,7 +571,7 @@ export class SettingsController extends BaseController {
   }
 
   /**
-   * POST /settings/personalize/nodeName
+   * POST /settings/personalize/name
    *
    * Update node name
    */
@@ -583,6 +587,28 @@ export class SettingsController extends BaseController {
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Error updating node name', error);
+
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
+    }
+  };
+
+  /**
+   * POST /settings/personalize/headline
+   *
+   * Update node headline
+   */
+  personalizeNodeHeadline = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    try {
+      const { nodeHeadline } = request.body as PersonalizeNodeHeadlineBody;
+
+      await this.settingsService.updateNodeHeadline(nodeHeadline);
+
+      return await this.sendSuccess(reply);
+    } catch (error) {
+      this.logger.error('Error updating node headline', error);
 
       return await this.sendError(reply, 'error communicating with the MoarTube node');
     }

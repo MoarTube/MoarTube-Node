@@ -107,7 +107,7 @@ describe('config/index.ts', () => {
     publicNodeProtocol: 'https',
     publicNodeAddress: 'example.com',
     publicNodePort: 443,
-    nodeName: 'Test Node',
+    nodeHeadline: 'Test Node',
     nodeAbout: 'A test node',
     username: 'hashed-username',
     password: 'hashed-password',
@@ -324,20 +324,20 @@ describe('config/index.ts', () => {
 
       // Should be frozen/read-only
       expect(() => {
-        (nodeSettings as any).nodeName = 'Modified';
+        (nodeSettings as any).nodeHeadline = 'Modified';
       }).toThrow();
     });
 
     it('should update node settings and persist to disk', () => {
       const config = Config.initialize(mockBaseDir);
-      const updates = { nodeName: 'Updated Node' };
+      const updates = { nodeHeadline: 'Updated Node' };
 
       config.updateNodeSettings(updates);
 
       expect(validateNodeSettings).toHaveBeenCalledWith({ ...mockNodeSettings, ...updates });
       expect(mockFs.writeFileSync).toHaveBeenCalledWith(
         mockPaths.nodeSettingsPath + '.test-generation.part',
-        JSON.stringify({ ...mockNodeSettings, nodeName: 'Updated Node' }, null, 2),
+        JSON.stringify({ ...mockNodeSettings, nodeHeadline: 'Updated Node' }, null, 2),
         { flag: 'wx' }
       );
     });
@@ -523,7 +523,7 @@ describe('config/index.ts', () => {
       const config = Config.initialize(mockBaseDir);
       const previous = config.nodeSettings;
       mockFs.writeFileSync.mockImplementationOnce(() => { throw new Error('disk full'); });
-      expect(() => config.updateNodeSettings({ nodeName: 'unsaved' })).toThrow('disk full');
+      expect(() => config.updateNodeSettings({ nodeHeadline: 'unsaved' })).toThrow('disk full');
       expect(config.nodeSettings).toEqual(previous);
       expect(mockFs.rmSync).toHaveBeenCalledWith(expect.stringContaining('.part'), { force: true });
     });
@@ -535,7 +535,7 @@ describe('config/index.ts', () => {
       expect(() => watchCallback('change')).not.toThrow();
       expect(config.nodeSettings).toEqual(mockNodeSettings);
 
-      const updated = { ...mockNodeSettings, nodeName: 'Completed write' };
+      const updated = { ...mockNodeSettings, nodeHeadline: 'Completed write' };
       mockFs.readFileSync.mockReturnValueOnce(JSON.stringify(updated));
       watchCallback('change');
       expect(config.nodeSettings).toEqual(updated);

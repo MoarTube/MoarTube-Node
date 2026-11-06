@@ -25,6 +25,7 @@ export type IPCCommandToMaster =
   | 'cloudflare_tunnel_request'
   | 'get_jwt_secret'
   | 'update_node_name'
+  | 'update_node_headline'
   | 'websocket_broadcast'
   | 'websocket_broadcast_chat'
   | 'live_stream_worker_stats_response'
@@ -38,6 +39,7 @@ export type IPCCommandToWorker =
   | 'cloudflare_tunnel_response'
   | 'get_jwt_secret_response'
   | 'update_node_name_response'
+  | 'update_node_headline_response'
   | 'websocket_broadcast_response'
   | 'websocket_broadcast_chat_response'
   | 'live_stream_worker_stats_request'
@@ -91,11 +93,16 @@ export interface GetJwtSecretMessage extends IPCMessageBase {
 }
 
 /**
- * Request node name update broadcast
+ * Request node headline update broadcast
  */
 export interface UpdateNodeNameMessage extends IPCMessageBase {
   cmd: 'update_node_name';
   nodeName: string;
+}
+
+export interface UpdateNodeHeadlineMessage extends IPCMessageBase {
+  cmd: 'update_node_headline';
+  nodeHeadline: string;
 }
 
 /**
@@ -151,11 +158,16 @@ export interface GetJwtSecretResponseMessage extends IPCMessageBase {
 }
 
 /**
- * Node name update broadcast response
+ * Node headline update broadcast response
  */
 export interface UpdateNodeNameResponseMessage extends IPCMessageBase {
   cmd: 'update_node_name_response';
   nodeName: string;
+}
+
+export interface UpdateNodeHeadlineResponseMessage extends IPCMessageBase {
+  cmd: 'update_node_headline_response';
+  nodeHeadline: string;
 }
 
 /**
@@ -215,6 +227,7 @@ export type IPCMessageToMaster =
   | CloudflareTunnelRequestMessage
   | GetJwtSecretMessage
   | UpdateNodeNameMessage
+  | UpdateNodeHeadlineMessage
   | WebSocketBroadcastMessage
   | WebSocketBroadcastChatMessage
   | LiveStreamWorkerStatsResponseMessage
@@ -228,6 +241,7 @@ export type IPCMessageToWorker =
   | CloudflareTunnelResponseMessage
   | GetJwtSecretResponseMessage
   | UpdateNodeNameResponseMessage
+  | UpdateNodeHeadlineResponseMessage
   | WebSocketBroadcastResponseMessage
   | WebSocketBroadcastChatResponseMessage
   | LiveStreamWorkerStatsRequestMessage

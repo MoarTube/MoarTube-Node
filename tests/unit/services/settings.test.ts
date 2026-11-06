@@ -100,7 +100,7 @@ describe('SettingsService', () => {
 
     mockConfig = {
       nodeSettings: {
-        nodeName: 'Test Node',
+        nodeHeadline: 'Test Node',
         databaseConfig: { databaseDialect: 'sqlite' },
         nodeAbout: 'About text',
         publicNodeProtocol: 'https',
@@ -176,30 +176,30 @@ describe('SettingsService', () => {
   describe('updateNodeSettings', () => {
     it('should update node settings', () => {
       service.updateNodeSettings({
-        nodeName: 'New Name',
+        nodeHeadline: 'New Name',
         nodeAbout: 'New about',
       });
 
       expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({
-        nodeName: 'New Name',
+        nodeHeadline: 'New Name',
         nodeAbout: 'New about',
       });
       expect(mockLogger.info).toHaveBeenCalledWith('Node settings updated', {
-        fields: ['nodeName', 'nodeAbout'],
+        fields: ['nodeHeadline', 'nodeAbout'],
       });
     });
 
     it('should only update provided fields', () => {
       service.updateNodeSettings({
-        nodeName: 'New Name',
+        nodeHeadline: 'New Name',
       });
 
       expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({
-        nodeName: 'New Name',
+        nodeHeadline: 'New Name',
       });
     });
 
-    it('should handle updates without nodeName', () => {
+    it('should handle updates without nodeHeadline', () => {
       service.updateNodeSettings({
         nodeAbout: 'About only',
       });
@@ -211,7 +211,8 @@ describe('SettingsService', () => {
 
     it('should handle all supported fields', () => {
       service.updateNodeSettings({
-        nodeName: 'Name',
+        nodeName: 'Node name',
+        nodeHeadline: 'Name',
         nodeAbout: 'About',
         publicNodeProtocol: 'https',
         publicNodeAddress: 'example.com',
@@ -223,7 +224,7 @@ describe('SettingsService', () => {
         cloudflareTurnstileSecretKey: 'secret-key',
       });
 
-      expect(mockConfig.updateNodeSettings).toHaveBeenCalled();
+      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith(expect.objectContaining({ nodeName: 'Node name', nodeHeadline: 'Name' }));
     });
   });
 
@@ -232,7 +233,7 @@ describe('SettingsService', () => {
       await service.updateNodeName('New Node Name');
 
       expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({ nodeName: 'New Node Name' });
-      expect(mockLogger.info).toHaveBeenCalledWith('Node name updated', { name: 'New Node Name' });
+      expect(mockLogger.info).toHaveBeenCalledWith('Node name updated', { nodeName: 'New Node Name' });
     });
 
     it('should purge Cloudflare cache when enabled', async () => {
@@ -247,6 +248,31 @@ describe('SettingsService', () => {
       vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(false);
 
       await service.updateNodeName('New Node Name');
+
+      expect(mockCloudflareService.purgeNodePage).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateNodeHeadline', () => {
+    it('should update node headline locally', async () => {
+      await service.updateNodeHeadline('New Node Headline');
+
+      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({ nodeHeadline: 'New Node Headline' });
+      expect(mockLogger.info).toHaveBeenCalledWith('Node headline updated', { nodeHeadline: 'New Node Headline' });
+    });
+
+    it('should purge Cloudflare cache when enabled', async () => {
+      vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(true);
+
+      await service.updateNodeHeadline('New Node Headline');
+
+      expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
+    });
+
+    it('should not purge Cloudflare cache when disabled', async () => {
+      vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(false);
+
+      await service.updateNodeHeadline('New Node Headline');
 
       expect(mockCloudflareService.purgeNodePage).not.toHaveBeenCalled();
     });

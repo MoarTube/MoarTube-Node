@@ -36,6 +36,7 @@ export type WebSocketEventName =
   | 'video_finalized'
   // Node events
   | 'node_name_update'
+  | 'node_headline_update'
   | 'node_about_update'
   // Registration events
   | 'registered'
@@ -206,11 +207,16 @@ export interface EchoMessage extends WebSocketMessageBase {
 }
 
 /**
- * Node name update message
+ * Node headline update message
  */
 export interface NodeNameUpdateMessage extends WebSocketMessageBase {
   eventName: 'node_name_update';
   nodeName: string;
+}
+
+export interface NodeHeadlineUpdateMessage extends WebSocketMessageBase {
+  eventName: 'node_headline_update';
+  nodeHeadline: string;
 }
 
 /**
@@ -244,6 +250,7 @@ export type WebSocketMessage =
   | VideoDataMessage
   | EchoMessage
   | NodeNameUpdateMessage
+  | NodeHeadlineUpdateMessage
   | LiveStreamStartedMessage
   | LiveStreamStoppedMessage
   | WebSocketMessageBase;

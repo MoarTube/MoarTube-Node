@@ -139,6 +139,7 @@ export class WatchEmbedController extends VideoControllerBase {
         cryptoWalletAddresses,
         nodeSettings: {
           nodeName: nodeSettings.nodeName,
+          nodeHeadline: nodeSettings.nodeHeadline,
           nodeAbout: nodeSettings.nodeAbout,
           publicNodeProtocol: nodeSettings.publicNodeProtocol,
           publicNodeAddress: nodeSettings.publicNodeAddress,

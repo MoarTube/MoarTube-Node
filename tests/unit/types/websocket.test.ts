@@ -33,7 +33,7 @@ describe('types/websocket.ts', () => {
         'video_published',
         'video_error',
         'video_finalized',
-        'node_name_update',
+        'node_headline_update',
         'node_about_update',
         'registered',
         'echo',

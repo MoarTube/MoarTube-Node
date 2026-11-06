@@ -32,6 +32,7 @@ interface NodeInformationData {
   information: {
     nodeVideoCount: number;
     nodeName: string;
+    nodeHeadline: string;
     nodeAbout: string;
     publicNodeProtocol: string;
     publicNodeAddress: string;
@@ -254,6 +255,7 @@ export class WatchController extends VideoControllerBase {
       information: {
         nodeVideoCount: videoCount,
         nodeName: nodeSettings.nodeName,
+        nodeHeadline: nodeSettings.nodeHeadline,
         nodeAbout: nodeSettings.nodeAbout,
         publicNodeProtocol: nodeSettings.publicNodeProtocol,
         publicNodeAddress: nodeSettings.publicNodeAddress,

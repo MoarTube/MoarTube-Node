@@ -9,6 +9,7 @@ import { cloudflareTunnelToggleBodySchema } from '@/config/cloudflare-tunnel.js'
 import { SettingsController } from '@controllers/index.js';
 import {
   personalizeNodeNameBodySchema,
+  personalizeNodeHeadlineBodySchema,
   personalizeNodeAboutBodySchema,
   updateAccountBodySchema,
   networkInternalBodySchema,
@@ -160,6 +161,19 @@ export function settingsRoutes(
       },
     },
     controller.personalizeNodeName.bind(controller)
+  );
+
+  // Update node headline
+  fastify.post(
+    '/personalize/headline',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Settings'],
+        body: personalizeNodeHeadlineBodySchema,
+      },
+    },
+    controller.personalizeNodeHeadline.bind(controller)
   );
 
   // Update node about

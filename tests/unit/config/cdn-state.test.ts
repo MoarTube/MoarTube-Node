@@ -79,9 +79,9 @@ describe('settings concurrency and durable CDN state', () => {
         publicNodePort: 9090,
       },
     });
-    second.updateNodeSettings({ nodeName: 'Concurrent identity change' });
+    second.updateNodeSettings({ nodeHeadline: 'Concurrent identity change' });
     expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toMatchObject({
-      nodeName: 'Concurrent identity change',
+      nodeHeadline: 'Concurrent identity change',
       isCloudflareCdnEnabled: true,
       cloudflareAddressMigrationPending: true,
       publicNodeAddress: 'example.com',
@@ -94,14 +94,14 @@ describe('settings concurrency and durable CDN state', () => {
     const config = worker(file);
     let later!: () => void;
     await withSettingsChange(file, async () => {
-      config.updateNodeSettings({ nodeName: 'Locked patch' });
-      later = AsyncResource.bind(() => config.updateNodeSettings({ nodeName: 'Stale callback' }));
+      config.updateNodeSettings({ nodeHeadline: 'Locked patch' });
+      later = AsyncResource.bind(() => config.updateNodeSettings({ nodeHeadline: 'Stale callback' }));
     });
     await withSettingsChange(file, async () => {
       expect(later).toThrow('in progress');
     });
     later();
-    expect(config.nodeSettings.nodeName).toBe('Stale callback');
+    expect(config.nodeSettings.nodeHeadline).toBe('Stale callback');
   });
   it('keeps the previous document and cache if persistence fails', () => {
     const file = path.join(directory, 'settings.json');
@@ -110,9 +110,9 @@ describe('settings concurrency and durable CDN state', () => {
     vi.spyOn(fs, 'renameSync').mockImplementationOnce(() => {
       throw new Error('disk failure');
     });
-    expect(() => config.updateNodeSettings({ nodeName: 'Lost patch' })).toThrow('disk failure');
-    expect(config.nodeSettings.nodeName).toBe(initial().nodeName);
-    expect(JSON.parse(fs.readFileSync(file, 'utf8')).nodeName).toBe(initial().nodeName);
+    expect(() => config.updateNodeSettings({ nodeHeadline: 'Lost patch' })).toThrow('disk failure');
+    expect(config.nodeSettings.nodeHeadline).toBe(initial().nodeHeadline);
+    expect(JSON.parse(fs.readFileSync(file, 'utf8')).nodeHeadline).toBe(initial().nodeHeadline);
   });
   it('treats missing journals as empty and projects only safe transition status', () => {
     const file = path.join(directory, 'settings.json');
@@ -175,4 +175,21 @@ it('does not invent recovery during an ordinary startup', () => {
   const file = path.join(directory, 'settings.json');
   rewindCdnAfterRestart(file);
   expect(fs.readdirSync(directory)).toEqual([]);
+});
+
+
+it('persists name and headline independently across reloads', () => {
+  const file = path.join(directory, 'identity-settings.json');
+  fs.writeFileSync(file, JSON.stringify({ ...initial(), nodeName: 'Existing name', nodeHeadline: 'Existing headline' }));
+  const config = worker(file);
+  config.reloadNodeSettings(true);
+  config.updateNodeSettings({ nodeName: 'New name' });
+  config.reloadNodeSettings(true);
+  expect(config.nodeSettings.nodeName).toBe('New name');
+  expect(config.nodeSettings.nodeHeadline).toBe('Existing headline');
+  config.updateNodeSettings({ nodeHeadline: 'New headline' });
+  config.reloadNodeSettings(true);
+  expect(config.nodeSettings.nodeName).toBe('New name');
+  expect(config.nodeSettings.nodeHeadline).toBe('New headline');
+  expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toMatchObject({ nodeName: 'New name', nodeHeadline: 'New headline' });
 });

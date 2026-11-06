@@ -183,6 +183,9 @@ export class SettingsService extends BaseService {
     if (data.nodeName !== undefined) {
       updates['nodeName'] = data.nodeName;
     }
+    if (data.nodeHeadline !== undefined) {
+      updates['nodeHeadline'] = data.nodeHeadline;
+    }
     if (data.nodeAbout !== undefined) {
       updates['nodeAbout'] = data.nodeAbout;
     }
@@ -219,15 +222,29 @@ export class SettingsService extends BaseService {
   /**
    * Update node name
    */
-  async updateNodeName(name: string): Promise<void> {
+  async updateNodeName(nodeName: string): Promise<void> {
     const config = getConfig();
 
-    config.updateNodeSettings({ nodeName: name });
+    config.updateNodeSettings({ nodeName });
     if (this.cloudflareService.isEnabled()) {
       await this.cloudflareService.purgeNodePage();
     }
 
-    this.logger.info('Node name updated', { name });
+    this.logger.info('Node name updated', { nodeName });
+  }
+
+  /**
+   * Update node headline
+   */
+  async updateNodeHeadline(nodeHeadline: string): Promise<void> {
+    const config = getConfig();
+
+    config.updateNodeSettings({ nodeHeadline });
+    if (this.cloudflareService.isEnabled()) {
+      await this.cloudflareService.purgeNodePage();
+    }
+
+    this.logger.info('Node headline updated', { nodeHeadline });
   }
 
   /**

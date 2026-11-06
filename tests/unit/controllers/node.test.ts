@@ -11,6 +11,7 @@ vi.mock('@config/index.js', () => ({
     nodeSettings: {
       storageConfig: { storageMode: 'filesystem' },
       nodeName: 'Test Node',
+      nodeHeadline: 'Test Node',
       nodeAbout: 'A test node',
       publicNodeProtocol: 'https',
       publicNodeAddress: 'example.com',

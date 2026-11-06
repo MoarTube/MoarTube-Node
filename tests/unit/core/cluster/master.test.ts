@@ -240,7 +240,7 @@ describe('ClusterMaster', () => {
       await master.start();
 
       expect(mockIpcOn).toHaveBeenCalledWith('get_jwt_secret', expect.any(Function));
-      expect(mockIpcOn).toHaveBeenCalledWith('update_node_name', expect.any(Function));
+      expect(mockIpcOn).toHaveBeenCalledWith('update_node_headline', expect.any(Function));
       expect(mockIpcOn).toHaveBeenCalledWith('websocket_broadcast', expect.any(Function));
       expect(mockIpcStartListening).toHaveBeenCalled();
     });
@@ -317,6 +317,18 @@ describe('ClusterMaster', () => {
       expect(mockIpcBroadcast).toHaveBeenCalledWith({
         cmd: 'update_node_name_response',
         nodeName: 'New Node Name',
+      });
+    });
+
+    it('should handle update_node_headline request', async () => {
+      const master = new ClusterMaster(mockLogger as any, mockCloudflare as any);
+      await master.start();
+
+      ipcHandlers['update_node_headline']?.({ cmd: 'update_node_headline', nodeHeadline: 'New Node Headline' });
+
+      expect(mockIpcBroadcast).toHaveBeenCalledWith({
+        cmd: 'update_node_headline_response',
+        nodeHeadline: 'New Node Headline',
       });
     });
 

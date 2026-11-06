@@ -56,6 +56,7 @@ export { ReportsController } from '@controllers/reports.js';
 export {
   SettingsController,
   type PersonalizeNodeNameBody,
+  type PersonalizeNodeHeadlineBody,
   type PersonalizeNodeAboutBody,
   type AccountBody,
   type NetworkInternalBody,

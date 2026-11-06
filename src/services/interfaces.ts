@@ -216,6 +216,7 @@ export type WebSocketEventName =
   | 'cloudflare_turnstile_information'
   | 'live_stream_stats'
   | 'node_name_update'
+  | 'node_headline_update'
   | 'node_about_update'
   | 'node_settings_update';
 
@@ -277,6 +278,7 @@ export interface CreateCommentReportInput {
  */
 export interface UpdateNodeSettingsInput {
   nodeName?: string;
+  nodeHeadline?: string;
   nodeAbout?: string;
   publicNodeProtocol?: 'http' | 'https';
   publicNodeAddress?: string;

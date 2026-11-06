@@ -92,6 +92,7 @@ export const NodeSettingsSchema = z.object({
 
   // Node Identity
   nodeName: z.string().default('MoarTube Node'),
+  nodeHeadline: z.string().default('MoarTube Node'),
   nodeAbout: z.string().default('A MoarTube Node'),
 
   // Authentication (Base64 encoded bcrypt hashes)

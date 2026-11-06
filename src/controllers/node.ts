@@ -91,6 +91,7 @@ export class NodeController extends BaseController {
         information: {
           nodeVideoCount: videoCount,
           nodeName: nodeSettings.nodeName,
+          nodeHeadline: nodeSettings.nodeHeadline,
           nodeAbout: nodeSettings.nodeAbout,
           publicNodeProtocol: nodeSettings.publicNodeProtocol,
           publicNodeAddress: nodeSettings.publicNodeAddress,

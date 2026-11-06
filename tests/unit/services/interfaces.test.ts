@@ -273,7 +273,7 @@ describe('Services Interfaces', () => {
         'chat_settings',
         'cloudflare_turnstile_information',
         'live_stream_stats',
-        'node_name_update',
+        'node_headline_update',
         'node_about_update',
         'node_settings_update',
       ];
@@ -347,7 +347,7 @@ describe('Services Interfaces', () => {
   describe('UpdateNodeSettingsInput', () => {
     it('should allow all optional fields', () => {
       const settings: UpdateNodeSettingsInput = {
-        nodeName: 'My Node',
+        nodeHeadline: 'My Node',
         nodeAbout: 'About my node',
         publicNodeProtocol: 'https',
         publicNodeAddress: 'example.com',
@@ -358,7 +358,7 @@ describe('Services Interfaces', () => {
         cloudflareTurnstileSiteKey: 'sitekey',
         cloudflareTurnstileSecretKey: 'secretkey',
       };
-      expect(settings.nodeName).toBe('My Node');
+      expect(settings.nodeHeadline).toBe('My Node');
       expect(settings.isSecure).toBe(true);
     });
 

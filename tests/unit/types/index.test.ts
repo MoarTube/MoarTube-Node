@@ -30,7 +30,7 @@ describe('types/index.ts', () => {
         publicNodeProtocol: 'http',
         publicNodeAddress: 'localhost',
         publicNodePort: 80,
-        nodeName: 'Test Node',
+        nodeHeadline: 'Test Node',
         nodeAbout: 'Test node description',
         username: 'dGVzdA==', // base64 encoded 'test'
         password: 'dGVzdA==', // base64 encoded 'test'
@@ -53,7 +53,7 @@ describe('types/index.ts', () => {
           storageMode: 'filesystem',
         },
       };
-      expect(settings.nodeName).toBe('Test Node');
+      expect(settings.nodeHeadline).toBe('Test Node');
       expect(settings.databaseConfig.databaseDialect).toBe('sqlite');
     });
 

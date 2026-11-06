@@ -116,6 +116,11 @@ describe('Settings Routes', () => {
     expect(mockFastify.post).toHaveBeenCalledWith('/personalize/name', expect.anything(), expect.any(Function));
   });
 
+  it('should register POST /personalize/headline route', () => {
+    settingsRoutes(mockFastify as any, mockContainer);
+    expect(mockFastify.post).toHaveBeenCalledWith('/personalize/headline', expect.anything(), expect.any(Function));
+  });
+
   it('should register POST /personalize/about route', () => {
     settingsRoutes(mockFastify as any, mockContainer);
     expect(mockFastify.post).toHaveBeenCalledWith('/personalize/about', expect.anything(), expect.any(Function));
@@ -222,8 +227,8 @@ describe('Settings Routes', () => {
     expect(mockFastify.get).toHaveBeenCalledTimes(8);
   });
 
-  it('should register exactly 23 POST routes', () => {
+  it('should register exactly 24 POST routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(23);
+    expect(mockFastify.post).toHaveBeenCalledTimes(24);
   });
 });

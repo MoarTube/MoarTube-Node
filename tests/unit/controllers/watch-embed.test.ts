@@ -13,6 +13,7 @@ vi.mock('@config/index.js', () => ({
       storageConfig: { storageMode: 'filesystem' },
       isLiveChatEnabled: true,
       nodeName: 'Test Node',
+      nodeHeadline: 'Test Node',
       nodeAbout: 'Test about',
       publicNodeProtocol: 'https',
       publicNodeAddress: 'example.com',

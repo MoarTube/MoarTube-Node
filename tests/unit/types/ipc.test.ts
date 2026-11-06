@@ -14,7 +14,7 @@ describe('types/ipc.ts', () => {
     it('should accept valid IPC commands', () => {
       const commandsToMaster: IPCCommand[] = [
         'get_jwt_secret',
-        'update_node_name',
+        'update_node_headline',
         'websocket_broadcast',
         'websocket_broadcast_chat',
         'live_stream_worker_stats_response',
@@ -24,7 +24,7 @@ describe('types/ipc.ts', () => {
 
       const commandsToWorker: IPCCommand[] = [
         'get_jwt_secret_response',
-        'update_node_name_response',
+        'update_node_headline_response',
         'websocket_broadcast_response',
         'websocket_broadcast_chat_response',
         'live_stream_worker_stats_request',

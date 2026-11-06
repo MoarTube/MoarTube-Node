@@ -25,6 +25,7 @@ vi.mock('@config/index.js', () => ({
   getConfig: vi.fn().mockReturnValue({
     nodeSettings: {
       nodeName: 'Test Node',
+      nodeHeadline: 'Test Node',
       nodeAbout: 'Test node description',
       publicNodeProtocol: 'https',
       publicNodeAddress: 'test.example.com',
@@ -92,6 +93,7 @@ describe('StatusController', () => {
         information: {
           nodeVideoCount: 42,
           nodeName: 'Test Node',
+          nodeHeadline: 'Test Node',
           nodeAbout: 'Test node description',
           publicNodeProtocol: 'https',
           publicNodeAddress: 'test.example.com',

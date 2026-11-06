@@ -269,6 +269,23 @@ describe('WebSocketService', () => {
     });
   });
 
+  describe('broadcastNodeHeadlineUpdate', () => {
+    it('should broadcast node headline update', () => {
+      const mockSend = vi.fn();
+      process.send = mockSend;
+
+      service.broadcastNodeHeadlineUpdate('New Node Headline');
+
+      expect(mockSend).toHaveBeenCalledWith({
+        cmd: 'websocket_broadcast',
+        message: {
+          eventName: 'node_headline_update',
+          data: { nodeHeadline: 'New Node Headline' },
+        },
+      });
+    });
+  });
+
   describe('broadcastNodeAboutUpdate', () => {
     it('should broadcast node about update', () => {
       const mockSend = vi.fn();

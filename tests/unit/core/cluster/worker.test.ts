@@ -975,6 +975,19 @@ describe('ClusterWorker', () => {
       expect(mockLogger.debug).toHaveBeenCalledWith('Node name updated', { nodeName: 'New Node Name' });
     });
 
+    it('should handle update_node_headline_response', async () => {
+      const worker = new ClusterWorker(mockLogger as any);
+      await worker.start();
+
+      ipcHandlers['update_node_headline_response']?.({
+        cmd: 'update_node_headline_response',
+        nodeHeadline: 'New Node Headline',
+      });
+
+      // The code logs with debug('Node headline updated', { nodeHeadline })
+      expect(mockLogger.debug).toHaveBeenCalledWith('Node headline updated', { nodeHeadline: 'New Node Headline' });
+    });
+
     it('should handle live_stream_worker_stats_update with null worker counts', async () => {
       const mockClient = {
         socketType: 'node_peer',
@@ -1146,6 +1159,17 @@ describe('ClusterWorker', () => {
       expect(mockIpcSendToMaster).toHaveBeenCalledWith({
         cmd: 'update_node_name',
         nodeName: 'New Name',
+      });
+    });
+    it('should request node headline update', async () => {
+      const worker = new ClusterWorker(mockLogger as any);
+      await worker.start();
+
+      worker.requestNodeHeadlineUpdate('New Name');
+
+      expect(mockIpcSendToMaster).toHaveBeenCalledWith({
+        cmd: 'update_node_headline',
+        nodeHeadline: 'New Name',
       });
     });
   });

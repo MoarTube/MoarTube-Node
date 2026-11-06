@@ -496,6 +496,7 @@ body {
             <div class="container-fluid mt-2 p-0">
               <div class="row m-0">
                 <h2><span id="node-name" class="text-break">........</span></h2>
+                <h2><span id="node-headline" class="text-break">........</span></h2>
               </div>
               <div class="row m-0">
                 <h5><span id="node-video-count" class="text-break">........</span></h5>
@@ -671,7 +672,8 @@ body {
       	}
 
       	loadInformation(information) {
-      		const nodeName = information.nodeName;
+          const nodeName = information.nodeName;
+          const nodeHeadline = information.nodeHeadline;
       		const nodeVideoCount = information.nodeVideoCount;
       		const nodeAbout = information.nodeAbout;
 
@@ -686,12 +688,13 @@ body {
       			nodeVideoCountDescriptor = ' video';
       		}
 
-      		$('#node-name').text(nodeName);
+          $('#node-name').text(nodeName);
+          $('#node-headline').text(nodeHeadline);
       		$('#node-video-count').text(nodeVideoCount + nodeVideoCountDescriptor);
       		$('#node-about').html(nodeAboutHtml);
 
-      		if (nodeName != '') {
-      			document.title = nodeName + ' - MoarTube';
+          if (nodeName != '') {
+            document.title = nodeName + ' - MoarTube';
       		}
       	}
 

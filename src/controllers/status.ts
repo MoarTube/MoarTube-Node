@@ -14,6 +14,7 @@ import type { VideosService } from '@services/index.js';
 interface StatusInformation {
   nodeVideoCount: number;
   nodeName: string;
+  nodeHeadline: string;
   nodeAbout: string;
   publicNodeProtocol: string;
   publicNodeAddress: string;
@@ -55,6 +56,7 @@ export class StatusController extends BaseController {
       const information: StatusInformation = {
         nodeVideoCount: videoCount,
         nodeName: nodeSettings.nodeName,
+        nodeHeadline: nodeSettings.nodeHeadline,
         nodeAbout: nodeSettings.nodeAbout,
         publicNodeProtocol: nodeSettings.publicNodeProtocol,
         publicNodeAddress: nodeSettings.publicNodeAddress,

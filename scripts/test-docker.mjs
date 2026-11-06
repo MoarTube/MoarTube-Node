@@ -75,7 +75,7 @@ try {
   assert.equal(range.status, 206);
   assert.equal(range.headers.get('content-range'), `bytes 0-7/${media.length}`);
   assert.deepEqual(Buffer.from(await range.arrayBuffer()), media.subarray(0, 8));
-  await json('/settings/personalize/name', post({ nodeName: name }, token));
+  await json('/settings/personalize/headline', post({ nodeHeadline: name }, token));
   await json('/links/add', post({ url: link, svgGraphic: '' }, token));
   const form = new FormData();
   form.append('avatarFile', new Blob([png], { type: 'image/png' }), 'avatar.png');
@@ -97,7 +97,7 @@ try {
   assert.notEqual(docker('inspect', '--format', '{{.State.ExitCode}}', name), '137', 'Container required SIGKILL');
   docker('rm', name);
   await start();
-  assert.equal((await json('/status/information')).information.nodeName, name);
+  assert.equal((await json('/status/information')).information.nodeHeadline, name);
   assert.ok((await json('/links/all')).links.some(item => item.url === link));
   assert.deepEqual(Buffer.from(await (await request('/settings/avatar')).arrayBuffer()), png);
   assert.deepEqual(Buffer.from(await (await request(mediaPath)).arrayBuffer()), media);

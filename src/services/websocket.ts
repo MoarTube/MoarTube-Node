@@ -160,6 +160,16 @@ export class WebSocketService extends BaseService {
   }
 
   /**
+   * Broadcast node headline update
+   */
+  broadcastNodeHeadlineUpdate(nodeHeadline: string): void {
+    this.broadcastToNodes({
+      eventName: 'node_headline_update',
+      data: { nodeHeadline },
+    });
+  }
+
+  /**
    * Broadcast node about update
    */
   broadcastNodeAboutUpdate(nodeAbout: string): void {

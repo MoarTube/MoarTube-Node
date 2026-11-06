@@ -326,7 +326,7 @@ describe('config/schema.ts', () => {
         publicNodeProtocol: 'https' as const,
         publicNodeAddress: 'example.com',
         publicNodePort: 443,
-        nodeName: 'Test Node',
+        nodeHeadline: 'Test Node',
         nodeAbout: 'A test node',
         username: 'hashed-username',
         password: 'hashed-password',
@@ -409,7 +409,7 @@ describe('config/schema.ts', () => {
         expect(result.success).toBe(true);
         expect(result.data?.isSecure).toBe(false);
         expect(result.data?.publicNodeProtocol).toBe('');
-        expect(result.data?.nodeName).toBe('MoarTube Node');
+        expect(result.data?.nodeHeadline).toBe('MoarTube Node');
       });
 
       it('should reject empty username', () => {
@@ -533,7 +533,7 @@ describe('config/schema.ts', () => {
         publicNodeProtocol: 'https',
         publicNodeAddress: 'example.com',
         publicNodePort: 443,
-        nodeName: 'Test Node',
+        nodeHeadline: 'Test Node',
         nodeAbout: 'A test node',
         username: 'hashed-username',
         password: 'hashed-password',
@@ -569,5 +569,30 @@ describe('config/schema.ts', () => {
       expect(nodeSettings.nodeListeningPort).toBe(8080);
       expect(tracker.lastCheckedCommentsTimestamp).toBe(1234567890);
     });
+  });
+});
+
+
+describe('independent name and headline settings', () => {
+  const required = {
+    nodeListeningPort: 9090,
+    username: 'user',
+    password: 'password',
+    databaseConfig: { databaseDialect: 'sqlite' },
+    storageConfig: { storageMode: 'filesystem' },
+  };
+  it('preserves existing node names without copying them into the headline', () => {
+    const settings = validateNodeSettings({ ...required, nodeName: 'Saved headline' });
+    expect(settings.nodeName).toBe('Saved headline');
+    expect(settings.nodeHeadline).toBe('MoarTube Node');
+
+  });
+  it.each(['New headline', ''])('keeps name and headline %j independent', (nodeHeadline) => {
+    const settings = validateNodeSettings({ ...required, nodeName: 'Old headline', nodeHeadline });
+    expect(settings.nodeHeadline).toBe(nodeHeadline);
+    expect(settings.nodeName).toBe('Old headline');
+  });
+  it('validates node names', () => {
+    expect(() => validateNodeSettings({ ...required, nodeName: 123 })).toThrow('Invalid node settings');
   });
 });

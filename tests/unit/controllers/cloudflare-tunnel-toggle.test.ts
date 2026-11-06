@@ -34,7 +34,7 @@ beforeEach(async () => {
       isCloudflareCdnEnabled: false,
       cloudflareTunnelName: 'saved-name',
       cloudflareGlobalApiKey: 'private-key',
-      nodeName: 'Keep me',
+      nodeHeadline: 'Keep me',
     })
   );
   config = {
@@ -115,7 +115,7 @@ describe('authenticated tunnel toggle', () => {
       config.reloadNodeSettings();
       expect(config.nodeSettings).toMatchObject({
         cloudflareTunnelName: 'saved-name',
-        nodeName: 'Keep me',
+        nodeHeadline: 'Keep me',
         cloudflareGlobalApiKey: 'private-key',
         isCloudflareCdnEnabled: cdn,
       });

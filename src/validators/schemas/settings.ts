@@ -26,6 +26,14 @@ export const nodeNameSchema = z
   .max(100, 'Node name must be less than 100 characters');
 
 /**
+ * Node headline schema
+ */
+export const nodeHeadlineSchema = z
+  .string()
+  .min(1, 'Node headline is required')
+  .max(100, 'Node headline must be less than 100 characters');
+
+/**
  * Node about schema
  */
 export const nodeAboutSchema = z
@@ -53,6 +61,13 @@ export const storageModeSchema = z.enum(['filesystem', 's3provider']);
  */
 export const personalizeNodeNameBodySchema = z.object({
   nodeName: nodeNameSchema,
+});
+
+/**
+ * Node headline personalization request body schema
+ */
+export const personalizeNodeHeadlineBodySchema = z.object({
+  nodeHeadline: nodeHeadlineSchema,
 });
 
 /**

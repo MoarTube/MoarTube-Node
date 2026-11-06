@@ -166,7 +166,7 @@ describe('types/config.ts', () => {
         publicNodePort: 443,
 
         // Node Identity
-        nodeName: 'My MoarTube Node',
+        nodeHeadline: 'My MoarTube Node',
         nodeAbout: 'A video sharing node',
 
         // Authentication
@@ -201,7 +201,7 @@ describe('types/config.ts', () => {
       expect(settings.nodeListeningPort).toBe(8080);
       expect(settings.isSecure).toBe(true);
       expect(settings.publicNodeProtocol).toBe('https');
-      expect(settings.nodeName).toBe('My MoarTube Node');
+      expect(settings.nodeHeadline).toBe('My MoarTube Node');
       expect(settings.isCommentsEnabled).toBe(true);
       expect(settings.databaseConfig.databaseDialect).toBe('sqlite');
       expect(settings.storageConfig.storageMode).toBe('filesystem');
@@ -214,7 +214,7 @@ describe('types/config.ts', () => {
         publicNodeProtocol: '',
         publicNodeAddress: 'localhost',
         publicNodePort: 8080,
-        nodeName: 'Test Node',
+        nodeHeadline: 'Test Node',
         nodeAbout: 'Test',
         username: 'admin',
         password: 'pass',

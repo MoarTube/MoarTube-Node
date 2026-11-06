@@ -323,6 +323,13 @@ export class ClusterWorker {
       this.logger.debug('Node name updated', { nodeName });
       // This could trigger a WebSocket broadcast to clients
     });
+
+    // Node headline update response
+    this.ipc.on('update_node_headline_response', (message) => {
+      const { nodeHeadline } = message as { nodeHeadline: string };
+      this.logger.debug('Node headline updated', { nodeHeadline });
+      // This could trigger a WebSocket broadcast to clients
+    });
   }
 
   /**
@@ -369,6 +376,16 @@ export class ClusterWorker {
     this.ipc.sendToMaster({
       cmd: 'update_node_name',
       nodeName,
+    });
+  }
+
+  /**
+   * Request node headline update broadcast
+   */
+  requestNodeHeadlineUpdate(nodeHeadline: string): void {
+    this.ipc.sendToMaster({
+      cmd: 'update_node_headline',
+      nodeHeadline,
     });
   }
 
