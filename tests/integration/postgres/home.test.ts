@@ -97,6 +97,38 @@ describe('Homepage real database and public routes', () => {
     expect(JSON.stringify(filtered)).not.toContain('secret');
   });
 
+  it('orders recently discussed videos by newest comment with stable ties and unmentioned videos last', async () => {
+    await videos.createMany([
+      { ...video('old-active'), is_published: true, creation_timestamp: 1, comments: 100 },
+      { ...video('newer-video'), is_published: true, creation_timestamp: 500, comments: 10 },
+      { ...video('tie'), is_published: true, creation_timestamp: 600, comments: 1 },
+      { ...video('no-comments'), is_published: true, creation_timestamp: 999 },
+    ]);
+    await comments.createMany([
+      comment('old-active', 200),
+      comment('old-active', 50),
+      comment('newer-video', 100),
+      comment('tie', 200),
+    ]);
+    const sort = { ...empty, sortTerm: 'recently-discussed' as const };
+    const first = await service.page('videos', sort, input());
+    expect(first.videos!.map((row) => row.videoId)).toEqual([
+      'tie',
+      'old-active',
+      'newer-video',
+      'no-comments',
+    ]);
+    await comments.create(comment('newer-video', 300));
+    const refreshed = await service.page('videos', sort, input());
+    expect(refreshed.videos!.map((row) => row.videoId)).toEqual([
+      'newer-video',
+      'tie',
+      'old-active',
+      'no-comments',
+    ]);
+    expect(refreshed.snapshot).not.toBe(first.snapshot);
+  });
+
   it('pins video order and counters through concurrent changes, and rechecks revoked eligibility', async () => {
     await videos.createMany(
       Array.from({ length: 31 }, (_, index) => ({
@@ -340,7 +372,7 @@ describe('Homepage real database and public routes', () => {
       const current = await service.state();
       expect(current.revision).not.toBe(old.revision);
       expect(current.tagsRevision).toBe(old.tagsRevision);
-      for (const sortTerm of ['hot', 'new', 'viewed', 'discussed']) {
+      for (const sortTerm of ['hot', 'new', 'viewed', 'recently-discussed', 'discussed']) {
         const response = await get('videos', {
           epoch: old.epoch,
           revision: old.revision,

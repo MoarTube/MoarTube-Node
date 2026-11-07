@@ -29,6 +29,7 @@
 }
 .home a {
   color: inherit;
+  text-decoration: none;
 }
 .home :focus-visible {
   outline: 3px solid var(--home-accent);
@@ -391,12 +392,12 @@
   margin: 3px 0;
 }
 .bulletin-panel li::before {
-  content: '◆';
+  content: '\25C6';
   position: absolute;
   left: 0;
   top: 2px;
   font-size: 10px;
-  color: #000;
+  color: var(--home-accent);
 }
 .node-link {
   display: grid;
@@ -1104,14 +1105,28 @@
 .home :is(input[type='search'], .search-box input):focus-visible { outline: none; }
 .home .search-box:focus-within { border-color: #737b89; box-shadow: 0 0 0 1px #737b8933; }
 .home input[type='search'].form-control:focus { border-color: #737b89; box-shadow: 0 0 0 1px #737b8933; }
-.viewer-dialog { width: min(440px, calc(100% - 32px)); border: 1px solid var(--home-border); border-radius: 8px; padding: 24px; }
-.viewer-dialog::backdrop { background: #0006; }
-.viewer-dialog h2 { font-size: 22px; margin: 0 30px 18px 0; }
-.dialog-close { float: right; border: 0; background: none; font-size: 26px; line-height: 1; }
-#donate-form { display: grid; gap: 12px; }
-#donate-form :is(select, input, button) { padding: 8px; min-width: 0; width: 100%; }
+/* Use the watch page's Bootstrap Settings and SweetAlert2 donation presentation. */
+.home .modal-content { color: #212529; font-size: 16px; line-height: 1.6; }
+.home .swal2-popup { line-height: 1.6; }
+.home .swal2-popup .form-control { background-color: #fff; color: #495057; }
+.home .swal2-styled.swal2-confirm {
+  border: 0;
+  border-radius: 0.25em;
+  background-color: transparent;
+  background-image: linear-gradient(310deg, #7928ca, #ff0080);
+  color: #fff;
+  font-size: 1em;
+}
+.home .swal2-styled.swal2-confirm:focus,
+.home .swal2-styled.swal2-confirm:hover {
+  background-image: linear-gradient(130deg, #7928ca, #ff0080) !important;
+  outline: 0;
+  box-shadow: 0 3px 5px -1px rgba(0, 0, 0, 0.09), 0 2px 3px -1px rgba(0, 0, 0, 0.07);
+}
+#donate-status:empty { display: none; }
+.home-dark :is(.sort-tabs, .tag-rail, .mobile-tabs) button:not([aria-pressed='true']):not([aria-selected='true']) { color: #eee; }
 .home.home-dark { background: #181a1e; color: #eee; --home-border: #444950; --home-muted: #aaa; }
-.home-dark :is(.videos-panel, .sidebar-introduction, .desktop-intro, .video-card, .home-sidebar .panel, .tag-menu, .tag-options button, .viewer-dialog, .feed-status button, .refresh-button) { background: #22252a; color: #eee; }
+.home-dark :is(.videos-panel, .sidebar-introduction, .desktop-intro, .video-card, .home-sidebar .panel, .tag-menu, .tag-options button, .feed-status button, .refresh-button) { background: #22252a; color: #eee; }
 .home-dark :is(.network-identity, .home-sidebar .panel h2, .comments-header) { background: #32363e; color: #eee; }
 .home-dark :is(.search-box input, .form-control, .form-select) { background-color: transparent; color: #eee; }
 .home-dark :is(.tag-menu input, .form-select option) { background: #22252a; color: #eee; }
@@ -1196,3 +1211,10 @@
 }
 
 .network-identity { text-align: center; }
+
+/* Match the watch header when branding and social links share a narrow viewport. */
+      @media (max-width: 359.98px) {
+        .viewer-navigation #navbar-settings-buttons { display: flex; align-items: center; gap: 6px; }
+        .viewer-navigation .navbar-settings-button { margin-right: 0; }
+        .watch-branding { gap: 6px; }
+      }

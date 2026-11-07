@@ -12,7 +12,8 @@
       if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $(id).click(); }
     };
   }
-  $('navbar-settings-button').onclick = () => $('settings-dialog').showModal();
+  const settingsModal = new bootstrap.Modal($('settings-dialog'));
+  $('navbar-settings-button').onclick = () => settingsModal.show();
   $('darkModeSwitch').onchange = () => {
     const dark = $('darkModeSwitch').checked;
     theme(dark);
@@ -43,42 +44,65 @@
     }
   }).catch(() => { /* Optional links must not prevent browsing. */ });
   let wallets = [];
-  let loading = false;
-  $('navbar-donate-button').onclick = async () => {
-    $('donate-dialog').showModal();
-    if (loading) return;
-    $('donate-form').hidden = true;
-    $('wallet-install').hidden = true;
+  $('navbar-donate-button').onclick = () => {
     if (!window.ethereum) {
-      $('donate-status').textContent = 'Your browser does not have a supported crypto wallet installed. MoarTube supports EIP-1193 wallets.';
-      $('wallet-install').hidden = false;
+      void Swal.fire({
+        title: 'Missing Crypto Wallet',
+        html: "Your browser doesn't have a supported crypto wallet installed.<br>MoarTube supports crypto wallets that conform to the EIP-1193 standard.<br>Would you like to be directed to a supported crypto wallet?",
+        width: 'auto',
+        icon: 'info',
+        showCloseButton: true,
+        showCancelButton: true,
+        confirmButtonText: '<a id="wallet-install" href="https://metamask.io/download" target="_blank" rel="noopener noreferrer" style="text-decoration: none; color: white;">Continue</a>',
+      });
       return;
     }
-    loading = true;
-    $('donate-status').textContent = 'Loading donation addresses...';
-    try {
-      const data = await read('/monetization/all');
-      wallets = data.cryptoWalletAddresses || [];
-      $('wallet-address-select').replaceChildren(...wallets.map((wallet, index) => {
-        const option = document.createElement('option');
-        option.value = String(index);
-        option.textContent = wallet.wallet_address + ' (' + wallet.chain + ')';
-        return option;
-      }));
-      $('donate-status').textContent = wallets.length ? '' : 'This node has no donation addresses configured.';
-      $('donate-form').hidden = !wallets.length;
-      $('donation-amount-input').value = '';
-      updateCurrency();
-    } catch (error) { $('donate-status').textContent = error.message; }
-    finally { loading = false; }
+    wallets = [];
+    void Swal.fire({
+      title: 'Donate to Creator',
+      html: $('donate-content').innerHTML,
+      width: 'auto',
+      showCloseButton: true,
+      showCancelButton: true,
+      confirmButtonText: 'Continue',
+      didOpen: async (popup) => {
+        const confirm = Swal.getConfirmButton();
+        confirm.id = 'donation-continue';
+        confirm.disabled = true;
+        $('donate-status').textContent = 'Loading donation addresses...';
+        $('wallet-address-select').onchange = updateCurrency;
+        $('donation-amount-input').oninput = updateContinue;
+        $('donate-form').onsubmit = (event) => { event.preventDefault(); Swal.clickConfirm(); };
+        try {
+          const data = await read('/monetization/all');
+          if (!popup.isConnected) return;
+          wallets = data.cryptoWalletAddresses || [];
+          $('wallet-address-select').append(...wallets.map((wallet, index) => {
+            const option = document.createElement('option');
+            option.value = String(index);
+            option.textContent = wallet.wallet_address + ' (' + wallet.chain + ')';
+            return option;
+          }));
+          $('donate-status').textContent = wallets.length ? '' : 'This node has no donation addresses configured.';
+          $('donate-form').hidden = !wallets.length;
+        } catch (error) {
+          if (popup.isConnected) $('donate-status').textContent = error.message;
+        }
+      },
+      preConfirm: async () => { await submitDonation(); return false; },
+    });
   };
   function updateCurrency() {
-    const wallet = wallets[Number($('wallet-address-select').value)];
-    $('donation-amount-input').placeholder = wallet ? 'Amount (' + wallet.currency + ')' : 'Amount';
+    const selected = $('wallet-address-select').value;
+    const wallet = selected === '' ? undefined : wallets[Number(selected)];
+    $('donation-amount-input').disabled = !wallet;
+    $('donation-amount-input').placeholder = wallet ? 'donation amount (' + wallet.currency + ')' : 'donation amount';
+    updateContinue();
   }
-  $('wallet-address-select').onchange = updateCurrency;
-  $('donate-form').onsubmit = async (event) => {
-    event.preventDefault();
+  function updateContinue() {
+    $('donation-continue').disabled = $('wallet-address-select').value === '' || $('donation-amount-input').value.trim() === '';
+  }
+  async function submitDonation() {
     const amount = $('donation-amount-input').value.trim();
     if (!/^\d+(?:\.\d{1,18})?$/.test(amount)) {
       $('donate-status').textContent = 'Enter a positive amount with up to 18 decimal places.';
@@ -89,14 +113,17 @@
     if (value <= 0n) { $('donate-status').textContent = 'Enter an amount greater than zero.'; return; }
     const wallet = wallets[Number($('wallet-address-select').value)];
     if (!wallet || !window.ethereum) return;
+    const popup = Swal.getPopup();
     $('donation-continue').disabled = true;
     try {
       await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: wallet.chain_id }] });
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       if (!accounts?.[0]) throw new Error('No wallet account selected.');
       await window.ethereum.request({ method: 'eth_sendTransaction', params: [{ to: wallet.wallet_address, from: accounts[0], value: '0x' + value.toString(16) }] });
-      $('donate-status').textContent = 'Transaction submitted to your wallet.';
-    } catch (error) { $('donate-status').textContent = error.message || 'Unable to open wallet.'; }
-    finally { $('donation-continue').disabled = false; }
-  };
+      if (popup.isConnected) $('donate-status').textContent = 'Transaction submitted to your wallet.';
+    } catch (error) {
+      if (popup.isConnected) $('donate-status').textContent = error.message || 'Unable to open wallet.';
+    }
+    finally { if (popup.isConnected) updateContinue(); }
+  }
 })();

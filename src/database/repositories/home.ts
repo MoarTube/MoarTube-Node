@@ -6,7 +6,7 @@ import type { DatabaseClient as PostgresClient } from '@/database/postgres-conne
 export interface HomeQuery {
   searchTerm: string;
   tagTerm: string;
-  sortTerm: 'hot' | 'new' | 'discussed' | 'viewed';
+  sortTerm: 'hot' | 'new' | 'recently-discussed' | 'discussed' | 'viewed';
   tagSearch: string;
   commentSearch?: string;
 }
@@ -159,9 +159,11 @@ export class HomeRepository {
       const sort =
         query.sortTerm === 'hot'
           ? score
-          : sql.raw(
-              `v.${({ new: 'creation_timestamp', discussed: 'comments', viewed: 'views' } as const)[query.sortTerm]}`
-            );
+          : query.sortTerm === 'recently-discussed'
+            ? sql`COALESCE((SELECT MAX(c.timestamp) FROM comments c WHERE c.video_id=v.video_id),0)`
+            : sql.raw(
+                `v.${({ new: 'creation_timestamp', discussed: 'comments', viewed: 'views' } as const)[query.sortTerm]}`
+              );
       const body = this.json({
         videoId: 'v.video_id',
         title: 'v.title',

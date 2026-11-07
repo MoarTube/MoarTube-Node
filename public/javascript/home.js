@@ -877,7 +877,7 @@
       tagTerm: values.get('tagTerm') || '',
       tagSearch: values.get('tagSearch') || '',
       commentSearch: values.get('commentSearch') || '',
-      sortTerm: ['hot', 'new', 'discussed', 'viewed'].includes(values.get('sortTerm'))
+      sortTerm: ['hot', 'new', 'recently-discussed', 'discussed', 'viewed'].includes(values.get('sortTerm'))
         ? values.get('sortTerm')
         : 'hot',
       view: ['about', 'community'].includes(view) ? view : 'videos',

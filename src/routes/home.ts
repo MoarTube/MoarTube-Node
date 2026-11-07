@@ -9,7 +9,7 @@ export const homeQuerySchema = z.object({
   tagTerm: z.string().trim().max(500).default(''),
   tagSearch: z.string().trim().max(500).default(''),
   commentSearch: z.string().trim().max(500).default(''),
-  sortTerm: z.enum(['hot', 'new', 'discussed', 'viewed']).default('hot'),
+  sortTerm: z.enum(['hot', 'new', 'recently-discussed', 'discussed', 'viewed']).default('hot'),
   view: z.enum(['videos', 'about', 'community']).default('videos'),
   epoch: z.string().max(100).optional(),
   revision: z

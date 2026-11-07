@@ -1,3 +1,4 @@
+<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -54,7 +55,8 @@
     <script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
     <style>
       body {
-        background: #f9f9f9;
+        background: var(--watch-page);
+        color: var(--watch-text);
         font-family: Arial, sans-serif;
         font-weight: 400;
         line-height: 1.6;
@@ -65,7 +67,7 @@
       .comment-quote-button[aria-disabled="true"], .comment-report-button[aria-disabled="true"], #video-report-button[aria-disabled="true"] { pointer-events: none; cursor: default; }
       #comments-container,
       .card {
-        background: #f5f5f5;
+        background: var(--watch-surface);
       }
 
       #recommended-videos {
@@ -73,7 +75,7 @@
       }
 
       #video-information-container span {
-        color: #606060;
+        color: var(--watch-muted);
       }
 
       #donate-modal .img-fluid {
@@ -85,34 +87,34 @@
       }
 
       .btn-primary {
-        --bs-btn-color: #fff;
+        --bs-btn-color: var(--watch-button-text);
         --bs-btn-bg: #cb0c9f;
         --bs-btn-border-color: #cb0c9f;
-        --bs-btn-hover-color: #fff;
+        --bs-btn-hover-color: var(--watch-button-text);
         --bs-btn-hover-bg: #cb0c9f;
         --bs-btn-hover-border-color: #cb0c9f;
         --bs-btn-focus-shadow-rgb: 49, 132, 253;
-        --bs-btn-active-color: #cb0c9f;
+        --bs-btn-active-color: var(--watch-button-text);
         --bs-btn-active-bg: white;
         --bs-btn-active-border-color: #cb0c9f;
         --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-        --bs-btn-disabled-color: #fff;
+        --bs-btn-disabled-color: var(--watch-button-text);
         --bs-btn-disabled-bg: #cb0c9f;
         --bs-btn-disabled-border-color: #cb0c9f;
       }
 
       .btn-outline-primary {
-        --bs-btn-color: #cb0c9f;
+        --bs-btn-color: var(--watch-button-text);
         --bs-btn-border-color: #cb0c9f;
-        --bs-btn-hover-color: #cb0c9f;
+        --bs-btn-hover-color: var(--watch-button-text);
         --bs-btn-hover-bg: #cb0c9f;
         --bs-btn-hover-border-color: #cb0c9f;
         --bs-btn-focus-shadow-rgb: 13, 110, 253;
-        --bs-btn-active-color: #fff;
+        --bs-btn-active-color: var(--watch-button-text);
         --bs-btn-active-bg: #cb0c9f;
         --bs-btn-active-border-color: #cb0c9f;
         --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-        --bs-btn-disabled-color: #cb0c9f;
+        --bs-btn-disabled-color: var(--watch-button-text);
         --bs-btn-disabled-bg: transparent;
         --bs-btn-disabled-border-color: #cb0c9f;
         --bs-gradient: none;
@@ -120,29 +122,29 @@
 
       .btn.recommendation-category-button.active,
       .btn.recommendation-category-button:first-child:active {
-        --bs-btn-active-color: #cb0c9f;
+        --bs-btn-active-color: var(--watch-button-text);
         --bs-btn-active-bg: white;
       }
 
       .btn.recommendation-category-button-selected.active,
       .btn.recommendation-category-button-selected:first-child:active {
-        --bs-btn-active-color: #fff;
+        --bs-btn-active-color: var(--watch-button-text);
         --bs-btn-active-bg: #cb0c9f;
       }
 
       .btn.recommendation-category-button-selected {
-        --bs-btn-color: #fff;
+        --bs-btn-color: var(--watch-button-text);
         --bs-btn-bg: #cb0c9f;
         --bs-btn-border-color: #cb0c9f;
-        --bs-btn-hover-color: #fff;
+        --bs-btn-hover-color: var(--watch-button-text);
         --bs-btn-hover-bg: #cb0c9f;
         --bs-btn-hover-border-color: #cb0c9f;
         --bs-btn-focus-shadow-rgb: 49, 132, 253;
-        --bs-btn-active-color: #cb0c9f;
+        --bs-btn-active-color: var(--watch-button-text);
         --bs-btn-active-bg: white;
         --bs-btn-active-border-color: #cb0c9f;
         --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
-        --bs-btn-disabled-color: #fff;
+        --bs-btn-disabled-color: var(--watch-button-text);
         --bs-btn-disabled-bg: #cb0c9f;
         --bs-btn-disabled-border-color: #cb0c9f;
       }
@@ -153,11 +155,11 @@
       }
 
       .btn.recommendation-category-button-selected:hover {
-        background-color: #cb0c9f;
+        background-color: var(--watch-tag-selected-background);
       }
 
       .btn.recommendation-category-button-selected:hover {
-        color: white;
+        color: var(--watch-button-text);
       }
 
       .btn.recommendation-category-button {
@@ -169,7 +171,7 @@
       }
 
       div.reply {
-        background-color: #f9f9f9;
+        background-color: var(--watch-page);
         border: 1px solid #b7c5d9;
         border-left: none;
         border-bottom: none;
@@ -205,7 +207,7 @@
 
       div.post div.postInfo span.postNum a {
         text-decoration: none;
-        color: #000;
+        color: var(--watch-muted);
       }
 
       /* Comment link interactions. */
@@ -246,7 +248,7 @@
 
       .burichan_new .backlink a,
       .yotsuba_b_new .backlink a {
-        color: #34345c !important;
+        color: var(--watch-quote-link) !important;
       }
 
       .quoteLink,
@@ -281,15 +283,12 @@
       .reply:target:not(.comment-unselected),
       .reply.highlight {
         background: #ede3eb !important;
-        border: 1px solid #ba9dbf !important;
-        border-left: none !important;
-        border-bottom: none !important;
-        padding: 2px;
+        /* Highlighting must not change row geometry beneath quote links. */
+        border-color: #ba9dbf !important;
       }
 
       .reply.highlight-anti,
       .reply:target.highlight-anti {
-        border-width: 1px !important;
         background-color: #bfa6ba !important;
       }
 
@@ -426,6 +425,12 @@
           display: none;
         }
 
+      }
+
+      @media (max-width: 991.98px) {
+        body.watch-comments-open #recommended-videos-list-container,
+        body.watch-comments-open #expand-comment-section { display: none; }
+        body.watch-comments-open #comment-section { display: block; }
       }
 
       @media (min-width: 992px) {
@@ -617,6 +622,129 @@
         border-width: 0.15rem;
       }
 
+      /* Match the homepage palette; saved dark mode overrides these tokens. */
+      body {
+        --watch-page: #edf0f3;
+        --watch-surface: #fff;
+        --watch-heading: #dfe2e6;
+        --watch-border: #dfe1e7;
+        --watch-text: #0a0a0a;
+        --watch-button-text: #000;
+        --watch-tag-background: #fff;
+        --watch-tag-selected-background: #fff;
+        --watch-close-filter: none;
+        --watch-muted: #737373;
+        --watch-quote: #789922;
+        --watch-quote-link: #d00;
+        --watch-highlight: #ede3eb;
+        --watch-highlight-hover: #bfa6ba;
+      }
+      @media (max-width: 991.98px) {
+        body { --watch-page: #fff; }
+      }
+      a { text-decoration: none; }
+      .watch-branding { display: flex; align-items: center; gap: 12px; min-width: 0; }
+      .watch-branding .navbar-brand { margin-right: 0; }
+      .watch-brand-divider { width: 1px; height: 24px; background-color: var(--watch-border); flex: none; }
+      @media (max-width: 359.98px) {
+        .viewer-navigation #navbar-settings-buttons { display: flex; align-items: center; gap: 6px; }
+        .viewer-navigation .navbar-settings-button { margin-right: 0; }
+        .watch-branding { gap: 6px; }
+      }
+      #watch-node-banner img { width: 90px; height: 20px; object-fit: contain; }
+      #video-player-information { padding: 24px; border-radius: 0 0 8px 8px; }
+      #video-player-information > .row { --bs-gutter-x: 0; margin-inline: 0; }
+      #video-title-section { margin: 0 !important; }
+      #video-title-section > .container-fluid, #stats-section { padding-inline: 0; }
+      #video-title { font-size: 28px; font-weight: 700; line-height: 1.2; margin: 0 0 16px; }
+      .watch-creator-row { --bs-gutter-x: 0; row-gap: 12px; align-items: center; }
+      .watch-creator { display: flex; align-items: center; gap: 10px; }
+      #node-name { font-weight: 600; }
+      #stats-section .float-end { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+      #video-information-container { padding: 12px 16px !important; margin-top: 16px !important; }
+      #video-information-views-date { font-size: 14px; margin-bottom: 4px; }
+      #video-information-views-date .fw-bold { font-weight: 500 !important; }
+      #video-information-description { font-size: 16px; line-height: 1.5; }
+      #video-player-information .btn-outline-primary {
+        background-color: transparent;
+        --bs-btn-bg: transparent;
+        --bs-btn-hover-bg: transparent;
+        --bs-btn-active-bg: transparent;
+        --bs-btn-active-color: var(--watch-button-text);
+      }
+      #comment-section { padding-top: 24px !important; }
+      #comment-section-counter-container { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .watch-comments-heading { font-size: 18px; font-weight: 700; line-height: 1.3; margin: 0; flex: none; }
+      .watch-comment-tools { margin-left: auto; display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+      #update-comments-button { display: inline-flex; align-items: center; gap: 6px; }
+      #comment-section-update-descriptor { color: var(--watch-muted); font-size: 13px; margin: 0 0 12px; }
+      #comment-section-update-descriptor:empty { display: none; }
+      .comment-input-form .comment-input-text-area {
+        display: block;
+        min-height: 80px;
+        border: 1px solid var(--watch-border);
+        border-radius: 8px;
+        padding: 12px;
+        line-height: 1.5;
+      }
+      .comment-input-form .comment-input-text-area:focus { outline: none; border-color: #cb0c9f; }
+      .comment-input-form > .text-end { margin-top: 8px !important; }
+      #comments-container { margin-top: 24px !important; }
+      #comments-container > .replyContainer { border-top: 1px solid var(--watch-border); padding: 16px 0; }
+      #comments-container > .replyContainer > .reply { display: block; border: 0; padding: 0; }
+      #comments-container .postInfo { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+      #comments-container .postInfo :is(.dateTime, .postNum) { font-size: 13px; }
+      #comments-container .postInfo .postMenuBtn { margin-left: 0; }
+      #comments-container .postInfo .backlink { flex-basis: 100%; }
+      #comments-container blockquote.postMessage { margin: 12px 0 0 12px; font-size: 16px; line-height: 1.5; }
+      @media (max-width: 991.98px) {
+        #video-player-information { padding: 16px; }
+        #video-title { font-size: 24px; }
+        .watch-comments-heading { font-size: 18px; }
+      }
+      #video-comments-outer { color: var(--watch-text); }
+      #video-player-information,
+      #comments-container,
+      #live-stream-chat-container,
+      .video-recommendation-card,
+      .replyContainer .reply {
+        background-color: var(--watch-surface);
+        color: var(--watch-text);
+        border-color: var(--watch-border);
+      }
+      #recommended-videos-list-container { background-color: var(--watch-page); }
+      .video-recommendation-card {
+        border: 1px solid var(--watch-border);
+      }
+      #live-stream-chat-container .card-header { background-color: var(--watch-heading); border-color: var(--watch-border); }
+      .recommendation-category-button:not(.recommendation-category-button-selected) { color: var(--watch-button-text); }
+      .video-recommendation-card-text,
+      .live-chat-text-color { color: var(--watch-text); }
+      #video-information-container span,
+      .replyContainer .reply .postNum a { color: var(--watch-muted); }
+      .reply .dateTime { color: var(--watch-muted); }
+      .postMenuBtn { color: #cb0c9f; }
+      .comment-input-text-area,
+      #send-chat-message-input {
+        background-color: var(--watch-surface);
+        color: var(--watch-text);
+        border-color: var(--watch-border);
+      }
+      .comment-input-text-area::placeholder,
+      #send-chat-message-input::placeholder { color: var(--watch-muted); opacity: 1; }
+      .replyContainer .reply .quotelink,
+      .quoteLink { color: var(--watch-quote-link); }
+      blockquote > span.quote { color: var(--watch-quote); }
+      .reply:target:not(.comment-unselected),
+      .reply.highlight { background: var(--watch-highlight) !important; }
+      .reply.highlight-anti,
+      .reply:target.highlight-anti { background: var(--watch-highlight-hover) !important; }
+      .modal-content { color: #212529; }
+      .viewer-navigation {
+        background-color: var(--watch-page);
+      }
+
+
       .navbar-settings-button {
         color: #cb0c9f;
       }
@@ -626,7 +754,7 @@
       }
 
       .new-comment-highlight {
-        background-color: #cb0c9f14 !important;
+        background-color: var(--watch-highlight) !important;
       }
 
       .dead-link {
@@ -638,108 +766,56 @@
         opacity: 0.5;
       }
 
-      @media (prefers-color-scheme: dark) {
-        body {
-          background-color: #1e1e1e;
-        }
 
-        #recommended-videos-list-container {
-          background-color: #1e1e1e;
-        }
 
-        #live-stream-chat-container {
-          background-color: #353535;
-        }
-
-        .live-chat-text-color {
-          color: white;
-        }
-
-        #send-chat-message-input {
-          background-color: black;
-          color: white;
-        }
-
-        #send-chat-message-input::placeholder {
-          color: grey;
-          opacity: 1;
-          /* Firefox */
-        }
-
-        .video-recommendation-card {
-          border: 0px;
-          background-color: #353535;
-          color: #efefef;
-        }
-
-        .video-recommendation-card-text {
-          color: #efefef;
-        }
-
-        .comment-input-text-area {
-          background-color: black;
-          color: white;
-        }
-
-        .comment-input-text-area::placeholder {
-          color: grey;
-          opacity: 1;
-          /* Firefox */
-        }
-
-        .replyContainer .reply {
-          background-color: #353535 !important;
-          color: #efefef !important;
-        }
-
-        .replyContainer .reply .quotelink {
-          color: #ff6767 !important;
-        }
-
-        .replyContainer .reply .postNum a {
-          color: grey !important;
-        }
-
-        #video-comments-outer {
-          color: #efefef;
-        }
-
-        .btn-outline-primary {
-          color: grey !important;
-        }
-
-        .btn-primary {
-          color: white !important;
-        }
-
-        .recommendation-category-button-selected {
-          color: white !important;
-        }
-
-        .reply:target:not(.comment-unselected),
-        .reply.highlight {
-          background: #2f2f2f !important;
-        }
-
-        #moartube-logo-light {
-          display: none !important;
-        }
-
-        #moartube-logo-dark {
-          display: block !important;
-        }
-
-        .new-comment-highlight {
-          background-color: black !important;
-        }
-
-        .reply.highlight-anti,
-      .reply:target.highlight-anti {
-          border-width: 1px !important;
-          background-color: #272727 !important;
-        }
+      /* Theme-aware content colors with the existing magenta button borders. */
+      .btn, .swal2-styled.swal2-confirm, .swal2-styled.swal2-cancel,
+      .swal2-styled.swal2-deny, .swal2-close, .swal2-close:hover { color: var(--watch-button-text); }
+      .navbar-settings-button:hover, .navbar-settings-button:focus,
+      .postMenuBtn:hover, .postMenuBtn:focus { color: #cb0c9f; }
+      .btn .text-primary { color: var(--watch-button-text) !important; }
+      .btn-close { filter: var(--watch-close-filter); }
+      .btn.recommendation-category-button {
+        background-color: var(--watch-tag-background);
+        --bs-btn-bg: var(--watch-tag-background);
+        --bs-btn-hover-bg: var(--watch-tag-background);
+        --bs-btn-active-bg: var(--watch-tag-background);
       }
-    </style>
+      .btn.recommendation-category-button-selected {
+        background-color: var(--watch-tag-selected-background);
+        box-shadow: inset 0 -3px 0 #cb0c9f;
+      }
+      .dropdown-menu {
+        --bs-dropdown-bg: var(--watch-surface);
+        --bs-dropdown-color: var(--watch-button-text);
+        --bs-dropdown-link-color: var(--watch-button-text);
+        --bs-dropdown-link-hover-color: var(--watch-button-text);
+        --bs-dropdown-link-active-color: var(--watch-button-text);
+        --bs-dropdown-link-hover-bg: var(--watch-heading);
+      }
+      .modal-content, .swal2-popup { background-color: var(--watch-surface); color: var(--watch-text); }
+      .modal .form-control, .swal2-popup .form-control, .swal2-input, .swal2-textarea {
+        background-color: var(--watch-surface);
+        color: var(--watch-text);
+        border-color: var(--watch-border);
+      }
+      .swal2-styled > a { color: inherit !important; }
+
+      /* Filled reactions and open actions keep white contents against magenta. */
+      #video-like-button.btn-primary,
+      #video-dislike-button.btn-primary,
+      #overflow-dropdown-button.show,
+      body:has(.watch-share-dialog) #video-share-button,
+      body:has(.watch-video-donate-dialog) #video-donate-button {
+        color: #fff;
+        background-color: #cb0c9f;
+        --bs-btn-color: #fff;
+        --bs-btn-hover-color: #fff;
+        --bs-btn-active-color: #fff;
+        --bs-btn-disabled-color: #fff;
+        --bs-btn-active-bg: #cb0c9f;
+      }
+</style>
 
     <script>
       function addStyles(css) {
@@ -755,105 +831,23 @@
 
       const darkModeStyles = `
 body {
-	background-color: #1e1e1e;
+  --watch-page: #181a1e;
+  --watch-surface: #22252a;
+  --watch-heading: #32363e;
+  --watch-border: #444950;
+  --watch-text: #eee;
+  --watch-button-text: #fff;
+  --watch-tag-background: transparent;
+  --watch-tag-selected-background: #cb0c9f;
+  --watch-close-filter: invert(1);
+  --watch-muted: #aaa;
+  --watch-quote: #a6c65a;
+  --watch-quote-link: #ff8585;
+  --watch-highlight: #32363e;
+  --watch-highlight-hover: #272727;
 }
-
-#recommended-videos-list-container {
-	background-color: #1e1e1e;
-}
-
-#live-stream-chat-container {
-	background-color: #353535;
-}
-
-.live-chat-text-color {
-	color: white;
-}
-
-#send-chat-message-input {
-	background-color: black;
-	color: white;
-}
-
-#send-chat-message-input::placeholder {
-	color: grey;
-	opacity: 1; /* Firefox */
-}
-
-.video-recommendation-card {
-	border: 0px;
-	background-color: #353535;
-	color: #efefef;
-}
-
-.video-recommendation-card-text {
-	color: #efefef;
-}
-
-.comment-input-text-area {
-	background-color: black;
-	color: white;
-}
-
-.comment-input-text-area::placeholder  {
-	color: grey;
-	opacity: 1; /* Firefox */
-}
-
-.replyContainer .reply {
-	background-color: #353535 !important;
-	color: #efefef !important;
-}
-
-.replyContainer .reply .quotelink {
-	color: #ff6767 !important;
-}
-
-.replyContainer .reply .postNum a {
-	color: grey !important;
-}
-
-#video-comments-outer {
-	color: #efefef;
-}
-
-.btn-outline-primary {
-	color: grey !important;
-}
-
-.btn-primary {
-	color: white !important;
-}
-
-.recommendation-category-button-selected {
-	color: white !important;
-}
-
-.reply:target:not(.comment-unselected), .reply.highlight {
-	background: #2f2f2f !important;
-}
-
-#moartube-logo-light {
-	display: none !important;
-}
-
-#moartube-logo-dark {
-	display: block !important;
-}
-
-#donate-modal p {
-	color: white !important;
-}
-
-.new-comment-highlight {
-	background-color: black !important;
-}
-
-.reply.highlight-anti,
-      .reply:target.highlight-anti {
-	border-width: 1px !important;
-	background-color: #272727 !important;
-}
+#moartube-logo-light { display: none !important; }
+#moartube-logo-dark { display: block !important; }
 `;
 
       addStyles(darkModeStyles);
@@ -868,9 +862,10 @@ body {
 </head>
 
   <body>
-    <nav class="navbar navbar-expand-xl navbar-light">
+    <nav class="navbar navbar-expand-xl navbar-light viewer-navigation">
       <div class="container-fluid w-100">
-        <a id="moartube-logo" class="navbar-brand" href="/">
+        <div class="watch-branding">
+        <a id="moartube-logo" class="navbar-brand" href="https://www.moartube.com" aria-label="MoarTube website">
           <svg
             viewBox="169.022 81.466 89.186 20.228"
             xmlns="http://www.w3.org/2000/svg"
@@ -926,6 +921,9 @@ body {
             ></path>
           </svg>
         </a>
+        <span class="watch-brand-divider" aria-hidden="true"></span>
+        <a id="watch-node-banner" class="navbar-brand" href="/" aria-label="Node home"><img src="<%=model.externalResourcesBaseUrl%>/external/resources/images/banner.png" width="90" height="20" alt="Node banner"></a>
+        </div>
         <div id="navbar-settings-buttons">
           <a id="navbar-donate-button" class="navbar-settings-button navbar-brand" role="button">
             <svg
@@ -999,7 +997,7 @@ body {
                 preload="auto"
               ></video>
             </div>
-            <div id="video-player-information" class="container-fluid p-0 w-100">
+            <div id="video-player-information" class="container-fluid w-100">
               <div id="video-title-section" class="row gutters mt-2">
                 <div class="container-fluid w-100">
                   <h3 id="video-title" class="text-break">........</h3>
@@ -1007,8 +1005,8 @@ body {
               </div>
               <div class="row gutters">
                 <div id="stats-section" class="container-fluid w-100">
-                  <div class="row align-items-center">
-                    <div class="col-xl-6 col-md-12">
+                  <div class="row watch-creator-row">
+                    <div class="col-xl-6 col-md-12 watch-creator">
                       <a href="/"
                         ><img
                           src="<%=model.externalResourcesBaseUrl%>/external/resources/images/icon.png"
@@ -1143,7 +1141,7 @@ body {
                 >
                   <div id="video-information-views-date">
                     <span id="video-information-views" class="fw-bold">........</span
-                    >&nbsp;&nbsp;<span id="video-information-date" class="fw-bold">........</span>
+                    ><span class="watch-metadata-separator" aria-hidden="true"> &middot; </span><span id="video-information-date" class="fw-bold">........</span>
                   </div>
                   <div id="video-information-description" class="text-break">........</div>
                 </div>
@@ -1172,7 +1170,9 @@ body {
                 <hr />
               </div>
               <div id="comment-section" class="pt-3">
-                <div id="comment-section-back-button-container" class="float-end hidden-elem">
+
+                <div id="comment-section-counter-container" class="mb-3">
+                <div id="comment-section-back-button-container" class="hidden-elem">
                   <button
                     class="btn btn-icon btn-2 btn-outline-primary"
                     type="button"
@@ -1195,14 +1195,13 @@ body {
                     </span>
                   </button>
                 </div>
-                <div id="comment-section-counter-container" class="mb-3">
-                  <span id="comment-section-counter">0</span>
-                  <span id="comment-section-counter-descriptor">Comments</span>
-                  <span>
+                  <h4 class="watch-comments-heading"><span id="comment-section-counter-descriptor">Comments</span> &middot; <span id="comment-section-counter">0</span></h4>
+                  <span class="watch-comment-tools">
                     <button
                       id="update-comments-button"
                       type="button"
                       class="btn btn-outline-primary me-1"
+                      aria-label="Refresh comments"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -1220,6 +1219,7 @@ body {
                           d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"
                         />
                       </svg>
+                      <span>Refresh</span>
                     </button>
                     <button
                       id="update-comments-button-spinner"
@@ -1233,8 +1233,8 @@ body {
                       ></div>
                     </button>
                   </span>
-                  <span id="comment-section-update-descriptor"></span>
                 </div>
+                <p id="comment-section-update-descriptor" role="status" aria-live="polite"></p>
                 <form
                   id="comment-input-form-static"
                   class="comment-input-form"
@@ -1243,7 +1243,7 @@ body {
                   data-commentformtype="static"
                 >
                   <textarea
-                    class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area"
+                    class="w-100 comment-input-text-area"
                     rows="1"
                     placeholder="Add a comment..."
                     maxlength="500"
@@ -1403,7 +1403,7 @@ body {
           this.IS_STREAMING = false;
           this.COMMENT_INPUT_FORM_DYNAMIC = $('\
             <form id="comment-input-form-dynamic" class="comment-input-form" role="form" method="POST" data-commentformtype="dynamic" style="background: #cb0c9f12;padding: 5px 5px 5px 5px;">\
-              <textarea class="w-100 border-top-0 border-end-0 border-start-0 comment-input-text-area" rows="1" placeholder="Add a comment..." maxlength="500" name="commentPlainText"></textarea>\
+              <textarea class="w-100 comment-input-text-area" rows="1" placeholder="Add a comment..." maxlength="500" name="commentPlainText"></textarea>\
               <div class="text-end mt-1">\
                 <div id="comment-input-form-dynamic-submit-container">\
                   <button id="comment-input-form-dynamic-cancel-button-inner" class="btn btn-outline-primary comment-input-form-dynamic-cancel-button" type="button" data-commentformtype="dynamic">cancel</button>\
@@ -1453,7 +1453,7 @@ body {
 
         setupEventListeners() {
           // Navbar buttons
-          $('#navbar-donate-button').off('click').on('click', () => this.donateVideo());
+          $('#navbar-donate-button').off('click').on('click', () => this.donateVideo('navbar-donate-button'));
           $('#navbar-settings-button').off('click').on('click', () => this.showSettings());
 
           // Video action buttons
@@ -2094,7 +2094,7 @@ body {
             this.COMMENT_BOTTOM.append(retry);
           }
         }
-      
+
         commentStore() {
           if (this.COMMENT_STORE) return this.COMMENT_STORE;
           this.COMMENT_STORE = new (class {
@@ -2400,7 +2400,7 @@ body {
                 .slice(0, 100)
                 .map((row) => row.commentId);
             }
-      
+
             async page(cursor) {
               await this.ready;
               const before = cursor.type === 'before',
@@ -2475,12 +2475,12 @@ body {
           })(this.VIDEO_ID);
           return this.COMMENT_STORE;
         }
-      
+
         async cacheComments(comments, range = null, memoryCoverage = true) {
           const store = this.commentStore();
           await store.put(comments, range, memoryCoverage);
         }
-      
+
         async updateCachedParentReplies(comments, store, generation) {
           for (const comment of comments)
             for (const parentId of new Set(
@@ -2508,7 +2508,7 @@ body {
               }
             }
         }
-      
+
         async getCachedReplyPage(id, beforeReplyId = null) {
           await this.ensureCommentFreshness();
           const store = this.commentStore(),
@@ -2552,7 +2552,7 @@ body {
             }
           return response;
         }
-      
+
         async readCommentState(fresh = false) {
           if (this.COMMENT_STATE_TASK) {
             await this.COMMENT_STATE_TASK;
@@ -2608,7 +2608,7 @@ body {
           store.pending.set(key, promise);
           return promise;
         }
-      
+
         async getCachedComment(id) {
           await this.ensureCommentFreshness();
           const store = this.commentStore(),
@@ -2624,7 +2624,7 @@ body {
           }
           return result;
         }
-      
+
         async getCachedCommentPage(cursor) {
           // An isolated cached hover record never establishes history coverage.
           for (;;) {
@@ -2665,7 +2665,7 @@ body {
             if (!cached?.partial && !result.commentIds) return result;
           }
         }
-      
+
         syncCommentCache(fresh = true) {
           if (this.COMMENT_SYNC_TASK) {
             if (fresh && !this.COMMENT_SYNC_FRESH)
@@ -2678,7 +2678,7 @@ body {
           });
           return this.COMMENT_SYNC_TASK;
         }
-      
+
         async performCommentCacheSync(fresh = true) {
           const store = this.commentStore();
           await store.ready;
@@ -2770,7 +2770,7 @@ body {
           }
           return { totalCount: result.totalCount };
         }
-      
+
         commentDeferred(promise) {
           const result = $.Deferred();
           promise.then(
@@ -3004,7 +3004,8 @@ body {
           if (highlight && countNew && unique.length) {this.COMMENT_TOTAL += unique.length;this.COMMENT_TOTAL_VERSION++;}
           const count = this.COMMENT_TOTAL;
           $('#comment-section-counter, #expand-comment-section-counter').text(String(count));
-          $('#comment-section-counter-descriptor, #expand-comment-section-counter-descriptor').text(count === 1 ? 'Comment' : 'Comments');
+          $('#comment-section-counter-descriptor').text('Comments');
+          $('#expand-comment-section-counter-descriptor').text(count === 1 ? 'Comment' : 'Comments');
           if (count) $('.comments-navigation-button').removeClass('hidden-elem');
           if (!unique.length && placement === 'older') this.COMMENT_HAS_MORE = false;
           if (!unique.length && !highlight && placement === 'newer') this.COMMENT_HAS_NEWER = false;
@@ -3030,7 +3031,7 @@ body {
                   <span class="nameBlock">\
                     <span class="name">Anonymous</span>\
                   </span>\
-                  <span class="dateTime">(' + formattedDate + ')</span>\
+                  <span class="dateTime">' + formattedDate + '</span>\
                   <span class="postNum desktop">\
                     <a class="tests" href="#p' + commentId + '" title="Link to this post">No.</a>\
                     <a class="comment-quote-button" data-comment-id="' + commentId + '" title="Reply to this post">' + commentId + '</a>\
@@ -3261,7 +3262,8 @@ body {
           this.COMMENT_TOTAL=version===this.COMMENT_TOTAL_VERSION?total:Math.max(this.COMMENT_TOTAL,total);
           this.COMMENT_TOTAL_VERSION++;
           $('#comment-section-counter, #expand-comment-section-counter').text(String(this.COMMENT_TOTAL));
-          $('#comment-section-counter-descriptor, #expand-comment-section-counter-descriptor').text(this.COMMENT_TOTAL===1?'Comment':'Comments');
+          $('#comment-section-counter-descriptor').text('Comments');
+          $('#expand-comment-section-counter-descriptor').text(this.COMMENT_TOTAL===1?'Comment':'Comments');
         }
 
         updateComments() {
@@ -3279,7 +3281,7 @@ body {
               if(!this.COMMENT_SYNC_LOADING){const last=data.comments[data.comments.length-1];void this.cacheComments([],[oldHead,data.hasMore&&last?[last.timestamp,last.commentId]:[Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER]]);}
               this.COMMENT_SYNC_LOADING=false;
               this.updateCommentTotal(data.totalCount,totalVersion);
-              $('#comment-section-update-descriptor').text(added+' new comment'+(added===1?'':'s')+(data.hasMore?'; refresh again for more.':''));
+              $('#comment-section-update-descriptor').text(added ? added+' new comment'+(added===1?'':'s')+(data.hasMore?'; refresh again for more.':'') : '');
               this.COMMENT_UPDATE_TIMER=setTimeout(()=>$('#comment-section-update-descriptor').text(''),3000);
             })
             .fail((_request,reason)=>{if(reason!=='abort')$('#comment-section-update-descriptor').text('Unable to refresh comments. Please retry.');})
@@ -3287,18 +3289,14 @@ body {
         }
 
         openCommentSection() {
-          $('#recommended-videos-list-container').css('display', 'none');
-          $('#expand-comment-section').css('display', 'none');
-          $('#comment-section').css('display', 'block');
+          $('body').addClass('watch-comments-open');
           $('#comment-section-back-button-container').removeClass('hidden-elem');
           this.refreshTextAreas();
         }
 
         closeCommentSection() {
           $('#comment-section-back-button-container').addClass('hidden-elem');
-          $('#comment-section').css('display', 'none');
-          $('#expand-comment-section').css('display', 'block');
-          $('#recommended-videos-list-container').css('display', 'block');
+          $('body').removeClass('watch-comments-open');
         }
 
         downloadVideo() {
@@ -3332,6 +3330,7 @@ body {
             <div class="input-group mt-1"><input id="video-embed-code-input" class="form-control me-1" type="text" disabled><span class="input-group-btn"><button id="video-embed-code-copy-button" class="btn btn-primary click-tooltip" type="button" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="copied!" data-bs-animation="false">copy</button></span></div>');
 
           Swal.fire({
+            customClass: { container: 'watch-share-dialog' },
             title: 'share',
             html: html,
             showConfirmButton: false,
@@ -3775,7 +3774,7 @@ body {
           }
         }
 
-        donateVideo() {
+        donateVideo(triggerId = 'video-donate-button') {
           if (window.ethereum) {
             let selectedCryptoWalletAddress;
             let selectedChainId;
@@ -3807,6 +3806,7 @@ body {
             );
 
             Swal.fire({
+              customClass: { container: triggerId === 'navbar-donate-button' ? 'watch-navbar-donate-dialog' : 'watch-video-donate-dialog' },
               title: 'Donate to Creator',
               html: html,
               width: 'auto',
@@ -3856,6 +3856,7 @@ body {
               });
           } else {
             Swal.fire({
+              customClass: { container: triggerId === 'navbar-donate-button' ? 'watch-navbar-donate-dialog' : 'watch-video-donate-dialog' },
               title: 'Missing Crypto Wallet',
               html: 'Your browser doesn\'t have a supported crypto wallet installed.<br>MoarTube supports crypto wallets that conform to the EIP-1193 standard.<br>Would you like to be directed to a supported crypto wallet? ',
               width: 'auto',
