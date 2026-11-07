@@ -43,7 +43,7 @@ it('authenticates and validates bulletin changes and persists ordered arrays wit
     {} as never,
     {} as never,
     {} as never,
-    {} as never
+    { purgeHomePage: vi.fn(async () => {}) } as never
   );
   const app = Fastify();
   app.setValidatorCompiler(validatorCompiler);

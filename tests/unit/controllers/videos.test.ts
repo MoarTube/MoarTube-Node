@@ -226,7 +226,7 @@ describe('VideosController', () => {
     };
 
     mockCloudflareService = {
-      purgeNodePage: vi.fn().mockResolvedValue(undefined),
+      purgeHomePage: vi.fn().mockResolvedValue(undefined),
       purgeVideo: vi.fn().mockResolvedValue(undefined),
       verifyTurnstileToken: vi.fn(),
       validateTurnstileToken: vi.fn(),

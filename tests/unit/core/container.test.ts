@@ -21,6 +21,7 @@ vi.mock('@/utils/logger.js', () => ({
 vi.mock('@config/index.js', () => ({
   getConfig: vi.fn(() => ({
     nodeSettings: {
+      nodeIcons: [],
       databaseConfig: {
         databaseDialect: 'sqlite',
       },
@@ -282,6 +283,27 @@ describe('Container', () => {
   });
 
   describe('createAppContainer', () => {
+    it('imports legacy icons only when settings have no saved icon list', async () => {
+      const { getConfig } = await import('@config/index.js');
+      const { createLinksRepository } = await import('@database/repositories/index.js');
+      const initializeNodeIcons = vi.fn();
+      const findAll = vi
+        .fn()
+        .mockResolvedValue([{ url: 'https://example.test', svg_graphic: '<svg/>' }]);
+      vi.mocked(createLinksRepository).mockReturnValueOnce({ findAll } as never);
+      vi.mocked(getConfig).mockReturnValueOnce({
+        nodeSettings: { databaseConfig: { databaseDialect: 'sqlite' } },
+        initializeNodeIcons,
+      } as never);
+      const { createAppContainer } = await import('@core/container.js');
+      await createAppContainer({ execute: vi.fn() } as never);
+      expect(initializeNodeIcons).toHaveBeenCalledWith([
+        { url: 'https://example.test', svgGraphic: '<svg/>' },
+      ]);
+      await createAppContainer({ execute: vi.fn() } as never);
+      expect(findAll).toHaveBeenCalledOnce();
+    });
+
     it('should create a container with all registered services for SQLite', async () => {
       const { createAppContainer } = await import('@core/container.js');
       
@@ -297,6 +319,7 @@ describe('Container', () => {
       const { getConfig } = await import('@config/index.js');
       (getConfig as ReturnType<typeof vi.fn>).mockReturnValue({
         nodeSettings: {
+      nodeIcons: [],
           databaseConfig: {
             databaseDialect: 'postgres',
           },
@@ -337,7 +360,7 @@ describe('Container', () => {
       expect(container.cradle.reportsArchiveCommentsRepository).toBeDefined();
       expect(container.cradle.liveChatMessagesRepository).toBeDefined();
       expect(container.cradle.monetizationRepository).toBeDefined();
-      expect(container.cradle.linksRepository).toBeDefined();
+      expect(container.hasRegistration('linksRepository')).toBe(false);
     });
 
     it('should register all services as singletons', async () => {
@@ -347,6 +370,7 @@ describe('Container', () => {
       const container = await createAppContainer(mockDb as any);
 
       // All services should be defined
+      expect(container.cradle.homeService).toBeDefined();
       expect(container.cradle.videosService).toBeDefined();
       expect(container.hasRegistration('indexerService')).toBe(false);
       expect(container.cradle.commentsService).toBeDefined();
@@ -438,7 +462,7 @@ describe('Container', () => {
       expect(container.hasRegistration('reportsArchiveCommentsRepository')).toBe(true);
       expect(container.hasRegistration('liveChatMessagesRepository')).toBe(true);
       expect(container.hasRegistration('monetizationRepository')).toBe(true);
-      expect(container.hasRegistration('linksRepository')).toBe(true);
+      expect(container.hasRegistration('linksRepository')).toBe(false);
 
       // Services
       expect(container.hasRegistration('videosService')).toBe(true);

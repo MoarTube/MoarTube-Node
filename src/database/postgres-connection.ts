@@ -1,3 +1,4 @@
+import { provisionPostgresHome } from '@database/provisioning/home.js';
 import { provisionPostgresComments } from '@database/provisioning/comments.js';
 /**
  * PostgreSQL database connection module for Drizzle ORM
@@ -84,6 +85,7 @@ export async function initializeDatabaseSchema(
     const migrationsFolder = options.migrationsFolder ?? resolveMigrationsFolder(import.meta.url);
     await migrate(connection.db, { migrationsFolder });
     await provisionPostgresComments(connection.client);
+    await provisionPostgresHome(connection.client);
   } catch (error) {
     throw new Error(`Failed to initialize PostgreSQL database schema: ${String(error)}`);
   }

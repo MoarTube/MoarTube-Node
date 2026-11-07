@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const nodeNeighborSchema = z.object({
+const iconSchema = z.object({
   url: z
     .string()
     .trim()
@@ -14,7 +14,12 @@ export const nodeNeighborSchema = z.object({
         return false;
       }
     }, 'Use a complete http:// or https:// URL'),
-  description: z.string().trim().min(1).max(1000),
+  svgGraphic: z
+    .string()
+    .trim()
+    .min(1)
+    .max(50000)
+    .refine((value) => /^<svg(?=[\s/>])[\s\S]*(?:<\/svg>|\/>)$/.test(value), 'Use an SVG graphic'),
 });
 
-export const nodeNeighborsSchema = z.array(nodeNeighborSchema).max(50);
+export const nodeIconsSchema = z.array(iconSchema).max(50);

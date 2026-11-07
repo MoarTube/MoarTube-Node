@@ -40,7 +40,7 @@ import { externalResourcesRoutes } from '@routes/external-resources.js';
 import { externalVideosRoutes } from '@routes/external-videos.js';
 import { commentsRoutes } from '@routes/comments.js';
 import { watchRoutes } from '@routes/watch.js';
-import { nodeRoutes, nodePageRoutes } from '@routes/node.js';
+import { nodeRoutes } from '@routes/node.js';
 import { reportsRoutes } from '@routes/reports.js';
 import { reportsVideosRoutes } from '@routes/reports-videos.js';
 import { reportsCommentsRoutes } from '@routes/reports-comments.js';
@@ -57,7 +57,7 @@ import { streamsRoutes } from '@routes/streams.js';
  */
 export function registerRoutes(fastify: FastifyInstance, container: Container): void {
   // Base routes (index page)
-  baseRoutes(fastify);
+  baseRoutes(fastify, container);
 
   // Status routes (/status/*)
   fastify.register(
@@ -79,7 +79,6 @@ export function registerRoutes(fastify: FastifyInstance, container: Container): 
   fastify.register(
     (instance) => {
       videosRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
-      nodePageRoutes(instance.withTypeProvider<ZodTypeProvider>(), container);
     },
     { prefix: '/videos' }
   );

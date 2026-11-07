@@ -142,7 +142,7 @@ const mockWebSocketService = {
 const mockCloudflareService = {
   purgeWatchPages: vi.fn(),
   purgeEmbedVideoPages: vi.fn(),
-  purgeNodePage: vi.fn(),
+  purgeHomePage: vi.fn(),
   purgeAllWatchPages: vi.fn(),
   purgeAllEmbedVideoPages: vi.fn(),
   purgeAdaptiveVideos: vi.fn(),
@@ -199,7 +199,7 @@ describe('VideosService', () => {
   it('invalidates the catalog when a video is unpublished', async () => {
     await service.unpublishVideo('id');
     expect(mockVideosRepository.update).toHaveBeenCalledWith('id', { is_published: false });
-    expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
+    expect(mockCloudflareService.purgeHomePage).toHaveBeenCalled();
   });
 
   describe('video sources and concurrent output updates', () => {
@@ -853,7 +853,7 @@ describe('VideosService', () => {
 
       expect(result).toBe(true);
       expect(mockCommentsRepository.deleteByVideoId).toHaveBeenCalledWith('video123');
-      expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
+      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalled();
       expect(mockCloudflareService.purgeEmbedVideoPages).toHaveBeenCalledWith(['video123']);
     });
 
@@ -861,7 +861,7 @@ describe('VideosService', () => {
       const mockVideo = { video_id: 'video123' };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.delete.mockResolvedValue(true);
-      mockCloudflareService.purgeNodePage.mockRejectedValueOnce(new Error('Cloudflare error'));
+      mockCloudflareService.purgeHomePage.mockRejectedValueOnce(new Error('Cloudflare error'));
 
       const result = await service.deleteVideo('video123');
 
@@ -992,13 +992,13 @@ describe('VideosService', () => {
         is_publishing: false,
         is_published: true,
       });
-      expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
+      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith('Video published', { videoId: 'video123' });
     });
 
     it('should continue when Cloudflare purge fails during publish', async () => {
       mockVideosRepository.update.mockResolvedValue(undefined);
-      mockCloudflareService.purgeNodePage.mockRejectedValueOnce(new Error('Cloudflare error'));
+      mockCloudflareService.purgeHomePage.mockRejectedValueOnce(new Error('Cloudflare error'));
 
       await service.publishVideo('video123');
 
@@ -1772,47 +1772,6 @@ describe('VideosService', () => {
       mockVideosRepository.findTags.mockResolvedValue(['tag1', 'tag2']);
       expect(await service.getPublishedTags()).toEqual(['tag1', 'tag2']);
       expect(mockVideosRepository.findTags).toHaveBeenCalledWith(true);
-    });
-    it.each([
-      ['popular', 'views', 'desc'],
-      ['oldest', 'creation_timestamp', 'asc'],
-      ['latest', 'creation_timestamp', 'desc'],
-    ] as const)(
-      'passes %s sorting and paging to matching tag discovery',
-      async (sortTerm, sortBy, sortDirection) => {
-        mockVideosRepository.findTags.mockResolvedValue(['tag1']);
-        expect(await service.getPublishedTags('city', { limit: 5, offset: 4, sortTerm })).toEqual([
-          'tag1',
-        ]);
-        expect(mockVideosRepository.findTags).toHaveBeenCalledWith(true, {
-          search: 'city',
-          limit: 5,
-          offset: 4,
-          sortBy,
-          sortDirection,
-        });
-      }
-    );
-    it('supports tag searches without paging and paging without a search', async () => {
-      mockVideosRepository.findTags.mockResolvedValue([]);
-      await service.getPublishedTags('city');
-      expect(mockVideosRepository.findTags).toHaveBeenLastCalledWith(true, { search: 'city' });
-      await service.getPublishedTags(undefined, { limit: 5, offset: 0 });
-      expect(mockVideosRepository.findTags).toHaveBeenLastCalledWith(true, {
-        limit: 5,
-        offset: 0,
-        sortBy: 'creation_timestamp',
-        sortDirection: 'desc',
-      });
-      await service.getPublishedTags('', { limit: 5, offset: 0 });
-      expect(mockVideosRepository.findTags).toHaveBeenLastCalledWith(true, {
-        limit: 5,
-        offset: 0,
-        sortBy: 'creation_timestamp',
-        sortDirection: 'desc',
-      });
-      await service.getPublishedTags('');
-      expect(mockVideosRepository.findTags).toHaveBeenLastCalledWith(true);
     });
     it('delegates all tag projection to the repository', async () => {
       mockVideosRepository.findTags.mockResolvedValue(['tag1', 'tag2']);

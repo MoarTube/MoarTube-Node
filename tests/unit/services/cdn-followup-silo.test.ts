@@ -104,7 +104,7 @@ beforeEach(async () => {
     purgeWatchPages: vi.fn(),
     purgeAllWatchPages: vi.fn(),
     purgeEmbedVideoPages: vi.fn(),
-    purgeNodePage: vi.fn(),
+    purgeHomePage: vi.fn(),
     purgeProgressiveVideos: vi.fn(),
     purgeVideoThumbnailImages: vi.fn(),
     purgeVideoPreviewImages: vi.fn(),

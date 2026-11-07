@@ -27,13 +27,13 @@ export {
 } from '@controllers/comments.js';
 export { ExternalResourcesController } from '@controllers/external-resources.js';
 export { ExternalVideosController } from '@controllers/external-videos.js';
-export { LinksController, type AddLinkBody, type DeleteLinkBody } from '@controllers/links.js';
+export { LinksController } from '@controllers/links.js';
 export {
   MonetizationController,
   type AddWalletAddressBody,
   type DeleteWalletAddressBody,
 } from '@controllers/monetization.js';
-export { NodeController, type NodeQuery, type ContentCheckedBody } from '@controllers/node.js';
+export { NodeController, type ContentCheckedBody } from '@controllers/node.js';
 export {
   ReportsArchiveCommentsController,
   type CommentArchiveIdParams,
@@ -59,7 +59,7 @@ export {
   type PersonalizeNodeHeadlineBody,
   type PersonalizeNodeAboutBody,
   type PersonalizeNodeBulletinBody,
-  type PersonalizeNodeNeighborsBody,
+  type PersonalizeNodeLinksBody,
   type AccountBody,
   type NetworkInternalBody,
   type NetworkExternalBody,

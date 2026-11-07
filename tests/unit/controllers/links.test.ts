@@ -17,7 +17,7 @@ describe('LinksController', () => {
 
   const mockCloudflareService: Record<string, ReturnType<typeof vi.fn>> = {
     purgeAllWatchPages: vi.fn(),
-    purgeNodePage: vi.fn(),
+    purgeHomePage: vi.fn(),
   };
 
   let controller: LinksController;
@@ -33,8 +33,7 @@ describe('LinksController', () => {
     vi.clearAllMocks();
 
     controller = new LinksController(
-      mockLinksService as any,
-      mockCloudflareService as any
+      mockLinksService as never
     );
 
     mockRequest = {
@@ -50,7 +49,7 @@ describe('LinksController', () => {
 
     // Default mock implementations
     mockCloudflareService.purgeAllWatchPages.mockResolvedValue(undefined);
-    mockCloudflareService.purgeNodePage.mockResolvedValue(undefined);
+    mockCloudflareService.purgeHomePage.mockResolvedValue(undefined);
   });
 
   describe('constructor', () => {
@@ -102,91 +101,4 @@ describe('LinksController', () => {
     });
   });
 
-  describe('addLink', () => {
-    it('should add a link', async () => {
-      mockRequest.body = {
-        url: 'https://twitter.com/newtest',
-        svgGraphic: '<svg>twitter</svg>',
-      };
-
-      const createdLink = {
-        id: 3,
-        url: 'https://twitter.com/newtest',
-        svgGraphic: '<svg>twitter</svg>',
-      };
-      mockLinksService.createLink.mockResolvedValue(createdLink);
-
-      await controller.addLink(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockLinksService.createLink).toHaveBeenCalledWith({
-        url: 'https://twitter.com/newtest',
-        svgGraphic: '<svg>twitter</svg>',
-      });
-      expect(mockCloudflareService.purgeAllWatchPages).toHaveBeenCalled();
-      expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
-      expect(mockReply.status).toHaveBeenCalledWith(200);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        isError: false,
-        link: createdLink,
-      });
-    });
-
-    it('should return error on service failure', async () => {
-      mockRequest.body = {
-        url: 'https://invalid.com',
-        svgGraphic: '<svg>test</svg>',
-      };
-
-      mockLinksService.createLink.mockRejectedValue(new Error('Database error'));
-
-      await controller.addLink(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        isError: true,
-        message: 'error communicating with the MoarTube node',
-      });
-    });
-  });
-
-  describe('deleteLink', () => {
-    it('should delete a link', async () => {
-      mockRequest.body = { linkId: 2 };
-      mockLinksService.deleteLink.mockResolvedValue(true);
-
-      await controller.deleteLink(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockLinksService.deleteLink).toHaveBeenCalledWith(2);
-      expect(mockCloudflareService.purgeAllWatchPages).toHaveBeenCalled();
-      expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
-      expect(mockReply.status).toHaveBeenCalledWith(200);
-    });
-
-    it('should return 404 when link not found', async () => {
-      mockRequest.body = { linkId: 999 };
-      mockLinksService.deleteLink.mockResolvedValue(false);
-
-      await controller.deleteLink(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockLinksService.deleteLink).toHaveBeenCalledWith(999);
-      expect(mockReply.status).toHaveBeenCalledWith(404);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        isError: true,
-        message: 'link not found',
-      });
-    });
-
-    it('should return error on service failure', async () => {
-      mockRequest.body = { linkId: 1 };
-      mockLinksService.deleteLink.mockRejectedValue(new Error('Database error'));
-
-      await controller.deleteLink(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-
-      expect(mockReply.status).toHaveBeenCalledWith(400);
-      expect(mockReply.send).toHaveBeenCalledWith({
-        isError: true,
-        message: 'error communicating with the MoarTube node',
-      });
-    });
-  });
 });

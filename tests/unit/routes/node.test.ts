@@ -1,137 +1,93 @@
-/**
- * Node Routes Tests
- *
- * Tests for main node page route registration.
- */
-
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import Fastify from 'fastify';
-import { nodeRoutes, nodePageRoutes } from '@routes/node.js';
-import { videosRoutes } from '@routes/videos.js';
-import type { Container } from '@core/container.js';
+import { validatorCompiler } from 'fastify-type-provider-zod';
+import { nodeRoutes } from '@/routes/node.js';
+import { videosRoutes } from '@/routes/videos.js';
 
-describe('Node Routes', () => {
-  const mockFastify = {
-    get: vi.fn(),
-    post: vi.fn(),
-    optionalAuthenticate: vi.fn(),
-    authenticate: vi.fn(),
-  };
+vi.mock('@/config/index.js', () => ({
+  getConfig: () => ({
+    lastCheckedContentTracker: {
+      lastCheckedCommentsTimestamp: 0,
+      lastCheckedVideoReportsTimestamp: 0,
+      lastCheckedCommentReportsTimestamp: 0,
+    },
+    updateLastCheckedContentTracker: vi.fn(),
+  }),
+}));
 
-  const mockVideosService = {};
-  const mockLinksService = {};
-  const mockMonetizationService = {};
-  const mockStreamsService = {};
-  const mockCommentsService = {};
-  const mockReportsService = {};
-
-  const mockContainer = {
-    resolve: vi.fn((serviceName: string) => {
-      if (serviceName === 'videosService') return mockVideosService;
-      if (serviceName === 'linksService') return mockLinksService;
-      if (serviceName === 'monetizationService') return mockMonetizationService;
-      if (serviceName === 'streamsService') return mockStreamsService;
-      if (serviceName === 'commentsService') return mockCommentsService;
-      if (serviceName === 'reportsService') return mockReportsService;
-      return {};
-    }),
-  } as unknown as Container;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should serve the browsing page alongside existing video APIs and redirect old links', async () => {
+describe('Node moderation APIs and retired browsing routes', () => {
+  it('removes old discovery routes while keeping video APIs and authenticated moderation state', async () => {
     const app = Fastify();
+    app.setValidatorCompiler(validatorCompiler);
     app.decorate('optionalAuthenticate', async () => {});
-    app.decorate('authenticate', async () => {});
-    app.setValidatorCompiler(() => () => true);
-    app.register(async (instance) => {
-      videosRoutes(instance, mockContainer);
-      nodePageRoutes(instance, mockContainer);
-    }, { prefix: '/videos' });
-    app.register(async (instance) => {
-      nodeRoutes(instance, mockContainer);
-    }, { prefix: '/node' });
-
-    try {
-      await app.ready();
-      expect(app.hasRoute({ method: 'GET', url: '/videos' })).toBe(true);
-      expect(app.hasRoute({ method: 'GET', url: '/videos/' })).toBe(true);
-      expect(app.hasRoute({ method: 'GET', url: '/videos/search' })).toBe(true);
-      expect(app.hasRoute({ method: 'GET', url: '/node/search' })).toBe(true);
-
-      for (const path of ['/node', '/node/']) {
-        const plainResponse = await app.inject(path);
-        expect(plainResponse.statusCode).toBe(301);
-        expect(plainResponse.headers.location).toBe('/videos');
-
-        const response = await app.inject(`${path}?searchTerm=cats&sortTerm=latest&tagTerm=fun`);
-        expect(response.statusCode).toBe(301);
-        expect(response.headers.location).toBe('/videos?searchTerm=cats&sortTerm=latest&tagTerm=fun');
+    app.decorate('authenticate', async (request, reply) => {
+      if (request.headers.authorization !== 'Bearer admin') {
+        await reply.code(401).send({ isError: true });
       }
+    });
+    const container = {
+      resolve: (name: string) =>
+        name === 'commentsService'
+          ? { countCommentsNewerThan: async () => 2 }
+          : name === 'reportsService'
+            ? {
+                countVideoReportsNewerThan: async () => 3,
+                countCommentReportsNewerThan: async () => 4,
+              }
+            : {},
+    };
+    await app.register(
+      async (scope) => {
+        nodeRoutes(scope, container as never);
+      },
+      { prefix: '/node' }
+    );
+    await app.register(
+      async (scope) => {
+        videosRoutes(scope, container as never);
+      },
+      { prefix: '/videos' }
+    );
+    try {
+      for (const path of ['/node', '/node/', '/node/search', '/videos', '/videos/']) {
+        expect((await app.inject(path)).statusCode).toBe(404);
+      }
+      expect(app.hasRoute({ method: 'GET', url: '/videos/:videoId/comments/state' })).toBe(true);
+      expect((await app.inject('/node/newContentCounts')).statusCode).toBe(401);
+      const authorized = await app.inject({
+        url: '/node/newContentCounts',
+        headers: { authorization: 'Bearer admin' },
+      });
+      expect(authorized.json()).toMatchObject({
+        isError: false,
+        newContentCounts: {
+          newCommentsCount: 2,
+          newVideoReportsCount: 3,
+          newCommentReportsCount: 4,
+        },
+      });
+      expect(
+        (
+          await app.inject({
+            method: 'POST',
+            url: '/node/contentChecked',
+            headers: { authorization: 'Bearer admin' },
+            payload: { contentType: 'comments' },
+          })
+        ).statusCode
+      ).toBe(200);
+      expect(
+        (
+          await app.inject({
+            method: 'POST',
+            url: '/node/contentChecked',
+            headers: { authorization: 'Bearer admin' },
+            payload: { contentType: 'invalid' },
+          })
+        ).statusCode
+      ).toBe(400);
     } finally {
       await app.close();
     }
-  });
-
-  it('should resolve videosService from container', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockContainer.resolve).toHaveBeenCalledWith('videosService');
-  });
-
-  it('should resolve linksService from container', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockContainer.resolve).toHaveBeenCalledWith('linksService');
-  });
-
-  it('should resolve monetizationService from container', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockContainer.resolve).toHaveBeenCalledWith('monetizationService');
-  });
-
-  it('should resolve streamsService from container', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockContainer.resolve).toHaveBeenCalledWith('streamsService');
-  });
-
-  it('should resolve commentsService from container', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockContainer.resolve).toHaveBeenCalledWith('commentsService');
-  });
-
-  it('should resolve reportsService from container', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockContainer.resolve).toHaveBeenCalledWith('reportsService');
-  });
-
-  it('should register GET / route', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.get).toHaveBeenCalledWith('/', expect.anything(), expect.any(Function));
-  });
-
-  it('should register GET /search route', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.get).toHaveBeenCalledWith('/search', expect.anything(), expect.any(Function));
-  });
-
-  it('should register GET /newContentCounts route', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.get).toHaveBeenCalledWith('/newContentCounts', expect.anything(), expect.any(Function));
-  });
-
-  it('should register POST /contentChecked route', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledWith('/contentChecked', expect.anything(), expect.any(Function));
-  });
-
-  it('should register exactly 3 GET routes', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.get).toHaveBeenCalledTimes(3);
-  });
-
-  it('should register exactly 1 POST route', () => {
-    nodeRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(1);
   });
 });

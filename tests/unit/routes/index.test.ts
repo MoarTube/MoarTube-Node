@@ -53,7 +53,6 @@ vi.mock('@routes/watch.js', () => ({
 
 vi.mock('@routes/node.js', () => ({
   nodeRoutes: vi.fn(),
-  nodePageRoutes: vi.fn(),
 }));
 
 vi.mock('@routes/reports.js', () => ({
@@ -131,7 +130,7 @@ describe('Routes Index', () => {
 
       registerRoutes(mockFastify as any, mockContainer);
 
-      expect(baseRoutes).toHaveBeenCalledWith(mockFastify);
+      expect(baseRoutes).toHaveBeenCalledWith(mockFastify, mockContainer);
     });
 
     it('should register status routes with /status prefix', async () => {
@@ -430,9 +429,8 @@ describe('Routes Index', () => {
   });
 
   describe('Route Handler Invocation', () => {
-    it('should register the browsing page alongside the video API routes', async () => {
+    it('should register video APIs without the retired browsing page', async () => {
       const { registerRoutes, videosRoutes } = await import('@routes/index.js');
-      const { nodePageRoutes } = await import('@routes/node.js');
       const instance = {};
       const mockFastify = createMockFastify();
       const container = createMockContainer();
@@ -445,7 +443,6 @@ describe('Routes Index', () => {
       registerRoutes(mockFastify as any, container);
 
       expect(videosRoutes).toHaveBeenCalledWith(instance, container);
-      expect(nodePageRoutes).toHaveBeenCalledWith(instance, container);
     });
 
     it('should call route handler with container for routes that need it', async () => {

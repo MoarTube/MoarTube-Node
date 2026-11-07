@@ -1,5 +1,6 @@
+import { nodeIconsSchema } from '@/config/node-icons.js';
 import { nodeBulletinSchema } from '@/config/node-bulletin.js';
-import { nodeNeighborsSchema } from '@/config/node-neighbors.js';
+import { nodeLinksSchema } from '@/config/node-links.js';
 /**
  * Settings Service
  *
@@ -14,7 +15,7 @@ import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
 import type { UpdateNodeSettingsInput } from '@services/interfaces.js';
 import { getConfig } from '@config/index.js';
-import type { DatabaseConfig, StorageConfig, NodeNeighbor } from '@/types/index.js';
+import type { DatabaseConfig, StorageConfig, NodeLink, NodeIcon } from '@/types/index.js';
 import type {
   ICommentsRepository,
   IReportsVideosRepository,
@@ -191,8 +192,11 @@ export class SettingsService extends BaseService {
     if (data.nodeBulletin !== undefined) {
       updates['nodeBulletin'] = nodeBulletinSchema.parse(data.nodeBulletin);
     }
-    if (data.nodeNeighbors !== undefined) {
-      updates['nodeNeighbors'] = nodeNeighborsSchema.parse(data.nodeNeighbors);
+    if (data.nodeIcons !== undefined) {
+      updates['nodeIcons'] = nodeIconsSchema.parse(data.nodeIcons);
+    }
+    if (data.nodeLinks !== undefined) {
+      updates['nodeLinks'] = nodeLinksSchema.parse(data.nodeLinks);
     }
     if (data.nodeAbout !== undefined) {
       updates['nodeAbout'] = data.nodeAbout;
@@ -235,7 +239,7 @@ export class SettingsService extends BaseService {
 
     config.updateNodeSettings({ nodeName });
     if (this.cloudflareService.isEnabled()) {
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
     }
 
     this.logger.info('Node name updated', { nodeName });
@@ -249,7 +253,7 @@ export class SettingsService extends BaseService {
 
     config.updateNodeSettings({ nodeHeadline });
     if (this.cloudflareService.isEnabled()) {
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
     }
 
     this.logger.info('Node headline updated', { nodeHeadline });
@@ -259,16 +263,29 @@ export class SettingsService extends BaseService {
   updateNodeBulletin(nodeBulletin: string[]): string[] {
     const bulletin = nodeBulletinSchema.parse(nodeBulletin);
     getConfig().updateNodeSettings({ nodeBulletin: bulletin });
+    void this.cloudflareService.purgeHomePage().catch((error: unknown) => {
+      this.logger.warn('Homepage purge deferred', { error });
+    });
     this.logger.info('Node bulletin updated', { itemCount: bulletin.length });
     return bulletin;
   }
 
-  /** Replace the neighbors in stored order; an empty array clears it. */
-  updateNodeNeighbors(nodeNeighbors: NodeNeighbor[]): NodeNeighbor[] {
-    const neighbors = nodeNeighborsSchema.parse(nodeNeighbors);
-    getConfig().updateNodeSettings({ nodeNeighbors: neighbors });
-    this.logger.info('Node neighbors updated', { itemCount: neighbors.length });
-    return neighbors;
+  /** Replace the icons in stored order; an empty array clears it. */
+  updateNodeIcons(nodeIcons: NodeIcon[]): NodeIcon[] {
+    const icons = nodeIconsSchema.parse(nodeIcons);
+    getConfig().updateNodeSettings({ nodeIcons: icons });
+    return icons;
+  }
+
+  /** Replace the links in stored order; an empty array clears it. */
+  updateNodeLinks(nodeLinks: NodeLink[]): NodeLink[] {
+    const links = nodeLinksSchema.parse(nodeLinks);
+    getConfig().updateNodeSettings({ nodeLinks: links });
+    void this.cloudflareService.purgeHomePage().catch((error: unknown) => {
+      this.logger.warn('Homepage purge deferred', { error });
+    });
+    this.logger.info('Node links updated', { itemCount: links.length });
+    return links;
   }
 
   /**
@@ -278,7 +295,7 @@ export class SettingsService extends BaseService {
     const config = getConfig();
     config.updateNodeSettings({ nodeAbout: about });
     if (this.cloudflareService.isEnabled()) {
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
     }
 
     this.logger.info('Node about updated');

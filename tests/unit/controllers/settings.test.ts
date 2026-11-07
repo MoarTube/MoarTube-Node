@@ -133,7 +133,7 @@ describe('SettingsController', () => {
     purgeAdaptiveVideos: vi.fn(),
     purgeVideo: vi.fn(),
     purgeWatchPages: vi.fn(),
-    purgeNodePage: vi.fn(),
+    purgeHomePage: vi.fn(),
     purgeNodeImages: vi.fn(),
     resetCdn: vi.fn(),
     setCdnConfiguration: vi.fn(),
@@ -305,6 +305,68 @@ describe('SettingsController', () => {
         isError: true,
         message: 'Unable to load memory metrics',
       });
+    });
+  });
+
+  describe('getMetricsBundle', () => {
+    it('collects worker metrics from the parent process', async () => {
+      const worker = Object.getOwnPropertyDescriptor(cluster, 'isWorker')!;
+      Object.defineProperty(cluster, 'isWorker', { configurable: true, value: true });
+      try {
+        mockSettingsService.getNodeSettings.mockReturnValue({
+          storageConfig: { storageMode: 's3provider' },
+        });
+        await controller.getMetricsBundle(
+          mockRequest as FastifyRequest,
+          mockReply as unknown as FastifyReply
+        );
+        expect(getCpuMetrics).toHaveBeenCalledWith(process.ppid);
+        expect(getMemoryMetrics).toHaveBeenCalledWith(process.ppid);
+      } finally {
+        Object.defineProperty(cluster, 'isWorker', worker);
+      }
+    });
+
+    it('runs collectors concurrently and returns all metrics with no caching', async () => {
+      const cpu = { usedPercent: 25, appPercent: 5 };
+      const memory = { appBytes: 10, availableBytes: 20, totalBytes: 100 };
+      const disk = { storageMode: 'filesystem' as const, mediaBytes: 10, availableBytes: 20, totalBytes: 100 };
+      mockSettingsService.getNodeSettings.mockReturnValue({ storageConfig: { storageMode: 'filesystem' } });
+      vi.mocked(getConfig).mockReturnValueOnce({ paths: { dataDirectoryPath: '/data' } } as never);
+      let release = (): void => {};
+      vi.mocked(getCpuMetrics).mockImplementationOnce(() => new Promise((resolve) => {
+        release = (): void => { resolve(cpu); };
+      }));
+      vi.mocked(getMemoryMetrics).mockResolvedValueOnce(memory);
+      vi.mocked(getStorageMetrics).mockResolvedValueOnce(disk);
+      const pending = controller.getMetricsBundle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      expect(getMemoryMetrics).toHaveBeenCalledWith(process.pid);
+      expect(getStorageMetrics).toHaveBeenCalledWith(path.join('/data', 'media'));
+      expect(mockReply.send).not.toHaveBeenCalled();
+      release();
+      await pending;
+      expect(mockReply.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics: {
+        cpu: { isError: false, metrics: cpu },
+        memory: { isError: false, metrics: memory },
+        disk: { isError: false, metrics: disk },
+      } });
+    });
+
+    it('isolates collector failures and returns elastic S3 capacity without scanning', async () => {
+      mockSettingsService.getNodeSettings.mockReturnValue({ storageConfig: { storageMode: 's3provider' } });
+      vi.mocked(getCpuMetrics).mockRejectedValueOnce(new Error('Unavailable'));
+      const memory = { appBytes: 10, availableBytes: 20, totalBytes: 100 };
+      vi.mocked(getMemoryMetrics).mockResolvedValueOnce(memory);
+      await controller.getMetricsBundle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      expect(getStorageMetrics).not.toHaveBeenCalled();
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics: {
+        cpu: { isError: true },
+        memory: { isError: false, metrics: memory },
+        disk: { isError: false, metrics: {
+          storageMode: 's3provider', mediaBytes: null, availableBytes: null, totalBytes: null,
+        } },
+      } });
     });
   });
 

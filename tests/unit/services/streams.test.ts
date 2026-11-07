@@ -136,7 +136,7 @@ describe('StreamsService', () => {
     mockCloudflareService = {
       purgeAdaptiveVideos: vi.fn().mockResolvedValue(undefined),
       purgeAllWatchPages: vi.fn(),
-      purgeNodePage: vi.fn(),
+      purgeHomePage: vi.fn(),
     } as unknown as CloudflareService;
 
     service = new StreamsService(

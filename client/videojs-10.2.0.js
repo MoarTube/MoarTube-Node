@@ -87,7 +87,7 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
   if (overlay) {
     // The poster handles its own Play action; exclude it from surface tap-to-pause.
     overlay.setAttribute('data-interactive', '');
-    if (embedded) overlay.classList.remove('hidden-elem');
+    if (embedded || !autoStart) overlay.classList.remove('hidden-elem');
     surface.append(overlay);
   }
   const information = wrapper.querySelector('#mtp-video-overlay-info');

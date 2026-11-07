@@ -16,7 +16,7 @@ const mockMonetizationService: Record<string, ReturnType<typeof vi.fn>> = {
 
 const mockCloudflareService: Record<string, ReturnType<typeof vi.fn>> = {
   purgeAllWatchPages: vi.fn(),
-  purgeNodePage: vi.fn(),
+  purgeHomePage: vi.fn(),
 };
 
 describe('MonetizationController', () => {
@@ -116,7 +116,7 @@ describe('MonetizationController', () => {
       };
       mockMonetizationService.createWalletAddress.mockResolvedValue(mockNewAddress);
       mockCloudflareService.purgeAllWatchPages.mockResolvedValue(undefined);
-      mockCloudflareService.purgeNodePage.mockResolvedValue(undefined);
+      mockCloudflareService.purgeHomePage.mockResolvedValue(undefined);
 
       await controller.addWalletAddress(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
@@ -127,7 +127,7 @@ describe('MonetizationController', () => {
         currency: 'USDC',
       });
       expect(mockCloudflareService.purgeAllWatchPages).toHaveBeenCalled();
-      expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
+      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
@@ -147,7 +147,7 @@ describe('MonetizationController', () => {
       };
       mockMonetizationService.createWalletAddress.mockResolvedValue(mockNewAddress);
       mockCloudflareService.purgeAllWatchPages.mockResolvedValue(undefined);
-      mockCloudflareService.purgeNodePage.mockResolvedValue(undefined);
+      mockCloudflareService.purgeHomePage.mockResolvedValue(undefined);
 
       await controller.addWalletAddress(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
@@ -169,7 +169,7 @@ describe('MonetizationController', () => {
 
       mockMonetizationService.createWalletAddress.mockResolvedValue({});
       mockCloudflareService.purgeAllWatchPages.mockResolvedValue(undefined);
-      mockCloudflareService.purgeNodePage.mockResolvedValue(undefined);
+      mockCloudflareService.purgeHomePage.mockResolvedValue(undefined);
 
       await controller.addWalletAddress(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
@@ -206,13 +206,13 @@ describe('MonetizationController', () => {
 
       mockMonetizationService.deleteWalletAddress.mockResolvedValue(true);
       mockCloudflareService.purgeAllWatchPages.mockResolvedValue(undefined);
-      mockCloudflareService.purgeNodePage.mockResolvedValue(undefined);
+      mockCloudflareService.purgeHomePage.mockResolvedValue(undefined);
 
       await controller.deleteWalletAddress(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
       expect(mockMonetizationService.deleteWalletAddress).toHaveBeenCalledWith(1);
       expect(mockCloudflareService.purgeAllWatchPages).toHaveBeenCalled();
-      expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
+      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 

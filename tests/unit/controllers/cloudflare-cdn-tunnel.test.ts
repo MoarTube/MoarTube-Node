@@ -629,7 +629,7 @@ it('guards HTTP uploads and releases remote write activity only after successful
       purgePrefixes: vi.fn(),
       purgeVideo: vi.fn(),
       purgeWatchPages: vi.fn(),
-      purgeNodePage: vi.fn(),
+      purgeHomePage: vi.fn(),
     } as never,
     {} as never
   );

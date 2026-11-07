@@ -212,7 +212,7 @@ export class VideoUploadService {
       this.uploadTrackerService.stopTracking(videoId);
 
       // Purge Cloudflare cache
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
       await this.cloudflareService.purgeWatchPages([videoId]);
 
       // Format-specific purge

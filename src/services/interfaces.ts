@@ -1,4 +1,4 @@
-import type { NodeNeighbor } from '@/types/config.js';
+import type { NodeLink, NodeIcon } from '@/types/config.js';
 /**
  * Service Layer Interfaces
  *
@@ -281,7 +281,8 @@ export interface UpdateNodeSettingsInput {
   nodeName?: string;
   nodeHeadline?: string;
   nodeBulletin?: string[];
-  nodeNeighbors?: NodeNeighbor[];
+  nodeLinks?: NodeLink[];
+  nodeIcons?: NodeIcon[];
   nodeAbout?: string;
   publicNodeProtocol?: 'http' | 'https';
   publicNodeAddress?: string;

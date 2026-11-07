@@ -80,7 +80,7 @@ export class CloudflareService extends BaseService {
       return;
     }
     await this.purgePrefixes(
-      ['/watch', '/videos', '/node/search'].map((route) => getConfig().getNodeBaseUrl() + route),
+      ['/watch', '/videos', '/home'].map((route) => getConfig().getNodeBaseUrl() + route),
       strict
     );
   }
@@ -683,9 +683,9 @@ export class CloudflareService extends BaseService {
   }
 
   /**
-   * Purge node page cache
+   * Purge homepage cache
    */
-  async purgeNodePage(): Promise<void> {
+  async purgeHomePage(): Promise<void> {
     if (!this.isEnabled() || !this.httpClient) {
       return;
     }
@@ -694,28 +694,17 @@ export class CloudflareService extends BaseService {
       const config = getConfig();
       const nodeBaseUrl = config.getNodeBaseUrl();
 
-      const files = [
-        `${nodeBaseUrl}/videos`,
-        `${nodeBaseUrl}/videos/`,
-        `${nodeBaseUrl}/videos?searchTerm=&sortTerm=latest&tagTerm=`,
-        `${nodeBaseUrl}/videos?searchTerm=&sortTerm=popular&tagTerm=`,
-        `${nodeBaseUrl}/videos?searchTerm=&sortTerm=oldest&tagTerm=`,
-        `${nodeBaseUrl}/node/search?searchTerm=&sortTerm=latest&tagTerm=`,
-        `${nodeBaseUrl}/node/search?searchTerm=&sortTerm=popular&tagTerm=`,
-        `${nodeBaseUrl}/node/search?searchTerm=&sortTerm=oldest&tagTerm=`,
-      ];
+      const files = [`${nodeBaseUrl}/`, `${nodeBaseUrl}/home/state`];
 
       await this.purgeCache(
         [
           ...files,
-          ...this.prefixTargets(
-            ['/watch', '/videos', '/node/search'].map((route) => nodeBaseUrl + route)
-          ),
+          ...this.prefixTargets(['/watch', '/videos', '/home'].map((route) => nodeBaseUrl + route)),
         ],
-        'purgeNodePage'
+        'purgeHomePage'
       );
     } catch (error) {
-      this.logger.error('Failed to purge node page', error);
+      this.logger.error('Failed to purge homepage', error);
     }
   }
 
@@ -1150,22 +1139,11 @@ export class CloudflareService extends BaseService {
           },
         },
         {
-          description: 'Node Search - Cache Searches on the Node Page',
-          action: 'set_cache_settings',
-          enabled: true,
-          expression: '(starts_with(http.request.uri, "/node/search?searchTerm=&sortTerm"))',
-          action_parameters: {
-            cache: true,
-            edge_ttl: { mode: 'bypass_by_default' },
-            browser_ttl: { mode: 'bypass_by_default' },
-          },
-        },
-        {
-          description: 'Node Page - Cache for Different Variations of the Node Page',
+          description: 'Node Homepage - Cache Public Homepage and Data',
           action: 'set_cache_settings',
           enabled: true,
           expression:
-            '(http.request.uri.path eq "/videos") or (http.request.uri.path eq "/videos/")',
+            '(http.request.uri.path eq "/") or (starts_with(http.request.uri.path, "/home/"))',
           action_parameters: {
             cache: true,
             edge_ttl: { mode: 'bypass_by_default' },

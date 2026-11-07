@@ -1009,7 +1009,7 @@ body {
                 <div id="stats-section" class="container-fluid w-100">
                   <div class="row align-items-center">
                     <div class="col-xl-6 col-md-12">
-                      <a href="/videos"
+                      <a href="/"
                         ><img
                           src="<%=model.externalResourcesBaseUrl%>/external/resources/images/icon.png"
                           style="border-radius: 50%; width: 40px; height: 40px"
@@ -1522,7 +1522,8 @@ body {
               .attr('target', '_blank')
               .addClass('navbar-settings-button navbar-brand')
               .attr('role', 'button')
-              .html(svgGraphic);
+              .attr('rel', 'noopener noreferrer')
+              .append($('<img>').attr('width', 16).attr('height', 16).attr('alt', '').attr('src', 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgGraphic)));
             $('#navbar-settings-buttons').prepend($link);
           }
         }
@@ -1799,6 +1800,7 @@ body {
               adaptiveSources,
               progressiveSources,
               isStreaming,
+              autoStart: !/^#p\d+$/.test(this.HASH_VALUE),
               timeParameter: this.TIME_PARAMETER,
               videoId: this.VIDEO_ID,
               copyText: text => this.setClipboard(text),

@@ -1,3 +1,7 @@
+vi.mock('@database/provisioning/home.js', () => ({
+  provisionSQLiteHome: vi.fn(),
+  provisionPostgresHome: vi.fn(),
+}));
 vi.mock('@database/provisioning/comments.js', () => ({
   provisionSQLiteComments: vi.fn(),
   provisionPostgresComments: vi.fn(),
@@ -26,6 +30,10 @@ vi.mock('better-sqlite3', () => {
         throw new Error(constructorErrorMessage);
       }
       return {
+        function: vi.fn((_name, _options, fold) => {
+          expect(fold('Mixed CASE')).toBe('mixed case');
+          expect(fold(null)).toBe('');
+        }),
         exec: mockExec,
         pragma: mockPragma,
         close: mockClose,

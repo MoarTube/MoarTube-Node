@@ -8,7 +8,12 @@ export default defineConfig({
   test: {
     environment: 'node',
     globalSetup: ['./tests/support/silo-global.mjs'],
-    include: ['tests/unit/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    // Homepage SQL, service, and route coverage uses the real database contract suites.
+    include: [
+      'tests/unit/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      'tests/integration/sqlite/home.test.ts',
+      'tests/integration/postgres/home.test.ts',
+    ],
     coverage: {
       enabled: true,
       provider: 'v8',

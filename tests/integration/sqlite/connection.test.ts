@@ -32,6 +32,13 @@ describe('SQLite connection and shipped migrations (real SQL)', () => {
 
   it('runs migrations idempotently and persists data across native connections', async () => {
     database = openTestDatabase();
+    expect(
+      database.client
+        .prepare(
+          "SELECT home_fold('Mixed CASE') AS text, home_fold(NULL) AS missing, home_fold(42) AS numeric"
+        )
+        .get()
+    ).toEqual({ text: 'mixed case', missing: '', numeric: '' });
     sqliteConnection.initializeDatabaseSchema();
     const journal = JSON.parse(readFileSync('drizzle/sqlite/meta/_journal.json', 'utf8'));
     expect(journal.entries.length).toBeGreaterThan(0);
@@ -43,7 +50,7 @@ describe('SQLite connection and shipped migrations (real SQL)', () => {
       database.db.all(
         sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`
       )
-    ).toHaveLength(13);
+    ).toHaveLength(17);
     database.client.exec(
       "INSERT INTO links (url, svg_graphic, timestamp) VALUES ('persisted', '<svg/>', 100)"
     );

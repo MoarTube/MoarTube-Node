@@ -147,7 +147,7 @@ export class StreamsService extends BaseService {
 
         this.logger.info('Stream started', { videoId, isRecordedRemotely, isRecordedLocally });
         await this.invalidateStreamMedia(videoId);
-        await this.cloudflareService.purgeNodePage();
+        await this.cloudflareService.purgeHomePage();
 
         // Broadcast stream start
         this.broadcastStreamEvent('stream_started', {
@@ -207,7 +207,7 @@ export class StreamsService extends BaseService {
 
         // Purge Cloudflare cache
         await this.cloudflareService.purgeAllWatchPages();
-        await this.cloudflareService.purgeNodePage();
+        await this.cloudflareService.purgeHomePage();
 
         this.broadcastStreamEvent('stream_stopped', {
           videoId,
@@ -408,7 +408,7 @@ export class StreamsService extends BaseService {
         // Purge Cloudflare cache
         await this.invalidateStreamMedia(videoId);
         await this.cloudflareService.purgeAllWatchPages();
-        await this.cloudflareService.purgeNodePage();
+        await this.cloudflareService.purgeHomePage();
 
         return { videoId };
       })
@@ -658,7 +658,7 @@ export class StreamsService extends BaseService {
         meta: JSON.stringify(metadata),
       });
       await this.invalidateStreamMedia(job.videoId);
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
     });
   }
 

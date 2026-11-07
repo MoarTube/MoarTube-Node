@@ -376,7 +376,7 @@ export class ClusterMaster {
   private async runCloudflarePurgeTask(): Promise<void> {
     try {
       await this.cloudflare.purgeAllWatchPages();
-      await this.cloudflare.purgeNodePage();
+      await this.cloudflare.purgeHomePage();
     } catch (error) {
       this.logger.error('Cloudflare purge task failed', error);
     }

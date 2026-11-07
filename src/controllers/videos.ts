@@ -450,7 +450,7 @@ export class VideosController extends BaseController {
     const results = await Promise.allSettled([
       this.cloudflareService.purgeVideo(videoId),
       this.cloudflareService.purgeWatchPages([videoId], true),
-      this.cloudflareService.purgeNodePage(),
+      this.cloudflareService.purgeHomePage(),
     ]);
     const failures = results
       .filter((result) => result.status === 'rejected')

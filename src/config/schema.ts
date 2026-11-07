@@ -1,3 +1,4 @@
+import { nodeIconsSchema } from './node-icons.js';
 /**
  * Configuration schema validation module
  * Zod schemas for runtime validation of all configuration structures
@@ -5,7 +6,7 @@
 
 import { z } from 'zod';
 import { nodeBulletinSchema } from './node-bulletin.js';
-import { nodeNeighborsSchema } from './node-neighbors.js';
+import { nodeLinksSchema, migrateNodeLinksSettings } from './node-links.js';
 import { cloudflareTunnelNameSchema } from './cloudflare-tunnel.js';
 
 // ============================================
@@ -97,7 +98,9 @@ export const NodeSettingsSchema = z.object({
   nodeHeadline: z.string().default('MoarTube Node'),
   nodeAbout: z.string().default('A MoarTube Node'),
   nodeBulletin: nodeBulletinSchema.default([]),
-  nodeNeighbors: nodeNeighborsSchema.default([]),
+  nodeLinks: nodeLinksSchema.default([]),
+  // Missing means the legacy database icons have not been imported yet.
+  nodeIcons: nodeIconsSchema.optional(),
 
   // Authentication (Base64 encoded bcrypt hashes)
   username: z.string().min(1, 'Username hash is required'),
@@ -167,7 +170,7 @@ export type LastCheckedContentTrackerValidated = z.infer<typeof LastCheckedConte
  * Validate node settings with detailed error messages
  */
 export function validateNodeSettings(data: unknown): NodeSettingsValidated {
-  const result = NodeSettingsSchema.safeParse(data);
+  const result = NodeSettingsSchema.safeParse(migrateNodeLinksSettings(data));
   if (!result.success) {
     throw new Error(`Invalid node settings: ${result.error.message}`);
   }

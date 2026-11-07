@@ -14,8 +14,8 @@ import { NodeSettingsSchema } from '@/config/schema.js';
 import { SettingsService } from '@/services/settings.js';
 import { settingsRoutes } from '@/routes/settings.js';
 
-it('authenticates and validates neighbors changes and persists ordered arrays without changing other settings', async () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'moartube-neighbors-'));
+it('authenticates and validates icon changes and persists ordered arrays without changing other settings', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'moartube-links-'));
   const file = path.join(directory, '_node_settings.json');
   const initial = NodeSettingsSchema.parse({
     nodeListeningPort: 9090,
@@ -28,7 +28,7 @@ it('authenticates and validates neighbors changes and persists ordered arrays wi
     databaseConfig: { databaseDialect: 'sqlite' },
     storageConfig: { storageMode: 'filesystem' },
   });
-  expect(initial.nodeNeighbors).toEqual([]);
+  expect(initial.nodeIcons).toBeUndefined();
   fs.writeFileSync(file, JSON.stringify(initial));
   const config = Object.assign(Object.create(Config.prototype), {
     _nodeSettings: initial,
@@ -44,7 +44,7 @@ it('authenticates and validates neighbors changes and persists ordered arrays wi
     {} as never,
     {} as never,
     {} as never,
-    {} as never
+    { purgeHomePage: vi.fn(async () => {}) } as never
   );
   const app = Fastify();
   app.setValidatorCompiler(validatorCompiler);
@@ -68,22 +68,22 @@ it('authenticates and validates neighbors changes and persists ordered arrays wi
     (scope, _options, done) => {
       settingsRoutes(
         scope as never,
-        { resolve: (key: string) => (key === 'settingsService' ? service : {}) } as never
+        { resolve: (key: string) => (key === 'settingsService' ? service : { purgeAllWatchPages: vi.fn(async () => {}), purgeHomePage: vi.fn(async () => {}) }) } as never
       );
       done();
     },
     { prefix: '/settings' }
   );
-  const update = (nodeNeighbors: unknown, authorized = true) =>
+  const update = (nodeIcons: unknown, authorized = true) =>
     app.inject({
       method: 'POST',
-      url: '/settings/personalize/neighbors',
-      payload: { nodeNeighbors },
+      url: '/settings/personalize/icons',
+      payload: { nodeIcons },
       headers: authorized ? { authorization: 'Bearer token' } : {},
     });
   try {
     expect(
-      (await update([{ url: 'https://rivet.tube', description: 'Denied' }], false)).statusCode
+      (await update([{ url: 'https://rivet.tube', svgGraphic: '<svg/>' }], false)).statusCode
     ).toBe(401);
     for (const invalid of [
       null,
@@ -91,51 +91,51 @@ it('authenticates and validates neighbors changes and persists ordered arrays wi
       {},
       [42],
       ['text'],
-      [{ url: 'javascript:alert(1)', description: 'Bad protocol' }],
-      [{ url: 'ftp://rivet.tube', description: 'Bad protocol' }],
-      [{ url: 'data:text/html,Hello', description: 'Bad protocol' }],
-      [{ url: '//rivet.tube', description: 'No protocol' }],
-      [{ url: 'rivet.tube', description: 'No protocol' }],
-      [{ description: 'Missing URL' }],
+      [{ url: 'javascript:alert(1)', svgGraphic: 'Bad protocol' }],
+      [{ url: 'ftp://rivet.tube', svgGraphic: 'Bad protocol' }],
+      [{ url: 'data:text/html,Hello', svgGraphic: 'Bad protocol' }],
+      [{ url: '//rivet.tube', svgGraphic: 'No protocol' }],
+      [{ url: 'rivet.tube', svgGraphic: 'No protocol' }],
+      [{ svgGraphic: 'Missing URL' }],
       [{ url: 'https://rivet.tube' }],
-      [{ url: 'https://rivet.tube', description: ' ' }],
-      [{ url: 'https://rivet.tube/' + 'x'.repeat(2048), description: 'Long URL' }],
-      [{ url: 'https://rivet.tube', description: 'x'.repeat(1001) }],
-      Array(51).fill({ url: 'https://rivet.tube', description: 'Neighbor' }),
+      [{ url: 'https://rivet.tube', svgGraphic: ' ' }],
+      [{ url: 'https://rivet.tube/' + 'x'.repeat(2048), svgGraphic: 'Long URL' }],
+      [{ url: 'https://rivet.tube', svgGraphic: 'x'.repeat(50001) }],
+      Array(51).fill({ url: 'https://rivet.tube', svgGraphic: '<svg/>' }),
     ]) {
       expect((await update(invalid)).statusCode).toBe(400);
-      expect(JSON.parse(fs.readFileSync(file, 'utf8')).nodeNeighbors).toEqual([]);
+      expect(JSON.parse(fs.readFileSync(file, 'utf8')).nodeIcons).toBeUndefined();
     }
     for (const entries of [
       [
-        { url: ' https://rivet.tube ', description: ' Indie film and art ' },
-        { url: 'http://localhost:9090', description: '<b>Plain text</b>' },
+        { url: ' https://rivet.tube ', svgGraphic: '<svg/>' },
+        { url: 'http://localhost:9090', svgGraphic: '<svg/>' },
       ],
-      [{ url: 'https://gearhead.tube', description: 'Replacement' }],
+      [{ url: 'https://gearhead.tube', svgGraphic: '<svg/>' }],
       [],
     ]) {
       const response = await update(entries);
       const expected = entries.map((item) => ({
         url: item.url.trim(),
-        description: item.description.trim(),
+        svgGraphic: item.svgGraphic.trim(),
       }));
       expect(response.statusCode).toBe(200);
-      expect(response.json()).toEqual({ isError: false, nodeNeighbors: expected });
+      expect(response.json()).toEqual({ isError: false, nodeIcons: expected });
       config.reloadNodeSettings(true);
-      expect(config.nodeSettings.nodeNeighbors).toEqual(expected);
+      expect(config.nodeSettings.nodeIcons).toEqual(expected);
       expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toEqual({
         ...initial,
-        nodeNeighbors: expected,
+        nodeIcons: expected,
       });
       const settings = await app.inject({
         url: '/settings/',
         headers: { authorization: 'Bearer token' },
       });
       expect(settings.statusCode).toBe(200);
-      expect(settings.json().nodeSettings.nodeNeighbors).toEqual(expected);
+      expect(settings.json().nodeSettings.nodeIcons).toEqual(expected);
     }
-    service.updateNodeSettings({ nodeNeighbors: [{ url: ' https://neighbor.test ', description: ' Neighbor ' }] });
-    expect(config.nodeSettings.nodeNeighbors).toEqual([{ url: 'https://neighbor.test', description: 'Neighbor' }]);
+    service.updateNodeSettings({ nodeIcons: [{ url: ' https://link.test ', svgGraphic: '<svg/>' }] });
+    expect(config.nodeSettings.nodeIcons).toEqual([{ url: 'https://link.test', svgGraphic: '<svg/>' }]);
     const beforeFailure = fs.readFileSync(file, 'utf8');
     const save = vi.spyOn(config, 'updateNodeSettings').mockImplementation(() => {
       throw new Error('Disk write failed');
@@ -143,7 +143,7 @@ it('authenticates and validates neighbors changes and persists ordered arrays wi
     try {
       const response = await update([]);
       expect(response.statusCode).toBe(500);
-      expect(response.json()).toEqual({ isError: true, message: 'Unable to save neighbors' });
+      expect(response.json()).toEqual({ isError: true, message: 'Unable to save icons' });
       expect(fs.readFileSync(file, 'utf8')).toBe(beforeFailure);
     } finally {
       save.mockRestore();

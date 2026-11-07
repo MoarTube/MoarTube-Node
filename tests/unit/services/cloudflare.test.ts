@@ -286,11 +286,11 @@ describe('CloudflareService', () => {
     });
   });
 
-  describe('purgeNodePage', () => {
+  describe('purgeHomePage', () => {
     it('should do nothing when Cloudflare is disabled', async () => {
       mockConfig.nodeSettings.isCloudflareCdnEnabled = false;
 
-      await service.purgeNodePage();
+      await service.purgeHomePage();
 
       // Should not throw and should complete
       expect(true).toBe(true);
@@ -453,14 +453,14 @@ describe('CloudflareService', () => {
     });
 
     it('should purge node page', async () => {
-      await service.purgeNodePage();
+      await service.purgeHomePage();
 
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         '/zones/zone123/purge_cache',
         expect.objectContaining({
           files: expect.arrayContaining([
-            expect.stringMatching(/\/videos(?:\?|$)/),
-            expect.stringContaining('/node/search?'),
+            expect.stringMatching(/\/home\/state$/),
+            expect.stringMatching(/\/$/),
           ]),
         })
       );
@@ -690,7 +690,7 @@ describe('CloudflareService', () => {
       expect(assets.action_parameters.browser_ttl).toEqual({ mode: 'respect_origin' });
       expect(assets.action_parameters.edge_ttl).toEqual({ mode: 'bypass_by_default' });
       const catalog = rules.find((rule: { description: string }) =>
-        rule.description.startsWith('Node Page')
+        rule.description.startsWith('Node Homepage')
       );
       expect(catalog.action_parameters.edge_ttl).toEqual({ mode: 'bypass_by_default' });
       expect(rules.length).toBeLessThanOrEqual(10);
@@ -961,14 +961,14 @@ describe('CloudflareService', () => {
       );
     });
 
-    it('should handle purgeNodePage errors when getNodeBaseUrl throws', async () => {
+    it('should handle purgeHomePage errors when getNodeBaseUrl throws', async () => {
       mockConfig.getNodeBaseUrl = vi.fn().mockImplementation(() => {
         throw new Error('URL generation error');
       });
 
-      await service.purgeNodePage();
+      await service.purgeHomePage();
 
-      expect(mockLogger.error).toHaveBeenCalledWith('Failed to purge node page', expect.any(Error));
+      expect(mockLogger.error).toHaveBeenCalledWith('Failed to purge homepage', expect.any(Error));
     });
 
     it('should handle purgeNodeImages errors when getExternalResourcesBaseUrl throws', async () => {

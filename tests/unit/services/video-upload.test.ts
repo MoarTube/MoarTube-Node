@@ -96,7 +96,7 @@ describe('VideoUploadService', () => {
       isEnabled: vi.fn().mockReturnValue(false),
       purgeProgressiveVideos: vi.fn().mockResolvedValue(undefined),
       purgeAdaptiveVideos: vi.fn().mockResolvedValue(undefined),
-      purgeNodePage: vi.fn().mockResolvedValue(undefined),
+      purgeHomePage: vi.fn().mockResolvedValue(undefined),
       purgeAllWatchPages: vi.fn().mockResolvedValue(undefined),
       purgeWatchPages: vi.fn().mockResolvedValue(undefined),
       purgeVideoThumbnailImages: vi.fn().mockResolvedValue(undefined),

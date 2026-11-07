@@ -1,4 +1,4 @@
-import type { NodeNeighbor } from '@/types/config.js';
+import type { NodeLink, NodeIcon } from '@/types/config.js';
 import {
   readCdnJournal,
   writeCdnJournal,
@@ -74,8 +74,8 @@ export interface PersonalizeNodeBulletinBody {
   nodeBulletin: string[];
 }
 
-export interface PersonalizeNodeNeighborsBody {
-  nodeNeighbors: NodeNeighbor[];
+export interface PersonalizeNodeLinksBody {
+  nodeLinks: NodeLink[];
 }
 
 export interface PersonalizeNodeAboutBody {
@@ -162,6 +162,31 @@ export interface SecureQuery {
  */
 export class SettingsController extends BaseController {
   private previousMediaBases: string[] = [];
+  public getMetricsBundle = async (
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    reply.header('Cache-Control', 'no-store');
+    const rootPid = cluster.isWorker ? process.ppid : process.pid;
+    const collect = async <T>(
+      name: string,
+      load: () => Promise<T>
+    ): Promise<{ isError: false; metrics: T } | { isError: true }> => {
+      try {
+        return { isError: false, metrics: await load() };
+      } catch (error) {
+        this.logger.debug(`Failed to load ${name} metrics`, { error });
+        return { isError: true };
+      }
+    };
+    const [cpu, memory, disk] = await Promise.all([
+      collect('CPU', () => getCpuMetrics(rootPid)),
+      collect('memory', () => getMemoryMetrics(rootPid)),
+      collect('storage', () => this.getStorageMetrics()),
+    ]);
+    return await this.sendSuccess(reply, { metrics: { cpu, memory, disk } });
+  };
+
   public getMemoryMetrics = async (
     _request: FastifyRequest,
     reply: FastifyReply
@@ -193,31 +218,33 @@ export class SettingsController extends BaseController {
 
   private metricsScan: Promise<StorageMetrics> | undefined;
 
+  private async getStorageMetrics(): Promise<StorageMetrics> {
+    const settings = this.settingsService.getNodeSettings() as {
+      storageConfig: { storageMode: string };
+    };
+    if (settings.storageConfig.storageMode === 's3provider') {
+      return {
+        storageMode: 's3provider',
+        mediaBytes: null,
+        availableBytes: null,
+        totalBytes: null,
+      };
+    }
+    this.metricsScan ??= getStorageMetrics(
+      path.join(getConfig().paths.dataDirectoryPath, 'media')
+    ).finally(() => {
+      this.metricsScan = undefined;
+    });
+    return await this.metricsScan;
+  }
+
   public getMetrics = async (
     _request: FastifyRequest,
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     reply.header('Cache-Control', 'no-store');
     try {
-      const settings = this.settingsService.getNodeSettings() as {
-        storageConfig: { storageMode: string };
-      };
-      if (settings.storageConfig.storageMode === 's3provider') {
-        return await this.sendSuccess(reply, {
-          metrics: {
-            storageMode: 's3provider',
-            mediaBytes: null,
-            availableBytes: null,
-            totalBytes: null,
-          },
-        });
-      }
-      this.metricsScan ??= getStorageMetrics(
-        path.join(getConfig().paths.dataDirectoryPath, 'media')
-      ).finally(() => {
-        this.metricsScan = undefined;
-      });
-      return await this.sendSuccess(reply, { metrics: await this.metricsScan });
+      return await this.sendSuccess(reply, { metrics: await this.getStorageMetrics() });
     } catch (error) {
       this.logger.error('Failed to load storage metrics', error);
       return await this.sendError(reply, 'Unable to load storage metrics', 500);
@@ -638,18 +665,35 @@ export class SettingsController extends BaseController {
     }
   };
 
-  /** POST /settings/personalize/neighbors */
-  personalizeNodeNeighbors = async (
+  /** POST /settings/personalize/links */
+  personalizeNodeLinks = async (
     request: FastifyRequest,
     reply: FastifyReply
   ): Promise<FastifyReply> => {
     try {
-      const { nodeNeighbors } = request.body as PersonalizeNodeNeighborsBody;
-      const saved = this.settingsService.updateNodeNeighbors(nodeNeighbors);
-      return await this.sendSuccess(reply, { nodeNeighbors: saved });
+      const { nodeLinks } = request.body as PersonalizeNodeLinksBody;
+      const saved = this.settingsService.updateNodeLinks(nodeLinks);
+      return await this.sendSuccess(reply, { nodeLinks: saved });
     } catch (error) {
-      this.logger.error('Error updating node neighbors', error);
-      return await this.sendCaughtError(reply, error, 'Unable to save neighbors');
+      this.logger.error('Error updating node links', error);
+      return await this.sendCaughtError(reply, error, 'Unable to save links');
+    }
+  };
+
+  /** POST /settings/personalize/icons */
+  personalizeNodeIcons = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    try {
+      const { nodeIcons } = request.body as { nodeIcons: NodeIcon[] };
+      const saved = this.settingsService.updateNodeIcons(nodeIcons);
+      await this.cloudflareService.purgeAllWatchPages();
+      await this.cloudflareService.purgeHomePage();
+      return await this.sendSuccess(reply, { nodeIcons: saved });
+    } catch (error) {
+      this.logger.error('Error updating node icons', error);
+      return await this.sendCaughtError(reply, error, 'Unable to save icons');
     }
   };
 
@@ -755,7 +799,7 @@ export class SettingsController extends BaseController {
           // Rewrite HLS manifest URLs if using filesystem storage
           await this.rewriteAllManifestUrls(config);
 
-          await this.cloudflareService.purgeNodePage();
+          await this.cloudflareService.purgeHomePage();
           await this.cloudflareService.purgeAllWatchPages();
         } catch (error) {
           config.updateNodeSettings({
@@ -1408,7 +1452,7 @@ export class SettingsController extends BaseController {
       });
 
       await this.cloudflareService.purgeAllWatchPages();
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1446,7 +1490,7 @@ export class SettingsController extends BaseController {
 
       // Purge all watch pages from Cloudflare cache
       await this.cloudflareService.purgeAllWatchPages();
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1468,7 +1512,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isCommentsEnabled: isEnabled });
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1490,7 +1534,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isLikesEnabled: isEnabled });
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1512,7 +1556,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isDislikesEnabled: isEnabled });
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1534,7 +1578,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isReportsEnabled: isEnabled });
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1556,7 +1600,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isLiveChatEnabled: isEnabled });
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1720,7 +1764,7 @@ export class SettingsController extends BaseController {
         return await this.sendError(reply, 'database file is missing');
       }
       await this.settingsService.restoreDatabaseBackup(temporary);
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Database import error', error);

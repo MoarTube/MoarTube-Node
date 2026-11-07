@@ -12,7 +12,8 @@ import {
   personalizeNodeHeadlineBodySchema,
   personalizeNodeAboutBodySchema,
   personalizeNodeBulletinBodySchema,
-  personalizeNodeNeighborsBodySchema,
+  personalizeNodeLinksBodySchema,
+  personalizeNodeIconsBodySchema,
   updateAccountBodySchema,
   networkInternalBodySchema,
   networkExternalBodySchema,
@@ -48,6 +49,12 @@ export function settingsRoutes(
   // ============================================================================
   // Settings Root
   // ============================================================================
+
+  fastify.get(
+    '/metrics',
+    { preHandler: [fastify.authenticate], schema: { tags: ['Settings'] } },
+    controller.getMetricsBundle
+  );
 
   fastify.get(
     '/metrics/disk',
@@ -188,14 +195,24 @@ export function settingsRoutes(
     controller.personalizeNodeBulletin
   );
 
-  // Replace the ordered node neighbors.
   fastify.post(
-    '/personalize/neighbors',
+    '/personalize/icons',
+    {
+      bodyLimit: 3 * 1024 * 1024,
+      preHandler: [fastify.authenticate],
+      schema: { tags: ['Settings'], body: personalizeNodeIconsBodySchema },
+    },
+    controller.personalizeNodeIcons
+  );
+
+  // Replace the ordered node links.
+  fastify.post(
+    '/personalize/links',
     {
       preHandler: [fastify.authenticate],
-      schema: { tags: ['Settings'], body: personalizeNodeNeighborsBodySchema },
+      schema: { tags: ['Settings'], body: personalizeNodeLinksBodySchema },
     },
-    controller.personalizeNodeNeighbors
+    controller.personalizeNodeLinks
   );
 
   // Update node about

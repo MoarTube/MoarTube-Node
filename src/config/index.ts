@@ -1,3 +1,4 @@
+import { nodeIconsSchema } from './node-icons.js';
 import { withSettingsWrite } from '@/utils/settings-change.js';
 /**
  * Centralized Configuration System
@@ -163,7 +164,7 @@ class Config {
   // Node Settings
   // ============================================
 
-  private loadNodeSettings(): NodeSettingsValidated {
+  private loadNodeSettings(persistMigration = true): NodeSettingsValidated {
     const settingsPath = this._paths.nodeSettingsPath;
 
     if (!fs.existsSync(settingsPath)) {
@@ -175,6 +176,20 @@ class Config {
     }
 
     const rawSettings: unknown = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+    if (
+      persistMigration &&
+      rawSettings &&
+      typeof rawSettings === 'object' &&
+      Object.hasOwn(rawSettings, 'nodeNeighbors')
+    ) {
+      // Re-read under the settings writer lock so migration cannot overwrite a concurrent edit.
+      return withSettingsWrite(settingsPath, () => {
+        const latest: unknown = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+        const settings = validateNodeSettings(latest);
+        this.persistNodeSettings(settings);
+        return settings;
+      });
+    }
     return validateNodeSettings(rawSettings);
   }
 
@@ -192,7 +207,8 @@ class Config {
       nodeHeadline: 'moartube node',
       nodeAbout: 'just a MoarTube node',
       nodeBulletin: [],
-      nodeNeighbors: [],
+      nodeLinks: [],
+      nodeIcons: [],
       username: 'JDJhJDEwJHVrZUJsbmlvVzNjWEhGUGU0NjJrS09lSVVHc1VxeTJXVlJQbTNoL3hEM2VWTFRad0FiZVZL', // admin (Base64 encoded bcrypt hash)
       password: 'JDJhJDEwJHVkYUxudzNkLjRiYkExcVMwMnRNL09la3Q5Z3ZMQVpEa1JWMEVxd3RjU09wVXNTYXpTbXRX', // admin (Base64 encoded bcrypt hash)
       isCloudflareCdnEnabled: false,
@@ -227,11 +243,25 @@ class Config {
   /**
    * Update node settings and persist to disk
    */
+  /** Import legacy icons once, without overwriting a concurrent save (including an empty array). */
+  initializeNodeIcons(icons: unknown): void {
+    withSettingsWrite(this._paths.nodeSettingsPath, () => {
+      const settings = this.loadNodeSettings(false);
+      if (settings.nodeIcons !== undefined) {
+        this._nodeSettings = settings;
+        return;
+      }
+      const migrated = { ...settings, nodeIcons: nodeIconsSchema.parse(icons) };
+      this.persistNodeSettings(migrated);
+      this._nodeSettings = migrated;
+    });
+  }
+
   updateNodeSettings(updates: Partial<NodeSettings>): void {
     withSettingsWrite(this._paths.nodeSettingsPath, () => {
       // File watchers are advisory. Every patch merges against disk under the writer lock.
       const previous = this._nodeSettings;
-      this._nodeSettings = validateNodeSettings({ ...this.loadNodeSettings(), ...updates });
+      this._nodeSettings = validateNodeSettings({ ...this.loadNodeSettings(false), ...updates });
       try {
         this.persistNodeSettings();
       } catch (error) {
@@ -272,10 +302,10 @@ class Config {
     }
   }
 
-  private persistNodeSettings(): void {
+  private persistNodeSettings(settings: NodeSettingsValidated = this._nodeSettings): void {
     const temporary = this._paths.nodeSettingsPath + '.' + crypto.randomUUID() + '.part';
     try {
-      fs.writeFileSync(temporary, JSON.stringify(this._nodeSettings, null, 2), { flag: 'wx' });
+      fs.writeFileSync(temporary, JSON.stringify(settings, null, 2), { flag: 'wx' });
       fs.renameSync(temporary, this._paths.nodeSettingsPath);
     } finally {
       fs.rmSync(temporary, { force: true });

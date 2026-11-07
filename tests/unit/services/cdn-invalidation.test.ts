@@ -112,7 +112,7 @@ describe('content invalidation regressions', () => {
   );
   it('clears primed filtered browse, unrelated recommendation pages and both embeds after a title edit', async () => {
     const cache = new Set([
-      'node.example/videos?offset=100&sortTerm=popular&tagTerm=old',
+      'node.example/home/videos?cursor=100&sortTerm=viewed&tagTerm=old',
       'node.example/watch?extra=1&v=other',
       'node.example/watch/embed/video/video123?autostart=1&extra=1',
       'node.example/watch/embed/chat/video123',

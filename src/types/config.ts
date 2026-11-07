@@ -1,4 +1,9 @@
-export interface NodeNeighbor {
+export interface NodeIcon {
+  url: string;
+  svgGraphic: string;
+}
+
+export interface NodeLink {
   url: string;
   description: string;
 }
@@ -95,7 +100,8 @@ export interface NodeSettings {
   nodeHeadline: string;
   nodeAbout: string;
   nodeBulletin: string[];
-  nodeNeighbors: NodeNeighbor[];
+  nodeLinks: NodeLink[];
+  nodeIcons?: NodeIcon[];
 
   // Authentication (Base64 encoded bcrypt hashes)
   username: string;

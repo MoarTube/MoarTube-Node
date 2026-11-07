@@ -1,3 +1,4 @@
+import { nodeIconsSchema } from '@/config/node-icons.js';
 /**
  * Settings Request Schemas
  *
@@ -5,7 +6,7 @@
  */
 import { z } from 'zod';
 import { nodeBulletinSchema } from '@/config/node-bulletin.js';
-import { nodeNeighborsSchema } from '@/config/node-neighbors.js';
+import { nodeLinksSchema } from '@/config/node-links.js';
 import {
   protocolSchema,
   publicNodeAddressSchema,
@@ -80,10 +81,10 @@ export const personalizeNodeBulletinBodySchema = z.object({
 });
 
 /**
- * Node neighbors personalization request body schema
+ * Node links personalization request body schema
  */
-export const personalizeNodeNeighborsBodySchema = z.object({
-  nodeNeighbors: nodeNeighborsSchema,
+export const personalizeNodeLinksBodySchema = z.object({
+  nodeLinks: nodeLinksSchema,
 });
 
 /** Node about personalization request body schema. */
@@ -185,3 +186,5 @@ export const storageConfigToggleBodySchema = z.object({
       .optional(),
   }),
 });
+
+export const personalizeNodeIconsBodySchema = z.object({ nodeIcons: nodeIconsSchema });

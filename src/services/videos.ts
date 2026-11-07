@@ -368,7 +368,7 @@ export class VideosService extends BaseService {
       try {
         await this.cloudflareService.purgeEmbedVideoPages([videoId]);
         await this.cloudflareService.purgeWatchPages([videoId]);
-        await this.cloudflareService.purgeNodePage();
+        await this.cloudflareService.purgeHomePage();
       } catch (error) {
         this.logger.warn('Failed to purge Cloudflare cache after video update', {
           videoId,
@@ -400,7 +400,7 @@ export class VideosService extends BaseService {
       try {
         await this.cloudflareService.purgeEmbedVideoPages([videoId]);
         await this.cloudflareService.purgeWatchPages([videoId]);
-        await this.cloudflareService.purgeNodePage();
+        await this.cloudflareService.purgeHomePage();
       } catch (error) {
         this.logger.warn('Failed to purge Cloudflare cache after video meta update', {
           videoId,
@@ -435,7 +435,7 @@ export class VideosService extends BaseService {
       const deleted = await this.videoRepository.delete(videoId);
 
       try {
-        await this.cloudflareService.purgeNodePage();
+        await this.cloudflareService.purgeHomePage();
         await this.cloudflareService.purgeEmbedVideoPages([videoId]);
         await this.cloudflareService.purgeAdaptiveVideos(videoId, cachedSegments);
         await this.cloudflareService.purgeProgressiveVideos(videoId);
@@ -484,7 +484,7 @@ export class VideosService extends BaseService {
   async setPublishing(videoId: string, isPublishing: boolean): Promise<void> {
     if (!isPublishing) {
       await this.videoRepository.update(videoId, { is_publishing: false });
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
       return;
     }
     await withJobAdmission(async () => {
@@ -503,7 +503,7 @@ export class VideosService extends BaseService {
         is_publishing: true,
         meta: JSON.stringify(metadata),
       });
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
     });
   }
 
@@ -532,7 +532,7 @@ export class VideosService extends BaseService {
     });
 
     try {
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
       await this.cloudflareService.purgeWatchPages([videoId]);
       await this.cloudflareService.purgeEmbedVideoPages([videoId]);
     } catch (error) {
@@ -551,7 +551,7 @@ export class VideosService extends BaseService {
     });
 
     try {
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
       await this.cloudflareService.purgeAllEmbedVideoPages();
       await this.cloudflareService.purgeAllWatchPages();
       await this.cloudflareService.purgeVideo(videoId);
@@ -567,7 +567,7 @@ export class VideosService extends BaseService {
    */
   async incrementViews(videoId: string): Promise<void> {
     await this.videoRepository.incrementViews(videoId);
-    await this.cloudflareService.purgeNodePage();
+    await this.cloudflareService.purgeHomePage();
   }
 
   /**
@@ -596,7 +596,7 @@ export class VideosService extends BaseService {
   private async writeViews(videoId: string, count: number): Promise<void> {
     try {
       await this.videoRepository.incrementViewsBy(videoId, count);
-      await this.cloudflareService.purgeNodePage();
+      await this.cloudflareService.purgeHomePage();
       this.logger.debug('Flushed pending views', { videoId, count });
     } catch (error) {
       this.logger.error('Failed to flush pending views', error, { videoId, count });
@@ -698,7 +698,7 @@ export class VideosService extends BaseService {
     };
 
     await this.videoRepository.update(videoId, updates);
-    await this.cloudflareService.purgeNodePage();
+    await this.cloudflareService.purgeHomePage();
   }
 
   /**
@@ -708,7 +708,7 @@ export class VideosService extends BaseService {
     await this.videoRepository.update(videoId, {
       outputs: JSON.stringify(outputs),
     });
-    await this.cloudflareService.purgeNodePage();
+    await this.cloudflareService.purgeHomePage();
   }
 
   /**
@@ -904,7 +904,7 @@ export class VideosService extends BaseService {
           await this.writeMasterManifest(videoId, type, master);
         }
         await this.cloudflareService.purgeVideo(videoId);
-        await this.cloudflareService.purgeNodePage();
+        await this.cloudflareService.purgeHomePage();
         this.logger.debug('Format/resolution published', { videoId, format, resolution });
       });
     });
@@ -1169,25 +1169,8 @@ export class VideosService extends BaseService {
   /**
    * Get unique tags from published/live videos
    */
-  async getPublishedTags(
-    search?: string,
-    page?: { limit: number; offset: number; sortTerm?: string }
-  ): Promise<string[]> {
-    if ((search ?? '') === '' && page === undefined) {
-      return this.videoRepository.findTags(true);
-    }
-    return this.videoRepository.findTags(true, {
-      ...(search !== undefined && search !== '' ? { search } : {}),
-      ...(page
-        ? {
-            limit: page.limit,
-            offset: page.offset,
-            sortBy:
-              page.sortTerm === 'popular' ? ('views' as const) : ('creation_timestamp' as const),
-            sortDirection: page.sortTerm === 'oldest' ? ('asc' as const) : ('desc' as const),
-          }
-        : {}),
-    });
+  async getPublishedTags(): Promise<string[]> {
+    return this.videoRepository.findTags(true);
   }
 
   /**
@@ -1271,7 +1254,7 @@ export class VideosService extends BaseService {
         await this.cloudflareService.purgeAdaptiveVideos(videoId, cachedSegments);
         await this.cloudflareService.purgeProgressiveVideos(videoId);
         await this.cloudflareService.purgeWatchPages([videoId]);
-        await this.cloudflareService.purgeNodePage();
+        await this.cloudflareService.purgeHomePage();
 
         this.logger.info('Format/resolution unpublished', { videoId, format, resolution });
       });

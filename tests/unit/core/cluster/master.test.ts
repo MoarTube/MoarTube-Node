@@ -97,7 +97,7 @@ describe('ClusterMaster', () => {
   };
   let mockCloudflare: {
     purgeAllWatchPages: ReturnType<typeof vi.fn>;
-    purgeNodePage: ReturnType<typeof vi.fn>;
+    purgeHomePage: ReturnType<typeof vi.fn>;
   };
   let originalProcessOn: typeof process.on;
   let cluster: typeof import('node:cluster').default;
@@ -119,7 +119,7 @@ describe('ClusterMaster', () => {
     mockCloudflare = {
       retryPendingPurges: vi.fn().mockResolvedValue(undefined),
       purgeAllWatchPages: vi.fn().mockResolvedValue(undefined),
-      purgeNodePage: vi.fn().mockResolvedValue(undefined),
+      purgeHomePage: vi.fn().mockResolvedValue(undefined),
     };
 
     // Store original process.on
@@ -572,7 +572,7 @@ describe('ClusterMaster', () => {
       const testCloudflare = {
         retryPendingPurges: vi.fn().mockResolvedValue(undefined),
         purgeAllWatchPages: vi.fn().mockResolvedValue(undefined),
-        purgeNodePage: vi.fn().mockResolvedValue(undefined),
+        purgeHomePage: vi.fn().mockResolvedValue(undefined),
       };
 
       const master = new ClusterMaster(mockLogger as any, testCloudflare as any);
@@ -582,14 +582,14 @@ describe('ClusterMaster', () => {
       await vi.advanceTimersByTimeAsync(60000 * 10);
 
       expect(testCloudflare.purgeAllWatchPages).toHaveBeenCalled();
-      expect(testCloudflare.purgeNodePage).toHaveBeenCalled();
+      expect(testCloudflare.purgeHomePage).toHaveBeenCalled();
     });
 
     it('should handle cloudflare purge errors', async () => {
       const testCloudflare = {
         retryPendingPurges: vi.fn().mockRejectedValue(new Error('Retry failed')),
         purgeAllWatchPages: vi.fn().mockRejectedValue(new Error('Purge failed')),
-        purgeNodePage: vi.fn().mockResolvedValue(undefined),
+        purgeHomePage: vi.fn().mockResolvedValue(undefined),
       };
 
       const master = new ClusterMaster(mockLogger as any, testCloudflare as any);

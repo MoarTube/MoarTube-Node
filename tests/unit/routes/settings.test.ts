@@ -59,6 +59,12 @@ describe('Settings Routes', () => {
     expect(mockContainer.resolve).toHaveBeenCalledWith('websocketService');
   });
 
+  it('requires authentication for the metrics bundle', () => {
+    settingsRoutes(mockFastify as never, mockContainer);
+    expect(mockFastify.get).toHaveBeenCalledWith('/metrics',
+      { preHandler: [mockFastify.authenticate], schema: { tags: ['Settings'] } }, expect.any(Function));
+  });
+
   it('requires authentication for storage metrics', () => {
     settingsRoutes(mockFastify as any, mockContainer);
     expect(mockFastify.get).toHaveBeenCalledWith('/metrics/disk',
@@ -222,13 +228,13 @@ describe('Settings Routes', () => {
     expect(mockFastify.post).toHaveBeenCalledWith('/restart', expect.anything(), expect.any(Function));
   });
 
-  it('should register exactly 8 GET routes', () => {
+  it('should register exactly 9 GET routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.get).toHaveBeenCalledTimes(8);
+    expect(mockFastify.get).toHaveBeenCalledTimes(9);
   });
 
-  it('should register exactly 26 POST routes', () => {
+  it('should register exactly 27 POST routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(26);
+    expect(mockFastify.post).toHaveBeenCalledTimes(27);
   });
 });

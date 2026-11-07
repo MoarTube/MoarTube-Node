@@ -6,19 +6,24 @@ import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import errorHandler from '@/plugins/error-handler.js';
-import { NodeController } from '@/controllers/node.js';
+import { HomeController } from '@/controllers/home.js';
 import { WatchController } from '@/controllers/watch.js';
 
 vi.mock('@config/index.js', () => ({
   getConfig: () => ({
-    nodeSettings: { publicNodeProtocol: 'https', publicNodeAddress: 'node.example.com', publicNodePort: '443', storageConfig: { storageMode: 'filesystem' } },
+    nodeSettings: {
+      publicNodeProtocol: 'https',
+      publicNodeAddress: 'node.example.com',
+      publicNodePort: '443',
+      storageConfig: { storageMode: 'filesystem' },
+    },
     getExternalVideosBaseUrl: () => 'https://media.example.com',
     getExternalResourcesBaseUrl: () => 'https://node.example.com',
   }),
 }));
 
 describe('CDN HTML rendering failure cache policy', () => {
-  it.each(['node', 'watch'] as const)(
+  it.each(['index', 'watch'] as const)(
     'keeps %s rendering failures uncached and successful anonymous responses cacheable',
     async (page) => {
       const videos = {
@@ -35,15 +40,11 @@ describe('CDN HTML rendering failure cache policy', () => {
       const links = { getAllLinks: async () => [] };
       const wallets = { getWalletAddresses: async () => [] };
       const handler =
-        page === 'node'
-          ? new NodeController(
-              videos as never,
-              links as never,
-              wallets as never,
-              {} as never,
-              {} as never,
-              {} as never
-            ).getNodePage
+        page === 'index'
+          ? new HomeController({
+              state: async () => ({ epoch: 'test' }),
+              settings: () => ({ nodeName: 'Node' }),
+            } as never).page
           : new WatchController(
               videos as never,
               links as never,

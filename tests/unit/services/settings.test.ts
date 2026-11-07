@@ -95,7 +95,7 @@ describe('SettingsService', () => {
 
     mockCloudflareService = {
       isEnabled: vi.fn().mockReturnValue(false),
-      purgeNodePage: vi.fn(),
+      purgeHomePage: vi.fn(),
     } as unknown as CloudflareService;
 
     mockConfig = {
@@ -241,7 +241,7 @@ describe('SettingsService', () => {
 
       await service.updateNodeName('New Node Name');
 
-      expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
+      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalled();
     });
 
     it('should not purge Cloudflare cache when disabled', async () => {
@@ -249,7 +249,7 @@ describe('SettingsService', () => {
 
       await service.updateNodeName('New Node Name');
 
-      expect(mockCloudflareService.purgeNodePage).not.toHaveBeenCalled();
+      expect(mockCloudflareService.purgeHomePage).not.toHaveBeenCalled();
     });
   });
 
@@ -266,7 +266,7 @@ describe('SettingsService', () => {
 
       await service.updateNodeHeadline('New Node Headline');
 
-      expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
+      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalled();
     });
 
     it('should not purge Cloudflare cache when disabled', async () => {
@@ -274,7 +274,7 @@ describe('SettingsService', () => {
 
       await service.updateNodeHeadline('New Node Headline');
 
-      expect(mockCloudflareService.purgeNodePage).not.toHaveBeenCalled();
+      expect(mockCloudflareService.purgeHomePage).not.toHaveBeenCalled();
     });
   });
 
@@ -291,11 +291,36 @@ describe('SettingsService', () => {
 
       await service.updateNodeAbout('New about text');
 
-      expect(mockCloudflareService.purgeNodePage).toHaveBeenCalled();
+      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalled();
     });
   });
 
   describe('updateNetworkSettings', () => {
+    it('saves bulletin text even when the asynchronous homepage purge fails', async () => {
+      const error = new Error('CDN unavailable');
+      vi.mocked(mockCloudflareService.purgeHomePage).mockRejectedValueOnce(error);
+      expect(service.updateNodeBulletin([' Welcome '])).toEqual(['Welcome']);
+      await Promise.resolve();
+      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({ nodeBulletin: ['Welcome'] });
+      expect(mockLogger.warn).toHaveBeenCalledWith('Homepage purge deferred', { error });
+    });
+    it('saves node links even when the asynchronous homepage purge fails', async () => {
+      const error = new Error('CDN unavailable');
+      vi.mocked(mockCloudflareService.purgeHomePage).mockRejectedValueOnce(error);
+      const links = [{ url: 'https://example.test', description: 'Neighbor' }];
+      expect(service.updateNodeLinks(links)).toEqual(links);
+      await Promise.resolve();
+      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({ nodeLinks: links });
+      expect(mockLogger.warn).toHaveBeenCalledWith('Homepage purge deferred', { error });
+    });
+
+    it('validates and persists a replacement icon list', () => {
+      const icons = [{ url: 'https://example.test', svgGraphic: '<svg/>' }];
+      expect(service.updateNodeIcons(icons)).toEqual(icons);
+      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({ nodeIcons: icons });
+      expect(() => service.updateNodeIcons([{ url: 'invalid', svgGraphic: '<svg/>' }])).toThrow();
+    });
+
     it('should update network settings locally', async () => {
       await service.updateNetworkSettings('https', 'example.com', '443');
 

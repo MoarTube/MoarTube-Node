@@ -1,3 +1,4 @@
+import { provisionSQLiteHome } from '@database/provisioning/home.js';
 import { provisionSQLiteComments } from '@database/provisioning/comments.js';
 /**
  * SQLite database connection module for Drizzle ORM
@@ -52,6 +53,11 @@ export function createDatabase(config: DatabaseConfig): BetterSQLite3Database<ty
 
   const sqliteDb = new sqliteDatabase(config.filepath);
 
+  // SQL functions belong to a connection. Web workers do not run schema provisioning.
+  sqliteDb.function('home_fold', { deterministic: true }, (value: unknown) =>
+    typeof value === 'string' ? value.toLowerCase() : ''
+  );
+
   sqliteDb.exec('VACUUM');
 
   // Enable WAL mode for better concurrent performance
@@ -80,6 +86,7 @@ export function initializeDatabaseSchema(options: { migrationsFolder?: string } 
     const migrationsFolder = options.migrationsFolder ?? resolveMigrationsFolder(import.meta.url);
     migrate(connection.db, { migrationsFolder });
     provisionSQLiteComments(connection.client);
+    provisionSQLiteHome(connection.client);
     connection.client.exec('VACUUM');
   } catch (error) {
     throw new Error(`Failed to initialize SQLite database schema: ${String(error)}`);

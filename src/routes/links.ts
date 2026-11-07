@@ -6,7 +6,6 @@
 import type { FastifyInstance } from 'fastify';
 import { LinksController } from '@controllers/index.js';
 import type { Container } from '@core/index.js';
-import { addLinkBodySchema, deleteLinkBodySchema } from '@validators/index.js';
 
 /**
  * Register links routes
@@ -19,8 +18,7 @@ export function linksRoutes(
   container: Container
 ): void {
   const linksService = container.resolve('linksService');
-  const cloudflareService = container.resolve('cloudflareService');
-  const controller = new LinksController(linksService, cloudflareService);
+  const controller = new LinksController(linksService);
 
   // Get all links - public (no auth required)
   fastify.get(
@@ -32,31 +30,5 @@ export function linksRoutes(
       },
     },
     controller.getAllLinks.bind(controller)
-  );
-
-  // Add link - authenticated
-  fastify.post(
-    '/add',
-    {
-      preHandler: [fastify.authenticate],
-      schema: {
-        tags: ['Links'],
-        body: addLinkBodySchema,
-      },
-    },
-    controller.addLink.bind(controller)
-  );
-
-  // Delete link - authenticated
-  fastify.post(
-    '/delete',
-    {
-      preHandler: [fastify.authenticate],
-      schema: {
-        tags: ['Links'],
-        body: deleteLinkBodySchema,
-      },
-    },
-    controller.deleteLink.bind(controller)
   );
 }

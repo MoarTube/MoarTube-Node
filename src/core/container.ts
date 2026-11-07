@@ -4,6 +4,8 @@
  * Configures and provides the Awilix DI container for service resolution.
  * All services and repositories are registered here for dependency injection.
  */
+import { HomeRepository } from '@/database/repositories/home.js';
+import { HomeService } from '@/services/home.js';
 import { createContainer, asClass, asValue, InjectionMode, type AwilixContainer } from 'awilix';
 
 // Logger
@@ -23,7 +25,6 @@ import type {
   IReportsArchiveCommentsRepository,
   ILiveChatMessagesRepository,
   IMonetizationRepository,
-  ILinksRepository,
   SQLiteVideo,
   SQLiteNewVideo,
   PostgresVideo,
@@ -56,10 +57,6 @@ import type {
   SQLiteNewCryptoWalletAddress,
   PostgresCryptoWalletAddress,
   PostgresNewCryptoWalletAddress,
-  SQLiteLink,
-  SQLiteNewLink,
-  PostgresLink,
-  PostgresNewLink,
 } from '@database/index.js';
 
 import type { DatabaseClient as SQLiteClient } from '@database/sqlite-connection.js';
@@ -121,11 +118,9 @@ export interface ContainerCradle {
   monetizationRepository:
     | IMonetizationRepository<SQLiteCryptoWalletAddress, SQLiteNewCryptoWalletAddress>
     | IMonetizationRepository<PostgresCryptoWalletAddress, PostgresNewCryptoWalletAddress>;
-  linksRepository:
-    | ILinksRepository<SQLiteLink, SQLiteNewLink>
-    | ILinksRepository<PostgresLink, PostgresNewLink>;
 
   // Services
+  homeService: HomeService;
   videosService: VideosService;
   commentsService: CommentsService;
   streamsService: StreamsService;
@@ -201,6 +196,16 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
       : postgresFactory('postgres', db as PostgresClient);
   };
 
+  // Import the retired Links database once. Never read it after nodeIcons is saved.
+  if (config.nodeSettings.nodeIcons === undefined) {
+    const legacy = createTypedRepository(dbDialect, createLinksRepository, createLinksRepository);
+    const icons = (await legacy.findAll()).map((link) => ({
+      url: link.url,
+      svgGraphic: link.svg_graphic,
+    }));
+    config.initializeNodeIcons(icons);
+  }
+
   // Register repositories (they need db and table in constructor)
   appContainer.register({
     videosRepository: asValue(
@@ -243,9 +248,6 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
     monetizationRepository: asValue(
       createTypedRepository(dbDialect, createMonetizationRepository, createMonetizationRepository)
     ),
-    linksRepository: asValue(
-      createTypedRepository(dbDialect, createLinksRepository, createLinksRepository)
-    ),
   });
 
   // Register services (singletons for shared state)
@@ -258,6 +260,7 @@ export async function createAppContainer(db: DatabaseClient): Promise<Container>
       }),
     websocketService: asClass(WebSocketService).singleton(),
     cloudflareService: asClass(CloudflareService).singleton(),
+    homeService: asValue(new HomeService(new HomeRepository(db, dbDialect))),
     videosService: asClass(VideosService).singleton(),
     commentsService: asClass(CommentsService).singleton(),
     streamsService: asClass(StreamsService).singleton(),
