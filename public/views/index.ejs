@@ -151,7 +151,6 @@
         <div id="about-panel" class="about-panel">
           <section class="mobile-intro node-intro" aria-label="About this node"><h1 data-setting="nodeName"><%= model.settings.nodeName %></h1><img class="node-avatar" src="/external/resources/images/avatar.png" width="96" height="96" alt=""><h3 data-setting="nodeHeadline"><%= model.settings.nodeHeadline %></h3><p data-setting="nodeAbout"><%= model.settings.nodeAbout %></p></section>
           <section class="panel bulletin-panel" aria-labelledby="bulletin-heading"><h2 id="bulletin-heading">Bulletin</h2><ul id="bulletin"><% for (const item of model.settings.nodeBulletin) { %><li><%= item %></li><% } %></ul><p id="bulletin-empty" class="empty-settings" <%= model.settings.nodeBulletin.length ? 'hidden' : '' %>>No bulletin items yet.</p></section>
-          <section class="panel links-panel" aria-labelledby="links-heading"><h2 id="links-heading">Links</h2><div id="links"><% for (const link of model.settings.nodeLinks) { %><div class="node-link"><a href="<%= link.url %>" rel="noopener noreferrer"><%= new URL(link.url).hostname %></a><span><%= link.description %></span></div><% } %></div><p id="links-empty" class="empty-settings" <%= model.settings.nodeLinks.length ? 'hidden' : '' %>>No links yet.</p></section>
         </div>
         <section id="community-panel" class="comments-panel panel" aria-labelledby="comments-heading">
           <div class="comments-header"><h2 id="comments-heading">Community</h2><button id="comments-search-toggle" type="button" class="comments-search-toggle" aria-label="Search comments" aria-controls="comment-search" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg></button></div>
@@ -160,6 +159,7 @@
           <nav hidden class="comment-pagination" aria-label="Latest comments pages"><button id="comments-prev" type="button" class="btn" disabled>← Previous</button><span id="comment-page">Page 1</span><button id="comments-next" type="button" class="btn" disabled>Next →</button></nav>
           <div id="comment-sentinel" class="feed-sentinel" aria-hidden="true"></div>
         </section>
+        <section class="panel links-panel about-panel" aria-labelledby="links-heading"><h2 id="links-heading">Links</h2><div id="links"><% for (const link of model.settings.nodeLinks) { %><div class="node-link"><a href="<%= link.url %>" rel="noopener noreferrer"><%= new URL(link.url).hostname %></a><span><%= link.description %></span></div><% } %></div><p id="links-empty" class="empty-settings" <%= model.settings.nodeLinks.length ? 'hidden' : '' %>>No links yet.</p></section>
       </aside>
     </main>
     <div id="settings-dialog" class="modal fade" tabindex="-1" aria-labelledby="settings-title" aria-hidden="true">
