@@ -84,7 +84,7 @@ export class HomeService {
     const page = await this.repository.page(
       snapshot,
       input.cursor,
-      kind === 'comments' ? 5 : 30,
+      kind === 'comments' ? 10 : 30,
       kind
     );
     return {

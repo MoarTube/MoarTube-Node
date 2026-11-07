@@ -216,7 +216,7 @@ describe('Homepage real database and public routes', () => {
     expect(expired.videos![0]).toMatchObject({ videoId: 'old' });
   });
 
-  it('pages every global comment in groups of five with stable timestamp ties and a partial final page', async () => {
+  it('pages every global comment in groups of ten with stable timestamp ties and a partial final page', async () => {
     await videos.createMany([
       { ...video('a'), is_published: true },
       { ...video('b'), is_live: true },
@@ -232,7 +232,7 @@ describe('Homepage real database and public routes', () => {
       epoch: state.epoch,
       revision: state.commentsRevision,
     });
-    expect(page.comments).toHaveLength(5);
+    expect(page.comments).toHaveLength(10);
     const rows = [...page.comments!] as HomeComment[];
     await comments.create(comment('a', 3000)); // Appears on refresh, not in the pinned older traversal.
     while (page.hasMore) {
@@ -309,7 +309,7 @@ describe('Homepage real database and public routes', () => {
       Array.from({ length: 23 }, (_, i) => ({
         ...comment('search-comments', 1000 + i),
         comment_plain_text_sanitized:
-          i < 12 ? 'Caf\u00e9 &amp; chips 100% ' + i : 'Something else ' + i,
+          i < 22 ? 'Caf\u00e9 &amp; chips 100% ' + i : 'Something else ' + i,
       }))
     );
     const query = {
@@ -319,14 +319,14 @@ describe('Homepage real database and public routes', () => {
       tagTerm: 'unmatched-tag',
     };
     const first = await service.page('comments', query, input());
-    expect(first.totalCount).toBe(12);
-    expect(first.comments).toHaveLength(5);
+    expect(first.totalCount).toBe(22);
+    expect(first.comments).toHaveLength(10);
     const second = await service.page('comments', query, {
       cursor: first.nextCursor!,
       snapshot: first.snapshot,
       revision: first.revision,
     });
-    expect(second.comments).toHaveLength(5);
+    expect(second.comments).toHaveLength(10);
     const last = await service.page('comments', query, {
       cursor: second.nextCursor!,
       snapshot: second.snapshot,
