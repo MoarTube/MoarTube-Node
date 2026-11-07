@@ -1207,7 +1207,7 @@
 @media (min-width: 992px) {
   .home-page { padding-bottom: 14px; }
   .video-page:last-child { margin-bottom: 0; }
-  .about-panel > .panel:last-child { margin-bottom: 0; }
+  .home-sidebar > .panel:last-child { margin-bottom: 0; }
 }
 
 .network-identity { text-align: center; }
