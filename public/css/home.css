@@ -446,8 +446,7 @@
 }
 .mobile-tabs,
 .mobile-sort,
-.mobile-intro,
-.community-subtitle {
+.mobile-intro {
   display: none;
 }
 @media (min-width: 992px) and (max-width: 1250px) {
@@ -663,12 +662,6 @@
     font-size: 26px;
     font-weight: 800;
     letter-spacing: -0.7px;
-  }
-  .community-subtitle {
-    display: block;
-    color: #555;
-    font-size: 16px;
-    margin: 3px 0 16px;
   }
   .comment-row {
     border: 1px solid var(--home-border);
@@ -1122,8 +1115,9 @@
 .home-dark :is(.network-identity, .home-sidebar .panel h2, .comments-header) { background: #32363e; color: #eee; }
 .home-dark :is(.search-box input, .form-control, .form-select) { background-color: transparent; color: #eee; }
 .home-dark :is(.tag-menu input, .form-select option) { background: #22252a; color: #eee; }
-.home-dark .mobile-intro { background: #382433; }
-.home-dark .node-intro p, .home-dark .community-subtitle { color: #bbb; }
+.home-dark .mobile-intro { background: #22252a; }
+.home-dark .mobile-intro h1 { background: #32363e; color: #eee; }
+.home-dark .node-intro p { color: #bbb; }
 .home-dark .dialog-close { color: #eee; }
 .home-dark #moartube-logo-light { fill: #eee; }
 
@@ -1144,7 +1138,37 @@
   .video-page { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 991.98px) {
-  .mobile-intro { text-align: center; }
+  .mobile-intro {
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    background: #fff;
+    border: 1px solid #bfc5ce;
+    border-radius: 6px;
+    padding: 2px;
+  }
+  .mobile-intro h1 {
+    background: #dfe2e6;
+    border-radius: 3px 3px 0 0;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: normal;
+    margin: 0;
+    padding: 5px 10px;
+  }
+  .mobile-intro h3 {
+    font-size: 22px;
+    line-height: 1.15;
+    margin: 10px 10px 0;
+  }
+  .mobile-intro p {
+    color: var(--home-muted);
+    line-height: 1.25;
+    margin: 0 10px 8px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid var(--home-accent);
+  }
 }
 
 @media (min-width: 992px) {

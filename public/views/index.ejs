@@ -8,7 +8,7 @@
   <% if (model.canonicalOrigin) { %><link rel="canonical" href="<%= model.canonicalOrigin %>/"><% } %>
   <link rel="icon" href="/external/resources/images/favicon.ico">
   <link rel="stylesheet" href="/external/resources/css/bootstrap.min-5.3.0.css">
-  <link rel="stylesheet" href="/external/resources/css/home.css?v=26">
+  <link rel="stylesheet" href="/external/resources/css/home.css?v=27">
   <script id="home-model" type="application/json"><%- bootstrap %></script>
   <script defer src="/external/resources/javascript/home.js?v=15"></script>
   <script defer src="/external/resources/javascript/home-header.js?v=3"></script>
@@ -146,14 +146,14 @@
           <section class="desktop-intro node-intro" aria-label="About this node"><h1 data-setting="nodeHeadline"><%= model.settings.nodeHeadline %></h1><p data-setting="nodeAbout"><%= model.settings.nodeAbout %></p></section>
         </div>
         <section id="community-panel" class="comments-panel panel" aria-labelledby="comments-heading">
-          <div class="comments-header"><h2 id="comments-heading">Latest Comments</h2><button id="comments-search-toggle" type="button" class="comments-search-toggle" aria-label="Search comments" aria-controls="comment-search" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg></button></div><p class="community-subtitle">Newest comments across this node</p>
+          <div class="comments-header"><h2 id="comments-heading">Latest Comments</h2><button id="comments-search-toggle" type="button" class="comments-search-toggle" aria-label="Search comments" aria-controls="comment-search" aria-expanded="false"><svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg></button></div>
           <form id="comment-search" class="comment-search" role="search" aria-label="Comment search" hidden><label class="search-box"><svg class="icon" aria-hidden="true"><use href="#icon-search"/></svg><input id="comment-search-input" name="commentSearch" type="search" maxlength="500" placeholder="Search comments&#8230;" aria-label="Search comment text" value="<%= model.query.commentSearch || '' %>"></label></form>
           <div id="comment-list"></div><div id="comment-status" class="feed-status" role="status"></div>
           <nav hidden class="comment-pagination" aria-label="Latest comments pages"><button id="comments-prev" type="button" class="btn" disabled>← Previous</button><span id="comment-page">Page 1</span><button id="comments-next" type="button" class="btn" disabled>Next →</button></nav>
           <div id="comment-sentinel" class="feed-sentinel" aria-hidden="true"></div>
         </section>
         <div id="about-panel" class="about-panel">
-          <section class="mobile-intro node-intro" aria-label="About this node"><img class="node-avatar" src="/external/resources/images/avatar.png" width="96" height="96" alt=""><h1 data-setting="nodeName"><%= model.settings.nodeName %></h1><h3 data-setting="nodeHeadline"><%= model.settings.nodeHeadline %></h3><p data-setting="nodeAbout"><%= model.settings.nodeAbout %></p></section>
+          <section class="mobile-intro node-intro" aria-label="About this node"><h1 data-setting="nodeName"><%= model.settings.nodeName %></h1><img class="node-avatar" src="/external/resources/images/avatar.png" width="96" height="96" alt=""><h3 data-setting="nodeHeadline"><%= model.settings.nodeHeadline %></h3><p data-setting="nodeAbout"><%= model.settings.nodeAbout %></p></section>
           <section class="panel bulletin-panel" aria-labelledby="bulletin-heading"><h2 id="bulletin-heading">Bulletin</h2><ul id="bulletin"><% for (const item of model.settings.nodeBulletin) { %><li><%= item %></li><% } %></ul><p id="bulletin-empty" class="empty-settings" <%= model.settings.nodeBulletin.length ? 'hidden' : '' %>>No bulletin items yet.</p></section>
           <section class="panel links-panel" aria-labelledby="links-heading"><h2 id="links-heading">Links</h2><div id="links"><% for (const link of model.settings.nodeLinks) { %><div class="node-link"><a href="<%= link.url %>" rel="noopener noreferrer"><%= new URL(link.url).hostname %></a><span><%= link.description %></span></div><% } %></div><p id="links-empty" class="empty-settings" <%= model.settings.nodeLinks.length ? 'hidden' : '' %>>No links yet.</p></section>
         </div>
