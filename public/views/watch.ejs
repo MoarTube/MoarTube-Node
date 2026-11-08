@@ -714,6 +714,64 @@
         border-color: var(--watch-border);
       }
       #recommended-videos-list-container { background-color: var(--watch-page); }
+      .video-recommendation-title { font-weight: 500; }
+      @media (min-width: 992px) {
+        body { --watch-spacing: 16px; }
+        #main-container,
+        #theater-container {
+          width: 100%;
+          padding-inline: var(--watch-spacing) !important;
+          margin-top: var(--watch-spacing) !important;
+        }
+        #theater-container:empty { display: none; }
+        #theater-container { padding-inline: 0 !important; }
+        #main-container > .row {
+          display: grid;
+          grid-template-columns: minmax(0, 5fr) minmax(300px, 2fr);
+          gap: var(--watch-spacing);
+          margin: 0;
+        }
+        #video-comments-outer,
+        #recommended-videos-list-container { width: auto; min-width: 0; padding: 0; }
+        #video-comments-inner { display: grid; gap: var(--watch-spacing); }
+        #video-player-information { padding: var(--watch-spacing); border-radius: 8px; }
+        #video-title { margin-bottom: var(--watch-spacing); }
+        .watch-creator-row { row-gap: var(--watch-spacing); }
+        #video-information-container { padding: var(--watch-spacing) !important; margin-block: var(--watch-spacing) 0 !important; }
+        #comment-section { padding-top: var(--watch-spacing) !important; }
+        #comments-container { margin-top: var(--watch-spacing) !important; }
+        #video-player-container {
+          border-radius: 12px;
+          overflow: hidden;
+        }
+        #video-player-container .mt-player-surface { border-radius: 12px; }
+        #video-player-container .mt-player-surface:fullscreen { border-radius: 0; }
+        #theater-container > #video-player-container {
+          height: min(90vh, 56.25vw);
+          border-radius: 0;
+        }
+        #theater-container .mt-player-surface { border-radius: 0; }
+        #recommended-videos-list-container { display: flex; flex-direction: column; gap: var(--watch-spacing); }
+        #live-stream-chat-container { margin-bottom: 0 !important; }
+        #recommended-videos-tag-slider { padding-bottom: 0 !important; }
+        #recommended-videos-list { gap: var(--watch-spacing); }
+        #recommended-videos-list > li { margin-top: 0 !important; padding-block: 0; }
+        #recommended-videos-list .row {
+          display: grid;
+          grid-template-columns: minmax(0, 62fr) minmax(0, 38fr);
+          gap: var(--watch-spacing);
+        }
+        #recommended-videos-list .col-6 { width: auto; min-width: 0; }
+        #recommended-videos-list .ms-1 { margin-left: 0 !important; }
+        #recommended-videos-list img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+        #recommended-videos-list .video-recommendation-title {
+          font-size: 14px;
+          font-weight: 600;
+          line-height: 20px;
+          overflow-wrap: anywhere;
+        }
+        #recommended-videos-list small { display: block; font-size: 12px; line-height: 18px; }
+      }
       .video-recommendation-card {
         border: 1px solid var(--watch-border);
       }
@@ -744,6 +802,14 @@
       .viewer-navigation {
         background-color: var(--watch-page);
       }
+      body:has(#theater-container > .mt-theater-wrapper) .viewer-navigation {
+        background-color: #0f0f0f;
+        color: #eee;
+        --watch-border: #333;
+      }
+      body:has(#theater-container > .mt-theater-wrapper) #moartube-logo-light { display: none !important; }
+      body:has(#theater-container > .mt-theater-wrapper) #moartube-logo-dark { display: inline !important; }
+      body:has(#theater-container > .mt-theater-wrapper) #theater-container { margin-top: 0 !important; }
 
 
       .navbar-settings-button {
@@ -1623,7 +1689,7 @@ body {
                     </div>\
                     <div class="col-6">\
                       <div class="h-100 ms-1">\
-                        <span class="video-recommendation-card-text" style="overflow: hidden;text-overflow: ellipsis;white-space: normal;-webkit-line-clamp: 2;display: -webkit-box;-webkit-box-orient: vertical;font-weight: 500;font-family: &quot;Roboto&quot;,&quot;Arial&quot;,sans-serif;"></span>\
+                        <span class="video-recommendation-card-text video-recommendation-title" style="overflow: hidden;text-overflow: ellipsis;white-space: normal;-webkit-line-clamp: 2;display: -webkit-box;-webkit-box-orient: vertical;font-family: &quot;Roboto&quot;,&quot;Arial&quot;,sans-serif;"></span>\
                         <small class="video-recommendation-card-text"><span class="recommended-video-info-views"></span> &#x2022 <span class="video-info-timestamp"></span></small>\
                       </div>\
                     </div>\

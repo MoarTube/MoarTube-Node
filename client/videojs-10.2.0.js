@@ -71,7 +71,6 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
           <span class="mt-spacer"></span>
           <a class="mt-watch-link mt-icon-button" aria-label="Watch on MoarTube" title="Watch on MoarTube" target="_blank" rel="noopener">${icons.brand}</a>
           <media-fullscreen-button class="mt-icon-button" title="Fullscreen"><span class="mt-enter">${icons.fullscreen}</span><span class="mt-exit">${icons.exit}</span></media-fullscreen-button>
-          <button type="button" class="mt-streamer mt-icon-button" aria-label="Streamer mode" title="Streamer mode" aria-pressed="false">${icons.fullscreen}</button>
           <button type="button" class="mt-theater mt-icon-button" aria-label="Theater mode" title="Theater mode" aria-pressed="false">${icons.theater}</button>
           <button type="button" class="mt-settings mt-icon-button" title="Settings" aria-label="Settings" aria-haspopup="menu" aria-expanded="false" aria-controls="mt-player-settings">${icons.more}</button>
         </media-controls-group>
@@ -102,7 +101,6 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
   watchLink.href = new URL('/watch?v=' + encodeURIComponent(videoId), window.location.origin).href;
   watchLink.hidden = !embedded;
   theater.hidden = embedded;
-  const streamer = player.querySelector('.mt-streamer');
   const error = player.querySelector('.mt-player-error');
   const buffering = player.querySelector('.mt-buffering');
   const lifetime = new AbortController();
@@ -111,7 +109,6 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
   let media, mediaLifetime, currentSource, pendingRestore, selected, sourceIndex = 0, initialSeekDone = false, hasPlayed = false;
   let playbackRequested = autoStart, preferredRate = 1;
   player.classList.toggle('mt-is-live', isStreaming);
-  streamer.hidden = embedded || !isStreaming;
 
   function setMenusClosed(focus = false) {
     menu.hidden = context.hidden = true;
@@ -267,7 +264,7 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
   listen(watchLink, 'click', () => media?.pause());
   listen(settings, 'click', () => menu.hidden ? showMenu() : setMenusClosed(true));
   const resetModes = initializeWatchModes({
-    wrapper, theater, streamer, isStreaming, embedded, icons, listen,
+    wrapper, theater, isStreaming, embedded, icons, listen,
     onMove(move) {
       // Older browsers pause media when it is reparented. Resume only if it was playing.
       const wasPlaying = media && !media.paused;
@@ -316,7 +313,6 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
   const fullscreenChanged = () => {
     setMenusClosed();
     theater.hidden = embedded || !!document.fullscreenElement;
-    streamer.hidden = embedded || !isStreaming || !!document.fullscreenElement;
   };
   listen(document, 'fullscreenchange', fullscreenChanged);
   listen(window, 'resize', () => { if (!context.hidden) setMenusClosed(); });

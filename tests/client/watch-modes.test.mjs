@@ -27,7 +27,7 @@ function element() {
 
 function setup({ storage = new Map(), live = true, embedded = false, desktop = true, atomic = false } = {}) {
   const home = element(), wrapper = element(), sibling = element();
-  const theaterContainer = element(), main = element(), theater = element(), streamer = element();
+  const theaterContainer = element(), main = element(), theater = element();
   home.insertBefore(wrapper, null);
   home.insertBefore(sibling, null);
   wrapper.nextSibling = sibling;
@@ -50,36 +50,31 @@ function setup({ storage = new Map(), live = true, embedded = false, desktop = t
   };
   globalThis.document = { querySelector: id => id === '#main-container' ? main : theaterContainer };
   const reset = initializeWatchModes({
-    wrapper, theater, streamer, isStreaming: live, embedded,
+    wrapper, theater, isStreaming: live, embedded,
     icons: { small: 'small', theater: 'theater', exit: 'exit', fullscreen: 'fullscreen' },
     listen: (target, event, callback) => target.addEventListener(event, callback),
     onMove: move => { moves++; move(); },
   });
   return {
-    wrapper, home, theaterContainer, main, theater, streamer, reset, storage,
+    wrapper, home, theaterContainer, main, theater, reset, storage,
     get moves() { return moves; },
     click: button => button.dispatchEvent(new Event('click')),
     resize: matches => { query.matches = matches; query.dispatchEvent(new Event('change')); },
   };
 }
 
-test('switches exclusively between theater, streamer and standard, including repeated transitions', () => {
+test('switches between theater and standard, including repeated transitions', () => {
   const page = setup();
   for (let i = 0; i < 3; i++) {
     page.click(page.theater);
     assert.equal(page.wrapper.parentElement, page.theaterContainer);
     assert.equal(page.theater.attributes['aria-pressed'], 'true');
     assert.equal(page.theater.innerHTML, 'small');
-    page.click(page.streamer);
+    page.click(page.theater);
     assert.equal(page.wrapper.parentElement, page.home);
     assert.equal(page.wrapper.classList.contains('mt-theater-wrapper'), false);
-    assert.equal(page.main.classList.contains('w-100'), true);
     assert.equal(page.theater.attributes['aria-pressed'], 'false');
-    page.click(page.theater);
-    assert.equal(page.main.classList.contains('w-100'), false);
-    assert.equal(page.streamer.attributes['aria-pressed'], 'false');
-    page.click(page.theater);
-    assert.equal(page.wrapper.parentElement, page.home);
+    assert.equal(page.theater.innerHTML, 'theater');
   }
 });
 
@@ -95,15 +90,13 @@ test('remembers theater for videos and live streams and remembers turning it off
   assert.equal(setup({ storage: first.storage }).theater.attributes['aria-pressed'], 'false');
 });
 
-test('streamer preference survives intervening videos without enabling streamer for videos', () => {
-  const first = setup();
-  first.click(first.streamer);
-  const video = setup({ storage: first.storage, live: false });
-  assert.equal(video.main.classList.contains('w-100'), false);
-  const live = setup({ storage: first.storage });
-  assert.equal(live.streamer.attributes['aria-pressed'], 'true');
-  live.click(live.streamer);
-  assert.equal(setup({ storage: first.storage }).streamer.attributes['aria-pressed'], 'false');
+test('obsolete streamer preferences fall back to the standard layout', () => {
+  const storage = new Map([['moartube-watch-modes', '{"video":"standard","live":"streamer"}']]);
+  const page = setup({ storage });
+  assert.equal(page.wrapper.parentElement, page.home);
+  assert.equal(page.theater.attributes['aria-pressed'], 'false');
+  page.click(page.theater);
+  assert.deepEqual(JSON.parse(storage.get('moartube-watch-modes')), { video: 'theater', live: 'theater' });
 });
 
 test('small screens temporarily use standard layout without losing the saved preference', () => {
@@ -126,15 +119,14 @@ test('invalid or unavailable storage does not break switching', () => {
   }
   const storage = { get() { throw Error('blocked'); }, set() { throw Error('blocked'); } };
   const page = setup({ storage });
-  page.click(page.streamer);
-  assert.equal(page.main.classList.contains('w-100'), true);
+  page.click(page.theater);
+  assert.equal(page.wrapper.parentElement, page.theaterContainer);
 });
 
 test('embeds leave stored watch preferences and page layout alone', () => {
   const storage = new Map([['moartube-watch-modes', '{"video":"theater","live":"streamer"}']]);
   const page = setup({ storage, embedded: true });
   page.click(page.theater);
-  page.click(page.streamer);
   page.reset();
   assert.equal(page.moves, 0);
   assert.equal(storage.get('moartube-watch-modes'), '{"video":"theater","live":"streamer"}');

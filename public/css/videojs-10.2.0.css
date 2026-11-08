@@ -56,7 +56,7 @@ media-play-button:not([data-paused]) .mt-pause, media-mute-button[data-muted] .m
 #video-player-container.mt-theater-wrapper { height: min(90vh, 56.25vw); }
 #video-player-container.mt-theater-wrapper::before { padding-top: 0; }
 .mt-player-surface:fullscreen .mt-theater { display: none; }
-@media (max-width: 991px) { .mt-theater, .mt-streamer { display: none !important; } }
+@media (max-width: 991px) { .mt-theater { display: none !important; } }
 @media (max-width: 480px) { .mt-volume { width: 40px; margin-right: 2px; } .mt-control-bar { padding: 0 4px; gap: 0; } .mt-icon-button { width: 32px; } .mt-times { padding: 0 2px; font-size: 11px; } }
 @media (max-width: 350px) { .mt-volume { display: none; } }
 @media (prefers-reduced-motion: reduce) { .mt-controls { transition: none; } }

@@ -5,11 +5,10 @@ pages. It uses HTML components with a shared skin in
 `public/css/videojs-10.2.0.css` and hls.js
 for HLS playback (native HLS on Safari). Progressive files use native video.
 The embed enables its title/channel links and Watch on MoarTube control, while
-the watch page enables theater mode and the live streamer layout toggle.
+the watch page enables theater mode.
 
 Watch layouts are mutually exclusive. Browser local storage (`moartube-watch-modes`)
-remembers theater mode for videos and live streams. Streamer mode changes only the
-live preference, so watching a video does not clear it. Clicking the active mode
+remembers theater mode for videos and live streams. Clicking the active mode
 returns to standard layout and saves that choice. Small screens temporarily use
 standard layout without changing the preference; embeds ignore watch preferences.
 Run `node --test tests/client/watch-modes.test.mjs` for layout regression tests.

@@ -66,7 +66,6 @@ working directory. Clean startup requires sources and build tools to recreate
   - Transcode **RTMP streams** ([e.g., from OBS](https://www.moartube.com/guides/how-to-live-stream-obs)) into **HLS live streams**
 - Video resolutions: **2160p**, **1440p**, **1080p**, **720p**, **480p**, **360p**, **240p**
 - Video player modes:
-  - **Streamer Mode**
   - **Theater Mode**
   - **Fullscreen Mode**
 - **Anonymous Comments & Live Stream Chat**:
