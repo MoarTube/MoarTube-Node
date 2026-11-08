@@ -295,8 +295,33 @@ describe('Homepage real database and public routes', () => {
     expect(orphans).toEqual([]);
   });
 
+  it('filters community comments by exact video tag, preserves pagination, and restores all comments', async () => {
+    await videos.createMany([
+      { ...video('tag-music'), tags: 'music, art', is_published: true },
+      { ...video('tag-art'), tags: 'art', is_published: true },
+      { ...video('tag-substring'), tags: 'music-video', is_published: true },
+    ]);
+    await comments.createMany([
+      ...Array.from({ length: 12 }, (_, i) => comment('tag-music', 1000 + i)),
+      comment('tag-art', 2000), comment('tag-substring', 3000),
+    ]);
+    const query = { ...empty, tagTerm: 'music' };
+    const first = await service.page('comments', query, input());
+    expect(first.totalCount).toBe(12);
+    expect(first.comments).toHaveLength(10);
+    expect(first.comments!.every((row) => row.videoId === 'tag-music')).toBe(true);
+    const cursor = { cursor: first.nextCursor!, snapshot: first.snapshot, revision: first.revision };
+    const second = await service.page('comments', query, cursor);
+    expect(second.comments).toHaveLength(2);
+    expect(second.hasMore).toBe(false);
+    await expect(service.page('comments', { ...empty, tagTerm: 'art' }, cursor)).rejects.toBeInstanceOf(HomeResetError);
+    expect((await service.page('comments', empty, input())).totalCount).toBe(14);
+    expect((await service.page('comments', { ...empty, tagTerm: 'art' }, input())).totalCount).toBe(13);
+    expect((await service.page('comments', { ...empty, tagTerm: 'missing' }, input())).totalCount).toBe(0);
+  });
+
   it('searches comment text independently, pages matches, and separates query-specific snapshots', async () => {
-    await videos.create({ ...video('search-comments'), is_published: true });
+    await videos.create({ ...video('search-comments'), tags: 'music', is_published: true });
     await comments.createMany(
       Array.from({ length: 23 }, (_, i) => ({
         ...comment('search-comments', 1000 + i),
@@ -308,7 +333,7 @@ describe('Homepage real database and public routes', () => {
       ...empty,
       commentSearch: 'CAF\u00c9 & chips 100%',
       searchTerm: 'unmatched video title',
-      tagTerm: 'unmatched-tag',
+      tagTerm: 'music',
     };
     const first = await service.page('comments', query, input());
     expect(first.totalCount).toBe(22);

@@ -138,12 +138,7 @@ function errorHandlerPlugin(fastify: FastifyInstance): void {
   fastify.setNotFoundHandler((request: FastifyRequest, reply: FastifyReply) => {
     request.log.warn({ url: request.url, method: request.method }, 'Route not found');
 
-    const response: ApiErrorResponse = {
-      isError: true,
-      message: 'Route not found',
-    };
-
-    return reply.status(404).send(response);
+    return reply.header('Cache-Control', 'no-store').redirect('/', 303);
   });
 }
 

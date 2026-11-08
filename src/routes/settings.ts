@@ -7,6 +7,7 @@ import type { FastifyInstance } from 'fastify';
 import type { Container } from '@core/index.js';
 import { cloudflareTunnelToggleBodySchema } from '@/config/cloudflare-tunnel.js';
 import { SettingsController } from '@controllers/index.js';
+import { z } from 'zod';
 import {
   personalizeNodeNameBodySchema,
   personalizeNodeHeadlineBodySchema,
@@ -36,6 +37,7 @@ export function settingsRoutes(
   container: Container
 ): void {
   const settingsService = container.resolve('settingsService');
+  // Runtime worker management is authenticated and coordinated by the primary.
   const videosService = container.resolve('videosService');
   const cloudflareService = container.resolve('cloudflareService');
   const websocketService = container.resolve('websocketService');
@@ -45,6 +47,27 @@ export function settingsRoutes(
     videosService,
     cloudflareService,
     websocketService
+  );
+  fastify.get(
+    '/workers',
+    { preHandler: [fastify.authenticate], schema: { tags: ['Settings'] } },
+    controller.getWorkerCount
+  );
+  fastify.post(
+    '/workers',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Settings'],
+        body: z
+          .object({
+            workerCount: z.number().int().nonnegative(),
+            confirmDecrease: z.boolean().optional(),
+          })
+          .strict(),
+      },
+    },
+    controller.setWorkerCount
   );
   // ============================================================================
   // Settings Root

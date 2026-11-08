@@ -4,9 +4,6 @@ services:
     image: moartube-node:local
     init: true
     restart: unless-stopped
-    environment:
-      # 0 uses all logical CPUs; set a positive number to limit workers.
-      MOARTUBE_WORKERS: "0"
     ports:
       - "9090:9090"
     volumes:

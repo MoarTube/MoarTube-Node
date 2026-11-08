@@ -57,9 +57,7 @@ export class HomeService {
       kind,
       kind === 'videos'
         ? [query.searchTerm, query.tagTerm, query.sortTerm]
-        : query.commentSearch
-          ? [query.commentSearch]
-          : [],
+        : [query.tagTerm, query.commentSearch ?? ''],
     ]);
     if (input.snapshot !== undefined && input.snapshot !== snapshot) {
       throw new HomeResetError('This cursor belongs to a different search.');

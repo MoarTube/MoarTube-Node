@@ -36,7 +36,7 @@ vi.mock('@/core/cluster/ipc-channel.js', () => ({
   },
 }));
 vi.mock('@/config/index.js', () => ({
-  getConfig: () => ({ runtime: { isDevelopment: false }, paths: { dataDirectoryPath: '/test' }, cleanup:vi.fn() }),
+  getConfig: () => ({ runtime: { isDevelopment: false }, paths: { dataDirectoryPath: '/test' }, nodeSettings: { workerCount: 4 }, cleanup:vi.fn() }),
 }));
 vi.mock('@/database/index.js', () => ({
   createDatabase: vi.fn(),

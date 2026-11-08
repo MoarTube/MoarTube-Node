@@ -15,7 +15,10 @@ function remoteWrites(): Database.Database {
 }
 
 /** Serialize transitions with job starts, exclude live HTTP writes, and retain remote-write intent across restart. */
-export function withDistributionTransition<T>(operation: () => Promise<T>): Promise<T> {
+export function withDistributionTransition<T>(
+  operation: () => Promise<T>,
+  action = 'changing distribution settings'
+): Promise<T> {
   const file = getConfig().paths.nodeSettingsPath;
   return withSettingsChange(file + '.distribution', async () => {
     const media = new Database(file + '.media-lock.sqlite', { timeout: 0 });
@@ -23,13 +26,13 @@ export function withDistributionTransition<T>(operation: () => Promise<T>): Prom
       try {
         media.exec('BEGIN EXCLUSIVE');
       } catch {
-        throw new Error('Wait for active uploads to finish before changing distribution settings.');
+        throw new Error(`Wait for active uploads to finish before ${action}.`);
       }
       const remote = remoteWrites();
       try {
         if (remote.prepare('SELECT 1 FROM writes WHERE active=1 LIMIT 1').get() !== undefined) {
           throw new Error(
-            'Wait for direct storage writes to finish or recover interrupted Client writes before changing distribution settings.'
+            `Wait for direct storage writes to finish or recover interrupted Client writes before ${action}.`
           );
         }
       } finally {

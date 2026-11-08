@@ -13,10 +13,11 @@
   <script defer src="/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
   <script defer src="/external/resources/javascript/sweetalert-11.0.11.min.js"></script>
   <script id="home-model" type="application/json"><%- bootstrap %></script>
-  <script defer src="/external/resources/javascript/home.js?v=16"></script>
+  <script defer src="/external/resources/javascript/home.js?v=17"></script>
   <script defer src="/external/resources/javascript/home-header.js?v=4"></script>
 </head>
 <body class="home" data-view="<%= model.query.view %>">
+  <script>try { document.body.classList.toggle('home-dark', localStorage.getItem('dark-mode-enabled') === 'true'); } catch { /* Storage may be disabled. */ }</script>
   <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <symbol id="icon-broadcast" viewBox="0 0 16 16"><path d="M3.05 3.05a7 7 0 0 0 0 9.9.5.5 0 1 1-.707.707 8 8 0 0 1 0-11.314.5.5 0 0 1 .707.707zm2.122 2.122a4 4 0 0 0 0 5.656.5.5 0 1 1-.708.708 5 5 0 0 1 0-7.072.5.5 0 0 1 .708.708zm5.656-.708a.5.5 0 0 1 .708 0 5 5 0 0 1 0 7.072.5.5 0 1 1-.708-.708 4 4 0 0 0 0-5.656.5.5 0 0 1 0-.708zm2.122-2.12a.5.5 0 0 1 .707 0 8 8 0 0 1 0 11.313.5.5 0 0 1-.707-.707 7 7 0 0 0 0-9.9.5.5 0 0 1 0-.707zM10 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"/></symbol>
     <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 6 6"/></symbol>

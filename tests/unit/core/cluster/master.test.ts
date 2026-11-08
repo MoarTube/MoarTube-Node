@@ -47,6 +47,7 @@ vi.mock('@config/index.js', () => ({
       isDevelopment: false,
     },
     nodeSettings: {
+      workerCount: 0,
       databaseConfig: {
         databaseDialect: 'sqlite',
       },
@@ -207,6 +208,7 @@ describe('ClusterMaster', () => {
           isDevelopment: true,
         },
         nodeSettings: {
+          workerCount: 0,
           databaseConfig: {
             databaseDialect: 'sqlite',
           },
@@ -324,7 +326,10 @@ describe('ClusterMaster', () => {
       const master = new ClusterMaster(mockLogger as any, mockCloudflare as any);
       await master.start();
 
-      ipcHandlers['update_node_headline']?.({ cmd: 'update_node_headline', nodeHeadline: 'New Node Headline' });
+      ipcHandlers['update_node_headline']?.({
+        cmd: 'update_node_headline',
+        nodeHeadline: 'New Node Headline',
+      });
 
       expect(mockIpcBroadcast).toHaveBeenCalledWith({
         cmd: 'update_node_headline_response',
@@ -651,16 +656,17 @@ describe('ClusterMaster', () => {
     });
   });
   it.each([
-    [undefined, 8],
-    ['0', 8],
-    ['1', 1],
-    ['3', 3],
-    ['99', 8],
-    ['-1', 1],
-    ['invalid', 1],
-    ['1.5', 1],
+    [0, 8],
+    [1, 1],
+    [3, 3],
+    [99, 8],
   ] as const)('uses %s to select %i workers on an eight-CPU system', async (value, expected) => {
-    vi.stubEnv('MOARTUBE_WORKERS', value);
+    const { getConfig } = await import('@config/index.js');
+    const config = getConfig();
+    vi.mocked(getConfig).mockReturnValueOnce({
+      ...config,
+      nodeSettings: { ...config.nodeSettings, workerCount: value },
+    } as never);
     try {
       const os = (await import('node:os')).default;
       vi.mocked(os.cpus).mockReturnValueOnce(Array.from({ length: 8 }, () => os.cpus()[0]!));

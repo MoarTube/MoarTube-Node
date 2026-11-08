@@ -88,6 +88,8 @@ export interface PublicNodeAddress {
 }
 
 export interface NodeSettings {
+  /** 0 selects all logical CPUs. Applied by the primary at startup. */
+  workerCount?: number;
   // Server Configuration
   nodeListeningPort: number | string;
   isSecure: boolean;

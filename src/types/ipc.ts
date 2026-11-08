@@ -21,6 +21,7 @@ export type { LiveStreamWatchingCounts, LiveStreamWatchingCountsTracker } from '
  * Commands sent from worker processes to master
  */
 export type IPCCommandToMaster =
+  | 'worker_count_request'
   | 'worker_http_ready'
   | 'cloudflare_tunnel_request'
   | 'get_jwt_secret'
@@ -36,6 +37,7 @@ export type IPCCommandToMaster =
  * Commands sent from master process to workers
  */
 export type IPCCommandToWorker =
+  | 'worker_count_response'
   | 'cloudflare_tunnel_response'
   | 'get_jwt_secret_response'
   | 'update_node_name_response'
@@ -66,6 +68,27 @@ export interface IPCMessageBase {
 export interface WorkerHttpReadyMessage extends IPCMessageBase {
   cmd: 'worker_http_ready';
   port: number | string;
+}
+
+export interface WorkerCountSnapshot {
+  workerCount: number;
+  runningWorkers: number;
+  maxWorkers: number;
+}
+
+export interface WorkerCountRequest extends IPCMessageBase {
+  cmd: 'worker_count_request';
+  requestId: string;
+  operation: 'snapshot' | 'apply';
+  workerCount?: number;
+  confirmDecrease?: boolean;
+}
+
+export interface WorkerCountResponse extends IPCMessageBase {
+  cmd: 'worker_count_response';
+  requestId: string;
+  snapshot?: WorkerCountSnapshot;
+  error?: string;
 }
 
 export interface CloudflareTunnelRequestMessage extends IPCMessageBase {
@@ -223,6 +246,7 @@ export interface RestartDatabaseResponseMessage extends IPCMessageBase {
  * All messages from worker to master
  */
 export type IPCMessageToMaster =
+  | WorkerCountRequest
   | WorkerHttpReadyMessage
   | CloudflareTunnelRequestMessage
   | GetJwtSecretMessage
@@ -238,6 +262,7 @@ export type IPCMessageToMaster =
  * All messages from master to worker
  */
 export type IPCMessageToWorker =
+  | WorkerCountResponse
   | CloudflareTunnelResponseMessage
   | GetJwtSecretResponseMessage
   | UpdateNodeNameResponseMessage

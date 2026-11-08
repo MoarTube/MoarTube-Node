@@ -1,3 +1,5 @@
+vi.mock('@/services/worker-count.js', () => ({ requestWorkerCount: vi.fn() }));
+import { requestWorkerCount } from '@/services/worker-count.js';
 // CDN lifecycle behavior is covered by cloudflare-cdn-tunnel.test.ts with real journals and admission.
 vi.mock('@/utils/cdn-journal.js', () => ({ hasPendingCdn: () => false, cdnStatus: () => null }));
 vi.mock('@/utils/distribution-admission.js', () => ({
@@ -2258,4 +2260,33 @@ describe('SettingsController', () => {
     });
     expect(mockReply.status).toHaveBeenCalledWith(400);
   });
+  describe('worker-count settings', () => {
+    it.each(['snapshot', 'apply'] as const)('forwards %s to the primary and returns the authoritative counts', async (operation) => {
+      const snapshot = { workerCount: 2, runningWorkers: 2, maxWorkers: 8 };
+      vi.mocked(requestWorkerCount).mockResolvedValueOnce(snapshot);
+      mockRequest.body = { workerCount: 2, confirmDecrease: true };
+      if (operation === 'snapshot') {
+        await controller.getWorkerCount(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+        expect(mockReply.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
+        expect(requestWorkerCount).toHaveBeenCalledWith('snapshot');
+      } else {
+        await controller.setWorkerCount(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+        expect(requestWorkerCount).toHaveBeenCalledWith('apply', 2, true);
+      }
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, ...snapshot });
+    });
+    it.each([
+      ['snapshot', new Error('Primary unavailable'), 'Primary unavailable'],
+      ['snapshot', null, 'Unable to read worker count.'],
+      ['apply', new Error('Stop active uploads'), 'Stop active uploads'],
+      ['apply', null, 'Unable to change worker count.'],
+    ] as const)('preserves %s rejections (%s)', async (operation, error, message) => {
+      vi.mocked(requestWorkerCount).mockRejectedValueOnce(error);
+      mockRequest.body = { workerCount: 1 };
+      await controller[operation === 'snapshot' ? 'getWorkerCount' : 'setWorkerCount'](mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      expect(mockReply.status).toHaveBeenCalledWith(409);
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: true, message });
+    });
+  });
+
 });

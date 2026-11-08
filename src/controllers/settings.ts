@@ -53,6 +53,7 @@ import { storageIdentity } from '@/utils/cdn-settings.js';
 import type { StorageConfig } from '@/types/config.js';
 import { withSettingsChange } from '@/utils/settings-change.js';
 import { withTunnelAdmission } from '@/utils/tunnel-admission.js';
+import { requestWorkerCount } from '@/services/worker-count.js';
 
 interface CdnResponse {
   status: number;
@@ -1774,13 +1775,37 @@ export class SettingsController extends BaseController {
     }
   };
 
-  /**
-   * POST /settings/restart
-   *
-   * Restart the server. This is a separate idempotent endpoint so that
-   * callers can perform configuration changes first and then trigger a
-   * restart once they are ready.
-   */
+  /** Read the primary's saved preference and live worker count. */
+  getWorkerCount = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    reply.header('Cache-Control', 'no-store');
+    try {
+      return await this.sendSuccess(reply, await requestWorkerCount('snapshot'));
+    } catch (error) {
+      return await this.sendError(
+        reply,
+        error instanceof Error ? error.message : 'Unable to read worker count.',
+        409
+      );
+    }
+  };
+
+  setWorkerCount = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    const body = request.body as { workerCount: number; confirmDecrease?: boolean };
+    try {
+      return await this.sendSuccess(
+        reply,
+        await requestWorkerCount('apply', body.workerCount, body.confirmDecrease)
+      );
+    } catch (error) {
+      return await this.sendError(
+        reply,
+        error instanceof Error ? error.message : 'Unable to change worker count.',
+        409
+      );
+    }
+  };
+
+  /** Restart HTTP workers after separate configuration changes. */
   restartServer = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const result = await this.sendSuccess(reply);

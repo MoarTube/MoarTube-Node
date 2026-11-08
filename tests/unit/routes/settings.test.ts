@@ -228,13 +228,13 @@ describe('Settings Routes', () => {
     expect(mockFastify.post).toHaveBeenCalledWith('/restart', expect.anything(), expect.any(Function));
   });
 
-  it('should register exactly 9 GET routes', () => {
+  it('should register exactly 10 GET routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.get).toHaveBeenCalledTimes(9);
+    expect(mockFastify.get).toHaveBeenCalledTimes(10);
   });
 
-  it('should register exactly 27 POST routes', () => {
+  it('should register exactly 28 POST routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(27);
+    expect(mockFastify.post).toHaveBeenCalledTimes(28);
   });
 });

@@ -213,10 +213,8 @@ adapt the check if enabling HTTPS directly on the node.
 
 `IS_DOCKER_ENVIRONMENT=true` is set by the image and selects `/data`. You do not
 need to edit or pass the checkout's `.env`; it is excluded from the build context.
-`MOARTUBE_WORKERS=0` is the image default and uses all logical CPUs. Set a positive
-number to limit workers (capped at the CPU count). For Compose, edit
-`environment.MOARTUBE_WORKERS` in `compose.yaml`; for `docker run`, pass
-`-e MOARTUBE_WORKERS=4` before the image name to use four workers.
+Worker count is controlled by the saved Node setting described below, including
+when running in Docker.
 `MOARTUBE_DATA_DIR`, if explicitly supplied, overrides this path and requires a
 matching writable volume mount. Avoid passing a development `.env` with
 `IS_DOCKER_ENVIRONMENT=false`, which would bypass the `/data` default.
@@ -269,23 +267,19 @@ And run from the command-line globally:
 moartube-node
 ```
 
-The npm runtime defaults to `MOARTUBE_WORKERS=0`, which uses all logical CPUs.
-Set a positive number to limit workers (capped at the CPU count). For example,
-to run four workers in PowerShell:
+Set **Worker count** below the Node listening port in Client settings and select
+**Save & Apply**. Automatic uses all logical CPUs; explicit counts range from one
+to the Node's CPU count. The preference is stored as `workerCount` in
+`_node_settings.json` (`0` means Automatic) and enforced on startup. A saved count
+above the current CPU count is capped at startup and when applied live. New and older settings without a
+worker count default to four workers, capped at the CPU count.
+`MOARTUBE_WORKERS` is no longer used.
 
-```powershell
-$env:MOARTUBE_WORKERS = '4'
-moartube-node
-```
-
-Or in Bash:
-
-```bash
-MOARTUBE_WORKERS=4 moartube-node
-```
-
-Environment variables take precedence over `.env`. A source checkout's `.env`
-sets four workers for development; `.env` is excluded from the npm package.
+Increasing the count starts additional workers without restarting existing ones.
+Lowering it requires confirmation because requests, playback, and connections may
+be interrupted. Active imports, publishing jobs, uploads (including direct storage
+writes), and live streams prevent a decrease; rejected changes leave the saved
+preference unchanged. The worker handling the settings request is retained.
 
 <br>
 

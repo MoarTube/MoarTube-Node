@@ -218,27 +218,25 @@ describe('Error Handler Plugin', () => {
   });
 
   describe('404 Not Found handler', () => {
-    it('should return 404 for unknown routes', async () => {
+    it('redirects unknown routes home without caching', async () => {
       const response = await app.inject({
         method: 'GET',
         url: '/unknown-route',
       });
 
-      expect(response.statusCode).toBe(404);
-      const body = JSON.parse(response.body);
-      expect(body.isError).toBe(true);
-      expect(body.message).toBe('Route not found');
+      expect(response.statusCode).toBe(303);
+      expect(response.headers.location).toBe('/');
+      expect(response.headers['cache-control']).toBe('no-store');
     });
 
-    it('should return 404 for unknown POST routes', async () => {
+    it('redirects unknown POST routes home using GET', async () => {
       const response = await app.inject({
         method: 'POST',
         url: '/unknown-route',
       });
 
-      expect(response.statusCode).toBe(404);
-      const body = JSON.parse(response.body);
-      expect(body.isError).toBe(true);
+      expect(response.statusCode).toBe(303);
+      expect(response.headers.location).toBe('/');
     });
   });
 

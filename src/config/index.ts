@@ -199,6 +199,7 @@ class Config {
   private createDefaultNodeSettings(): Record<string, unknown> {
     return {
       nodeListeningPort: 9090,
+      workerCount: 4,
       isSecure: false,
       publicNodeProtocol: '',
       publicNodeAddress: '',

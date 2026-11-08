@@ -8,6 +8,10 @@
 import cluster from 'node:cluster';
 import os from 'node:os';
 import crypto from 'node:crypto';
+import type { Worker } from 'node:cluster';
+import type { WorkerCountRequest, WorkerCountSnapshot } from '@/types/ipc.js';
+import { getContainer } from '@/core/container.js';
+import { withDistributionTransition } from '@/utils/distribution-admission.js';
 import type {
   LiveStreamWorkerStatsResponseMessage,
   RestartDatabaseMessage,
@@ -38,6 +42,163 @@ export class ClusterMaster {
   private tunnel?: CloudflareTunnelManager;
   private originPort?: string;
   private stopping?: Promise<void>;
+  private desiredWorkers = 1;
+  private adjustingWorkers = false;
+  private readonly retiringWorkers = new Set<number>();
+
+  private workerSnapshot(): WorkerCountSnapshot {
+    return {
+      workerCount: getConfig().nodeSettings.workerCount,
+      runningWorkers: this.ipc.getWorkers().filter((w) => !this.retiringWorkers.has(w.id)).length,
+      maxWorkers: Math.max(1, os.cpus().length),
+    };
+  }
+
+  private async addReadyWorker(added: Worker[]): Promise<void> {
+    const worker = cluster.fork();
+    added.push(worker);
+    await new Promise<void>((resolve, reject) => {
+      const cleanup = (): void => {
+        clearTimeout(timer);
+        worker.off('message', onMessage);
+        worker.off('exit', onExit);
+      };
+      const onMessage = (message: { cmd?: string }): void => {
+        if (message.cmd === 'worker_http_ready') {
+          cleanup();
+          resolve();
+        }
+      };
+      const onExit = (): void => {
+        cleanup();
+        reject(new Error('An additional worker failed to start.'));
+      };
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error('An additional worker did not become ready.'));
+      }, 20_000);
+      worker.on('message', onMessage);
+      worker.once('exit', onExit);
+    });
+  }
+
+  private async removeWorkers(workers: Worker[]): Promise<void> {
+    // Mark every removal before sending signals, so exits cannot trigger replacements.
+    for (const worker of workers) {
+      this.retiringWorkers.add(worker.id);
+    }
+    await Promise.all(
+      workers.map(
+        (worker) =>
+          new Promise<void>((resolve, reject) => {
+            if (worker.isDead()) {
+              this.retiringWorkers.delete(worker.id);
+              resolve();
+              return;
+            }
+            const timer = setTimeout(() => {
+              worker.off('exit', onExit);
+              reject(
+                new Error(
+                  'Worker removal could not be confirmed. Refresh settings before retrying.'
+                )
+              );
+            }, 5000);
+            const onExit = (): void => {
+              clearTimeout(timer);
+              resolve();
+            };
+            worker.once('exit', onExit);
+            worker.kill('SIGKILL');
+          })
+      )
+    );
+  }
+
+  private async applyWorkerCount(
+    message: WorkerCountRequest,
+    requester: Worker
+  ): Promise<WorkerCountSnapshot> {
+    if (this.adjustingWorkers || !this.isRunning) {
+      throw new Error('Another worker adjustment or shutdown is in progress.');
+    }
+    const count = message.workerCount;
+    const maximum = Math.max(1, os.cpus().length);
+    if (count === undefined || !Number.isInteger(count) || count < 0) {
+      throw new Error('Select Automatic or a positive whole-number worker count.');
+    }
+    const target = count === 0 ? maximum : Math.min(count, maximum);
+    this.adjustingWorkers = true;
+    try {
+      const current = this.ipc.getWorkers().filter((w) => !this.retiringWorkers.has(w.id));
+      if (target < current.length) {
+        if (message.confirmDecrease !== true) {
+          throw new Error(
+            'Confirm that lowering the worker count may interrupt requests, playback, and connections.'
+          );
+        }
+        await withDistributionTransition(async () => {
+          const videos = getContainer().resolve('videosService');
+          for (let offset = 0; ; offset += 100) {
+            const page = await videos.getAllVideosData({ limit: 100, offset });
+            if (
+              page.some(
+                (video) =>
+                  video.isImporting === true || video.isPublishing === true || video.isStreaming
+              )
+            ) {
+              throw new Error(
+                'Stop active imports, publishing jobs, uploads, and live streams before lowering the worker count.'
+              );
+            }
+            if (page.length < 100) {
+              break;
+            }
+          }
+          const remove = current
+            .filter((w) => w.id !== requester.id)
+            .slice(0, current.length - target);
+          if (remove.length !== current.length - target) {
+            throw new Error('Worker state changed. Please retry.');
+          }
+          // Save before terminating anything: a failed settings write leaves workers untouched.
+          getConfig().updateNodeSettings({ workerCount: count });
+          this.desiredWorkers = target;
+          await this.removeWorkers(remove);
+        }, 'lowering the worker count');
+      } else {
+        const added: Worker[] = [];
+        try {
+          await Promise.all(
+            Array.from({ length: Math.max(0, target - current.length) }, () =>
+              this.addReadyWorker(added)
+            )
+          );
+          if (this.stopping !== undefined) {
+            throw new Error('Node is shutting down.');
+          }
+          if (this.workerSnapshot().runningWorkers !== target) {
+            throw new Error('Worker state changed during startup. Please retry.');
+          }
+          getConfig().updateNodeSettings({ workerCount: count });
+          this.desiredWorkers = target;
+        } catch (error) {
+          await this.removeWorkers(added);
+          throw error;
+        }
+      }
+      return this.workerSnapshot();
+    } finally {
+      this.adjustingWorkers = false;
+      // A pre-existing worker may have crashed while additional workers were starting.
+      if (this.stopping === undefined) {
+        const missing = this.desiredWorkers - this.workerSnapshot().runningWorkers;
+        for (let i = 0; i < missing; i++) {
+          cluster.fork();
+        }
+      }
+    }
+  }
 
   constructor(logger: IPCLogger, cloudflare: CloudflareService) {
     this.logger = logger;
@@ -181,6 +342,32 @@ export class ClusterMaster {
    * Set up IPC message handlers
    */
   private setupIPCHandlers(): void {
+    this.ipc.on<WorkerCountRequest>('worker_count_request', async (message, worker) => {
+      if (!worker) {
+        return;
+      }
+      try {
+        const operation: unknown = message.operation;
+        if (operation !== 'snapshot' && operation !== 'apply') {
+          throw new Error('Invalid worker operation.');
+        }
+        const snapshot =
+          message.operation === 'snapshot'
+            ? this.workerSnapshot()
+            : await this.applyWorkerCount(message, worker);
+        this.ipc.sendToWorker(worker, {
+          cmd: 'worker_count_response',
+          requestId: message.requestId,
+          snapshot,
+        });
+      } catch (error) {
+        this.ipc.sendToWorker(worker, {
+          cmd: 'worker_count_response',
+          requestId: message.requestId,
+          error: error instanceof Error ? error.message : 'Unable to change worker count.',
+        });
+      }
+    });
     this.ipc.on('worker_http_ready', (message) => {
       const port = String((message as { port: number | string }).port);
       if (!this.isRunning || this.originPort === port) {
@@ -299,7 +486,7 @@ export class ClusterMaster {
    */
   private forkWorkers(): void {
     const availableWorkers = Math.max(1, os.cpus().length);
-    const configured = Number(process.env['MOARTUBE_WORKERS'] ?? 0);
+    const configured = getConfig().nodeSettings.workerCount;
     const numCPUs = Math.max(
       1,
       Math.min(
@@ -312,6 +499,7 @@ export class ClusterMaster {
       )
     );
 
+    this.desiredWorkers = numCPUs;
     for (let i = 0; i < numCPUs; i++) {
       cluster.fork();
     }
@@ -330,7 +518,13 @@ export class ClusterMaster {
       Reflect.deleteProperty(this.liveStreamWatchingCountsTracker, worker.id);
 
       // Fork replacement worker
-      if (this.isRunning) {
+      const retiring = this.retiringWorkers.delete(worker.id);
+      if (
+        this.isRunning &&
+        !retiring &&
+        this.ipc.getWorkers().filter((w) => w.id !== worker.id && !this.retiringWorkers.has(w.id))
+          .length < this.desiredWorkers
+      ) {
         cluster.fork();
       }
     });

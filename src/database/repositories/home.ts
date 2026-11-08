@@ -206,7 +206,7 @@ export class HomeRepository {
       const search = text
         ? sql` AND ${this.fold('c.comment_plain_text_sanitized')} LIKE ${pattern} ESCAPE '!'`
         : sql``;
-      select = sql`SELECT ${id},ROW_NUMBER() OVER (ORDER BY c.timestamp DESC,c.comment_id DESC),v.video_id,c.comment_id,CAST(${body} AS TEXT) FROM comments c JOIN videos v ON v.video_id=c.video_id WHERE ${this.eligible()} AND v.is_comments_enabled=true ${search}`;
+      select = sql`SELECT ${id},ROW_NUMBER() OVER (ORDER BY c.timestamp DESC,c.comment_id DESC),v.video_id,c.comment_id,CAST(${body} AS TEXT) FROM comments c JOIN videos v ON v.video_id=c.video_id WHERE ${this.filters({ ...query, searchTerm: '' })} AND v.is_comments_enabled=true ${search}`;
     }
     // The entire publication and eviction step is atomic. A concurrent cleanup can
     // never mistake another worker's half-built snapshot for orphaned rows.

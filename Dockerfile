@@ -27,8 +27,7 @@ FROM node:24.22.1-bookworm-slim AS production
 WORKDIR /moartube-node
 
 ENV NODE_ENV=production \
-    IS_DOCKER_ENVIRONMENT=true \
-    MOARTUBE_WORKERS=0
+    IS_DOCKER_ENVIRONMENT=true
 
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
     && rm -rf /var/lib/apt/lists/* \

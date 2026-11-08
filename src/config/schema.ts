@@ -78,6 +78,7 @@ export const StorageConfigSchema = z.object({
  * Complete node settings schema with all fields validated
  */
 export const NodeSettingsSchema = z.object({
+  workerCount: z.number().int().nonnegative().default(4),
   // Server Configuration
   nodeListeningPort: z
     .union([z.number(), z.string()])

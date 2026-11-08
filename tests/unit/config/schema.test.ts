@@ -410,6 +410,7 @@ describe('config/schema.ts', () => {
         expect(result.data?.isSecure).toBe(false);
         expect(result.data?.publicNodeProtocol).toBe('');
         expect(result.data?.nodeHeadline).toBe('MoarTube Node');
+        expect(result.data?.workerCount).toBe(4);
       });
 
       it('should reject empty username', () => {

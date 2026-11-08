@@ -502,6 +502,7 @@
       controls();
       url();
       resetVideos();
+      void refreshComments();
       void loadTags();
     };
     const button = (label, value, count) => {
@@ -600,6 +601,7 @@
     try {
       const previous = commentPages[index - 1];
       const input = params(commentRevision, {
+        tagTerm: query.tagTerm,
         commentSearch: query.commentSearch || '',
         cursor: previous?.nextCursor ?? 0,
         snapshot: index ? commentSnapshot : undefined,
@@ -872,6 +874,7 @@
     const values = new URLSearchParams(location.search);
     const view = values.get('view');
     const previousCommentSearch = query.commentSearch || '';
+    const previousTag = query.tagTerm;
     query = {
       searchTerm: values.get('searchTerm') || '',
       tagTerm: values.get('tagTerm') || '',
@@ -886,7 +889,7 @@
     controls();
     resetVideos();
     void loadTags();
-    if (previousCommentSearch !== query.commentSearch) void refreshComments();
+    if (previousCommentSearch !== query.commentSearch || previousTag !== query.tagTerm) void refreshComments();
     else if (!commentPages.length) void loadComments();
   });
   mobile.addEventListener('change', async () => {
