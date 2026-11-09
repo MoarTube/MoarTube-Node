@@ -1,5 +1,4 @@
 import type fs from 'node:fs';
-import { transformManifest } from './manifest-transform.js';
 import { Readable } from 'node:stream';
 import { open, type FileHandle } from 'node:fs/promises';
 import { createGzip } from 'node:zlib';
@@ -45,7 +44,6 @@ export async function servePublicFile(
     live?: boolean;
     ranges?: boolean;
     onBytes?: (bytes: number) => void;
-    manifestTransform?: (line: string) => string;
   } = {}
 ): Promise<FastifyReply> {
   reply.header('Cache-Control', 'no-store');
@@ -95,7 +93,7 @@ export async function servePublicFile(
         reply.header('Cache-Control', 'public, max-age=0, s-maxage=1, must-revalidate');
       }
     }
-    const etag = `W/"${info.size.toString(16)}-${info.mtimeMs.toString(16)}${options.manifestTransform ? '-relative-v1' : ''}"`;
+    const etag = `W/"${info.size.toString(16)}-${info.mtimeMs.toString(16)}"`;
     const modified = info.mtime.toUTCString();
     reply.header('Content-Type', contentType).header('X-Content-Type-Options', 'nosniff');
     const text = /^(?:text\/|application\/javascript|image\/svg)/.test(contentType);
@@ -117,8 +115,7 @@ export async function servePublicFile(
                   value.trim() === '*' ||
                   value.trim().replace(/^W\//, '') === etag.replace(/^W\//, '')
               )
-          : options.manifestTransform === undefined &&
-            request.headers['if-modified-since'] !== undefined &&
+          : request.headers['if-modified-since'] !== undefined &&
             Math.floor(info.mtimeMs / 1000) * 1000 <=
               Date.parse(request.headers['if-modified-since']);
       if (unchanged) {
@@ -160,7 +157,7 @@ export async function servePublicFile(
       text && !range && info.size >= 1024 && acceptsGzip(request.headers['accept-encoding']);
     if (compress) {
       reply.header('Content-Encoding', 'gzip');
-    } else if (options.manifestTransform === undefined) {
+    } else {
       reply.header('Content-Length', length);
     }
     if (request.method === 'HEAD') {
@@ -171,13 +168,7 @@ export async function servePublicFile(
     }
     // Metadata and body must refer to the same inode. Bound a growing file to its snapshot size.
     const rawStream = handle.createReadStream(range ?? { start: 0, end: info.size - 1 });
-    const stream =
-      options.manifestTransform === undefined
-        ? rawStream
-        : Readable.from(transformManifest(rawStream, options.manifestTransform));
-    if (stream !== rawStream) {
-      stream.once('close', () => rawStream.destroy());
-    }
+    const stream = rawStream;
     handle = undefined; // The stream now owns and closes the descriptor.
     if (options.onBytes) {
       stream.once('close', () => options.onBytes?.(rawStream.bytesRead));

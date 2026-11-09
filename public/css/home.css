@@ -428,6 +428,13 @@
   padding: 10px 4px;
   font-size: 15px;
 }
+#comment-status {
+  text-align: left;
+  color: var(--home-muted);
+  margin: 10px 14px;
+  padding: 0;
+  font-size: 14px;
+}
 .feed-status:empty {
   display: none;
 }

@@ -59,6 +59,8 @@ export default async function setup(project) {
         `MINIO_ROOT_PASSWORD=${secretAccessKey}`,
         '-e',
         'MINIO_BROWSER=off',
+        '-e',
+        'MINIO_DOMAIN=localhost',
         process.env.MOARTUBE_SILO_IMAGE ?? image,
         'server',
         '/tmp/moartube-s3-data',

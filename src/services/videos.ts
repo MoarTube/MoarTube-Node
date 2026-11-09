@@ -1,6 +1,4 @@
 import { withJobAdmission } from '@/utils/distribution-admission.js';
-import { managedMediaBases } from '@/utils/media-url-origins.js';
-import { relativeHlsLine, hlsPlaylistPath } from '@/utils/hls-urls.js';
 /**
  * Videos Service
  *
@@ -505,21 +503,6 @@ export class VideosService extends BaseService {
       });
       await this.cloudflareService.purgeHomePage();
     });
-  }
-
-  async rewriteS3VideoManifests(
-    videoId: string,
-    resolutions: string[],
-    baseUrl: string,
-    previousBases: string[] = []
-  ): Promise<void> {
-    for (const resolution of [...resolutions, 'master']) {
-      await this.storageService.rewriteS3Manifest(
-        `external/videos/${videoId}/adaptive/m3u8/static/manifests/manifest-${resolution}.m3u8`,
-        baseUrl,
-        previousBases
-      );
-    }
   }
 
   /**
@@ -1442,17 +1425,6 @@ export class VideosService extends BaseService {
     return this.withErrorLogging('writeMasterManifest', async () => {
       const config = getConfig();
       const storageMode = config.nodeSettings.storageConfig.storageMode;
-      const bases = managedMediaBases(config);
-      content = content
-        .split('\n')
-        .map((line) =>
-          relativeHlsLine(
-            line,
-            hlsPlaylistPath(videoId, 'manifest-master.m3u8', manifestType),
-            bases
-          )
-        )
-        .join('\n');
       if (manifestType === 'dynamic' && !content.includes('#MOARTUBE-LIVE')) {
         content = content.replace('#EXTM3U', '#EXTM3U\n#MOARTUBE-LIVE');
       }

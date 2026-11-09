@@ -231,83 +231,66 @@ describe('follow-up Cloudflare correctness', () => {
     expect(inventory).toHaveBeenCalledTimes(2);
     expect((service as any).pendingAdaptiveInventories.get('zone').size).toBe(0);
   });
-  it.each([
-    { status: 'active', hosts: ['externalvideos.node.example.com'] },
-    { status: 'active', hosts: ['*.node.example.com'], expires_on: '2999-01-01' },
-  ])('accepts active exact or one-label wildcard certificate coverage: %j', async (certificate) => {
-    vi.mocked(axios.get)
-      .mockResolvedValueOnce({ data: { success: true, result: { name: 'example.com' } } })
-      .mockResolvedValueOnce({ data: { success: true, result: [certificate] } });
-    await expect(
-      service.validateCdnConfiguration('email', 'zone', 'key', {
-        publicNodeAddress: 'node.example.com',
-        storageConfig: {
-          storageMode: 's3provider',
-          s3Config: {
-            bucketName: 'externalvideos.node.example.com',
-            s3ProviderClientConfig: {
-              region: 'us-east-1',
-              forcePathStyle: false,
-              credentials: { accessKeyId: 'a', secretAccessKey: 'b' },
-            },
-          },
-        },
-      })
-    ).resolves.toBeUndefined();
-  });
-  it('checks paginated packs and uploaded certificates and rejects expired, pending and shallow wildcard certificates', async () => {
-    const settings = {
-      publicNodeAddress: 'node.example.com',
-      storageConfig: {
-        storageMode: 's3provider',
-        s3Config: {
-          bucketName: 'externalvideos.node.example.com',
-          s3ProviderClientConfig: {
-            region: 'us-east-1',
-            forcePathStyle: false,
-            credentials: { accessKeyId: 'a', secretAccessKey: 'b' },
-          },
-        },
-      },
-    } as const;
-    const invalid = [
-      { status: 'pending', hosts: ['externalvideos.node.example.com'] },
-      { status: 'active', hosts: ['*.example.com'] },
-      { status: 'active', hosts: ['externalvideos.node.example.com'], expires_on: '2000-01-01' },
-      { status: 'active' },
-    ];
-    vi.mocked(axios.get)
-      .mockResolvedValueOnce({ data: { success: true, result: { name: 'example.com' } } })
-      .mockResolvedValueOnce({
-        data: { success: true, result: invalid, result_info: { total_pages: 2 } },
-      })
-      .mockResolvedValueOnce({ data: { success: true } })
-      .mockResolvedValueOnce({
-        data: {
-          success: true,
-          result: [{ status: 'active', hosts: ['externalvideos.node.example.com'] }],
-        },
+  it.each(['filesystem', 's3provider'] as const)(
+    'rejects nested CDN hostnames for %s before querying certificate exceptions',
+    async (storageMode) => {
+      vi.mocked(axios.get).mockResolvedValueOnce({
+        data: { success: true, result: { name: 'example.com' } },
       });
-    await expect(
-      service.validateCdnConfiguration('email', 'zone', 'key', settings)
-    ).resolves.toBeUndefined();
-    expect(axios.get).toHaveBeenLastCalledWith(
-      expect.stringContaining('custom_certificates'),
-      expect.objectContaining({ timeout: 10_000 })
-    );
-    vi.mocked(axios.get)
-      .mockResolvedValueOnce({ data: { success: true, result: { name: 'example.com' } } })
-      .mockResolvedValue({ data: { success: true, result: invalid } });
-    await expect(
-      service.validateCdnConfiguration('email', 'zone', 'key', settings)
-    ).rejects.toThrow('active edge certificate');
-    vi.mocked(axios.get)
-      .mockResolvedValueOnce({ data: { success: true, result: { name: 'example.com' } } })
-      .mockResolvedValueOnce({ data: { success: false } });
-    await expect(
-      service.validateCdnConfiguration('email', 'zone', 'key', settings)
-    ).rejects.toThrow('verify Cloudflare certificate');
-  });
+      await expect(
+        service.validateCdnConfiguration('email', 'zone', 'key', {
+          publicNodeAddress: 'node.example.com',
+          storageConfig:
+            storageMode === 'filesystem'
+              ? { storageMode }
+              : {
+                  storageMode,
+                  s3Config: {
+                    bucketName: 'externalvideos.node.example.com',
+                    s3ProviderClientConfig: {
+                      region: 'us-east-1',
+                      forcePathStyle: false,
+                      credentials: { accessKeyId: 'a', secretAccessKey: 'b' },
+                    },
+                  },
+                },
+        })
+      ).rejects.toThrow('zone root exactly');
+      expect(axios.get).toHaveBeenCalledTimes(1);
+      expect(axios.get).toHaveBeenCalledWith(
+        expect.stringContaining('/zones/zone'),
+        expect.anything()
+      );
+    }
+  );
+  it.each(['filesystem', 's3provider'] as const)(
+    'accepts the selected zone root for %s without a nested-host certificate lookup',
+    async (storageMode) => {
+      vi.mocked(axios.get).mockResolvedValueOnce({
+        data: { success: true, result: { name: 'example.com' } },
+      });
+      await expect(
+        service.validateCdnConfiguration('email', 'zone', 'key', {
+          publicNodeAddress: 'Example.COM.',
+          storageConfig:
+            storageMode === 'filesystem'
+              ? { storageMode }
+              : {
+                  storageMode,
+                  s3Config: {
+                    bucketName: 'externalvideos.example.com',
+                    s3ProviderClientConfig: {
+                      region: 'us-east-1',
+                      forcePathStyle: false,
+                      credentials: { accessKeyId: 'a', secretAccessKey: 'b' },
+                    },
+                  },
+                },
+        })
+      ).resolves.toBeUndefined();
+      expect(axios.get).toHaveBeenCalledTimes(1);
+    }
+  );
   it('shares the transition signal and gives recovery a fresh bounded signal', async () => {
     await withCloudflareDeadline(async () => {
       const initial = cloudflareOptions({}).signal!;

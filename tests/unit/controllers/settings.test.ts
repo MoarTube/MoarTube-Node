@@ -1,3 +1,5 @@
+vi.mock('@/services/storage-migration.js', () => ({ migrateStorage: vi.fn() }));
+import { migrateStorage as copyStorage } from '@/services/storage-migration.js';
 vi.mock('@/utils/cdn-journal.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/utils/cdn-journal.js')>()),
   hasPendingCdn: vi.fn(() => false),
@@ -233,18 +235,28 @@ describe('SettingsController', () => {
     }
   });
 
-  it.each([false, true])('saves network access %s without scheduling a restart', async (enabled) => {
-    const updateNodeSettings = vi.fn();
-    vi.mocked(getConfig).mockReturnValueOnce({ updateNodeSettings } as never);
-    mockRequest.body = { allowRemoteConnections: enabled };
-    const schedule = vi.spyOn(globalThis, 'setImmediate');
-    try {
-      await controller.setNetworkAccess(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-      expect(updateNodeSettings).toHaveBeenCalledExactlyOnceWith({ allowRemoteConnections: enabled });
-      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, restartRequired: true });
-      expect(schedule).not.toHaveBeenCalled();
-    } finally { schedule.mockRestore(); }
-  });
+  it.each([false, true])(
+    'saves network access %s without scheduling a restart',
+    async (enabled) => {
+      const updateNodeSettings = vi.fn();
+      vi.mocked(getConfig).mockReturnValueOnce({ updateNodeSettings } as never);
+      mockRequest.body = { allowRemoteConnections: enabled };
+      const schedule = vi.spyOn(globalThis, 'setImmediate');
+      try {
+        await controller.setNetworkAccess(
+          mockRequest as FastifyRequest,
+          mockReply as unknown as FastifyReply
+        );
+        expect(updateNodeSettings).toHaveBeenCalledExactlyOnceWith({
+          allowRemoteConnections: enabled,
+        });
+        expect(mockReply.send).toHaveBeenCalledWith({ isError: false, restartRequired: true });
+        expect(schedule).not.toHaveBeenCalled();
+      } finally {
+        schedule.mockRestore();
+      }
+    }
+  );
 
   describe('getCpuMetrics', () => {
     it('measures the entire Node cluster when called from a worker', async () => {
@@ -900,7 +912,7 @@ describe('SettingsController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should rewrite manifests when storage mode is filesystem', async () => {
+    it('should invalidate media caches without opening filesystem playlists', async () => {
       mockRequest.body = {
         publicNodeProtocol: 'https',
         publicNodeAddress: 'newnode.example.com',
@@ -943,7 +955,7 @@ describe('SettingsController', () => {
       );
 
       expect(mockVideosService.getAllVideosData).toHaveBeenCalled();
-      expect(fs.default.existsSync).toHaveBeenCalled();
+      expect(fs.default.existsSync).not.toHaveBeenCalled();
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
@@ -2190,33 +2202,18 @@ describe('SettingsController', () => {
     expect(resume).toHaveBeenCalled();
     expect(mockReply.status).toHaveBeenCalledWith(400);
   });
-  it('awaits catalog maintenance pages and rewrites manifest URLs', async () => {
+  it('invalidates catalog pages without rewriting relative playlists', async () => {
     mockVideosService.getAllVideosData
       .mockResolvedValueOnce(
         Array.from({ length: 100 }, () => ({ videoId: 'a', outputs: { m3u8: [] } }))
       )
       .mockResolvedValueOnce([]);
-    await (controller as any).rewriteAllManifestUrls();
+    await (controller as any).invalidateMediaCaches();
     expect(mockVideosService.getAllVideosData).toHaveBeenLastCalledWith({
       limit: 100,
       offset: 100,
     });
-    vi.mocked(rewriteManifestFile).mockImplementationOnce(async (_file, transform) => {
-      expect(transform('https://new/external/videos/a/adaptive/m3u8/720p/segments/0.ts')).toBe(
-        '../../720p/segments/0.ts'
-      );
-    });
-    await (controller as any).rewriteManifestUrls(
-      '/videos/a/adaptive/m3u8/manifest-720p.m3u8',
-      'https://new'
-    );
-    vi.mocked(rewriteManifestFile).mockRejectedValueOnce(new Error('disk failure'));
-    await expect(
-      (controller as any).rewriteManifestUrls(
-        '/videos/a/adaptive/m3u8/manifest-720p.m3u8',
-        'https://new'
-      )
-    ).rejects.toThrow('disk failure');
+    expect(rewriteManifestFile).not.toHaveBeenCalled();
   });
 
   it('rejects distribution changes during active publishing or streaming before any mutation', async () => {
@@ -2355,16 +2352,65 @@ describe('SettingsController', () => {
   });
   it('reports a failed network-access settings write', async () => {
     const { getConfig } = await import('@/config/index.js');
-    vi.mocked(getConfig).mockReturnValueOnce({ ...getConfig(), updateNodeSettings: vi.fn(() => { throw new Error('disk full'); }) } as never);
+    vi.mocked(getConfig).mockReturnValueOnce({
+      ...getConfig(),
+      updateNodeSettings: vi.fn(() => {
+        throw new Error('disk full');
+      }),
+    } as never);
     mockRequest.body = { allowRemoteConnections: false };
-    await controller.setNetworkAccess(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-    expect(mockReply.send).toHaveBeenCalledWith({ isError: true, message: 'Unable to save Node network access.' });
+    await controller.setNetworkAccess(
+      mockRequest as FastifyRequest,
+      mockReply as unknown as FastifyReply
+    );
+    expect(mockReply.send).toHaveBeenCalledWith({
+      isError: true,
+      message: 'Unable to save Node network access.',
+    });
   });
   it('reports an unknown database-selection failure without leaking an arbitrary value', async () => {
     mockSettingsService.updateDatabaseConfig.mockRejectedValueOnce(null);
     mockRequest.body = { databaseDialect: 'sqlite' };
-    await controller.databaseConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-    expect(mockReply.send).toHaveBeenCalledWith({ isError: true, message: 'Could not change database configuration' });
+    await controller.databaseConfigToggle(
+      mockRequest as FastifyRequest,
+      mockReply as unknown as FastifyReply
+    );
+    expect(mockReply.send).toHaveBeenCalledWith({
+      isError: true,
+      message: 'Could not change database configuration',
+    });
+  });
+  it('rejects invalid migrations and forwards validated copies without changing storage settings', async () => {
+    mockRequest.body = { direction: 'invalid' };
+    await controller.migrateStorage(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+    expect(copyStorage).not.toHaveBeenCalled();
+    expect(mockReply.status).toHaveBeenLastCalledWith(400);
+    mockRequest.body = { direction: 'filesystem-to-s3', destination: { bucketName: 'dest', s3ProviderClientConfig: { credentials: { accessKeyId: 'a', secretAccessKey: 'b' } } } };
+    vi.mocked(copyStorage).mockResolvedValueOnce(2);
+    await controller.migrateStorage(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+    expect(mockReply.send).toHaveBeenLastCalledWith({ isError: false, filesCopied: 2 });
+    expect(mockSettingsService.updateStorageConfig).not.toHaveBeenCalled();
+    vi.mocked(copyStorage).mockRejectedValueOnce(new Error('private credential'));
+    await controller.migrateStorage(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+    expect(mockReply.status).toHaveBeenLastCalledWith(500);
+    expect(mockReply.send).toHaveBeenLastCalledWith({ isError: true, message: 'Migration failed. Destination data may be partially overwritten; source data was not deleted.' });
+  });
+  it('skips S3 videos without HLS outputs when invalidating delivery caches', async () => {
+    const { getConfig } = await import('@/config/index.js');
+    const config = getConfig();
+    config.nodeSettings.storageConfig = { storageMode: 's3provider' } as never;
+    mockVideosService.getAllVideosData.mockResolvedValueOnce([{ videoId: 'none', outputs: { m3u8: [] } }, { videoId: 'hls', outputs: { m3u8: ['720p'] } }]).mockResolvedValueOnce([]);
+    await (controller as any).invalidateMediaCaches(config);
+    expect(mockCloudflareService.purgeVideo).toHaveBeenCalledWith('hls');
+    expect(mockCloudflareService.purgeVideo).not.toHaveBeenCalledWith('none');
+  });
+  it('reports an incomplete cache recovery after a network change fails', async () => {
+    mockRequest.body = { publicNodeProtocol: 'https', publicNodeAddress: 'node.test', publicNodePort: '443' };
+    mockSettingsService.updateNetworkSettings.mockResolvedValue(undefined);
+    vi.spyOn(controller as any, 'invalidateMediaCaches').mockRejectedValue(new Error('purge failed'));
+    await controller.networkExternal(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+    expect(mockReply.status).toHaveBeenLastCalledWith(400);
+    expect(mockReply.send).toHaveBeenLastCalledWith(expect.objectContaining({ isError: true }));
   });
 
 });

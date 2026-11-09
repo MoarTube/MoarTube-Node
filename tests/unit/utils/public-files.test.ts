@@ -17,7 +17,11 @@ import { externalResourcesRoutes } from '@/routes/external-resources.js';
 import { externalVideosRoutes } from '@/routes/external-videos.js';
 import type { Container } from '@/core/container.js';
 const config = vi.hoisted(() => ({
-  nodeSettings: { publicNodeProtocol: 'https', publicNodeAddress: 'example.com', publicNodePort: 443 },
+  nodeSettings: {
+    publicNodeProtocol: 'https',
+    publicNodeAddress: 'example.com',
+    publicNodePort: 443,
+  },
   getNodeBaseUrl: () => 'https://example.com',
   getExternalVideosBaseUrl: () => 'https://example.com',
   paths: { publicDirectoryPath: '', imagesDirectoryPath: '', videosDirectoryPath: '' },
@@ -291,7 +295,7 @@ describe('public file HTTP boundaries and delivery', () => {
       );
       expect(response.headers.etag).toBeUndefined();
       expect(response.headers['last-modified']).toBeUndefined();
-      expect(response.body).toBe(method === 'HEAD' ? '' : active.replaceAll('\r\n', '\n'));
+      expect(response.body).toBe(method === 'HEAD' ? '' : active);
     }
     writeFileSync(file, active + '#EXT-X-ENDLIST\r\n');
     const terminal = await app.inject(url);
@@ -306,7 +310,7 @@ describe('public file HTTP boundaries and delivery', () => {
   it('does not cache a finalized master through the dynamic alias', async () => {
     writeFileSync(
       path.join(root, `videos/${video}/adaptive/m3u8/manifest-master.m3u8`),
-      '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nhttps://node/external/videos/id/adaptive/m3u8/static/manifests/manifest-720p.m3u8\n'
+      '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n'
     );
     const terminal = await app.inject(
       `${media}/adaptive/m3u8/dynamic/manifests/manifest-master.m3u8`
@@ -397,26 +401,43 @@ describe('public file HTTP boundaries and delivery', () => {
     expect(response.headers['content-length']).toBe('0');
   });
 
-  it('serves legacy manifests as relative references without rewriting the stored file or using stale lengths', async () => {
+  it('serves relative playlists unchanged with ordinary length and conditional HTTP headers', async () => {
     const file = path.join(root, `videos/${video}/adaptive/m3u8/manifest-master.m3u8`);
-    const original = `#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nhttps://example.com${media}/adaptive/m3u8/static/manifests/manifest-720p.m3u8\n`;
+    const original = `#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n`;
     writeFileSync(file, original);
     const url = `${media}/adaptive/m3u8/static/manifests/manifest-master.m3u8`;
     const response = await app.inject(url);
     expect(response.statusCode).toBe(200);
     expect(response.body).toBe('#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n');
-    expect(response.headers['content-length']).toBeUndefined();
+    expect(response.headers['content-length']).toBe(String(Buffer.byteLength(original)));
     expect(fs.readFileSync(file, 'utf8')).toBe(original);
-    expect((await app.inject({ url, headers: { 'if-modified-since': new Date(Date.now() + 60000).toUTCString() } })).statusCode).toBe(200);
-    expect((await app.inject({ url, headers: { 'if-none-match': String(response.headers.etag) } })).statusCode).toBe(304);
+    expect(
+      (
+        await app.inject({
+          url,
+          headers: { 'if-modified-since': new Date(Date.now() + 60000).toUTCString() },
+        })
+      ).statusCode
+    ).toBe(304);
+    expect(
+      (await app.inject({ url, headers: { 'if-none-match': String(response.headers.etag) } }))
+        .statusCode
+    ).toBe(304);
   });
 
   it('recognizes a relative live master through its static alias without granting VOD caching', async () => {
-    writeFileSync(path.join(root, `videos/${video}/adaptive/m3u8/manifest-master.m3u8`), '#EXTM3U\n#MOARTUBE-LIVE\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n');
+    writeFileSync(
+      path.join(root, `videos/${video}/adaptive/m3u8/manifest-master.m3u8`),
+      '#EXTM3U\n#MOARTUBE-LIVE\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n'
+    );
     for (const type of ['static', 'dynamic']) {
-      const response = await app.inject(`${media}/adaptive/m3u8/${type}/manifests/manifest-master.m3u8`);
+      const response = await app.inject(
+        `${media}/adaptive/m3u8/${type}/manifests/manifest-master.m3u8`
+      );
       expect(response.statusCode).toBe(200);
-      expect(response.headers['cache-control']).toBe('public, max-age=0, s-maxage=1, must-revalidate');
+      expect(response.headers['cache-control']).toBe(
+        'public, max-age=0, s-maxage=1, must-revalidate'
+      );
       expect(response.headers.etag).toBeUndefined();
     }
   });

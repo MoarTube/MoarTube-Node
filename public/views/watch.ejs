@@ -2934,7 +2934,7 @@ body {
           if (!edge) return;
           this.COMMENT_LOADING = true;
           const status = direction === 'gap' ? this.COMMENT_GAP : direction === 'older' ? this.COMMENT_BOTTOM : this.COMMENT_TOP;
-          status.textContent = 'Loading comments…';
+          status.textContent = 'Loading comments\u2026';
           const cursor = {timestamp:Number(edge.dataset.timestamp),type:direction !== 'newer' ? 'before' : 'after',sort:direction !== 'newer' ? 'descending' : 'ascending'};
           cursor[direction !== 'newer' ? 'beforeId' : 'afterId'] = Number(edge.id.slice(2));
           const failed = () => {

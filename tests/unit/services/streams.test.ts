@@ -283,9 +283,9 @@ describe('StreamsService', () => {
       expect(rewriteManifestFile).toHaveBeenCalledTimes(4);
       const masterCall = vi.mocked(rewriteManifestFile).mock.calls.at(-1)!;
       expect(masterCall[0]).toContain('manifest-master.m3u8');
-      expect(
-        masterCall[1]('https://node/external/videos/id/adaptive/m3u8/dynamic/manifests/a.m3u8')
-      ).toContain('/static/');
+      expect(masterCall[1]('manifest-720p.m3u8')).toBe('manifest-720p.m3u8');
+      const external = 'https://node/external/videos/id/adaptive/m3u8/dynamic/manifests/a.m3u8';
+      expect(masterCall[1](external)).toBe(external);
       expect(masterCall[2]).toBeUndefined();
       expect(masterCall[1]('#EXT-X-ENDLIST')).toBe('');
     });

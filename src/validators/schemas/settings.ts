@@ -176,10 +176,12 @@ export const storageConfigToggleBodySchema = z.object({
         bucketName: z.string().min(1, 'Bucket name is required'),
         s3ProviderClientConfig: z.object({
           forcePathStyle: z.boolean(),
+          endpoint: z.string().optional(),
           region: z.string().min(1, 'Region is required'),
           credentials: z.object({
             accessKeyId: z.string().min(1, 'Access key ID is required'),
             secretAccessKey: z.string().min(1, 'Secret access key is required'),
+            sessionToken: z.string().optional(),
           }),
         }),
       })

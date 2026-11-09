@@ -471,6 +471,12 @@ export function settingsRoutes(
     controller.databaseConfigToggle.bind(controller)
   );
 
+  fastify.post(
+    '/storage/migrate',
+    { preHandler: [fastify.authenticate], schema: { tags: ['Settings'] } },
+    controller.migrateStorage.bind(controller)
+  );
+
   // Toggle storage configuration
   fastify.post(
     '/storage/config/toggle',

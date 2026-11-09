@@ -1,3 +1,5 @@
+import { migrateStorage } from '@/services/storage-migration.js';
+import { storageMigrationSchema } from '@/validators/storage-migration.js';
 import type { NodeLink, NodeIcon } from '@/types/config.js';
 import {
   readCdnJournal,
@@ -9,8 +11,6 @@ import {
   type CdnCredentials,
 } from '@/utils/cdn-journal.js';
 import { withDistributionTransition } from '@/utils/distribution-admission.js';
-import { managedMediaBases } from '@/utils/media-url-origins.js';
-import { relativeHlsLine, hlsPlaylistPath } from '@/utils/hls-urls.js';
 import cluster from 'node:cluster';
 import { getCpuMetrics } from '@/utils/cpu-metrics.js';
 import { getMemoryMetrics } from '@/utils/memory-metrics.js';
@@ -29,7 +29,6 @@ import { rm } from 'node:fs/promises';
 import { getStorageMetrics, type StorageMetrics } from '@/utils/storage-metrics.js';
 import { Readable } from 'node:stream';
 import { writeUpload } from '@/utils/stream-files.js';
-import { rewriteManifestFile } from '@/utils/manifest-transform.js';
 import { pipeline } from 'node:stream/promises';
 
 import { BaseController } from '@controllers/base.js';
@@ -38,17 +37,12 @@ import type {
   CloudflareService,
   WebSocketService,
   VideosService,
-  VideoOutputs,
 } from '@services/index.js';
 import { getConfig } from '@config/index.js';
 import { isCloudflareCredentialsValid } from '@utils/index.js';
 import { requestTunnelOperation } from '@/services/cloudflare-tunnel-runtime.js';
 import { cloudflareConfigureBodySchema } from '@/validators/schemas/settings.js';
-import {
-  distributionSignal,
-  withCloudflareDeadline,
-  withCloudflareRecovery,
-} from '@/utils/cloudflare-http.js';
+import { withCloudflareDeadline, withCloudflareRecovery } from '@/utils/cloudflare-http.js';
 import { storageIdentity } from '@/utils/cdn-settings.js';
 import type { StorageConfig } from '@/types/config.js';
 import { withSettingsChange } from '@/utils/settings-change.js';
@@ -162,7 +156,6 @@ export interface SecureQuery {
  * - Database export/import
  */
 export class SettingsController extends BaseController {
-  private previousMediaBases: string[] = [];
   public getMetricsBundle = async (
     _request: FastifyRequest,
     reply: FastifyReply
@@ -789,7 +782,7 @@ export class SettingsController extends BaseController {
    * POST /settings/network/external
    *
    * Update external network settings
-   * Also rewrites HLS manifest URLs when storage mode is filesystem
+   * Invalidates cached media and pages; relative HLS references remain unchanged
    */
   networkExternal = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
@@ -815,8 +808,8 @@ export class SettingsController extends BaseController {
             publicNodePort
           );
 
-          // Rewrite HLS manifest URLs if using filesystem storage
-          await this.rewriteAllManifestUrls(config);
+          // Relative HLS references do not depend on the public Node address.
+          await this.invalidateMediaCaches(config);
 
           await this.cloudflareService.purgeHomePage();
           await this.cloudflareService.purgeAllWatchPages();
@@ -827,11 +820,11 @@ export class SettingsController extends BaseController {
             publicNodePort: previous.publicNodePort,
           });
           try {
-            await withCloudflareRecovery(() => this.rewriteAllManifestUrls(config));
+            await withCloudflareRecovery(() => this.invalidateMediaCaches(config));
           } catch (recoveryError) {
             throw new AggregateError(
               [error, recoveryError],
-              'Network change failed and manifest recovery is incomplete.'
+              'Network change failed and cache invalidation recovery is incomplete.'
             );
           }
           throw error;
@@ -904,7 +897,6 @@ export class SettingsController extends BaseController {
               }
             }
             const previous = config.nodeSettings;
-            this.previousMediaBases = managedMediaBases(config, true);
             let outcome: { value: T } | { error: unknown };
             try {
               outcome = { value: await operation(config) };
@@ -946,12 +938,12 @@ export class SettingsController extends BaseController {
     return transitionHeld ? operationWithLocks() : withDistributionTransition(operationWithLocks);
   }
 
-  private async completeMediaMigration(config: ReturnType<typeof getConfig>): Promise<void> {
+  private async completeDistributionChange(config: ReturnType<typeof getConfig>): Promise<void> {
     try {
-      await this.rewriteAllManifestUrls(config);
+      await this.invalidateMediaCaches(config);
     } catch (error) {
       throw new Error(
-        'Settings saved, but media migration or invalidation is incomplete; reapply these settings to retry.',
+        'Settings saved, but cache invalidation is incomplete; reapply these settings to retry.',
         { cause: error }
       );
     }
@@ -965,24 +957,15 @@ export class SettingsController extends BaseController {
   }
 
   /**
-   * Rewrite all HLS manifest URLs if using filesystem storage
+   * Invalidate media and viewer pages after a distribution change
    */
-  private async rewriteAllManifestUrls(config = getConfig()): Promise<void> {
-    const settings = config.nodeSettings;
-    const base = config.getExternalVideosBaseUrl();
+  private async invalidateMediaCaches(config = getConfig()): Promise<void> {
     for (let offset = 0; ; offset += 100) {
       const videos = await this.videosService.getAllVideosData({ limit: 100, offset });
       for (const video of videos) {
-        if (settings.storageConfig.storageMode === 'filesystem') {
-          await this.rewriteVideoManifests(video, config.paths.videosDirectoryPath, base);
+        if (config.nodeSettings.storageConfig.storageMode === 'filesystem') {
           await this.cloudflareService.purgeAdaptiveVideos(video.videoId, undefined, true);
-        } else if (video.isPublished && video.outputs.m3u8.length > 0) {
-          await this.videosService.rewriteS3VideoManifests(
-            video.videoId,
-            video.outputs.m3u8,
-            base,
-            this.previousMediaBases
-          );
+        } else if (video.outputs.m3u8.length > 0) {
           await this.cloudflareService.purgeVideo(video.videoId);
         } else {
           continue;
@@ -992,79 +975,6 @@ export class SettingsController extends BaseController {
       if (videos.length < 100) {
         break;
       }
-    }
-  }
-
-  /**
-   * Rewrite manifest URLs for a single video
-   */
-  private async rewriteVideoManifests(
-    video: { videoId: string; outputs: VideoOutputs },
-    videosDirectoryPath: string,
-    externalVideosBaseUrl: string
-  ): Promise<void> {
-    const outputs = video.outputs as { m3u8: string[] };
-
-    if (outputs.m3u8.length === 0) {
-      return;
-    }
-
-    // Publish the master only after all renditions have been rewritten successfully.
-    const masterManifestPath = path.join(
-      videosDirectoryPath,
-      video.videoId,
-      'adaptive',
-      'm3u8',
-      'manifest-master.m3u8'
-    );
-    // Update resolution-specific manifests
-    for (const resolution of outputs.m3u8) {
-      const manifestPath = path.join(
-        videosDirectoryPath,
-        video.videoId,
-        'adaptive',
-        'm3u8',
-        `manifest-${resolution}.m3u8`
-      );
-      if (fs.existsSync(manifestPath)) {
-        await this.rewriteManifestUrls(manifestPath, externalVideosBaseUrl);
-      }
-    }
-    if (fs.existsSync(masterManifestPath)) {
-      await this.rewriteManifestUrls(masterManifestPath, externalVideosBaseUrl);
-    }
-  }
-
-  /**
-   * Rewrites URLs in an HLS manifest file to use the new external base URL
-   */
-  private async rewriteManifestUrls(
-    manifestPath: string,
-    externalVideosBaseUrl: string
-  ): Promise<void> {
-    try {
-      const bases = [
-        externalVideosBaseUrl,
-        ...managedMediaBases(getConfig()),
-        ...this.previousMediaBases,
-      ];
-      await rewriteManifestFile(
-        manifestPath,
-        (line) =>
-          relativeHlsLine(
-            line,
-            hlsPlaylistPath(
-              path.basename(path.dirname(path.dirname(path.dirname(manifestPath)))),
-              path.basename(manifestPath)
-            ),
-            bases
-          ),
-        false,
-        distributionSignal()
-      );
-    } catch (error) {
-      this.logger.error('Failed to rewrite manifest', error);
-      throw error;
     }
   }
 
@@ -1233,7 +1143,7 @@ export class SettingsController extends BaseController {
                 !this.cdnSettingsMatch(transition)
               ) {
                 // The saved intent is authoritative after an interrupted settings commit.
-                // Re-apply it and repeat media writes/purging rather than using a divergent origin.
+                // Re-apply it and repeat cache invalidation rather than using a divergent origin.
                 await advance('settings');
               }
               if (transition.stage === 'provider') {
@@ -1304,7 +1214,7 @@ export class SettingsController extends BaseController {
                 await advance('media');
               }
               if (transition.stage === 'media') {
-                await this.completeMediaMigration(config);
+                await this.completeDistributionChange(config);
                 await advance('purge');
               }
               if (transition.stage === 'purge') {
@@ -1659,10 +1569,27 @@ export class SettingsController extends BaseController {
   };
 
   /**
-   * POST /settings/storageConfig/toggle
-   *
-   * Update storage configuration
+   * POST /settings/storage/migrate
+   * Copy video data without changing storage settings.
    */
+  migrateStorage = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    const parsed = storageMigrationSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return this.sendError(reply, 'Invalid migration configuration.', 400);
+    }
+    try {
+      const filesCopied = await migrateStorage(parsed.data, getConfig().paths.videosDirectoryPath);
+      return await this.sendSuccess(reply, { filesCopied });
+    } catch {
+      return this.sendError(
+        reply,
+        'Migration failed. Destination data may be partially overwritten; source data was not deleted.',
+        500
+      );
+    }
+  };
+
+  /** Update the active storage configuration. */
   storageConfigToggle = async (
     request: FastifyRequest,
     reply: FastifyReply
@@ -1711,7 +1638,7 @@ export class SettingsController extends BaseController {
             this.settingsService.updateStorageConfig(storageConfig);
           }
 
-          await this.completeMediaMigration(config);
+          await this.completeDistributionChange(config);
           return;
         },
         (request.body as StorageConfigBody).storageConfig

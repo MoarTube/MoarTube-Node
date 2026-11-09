@@ -182,54 +182,7 @@ export class CloudflareService extends BaseService {
     if (!response.data.success || response.data.result.name === '') {
       throw new Error('Could not validate the Cloudflare zone.');
     }
-    const hostname = validateCdnSettings(settings, response.data.result.name);
-    if (
-      settings.storageConfig.storageMode === 's3provider' &&
-      hostname.split('.').length > response.data.result.name.split('.').length + 1
-    ) {
-      let covered = false;
-      for (const endpoint of ['ssl/certificate_packs', 'custom_certificates']) {
-        for (let page = 1; ; page++) {
-          const packs = await axios.get<{
-            success: boolean;
-            result?: Array<{ status?: string; hosts?: string[]; expires_on?: string }>;
-            result_info?: { total_pages: number };
-          }>(`${CLOUDFLARE_API_BASE}/zones/${zoneId}/${endpoint}`, {
-            ...cloudflareOptions({ 'X-Auth-Email': email, 'X-Auth-Key': key }),
-            params: { page, per_page: 50, status: 'active' },
-          });
-          if (!packs.data.success) {
-            throw new Error('Could not verify Cloudflare certificate coverage.');
-          }
-          const certificates = packs.data.result ?? [];
-          covered ||= certificates.some(
-            (pack) =>
-              pack.status === 'active' &&
-              (pack.expires_on === undefined || Date.parse(pack.expires_on) > Date.now()) &&
-              (pack.hosts ?? []).some(
-                (host) =>
-                  host.toLowerCase() === hostname ||
-                  (host.startsWith('*.') &&
-                    hostname.slice(hostname.indexOf('.') + 1) === host.slice(2).toLowerCase())
-              )
-          );
-          const complete = packs.data.result_info
-            ? page >= packs.data.result_info.total_pages
-            : certificates.length < 50;
-          if (covered || complete) {
-            break;
-          }
-        }
-        if (covered) {
-          break;
-        }
-      }
-      if (!covered) {
-        throw new Error(
-          `Cloudflare requires an active edge certificate covering ${hostname}; standard Universal SSL for this zone does not cover that hostname.`
-        );
-      }
-    }
+    validateCdnSettings(settings, response.data.result.name);
   }
 
   /** Persist the values we change before activation; no DNS ownership is transferred here. */

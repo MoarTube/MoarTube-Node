@@ -1,14 +1,10 @@
-import fs from 'node:fs';
 import os from 'node:os';
-import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 const state = vi.hoisted(() => ({ settings: {} as any, snapshot: vi.fn(), interfaces: {} as any }));
 vi.mock('node:os',async original=>({...await original<typeof import('node:os')>(),networkInterfaces:()=>state.interfaces}));
 vi.mock('@/config/index.js', () => ({ getConfig: () => ({ nodeSettings: state.settings }) }));
 vi.mock('@/services/cloudflare-tunnel-runtime.js', () => ({ requestTunnelOperation: state.snapshot }));
 import { canonicalNodeOrigin, localHostname, pageCanonicalOrigin } from '@/utils/viewer-urls.js';
-import { relativeHlsLine, hlsPlaylistPath } from '@/utils/hls-urls.js';
-import { managedMediaBases } from '@/utils/media-url-origins.js';
 afterEach(() => vi.restoreAllMocks());
 const stopped = { mode:'none',status:'stopped',name:'' } as const;
 const local = () => ({ publicNodeProtocol:'http',publicNodeAddress:'localhost',publicNodePort:9090,isCloudflareTunnelEnabled:true,isCloudflareCdnEnabled:false,storageConfig:{storageMode:'filesystem'} });
@@ -30,30 +26,5 @@ describe('viewer origin failure boundaries', () => {
     expect(await pageCanonicalOrigin({headers:{host:'127.0.0.1:9090'}} as never)).toBe('http://127.0.0.1:9090');
     state.snapshot.mockClear();state.settings={...local(),publicNodeAddress:'public.example',publicNodeProtocol:'https',publicNodePort:443};
     expect(await pageCanonicalOrigin({headers:{}} as never)).toBe('https://public.example');expect(state.snapshot).not.toHaveBeenCalled();
-  });
-});
-describe('managed URL corruption and persistence boundaries',()=>{
-  it('rejects invalid playlist locations and preserves empty, malformed, escaped and self references',()=>{
-    expect(()=>relativeHlsLine('x','/unmanaged',[])).toThrow('Invalid managed playlist');
-    const playlist=hlsPlaylistPath('video','master.m3u8');
-    for(const reference of ['#EXT-X-KEY:URI=""','#EXT-X-KEY:URI="bad\\path"','http://[','   ']) expect(relativeHlsLine(reference,playlist,[])).toBe(reference);
-    expect(relativeHlsLine('master.m3u8',playlist,[])).toBe('master.m3u8');
-    expect(relativeHlsLine('/external/videos/video/adaptive/m3u8/static/manifests',playlist,[])).toBe('manifests');
-    expect(relativeHlsLine('https://outside.example/other',playlist,['not a URL'])).toBe('https://outside.example/other');
-    expect(relativeHlsLine('../../720p/segments/0.ts',playlist,['not a URL'])).toBe('../../720p/segments/0.ts');
-  });
-  it('validates saved history and cleans a failed atomic replacement without erasing the previous journal',()=>{
-    const root=fs.mkdtempSync(path.join(os.tmpdir(),'moartube-origin-failures-'));
-    const file=path.join(root,'_media_url_origins.json');
-    const config={nodeSettings:local(),paths:{dataDirectoryPath:root},getExternalVideosBaseUrl:()=>''};
-    try{
-      expect(managedMediaBases({...config,paths:{dataDirectoryPath:''}} as never)).toEqual(['http://localhost:9090','']);
-      for(const saved of [{},[123],['ftp://example.com'],['https://u:p@example.com'],['https://example.com?a=b'],['https://example.com#hash']]){
-        fs.writeFileSync(file,JSON.stringify(saved));expect(()=>managedMediaBases(config as never)).toThrow(/Invalid managed media/);
-      }
-      fs.writeFileSync(file,'[]');const rename=vi.spyOn(fs,'renameSync').mockImplementationOnce(()=>{throw new Error('replace denied')});
-      expect(()=>managedMediaBases(config as never,true)).toThrow('replace denied');rename.mockRestore();
-      expect(fs.readdirSync(root)).toEqual(['_media_url_origins.json']);expect(fs.readFileSync(file,'utf8')).toBe('[]');
-    }finally{fs.rmSync(root,{recursive:true,force:true});}
   });
 });

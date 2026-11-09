@@ -219,6 +219,15 @@ describe('Settings Routes', () => {
     expect(mockFastify.post).toHaveBeenCalledWith('/database/config/toggle', expect.anything(), expect.any(Function));
   });
 
+  it('requires authentication for storage migration', () => {
+    settingsRoutes(mockFastify as any, mockContainer);
+    expect(mockFastify.post).toHaveBeenCalledWith(
+      '/storage/migrate',
+      expect.objectContaining({ preHandler: [mockFastify.authenticate] }),
+      expect.any(Function)
+    );
+  });
+
   it('should register POST /storage/config/toggle route', () => {
     settingsRoutes(mockFastify as any, mockContainer);
     expect(mockFastify.post).toHaveBeenCalledWith('/storage/config/toggle', expect.anything(), expect.any(Function));
@@ -245,8 +254,8 @@ describe('Settings Routes', () => {
     expect(mockFastify.get).toHaveBeenCalledTimes(10);
   });
 
-  it('should register exactly 29 POST routes', () => {
+  it('should register exactly 30 POST routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(29);
+    expect(mockFastify.post).toHaveBeenCalledTimes(30);
   });
 });

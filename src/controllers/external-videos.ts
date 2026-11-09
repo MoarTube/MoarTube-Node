@@ -1,5 +1,3 @@
-import { managedMediaBases } from '@/utils/media-url-origins.js';
-import { relativeHlsLine, hlsPlaylistPath } from '@/utils/hls-urls.js';
 /**
  * External Videos Controller
  *
@@ -181,8 +179,6 @@ export class ExternalVideosController extends BaseController {
       const { videoId, format, manifestName } = request.params as AdaptiveManifestParams;
 
       const config = getConfig();
-      const bases = managedMediaBases(config);
-      const playlistPath = hlsPlaylistPath(videoId, manifestName);
 
       return await servePublicFile(
         request,
@@ -192,7 +188,6 @@ export class ExternalVideosController extends BaseController {
         'application/vnd.apple.mpegurl',
         {
           live: (request.params as AdaptiveManifestParams).type === 'dynamic',
-          manifestTransform: (line) => relativeHlsLine(line, playlistPath, bases),
         }
       );
     } catch (error) {

@@ -26,7 +26,6 @@ let app: FastifyInstance;
 let directory: string;
 let settings: Record<string, unknown>;
 let videoRecords: object[];
-const rewriteS3 = vi.fn();
 let cloudflare: Record<string, ReturnType<typeof vi.fn>>;
 const payload = {
   cloudflareEmailAddress: 'email@example.com',
@@ -116,7 +115,6 @@ beforeEach(async () => {
     cloudflareService: cloudflare,
     videosService: {
       getAllVideosData: async () => videoRecords,
-      rewriteS3VideoManifests: rewriteS3,
     },
     websocketService: {},
   };
@@ -259,9 +257,9 @@ describe('durable CDN lifecycle', () => {
       }
       if (stage === 'media') {
         videoRecords = [{ videoId: 'video', outputs: { m3u8: ['720p'] } }];
-        fs.mkdirSync(path.join(directory, 'video', 'adaptive', 'm3u8', 'manifest-720p.m3u8'), {
-          recursive: true,
-        });
+        cloudflare.purgeAdaptiveVideos.mockRejectedValueOnce(
+          new Error('cache invalidation interrupted')
+        );
       }
       const response = await configure();
       expect(response.statusCode).toBe(502);
@@ -272,8 +270,7 @@ describe('durable CDN lifecycle', () => {
       await expect(withJobAdmission(async () => {})).rejects.toThrow('retry');
       expect((await configure()).statusCode).toBe(409);
       expect((await clear()).statusCode).toBe(409);
-      if (stage === 'media')
-        fs.rmdirSync(path.join(directory, 'video', 'adaptive', 'm3u8', 'manifest-720p.m3u8'));
+
       expect((await retry()).statusCode).toBe(200);
       expect((await journal()).current).toMatchObject({
         id: transition.id,
@@ -315,9 +312,9 @@ describe('durable CDN lifecycle', () => {
       }
       if (stage === 'media') {
         videoRecords = [{ videoId: 'video', outputs: { m3u8: ['720p'] } }];
-        fs.mkdirSync(path.join(directory, 'video', 'adaptive', 'm3u8', 'manifest-720p.m3u8'), {
-          recursive: true,
-        });
+        cloudflare.purgeAdaptiveVideos.mockRejectedValueOnce(
+          new Error('cache invalidation interrupted')
+        );
       }
       expect((await clear()).statusCode).toBe(502);
       const transition = (await journal()).current!;
@@ -328,8 +325,7 @@ describe('durable CDN lifecycle', () => {
       });
       expect(settings.cloudflarePublicAddressBackup).not.toBeNull();
       expect((await configure({ ...payload, cloudflareZoneId: 'other' })).statusCode).toBe(409);
-      if (stage === 'media')
-        fs.rmdirSync(path.join(directory, 'video', 'adaptive', 'm3u8', 'manifest-720p.m3u8'));
+
       cloudflare.purgeEntireCacheWithCredentials.mockClear();
       expect((await retry()).statusCode).toBe(200);
       if (stage !== 'tunnel')
@@ -346,9 +342,9 @@ describe('durable CDN lifecycle', () => {
   it('retains the final old-zone purge intent in the saved removal state before media migration finishes', async () => {
     await configure();
     videoRecords = [{ videoId: 'video', outputs: { m3u8: ['720p'] } }];
-    fs.mkdirSync(path.join(directory, 'video', 'adaptive', 'm3u8', 'manifest-720p.m3u8'), {
-      recursive: true,
-    });
+    cloudflare.purgeAdaptiveVideos.mockRejectedValueOnce(
+      new Error('cache invalidation interrupted')
+    );
     expect((await clear()).statusCode).toBe(502);
     expect(settings.cloudflareZoneId).toBe('');
     const persisted = await journal();
@@ -357,7 +353,7 @@ describe('durable CDN lifecycle', () => {
       source: { zone: 'zone', key: 'key' },
     });
     // Reloading the journal after the interruption retains the obligation independently of settings/outbox.
-    fs.rmdirSync(path.join(directory, 'video', 'adaptive', 'm3u8', 'manifest-720p.m3u8'));
+
     cloudflare.purgeEntireCacheWithCredentials.mockClear();
     expect((await retry(persisted.current!.id)).statusCode).toBe(200);
     expect(cloudflare.purgeEntireCacheWithCredentials).toHaveBeenCalledWith(

@@ -454,7 +454,7 @@
         videoCard,
         async () => (await read('videos', input)).videos
       );
-      $('video-status').textContent = data.totalCount === 0 ? 'No videos match this search.' : '';
+      $('video-status').textContent = '';
     } catch (error) {
       if (generation === videoGeneration) {
         failure('video-status', error, () => (error.reset ? refreshVideos() : loadVideos()), () => generation === videoGeneration);
@@ -552,7 +552,7 @@
       tagCursor = data.nextCursor;
       tagMore = data.hasMore;
       renderTags();
-      $('tag-status').textContent = tagRows.length ? '' : 'No matching tags.';
+      $('tag-status').textContent = '';
     } catch (error) {
       if (generation === tagGeneration)
         failure('tag-status', error, async () => {

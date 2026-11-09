@@ -60,10 +60,6 @@ beforeEach(async () => {
       );
   }
   root = await mkdtemp(path.join(tmpdir(), 'moartube-cdn-followup-'));
-  await writeFile(
-    path.join(root, '_media_url_origins.json'),
-    JSON.stringify(['https://old.example', 'https://old'])
-  );
   state.config = {
     paths: {
       dataDirectoryPath: root,
@@ -140,11 +136,11 @@ async function seed(recorded = true): Promise<void> {
   await a.put(prefix + '720p/segments/run-one-0.ts', 'first stream bytes');
   await a.put(
     prefix + 'dynamic/manifests/manifest-720p.m3u8',
-    '#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXTINF:2,\nhttps://old.example/external/videos/video123/adaptive/m3u8/720p/segments/run-one-0.ts\n'
+    '#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-PLAYLIST-TYPE:EVENT\n#EXTINF:2,\n../../720p/segments/run-one-0.ts\n'
   );
   await a.put(
     prefix + 'dynamic/manifests/manifest-master.m3u8',
-    '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nhttps://old.example/external/videos/video123/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8\n'
+    '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n'
   );
 }
 
@@ -255,7 +251,7 @@ describe('follow-up storage fixes against real Silo', () => {
       // Client publishes the dynamic master before starting the live encoder.
       await a.put(
         prefix + 'dynamic/manifests/manifest-master.m3u8',
-        '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nhttps://old.example/external/videos/video123/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8\n'
+        '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n'
       );
       await streams.stopStream('video123');
       expect(video.is_streaming).toBe(false);
@@ -287,7 +283,7 @@ describe('follow-up storage fixes against real Silo', () => {
       await mkdir(path.join(folder, '720p'), { recursive: true });
       await writeFile(
         path.join(folder, 'manifest-master.m3u8'),
-        '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nhttps://old.example/external/videos/video123/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8\n'
+        '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n'
       );
       await streams.stopStream('video123');
       expect(video.is_streaming).toBe(false);
@@ -721,7 +717,7 @@ describe('follow-up storage fixes against real Silo', () => {
       await proxy.close();
     }
   }, 20_000);
-  it('rewrites real S3 manifests from CDN URLs to dotted-bucket HTTPS AWS path URLs when CDN is disabled', async () => {
+  it('keeps relative playlists unchanged when switching from CDN to dotted-bucket AWS delivery', async () => {
     await seed();
     state.config.nodeSettings.isCloudflareTunnelEnabled = false;
     state.config.updateNodeSettings = (patch: object) => {
@@ -751,14 +747,6 @@ describe('follow-up storage fixes against real Silo', () => {
       storage,
       {} as never,
       cloudflare
-    );
-    await videos.rewriteS3VideoManifests(
-      'video123',
-      ['720p'],
-      state.config.getExternalVideosBaseUrl()
-    );
-    expect(await a.text(prefix + 'static/manifests/manifest-720p.m3u8')).toContain(
-      '../../720p/segments/'
     );
     cloudflare.withConfigurationRollback = async (
       _email: unknown,
@@ -885,7 +873,7 @@ describe('follow-up storage fixes against real Silo', () => {
       cloudflare.purgeWatchPages.mock.invocationCallOrder[0]
     );
   });
-  it('rewrites S3 renditions before their master inside the settings/admission lock', async () => {
+  it('invalidates viewer caches inside the settings/admission lock without rewriting playlists', async () => {
     await seed();
     video.is_streaming = false;
     await storage.finalizeS3Stream('video123', ['720p'], true);
@@ -899,6 +887,10 @@ describe('follow-up storage fixes against real Silo', () => {
         entered = true;
         await gate;
       }
+    });
+    cloudflare.purgeVideo.mockImplementationOnce(async () => {
+      entered = true;
+      await gate;
     });
     const videos = new VideosService(
       logger as never,
@@ -993,6 +985,10 @@ describe('follow-up storage fixes against real Silo', () => {
         entered = true;
         await gate;
       }
+    });
+    cloudflare.purgeVideo.mockImplementationOnce(async () => {
+      entered = true;
+      await gate;
     });
     const videos = new VideosService(
       logger as never,
@@ -1134,10 +1130,10 @@ describe('follow-up storage fixes against real Silo', () => {
   it.each(['-1', 'Infinity', '9'.repeat(310)])(
     'rejects invalid segment durations before publishing a replacement: %s',
     async (duration) => {
-      const key = prefix + 'static/manifests/manifest-720p.m3u8';
+      const key = prefix + 'dynamic/manifests/manifest-720p.m3u8';
       const original = '#EXTM3U\n#EXTINF:' + duration + ',\nold.ts\n';
       await a.put(key, original);
-      await expect(storage.rewriteS3Manifest(key, 'https://new.example')).rejects.toThrow(
+      await expect(storage.finalizeS3Stream('video123', ['720p'], true)).rejects.toThrow(
         'Invalid playlist segment duration'
       );
       expect(await a.text(key)).toBe(original);
@@ -1268,8 +1264,8 @@ describe('follow-up storage fixes against real Silo', () => {
     }
     expect(await a.text(prefix + '720p/segments/run-one-0.ts')).toBe('first stream bytes');
   });
-  it('honors migration deadlines and retains the previous complete object after an aborted write', async () => {
-    const key = prefix + 'static/manifests/manifest-720p.m3u8';
+  it('honors recording finalization deadlines and retains the previous complete object after an aborted write', async () => {
+    const key = prefix + 'dynamic/manifests/manifest-720p.m3u8';
     const original = '#EXTM3U\n#EXTINF:2,\nhttps://old.example/external/a.ts\n';
     await a.put(key, original);
     let release!: () => void;
@@ -1288,7 +1284,7 @@ describe('follow-up storage fixes against real Silo', () => {
         },
       };
       await expect(
-        withCloudflareDeadline(() => storage.rewriteS3Manifest(key, 'https://new.example'), 50)
+        withCloudflareDeadline(() => storage.finalizeS3Stream('video123', ['720p'], true), 50)
       ).rejects.toThrow();
       expect(await a.text(key)).toBe(original);
     } finally {
@@ -1322,7 +1318,7 @@ describe('follow-up storage fixes against real Silo', () => {
           '#MOARTUBE-LIVE'
         );
         expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).toContain(
-          '/static/'
+          'manifest-720p.m3u8'
         );
       } else {
         await expect(a.text(prefix + 'static/manifests/manifest-master.m3u8')).rejects.toThrow();

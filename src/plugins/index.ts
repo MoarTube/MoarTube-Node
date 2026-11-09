@@ -20,6 +20,7 @@ import { getConfig } from '@config/index.js';
 import { createAppContainer } from '@core/index.js';
 import { getDatabase } from '@database/index.js';
 import { registerRoutes } from '@routes/index.js';
+import { nodeTlsOptions } from '@/utils/node-tls.js';
 import { compressTextResponse } from '@/utils/http-compression.js';
 import authenticationPlugin from '@plugins/authentication.js';
 import swaggerPlugin from '@plugins/swagger.js';
@@ -56,6 +57,7 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
   // Create Fastify instance with pino-pretty logger
   const app = Fastify({
     logger: getLoggerConfig(),
+    https: nodeTlsOptions(),
     trustProxy: 'loopback',
   });
 

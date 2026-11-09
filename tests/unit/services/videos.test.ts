@@ -1,5 +1,4 @@
 vi.mock('@/utils/distribution-admission.js', () => ({ withJobAdmission: (operation: () => Promise<unknown>) => operation() }));
-vi.mock('@/utils/media-url-origins.js', () => ({ managedMediaBases: (config: any) => [config.getExternalVideosBaseUrl()] }));
 vi.mock('@/utils/settings-change.js', () => ({
   withSettingsChange: vi.fn(async (_path, operation) => operation()),
 }));

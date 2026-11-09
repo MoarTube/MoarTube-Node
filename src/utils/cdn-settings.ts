@@ -36,9 +36,11 @@ export function validateCdnSettings(
   const hostname = mediaHostname(settings.publicNodeAddress);
   const host = hostname.slice('externalvideos.'.length);
   if (zoneName) {
-    const zone = zoneName.toLowerCase().replace(/\.$/, '');
-    if (host !== zone && !host.endsWith('.' + zone)) {
-      throw new Error('The public Node domain must belong to the selected Cloudflare zone.');
+    const zone = zoneName.trim().toLowerCase().replace(/\.$/, '');
+    if (host !== zone) {
+      throw new Error(
+        'Cloudflare CDN requires the public Node domain to match the selected Cloudflare zone root exactly; subdomains are not supported.'
+      );
     }
   }
   if (settings.storageConfig.storageMode === 's3provider') {

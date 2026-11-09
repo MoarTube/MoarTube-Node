@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { mediaHostname, validateCdnSettings, cdnDnsTarget, storageIdentity } from '@/utils/cdn-settings.js';
+import {
+  mediaHostname,
+  validateCdnSettings,
+  cdnDnsTarget,
+  storageIdentity,
+} from '@/utils/cdn-settings.js';
 import { buildExternalVideosBaseUrl } from '@/config/urls.js';
 import type { NodeSettings, StorageConfig } from '@/types/config.js';
 
@@ -17,22 +22,37 @@ const s3 = (overrides: Record<string, unknown> = {}): StorageConfig => ({
 });
 
 describe('CDN naming contract', () => {
-  it('validates final DNS labels, completed names and derived bucket limits',()=>{
-    expect(mediaHostname('example.'+'a'.repeat(63))).toContain('a'.repeat(63));
-    for(const host of ['example.'+'a'.repeat(64),'example.com-','a'.repeat(63)+'.'+'b'.repeat(63)+'.'+'c'.repeat(63)+'.'+'d'.repeat(63)])expect(()=>mediaHostname(host)).toThrow();
-    const address='a'.repeat(46)+'.com';
-    expect(()=>validateCdnSettings({publicNodeAddress:address,storageConfig:s3()})).toThrow('63-character');
-    const settings={storageMode:'filesystem'} as StorageConfig;
+  it('validates final DNS labels, completed names and derived bucket limits', () => {
+    expect(mediaHostname('example.' + 'a'.repeat(63))).toContain('a'.repeat(63));
+    for (const host of [
+      'example.' + 'a'.repeat(64),
+      'example.com-',
+      'a'.repeat(63) + '.' + 'b'.repeat(63) + '.' + 'c'.repeat(63) + '.' + 'd'.repeat(63),
+    ])
+      expect(() => mediaHostname(host)).toThrow();
+    const address = 'a'.repeat(46) + '.com';
+    expect(() => validateCdnSettings({ publicNodeAddress: address, storageConfig: s3() })).toThrow(
+      '63-character'
+    );
+    const settings = { storageMode: 'filesystem' } as StorageConfig;
     expect(storageIdentity(settings)).toBe('filesystem');
-    expect(storageIdentity({storageMode:'s3provider'})).toBe('[null,null,null]');
+    expect(storageIdentity({ storageMode: 's3provider' })).toBe('[null,null,null]');
     expect(storageIdentity(s3())).toContain('externalvideos.example.com');
-    expect(storageIdentity(s3({endpoint:'https://provider.example/'}))).toBe(storageIdentity(s3({endpoint:'https://provider.example'})));
+    expect(storageIdentity(s3({ endpoint: 'https://provider.example/' }))).toBe(
+      storageIdentity(s3({ endpoint: 'https://provider.example' }))
+    );
   });
-  it('uses certificate-compatible HTTPS AWS path addressing when disabling CDN for dotted buckets',()=>{
-    const settings={publicNodeAddress:'example.com',storageConfig:s3(),isCloudflareCdnEnabled:true} as NodeSettings;
+  it('uses certificate-compatible HTTPS AWS path addressing when disabling CDN for dotted buckets', () => {
+    const settings = {
+      publicNodeAddress: 'example.com',
+      storageConfig: s3(),
+      isCloudflareCdnEnabled: true,
+    } as NodeSettings;
     expect(buildExternalVideosBaseUrl(settings)).toBe('https://externalvideos.example.com');
-    settings.isCloudflareCdnEnabled=false;
-    expect(buildExternalVideosBaseUrl(settings)).toBe('https://s3.us-east-1.amazonaws.com/externalvideos.example.com');
+    settings.isCloudflareCdnEnabled = false;
+    expect(buildExternalVideosBaseUrl(settings)).toBe(
+      'https://s3.us-east-1.amazonaws.com/externalvideos.example.com'
+    );
   });
   it('keeps filesystem-backed CDN media on the validated Node URL', () => {
     expect(
@@ -57,21 +77,28 @@ describe('CDN naming contract', () => {
   ])('rejects invalid CDN Node address %s', (address) => {
     expect(() => mediaHostname(address)).toThrow('domain name');
   });
-  it('normalizes domains and derives subdomains without including protocol or port', () => {
-    expect(mediaHostname('Example.COM.')).toBe('externalvideos.example.com');
+  it.each(['example.com', 'example.co.uk'])('normalizes the selected zone root %s', (zone) => {
     expect(
       validateCdnSettings(
-        { publicNodeAddress: 'node.example.com', storageConfig: { storageMode: 'filesystem' } },
-        'example.com'
+        {
+          publicNodeAddress: zone.toUpperCase() + '.',
+          storageConfig: { storageMode: 'filesystem' },
+        },
+        ' ' + zone.toUpperCase() + '. '
       )
-    ).toBe('externalvideos.node.example.com');
-    expect(() =>
-      validateCdnSettings(
-        { publicNodeAddress: 'badexample.com', storageConfig: s3() },
-        'example.com'
-      )
-    ).toThrow('selected Cloudflare zone');
+    ).toBe('externalvideos.' + zone);
   });
+  it.each(['node.example.com', 'deep.node.example.com', 'badexample.com', 'other.com'])(
+    'rejects a public CDN address outside the exact zone root: %s',
+    (address) => {
+      for (const storage of [{ storageMode: 'filesystem' } as StorageConfig, s3()]) {
+        if (storage.s3Config) storage.s3Config.bucketName = 'externalvideos.' + address;
+        expect(() =>
+          validateCdnSettings({ publicNodeAddress: address, storageConfig: storage }, 'example.com')
+        ).toThrow('zone root exactly');
+      }
+    }
+  );
   it('requires an exact S3 bucket match, while filesystem delivery needs no bucket', () => {
     expect(
       validateCdnSettings({ publicNodeAddress: 'example.com', storageConfig: s3() }, 'example.com')
