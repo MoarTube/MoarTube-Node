@@ -72,6 +72,41 @@ CREATE TABLE "livechatmessages" (
 	"timestamp" bigint NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "node_operational_meta" (
+	"key" text PRIMARY KEY NOT NULL,
+	"value" text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "node_purge_backoff" (
+	"zone" text PRIMARY KEY NOT NULL,
+	"until_ms" bigint NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "node_purge_credentials" (
+	"zone" text PRIMARY KEY NOT NULL,
+	"email" text NOT NULL,
+	"key" text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "node_purges" (
+	"zone" text NOT NULL,
+	"target" text NOT NULL,
+	"token" text NOT NULL,
+	CONSTRAINT "node_purges_zone_target_pk" PRIMARY KEY("zone","target")
+);
+--> statement-breakpoint
+CREATE TABLE "node_recovery" (
+	"key" text PRIMARY KEY NOT NULL,
+	"value" text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "node_remote_writes" (
+	"id" text PRIMARY KEY NOT NULL,
+	"video" text NOT NULL,
+	"active" integer DEFAULT 1 NOT NULL,
+	"finished" bigint
+);
+--> statement-breakpoint
 CREATE TABLE "videoreports" (
 	"report_id" serial PRIMARY KEY NOT NULL,
 	"timestamp" bigint NOT NULL,

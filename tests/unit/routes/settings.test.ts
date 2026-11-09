@@ -9,6 +9,18 @@ import { settingsRoutes } from '@routes/settings.js';
 import type { Container } from '@core/container.js';
 
 describe('Settings Routes', () => {
+  it('requires authentication and a strict boolean for the network access setting', () => {
+    settingsRoutes(mockFastify as any, mockContainer);
+    const route = mockFastify.post.mock.calls.find(([url]) => url === '/network/access');
+    expect(route).toBeDefined();
+    expect(route![1].preHandler).toEqual([mockFastify.authenticate]);
+    const schema = route![1].schema.body;
+    expect(schema.safeParse({ allowRemoteConnections: false }).success).toBe(true);
+    expect(schema.safeParse({ allowRemoteConnections: 'false' }).success).toBe(false);
+    expect(schema.safeParse({}).success).toBe(false);
+    expect(schema.safeParse({ allowRemoteConnections: true, host: 'other' }).success).toBe(false);
+  });
+
   it('does not register the retired Node ID endpoint', () => {
     settingsRoutes(mockFastify as any, mockContainer);
     expect(mockFastify.post.mock.calls.map(([route]) => route)).not.toContain('/personalize/id');
@@ -233,8 +245,8 @@ describe('Settings Routes', () => {
     expect(mockFastify.get).toHaveBeenCalledTimes(10);
   });
 
-  it('should register exactly 28 POST routes', () => {
+  it('should register exactly 29 POST routes', () => {
     settingsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(28);
+    expect(mockFastify.post).toHaveBeenCalledTimes(29);
   });
 });

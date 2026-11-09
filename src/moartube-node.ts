@@ -1,8 +1,11 @@
+import { importLegacyOperationalState } from '@/database/legacy-operational.js';
+import { operationalConfig } from '@/database/operational.js';
 import { rewindCdnAfterRestart } from '@/utils/cdn-journal.js';
 import '../bin/check-node-version.js';
 import 'dotenv/config';
 
 import cluster from 'node:cluster';
+import { prepareData } from './config/data-layout.cjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -69,13 +72,17 @@ async function startMaster(): Promise<void> {
 
   // Initialize database first (services depend on it)
   await initializeMasterDatabase(logger);
+  await importLegacyOperationalState(
+    getConfig().paths.nodeSettingsPath,
+    operationalConfig(getConfig())
+  );
 
   // Create DI container with all services
   const db = getDatabase();
   const container = await createAppContainer(db);
 
   // Re-arm invalidation before startup changes any recorded media.
-  rewindCdnAfterRestart(getConfig().paths.nodeSettingsPath);
+  await rewindCdnAfterRestart(getConfig().paths.nodeSettingsPath);
 
   // Startup provisioning: reset stale streaming/importing flags, clean up chat messages, finalize manifests
   await performStartupProvisioning(logger, container);
@@ -156,6 +163,10 @@ async function startWorker(): Promise<void> {
  * Main entry point using top-level await (ESM)
  */
 try {
+  if (cluster.isPrimary) {
+    const releaseData = await prepareData('node');
+    process.once('exit', releaseData);
+  }
   loadConfig();
 
   if (cluster.isPrimary) {

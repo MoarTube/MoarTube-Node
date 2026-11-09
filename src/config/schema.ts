@@ -89,6 +89,7 @@ export const NodeSettingsSchema = z.object({
     .refine((val) => !Number.isNaN(val) && val >= 1 && val <= 65535, {
       message: 'Port must be between 1 and 65535',
     }),
+  allowRemoteConnections: z.boolean().default(true),
   isSecure: z.boolean().default(false),
   publicNodeProtocol: z.enum(['http', 'https', '']).default(''),
   publicNodeAddress: z.string().default(''),

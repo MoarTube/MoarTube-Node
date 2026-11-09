@@ -50,7 +50,7 @@ describe('SQLite connection and shipped migrations (real SQL)', () => {
       database.db.all(
         sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`
       )
-    ).toHaveLength(17);
+    ).toHaveLength(23);
     database.client.exec(
       "INSERT INTO links (url, svg_graphic, timestamp) VALUES ('persisted', '<svg/>', 100)"
     );

@@ -1,3 +1,5 @@
+import { operationalForPath, writeRecovery } from '@/database/recovery.js';
+import { OperationalDatabase } from '@/database/operational.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -95,7 +97,9 @@ describe('settings concurrency and durable CDN state', () => {
     let later!: () => void;
     await withSettingsChange(file, async () => {
       config.updateNodeSettings({ nodeHeadline: 'Locked patch' });
-      later = AsyncResource.bind(() => config.updateNodeSettings({ nodeHeadline: 'Stale callback' }));
+      later = AsyncResource.bind(() =>
+        config.updateNodeSettings({ nodeHeadline: 'Stale callback' })
+      );
     });
     await withSettingsChange(file, async () => {
       expect(later).toThrow('in progress');
@@ -114,45 +118,46 @@ describe('settings concurrency and durable CDN state', () => {
     expect(config.nodeSettings.nodeHeadline).toBe(initial().nodeHeadline);
     expect(JSON.parse(fs.readFileSync(file, 'utf8')).nodeHeadline).toBe(initial().nodeHeadline);
   });
-  it('treats missing journals as empty and projects only safe transition status', () => {
+  it('treats missing journals as empty and projects only safe transition status', async () => {
     const file = path.join(directory, 'settings.json');
-    expect(readCdnJournal(file)).toEqual({ version: 1, current: null, originals: {} });
-    expect(cdnStatus(file)).toBeNull();
-    expect(hasPendingCdn(file)).toBe(false);
-    writeCdnJournal(file, record());
-    expect(hasPendingCdn(file)).toBe(true);
-    expect(cdnStatus(file)).toEqual({
+    expect(await readCdnJournal(file)).toEqual({ version: 1, current: null, originals: {} });
+    expect(await cdnStatus(file)).toBeNull();
+    expect(await hasPendingCdn(file)).toBe(false);
+    await writeCdnJournal(file, record());
+    expect(await hasPendingCdn(file)).toBe(true);
+    expect(await cdnStatus(file)).toEqual({
       id: record().current!.id,
       targetEnabled: true,
       stage: 'provider',
     });
-    expect(JSON.stringify(cdnStatus(file))).not.toContain('PRIVATE');
+    expect(JSON.stringify(await cdnStatus(file))).not.toContain('PRIVATE');
     const completed = record();
     completed.current!.stage = 'complete';
-    writeCdnJournal(file, completed);
-    expect(hasPendingCdn(file)).toBe(false);
+    await writeCdnJournal(file, completed);
+    expect(await hasPendingCdn(file)).toBe(false);
     expect(publicAddressOf(completed.current!.publicAddress)).toEqual(
       completed.current!.publicAddress
     );
   });
   it.each(['{invalid', JSON.stringify({ version: 2 })])(
     'fails closed on corrupt journals %s',
-    (contents) => {
+    async (contents) => {
       const file = path.join(directory, 'settings.json');
-      fs.writeFileSync(file + '.cdn-private.json', contents);
-      expect(() => readCdnJournal(file)).toThrow('Repair the recovery journal');
+      await writeRecovery(file, 'cdn', contents);
+      await expect(readCdnJournal(file)).rejects.toThrow('Repair the recovery journal');
     }
   );
-  it('cleans temporary files and retains the committed journal when rename fails', () => {
+  it('retains committed recovery state when a database write fails', async () => {
     const file = path.join(directory, 'settings.json');
-    writeCdnJournal(file, record());
-    const rename = vi.spyOn(fs, 'renameSync').mockImplementationOnce(() => {
-      throw new Error('cannot commit');
-    });
-    expect(() => writeCdnJournal(file, { ...record(), current: null })).toThrow('cannot commit');
-    rename.mockRestore();
-    expect(readCdnJournal(file).current).not.toBeNull();
-    expect(fs.readdirSync(directory)).toEqual(['settings.json.cdn-private.json']);
+    await writeCdnJournal(file, record());
+    const write = vi
+      .spyOn(OperationalDatabase.prototype, 'query')
+      .mockRejectedValueOnce(new Error('cannot commit'));
+    await expect(writeCdnJournal(file, { ...record(), current: null })).rejects.toThrow(
+      'cannot commit'
+    );
+    write.mockRestore();
+    expect((await readCdnJournal(file)).current).not.toBeNull();
   });
 });
 
@@ -160,27 +165,34 @@ import { rewindCdnAfterRestart } from '@/utils/cdn-journal.js';
 
 it.each(['provider', 'settings', 'media', 'purge', 'tunnel', 'complete'] as const)(
   're-arms media and final invalidation after restart from %s',
-  (stage) => {
+  async (stage) => {
     const file = path.join(directory, 'settings.json');
     const state = record();
     state.current!.stage = stage;
-    writeCdnJournal(file, state);
-    rewindCdnAfterRestart(file);
-    expect(readCdnJournal(file).current!.stage).toBe(
+    await writeCdnJournal(file, state);
+    await rewindCdnAfterRestart(file);
+    expect((await readCdnJournal(file)).current!.stage).toBe(
       stage === 'purge' || stage === 'tunnel' ? 'media' : stage
     );
   }
 );
-it('does not invent recovery during an ordinary startup', () => {
+it('does not invent recovery during an ordinary startup', async () => {
   const file = path.join(directory, 'settings.json');
-  rewindCdnAfterRestart(file);
-  expect(fs.readdirSync(directory)).toEqual([]);
+  await rewindCdnAfterRestart(file);
+  const db = operationalForPath(file);
+  try {
+    expect(await db.query('SELECT * FROM node_recovery')).toEqual([]);
+  } finally {
+    await db.close();
+  }
 });
-
 
 it('persists name and headline independently across reloads', () => {
   const file = path.join(directory, 'identity-settings.json');
-  fs.writeFileSync(file, JSON.stringify({ ...initial(), nodeName: 'Existing name', nodeHeadline: 'Existing headline' }));
+  fs.writeFileSync(
+    file,
+    JSON.stringify({ ...initial(), nodeName: 'Existing name', nodeHeadline: 'Existing headline' })
+  );
   const config = worker(file);
   config.reloadNodeSettings(true);
   config.updateNodeSettings({ nodeName: 'New name' });
@@ -191,5 +203,8 @@ it('persists name and headline independently across reloads', () => {
   config.reloadNodeSettings(true);
   expect(config.nodeSettings.nodeName).toBe('New name');
   expect(config.nodeSettings.nodeHeadline).toBe('New headline');
-  expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toMatchObject({ nodeName: 'New name', nodeHeadline: 'New headline' });
+  expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toMatchObject({
+    nodeName: 'New name',
+    nodeHeadline: 'New headline',
+  });
 });

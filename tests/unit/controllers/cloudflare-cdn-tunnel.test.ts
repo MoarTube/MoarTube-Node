@@ -1,3 +1,5 @@
+import { operationalForPath, writeRecovery } from '@/database/recovery.js';
+import { OperationalDatabase } from '@/database/operational.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -164,13 +166,13 @@ import {
   beginRemoteWrite,
   finishRemoteWrite,
 } from '@/utils/distribution-admission.js';
-const journal = () => readCdnJournal(mocks.config().paths.nodeSettingsPath);
-const retry = (transitionId = journal().current?.id) =>
+const journal = async () => await readCdnJournal(mocks.config().paths.nodeSettingsPath);
+const retry = async (transitionId?: string) =>
   app.inject({
     method: 'POST',
     url: '/settings/cloudflare/retry',
     headers: { authorization: 'Bearer test' },
-    payload: { transitionId },
+    payload: { transitionId: transitionId ?? (await journal()).current?.id },
   });
 
 describe('durable CDN lifecycle', () => {
@@ -210,8 +212,12 @@ describe('durable CDN lifecycle', () => {
       { rules: null, settings: [] },
       { rules: [], settings: [] }
     );
-    expect(journal().originals).toEqual({});
-    expect(journal().current).toMatchObject({ stage: 'complete', source: null, target: null });
+    expect((await journal()).originals).toEqual({});
+    expect((await journal()).current).toMatchObject({
+      stage: 'complete',
+      source: null,
+      target: null,
+    });
   });
 
   it.each([
@@ -259,7 +265,7 @@ describe('durable CDN lifecycle', () => {
       }
       const response = await configure();
       expect(response.statusCode).toBe(502);
-      const transition = journal().current!;
+      const transition = (await journal()).current!;
       expect(transition.targetEnabled).toBe(true);
       expect(response.json().cdnTransition.id).toBe(transition.id);
       expect(response.json().cloudflareAddressMigrationPending).toBe(true);
@@ -269,7 +275,7 @@ describe('durable CDN lifecycle', () => {
       if (stage === 'media')
         fs.rmdirSync(path.join(directory, 'video', 'adaptive', 'm3u8', 'manifest-720p.m3u8'));
       expect((await retry()).statusCode).toBe(200);
-      expect(journal().current).toMatchObject({
+      expect((await journal()).current).toMatchObject({
         id: transition.id,
         tunnelName: transition.tunnelName,
         stage: 'complete',
@@ -314,7 +320,7 @@ describe('durable CDN lifecycle', () => {
         });
       }
       expect((await clear()).statusCode).toBe(502);
-      const transition = journal().current!;
+      const transition = (await journal()).current!;
       expect(transition.targetEnabled).toBe(false);
       expect(transition.source).toMatchObject({
         zone: payload.cloudflareZoneId,
@@ -333,7 +339,7 @@ describe('durable CDN lifecycle', () => {
           payload.cloudflareGlobalApiKey
         );
       expect(settings.cloudflarePublicAddressBackup).toBeNull();
-      expect(journal().current).toMatchObject({ id: transition.id, stage: 'complete' });
+      expect((await journal()).current).toMatchObject({ id: transition.id, stage: 'complete' });
     }
   );
 
@@ -345,7 +351,7 @@ describe('durable CDN lifecycle', () => {
     });
     expect((await clear()).statusCode).toBe(502);
     expect(settings.cloudflareZoneId).toBe('');
-    const persisted = journal();
+    const persisted = await journal();
     expect(persisted.current).toMatchObject({
       stage: 'media',
       source: { zone: 'zone', key: 'key' },
@@ -369,7 +375,7 @@ describe('durable CDN lifecycle', () => {
     expect((await retry('old')).statusCode).toBe(409);
     expect((await retry(undefined)).statusCode).toBe(400);
     await configure();
-    const previous = journal().current!.id;
+    const previous = (await journal()).current!.id;
     const before = cloudflare.retryPendingPurges.mock.calls.length;
     cloudflare.retryPendingPurges.mockRejectedValue(new Error('must not execute'));
     expect((await retry(previous)).statusCode).toBe(200);
@@ -397,7 +403,7 @@ describe('durable CDN lifecycle', () => {
       ];
       expect((await configure()).statusCode).toBe(400);
       expect((await clear()).statusCode).toBe(400);
-      expect(journal().current).toBeNull();
+      expect((await journal()).current).toBeNull();
     }
   );
 
@@ -413,7 +419,7 @@ describe('durable CDN lifecycle', () => {
   it('keeps remote write leases across restart, releases only after finish, and rejects late admission after finish', async () => {
     await beginRemoteWrite('video', 'write');
     expect((await configure()).statusCode).toBe(409);
-    finishRemoteWrite('video', 'write');
+    await finishRemoteWrite('video', 'write');
     await expect(beginRemoteWrite('video', 'write')).rejects.toThrow('already finished');
     expect((await configure()).statusCode).toBe(200);
   });
@@ -428,11 +434,11 @@ describe('durable CDN lifecycle', () => {
     settings.cloudflareGlobalApiKey = 'key';
     settings.cloudflareEmailAddress = 'email';
     expect((await clear()).statusCode).toBe(502);
-    expect(hasPendingCdn(mocks.config().paths.nodeSettingsPath)).toBe(true);
+    expect(await hasPendingCdn(mocks.config().paths.nodeSettingsPath)).toBe(true);
   });
 
   it('fails closed on unreadable journal state', async () => {
-    fs.writeFileSync(mocks.config().paths.nodeSettingsPath + '.cdn-private.json', '{broken');
+    await writeRecovery(mocks.config().paths.nodeSettingsPath, 'cdn', '{broken');
     expect((await configure()).statusCode).toBe(409);
     await expect(withJobAdmission(async () => {})).rejects.toThrow('journal');
   });
@@ -441,18 +447,21 @@ describe('durable CDN lifecycle', () => {
     cloudflare.setCdnConfiguration.mockRejectedValueOnce(new Error('first failure'));
     await configure();
     const pathName = mocks.config().paths.nodeSettingsPath;
-    const rename = fs.renameSync;
+    const query = OperationalDatabase.prototype.query;
     let failed = false;
-    const spy = vi.spyOn(fs, 'renameSync').mockImplementation((source, target) => {
+    const spy = vi.spyOn(OperationalDatabase.prototype, 'query').mockImplementation(async function (
+      sql,
+      parameters = []
+    ) {
       if (
         !failed &&
-        String(target).endsWith('.cdn-private.json') &&
-        JSON.parse(fs.readFileSync(source, 'utf8')).current.stage === 'complete'
+        sql.startsWith('INSERT INTO node_recovery') &&
+        JSON.parse(String(parameters[1])).current?.stage === 'complete'
       ) {
         failed = true;
-        throw new Error('disk unavailable');
+        throw new Error('database unavailable');
       }
-      rename(source, target);
+      return query.call(this, sql, parameters);
     });
     try {
       expect((await retry()).statusCode).toBe(502);
@@ -460,7 +469,7 @@ describe('durable CDN lifecycle', () => {
       spy.mockRestore();
     }
     expect(settings.cloudflareAddressMigrationPending).toBe(false);
-    expect(hasPendingCdn(pathName)).toBe(true);
+    expect(await hasPendingCdn(pathName)).toBe(true);
     await expect(withJobAdmission(async () => {})).rejects.toThrow('retry');
     expect((await retry()).statusCode).toBe(200);
   });
@@ -474,7 +483,7 @@ it.each([false, 'offline'])(
     if (failure === false) mocks.credentials.mockResolvedValueOnce(false);
     else mocks.credentials.mockRejectedValueOnce(failure);
     expect((await configure()).statusCode).toBe(400);
-    expect(journal().current).toBeNull();
+    expect((await journal()).current).toBeNull();
   }
 );
 it('rejects malformed configure calls and direct retry calls without an ID', async () => {
@@ -505,7 +514,7 @@ it('refuses distribution edits during pending recovery and refuses a changed sto
     s3Config: { bucketName: 'new', s3ProviderClientConfig: { region: 'region' } },
   };
   expect((await retry()).statusCode).toBe(502);
-  expect(journal().current?.stage).toBe('provider');
+  expect((await journal()).current?.stage).toBe('provider');
 });
 it('refuses an enable on an untracked legacy zone rather than inventing original settings', async () => {
   settings.isCloudflareCdnEnabled = true;
@@ -522,7 +531,7 @@ it('rejects a stale running named connector and leaves recovery pending', async 
     name: 'previous-name',
   });
   expect((await configure()).statusCode).toBe(502);
-  expect(journal().current?.stage).toBe('tunnel');
+  expect((await journal()).current?.stage).toBe('tunnel');
   expect((await retry()).statusCode).toBe(200);
 });
 it('detects preference changes between reconciliation and completion commit', async () => {
@@ -538,14 +547,14 @@ it('detects preference changes between reconciliation and completion commit', as
     return result;
   });
   expect((await configure()).statusCode).toBe(502);
-  expect(hasPendingCdn(mocks.config().paths.nodeSettingsPath)).toBe(true);
+  expect(await hasPendingCdn(mocks.config().paths.nodeSettingsPath)).toBe(true);
   expect((await retry()).statusCode).toBe(200);
 });
 it('clears an initially disabled configuration with no tunnel name without inventing a name', async () => {
   settings.isCloudflareTunnelEnabled = false;
   delete settings.cloudflareTunnelName;
   expect((await clear()).statusCode).toBe(200);
-  expect(journal().current?.tunnelName).toBe('');
+  expect((await journal()).current?.tunnelName).toBe('');
 });
 it('releases transition admission even if the HTTP response never finishes', async () => {
   const controller = new SettingsController(
@@ -597,9 +606,9 @@ it('fails closed if the saved transition disappears after admission', async () =
   cloudflare.setCdnConfiguration.mockRejectedValueOnce(new Error('prepare'));
   await configure();
   let reads = 0;
-  mocks.config().reloadNodeSettings.mockImplementation(() => {
+  mocks.config().reloadNodeSettings.mockImplementation(async () => {
     if (++reads === 2)
-      writeCdnJournal(mocks.config().paths.nodeSettingsPath, {
+      await writeCdnJournal(mocks.config().paths.nodeSettingsPath, {
         version: 1,
         current: null,
         originals: {},
@@ -669,7 +678,7 @@ it('guards HTTP uploads and releases remote write activity only after successful
   expect((await clear()).statusCode).toBe(200);
   await beginRemoteWrite('video', 'owned');
   await expect(beginRemoteWrite('different', 'owned')).rejects.toThrow('another video');
-  finishRemoteWrite('video', 'owned');
+  await finishRemoteWrite('video', 'owned');
   await controller.beginStorageActivity(
     { params, body: { activityId: 'write' } } as never,
     reply as never
@@ -702,7 +711,7 @@ import { rewindCdnAfterRestart } from '@/utils/cdn-journal.js';
 
 it('recovers the final old-zone purge after a real process dies at the post-media purge boundary', async () => {
   await configure();
-  const state = journal();
+  const state = await journal();
   const transition = state.current!;
   Object.assign(transition, {
     targetEnabled: false,
@@ -711,7 +720,7 @@ it('recovers the final old-zone purge after a real process dies at the post-medi
     target: null,
     publicAddress: transition.originalAddress,
   });
-  writeCdnJournal(mocks.config().paths.nodeSettingsPath, state);
+  await writeCdnJournal(mocks.config().paths.nodeSettingsPath, state);
   Object.assign(settings, transition.originalAddress, {
     cloudflareAddressMigrationPending: true,
     isCloudflareCdnEnabled: false,
@@ -759,8 +768,11 @@ it('recovers the final old-zone purge after a real process dies at the post-medi
     zone: 'zone',
     key: 'key',
   });
-  expect(journal().current).toMatchObject({ stage: 'purge', source: { zone: 'zone', key: 'key' } });
-  rewindCdnAfterRestart(file);
+  expect((await journal()).current).toMatchObject({
+    stage: 'purge',
+    source: { zone: 'zone', key: 'key' },
+  });
+  await rewindCdnAfterRestart(file);
   cloudflare.purgeEntireCacheWithCredentials.mockClear();
   expect((await retry()).statusCode).toBe(200);
   expect(cloudflare.purgeEntireCacheWithCredentials).toHaveBeenCalledWith(
@@ -776,7 +788,7 @@ it('reapplies the saved public address and repeats invalidation when the summary
     new Error('pending final purge')
   );
   expect((await configure()).statusCode).toBe(502);
-  const intended = journal().current!.publicAddress;
+  const intended = (await journal()).current!.publicAddress;
   settings.publicNodeAddress = 'diverged.test';
   settings.publicNodePort = 1234;
   cloudflare.purgeEntireCacheWithCredentials.mockClear();

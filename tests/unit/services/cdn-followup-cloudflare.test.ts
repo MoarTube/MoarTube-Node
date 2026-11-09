@@ -122,11 +122,23 @@ describe('follow-up Cloudflare correctness', () => {
       service,
       {} as never
     );
-    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = {
+      header: vi.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+    };
     try {
-      await expect(withCloudflareDeadline(
-        () => withSettingsChange(state.config.paths.nodeSettingsPath, () => service.withConfigurationRollback('email', 'zone', 'key', () => service.setCdnConfiguration('email', 'zone', 'key'))), 50
-      )).rejects.toThrow('previous zone configuration was restored');
+      await expect(
+        withCloudflareDeadline(
+          () =>
+            withSettingsChange(state.config.paths.nodeSettingsPath, () =>
+              service.withConfigurationRollback('email', 'zone', 'key', () =>
+                service.setCdnConfiguration('email', 'zone', 'key')
+              )
+            ),
+          50
+        )
+      ).rejects.toThrow('previous zone configuration was restored');
       expect(stalledSignal!.aborted).toBe(true);
       expect(recoverySignal).not.toBe(stalledSignal);
       expect(recoverySignal!.aborted).toBe(false);
@@ -184,8 +196,10 @@ describe('follow-up Cloudflare correctness', () => {
         );
       const purge = (files: string[]) => (service as any).purgeCache(files, 'regression');
       const first = purge(['https://node.example.com/old']);
+      await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
       const second = purge(['https://node.example.com/old']);
       const rejected = expect(second).rejects.toThrow('incomplete');
+      await vi.waitFor(() => expect(fail).toBeTypeOf('function'));
       if (reversed) {
         fail({ response: { status: 403 } });
         await rejected;

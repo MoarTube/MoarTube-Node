@@ -14,6 +14,14 @@ import {
   type LastCheckedContentTrackerValidated,
 } from '@/config/schema.js';
 
+it('defaults standalone Node network access on and preserves explicit opt-out', () => {
+  const setting = NodeSettingsSchema.shape.allowRemoteConnections;
+  expect(setting.parse(undefined)).toBe(true);
+  expect(setting.parse(false)).toBe(false);
+  expect(setting.parse(true)).toBe(true);
+  expect(setting.safeParse('false').success).toBe(false);
+});
+
 describe('config/schema.ts', () => {
   describe('Database Configuration Schemas', () => {
     describe('PostgresConfigSchema', () => {

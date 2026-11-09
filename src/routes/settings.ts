@@ -69,6 +69,17 @@ export function settingsRoutes(
     },
     controller.setWorkerCount
   );
+  fastify.post(
+    '/network/access',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        tags: ['Settings'],
+        body: z.object({ allowRemoteConnections: z.boolean() }).strict(),
+      },
+    },
+    controller.setNetworkAccess
+  );
   // ============================================================================
   // Settings Root
   // ============================================================================

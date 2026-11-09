@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import path from 'node:path';
+import { componentDirectory } from '../../../src/config/data-layout.cjs';
 import { Paths, initializePaths, type PathConfig } from '@/config/paths.js';
 
 // Mock the env module
@@ -65,32 +66,32 @@ describe('config/paths.ts', () => {
     it('should use entryPointDir for public paths when bundled (dist directory)', () => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
-      
+
       // Simulate bundled build where entryPointDir is the dist directory
       const paths = Paths.initialize('/project', true, '/project/dist');
-      
+
       // Public directory should be in dist folder
       expect(paths.publicDirectoryPath).toBe(path.join('/project/dist', 'public'));
       expect(paths.viewsDirectoryPath).toBe(path.join('/project/dist', 'public', 'views'));
       // Data directory still follows normal resolution (developer mode)
-      expect(paths.dataDirectoryPath).toBe(path.join('/project', 'data'));
+      expect(paths.dataDirectoryPath).toBe(componentDirectory('node'));
     });
 
     it('should use entryPointDir when path ends with dist', () => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
-      
+
       const paths = Paths.initialize('/app', true, '/app/output/dist');
-      
+
       expect(paths.publicDirectoryPath).toBe(path.join('/app/output/dist', 'public'));
     });
 
     it('should use baseDir for public paths when entryPointDir is undefined', () => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
-      
+
       const paths = Paths.initialize('/app', true, undefined);
-      
+
       expect(paths.publicDirectoryPath).toBe(path.join('/app', 'public'));
       expect(paths.viewsDirectoryPath).toBe(path.join('/app', 'public', 'views'));
     });
@@ -98,10 +99,10 @@ describe('config/paths.ts', () => {
     it('should use baseDir for public paths when entryPointDir does not contain dist', () => {
       mockEnv = { isDockerEnvironment: false };
       mockGetEnv.mockReturnValue(mockEnv);
-      
+
       // entryPointDir that doesn't indicate a bundled build
       const paths = Paths.initialize('/app', true, '/app/src');
-      
+
       expect(paths.publicDirectoryPath).toBe(path.join('/app', 'public'));
     });
   });
@@ -118,20 +119,30 @@ describe('config/paths.ts', () => {
     it('should construct base directory paths correctly', () => {
       expect(paths.publicDirectoryPath).toBe(path.join('/app', 'public'));
       expect(paths.viewsDirectoryPath).toBe(path.join('/app', 'public', 'views'));
-      expect(paths.dataDirectoryPath).toBe(path.join('/app', 'data'));
+      expect(paths.dataDirectoryPath).toBe(path.join(componentDirectory('node')));
     });
 
     it('should construct data subdirectory paths correctly', () => {
-      expect(paths.imagesDirectoryPath).toBe(path.join('/app', 'data', 'images'));
-      expect(paths.videosDirectoryPath).toBe(path.join('/app', 'data', 'media', 'videos'));
-      expect(paths.databaseDirectoryPath).toBe(path.join('/app', 'data', 'db'));
-      expect(paths.certificatesDirectoryPath).toBe(path.join('/app', 'data', 'certificates'));
+      expect(paths.imagesDirectoryPath).toBe(path.join(componentDirectory('node'), 'images'));
+      expect(paths.videosDirectoryPath).toBe(
+        path.join(componentDirectory('node'), 'media', 'videos')
+      );
+      expect(paths.databaseDirectoryPath).toBe(path.join(componentDirectory('node'), 'db'));
+      expect(paths.certificatesDirectoryPath).toBe(
+        path.join(componentDirectory('node'), 'certificates')
+      );
     });
 
     it('should construct config file paths correctly', () => {
-      expect(paths.nodeSettingsPath).toBe(path.join('/app', 'data', '_node_settings.json'));
-      expect(paths.lastCheckedContentTrackerPath).toBe(path.join('/app', 'data', '_last_checked_content_tracker.json'));
-      expect(paths.databaseFilePath).toBe(path.join('/app', 'data', 'db', 'node_db.sqlite'));
+      expect(paths.nodeSettingsPath).toBe(
+        path.join(componentDirectory('node'), '_node_settings.json')
+      );
+      expect(paths.lastCheckedContentTrackerPath).toBe(
+        path.join(componentDirectory('node'), '_last_checked_content_tracker.json')
+      );
+      expect(paths.databaseFilePath).toBe(
+        path.join(componentDirectory('node'), 'db', 'node_db.sqlite')
+      );
     });
   });
 
@@ -145,20 +156,24 @@ describe('config/paths.ts', () => {
     });
 
     it('should use /data as data directory in Docker environment', () => {
-      expect(paths.dataDirectoryPath).toBe('/data');
+      expect(paths.dataDirectoryPath).toBe('/data/MoarTube/node');
     });
 
     it('should construct data subdirectory paths correctly in Docker', () => {
-      expect(paths.imagesDirectoryPath).toBe(path.join('/data', 'images'));
-      expect(paths.videosDirectoryPath).toBe(path.join('/data', 'media', 'videos'));
-      expect(paths.databaseDirectoryPath).toBe(path.join('/data', 'db'));
-      expect(paths.certificatesDirectoryPath).toBe(path.join('/data', 'certificates'));
+      expect(paths.imagesDirectoryPath).toBe(path.join('/data/MoarTube/node', 'images'));
+      expect(paths.videosDirectoryPath).toBe(path.join('/data/MoarTube/node', 'media', 'videos'));
+      expect(paths.databaseDirectoryPath).toBe(path.join('/data/MoarTube/node', 'db'));
+      expect(paths.certificatesDirectoryPath).toBe(
+        path.join('/data/MoarTube/node', 'certificates')
+      );
     });
 
     it('should construct config file paths correctly in Docker', () => {
-      expect(paths.nodeSettingsPath).toBe(path.join('/data', '_node_settings.json'));
-      expect(paths.lastCheckedContentTrackerPath).toBe(path.join('/data', '_last_checked_content_tracker.json'));
-      expect(paths.databaseFilePath).toBe(path.join('/data', 'db', 'node_db.sqlite'));
+      expect(paths.nodeSettingsPath).toBe(path.join('/data/MoarTube/node', '_node_settings.json'));
+      expect(paths.lastCheckedContentTrackerPath).toBe(
+        path.join('/data/MoarTube/node', '_last_checked_content_tracker.json')
+      );
+      expect(paths.databaseFilePath).toBe(path.join('/data/MoarTube/node', 'db', 'node_db.sqlite'));
     });
   });
 
@@ -205,7 +220,7 @@ describe('config/paths.ts', () => {
       const paths = Paths.initialize('/app', false);
 
       // Empty string should fall back to Docker's /data
-      expect(paths.dataDirectoryPath).toBe('/data');
+      expect(paths.dataDirectoryPath).toBe('/data/MoarTube/node');
     });
 
     it('should handle Windows-style MOARTUBE_DATA_DIR paths', () => {
@@ -231,43 +246,76 @@ describe('config/paths.ts', () => {
 
     it('should return correct video directory path', () => {
       const videoId = 'abc123';
-      const expected = path.join('/app', 'data', 'media', 'videos', videoId);
+      const expected = path.join(componentDirectory('node'), 'media', 'videos', videoId);
       expect(paths.getVideoDirectoryPath(videoId)).toBe(expected);
     });
 
     it('should return correct video images directory path', () => {
       const videoId = 'abc123';
-      const expected = path.join('/app', 'data', 'media', 'videos', videoId, 'images');
+      const expected = path.join(componentDirectory('node'), 'media', 'videos', videoId, 'images');
       expect(paths.getVideoImagesDirectoryPath(videoId)).toBe(expected);
     });
 
     it('should return correct video adaptive directory path', () => {
       const videoId = 'abc123';
-      const expected = path.join('/app', 'data', 'media', 'videos', videoId, 'adaptive');
+      const expected = path.join(
+        componentDirectory('node'),
+        'media',
+        'videos',
+        videoId,
+        'adaptive'
+      );
       expect(paths.getVideoAdaptiveDirectoryPath(videoId)).toBe(expected);
     });
 
     it('should return correct video progressive directory path', () => {
       const videoId = 'abc123';
-      const expected = path.join('/app', 'data', 'media', 'videos', videoId, 'progressive');
+      const expected = path.join(
+        componentDirectory('node'),
+        'media',
+        'videos',
+        videoId,
+        'progressive'
+      );
       expect(paths.getVideoProgressiveDirectoryPath(videoId)).toBe(expected);
     });
 
     it('should return correct video thumbnail path', () => {
       const videoId = 'abc123';
-      const expected = path.join('/app', 'data', 'media', 'videos', videoId, 'images', 'thumbnail.jpg');
+      const expected = path.join(
+        componentDirectory('node'),
+        'media',
+        'videos',
+        videoId,
+        'images',
+        'thumbnail.jpg'
+      );
       expect(paths.getVideoThumbnailPath(videoId)).toBe(expected);
     });
 
     it('should return correct video preview path', () => {
       const videoId = 'abc123';
-      const expected = path.join('/app', 'data', 'media', 'videos', videoId, 'images', 'preview.jpg');
+      const expected = path.join(
+        componentDirectory('node'),
+        'media',
+        'videos',
+        videoId,
+        'images',
+        'preview.jpg'
+      );
       expect(paths.getVideoPreviewPath(videoId)).toBe(expected);
     });
 
     it('should return correct video poster path', () => {
       const videoId = 'abc123';
-      const expected = path.join('/app', 'data', 'media', 'videos', videoId, 'images', 'poster.jpg');
+      const expected = path.join(
+        componentDirectory('node'),
+        'media',
+        'videos',
+        videoId,
+        'images',
+        'poster.jpg'
+      );
       expect(paths.getVideoPosterPath(videoId)).toBe(expected);
     });
   });
@@ -282,7 +330,7 @@ describe('config/paths.ts', () => {
     });
 
     it('should return correct custom icon path', () => {
-      const expected = path.join('/app', 'data', 'images', 'icon.png');
+      const expected = path.join(componentDirectory('node'), 'images', 'icon.png');
       expect(paths.getCustomIconPath()).toBe(expected);
     });
 
@@ -292,7 +340,7 @@ describe('config/paths.ts', () => {
     });
 
     it('should return correct custom avatar path', () => {
-      const expected = path.join('/app', 'data', 'images', 'avatar.png');
+      const expected = path.join(componentDirectory('node'), 'images', 'avatar.png');
       expect(paths.getCustomAvatarPath()).toBe(expected);
     });
 
@@ -302,7 +350,7 @@ describe('config/paths.ts', () => {
     });
 
     it('should return correct custom banner path', () => {
-      const expected = path.join('/app', 'data', 'images', 'banner.png');
+      const expected = path.join(componentDirectory('node'), 'images', 'banner.png');
       expect(paths.getCustomBannerPath()).toBe(expected);
     });
 
@@ -322,15 +370,18 @@ describe('config/paths.ts', () => {
 
       expect(obj).toEqual({
         publicDirectoryPath: path.join('/app', 'public'),
-        dataDirectoryPath: path.join('/app', 'data'),
+        dataDirectoryPath: path.join(componentDirectory('node')),
         viewsDirectoryPath: path.join('/app', 'public', 'views'),
-        imagesDirectoryPath: path.join('/app', 'data', 'images'),
-        videosDirectoryPath: path.join('/app', 'data', 'media', 'videos'),
-        databaseDirectoryPath: path.join('/app', 'data', 'db'),
-        certificatesDirectoryPath: path.join('/app', 'data', 'certificates'),
-        nodeSettingsPath: path.join('/app', 'data', '_node_settings.json'),
-        lastCheckedContentTrackerPath: path.join('/app', 'data', '_last_checked_content_tracker.json'),
-        databaseFilePath: path.join('/app', 'data', 'db', 'node_db.sqlite'),
+        imagesDirectoryPath: path.join(componentDirectory('node'), 'images'),
+        videosDirectoryPath: path.join(componentDirectory('node'), 'media', 'videos'),
+        databaseDirectoryPath: path.join(componentDirectory('node'), 'db'),
+        certificatesDirectoryPath: path.join(componentDirectory('node'), 'certificates'),
+        nodeSettingsPath: path.join(componentDirectory('node'), '_node_settings.json'),
+        lastCheckedContentTrackerPath: path.join(
+          componentDirectory('node'),
+          '_last_checked_content_tracker.json'
+        ),
+        databaseFilePath: path.join(componentDirectory('node'), 'db', 'node_db.sqlite'),
       });
 
       // Should be a plain object, not the Paths instance
@@ -344,9 +395,9 @@ describe('config/paths.ts', () => {
 
       const obj = paths.toObject();
 
-      expect(obj.dataDirectoryPath).toBe('/data');
-      expect(obj.imagesDirectoryPath).toBe(path.join('/data', 'images'));
-      expect(obj.videosDirectoryPath).toBe(path.join('/data', 'media', 'videos'));
+      expect(obj.dataDirectoryPath).toBe('/data/MoarTube/node');
+      expect(obj.imagesDirectoryPath).toBe(path.join('/data/MoarTube/node', 'images'));
+      expect(obj.videosDirectoryPath).toBe(path.join('/data/MoarTube/node', 'media', 'videos'));
     });
   });
 
@@ -358,7 +409,7 @@ describe('config/paths.ts', () => {
 
       // Node.js path.join should handle platform-specific separators
       expect(paths.publicDirectoryPath).toContain('public');
-      expect(paths.dataDirectoryPath).toContain('data');
+      expect(paths.dataDirectoryPath).toBe(componentDirectory('node'));
     });
 
     it('should handle relative paths correctly', () => {
@@ -367,7 +418,7 @@ describe('config/paths.ts', () => {
       const paths = Paths.initialize('./app', true); // Developer mode for local data path
 
       expect(paths.publicDirectoryPath).toBe(path.join('./app', 'public'));
-      expect(paths.dataDirectoryPath).toBe(path.join('./app', 'data'));
+      expect(paths.dataDirectoryPath).toBe(componentDirectory('node'));
     });
   });
 
@@ -393,7 +444,9 @@ describe('config/paths.ts', () => {
 
         const paths = Paths.initialize('/app', false); // Production mode (isDevelopment = false)
 
-        expect(paths.dataDirectoryPath).toBe(path.join('C:\\Users\\Test\\AppData\\Roaming', 'moartube-node'));
+        expect(paths.dataDirectoryPath).toBe(
+          path.join('C:\\Users\\Test\\AppData\\Roaming', 'MoarTube', 'node')
+        );
       });
 
       it('should throw error when APPDATA is not set on Windows', () => {
@@ -429,7 +482,9 @@ describe('config/paths.ts', () => {
 
         const paths = Paths.initialize('/app', false); // Production mode
 
-        expect(paths.dataDirectoryPath).toBe(path.join('/Users/testuser', 'Library', 'Application Support', 'moartube-node'));
+        expect(paths.dataDirectoryPath).toBe(
+          path.posix.join('/Users/testuser', 'Library', 'Application Support', 'MoarTube', 'node')
+        );
       });
 
       it('should throw error when HOME is not set on macOS', () => {
@@ -465,7 +520,9 @@ describe('config/paths.ts', () => {
 
         const paths = Paths.initialize('/app', false); // Production mode
 
-        expect(paths.dataDirectoryPath).toBe(path.join('/home/testuser', '.local', 'share', 'moartube-node'));
+        expect(paths.dataDirectoryPath).toBe(
+          path.posix.join('/home/testuser', '.local', 'share', 'MoarTube', 'node')
+        );
       });
 
       it('should throw error when HOME is not set on Linux', () => {
@@ -498,7 +555,9 @@ describe('config/paths.ts', () => {
 
         const paths = Paths.initialize('/app', false); // Production mode
 
-        expect(paths.dataDirectoryPath).toBe(path.join('/home/testuser', '.local', 'share', 'moartube-node'));
+        expect(paths.dataDirectoryPath).toBe(
+          path.posix.join('/home/testuser', '.local', 'share', 'MoarTube', 'node')
+        );
       });
     });
   });

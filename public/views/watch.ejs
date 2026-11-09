@@ -164,6 +164,7 @@
 
       .btn.recommendation-category-button {
         font-size: 13px;
+        font-weight: 700;
       }
 
       #overflow-dropdown-button.show:hover {
@@ -631,7 +632,7 @@
         --watch-text: #0a0a0a;
         --watch-button-text: #000;
         --watch-tag-background: #fff;
-        --watch-tag-selected-background: #fff;
+        --watch-tag-selected-background: #cb0c9f;
         --watch-close-filter: none;
         --watch-muted: #737373;
         --watch-quote: #789922;
@@ -851,6 +852,10 @@
       .btn.recommendation-category-button-selected {
         background-color: var(--watch-tag-selected-background);
         box-shadow: inset 0 -3px 0 #cb0c9f;
+        --watch-button-text: #fff;
+        --bs-btn-bg: var(--watch-tag-selected-background);
+        --bs-btn-hover-bg: var(--watch-tag-selected-background);
+        --bs-btn-active-bg: var(--watch-tag-selected-background);
       }
       .dropdown-menu {
         --bs-dropdown-bg: var(--watch-surface);
@@ -867,6 +872,12 @@
         border-color: var(--watch-border);
       }
       .swal2-styled > a { color: inherit !important; }
+      .modal .btn-primary,
+      .swal2-popup .btn-primary,
+      .swal2-popup .swal2-styled {
+        --watch-button-text: #fff;
+        color: #fff;
+      }
 
       /* Filled reactions and open actions keep white contents against magenta. */
       #video-like-button.btn-primary,

@@ -28,6 +28,8 @@ function builder(root: string, content: string): void {
     "import fs from 'node:fs';for(const name of ['coverage','data','dist','drizzle'])if(fs.existsSync(name))throw new Error('Preparation ran before cleanup: '+name);for(const dialect of ['sqlite','postgres']){fs.mkdirSync('drizzle/'+dialect,{recursive:true});fs.writeFileSync('drizzle/'+dialect+'/baseline.sql','fresh');}fs.writeFileSync('prepared','yes');"
   );
   mkdirSync(path.join(root, 'src'));
+  mkdirSync(path.join(root, 'src/config'));
+  copyFileSync('src/config/data-layout.cjs', path.join(root, 'src/config/data-layout.cjs'));
   writeFileSync(path.join(root, 'src/moartube-node.ts'), '');
   const dir = path.join(root, 'node_modules/tsup/dist');
   mkdirSync(dir, { recursive: true });
@@ -37,6 +39,7 @@ function builder(root: string, content: string): void {
 function start(root: string, args: string[] = []): ReturnType<typeof spawnSync> {
   return spawnSync(process.execPath, [path.join(root, 'bin/moartube-node-start'), ...args], {
     cwd: tmpdir(),
+    env: { ...process.env, MOARTUBE_DATA_ROOT: path.join(root, 'user-data') },
     encoding: 'utf8',
     timeout: 10_000,
   });

@@ -1,5 +1,8 @@
+import { operationalForPath, writeRecovery } from '@/database/recovery.js';
 import { writeCdnJournal } from '@/utils/cdn-journal.js';
-vi.mock('@/services/cloudflare-tunnel-runtime.js', () => ({ requestTunnelOperation: vi.fn(async () => ({ mode: 'none', status: 'stopped', name: '' })) }));
+vi.mock('@/services/cloudflare-tunnel-runtime.js', () => ({
+  requestTunnelOperation: vi.fn(async () => ({ mode: 'none', status: 'stopped', name: '' })),
+}));
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 import { mkdtemp, mkdir, writeFile, readFile, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -57,7 +60,10 @@ beforeEach(async () => {
       );
   }
   root = await mkdtemp(path.join(tmpdir(), 'moartube-cdn-followup-'));
-  await writeFile(path.join(root, '_media_url_origins.json'), JSON.stringify(['https://old.example', 'https://old']));
+  await writeFile(
+    path.join(root, '_media_url_origins.json'),
+    JSON.stringify(['https://old.example', 'https://old'])
+  );
   state.config = {
     paths: {
       dataDirectoryPath: root,
@@ -144,15 +150,17 @@ async function seed(recorded = true): Promise<void> {
 
 async function expireJournal(): Promise<void> {
   streams.close();
-  const directory = state.config.paths.nodeSettingsPath + '.stream-cleanup';
-  const name = (await readdir(directory))[0];
-  const file = path.join(directory, name ?? 'missing');
-  const job = JSON.parse(await readFile(file, 'utf8'));
+  const db = operationalForPath(state.config.paths.nodeSettingsPath);
+  const row = (
+    await db.query("SELECT key,value FROM node_recovery WHERE key LIKE 'cleanup:%'")
+  )[0]!;
+  await db.close();
+  const job = JSON.parse(row.value as string);
   job.deadline = Date.now() - 1;
   const meta = JSON.parse(video.meta);
   meta.streamCleanupAt = job.deadline;
   video.meta = JSON.stringify(meta);
-  await writeFile(file, JSON.stringify(job));
+  await writeRecovery(state.config.paths.nodeSettingsPath, row.key as string, JSON.stringify(job));
   streams = new StreamsService(
     logger as never,
     repository,
@@ -163,7 +171,16 @@ async function expireJournal(): Promise<void> {
     storage
   );
   await streams.recoverStreamCleanup();
-  await vi.waitFor(async () => expect(await readdir(directory)).toHaveLength(0));
+  await vi.waitFor(async () => {
+    const db = operationalForPath(state.config.paths.nodeSettingsPath);
+    try {
+      expect(
+        await db.query("SELECT key FROM node_recovery WHERE key LIKE 'cleanup:%'")
+      ).toHaveLength(0);
+    } finally {
+      await db.close();
+    }
+  });
 }
 
 describe('follow-up storage fixes against real Silo', () => {
@@ -176,9 +193,7 @@ describe('follow-up storage fixes against real Silo', () => {
       await a.put(prefix + type + '/manifests/manifest-master.m3u8', 'stale master');
       cloudflare.purgeVideo.mockImplementation(async () => {
         const master = await a.text(prefix + type + '/manifests/manifest-master.m3u8');
-        expect(master).toContain(
-          'manifest-720p.m3u8'
-        );
+        expect(master).toContain('manifest-720p.m3u8');
         expect(master).not.toContain('stale master');
       });
       const videos = new VideosService(
@@ -483,7 +498,11 @@ describe('follow-up storage fixes against real Silo', () => {
       cloudflare,
       {} as never
     );
-    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = {
+      header: vi.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+    };
     const operation = controller.storageConfigToggle(
       { body: { storageConfig: state.config.nodeSettings.storageConfig } } as never,
       reply as never
@@ -705,7 +724,9 @@ describe('follow-up storage fixes against real Silo', () => {
   it('rewrites real S3 manifests from CDN URLs to dotted-bucket HTTPS AWS path URLs when CDN is disabled', async () => {
     await seed();
     state.config.nodeSettings.isCloudflareTunnelEnabled = false;
-    state.config.updateNodeSettings = (patch: object) => { Object.assign(state.config.nodeSettings, patch); };
+    state.config.updateNodeSettings = (patch: object) => {
+      Object.assign(state.config.nodeSettings, patch);
+    };
     video.is_streaming = false;
     await storage.finalizeS3Stream('video123', ['720p'], true);
     state.config.nodeSettings.isCloudflareCdnEnabled = true;
@@ -736,7 +757,9 @@ describe('follow-up storage fixes against real Silo', () => {
       ['720p'],
       state.config.getExternalVideosBaseUrl()
     );
-    expect(await a.text(prefix + 'static/manifests/manifest-720p.m3u8')).toContain('../../720p/segments/');
+    expect(await a.text(prefix + 'static/manifests/manifest-720p.m3u8')).toContain(
+      '../../720p/segments/'
+    );
     cloudflare.withConfigurationRollback = async (
       _email: unknown,
       _zone: unknown,
@@ -745,17 +768,30 @@ describe('follow-up storage fixes against real Silo', () => {
     ) => operation();
     cloudflare.resetCdn = vi.fn();
     cloudflare.purgeEntireCacheWithCredentials = vi.fn();
-    Object.assign(state.config.nodeSettings, { cloudflareEmailAddress: 'email', cloudflareZoneId: 'zone', cloudflareGlobalApiKey: 'key' });
+    Object.assign(state.config.nodeSettings, {
+      cloudflareEmailAddress: 'email',
+      cloudflareZoneId: 'zone',
+      cloudflareGlobalApiKey: 'key',
+    });
     state.config.nodeSettings.publicNodeProtocol = 'https';
     state.config.nodeSettings.publicNodePort = 443;
     cloudflare.restoreCdnSnapshot = vi.fn();
     cloudflare.retryPendingPurges = vi.fn();
-    writeCdnJournal(state.config.paths.nodeSettingsPath, { version: 1, current: null, originals: {
-      [state.config.nodeSettings.cloudflareZoneId]: {
-        credentials: { email: state.config.nodeSettings.cloudflareEmailAddress, zone: state.config.nodeSettings.cloudflareZoneId, key: state.config.nodeSettings.cloudflareGlobalApiKey },
-        before: { rules: null, settings: [] }, applied: { rules: [], settings: [] },
+    await writeCdnJournal(state.config.paths.nodeSettingsPath, {
+      version: 1,
+      current: null,
+      originals: {
+        [state.config.nodeSettings.cloudflareZoneId]: {
+          credentials: {
+            email: state.config.nodeSettings.cloudflareEmailAddress,
+            zone: state.config.nodeSettings.cloudflareZoneId,
+            key: state.config.nodeSettings.cloudflareGlobalApiKey,
+          },
+          before: { rules: null, settings: [] },
+          applied: { rules: [], settings: [] },
+        },
       },
-    } });
+    });
     const controller = new SettingsController(
       {
         clearCloudflareConfig: () => {
@@ -766,11 +802,17 @@ describe('follow-up storage fixes against real Silo', () => {
       cloudflare,
       {} as never
     );
-    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = {
+      header: vi.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+    };
     await controller.cloudflareClear({} as never, reply as never);
     expect(reply.status).toHaveBeenLastCalledWith(200);
     for (const name of ['720p', 'master'])
-      expect(await a.text(prefix + 'static/manifests/manifest-' + name + '.m3u8')).not.toMatch(/^https?:\/\//m);
+      expect(await a.text(prefix + 'static/manifests/manifest-' + name + '.m3u8')).not.toMatch(
+        /^https?:\/\//m
+      );
   });
   it('refreshes bucket, endpoint and credentials while older readers drain safely', async () => {
     await a.put('same', 'old bucket');
@@ -872,7 +914,11 @@ describe('follow-up storage fixes against real Silo', () => {
       },
     };
     const controller = new SettingsController(settings as never, videos, cloudflare, {} as never);
-    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = {
+      header: vi.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+    };
     const operation = controller.storageConfigToggle(
       {
         body: {
@@ -917,7 +963,9 @@ describe('follow-up storage fixes against real Silo', () => {
       release();
       await operation;
       expect(reply.status).toHaveBeenCalledWith(200);
-      expect(await a.text(prefix + 'static/manifests/manifest-720p.m3u8')).not.toMatch(/^https?:\/\//m);
+      expect(await a.text(prefix + 'static/manifests/manifest-720p.m3u8')).not.toMatch(
+        /^https?:\/\//m
+      );
       expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).toContain(
         'manifest-720p.m3u8'
       );
@@ -996,7 +1044,9 @@ describe('follow-up storage fixes against real Silo', () => {
           await withSettingsChange(state.config.paths.nodeSettingsPath, async () => true)
         ).toBe(true)
       );
-      expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).not.toMatch(/^https?:\/\//m);
+      expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).not.toMatch(
+        /^https?:\/\//m
+      );
     } finally {
       release();
       await proxy.close();
@@ -1025,7 +1075,11 @@ describe('follow-up storage fixes against real Silo', () => {
       cloudflare,
       {} as never
     );
-    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = {
+      header: vi.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+    };
     cloudflare.purgeVideo.mockRejectedValueOnce(new Error('purge failed'));
     const request = { body: { storageConfig: state.config.nodeSettings.storageConfig } } as never;
     await controller.storageConfigToggle(request, reply as never);
@@ -1055,7 +1109,11 @@ describe('follow-up storage fixes against real Silo', () => {
       cloudflare,
       {} as never
     );
-    const reply = { header: vi.fn().mockReturnThis(), status: vi.fn().mockReturnThis(), send: vi.fn().mockReturnThis() };
+    const reply = {
+      header: vi.fn().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      send: vi.fn().mockReturnThis(),
+    };
     await controller.storageConfigToggle(
       { body: { storageConfig: { storageMode: 'filesystem' } } } as never,
       reply as never
@@ -1171,13 +1229,19 @@ describe('follow-up storage fixes against real Silo', () => {
         credentials: { ...a.config.s3ProviderClientConfig.credentials, secretAccessKey: 'wrong' },
       },
     };
-    const directory = state.config.paths.nodeSettingsPath + '.stream-cleanup';
-    const name = (await readdir(directory))[0]!;
-    const file = path.join(directory, name);
-    const job = JSON.parse(await readFile(file, 'utf8'));
+    const db = operationalForPath(state.config.paths.nodeSettingsPath);
+    const row = (
+      await db.query("SELECT key,value FROM node_recovery WHERE key LIKE 'cleanup:%'")
+    )[0]!;
+    await db.close();
+    const job = JSON.parse(row.value as string);
     job.deadline = Date.now() - 1;
     video.meta = JSON.stringify({ ...JSON.parse(video.meta), streamCleanupAt: job.deadline });
-    await writeFile(file, JSON.stringify(job));
+    await writeRecovery(
+      state.config.paths.nodeSettingsPath,
+      row.key as string,
+      JSON.stringify(job)
+    );
     streams = new StreamsService(
       logger as never,
       repository,
@@ -1194,7 +1258,14 @@ describe('follow-up storage fixes against real Silo', () => {
         expect.anything()
       )
     );
-    expect(await readdir(directory)).toContain(name);
+    const pending = operationalForPath(state.config.paths.nodeSettingsPath);
+    try {
+      expect(
+        await pending.query("SELECT key FROM node_recovery WHERE key LIKE 'cleanup:%'")
+      ).toHaveLength(1);
+    } finally {
+      await pending.close();
+    }
     expect(await a.text(prefix + '720p/segments/run-one-0.ts')).toBe('first stream bytes');
   });
   it('honors migration deadlines and retains the previous complete object after an aborted write', async () => {
@@ -1229,8 +1300,8 @@ describe('follow-up storage fixes against real Silo', () => {
     'finalizes real S3 media and masters before marking stopped (recorded=%s)',
     async (recorded) => {
       await seed(recorded);
-      const master=prefix+'dynamic/manifests/manifest-master.m3u8';
-      await a.put(master,(await a.text(master)).replace('#EXTM3U','#EXTM3U\n#MOARTUBE-LIVE'));
+      const master = prefix + 'dynamic/manifests/manifest-master.m3u8';
+      await a.put(master, (await a.text(master)).replace('#EXTM3U', '#EXTM3U\n#MOARTUBE-LIVE'));
       await streams.stopStream('video123', 90);
       expect(video.is_streaming).toBe(false);
       expect(video.is_published).toBe(recorded);
@@ -1247,7 +1318,9 @@ describe('follow-up storage fixes against real Silo', () => {
           ).CacheControl
         ).toBe('no-store');
       if (recorded) {
-        expect(await a.text(prefix+'static/manifests/manifest-master.m3u8')).not.toContain('#MOARTUBE-LIVE');
+        expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).not.toContain(
+          '#MOARTUBE-LIVE'
+        );
         expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).toContain(
           '/static/'
         );

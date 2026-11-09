@@ -1,6 +1,5 @@
-import { mkdir, writeFile, rename, readdir, readFile, rm } from 'node:fs/promises';
+import { operationalForPath, writeRecovery } from '@/database/recovery.js';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import type { StorageConfig } from '@/types/config.js';
 
 export interface StreamCleanupJob {
@@ -39,37 +38,42 @@ export class StreamCleanupQueue {
 
   async enqueue(job: StreamCleanupJob): Promise<void> {
     validate(job);
-    await mkdir(this.directory, { recursive: true });
-    const file = path.join(this.directory, `${job.videoId}-${job.generation}.json`);
-    const temporary = file + '.' + randomUUID() + '.part';
-    try {
-      await writeFile(temporary, JSON.stringify(job), { flag: 'wx', mode: 0o600 });
-      await rename(temporary, file);
-    } finally {
-      await rm(temporary, { force: true });
-    }
+    const file = 'cleanup:' + job.videoId + '-' + job.generation;
+    await writeRecovery(this.settingsPath, file, JSON.stringify(job));
     this.schedule(file, job);
   }
 
   async recover(): Promise<void> {
-    let names: string[];
+    const db = operationalForPath(this.settingsPath);
     try {
-      names = await readdir(this.directory);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return;
+      for (const row of await db.query<{ key: string; value: string }>(
+        "SELECT key,value FROM node_recovery WHERE key LIKE 'cleanup:%'"
+      )) {
+        try {
+          const job = JSON.parse(row.value) as StreamCleanupJob;
+          validate(job);
+          this.schedule(row.key, job);
+        } catch (error) {
+          this.failed(error);
+        }
       }
-      throw error;
+    } finally {
+      await db.close();
     }
-    for (const name of names.filter((name) => name.endsWith('.json'))) {
-      const file = path.join(this.directory, name);
-      try {
-        const job = JSON.parse(await readFile(file, 'utf8')) as StreamCleanupJob;
-        validate(job);
-        this.schedule(file, job);
-      } catch (error) {
-        this.failed(error);
-      }
+  }
+
+  private get settingsPath(): string {
+    return this.directory.replace(/\.stream-cleanup$/, '');
+  }
+  private async acknowledge(key: string, job: StreamCleanupJob): Promise<void> {
+    const db = operationalForPath(this.settingsPath);
+    try {
+      await db.query('DELETE FROM node_recovery WHERE key=? AND value=?', [
+        key,
+        JSON.stringify(job),
+      ]);
+    } finally {
+      await db.close();
     }
   }
 
@@ -86,7 +90,7 @@ export class StreamCleanupQueue {
           return;
         }
         void this.perform(job)
-          .then(() => rm(file, { force: true }))
+          .then(() => this.acknowledge(file, job))
           .catch((error: unknown) => {
             this.failed(error);
             this.schedule(file, job, true);

@@ -6,6 +6,15 @@
  */
 import { AppError } from '@errors/base.js';
 
+/** All old database connections must close before the new selection is active. */
+export class DatabaseRestartRequiredError extends AppError {
+  readonly statusCode = 503;
+  readonly isOperational = true;
+  constructor() {
+    super('Database selection changed. Restart MoarTube Node before continuing.');
+  }
+}
+
 /**
  * 400 Bad Request
  * Used when the request is malformed or contains invalid data

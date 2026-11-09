@@ -266,35 +266,53 @@ export class SettingsController extends BaseController {
    *
    * Get all node settings
    */
-  getSettings = (_request: FastifyRequest, reply: FastifyReply): void => {
+  setNetworkAccess = async (
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
+    const { allowRemoteConnections } = request.body as { allowRemoteConnections: boolean };
+    try {
+      // Persist only. Rebinding waits for an explicit restart to preserve active work.
+      getConfig().updateNodeSettings({ allowRemoteConnections });
+      return await this.sendSuccess(reply, { restartRequired: true });
+    } catch (error) {
+      this.logger.error('Unable to save network access', error);
+      return await this.sendError(reply, 'Unable to save Node network access.');
+    }
+  };
+
+  getSettings = async (_request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       getConfig().reloadNodeSettings();
       const nodeSettings = this.settingsService.getNodeSettings();
       const version = this.settingsService.getVersion();
 
-      this.sendSuccess(reply, {
+      return await this.sendSuccess(reply, {
         nodeSettings: {
           ...nodeSettings,
           cloudflareAddressMigrationPending:
             nodeSettings['cloudflareAddressMigrationPending'] === true ||
-            hasPendingCdn(getConfig().paths.nodeSettingsPath),
-          cdnTransition: cdnStatus(getConfig().paths.nodeSettingsPath),
+            (await hasPendingCdn(getConfig().paths.nodeSettingsPath)),
+          cdnTransition: await cdnStatus(getConfig().paths.nodeSettingsPath),
           version,
         },
       });
     } catch (error) {
       this.logger.error('Error getting settings', error);
 
-      this.sendError(reply, 'error communicating with the MoarTube node');
+      return await this.sendError(reply, 'error communicating with the MoarTube node');
     }
   };
 
-  getCloudflareTunnel = async (_request: FastifyRequest, reply: FastifyReply): Promise<void> => {
+  getCloudflareTunnel = async (
+    _request: FastifyRequest,
+    reply: FastifyReply
+  ): Promise<FastifyReply> => {
     reply.header('Cache-Control', 'no-store');
     try {
-      this.sendSuccess(reply, { tunnel: await requestTunnelOperation('snapshot') });
+      return await this.sendSuccess(reply, { tunnel: await requestTunnelOperation('snapshot') });
     } catch {
-      this.sendError(reply, 'Cloudflare Tunnel status is unavailable', 503);
+      return await this.sendError(reply, 'Cloudflare Tunnel status is unavailable', 503);
     }
   };
 
@@ -308,7 +326,7 @@ export class SettingsController extends BaseController {
     let settingsSaved = false;
     try {
       // Release admission before IPC: quick startup takes this same lock when saving its name.
-      await withSettingsChange(config.paths.nodeSettingsPath, () => {
+      await withSettingsChange(config.paths.nodeSettingsPath, async () => {
         config.reloadNodeSettings(true);
         config.updateNodeSettings({ isCloudflareTunnelEnabled: isEnabled });
         return Promise.resolve();
@@ -844,7 +862,7 @@ export class SettingsController extends BaseController {
             if (
               !transitionHeld &&
               (config.nodeSettings['cloudflareAddressMigrationPending'] ||
-                hasPendingCdn(config.paths.nodeSettingsPath))
+                (await hasPendingCdn(config.paths.nodeSettingsPath)))
             ) {
               throw new Error(
                 'Finish the pending CDN transition before changing distribution settings.'
@@ -1104,7 +1122,7 @@ export class SettingsController extends BaseController {
     try {
       response = await withDistributionTransition(async () => {
         config.reloadNodeSettings(true);
-        let state = readCdnJournal(config.paths.nodeSettingsPath);
+        let state = await readCdnJournal(config.paths.nodeSettingsPath);
         const current = state.current;
         // Completed retries are status reads; they never start untracked work.
         if (
@@ -1114,7 +1132,7 @@ export class SettingsController extends BaseController {
           current.stage === 'complete'
         ) {
           config.reloadNodeSettings(true);
-          return this.cdnReply(false);
+          return await this.cdnReply(false);
         }
         if (enabled === null && (!current || current.id !== expectedId)) {
           return reject(
@@ -1132,7 +1150,7 @@ export class SettingsController extends BaseController {
         try {
           await this.changeDistributionSettings(
             async () => {
-              state = readCdnJournal(config.paths.nodeSettingsPath);
+              state = await readCdnJournal(config.paths.nodeSettingsPath);
               if (enabled !== null) {
                 const previous = config.nodeSettings;
                 let target: CdnCredentials | null = null;
@@ -1189,7 +1207,7 @@ export class SettingsController extends BaseController {
                   storageIdentity: storageIdentity(previous.storageConfig),
                 };
                 // Journal first: even a subsequent settings write failure leaves admission blocked.
-                writeCdnJournal(config.paths.nodeSettingsPath, state);
+                await writeCdnJournal(config.paths.nodeSettingsPath, state);
                 progress.admitted = true;
                 config.updateNodeSettings({ cloudflareAddressMigrationPending: true });
               } else {
@@ -1206,9 +1224,9 @@ export class SettingsController extends BaseController {
                   'Storage changed during CDN recovery. Restore its saved configuration before retrying.'
                 );
               }
-              const advance = (stage: CdnTransition['stage']): void => {
+              const advance = async (stage: CdnTransition['stage']): Promise<void> => {
                 transition.stage = stage;
-                writeCdnJournal(config.paths.nodeSettingsPath, state);
+                await writeCdnJournal(config.paths.nodeSettingsPath, state);
               };
               if (
                 ['media', 'purge', 'tunnel'].includes(transition.stage) &&
@@ -1216,7 +1234,7 @@ export class SettingsController extends BaseController {
               ) {
                 // The saved intent is authoritative after an interrupted settings commit.
                 // Re-apply it and repeat media writes/purging rather than using a divergent origin.
-                advance('settings');
+                await advance('settings');
               }
               if (transition.stage === 'provider') {
                 const source = transition.source;
@@ -1235,7 +1253,7 @@ export class SettingsController extends BaseController {
                       applied: this.cloudflareService.managedCdnSnapshot(),
                     };
                     state.originals[target.zone] = original;
-                    writeCdnJournal(config.paths.nodeSettingsPath, state);
+                    await writeCdnJournal(config.paths.nodeSettingsPath, state);
                   }
                   await this.cloudflareService.verifyCdnChange(
                     target,
@@ -1270,7 +1288,7 @@ export class SettingsController extends BaseController {
                     original.applied
                   );
                 }
-                advance('settings');
+                await advance('settings');
               }
               if (transition.stage === 'settings') {
                 config.updateNodeSettings({
@@ -1283,11 +1301,11 @@ export class SettingsController extends BaseController {
                   cloudflareGlobalApiKey: transition.target?.key ?? '',
                   cloudflareTunnelName: transition.tunnelName,
                 });
-                advance('media');
+                await advance('media');
               }
               if (transition.stage === 'media') {
                 await this.completeMediaMigration(config);
-                advance('purge');
+                await advance('purge');
               }
               if (transition.stage === 'purge') {
                 const zones = new Map<string, CdnCredentials>();
@@ -1304,7 +1322,7 @@ export class SettingsController extends BaseController {
                   );
                 }
                 await this.cloudflareService.retryPendingPurges();
-                advance('tunnel');
+                await advance('tunnel');
               }
             },
             undefined,
@@ -1315,7 +1333,7 @@ export class SettingsController extends BaseController {
         } catch (error) {
           this.logger.error('CDN transition remains incomplete', error);
           if (progress.admitted) {
-            return this.cdnReply(true);
+            return await this.cdnReply(true);
           }
           return reject(
             error instanceof Error ? error.message : 'CDN transition could not start.',
@@ -1347,16 +1365,16 @@ export class SettingsController extends BaseController {
     );
   }
 
-  private cdnReply(isError: boolean): CdnResponse {
+  private async cdnReply(isError: boolean): Promise<CdnResponse> {
     const config = getConfig();
-    const status = cdnStatus(config.paths.nodeSettingsPath);
+    const status = await cdnStatus(config.paths.nodeSettingsPath);
     return {
       status: isError ? 502 : 200,
       data: {
         isError,
         settingsSaved: true,
         cloudflareAddressMigrationPending:
-          hasPendingCdn(config.paths.nodeSettingsPath) ||
+          (await hasPendingCdn(config.paths.nodeSettingsPath)) ||
           config.nodeSettings.cloudflareAddressMigrationPending,
         cdnTransition: status,
         ...publicAddressOf(config.nodeSettings),
@@ -1375,10 +1393,10 @@ export class SettingsController extends BaseController {
 
   private async finishCloudflareChange(): Promise<CdnResponse> {
     const config = getConfig();
-    const state = readCdnJournal(config.paths.nodeSettingsPath);
+    const state = await readCdnJournal(config.paths.nodeSettingsPath);
     const transition = state.current;
     if (transition?.stage !== 'tunnel') {
-      return this.cdnReply(true);
+      return await this.cdnReply(true);
     }
     try {
       const tunnel = await requestTunnelOperation('reconcile');
@@ -1390,14 +1408,14 @@ export class SettingsController extends BaseController {
           tunnel.mode === (transition.targetEnabled ? 'named' : 'quick') &&
           (!transition.targetEnabled || tunnel.name === transition.tunnelName);
       if (!ready) {
-        return this.cdnReply(true);
+        return await this.cdnReply(true);
       }
-      await withSettingsChange(config.paths.nodeSettingsPath, () => {
+      await withSettingsChange(config.paths.nodeSettingsPath, async () => {
         config.reloadNodeSettings(true);
         if (
           config.nodeSettings.isCloudflareTunnelEnabled !== preference ||
           !this.cdnSettingsMatch(transition) ||
-          readCdnJournal(config.paths.nodeSettingsPath).current?.id !== transition.id
+          (await readCdnJournal(config.paths.nodeSettingsPath)).current?.id !== transition.id
         ) {
           throw new Error('CDN transition was superseded.');
         }
@@ -1413,13 +1431,13 @@ export class SettingsController extends BaseController {
         transition.stage = 'complete';
         transition.source = null;
         transition.target = null;
-        writeCdnJournal(config.paths.nodeSettingsPath, state);
+        await writeCdnJournal(config.paths.nodeSettingsPath, state);
         return Promise.resolve();
       });
-      return this.cdnReply(false);
+      return await this.cdnReply(false);
     } catch (error) {
       this.logger.error('CDN tunnel reconciliation remains incomplete', error);
-      return this.cdnReply(true);
+      return await this.cdnReply(true);
     }
   }
 
@@ -1626,13 +1644,16 @@ export class SettingsController extends BaseController {
 
       await this.settingsService.updateDatabaseConfig(databaseConfig);
 
-      return await this.sendSuccess(reply);
+      return await this.sendSuccess(reply, {
+        restartRequired: true,
+        message: 'Database selection saved. Restart MoarTube Node before continuing.',
+      });
     } catch (error) {
       this.logger.error('Database connection test failed', error);
 
       return await this.sendError(
         reply,
-        'could not connect to database with provided configuration'
+        error instanceof Error ? error.message : 'Could not change database configuration'
       );
     }
   };

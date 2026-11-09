@@ -210,7 +210,7 @@ change it in MoarTube Client, update the port mapping and Docker health check to
 The included health check expects HTTP; terminate HTTPS at a reverse proxy, or
 adapt the check if enabling HTTPS directly on the node.
 
-`IS_DOCKER_ENVIRONMENT=true` is set by the image and selects `/data`. You do not
+`IS_DOCKER_ENVIRONMENT=true` is set by the image and selects `/data/MoarTube/node`. You do not
 need to edit or pass the checkout's `.env`; it is excluded from the build context.
 Worker count is controlled by the saved Node setting described below, including
 when running in Docker.
@@ -452,3 +452,9 @@ sudo systemctl restart moartube-node
 
 
 
+
+### Unified local data directory
+
+All standalone Node launches use the per-user `MoarTube/node` directory: `%APPDATA%/MoarTube/node` on Windows, `~/Library/Application Support/MoarTube/node` on macOS, and `$XDG_DATA_HOME/MoarTube/node` (default `~/.local/share/MoarTube/node`) on Linux. Containers keep the existing `/data` volume and store Node data in `/data/MoarTube/node`. Bundled Client + Node uses `MoarTube/client_node/node` instead. `MOARTUBE_DATA_ROOT` selects a shared parent (or a directory named `MoarTube`); the existing `MOARTUBE_DATA_DIR` explicit component override remains supported.
+
+Startup uses only the selected data folder. Older folders are never searched or imported; a missing folder starts with fresh defaults.

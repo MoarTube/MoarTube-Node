@@ -1,3 +1,8 @@
+vi.mock('@/config/data-layout.cjs', () => ({ prepareData: vi.fn(async () => () => {}) }));
+vi.mock('@/database/legacy-operational.js', () => ({ importLegacyOperationalState: vi.fn() }));
+vi.mock('@/database/operational.js', () => ({
+  operationalConfig: vi.fn(() => ({ dialect: 'sqlite', filepath: '/unused' })),
+}));
 vi.mock('@/utils/cdn-journal.js', () => ({ rewindCdnAfterRestart: vi.fn() }));
 /**
  * MoarTube-Node Entry Point Tests
@@ -76,10 +81,10 @@ describe('MoarTube-Node Entry Point', () => {
   describe('loadConfig', () => {
     it('should set NODE_TLS_REJECT_UNAUTHORIZED to 0', async () => {
       mockIsPrimary.mockReturnValue(true);
-      
+
       // Re-import the module to trigger loadConfig
       vi.resetModules();
-      
+
       // Re-setup mocks after reset
       vi.doMock('node:cluster', () => ({
         default: {
@@ -88,11 +93,11 @@ describe('MoarTube-Node Entry Point', () => {
           },
         },
       }));
-      
+
       vi.doMock('@config/index.js', () => ({
         initializeConfig: mockInitializeConfig,
       }));
-      
+
       vi.doMock('@core/cluster/index.js', () => ({
         ClusterMaster: class ClusterMaster {
           start = mockMasterStart;
@@ -101,7 +106,7 @@ describe('MoarTube-Node Entry Point', () => {
           start = mockWorkerStart;
         },
       }));
-      
+
       vi.doMock('@utils/logger.js', () => ({
         getLogger: vi.fn(() => ({
           error: mockLoggerError,
@@ -116,7 +121,7 @@ describe('MoarTube-Node Entry Point', () => {
       } catch {
         // Expected - module may throw during test
       }
-      
+
       expect(process.env['NODE_TLS_REJECT_UNAUTHORIZED']).toBe('0');
     });
   });
@@ -131,7 +136,7 @@ describe('MoarTube-Node Entry Point', () => {
     it('should start master when cluster.isPrimary is true', async () => {
       // Test that ClusterMaster is instantiated and started when isPrimary
       mockIsPrimary.mockReturnValue(true);
-      
+
       expect(mockMasterStart).toBeDefined();
       expect(typeof mockMasterStart).toBe('function');
     });
@@ -139,7 +144,7 @@ describe('MoarTube-Node Entry Point', () => {
     it('should start worker when cluster.isPrimary is false', async () => {
       // Test that ClusterWorker is instantiated and started when not isPrimary
       mockIsPrimary.mockReturnValue(false);
-      
+
       expect(mockWorkerStart).toBeDefined();
       expect(typeof mockWorkerStart).toBe('function');
     });
@@ -162,29 +167,29 @@ describe('MoarTube-Node Entry Point', () => {
     it('should call initializeConfig with baseDir and entry point directory', async () => {
       // Verify initializeConfig would be called with resolved base dir and entry point directory
       vi.resetModules();
-      
+
       const initConfig = vi.fn();
       const masterStart = vi.fn().mockResolvedValue(undefined);
-      
+
       vi.doMock('node:cluster', () => ({
         default: { isPrimary: true },
       }));
-      
+
       vi.doMock('node:path', () => ({
         default: {
           dirname: vi.fn(() => '/app/dist'),
           resolve: vi.fn((...args: string[]) => '/app'),
         },
       }));
-      
+
       vi.doMock('node:url', () => ({
         fileURLToPath: vi.fn(() => '/app/dist/moartube-node.js'),
       }));
-      
+
       vi.doMock('@config/index.js', () => ({
         initializeConfig: initConfig,
       }));
-      
+
       vi.doMock('@core/cluster/index.js', () => ({
         ClusterMaster: class ClusterMaster {
           start = masterStart;
@@ -193,7 +198,7 @@ describe('MoarTube-Node Entry Point', () => {
           start = vi.fn();
         },
       }));
-      
+
       vi.doMock('@utils/logger.js', () => ({
         getLogger: vi.fn(() => ({
           error: vi.fn(),
@@ -208,24 +213,24 @@ describe('MoarTube-Node Entry Point', () => {
       } catch {
         // Module execution may fail in test environment
       }
-      
+
       expect(initConfig).toHaveBeenCalledWith('/app', '/app/dist');
     });
 
     it('should instantiate ClusterMaster when isPrimary is true', async () => {
       const masterStartFn = vi.fn().mockResolvedValue(undefined);
       let masterInstantiated = false;
-      
+
       vi.resetModules();
-      
+
       vi.doMock('node:cluster', () => ({
         default: { isPrimary: true },
       }));
-      
+
       vi.doMock('@config/index.js', () => ({
         initializeConfig: vi.fn(),
       }));
-      
+
       vi.doMock('@core/cluster/index.js', () => ({
         ClusterMaster: class ClusterMaster {
           constructor() {
@@ -237,7 +242,7 @@ describe('MoarTube-Node Entry Point', () => {
           start = vi.fn();
         },
       }));
-      
+
       vi.doMock('@utils/logger.js', () => ({
         getLogger: vi.fn(() => ({
           error: vi.fn(),
@@ -258,17 +263,17 @@ describe('MoarTube-Node Entry Point', () => {
     it('should instantiate ClusterWorker when isPrimary is false', async () => {
       const workerStartFn = vi.fn().mockResolvedValue(undefined);
       let workerInstantiated = false;
-      
+
       vi.resetModules();
-      
+
       vi.doMock('node:cluster', () => ({
         default: { isPrimary: false },
       }));
-      
+
       vi.doMock('@config/index.js', () => ({
         initializeConfig: vi.fn(),
       }));
-      
+
       vi.doMock('@core/cluster/index.js', () => ({
         ClusterMaster: class ClusterMaster {
           start = vi.fn();
@@ -280,7 +285,7 @@ describe('MoarTube-Node Entry Point', () => {
           start = workerStartFn;
         },
       }));
-      
+
       vi.doMock('@utils/logger.js', () => ({
         getLogger: vi.fn(() => ({
           error: vi.fn(),
@@ -306,9 +311,12 @@ describe('MoarTube-Node Entry Point', () => {
       const mockFileURLToPath = vi.fn(() => '/app/dist/moartube-node.js');
       const mockDirname = vi.fn(() => '/app/dist');
       const mockResolve = vi.fn((...args: string[]) => '/app');
-      
-      const result = mockResolve(mockDirname(mockFileURLToPath('file:///app/dist/moartube-node.js')), '..');
-      
+
+      const result = mockResolve(
+        mockDirname(mockFileURLToPath('file:///app/dist/moartube-node.js')),
+        '..'
+      );
+
       expect(result).toBe('/app');
     });
   });
@@ -318,24 +326,24 @@ describe('MoarTube-Node Entry Point', () => {
       const startupError = new Error('Master startup failed');
       const loggerErrorFn = vi.fn();
       const exitFn = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-      
+
       vi.resetModules();
-      
+
       vi.doMock('node:cluster', () => ({
         default: { isPrimary: true },
       }));
-      
+
       vi.doMock('node:path', () => ({
         default: {
           dirname: vi.fn(() => '/app/dist'),
           resolve: vi.fn(() => '/app'),
         },
       }));
-      
+
       vi.doMock('node:url', () => ({
         fileURLToPath: vi.fn(() => '/app/dist/moartube-node.js'),
       }));
-      
+
       vi.doMock('@config/index.js', () => ({
         initializeConfig: vi.fn(),
         getConfig: vi.fn(() => ({
@@ -386,16 +394,18 @@ describe('MoarTube-Node Entry Point', () => {
           }),
         }),
       }));
-      
+
       vi.doMock('@core/cluster/index.js', () => ({
         ClusterMaster: class ClusterMaster {
-          start = vi.fn(() => { throw startupError; });
+          start = vi.fn(() => {
+            throw startupError;
+          });
         },
         ClusterWorker: class ClusterWorker {
           start = vi.fn();
         },
       }));
-      
+
       vi.doMock('@utils/logger.js', () => ({
         getLogger: vi.fn(() => ({
           error: loggerErrorFn,
@@ -410,13 +420,13 @@ describe('MoarTube-Node Entry Point', () => {
       } catch {
         // Error is caught and handled by the module
       }
-      
+
       // Wait for async error handling
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       expect(loggerErrorFn).toHaveBeenCalledWith('Fatal error during startup', startupError);
       expect(exitFn).toHaveBeenCalledWith(1);
-      
+
       exitFn.mockRestore();
     });
 
@@ -424,24 +434,24 @@ describe('MoarTube-Node Entry Point', () => {
       const startupError = new Error('Worker startup failed');
       const loggerErrorFn = vi.fn();
       const exitFn = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-      
+
       vi.resetModules();
-      
+
       vi.doMock('node:cluster', () => ({
         default: { isPrimary: false },
       }));
-      
+
       vi.doMock('node:path', () => ({
         default: {
           dirname: vi.fn(() => '/app/dist'),
           resolve: vi.fn(() => '/app'),
         },
       }));
-      
+
       vi.doMock('node:url', () => ({
         fileURLToPath: vi.fn(() => '/app/dist/moartube-node.js'),
       }));
-      
+
       vi.doMock('@config/index.js', () => ({
         initializeConfig: vi.fn(),
         getConfig: vi.fn(() => ({
@@ -492,7 +502,7 @@ describe('MoarTube-Node Entry Point', () => {
           }),
         }),
       }));
-      
+
       vi.doMock('@core/cluster/index.js', () => ({
         ClusterMaster: class ClusterMaster {
           start = vi.fn();
@@ -501,7 +511,7 @@ describe('MoarTube-Node Entry Point', () => {
           start = vi.fn().mockRejectedValue(startupError);
         },
       }));
-      
+
       vi.doMock('@utils/logger.js', () => ({
         getLogger: vi.fn(() => ({
           error: loggerErrorFn,
@@ -516,13 +526,13 @@ describe('MoarTube-Node Entry Point', () => {
       } catch {
         // Error is caught and handled by the module
       }
-      
+
       // Wait for async error handling
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       expect(loggerErrorFn).toHaveBeenCalledWith('Fatal error during startup', startupError);
       expect(exitFn).toHaveBeenCalledWith(1);
-      
+
       exitFn.mockRestore();
     });
 
@@ -530,24 +540,24 @@ describe('MoarTube-Node Entry Point', () => {
       const configError = new Error('Config initialization failed');
       const loggerErrorFn = vi.fn();
       const exitFn = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-      
+
       vi.resetModules();
-      
+
       vi.doMock('node:cluster', () => ({
         default: { isPrimary: true },
       }));
-      
+
       vi.doMock('node:path', () => ({
         default: {
           dirname: vi.fn(() => '/app/dist'),
           resolve: vi.fn(() => '/app'),
         },
       }));
-      
+
       vi.doMock('node:url', () => ({
         fileURLToPath: vi.fn(() => '/app/dist/moartube-node.js'),
       }));
-      
+
       vi.doMock('@config/index.js', () => ({
         initializeConfig: vi.fn(() => {
           throw configError;
@@ -578,7 +588,7 @@ describe('MoarTube-Node Entry Point', () => {
       vi.doMock('@database/repositories/index.js', () => ({
         VideosRepository: class MockVideosRepository {},
       }));
-      
+
       vi.doMock('@core/cluster/index.js', () => ({
         ClusterMaster: class ClusterMaster {
           start = vi.fn();
@@ -587,7 +597,7 @@ describe('MoarTube-Node Entry Point', () => {
           start = vi.fn();
         },
       }));
-      
+
       vi.doMock('@utils/logger.js', () => ({
         getLogger: vi.fn(() => ({
           error: loggerErrorFn,
@@ -602,10 +612,10 @@ describe('MoarTube-Node Entry Point', () => {
       } catch {
         // Error is caught and handled by the module
       }
-      
+
       expect(loggerErrorFn).toHaveBeenCalledWith('Fatal error during startup', configError);
       expect(exitFn).toHaveBeenCalledWith(1);
-      
+
       exitFn.mockRestore();
     });
 
@@ -614,24 +624,24 @@ describe('MoarTube-Node Entry Point', () => {
       const masterStartFn = vi.fn().mockResolvedValue(undefined);
       const createDatabaseFn = vi.fn();
       const initializeDatabaseSchemaFn = vi.fn().mockResolvedValue(undefined);
-      
+
       vi.resetModules();
-      
+
       vi.doMock('node:cluster', () => ({
         default: { isPrimary: true },
       }));
-      
+
       vi.doMock('node:path', () => ({
         default: {
           dirname: vi.fn(() => '/app/dist'),
           resolve: vi.fn(() => '/app'),
         },
       }));
-      
+
       vi.doMock('node:url', () => ({
         fileURLToPath: vi.fn(() => '/app/dist/moartube-node.js'),
       }));
-      
+
       vi.doMock('@config/index.js', () => ({
         initializeConfig: vi.fn(),
         getConfig: vi.fn(() => ({
@@ -685,7 +695,7 @@ describe('MoarTube-Node Entry Point', () => {
           }),
         }),
       }));
-      
+
       vi.doMock('@core/cluster/index.js', () => ({
         ClusterMaster: class ClusterMaster {
           start = masterStartFn;
@@ -694,7 +704,7 @@ describe('MoarTube-Node Entry Point', () => {
           start = vi.fn();
         },
       }));
-      
+
       vi.doMock('@utils/logger.js', () => ({
         getLogger: vi.fn(() => ({
           error: vi.fn(),
@@ -709,10 +719,10 @@ describe('MoarTube-Node Entry Point', () => {
       } catch {
         // Module execution may throw
       }
-      
+
       // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       expect(createDatabaseFn).toHaveBeenCalledWith({
         dialect: 'postgres',
         connectionString: 'postgres://testuser:testpass@localhost:5432/testdb',
@@ -723,24 +733,24 @@ describe('MoarTube-Node Entry Point', () => {
     it('should throw error when postgres config is missing', async () => {
       const loggerErrorFn = vi.fn();
       const exitFn = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
-      
+
       vi.resetModules();
-      
+
       vi.doMock('node:cluster', () => ({
         default: { isPrimary: true },
       }));
-      
+
       vi.doMock('node:path', () => ({
         default: {
           dirname: vi.fn(() => '/app/dist'),
           resolve: vi.fn(() => '/app'),
         },
       }));
-      
+
       vi.doMock('node:url', () => ({
         fileURLToPath: vi.fn(() => '/app/dist/moartube-node.js'),
       }));
-      
+
       vi.doMock('@config/index.js', () => ({
         initializeConfig: vi.fn(),
         getConfig: vi.fn(() => ({
@@ -785,7 +795,7 @@ describe('MoarTube-Node Entry Point', () => {
           resolve: vi.fn(),
         }),
       }));
-      
+
       vi.doMock('@core/cluster/index.js', () => ({
         ClusterMaster: class ClusterMaster {
           start = vi.fn();
@@ -794,7 +804,7 @@ describe('MoarTube-Node Entry Point', () => {
           start = vi.fn();
         },
       }));
-      
+
       vi.doMock('@utils/logger.js', () => ({
         getLogger: vi.fn(() => ({
           error: loggerErrorFn,
@@ -809,10 +819,10 @@ describe('MoarTube-Node Entry Point', () => {
       } catch {
         // Error is caught and handled by the module
       }
-      
+
       // Wait for async error handling
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       expect(loggerErrorFn).toHaveBeenCalledWith(
         'Fatal error during startup',
         expect.objectContaining({
@@ -820,7 +830,7 @@ describe('MoarTube-Node Entry Point', () => {
         })
       );
       expect(exitFn).toHaveBeenCalledWith(1);
-      
+
       exitFn.mockRestore();
     });
   });

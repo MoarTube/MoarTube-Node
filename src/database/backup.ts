@@ -1,3 +1,4 @@
+import { operationalSchema } from './operational.js';
 import fs from 'node:fs';
 import { mkdtemp, open, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -10,7 +11,7 @@ import { parseBackup } from '@/utils/backup-json.js';
 export type BackupConfig =
   | { dialect: 'sqlite'; sqlitePath: string }
   | { dialect: 'postgres'; postgresUrl: string };
-const tables = [
+const catalogTables = [
   'videos',
   'comments',
   'videoreports',
@@ -21,6 +22,15 @@ const tables = [
   'cryptowalletaddresses',
   'links',
 ];
+const operationalTables = [
+  'node_purges',
+  'node_purge_backoff',
+  'node_purge_credentials',
+  'node_remote_writes',
+  'node_operational_meta',
+  'node_recovery',
+];
+const tables = [...catalogTables, ...operationalTables];
 type Row = Record<string, unknown>;
 const quoted = (value: string): string => {
   if (!/^[a-z_]+$/.test(value)) {
@@ -43,9 +53,11 @@ async function temporary() {
     },
   };
 }
-function exported(row: Row): Row {
+function exported(row: Row, table: string): Row {
   const result = { ...row };
-  delete result['id'];
+  if (catalogTables.includes(table)) {
+    delete result['id'];
+  }
   for (const [key, value] of Object.entries(result)) {
     if (key.startsWith('is_') && (value === 0 || value === 1)) {
       result[key] = Boolean(value);
@@ -64,7 +76,7 @@ async function writeTables(
       await output.write(`${index ? ',' : ''}{"rows":[`);
       let first = true;
       for await (const row of rows(name)) {
-        const json = JSON.stringify(exported(row));
+        const json = JSON.stringify(exported(row, name));
         if (Buffer.byteLength(json) > 1024 ** 2) {
           throw new Error('Backup row exceeds byte limit');
         }
@@ -98,6 +110,12 @@ export async function createBackup(
       try {
         db.exec('BEGIN');
         await writeTables(file, function* (name) {
+          if (
+            operationalTables.includes(name) &&
+            !db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name)
+          ) {
+            return;
+          }
           for (const row of db.prepare(`SELECT * FROM ${quoted(name)}`).iterate()) {
             yield row as Row;
           }
@@ -111,6 +129,17 @@ export async function createBackup(
       try {
         await sql.begin('isolation level repeatable read read only', async (transaction) => {
           await writeTables(file, async function* (name) {
+            if (
+              operationalTables.includes(name) &&
+              !(
+                await transaction.unsafe(
+                  "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name=$1",
+                  [name]
+                )
+              ).length
+            ) {
+              return;
+            }
             for await (const batch of transaction
               .unsafe(`SELECT * FROM ${quoted(name)}`)
               .cursor(100)) {
@@ -177,17 +206,20 @@ export async function restoreBackup(file: string, config: BackupConfig): Promise
     } finally {
       input.destroy();
     }
-    if (staged.size !== tables.length) {
+    if (catalogTables.some((name) => !staged.has(name))) {
       throw new Error('Backup must contain all database tables');
     }
     if (config.dialect === 'sqlite') {
       const db = new SQLite(config.sqlitePath, { timeout: 30_000 });
       try {
+        for (const statement of operationalSchema) {
+          db.exec(statement);
+        }
         db.exec('BEGIN IMMEDIATE');
         for (const name of [...tables].reverse()) {
           db.exec(`DELETE FROM ${quoted(name)}`);
         }
-        for (const name of tables) {
+        for (const name of tables.filter((name) => staged.has(name))) {
           const allowed = new Set(
             (db.prepare(`PRAGMA table_info(${quoted(name)})`).all() as { name: string }[]).map(
               (column) => column.name
@@ -197,7 +229,9 @@ export async function restoreBackup(file: string, config: BackupConfig): Promise
             statement: SQLite.Statement | undefined;
           for await (const rows of stagedRows(staged.get(name) as string)) {
             for (const row of rows) {
-              delete row['id'];
+              if (catalogTables.includes(name)) {
+                delete row['id'];
+              }
               const keys = Object.keys(row);
               if (!keys.length || keys.some((key) => !allowed.has(key))) {
                 throw new Error('Unknown backup columns');
@@ -227,11 +261,14 @@ export async function restoreBackup(file: string, config: BackupConfig): Promise
     } else {
       const sql = postgres(config.postgresUrl, { max: 1, connect_timeout: 10 });
       try {
+        for (const statement of operationalSchema) {
+          await sql.unsafe(statement);
+        }
         await sql.begin(async (transaction) => {
           for (const name of [...tables].reverse()) {
             await transaction.unsafe(`DELETE FROM ${quoted(name)}`);
           }
-          for (const name of tables) {
+          for (const name of tables.filter((name) => staged.has(name))) {
             const columns = await transaction.unsafe<
               { column_name: string; column_default: string | null }[]
             >(
@@ -242,7 +279,9 @@ export async function restoreBackup(file: string, config: BackupConfig): Promise
             for await (const rows of stagedRows(staged.get(name) as string)) {
               const groups = new Map<string, Row[]>();
               for (const row of rows) {
-                delete row['id'];
+                if (catalogTables.includes(name)) {
+                  delete row['id'];
+                }
                 const keys = Object.keys(row).sort();
                 if (!keys.length || keys.some((key) => !allowed.has(key))) {
                   throw new Error('Unknown backup columns');

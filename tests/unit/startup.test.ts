@@ -1,3 +1,8 @@
+vi.mock('@/config/data-layout.cjs', () => ({ prepareData: vi.fn(async () => () => {}) }));
+vi.mock('@/database/legacy-operational.js', () => ({ importLegacyOperationalState: vi.fn() }));
+vi.mock('@/database/operational.js', () => ({
+  operationalConfig: vi.fn(() => ({ dialect: 'sqlite', filepath: '/unused' })),
+}));
 vi.mock('@/utils/cdn-journal.js', () => ({ rewindCdnAfterRestart: vi.fn() }));
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

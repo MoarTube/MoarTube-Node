@@ -1,3 +1,7 @@
+import { withDistributionTransition } from '@/utils/distribution-admission.js';
+import { assertDatabaseIdle } from '@/database/switch.js';
+import { operationalConfig } from '@/database/operational.js';
+import { hasPendingCdn } from '@/utils/cdn-journal.js';
 import { nodeIconsSchema } from '@/config/node-icons.js';
 import { nodeBulletinSchema } from '@/config/node-bulletin.js';
 import { nodeLinksSchema } from '@/config/node-links.js';
@@ -352,58 +356,21 @@ export class SettingsService extends BaseService {
    * Update database configuration
    */
   async updateDatabaseConfig(databaseConfig: DatabaseConfig): Promise<void> {
-    const databaseDialect = databaseConfig.databaseDialect;
-
-    // Test connection before saving config
-    if (databaseDialect === 'sqlite') {
-      // Test SQLite connection using better-sqlite3
-      const config = getConfig();
-
-      const databaseFilePath = config.paths.databaseFilePath;
-
-      const Database = (await import('better-sqlite3')).default;
-
-      const db = new Database(databaseFilePath, { readonly: true, fileMustExist: false });
-
-      try {
-        // Test connection with a simple query
-        db.prepare('SELECT 1').get();
-      } finally {
-        db.close();
-      }
-    } else {
-      // Test PostgreSQL connection using postgres driver
-      const postgresConfig = databaseConfig.postgresConfig;
-
-      if (postgresConfig === undefined) {
-        throw new Error('postgres configuration is required');
-      }
-
-      const postgres = (await import('postgres')).default;
-
-      const sql = postgres({
-        database: postgresConfig.databaseName,
-        username: postgresConfig.username,
-        password: postgresConfig.password,
-        host: postgresConfig.host,
-        port: postgresConfig.port,
-        max: 1,
-        connect_timeout: 10,
-      });
-
-      try {
-        // Test connection with a simple query
-        await sql`SELECT 1`;
-      } finally {
-        await sql.end();
-      }
-    }
-
     const config = getConfig();
-
-    config.updateNodeSettings({ databaseConfig });
-
-    this.logger.info('Database configuration updated', { databaseConfig });
+    await withDistributionTransition(async () => {
+      if (
+        config.nodeSettings.cloudflareAddressMigrationPending ||
+        (await hasPendingCdn(config.paths.nodeSettingsPath))
+      ) {
+        throw new Error('Finish the pending CDN transition before switching databases.');
+      }
+      await assertDatabaseIdle(operationalConfig(config));
+      const target = operationalConfig({ paths: config.paths, nodeSettings: { databaseConfig } });
+      await assertDatabaseIdle(target);
+      // Database selection takes effect on restart, after every process releases its old connections.
+      config.updateNodeSettings({ databaseConfig });
+      this.logger.info('Database selection saved; restart MoarTube Node to activate it.');
+    }, 'switching databases');
   }
 
   /**

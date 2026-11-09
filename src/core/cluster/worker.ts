@@ -94,7 +94,10 @@ export class ClusterWorker {
     const port = config.nodeSettings.nodeListeningPort;
 
     try {
-      await this.app.listen({ port, host: '0.0.0.0' });
+      await this.app.listen({
+        port,
+        host: !config.nodeSettings.allowRemoteConnections ? '127.0.0.1' : '0.0.0.0',
+      });
       this.logger.info(`Worker ${String(cluster.worker?.id)} listening on port ${String(port)}`);
 
       // Set up WebSocket server
@@ -403,7 +406,10 @@ export class ClusterWorker {
     const config = getConfig();
     const port = config.nodeSettings.nodeListeningPort;
 
-    await this.app.listen({ port, host: '0.0.0.0' });
+    await this.app.listen({
+      port,
+      host: !config.nodeSettings.allowRemoteConnections ? '127.0.0.1' : '0.0.0.0',
+    });
     this.ipc.sendToMaster({ cmd: 'worker_http_ready', port });
     this.logger.info(`Worker ${String(cluster.worker?.id ?? 0)} restarted on port ${String(port)}`);
   }

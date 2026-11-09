@@ -1,3 +1,4 @@
+import { operationalSchema } from './operational.js';
 import { provisionSQLiteHome } from '@database/provisioning/home.js';
 import { provisionSQLiteComments } from '@database/provisioning/comments.js';
 /**
@@ -87,6 +88,9 @@ export function initializeDatabaseSchema(options: { migrationsFolder?: string } 
     migrate(connection.db, { migrationsFolder });
     provisionSQLiteComments(connection.client);
     provisionSQLiteHome(connection.client);
+    for (const statement of operationalSchema) {
+      connection.client.exec(statement.replaceAll('BIGINT', 'INTEGER'));
+    }
     connection.client.exec('VACUUM');
   } catch (error) {
     throw new Error(`Failed to initialize SQLite database schema: ${String(error)}`);

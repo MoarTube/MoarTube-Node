@@ -1,10 +1,11 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { componentDirectory } from '../src/config/data-layout.cjs';
 import * as sqlite from '../src/database/sqlite-connection.js';
 import * as postgres from '../src/database/postgres-connection.js';
 const dialect = process.env['DATABASE_DIALECT'] ?? 'sqlite';
 if (dialect === 'sqlite') {
-  const filepath = process.env['DATABASE_URL'] ?? './data/db/node_db.sqlite';
+  const filepath = process.env['DATABASE_URL'] ?? path.join(componentDirectory('node'), 'db', 'node_db.sqlite');
   mkdirSync(path.dirname(path.resolve(filepath)), { recursive: true });
   const db = sqlite.createDatabase({ filepath });
   try {

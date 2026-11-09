@@ -1,5 +1,4 @@
-import fs from 'node:fs';
-import { randomUUID } from 'node:crypto';
+import { readRecovery, writeRecovery } from '@/database/recovery.js';
 import { z } from 'zod';
 import type { PublicNodeAddress } from '@/types/config.js';
 
@@ -44,47 +43,33 @@ export type CdnTransition = z.infer<typeof transition>;
 export type CdnJournal = z.infer<typeof journal>;
 export type CdnCredentials = z.infer<typeof credentials>;
 
-export function readCdnJournal(settingsPath: string): CdnJournal {
-  const file = settingsPath + '.cdn-private.json';
+export async function readCdnJournal(settingsPath: string): Promise<CdnJournal> {
   try {
-    return journal.parse(JSON.parse(fs.readFileSync(file, 'utf8')));
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    const value = await readRecovery(settingsPath, 'cdn');
+    if (value === undefined) {
       return { version: 1, current: null, originals: {} };
     }
+    return journal.parse(JSON.parse(value));
+  } catch (cause) {
     throw new Error(
       'CDN recovery state could not be read. Repair the recovery journal before changing distribution settings.',
-      { cause: error }
+      { cause }
     );
   }
 }
-export function writeCdnJournal(settingsPath: string, value: CdnJournal): void {
-  const validated = journal.parse(value);
-  const file = settingsPath + '.cdn-private.json';
-  const temporary = file + '.' + randomUUID() + '.part';
-  try {
-    const fd = fs.openSync(temporary, 'wx', 0o600);
-    try {
-      fs.writeFileSync(fd, JSON.stringify(validated));
-      fs.fsyncSync(fd);
-    } finally {
-      fs.closeSync(fd);
-    }
-    fs.renameSync(temporary, file);
-  } finally {
-    fs.rmSync(temporary, { force: true });
-  }
+export async function writeCdnJournal(settingsPath: string, value: CdnJournal): Promise<void> {
+  await writeRecovery(settingsPath, 'cdn', JSON.stringify(journal.parse(value)));
 }
-export function cdnStatus(
+export async function cdnStatus(
   settingsPath: string
-): { id: string; targetEnabled: boolean; stage: string } | null {
-  const current = readCdnJournal(settingsPath).current;
+): Promise<{ id: string; targetEnabled: boolean; stage: string } | null> {
+  const current = (await readCdnJournal(settingsPath)).current;
   return current
     ? { id: current.id, targetEnabled: current.targetEnabled, stage: current.stage }
     : null;
 }
-export function hasPendingCdn(settingsPath: string): boolean {
-  const current = readCdnJournal(settingsPath).current;
+export async function hasPendingCdn(settingsPath: string): Promise<boolean> {
+  const current = (await readCdnJournal(settingsPath)).current;
   return current !== null && current.stage !== 'complete';
 }
 export function publicAddressOf(value: PublicNodeAddress): PublicNodeAddress {
@@ -96,10 +81,10 @@ export function publicAddressOf(value: PublicNodeAddress): PublicNodeAddress {
 }
 
 /** Startup can finalize recorded media; repeat media migration and its final purge afterward. */
-export function rewindCdnAfterRestart(settingsPath: string): void {
-  const state = readCdnJournal(settingsPath);
+export async function rewindCdnAfterRestart(settingsPath: string): Promise<void> {
+  const state = await readCdnJournal(settingsPath);
   if (state.current?.stage === 'purge' || state.current?.stage === 'tunnel') {
     state.current.stage = 'media';
-    writeCdnJournal(settingsPath, state);
+    await writeCdnJournal(settingsPath, state);
   }
 }

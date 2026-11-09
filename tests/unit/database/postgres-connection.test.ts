@@ -1,4 +1,8 @@
-vi.mock('@database/provisioning/home.js', () => ({ provisionSQLiteHome: vi.fn(), provisionPostgresHome: vi.fn() }));
+vi.mock('@/database/operational.js', () => ({ operationalSchema: [] }));
+vi.mock('@database/provisioning/home.js', () => ({
+  provisionSQLiteHome: vi.fn(),
+  provisionPostgresHome: vi.fn(),
+}));
 vi.mock('@database/provisioning/comments.js', () => ({
   provisionSQLiteComments: vi.fn(),
   provisionPostgresComments: vi.fn(),

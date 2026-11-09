@@ -1,3 +1,8 @@
+vi.mock('@/utils/cdn-journal.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/utils/cdn-journal.js')>()),
+  hasPendingCdn: vi.fn(() => false),
+  cdnStatus: vi.fn(() => null),
+}));
 vi.mock('@/services/worker-count.js', () => ({ requestWorkerCount: vi.fn() }));
 import { requestWorkerCount } from '@/services/worker-count.js';
 // CDN lifecycle behavior is covered by cloudflare-cdn-tunnel.test.ts with real journals and admission.
@@ -228,6 +233,19 @@ describe('SettingsController', () => {
     }
   });
 
+  it.each([false, true])('saves network access %s without scheduling a restart', async (enabled) => {
+    const updateNodeSettings = vi.fn();
+    vi.mocked(getConfig).mockReturnValueOnce({ updateNodeSettings } as never);
+    mockRequest.body = { allowRemoteConnections: enabled };
+    const schedule = vi.spyOn(globalThis, 'setImmediate');
+    try {
+      await controller.setNetworkAccess(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      expect(updateNodeSettings).toHaveBeenCalledExactlyOnceWith({ allowRemoteConnections: enabled });
+      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, restartRequired: true });
+      expect(schedule).not.toHaveBeenCalled();
+    } finally { schedule.mockRestore(); }
+  });
+
   describe('getCpuMetrics', () => {
     it('measures the entire Node cluster when called from a worker', async () => {
       const original = Object.getOwnPropertyDescriptor(cluster, 'isWorker')!;
@@ -332,43 +350,75 @@ describe('SettingsController', () => {
     it('runs collectors concurrently and returns all metrics with no caching', async () => {
       const cpu = { usedPercent: 25, appPercent: 5 };
       const memory = { appBytes: 10, availableBytes: 20, totalBytes: 100 };
-      const disk = { storageMode: 'filesystem' as const, mediaBytes: 10, availableBytes: 20, totalBytes: 100 };
-      mockSettingsService.getNodeSettings.mockReturnValue({ storageConfig: { storageMode: 'filesystem' } });
+      const disk = {
+        storageMode: 'filesystem' as const,
+        mediaBytes: 10,
+        availableBytes: 20,
+        totalBytes: 100,
+      };
+      mockSettingsService.getNodeSettings.mockReturnValue({
+        storageConfig: { storageMode: 'filesystem' },
+      });
       vi.mocked(getConfig).mockReturnValueOnce({ paths: { dataDirectoryPath: '/data' } } as never);
       let release = (): void => {};
-      vi.mocked(getCpuMetrics).mockImplementationOnce(() => new Promise((resolve) => {
-        release = (): void => { resolve(cpu); };
-      }));
+      vi.mocked(getCpuMetrics).mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            release = (): void => {
+              resolve(cpu);
+            };
+          })
+      );
       vi.mocked(getMemoryMetrics).mockResolvedValueOnce(memory);
       vi.mocked(getStorageMetrics).mockResolvedValueOnce(disk);
-      const pending = controller.getMetricsBundle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      const pending = controller.getMetricsBundle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
       expect(getMemoryMetrics).toHaveBeenCalledWith(process.pid);
       expect(getStorageMetrics).toHaveBeenCalledWith(path.join('/data', 'media'));
       expect(mockReply.send).not.toHaveBeenCalled();
       release();
       await pending;
       expect(mockReply.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
-      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics: {
-        cpu: { isError: false, metrics: cpu },
-        memory: { isError: false, metrics: memory },
-        disk: { isError: false, metrics: disk },
-      } });
+      expect(mockReply.send).toHaveBeenCalledWith({
+        isError: false,
+        metrics: {
+          cpu: { isError: false, metrics: cpu },
+          memory: { isError: false, metrics: memory },
+          disk: { isError: false, metrics: disk },
+        },
+      });
     });
 
     it('isolates collector failures and returns elastic S3 capacity without scanning', async () => {
-      mockSettingsService.getNodeSettings.mockReturnValue({ storageConfig: { storageMode: 's3provider' } });
+      mockSettingsService.getNodeSettings.mockReturnValue({
+        storageConfig: { storageMode: 's3provider' },
+      });
       vi.mocked(getCpuMetrics).mockRejectedValueOnce(new Error('Unavailable'));
       const memory = { appBytes: 10, availableBytes: 20, totalBytes: 100 };
       vi.mocked(getMemoryMetrics).mockResolvedValueOnce(memory);
-      await controller.getMetricsBundle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getMetricsBundle(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
       expect(getStorageMetrics).not.toHaveBeenCalled();
-      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, metrics: {
-        cpu: { isError: true },
-        memory: { isError: false, metrics: memory },
-        disk: { isError: false, metrics: {
-          storageMode: 's3provider', mediaBytes: null, availableBytes: null, totalBytes: null,
-        } },
-      } });
+      expect(mockReply.send).toHaveBeenCalledWith({
+        isError: false,
+        metrics: {
+          cpu: { isError: true },
+          memory: { isError: false, metrics: memory },
+          disk: {
+            isError: false,
+            metrics: {
+              storageMode: 's3provider',
+              mediaBytes: null,
+              availableBytes: null,
+              totalBytes: null,
+            },
+          },
+        },
+      });
     });
   });
 
@@ -439,14 +489,17 @@ describe('SettingsController', () => {
   });
 
   describe('getSettings', () => {
-    it('should get all node settings', () => {
+    it('should get all node settings', async () => {
       mockSettingsService.getNodeSettings.mockReturnValue({
         nodeHeadline: 'My Node',
         isSecure: false,
       });
       mockSettingsService.getVersion.mockReturnValue('2.0.0');
 
-      controller.getSettings(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller.getSettings(
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
 
       expect(mockSettingsService.getNodeSettings).toHaveBeenCalled();
       expect(mockSettingsService.getVersion).toHaveBeenCalled();
@@ -1273,7 +1326,7 @@ describe('SettingsController', () => {
       expect(mockReply.send).toHaveBeenCalledWith(
         expect.objectContaining({
           isError: true,
-          message: 'could not connect to database with provided configuration',
+          message: 'Connection failed',
         })
       );
     });
@@ -2261,20 +2314,29 @@ describe('SettingsController', () => {
     expect(mockReply.status).toHaveBeenCalledWith(400);
   });
   describe('worker-count settings', () => {
-    it.each(['snapshot', 'apply'] as const)('forwards %s to the primary and returns the authoritative counts', async (operation) => {
-      const snapshot = { workerCount: 2, runningWorkers: 2, maxWorkers: 8 };
-      vi.mocked(requestWorkerCount).mockResolvedValueOnce(snapshot);
-      mockRequest.body = { workerCount: 2, confirmDecrease: true };
-      if (operation === 'snapshot') {
-        await controller.getWorkerCount(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-        expect(mockReply.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
-        expect(requestWorkerCount).toHaveBeenCalledWith('snapshot');
-      } else {
-        await controller.setWorkerCount(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
-        expect(requestWorkerCount).toHaveBeenCalledWith('apply', 2, true);
+    it.each(['snapshot', 'apply'] as const)(
+      'forwards %s to the primary and returns the authoritative counts',
+      async (operation) => {
+        const snapshot = { workerCount: 2, runningWorkers: 2, maxWorkers: 8 };
+        vi.mocked(requestWorkerCount).mockResolvedValueOnce(snapshot);
+        mockRequest.body = { workerCount: 2, confirmDecrease: true };
+        if (operation === 'snapshot') {
+          await controller.getWorkerCount(
+            mockRequest as FastifyRequest,
+            mockReply as unknown as FastifyReply
+          );
+          expect(mockReply.header).toHaveBeenCalledWith('Cache-Control', 'no-store');
+          expect(requestWorkerCount).toHaveBeenCalledWith('snapshot');
+        } else {
+          await controller.setWorkerCount(
+            mockRequest as FastifyRequest,
+            mockReply as unknown as FastifyReply
+          );
+          expect(requestWorkerCount).toHaveBeenCalledWith('apply', 2, true);
+        }
+        expect(mockReply.send).toHaveBeenCalledWith({ isError: false, ...snapshot });
       }
-      expect(mockReply.send).toHaveBeenCalledWith({ isError: false, ...snapshot });
-    });
+    );
     it.each([
       ['snapshot', new Error('Primary unavailable'), 'Primary unavailable'],
       ['snapshot', null, 'Unable to read worker count.'],
@@ -2283,10 +2345,26 @@ describe('SettingsController', () => {
     ] as const)('preserves %s rejections (%s)', async (operation, error, message) => {
       vi.mocked(requestWorkerCount).mockRejectedValueOnce(error);
       mockRequest.body = { workerCount: 1 };
-      await controller[operation === 'snapshot' ? 'getWorkerCount' : 'setWorkerCount'](mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+      await controller[operation === 'snapshot' ? 'getWorkerCount' : 'setWorkerCount'](
+        mockRequest as FastifyRequest,
+        mockReply as unknown as FastifyReply
+      );
       expect(mockReply.status).toHaveBeenCalledWith(409);
       expect(mockReply.send).toHaveBeenCalledWith({ isError: true, message });
     });
+  });
+  it('reports a failed network-access settings write', async () => {
+    const { getConfig } = await import('@/config/index.js');
+    vi.mocked(getConfig).mockReturnValueOnce({ ...getConfig(), updateNodeSettings: vi.fn(() => { throw new Error('disk full'); }) } as never);
+    mockRequest.body = { allowRemoteConnections: false };
+    await controller.setNetworkAccess(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+    expect(mockReply.send).toHaveBeenCalledWith({ isError: true, message: 'Unable to save Node network access.' });
+  });
+  it('reports an unknown database-selection failure without leaking an arbitrary value', async () => {
+    mockSettingsService.updateDatabaseConfig.mockRejectedValueOnce(null);
+    mockRequest.body = { databaseDialect: 'sqlite' };
+    await controller.databaseConfigToggle(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
+    expect(mockReply.send).toHaveBeenCalledWith({ isError: true, message: 'Could not change database configuration' });
   });
 
 });

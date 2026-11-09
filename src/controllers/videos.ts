@@ -443,7 +443,7 @@ export class VideosController extends BaseController {
         true
       );
       if (body?.activityId !== undefined) {
-        finishRemoteWrite(videoId, body.activityId);
+        await finishRemoteWrite(videoId, body.activityId);
       }
       return this.sendSuccess(reply);
     }
@@ -463,7 +463,7 @@ export class VideosController extends BaseController {
     }
     if (body?.activityId !== undefined) {
       await this.cloudflareService.retryPendingPurges();
-      finishRemoteWrite(videoId, body.activityId);
+      await finishRemoteWrite(videoId, body.activityId);
     }
     return this.sendSuccess(reply);
   };

@@ -1,4 +1,5 @@
 import { nodeIconsSchema } from './node-icons.js';
+import { DatabaseRestartRequiredError } from '@/errors/http.js';
 import { withSettingsWrite } from '@/utils/settings-change.js';
 /**
  * Centralized Configuration System
@@ -48,6 +49,7 @@ class Config {
   private readonly _paths: Paths;
   private readonly _urls: Urls;
   private _nodeSettings: NodeSettingsValidated;
+  private _runningDatabaseConfig: string | undefined;
   private _lastCheckedContentTracker: LastCheckedContentTracker;
   private readonly _runtime: RuntimeConfig;
   private _nodeSettingsWatcher: fs.FSWatcher | null = null;
@@ -69,6 +71,7 @@ class Config {
 
     // Load node settings
     this._nodeSettings = this.loadNodeSettings();
+    this._runningDatabaseConfig = JSON.stringify(this._nodeSettings.databaseConfig);
 
     // Load content tracker
     this._lastCheckedContentTracker = this.loadLastCheckedContentTracker();
@@ -199,6 +202,7 @@ class Config {
   private createDefaultNodeSettings(): Record<string, unknown> {
     return {
       nodeListeningPort: 9090,
+      allowRemoteConnections: true,
       workerCount: 4,
       isSecure: false,
       publicNodeProtocol: '',
@@ -238,6 +242,12 @@ class Config {
    * Get node settings (read-only)
    */
   get nodeSettings(): Readonly<NodeSettingsValidated> {
+    if (
+      this._runningDatabaseConfig !== undefined &&
+      this._runningDatabaseConfig !== JSON.stringify(this._nodeSettings.databaseConfig)
+    ) {
+      throw new DatabaseRestartRequiredError();
+    }
     return Object.freeze({ ...this._nodeSettings });
   }
 

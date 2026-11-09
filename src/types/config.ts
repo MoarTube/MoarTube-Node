@@ -92,6 +92,7 @@ export interface NodeSettings {
   workerCount?: number;
   // Server Configuration
   nodeListeningPort: number | string;
+  allowRemoteConnections?: boolean;
   isSecure: boolean;
   publicNodeProtocol: 'http' | 'https' | '';
   publicNodeAddress: string;

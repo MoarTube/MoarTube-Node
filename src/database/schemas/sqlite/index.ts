@@ -67,3 +67,11 @@ export { links, type DrizzleLink, type DrizzleNewLink } from '@database/schemas/
 export { commentEdges, commentChanges } from '@database/schemas/sqlite/comment-cache.js';
 
 export { databaseMeta } from '@database/schemas/sqlite/database-meta.js';
+export {
+  nodePurges,
+  nodePurgeBackoff,
+  nodePurgeCredentials,
+  nodeRemoteWrites,
+  nodeOperationalMeta,
+  nodeRecovery,
+} from './operational.js';

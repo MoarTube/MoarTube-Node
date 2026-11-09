@@ -111,7 +111,7 @@ describe('backup provider contracts and failure cleanup', () => {
       expect(JSON.parse(await readFile(backup.file, 'utf8'))[0].rows).toHaveLength(101);
       await restoreBackup(backup.file, { dialect: 'postgres', postgresUrl: 'postgres://test' });
       expect(state.inserted.length).toBe(3);
-      expect(state.sequences).toBe(9);
+      expect(state.sequences).toBe(15);
       expect(state.closed).toBe(2);
     } finally {
       await backup.dispose();

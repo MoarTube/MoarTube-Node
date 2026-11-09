@@ -1,3 +1,4 @@
+import { operationalSchema } from './operational.js';
 import { provisionPostgresHome } from '@database/provisioning/home.js';
 import { provisionPostgresComments } from '@database/provisioning/comments.js';
 /**
@@ -86,6 +87,9 @@ export async function initializeDatabaseSchema(
     await migrate(connection.db, { migrationsFolder });
     await provisionPostgresComments(connection.client);
     await provisionPostgresHome(connection.client);
+    for (const statement of operationalSchema) {
+      await connection.client.unsafe(statement);
+    }
   } catch (error) {
     throw new Error(`Failed to initialize PostgreSQL database schema: ${String(error)}`);
   }

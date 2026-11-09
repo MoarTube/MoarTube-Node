@@ -1,6 +1,9 @@
-import Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
-import { openSync, closeSync } from 'node:fs';
+import {
+  OperationalDatabase,
+  type OperationalConfig,
+  type Statement,
+} from '@/database/operational.js';
 
 export interface PurgeEntry {
   target: string;
@@ -12,76 +15,56 @@ export interface PurgeCredentials {
   key: string;
 }
 
-/** Brief SQLite transactions coordinate workers; no lock is held during network I/O. */
-export function purgeOutbox(file: string) {
-  closeSync(openSync(file, 'a', 0o600));
-  const db = new Database(file, { timeout: 5000 });
-  db.pragma('secure_delete = ON');
-  db.exec(
-    'CREATE TABLE IF NOT EXISTS purges (zone TEXT, target TEXT, token TEXT, PRIMARY KEY(zone,target))'
-  );
-  db.exec(
-    'CREATE TABLE IF NOT EXISTS purge_backoff (zone TEXT PRIMARY KEY, until_ms INTEGER NOT NULL)'
-  );
-  db.exec(
-    'CREATE TABLE IF NOT EXISTS purge_credentials (zone TEXT PRIMARY KEY, email TEXT NOT NULL, key TEXT NOT NULL)'
-  );
+/** Pending invalidations belong to the authoritative database, including old-zone credentials. */
+export function purgeOutbox(config: OperationalConfig) {
+  const db = new OperationalDatabase(config);
   return {
-    enqueue(zone: string, targets: string[], credentials?: PurgeCredentials): void {
-      const put = db.prepare(
-        'INSERT INTO purges VALUES (?,?,?) ON CONFLICT(zone,target) DO UPDATE SET token=excluded.token'
-      );
-      db.transaction(() => {
-        for (const target of targets) {
-          put.run(zone, target, randomUUID());
-        }
-        if (
-          credentials &&
-          db.prepare('SELECT 1 FROM purges WHERE zone=? LIMIT 1').get(zone) !== undefined
-        ) {
-          db.prepare(
-            'INSERT INTO purge_credentials VALUES (?,?,?) ON CONFLICT(zone) DO UPDATE SET email=excluded.email,key=excluded.key'
-          ).run(zone, credentials.email, credentials.key);
-        }
-      })();
+    async enqueue(zone: string, targets: string[], credentials?: PurgeCredentials): Promise<void> {
+      const statements: Statement[] = targets.map((target) => ({
+        sql: 'INSERT INTO node_purges VALUES (?,?,?) ON CONFLICT(zone,target) DO UPDATE SET token=excluded.token',
+        parameters: [zone, target, randomUUID()],
+      }));
+      if (credentials) {
+        statements.push({
+          sql: 'INSERT INTO node_purge_credentials SELECT ?,?,? WHERE EXISTS (SELECT 1 FROM node_purges WHERE zone=?) ON CONFLICT(zone) DO UPDATE SET email=excluded.email,key=excluded.key',
+          parameters: [zone, credentials.email, credentials.key, zone],
+        });
+      }
+      await db.batch(statements);
     },
-    snapshot(zone: string): PurgeEntry[] {
-      return db.prepare('SELECT target,token FROM purges WHERE zone=?').all(zone) as PurgeEntry[];
-    },
-    acknowledge(zone: string, entries: PurgeEntry[]): void {
-      const remove = db.prepare('DELETE FROM purges WHERE zone=? AND target=? AND token=?');
-      db.transaction(() => {
-        for (const entry of entries) {
-          remove.run(zone, entry.target, entry.token);
-        }
-      })();
-      db.prepare(
-        'DELETE FROM purge_credentials WHERE zone=? AND NOT EXISTS (SELECT 1 FROM purges WHERE zone=?)'
-      ).run(zone, zone);
-    },
-    pendingCredentials(): PurgeCredentials[] {
-      return db
-        .prepare(
-          'SELECT zone,email,key FROM purge_credentials WHERE zone IN (SELECT zone FROM purges)'
-        )
-        .all() as PurgeCredentials[];
-    },
-    notBefore(zone: string): number {
-      return (
-        (
-          db.prepare('SELECT until_ms FROM purge_backoff WHERE zone=?').get(zone) as
-            | { until_ms: number }
-            | undefined
-        )?.until_ms ?? 0
+    async snapshot(zone: string): Promise<PurgeEntry[]> {
+      return db.query<PurgeEntry & Record<string, unknown>>(
+        'SELECT target,token FROM node_purges WHERE zone=?',
+        [zone]
       );
     },
-    defer(zone: string, until: number): void {
-      db.prepare(
-        'INSERT INTO purge_backoff VALUES (?,?) ON CONFLICT(zone) DO UPDATE SET until_ms=MAX(until_ms,excluded.until_ms)'
-      ).run(zone, until);
+    async acknowledge(zone: string, entries: PurgeEntry[]): Promise<void> {
+      await db.batch([
+        ...entries.map((entry) => ({
+          sql: 'DELETE FROM node_purges WHERE zone=? AND target=? AND token=?',
+          parameters: [zone, entry.target, entry.token],
+        })),
+        {
+          sql: 'DELETE FROM node_purge_credentials WHERE zone=? AND NOT EXISTS (SELECT 1 FROM node_purges WHERE zone=?)',
+          parameters: [zone, zone],
+        },
+      ]);
     },
-    close(): void {
-      db.close();
+    async pendingCredentials(): Promise<PurgeCredentials[]> {
+      return db.query<PurgeCredentials & Record<string, unknown>>(
+        'SELECT zone,email,key FROM node_purge_credentials WHERE zone IN (SELECT zone FROM node_purges)'
+      );
     },
+    async notBefore(zone: string): Promise<number> {
+      const rows = await db.query('SELECT until_ms FROM node_purge_backoff WHERE zone=?', [zone]);
+      return Number(rows[0]?.['until_ms'] ?? 0);
+    },
+    async defer(zone: string, until: number): Promise<void> {
+      await db.query(
+        'INSERT INTO node_purge_backoff VALUES (?,?) ON CONFLICT(zone) DO UPDATE SET until_ms=CASE WHEN node_purge_backoff.until_ms>excluded.until_ms THEN node_purge_backoff.until_ms ELSE excluded.until_ms END',
+        [zone, until]
+      );
+    },
+    close: () => db.close(),
   };
 }

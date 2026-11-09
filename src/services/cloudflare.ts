@@ -1,3 +1,4 @@
+import { operationalConfig } from '@/database/operational.js';
 import { isDeepStrictEqual } from 'node:util';
 import {
   providerSnapshotSchema,
@@ -69,9 +70,10 @@ export class CloudflareService extends BaseService {
   private retrying = false;
 
   private outbox(): ReturnType<typeof purgeOutbox> | undefined {
-    const config: { paths?: { nodeSettingsPath?: string } } = getConfig();
-    const settingsPath = config.paths?.nodeSettingsPath;
-    return settingsPath ? purgeOutbox(settingsPath + '.purges.sqlite') : undefined;
+    const config = getConfig();
+    const settingsPath = (config as { paths?: { nodeSettingsPath?: string } }).paths
+      ?.nodeSettingsPath;
+    return settingsPath ? purgeOutbox(operationalConfig(config)) : undefined;
   }
 
   /** Prefix purges include every query variant and all embed routes below /watch. */
@@ -124,8 +126,8 @@ export class CloudflareService extends BaseService {
         }
       }
       const journal = this.outbox();
-      const previous = journal?.pendingCredentials() ?? [];
-      journal?.close();
+      const previous = (await journal?.pendingCredentials()) ?? [];
+      await journal?.close();
       for (const credentials of previous) {
         if (enabled && credentials.zone === getConfig().nodeSettings.cloudflareZoneId) {
           continue;
@@ -1023,15 +1025,15 @@ export class CloudflareService extends BaseService {
     const journal = this.outbox();
     let entries: PurgeEntry[] = [];
     try {
-      journal?.enqueue(cloudflareZoneId, ['everything'], {
+      await journal?.enqueue(cloudflareZoneId, ['everything'], {
         zone: cloudflareZoneId,
         email: cloudflareEmailAddress,
         key: cloudflareGlobalApiKey,
       });
-      if ((journal?.notBefore(cloudflareZoneId) ?? 0) > Date.now()) {
+      if (((await journal?.notBefore(cloudflareZoneId)) ?? 0) > Date.now()) {
         throw new Error('Cloudflare purge deferred until Retry-After expires');
       }
-      entries = journal?.snapshot(cloudflareZoneId) ?? [];
+      entries = (await journal?.snapshot(cloudflareZoneId)) ?? [];
       const response = await axios.post(
         `${CLOUDFLARE_API_BASE}/zones/${cloudflareZoneId}/purge_cache`,
         { purge_everything: true },
@@ -1047,7 +1049,7 @@ export class CloudflareService extends BaseService {
       if (result?.data?.success === false) {
         throw new Error('Cloudflare rejected whole-zone purge');
       }
-      journal?.acknowledge(cloudflareZoneId, entries);
+      await journal?.acknowledge(cloudflareZoneId, entries);
 
       this.logger.info('Entire cache purged with explicit credentials');
     } catch (error) {
@@ -1058,12 +1060,12 @@ export class CloudflareService extends BaseService {
         ? Date.now() + seconds * 1000
         : Date.parse(header ?? '');
       if (Number.isFinite(until) && until > Date.now()) {
-        journal?.defer(cloudflareZoneId, until);
+        await journal?.defer(cloudflareZoneId, until);
       }
       this.logger.error('Failed to purge entire cache with credentials', error);
       throw error;
     } finally {
-      journal?.close();
+      await journal?.close();
     }
   }
 
@@ -1500,18 +1502,18 @@ export class CloudflareService extends BaseService {
     let durable: PurgeEntry[];
     try {
       const settings = getConfig().nodeSettings;
-      outbox?.enqueue(zoneId, files, {
+      await outbox?.enqueue(zoneId, files, {
         zone: zoneId,
         email: settings.cloudflareEmailAddress,
         key: settings.cloudflareGlobalApiKey,
       });
-      durable = outbox?.snapshot(zoneId) ?? [];
+      durable = (await outbox?.snapshot(zoneId)) ?? [];
       this.purgeNotBefore.set(
         zoneId,
-        Math.max(this.purgeNotBefore.get(zoneId) ?? 0, outbox?.notBefore(zoneId) ?? 0)
+        Math.max(this.purgeNotBefore.get(zoneId) ?? 0, (await outbox?.notBefore(zoneId)) ?? 0)
       );
     } finally {
-      outbox?.close();
+      await outbox?.close();
     }
     const versions = this.purgeVersions.get(zoneId) ?? new Map<string, number>();
     this.purgeVersions.set(zoneId, versions);
@@ -1565,12 +1567,12 @@ export class CloudflareService extends BaseService {
             });
             const journal = this.outbox();
             try {
-              journal?.acknowledge(
+              await journal?.acknowledge(
                 zoneId,
                 durable.filter((entry) => batch.includes(entry.target))
               );
             } finally {
-              journal?.close();
+              await journal?.close();
             }
             break;
           } catch (error) {
@@ -1589,9 +1591,9 @@ export class CloudflareService extends BaseService {
               this.purgeNotBefore.set(zoneId, Date.now() + retryAfter * 1000);
               const journal = this.outbox();
               try {
-                journal?.defer(zoneId, Date.now() + retryAfter * 1000);
+                await journal?.defer(zoneId, Date.now() + retryAfter * 1000);
               } finally {
-                journal?.close();
+                await journal?.close();
               }
               failures.push(error);
               break;

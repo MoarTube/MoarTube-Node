@@ -45,6 +45,7 @@ vi.mock('@config/index.js', () => ({
         databaseDialect: 'sqlite',
       },
       nodeListeningPort: 3000,
+        allowRemoteConnections: true,
     },
     setJwtSecret: mockSetJwtSecret,
   })),
@@ -206,6 +207,7 @@ describe('ClusterWorker', () => {
           databaseDialect: 'sqlite',
         },
         nodeListeningPort: 3000,
+        allowRemoteConnections: true,
       },
       setJwtSecret: mockSetJwtSecret,
     });
@@ -344,6 +346,7 @@ describe('ClusterWorker', () => {
             },
           },
           nodeListeningPort: 3000,
+        allowRemoteConnections: true,
         },
       });
 
@@ -371,6 +374,7 @@ describe('ClusterWorker', () => {
             postgresConfig: undefined,
           },
           nodeListeningPort: 3000,
+        allowRemoteConnections: true,
         },
       });
 
@@ -395,6 +399,21 @@ describe('ClusterWorker', () => {
       expect(mockIpcOn).toHaveBeenCalledWith('get_jwt_secret_response', expect.any(Function));
       expect(mockIpcOn).toHaveBeenCalledWith('websocket_broadcast_response', expect.any(Function));
       expect(mockIpcStartListening).toHaveBeenCalled();
+    });
+
+    it.each([false, true])('uses saved network access %s at startup and after a server restart', async (enabled) => {
+      const { getConfig } = await import('@config/index.js');
+      const config = getConfig();
+      config.nodeSettings.allowRemoteConnections = enabled;
+      vi.mocked(getConfig).mockReturnValue(config);
+      const worker = new ClusterWorker(mockLogger as any);
+      const expected = { port: 3000, host: enabled ? '0.0.0.0' : '127.0.0.1' };
+      await worker.start();
+      expect(mockFastifyListen).toHaveBeenLastCalledWith(expected);
+      mockFastifyListen.mockClear();
+      ipcHandlers['restart_server_response']?.({ cmd: 'restart_server_response' });
+      await vi.waitFor(() => expect(mockFastifyListen).toHaveBeenLastCalledWith(expected));
+      await worker.stop();
     });
 
     it('should start HTTP server', async () => {

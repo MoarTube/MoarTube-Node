@@ -1,3 +1,8 @@
+vi.mock('@/utils/distribution-admission.js', () => ({
+  withDistributionTransition: (operation: () => Promise<unknown>) => operation(),
+}));
+vi.mock('@/database/switch.js', () => ({ assertDatabaseIdle: vi.fn() }));
+vi.mock('@/utils/cdn-journal.js', () => ({ hasPendingCdn: vi.fn(() => false) }));
 /**
  * Settings Service Tests
  *
@@ -224,7 +229,9 @@ describe('SettingsService', () => {
         cloudflareTurnstileSecretKey: 'secret-key',
       });
 
-      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith(expect.objectContaining({ nodeName: 'Node name', nodeHeadline: 'Name' }));
+      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ nodeName: 'Node name', nodeHeadline: 'Name' })
+      );
     });
   });
 
@@ -233,7 +240,9 @@ describe('SettingsService', () => {
       await service.updateNodeName('New Node Name');
 
       expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({ nodeName: 'New Node Name' });
-      expect(mockLogger.info).toHaveBeenCalledWith('Node name updated', { nodeName: 'New Node Name' });
+      expect(mockLogger.info).toHaveBeenCalledWith('Node name updated', {
+        nodeName: 'New Node Name',
+      });
     });
 
     it('should purge Cloudflare cache when enabled', async () => {
@@ -257,8 +266,12 @@ describe('SettingsService', () => {
     it('should update node headline locally', async () => {
       await service.updateNodeHeadline('New Node Headline');
 
-      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({ nodeHeadline: 'New Node Headline' });
-      expect(mockLogger.info).toHaveBeenCalledWith('Node headline updated', { nodeHeadline: 'New Node Headline' });
+      expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({
+        nodeHeadline: 'New Node Headline',
+      });
+      expect(mockLogger.info).toHaveBeenCalledWith('Node headline updated', {
+        nodeHeadline: 'New Node Headline',
+      });
     });
 
     it('should purge Cloudflare cache when enabled', async () => {
@@ -367,9 +380,9 @@ describe('SettingsService', () => {
       expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({
         databaseConfig: { databaseDialect: 'sqlite' },
       });
-      expect(mockLogger.info).toHaveBeenCalledWith('Database configuration updated', {
-        databaseConfig: { databaseDialect: 'sqlite' },
-      });
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Database selection saved; restart MoarTube Node to activate it.'
+      );
     });
 
     it('should throw error when postgres config is missing', async () => {
@@ -377,7 +390,7 @@ describe('SettingsService', () => {
         service.updateDatabaseConfig({
           databaseDialect: 'postgres',
         })
-      ).rejects.toThrow('postgres configuration is required');
+      ).rejects.toThrow('Missing PostgreSQL configuration');
     });
 
     it('should test PostgreSQL connection and update config', async () => {
@@ -397,9 +410,9 @@ describe('SettingsService', () => {
       expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({
         databaseConfig: postgresConfig,
       });
-      expect(mockLogger.info).toHaveBeenCalledWith('Database configuration updated', {
-        databaseConfig: postgresConfig,
-      });
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'Database selection saved; restart MoarTube Node to activate it.'
+      );
     });
   });
 

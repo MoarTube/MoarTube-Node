@@ -27,8 +27,12 @@ vi.mock('@/core/container.js', () => ({
 }));
 vi.mock('@/core/cluster/ipc-channel.js', () => ({
   IPCChannel: class {
-    on(command: string, handler: Function) { state.handlers.set(command, handler); }
-    sendToWorker(...args: unknown[]) { state.send(...args); }
+    on(command: string, handler: Function) {
+      state.handlers.set(command, handler);
+    }
+    sendToWorker(...args: unknown[]) {
+      state.send(...args);
+    }
     getWorkers() {
       return [...state.workers.values()];
     }
@@ -171,7 +175,7 @@ it('refuses a decrease during direct storage writes', async () => {
     /direct storage writes/
   );
   expect(state.config.updateNodeSettings).not.toHaveBeenCalled();
-  finishRemoteWrite('video', 'write');
+  await finishRemoteWrite('video', 'write');
 });
 
 it('retains the requesting worker, removes only the difference, and does not replace deliberate exits', async () => {
@@ -227,23 +231,30 @@ it.each([-1, 1.5, NaN, Infinity])('rejects invalid selection %s', async (count) 
   expect(state.config.updateNodeSettings).not.toHaveBeenCalled();
 });
 
-it.each([1, 2])('caps a requested four workers to %i CPUs at startup and on live apply', async (maximum) => {
-  const cpu = os.cpus()[0]!;
-  const cpuCount = vi.spyOn(os, 'cpus').mockReturnValue(Array.from({ length: maximum }, () => cpu));
-  try {
-    state.workers.clear();
-    state.config.nodeSettings.workerCount = 4;
-    master.forkWorkers();
-    expect(state.workers.size).toBe(maximum);
-    const requester = [...state.workers.values()][0];
-    await expect(master.applyWorkerCount(request(4), requester)).resolves.toMatchObject({
-      workerCount: 4, runningWorkers: maximum, maxWorkers: maximum,
-    });
-    expect(master.desiredWorkers).toBe(maximum);
-  } finally {
-    cpuCount.mockRestore();
+it.each([1, 2])(
+  'caps a requested four workers to %i CPUs at startup and on live apply',
+  async (maximum) => {
+    const cpu = os.cpus()[0]!;
+    const cpuCount = vi
+      .spyOn(os, 'cpus')
+      .mockReturnValue(Array.from({ length: maximum }, () => cpu));
+    try {
+      state.workers.clear();
+      state.config.nodeSettings.workerCount = 4;
+      master.forkWorkers();
+      expect(state.workers.size).toBe(maximum);
+      const requester = [...state.workers.values()][0];
+      await expect(master.applyWorkerCount(request(4), requester)).resolves.toMatchObject({
+        workerCount: 4,
+        runningWorkers: maximum,
+        maxWorkers: maximum,
+      });
+      expect(master.desiredWorkers).toBe(maximum);
+    } finally {
+      cpuCount.mockRestore();
+    }
   }
-});
+);
 
 it('restores the previous target if an existing worker crashes during an increase', async () => {
   if (os.cpus().length < 4) return;
@@ -264,21 +275,43 @@ it('correlates IPC snapshots and applies, ignores missing workers, and reports i
   await handler({ operation: 'snapshot' });
   expect(state.send).not.toHaveBeenCalled();
   await handler({ requestId: 'snapshot', operation: 'snapshot' }, requester);
-  expect(state.send).toHaveBeenLastCalledWith(requester, expect.objectContaining({ requestId: 'snapshot', snapshot: expect.objectContaining({ runningWorkers: 3 }) }));
+  expect(state.send).toHaveBeenLastCalledWith(
+    requester,
+    expect.objectContaining({
+      requestId: 'snapshot',
+      snapshot: expect.objectContaining({ runningWorkers: 3 }),
+    })
+  );
   await handler(request(3), requester);
-  expect(state.send).toHaveBeenLastCalledWith(requester, expect.objectContaining({ requestId: 'test', snapshot: expect.objectContaining({ workerCount: 3 }) }));
+  expect(state.send).toHaveBeenLastCalledWith(
+    requester,
+    expect.objectContaining({
+      requestId: 'test',
+      snapshot: expect.objectContaining({ workerCount: 3 }),
+    })
+  );
   await handler({ requestId: 'invalid', operation: 'unknown' }, requester);
-  expect(state.send).toHaveBeenLastCalledWith(requester, expect.objectContaining({ requestId: 'invalid', error: 'Invalid worker operation.' }));
+  expect(state.send).toHaveBeenLastCalledWith(
+    requester,
+    expect.objectContaining({ requestId: 'invalid', error: 'Invalid worker operation.' })
+  );
   vi.spyOn(master, 'applyWorkerCount').mockRejectedValueOnce(null);
   await handler(request(1), requester);
-  expect(state.send).toHaveBeenLastCalledWith(requester, expect.objectContaining({ error: 'Unable to change worker count.' }));
+  expect(state.send).toHaveBeenLastCalledWith(
+    requester,
+    expect.objectContaining({ error: 'Unable to change worker count.' })
+  );
 });
 
 it('does not accept changes after shutdown begins or without a count', async () => {
   master.isRunning = false;
-  await expect(master.applyWorkerCount(request(3), state.workers.get(1))).rejects.toThrow(/shutdown/);
+  await expect(master.applyWorkerCount(request(3), state.workers.get(1))).rejects.toThrow(
+    /shutdown/
+  );
   master.isRunning = true;
-  await expect(master.applyWorkerCount({ operation: 'apply' }, state.workers.get(1))).rejects.toThrow(/Select Automatic/);
+  await expect(
+    master.applyWorkerCount({ operation: 'apply' }, state.workers.get(1))
+  ).rejects.toThrow(/Select Automatic/);
 });
 
 it('rolls back when an additional worker exits before readiness and ignores unrelated messages', async () => {
@@ -309,7 +342,9 @@ it('rolls back an increase when shutdown starts before the worker becomes ready'
 it('rejects a reduction when the requester leaves insufficient removable workers', async () => {
   const requester = state.workers.get(1);
   const spy = vi.spyOn(master.ipc, 'getWorkers').mockReturnValue([requester, requester, requester]);
-  await expect(master.applyWorkerCount(request(1, true), requester)).rejects.toThrow(/state changed/);
+  await expect(master.applyWorkerCount(request(1, true), requester)).rejects.toThrow(
+    /state changed/
+  );
   expect(state.config.updateNodeSettings).not.toHaveBeenCalled();
   spy.mockRestore();
 });
@@ -327,7 +362,9 @@ it('reports unconfirmed removals instead of claiming a successful reduction', as
   vi.useFakeTimers();
   const removed = state.workers.get(2);
   removed.kill.mockImplementation(() => {});
-  const rejection = expect(master.removeWorkers([removed])).rejects.toThrow(/could not be confirmed/);
+  const rejection = expect(master.removeWorkers([removed])).rejects.toThrow(
+    /could not be confirmed/
+  );
   await vi.advanceTimersByTimeAsync(5000);
   await rejection;
   expect(removed.listenerCount('exit')).toBe(0);
@@ -337,7 +374,11 @@ it('saves Automatic while applying the current CPU limit', async () => {
   const cpu = os.cpus()[0]!;
   const cpuCount = vi.spyOn(os, 'cpus').mockReturnValue([cpu, cpu, cpu]);
   try {
-    await expect(master.applyWorkerCount(request(0), state.workers.get(1))).resolves.toMatchObject({ workerCount: 0, runningWorkers: 3, maxWorkers: 3 });
+    await expect(master.applyWorkerCount(request(0), state.workers.get(1))).resolves.toMatchObject({
+      workerCount: 0,
+      runningWorkers: 3,
+      maxWorkers: 3,
+    });
     expect(state.config.updateNodeSettings).toHaveBeenCalledWith({ workerCount: 0 });
     expect(state.fork).not.toHaveBeenCalled();
   } finally {

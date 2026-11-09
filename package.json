@@ -49,6 +49,7 @@
     "test:unit": "vitest run",
     "test:integration:sqlite": "vitest run --config vitest.sqlite.integration.config.ts",
     "test:integration:postgres": "vitest run --config vitest.postgres.integration.config.ts",
+    "test:database-authority": "vitest run --config vitest.database-authority.config.ts",
     "knip": "knip",
     "prepare": "husky install",
     "db:push": "tsx node_modules/drizzle-kit/bin.cjs push",

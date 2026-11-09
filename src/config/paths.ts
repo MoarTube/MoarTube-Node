@@ -4,6 +4,7 @@
  */
 
 import path from 'node:path';
+import { componentDirectory } from './data-layout.cjs';
 import { getEnv } from '@config/env.js';
 
 /**
@@ -94,70 +95,17 @@ class Paths implements PathConfig {
    * 4. OS-specific user data directory
    */
   private resolveDataDirectory(
-    baseDir: string,
-    isDevelopment: boolean,
+    _baseDir: string,
+    _isDevelopment: boolean,
     env: ReturnType<typeof getEnv>
   ): string {
-    // Priority 1: Explicit environment variable override
-    const envDataDir = env.dataDirectory;
-    if (envDataDir !== undefined && envDataDir !== '') {
-      return envDataDir;
-    }
-
-    // Priority 2: Docker environment uses /data volume
-    if (env.isDockerEnvironment) {
-      return '/data';
-    }
-
-    // Priority 3: Development mode uses local ./data directory
-    if (isDevelopment) {
-      return path.join(baseDir, 'data');
-    }
-
-    // Priority 4: Production uses OS-specific user data directory
-    return this.getOsSpecificDataDirectory();
-  }
-
-  /**
-   * Get the OS-specific user data directory
-   * - Windows: %APPDATA%/moartube-node
-   * - macOS: ~/Library/Application Support/moartube-node
-   * - Linux: ~/.local/share/moartube-node
-   */
-  private getOsSpecificDataDirectory(): string {
-    const appName = 'moartube-node';
-
-    if (process.platform === 'win32') {
-      const appData = process.env['APPDATA'];
-      if (appData === undefined || appData === '') {
-        throw new Error(
-          'APPDATA environment variable is not set. ' +
-            'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
-        );
-      }
-      return path.join(appData, appName);
-    }
-
-    if (process.platform === 'darwin') {
-      const home = process.env['HOME'];
-      if (home === undefined || home === '') {
-        throw new Error(
-          'HOME environment variable is not set. ' +
-            'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
-        );
-      }
-      return path.join(home, 'Library', 'Application Support', appName);
-    }
-
-    // Linux and other Unix-like systems
-    const home = process.env['HOME'];
-    if (home === undefined || home === '') {
-      throw new Error(
-        'HOME environment variable is not set. ' +
-          'Set MOARTUBE_DATA_DIR environment variable to specify the data directory.'
-      );
-    }
-    return path.join(home, '.local', 'share', appName);
+    return componentDirectory('node', {
+      env: {
+        ...process.env,
+        MOARTUBE_DATA_DIR: env.dataDirectory ?? '',
+        IS_DOCKER_ENVIRONMENT: env.isDockerEnvironment ? 'true' : 'false',
+      },
+    });
   }
 
   /**

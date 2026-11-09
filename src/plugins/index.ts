@@ -59,6 +59,11 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
     trustProxy: 'loopback',
   });
 
+  app.addHook('onRequest', () =>
+    Promise.resolve().then(() => {
+      void getConfig().nodeSettings;
+    })
+  );
   app.addHook('onSend', compressTextResponse);
 
   // Register CORS to allow any origin

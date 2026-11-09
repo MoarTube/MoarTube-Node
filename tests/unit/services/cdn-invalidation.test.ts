@@ -1,3 +1,4 @@
+import { operationalConfig } from '@/database/operational.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -150,15 +151,15 @@ describe('content invalidation regressions', () => {
   it('persists a rejected prefix purge and a different service drains it without another mutation', async () => {
     post.mockRejectedValue({ response: { status: 403 } });
     await cdn.purgePublicPages();
-    const journal = purgeOutbox(state.config.paths.nodeSettingsPath + '.purges.sqlite');
-    expect(journal.snapshot('zone').length).toBe(3);
-    journal.close();
+    const journal = purgeOutbox(operationalConfig(state.config));
+    expect((await journal.snapshot('zone')).length).toBe(3);
+    await journal.close();
     post.mockResolvedValue(success);
     const replacement = new CloudflareService(logger as never, repository);
     await replacement.retryPendingPurges();
-    const reopened = purgeOutbox(state.config.paths.nodeSettingsPath + '.purges.sqlite');
-    expect(reopened.snapshot('zone')).toEqual([]);
-    reopened.close();
+    const reopened = purgeOutbox(operationalConfig(state.config));
+    expect(await reopened.snapshot('zone')).toEqual([]);
+    await reopened.close();
   });
 
   it('does not acknowledge a newer worker generation with an older successful response', async () => {
@@ -170,14 +171,15 @@ describe('content invalidation regressions', () => {
         })
     );
     const first = cdn.purgePublicPages();
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
     const other = new CloudflareService(logger as never, repository);
     post.mockRejectedValue({ response: { status: 403 } });
     await other.purgePublicPages();
     finish(success);
     await first;
-    const journal = purgeOutbox(state.config.paths.nodeSettingsPath + '.purges.sqlite');
-    expect(journal.snapshot('zone').length).toBe(3);
-    journal.close();
+    const journal = purgeOutbox(operationalConfig(state.config));
+    expect((await journal.snapshot('zone')).length).toBe(3);
+    await journal.close();
     post.mockResolvedValue(success);
     await cdn.retryPendingPurges();
   });
@@ -222,9 +224,9 @@ describe('content invalidation regressions', () => {
         headers: expect.objectContaining({ 'X-Auth-Key': 'previous-key' }),
       })
     );
-    const journal = purgeOutbox(state.config.paths.nodeSettingsPath + '.purges.sqlite');
-    expect(journal.pendingCredentials()).toEqual([]);
-    journal.close();
+    const journal = purgeOutbox(operationalConfig(state.config));
+    expect(await journal.pendingCredentials()).toEqual([]);
+    await journal.close();
   });
 
   it.each(['video', 'chat'])(
@@ -385,6 +387,7 @@ describe('content invalidation regressions', () => {
         })
     );
     const running = cdn.retryPendingPurges();
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
     const calls = post.mock.calls.length;
     await cdn.retryPendingPurges();
     expect(post.mock.calls.length).toBe(calls);
@@ -416,13 +419,11 @@ describe('content invalidation regressions', () => {
     post.mockRejectedValue({ response: { status: 403 } });
     await cdn.purgePublicPages();
     await expect(cdn.retryPendingPurges()).rejects.toThrow('incomplete');
-    const journal = purgeOutbox(state.config.paths.nodeSettingsPath + '.purges.sqlite');
-    expect(
-      journal
-        .pendingCredentials()
-        .map(({ zone }) => zone)
-        .sort()
-    ).toEqual(['old-zone', 'zone']);
-    journal.close();
+    const journal = purgeOutbox(operationalConfig(state.config));
+    expect((await journal.pendingCredentials()).map(({ zone }) => zone).sort()).toEqual([
+      'old-zone',
+      'zone',
+    ]);
+    await journal.close();
   });
 });
