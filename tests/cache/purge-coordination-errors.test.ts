@@ -20,8 +20,7 @@ beforeEach(() => {
   post = vi.fn().mockResolvedValue({ data: { success: true } });
   vi.mocked(axios.create).mockReturnValue({ post } as never);
   cdn = new CloudflareService(
-    { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() } as never,
-    {} as never
+    { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() } as never
   );
   cdn.isEnabled();
   lease = { renew: vi.fn().mockResolvedValue(true), release: vi.fn() };

@@ -404,8 +404,16 @@ export class StreamsService extends BaseService {
           isFinalized: 0,
         });
 
-        // Purge Cloudflare cache
-        await this.invalidateStreamMedia(videoId);
+        // Restreaming resets the whole video tree and deletes its comments.
+        if (isResumingStream) {
+          const config = getConfig();
+          await this.cloudflareService.purgePrefixes([
+            config.getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/',
+            config.getNodeBaseUrl() + '/videos/' + videoId + '/comments',
+          ]);
+        } else {
+          await this.invalidateStreamMedia(videoId);
+        }
         await this.cloudflareService.purgeHomePage([videoId]);
 
         return { videoId };

@@ -454,6 +454,7 @@ export class SettingsController extends BaseController {
       if (published) {
         await this.cloudflareService.purgeNodeImages().catch((error: unknown) => {
           this.logger.error('Failed to purge node images from Cloudflare', error);
+          failed = true;
         });
       }
     }
@@ -483,22 +484,27 @@ export class SettingsController extends BaseController {
       const parts = request.parts({ limits: { fileSize: 20 * 1024 ** 2, files: 2, parts: 4 } });
 
       let bannerFile: MultipartFile | undefined;
-
-      for await (const part of parts) {
-        if (part.type === 'file' && part.fieldname === 'bannerFile') {
-          bannerFile = part;
-          // Save banner file
-          const bannerPath = path.join(imagesDir, 'banner.png');
-          await writeUpload(part, bannerPath, 20 * 1024 ** 2);
+      let published = false;
+      try {
+        for await (const part of parts) {
+          if (part.type === 'file' && part.fieldname === 'bannerFile') {
+            bannerFile = part;
+            // Save banner file
+            const bannerPath = path.join(imagesDir, 'banner.png');
+            await writeUpload(part, bannerPath, 20 * 1024 ** 2);
+            published = true;
+          }
+        }
+      } finally {
+        // A later part can fail after an earlier image has already committed.
+        if (published) {
+          await this.cloudflareService.purgeNodeImages();
         }
       }
 
       if (bannerFile === undefined) {
         return await this.sendError(reply, 'bannerFile is required');
       } else {
-        // Purge Cloudflare cache if enabled
-        await this.cloudflareService.purgeNodeImages();
-
         return await this.sendSuccess(reply);
       }
     } catch (error) {
@@ -674,7 +680,7 @@ export class SettingsController extends BaseController {
   ): Promise<FastifyReply> => {
     try {
       const { nodeBulletin } = request.body as PersonalizeNodeBulletinBody;
-      const saved = this.settingsService.updateNodeBulletin(nodeBulletin);
+      const saved = await this.settingsService.updateNodeBulletin(nodeBulletin);
       return await this.sendSuccess(reply, { nodeBulletin: saved });
     } catch (error) {
       this.logger.error('Error updating node bulletin', error);
@@ -689,7 +695,7 @@ export class SettingsController extends BaseController {
   ): Promise<FastifyReply> => {
     try {
       const { nodeLinks } = request.body as PersonalizeNodeLinksBody;
-      const saved = this.settingsService.updateNodeLinks(nodeLinks);
+      const saved = await this.settingsService.updateNodeLinks(nodeLinks);
       return await this.sendSuccess(reply, { nodeLinks: saved });
     } catch (error) {
       this.logger.error('Error updating node links', error);

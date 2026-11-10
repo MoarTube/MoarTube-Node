@@ -265,11 +265,12 @@ export class SettingsService extends BaseService {
   }
 
   /** Replace the bulletin in stored order; an empty array clears it. */
-  updateNodeBulletin(nodeBulletin: string[]): string[] {
+  async updateNodeBulletin(nodeBulletin: string[]): Promise<string[]> {
     const bulletin = nodeBulletinSchema.parse(nodeBulletin);
     getConfig().updateNodeSettings({ nodeBulletin: bulletin });
-    void this.cloudflareService.purgeHomePage([], true).catch((error: unknown) => {
+    await this.cloudflareService.purgeHomePage([], true).catch((error: unknown) => {
       this.logger.warn('Homepage purge deferred', { error });
+      throw error;
     });
     this.logger.info('Node bulletin updated', { itemCount: bulletin.length });
     return bulletin;
@@ -283,11 +284,12 @@ export class SettingsService extends BaseService {
   }
 
   /** Replace the links in stored order; an empty array clears it. */
-  updateNodeLinks(nodeLinks: NodeLink[]): NodeLink[] {
+  async updateNodeLinks(nodeLinks: NodeLink[]): Promise<NodeLink[]> {
     const links = nodeLinksSchema.parse(nodeLinks);
     getConfig().updateNodeSettings({ nodeLinks: links });
-    void this.cloudflareService.purgeHomePage([], true).catch((error: unknown) => {
+    await this.cloudflareService.purgeHomePage([], true).catch((error: unknown) => {
       this.logger.warn('Homepage purge deferred', { error });
+      throw error;
     });
     this.logger.info('Node links updated', { itemCount: links.length });
     return links;

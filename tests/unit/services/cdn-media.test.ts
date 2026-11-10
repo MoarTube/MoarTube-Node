@@ -37,8 +37,7 @@ beforeEach(() => {
     post: vi.fn().mockResolvedValue({ data: { success: true } }),
   } as never);
   service = new CloudflareService(
-    { error: vi.fn(), debug: vi.fn(), warn: vi.fn(), info: vi.fn() } as never,
-    {} as never
+    { error: vi.fn(), debug: vi.fn(), warn: vi.fn(), info: vi.fn() } as never
   );
 });
 describe('media invalidation inventories', () => {

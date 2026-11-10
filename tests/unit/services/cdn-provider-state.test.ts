@@ -78,8 +78,7 @@ beforeEach(() => {
     return { data: { success: true } };
   });
   service = new CloudflareService(
-    { info: vi.fn(), error: vi.fn(), debug: vi.fn() } as never,
-    {} as never
+    { info: vi.fn(), error: vi.fn(), debug: vi.fn() } as never
   );
 });
 const apply = () =>

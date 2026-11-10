@@ -40,7 +40,7 @@ import { getConfig } from '@config/index.js';
 import { randomUUID } from 'node:crypto';
 import { rewriteManifestFile } from '@/utils/manifest-transform.js';
 import { withoutRendition } from '@/utils/hls-rendition.js';
-import type { CloudflareService } from '@services/cloudflare.js';
+import { PurgePersistenceError, type CloudflareService } from '@services/cloudflare.js';
 import type { StorageService } from '@services/storage.js';
 import type { WebSocketService } from '@services/websocket.js';
 import type { PaginatedResult } from '@/types/index.js';
@@ -370,6 +370,9 @@ export class VideosService extends BaseService {
           videoId,
           error,
         });
+        if (error instanceof PurgePersistenceError) {
+          throw error;
+        }
       }
 
       return updatedVideo;
@@ -400,6 +403,9 @@ export class VideosService extends BaseService {
           videoId,
           error,
         });
+        if (error instanceof PurgePersistenceError) {
+          throw error;
+        }
       }
 
       return updatedVideo;
@@ -436,6 +442,9 @@ export class VideosService extends BaseService {
           videoId,
           error,
         });
+        if (error instanceof PurgePersistenceError) {
+          throw error;
+        }
       }
 
       return deleted;

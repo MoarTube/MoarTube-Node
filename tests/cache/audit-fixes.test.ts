@@ -138,7 +138,7 @@ it('purges comment state, bodies, deltas and replies through a revision-independ
   };
   const post = vi.fn().mockResolvedValue({ data: { success: true } });
   vi.mocked(axios.create).mockReturnValue({ post } as never);
-  const cdn = new CloudflareService(Logger.getInstance(), {} as never);
+  const cdn = new CloudflareService(Logger.getInstance());
   await cdn.purgeComments('auditCache1');
   expect(post).toHaveBeenCalledWith('/zones/zone/purge_cache', {
     prefixes: ['node.example/videos/auditCache1/comments'],
@@ -218,7 +218,7 @@ it('purges the image prefix rather than a literal directory URL', async () => {
     videosService: {},
     videoUploadService: {},
     reportsService: {},
-    cloudflareService: new CloudflareService(Logger.getInstance(), {} as never),
+    cloudflareService: new CloudflareService(Logger.getInstance()),
   };
   const app = Fastify();
   cleanup.push(() => app.close());

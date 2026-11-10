@@ -27,7 +27,7 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 function service(post: ReturnType<typeof vi.fn>) {
   vi.mocked(axios.create).mockReturnValue({ post } as never);
-  const cdn = new CloudflareService(logger as never, {} as never);
+  const cdn = new CloudflareService(logger as never);
   cdn.isEnabled();
   return cdn;
 }

@@ -45,6 +45,8 @@ vi.mock('@config/index.js', () => ({
       dataDirectoryPath: '/data',
     },
     reloadNodeSettings: vi.fn(),
+    getNodeBaseUrl: () => 'https://node.example',
+    getExternalVideosBaseUrl: () => 'https://media.example',
     nodeSettings: {
       storageConfig: {
         storageMode: 'filesystem',
@@ -135,6 +137,7 @@ describe('StreamsService', () => {
 
     mockCloudflareService = {
       purgeAdaptiveVideos: vi.fn().mockResolvedValue(undefined),
+      purgePrefixes: vi.fn().mockResolvedValue(undefined),
       purgeAllWatchPages: vi.fn(),
       purgeHomePage: vi.fn(),
     } as unknown as CloudflareService;
@@ -493,6 +496,12 @@ describe('StreamsService', () => {
     });
 
     it('should resume existing stream when existingVideoId provided', async () => {
+      const { getConfig } = await import('@config/index.js');
+      vi.mocked(getConfig).mockReturnValue({
+        ...getConfig(),
+        getNodeBaseUrl: () => 'https://node.example',
+        getExternalVideosBaseUrl: () => 'https://media.example',
+      } as never);
       vi.mocked(mockVideosRepository.findById).mockResolvedValue(mockVideo);
       vi.mocked(mockVideosRepository.update).mockResolvedValue(mockVideo);
       vi.mocked(mockCommentsRepository.deleteByVideoId).mockResolvedValue(2);
@@ -504,6 +513,10 @@ describe('StreamsService', () => {
       });
 
       expect(result.videoId).toBe('video123');
+      expect(mockCloudflareService.purgePrefixes).toHaveBeenCalledWith([
+        'https://media.example/external/videos/video123/',
+        'https://node.example/videos/video123/comments',
+      ]);
       expect(mockVideosRepository.update).toHaveBeenCalledWith(
         'video123',
         expect.objectContaining({

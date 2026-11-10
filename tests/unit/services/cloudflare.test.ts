@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import axios from 'axios';
+import { asClass, asValue, createContainer, InjectionMode } from 'awilix';
 import { CloudflareService } from '@/services/cloudflare.js';
 import type { Logger } from '@/utils/logger.js';
 import type { VideosRepository } from '@/database/repositories/index.js';
@@ -67,7 +68,7 @@ describe('CloudflareService', () => {
       get: vi.fn(),
     } as unknown as ReturnType<typeof axios.create>);
 
-    service = new CloudflareService(mockLogger, mockVideosRepository);
+    service = new CloudflareService(mockLogger);
     vi.spyOn(service, 'getAdaptiveVideoUrls').mockResolvedValue([]);
   });
 
@@ -76,6 +77,16 @@ describe('CloudflareService', () => {
   });
 
   describe('constructor', () => {
+    it('resolves through classic dependency injection with only a logger', () => {
+      const container = createContainer({ injectionMode: InjectionMode.CLASSIC, strict: true });
+      container.register({
+        logger: asValue(mockLogger),
+        cloudflareService: asClass(CloudflareService).singleton(),
+      });
+
+      expect(container.resolve('cloudflareService')).toBeInstanceOf(CloudflareService);
+    });
+
     it('should create a CloudflareService instance', () => {
       expect(service).toBeInstanceOf(CloudflareService);
     });
@@ -85,7 +96,7 @@ describe('CloudflareService', () => {
       mockConfig.nodeSettings.cloudflareGlobalApiKey = 'api-key';
       mockConfig.nodeSettings.cloudflareEmailAddress = 'test@example.com';
 
-      service = new CloudflareService(mockLogger, mockVideosRepository);
+      service = new CloudflareService(mockLogger);
       vi.spyOn(service, 'getAdaptiveVideoUrls').mockResolvedValue([]);
 
       expect(axios.create).toHaveBeenCalledWith(
@@ -104,7 +115,7 @@ describe('CloudflareService', () => {
       mockConfig.nodeSettings.isCloudflareCdnEnabled = false;
 
       vi.mocked(axios.create).mockClear();
-      service = new CloudflareService(mockLogger, mockVideosRepository);
+      service = new CloudflareService(mockLogger);
 
       expect(axios.create).not.toHaveBeenCalled();
     });
@@ -378,7 +389,7 @@ describe('CloudflareService', () => {
       });
 
       // Should not throw during construction
-      expect(() => new CloudflareService(mockLogger, mockVideosRepository)).not.toThrow();
+      expect(() => new CloudflareService(mockLogger)).not.toThrow();
       expect(mockLogger.debug).toHaveBeenCalledWith('Cloudflare client not configured');
     });
   });
@@ -400,7 +411,7 @@ describe('CloudflareService', () => {
       vi.mocked(axios.create).mockReturnValue(
         mockHttpClient as unknown as ReturnType<typeof axios.create>
       );
-      service = new CloudflareService(mockLogger, mockVideosRepository);
+      service = new CloudflareService(mockLogger);
       vi.spyOn(service, 'getAdaptiveVideoUrls').mockResolvedValue([]);
     });
 
@@ -919,7 +930,7 @@ describe('CloudflareService', () => {
         mockHttpClient as unknown as ReturnType<typeof axios.create>
       );
 
-      service = new CloudflareService(mockLogger, mockVideosRepository);
+      service = new CloudflareService(mockLogger);
     });
 
     it('should retain purgeWatchPages failures when the provider rejects tags', async () => {
@@ -1091,7 +1102,7 @@ describe('CloudflareService', () => {
   it('invalidates the catalog with a single tag rather than enumerating videos', async () => {
     mockConfig.nodeSettings.isCloudflareCdnEnabled = true;
     mockConfig.nodeSettings.cloudflareGlobalApiKey = 'key';
-    service = new CloudflareService(mockLogger, mockVideosRepository);
+    service = new CloudflareService(mockLogger);
     const purge = vi.spyOn(service as any, 'purgeCache').mockResolvedValue(undefined);
     await service.purgeWatchPages();
     expect(purge).toHaveBeenCalledWith(['tag:moartube-watch'], 'purgeWatchPages', undefined, false);
@@ -1112,7 +1123,7 @@ describe('CDN public hostname selection', () => {
     vi.mocked(axios.get).mockResolvedValueOnce({
       data: { success: true, result: { name } },
     });
-    const service = new CloudflareService(logger as never, {} as never);
+    const service = new CloudflareService(logger as never);
     expect(await service.resolveCdnPublicAddress('email', 'zone', 'key')).toBe('example.com');
   });
   it.each([
@@ -1121,7 +1132,7 @@ describe('CDN public hostname selection', () => {
     { success: true, result: { name: 'http://bad' } },
   ])('rejects invalid provider zone data %o', async (data) => {
     vi.mocked(axios.get).mockResolvedValueOnce({ data });
-    const service = new CloudflareService(logger as never, {} as never);
+    const service = new CloudflareService(logger as never);
     await expect(service.resolveCdnPublicAddress('email', 'zone', 'key')).rejects.toThrow();
   });
 });

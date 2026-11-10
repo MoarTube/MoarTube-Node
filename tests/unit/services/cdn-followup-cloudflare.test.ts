@@ -37,8 +37,7 @@ beforeEach(() => {
   post = vi.fn().mockResolvedValue(success);
   vi.mocked(axios.create).mockReturnValue({ post } as never);
   service = new CloudflareService(
-    { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() } as never,
-    {} as never
+    { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() } as never
   );
 });
 describe('follow-up Cloudflare correctness', () => {

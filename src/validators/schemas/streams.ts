@@ -38,20 +38,14 @@ export const uuidSchema = z.union([z.uuid(), z.literal('moartube')]);
 export const hlsSegmentNameSchema = z
   .string()
   .regex(
-    /^segment-(?:2160p|1440p|1080p|720p|480p|360p|240p)-\d+\.ts$/,
+    /^segment-(?:2160p|1440p|1080p|720p|480p|360p|240p)-(?:[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}-)?\d+\.ts$/i,
     'Invalid segment name format'
   );
 
 /**
  * Chat history limit schema
  */
-export const chatHistoryLimitSchema = z.coerce
-  .number()
-  .int()
-  .min(0)
-  .max(500)
-  .optional()
-  .default(0);
+export const chatHistoryLimitSchema = z.coerce.number().int().min(0).max(500).optional().default(0);
 
 /**
  * Chat slow mode seconds schema

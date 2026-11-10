@@ -43,7 +43,7 @@ afterEach(async () => {
 });
 
 it('direct-storage invalidation strictly purges every cacheable Origin identity in one file request', async () => {
-  const cdn = new CloudflareService(logger as never, {} as never);
+  const cdn = new CloudflareService(logger as never);
   const controller = new VideosController({} as never, {} as never, {} as never, cdn, {} as never);
   const app = Fastify();
   app.post('/videos/:videoId/invalidate', controller.invalidateCache);
@@ -96,7 +96,7 @@ it('only canonical media variants are promoted at the Node origin', async () => 
 });
 
 it('bypasses arbitrary key variants on direct S3 without paid custom-key features', () => {
-  const cdn = new CloudflareService(logger as never, {} as never);
+  const cdn = new CloudflareService(logger as never);
   const rules = cdn.managedCdnSnapshot().rules ?? [];
   expect(rules.length).toBeLessThanOrEqual(10);
   expect(rules.some((rule) => rule['expression'] === mediaVariantBypass())).toBe(true);
@@ -137,10 +137,10 @@ it('shares the Free burst budget across credential changes and drains queued wor
   vi.spyOn(Date, 'now').mockImplementation(() => now);
   for (let i = 0; i < 25; i++) {
     cfg.value.nodeSettings.cloudflareEmailAddress = 'account-' + i;
-    const service = new CloudflareService(logger as never, {} as never);
+    const service = new CloudflareService(logger as never);
     await service.purgePrefixes(['https://media.example/videos/' + i], true);
   }
-  const service = new CloudflareService(logger as never, {} as never);
+  const service = new CloudflareService(logger as never);
   await expect(
     service.purgePrefixes(['https://media.example/videos/queued'], true)
   ).rejects.toThrow('incomplete');
@@ -163,8 +163,8 @@ it('strict concurrent direct writes join dispatch without a synthetic completion
     await release;
     return { data: { success: true } };
   });
-  const first = new CloudflareService(logger as never, {} as never);
-  const second = new CloudflareService(logger as never, {} as never);
+  const first = new CloudflareService(logger as never);
+  const second = new CloudflareService(logger as never);
   const a = first.purgeFiles(['https://media.example/external/videos/one/a.ts'], true);
   await entered;
   const b = second.purgeFiles(['https://media.example/external/videos/one/b.ts'], true);
@@ -191,11 +191,11 @@ it('honors an exhausted API-wide quota across both purge lanes and process handl
       },
     },
   });
-  const first = new CloudflareService(logger as never, {} as never);
+  const first = new CloudflareService(logger as never);
   await expect(
     first.purgePrefixes(['https://media.example/external/videos/one/'], true)
   ).rejects.toThrow();
-  const next = new CloudflareService(logger as never, {} as never);
+  const next = new CloudflareService(logger as never);
   const file = 'https://media.example/external/videos/two/a.ts';
   await expect(next.purgeFiles([file], true)).rejects.toThrow();
   now += 2000;

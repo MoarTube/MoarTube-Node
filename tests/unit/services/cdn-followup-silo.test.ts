@@ -518,7 +518,7 @@ describe('follow-up storage fixes against real Silo', () => {
     vi.mocked(axios.create).mockReturnValue({
       post: vi.fn().mockResolvedValue({ data: { success: true } }),
     } as never);
-    const cdn = new CloudflareService(logger as never, repository);
+    const cdn = new CloudflareService(logger as never);
     try {
       await expect(
         withCloudflareDeadline(
@@ -597,7 +597,7 @@ describe('follow-up storage fixes against real Silo', () => {
     ).toContain('s-maxage=31536000');
     vi.mocked(axios.put).mockResolvedValue({ data: { success: true } });
     vi.mocked(axios.patch).mockResolvedValue({ data: { success: true } });
-    const cdn = new CloudflareService(logger as never, repository);
+    const cdn = new CloudflareService(logger as never);
     await cdn.setCdnConfiguration('email', 'zone', 'key');
     const rules = (
       vi
@@ -652,7 +652,7 @@ describe('follow-up storage fixes against real Silo', () => {
         return { data: { success: true } };
       }),
     } as never);
-    const cdn = new CloudflareService(logger as never, repository);
+    const cdn = new CloudflareService(logger as never);
     const videos = new VideosService(
       logger as never,
       repository,
@@ -699,7 +699,7 @@ describe('follow-up storage fixes against real Silo', () => {
         return { data: { success: true } };
       }),
     } as never);
-    const cdn = new CloudflareService(logger as never, repository);
+    const cdn = new CloudflareService(logger as never);
     const controller = new VideosController(
       {} as never,
       {} as never,

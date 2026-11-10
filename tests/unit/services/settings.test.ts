@@ -311,20 +311,18 @@ describe('SettingsService', () => {
   });
 
   describe('updateNetworkSettings', () => {
-    it('saves bulletin text even when the asynchronous homepage purge fails', async () => {
+    it('reports failure when the bulletin homepage purge cannot be accepted', async () => {
       const error = new Error('CDN unavailable');
       vi.mocked(mockCloudflareService.purgeHomePage).mockRejectedValueOnce(error);
-      expect(service.updateNodeBulletin([' Welcome '])).toEqual(['Welcome']);
-      await Promise.resolve();
+      await expect(service.updateNodeBulletin([' Welcome '])).rejects.toBe(error);
       expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({ nodeBulletin: ['Welcome'] });
       expect(mockLogger.warn).toHaveBeenCalledWith('Homepage purge deferred', { error });
     });
-    it('saves node links even when the asynchronous homepage purge fails', async () => {
+    it('reports failure when the links homepage purge cannot be accepted', async () => {
       const error = new Error('CDN unavailable');
       vi.mocked(mockCloudflareService.purgeHomePage).mockRejectedValueOnce(error);
       const links = [{ url: 'https://example.test', description: 'Neighbor' }];
-      expect(service.updateNodeLinks(links)).toEqual(links);
-      await Promise.resolve();
+      await expect(service.updateNodeLinks(links)).rejects.toBe(error);
       expect(mockConfig.updateNodeSettings).toHaveBeenCalledWith({ nodeLinks: links });
       expect(mockLogger.warn).toHaveBeenCalledWith('Homepage purge deferred', { error });
     });

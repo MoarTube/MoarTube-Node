@@ -1854,7 +1854,7 @@ describe('SettingsController', () => {
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
-    it('should handle cloudflare purge error gracefully', async () => {
+    it('should report a cache persistence error instead of acknowledging the upload', async () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
 
       const mockFile = { pipe: vi.fn() };
@@ -1872,8 +1872,7 @@ describe('SettingsController', () => {
         mockReply as unknown as FastifyReply
       );
 
-      // Should still succeed
-      expect(mockReply.status).toHaveBeenCalledWith(200);
+      expect(mockReply.status).toHaveBeenCalledWith(500);
     });
 
     it('should return error on exception', async () => {

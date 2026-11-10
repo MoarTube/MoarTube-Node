@@ -1887,29 +1887,38 @@ export class VideosController extends BaseController {
 
     // Process multipart upload
     const parts = request.parts();
+    let published = false;
+    try {
+      for await (const part of parts) {
+        if (part.type === 'file' && part.fieldname === fieldName) {
+          const file = part;
 
-    for await (const part of parts) {
-      if (part.type === 'file' && part.fieldname === fieldName) {
-        const file = part;
+          // Validate mime type
+          if (!this.videoUploadService.isValidImageMimeType(file.mimetype)) {
+            throw new BadRequestError(
+              `Unsupported image type: ${file.mimetype}. Only JPEG is supported.`
+            );
+          }
 
-        // Validate mime type
-        if (!this.videoUploadService.isValidImageMimeType(file.mimetype)) {
-          throw new BadRequestError(
-            `Unsupported image type: ${file.mimetype}. Only JPEG is supported.`
-          );
+          // Get destination path
+          const destPath = this.videoUploadService.getImageDestinationPath(videoId, imageType);
+
+          // Ensure directory exists
+          fs.mkdirSync(destPath, { recursive: true });
+
+          // Save with correct filename
+          const fileName = `${imageType}.jpg`;
+          const filePath = path.join(destPath, fileName);
+          await writeUpload(file, filePath, 20 * 1024 ** 2);
+          published = true;
         }
-
-        // Get destination path
-        const destPath = this.videoUploadService.getImageDestinationPath(videoId, imageType);
-
-        // Ensure directory exists
-        fs.mkdirSync(destPath, { recursive: true });
-
-        // Save with correct filename
-        const fileName = `${imageType}.jpg`;
-        const filePath = path.join(destPath, fileName);
-        await writeUpload(file, filePath, 20 * 1024 ** 2);
       }
+    } catch (error) {
+      // Invalidate an earlier committed part even when the request later fails.
+      if (published) {
+        await this.videoUploadService.handleImageUploadComplete({ videoId, imageType });
+      }
+      throw error;
     }
 
     // Handle upload completion
@@ -1917,6 +1926,9 @@ export class VideosController extends BaseController {
       videoId,
       imageType,
     });
+    if (!result.success) {
+      throw new Error(result.error ?? 'Image cache invalidation failed');
+    }
 
     return await this.sendSuccess(reply, result);
   };

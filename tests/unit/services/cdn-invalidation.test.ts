@@ -67,7 +67,7 @@ beforeEach(async () => {
   };
   post = vi.fn().mockResolvedValue(success);
   vi.mocked(axios.create).mockReturnValue({ post } as never);
-  cdn = new CloudflareService(logger as never, repository);
+  cdn = new CloudflareService(logger as never);
   vi.spyOn(cdn, 'getAdaptiveVideoUrls').mockResolvedValue([]);
   videos = new VideosService(
     logger as never,
@@ -168,7 +168,7 @@ describe('content invalidation regressions', () => {
     ]);
     await journal.close();
     post.mockResolvedValue(success);
-    const replacement = new CloudflareService(logger as never, repository);
+    const replacement = new CloudflareService(logger as never);
     await replacement.retryPendingPurges();
     const reopened = purgeOutbox(operationalConfig(state.config));
     expect(await reopened.snapshot('zone')).toEqual([]);
@@ -185,7 +185,7 @@ describe('content invalidation regressions', () => {
     );
     const first = cdn.purgePublicPages();
     await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
-    const other = new CloudflareService(logger as never, repository);
+    const other = new CloudflareService(logger as never);
     post.mockRejectedValue({ response: { status: 403 } });
     await other.purgePublicPages();
     finish(success);
@@ -202,7 +202,7 @@ describe('content invalidation regressions', () => {
     post.mockRejectedValue({ response: { status: 429, headers: { 'retry-after': '60' } } });
     await cdn.purgePublicPages();
     const calls = post.mock.calls.length;
-    const other = new CloudflareService(logger as never, repository);
+    const other = new CloudflareService(logger as never);
     post.mockResolvedValue(success);
     await expect(other.retryPendingPurges()).rejects.toThrow('incomplete');
     expect(post.mock.calls.length).toBe(calls);
@@ -229,7 +229,7 @@ describe('content invalidation regressions', () => {
     ).rejects.toThrow();
     state.config.nodeSettings.isCloudflareCdnEnabled = false;
     state.config.nodeSettings.cloudflareGlobalApiKey = '';
-    await new CloudflareService(logger as never, repository).retryPendingPurges();
+    await new CloudflareService(logger as never).retryPendingPurges();
     expect(axios.post).toHaveBeenLastCalledWith(
       'https://api.cloudflare.com/client/v4/zones/previous-zone/purge_cache',
       { purge_everything: true },

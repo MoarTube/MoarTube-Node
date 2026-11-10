@@ -28,7 +28,7 @@ const post = vi.fn();
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(axios.create).mockReturnValue({ post } as never);
-  service = new CloudflareService(logger, {} as never);
+  service = new CloudflareService(logger);
 });
 
 describe('CDN failure recovery', () => {

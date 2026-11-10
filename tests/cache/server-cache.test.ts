@@ -122,7 +122,7 @@ it('retains immutable release assets and never serves changed bytes under an old
 it('tags root query variants and purges HTML without evicting comment prefixes', async () => {
   const post = vi.fn().mockResolvedValue({ data: { success: true } });
   vi.mocked(axios.create).mockReturnValue({ post } as never);
-  const cdn = new CloudflareService(logger as never, {} as never);
+  const cdn = new CloudflareService(logger as never);
   const app = Fastify();
   const home = new HomeController({ state: async () => ({}), settings: () => ({}) } as never);
   app.decorateReply('view', function () {
@@ -190,7 +190,7 @@ it.each(['1', '120', new Date(Date.now() + 120000).toUTCString()])(
       .mockRejectedValueOnce({ response: { status: 429, headers: { 'retry-after': retryAfter } } })
       .mockResolvedValue({ data: { success: true } });
     vi.mocked(axios.create).mockReturnValue({ post } as never);
-    const cdn = new CloudflareService(logger as never, {} as never);
+    const cdn = new CloudflareService(logger as never);
     await expect(cdn.purgeFiles(['https://node.example/file'], true)).rejects.toThrow();
     await expect(cdn.retryPendingPurges()).rejects.toThrow();
     expect(post).toHaveBeenCalledTimes(3);

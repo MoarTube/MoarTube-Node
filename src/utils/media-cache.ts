@@ -15,6 +15,10 @@ export const mediaKeyHeaders = [
 ] as const;
 
 export function mediaCacheOrigins(baseUrl = getConfig().getNodeBaseUrl()): string[] {
+  // Local-only nodes can legitimately have no public network address yet.
+  if (!baseUrl) {
+    return [];
+  }
   const base = new URL(baseUrl);
   return [...new Set([base.origin, new URL(base.href.replace(/^http:/, 'https:')).origin])];
 }

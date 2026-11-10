@@ -29,15 +29,6 @@ import type { NodeSettings, StorageConfig } from '@/types/config.js';
 
 import { BaseService } from '@services/base.js';
 import type { Logger } from '@/utils/index.js';
-import type {
-  IVideosRepository,
-  SQLiteVideo,
-  SQLiteNewVideo,
-  PostgresVideo,
-  PostgresNewVideo,
-} from '@database/index.js';
-
-// Common interface for video objects (both SQLite and PostgreSQL types have the same structure)
 import { getConfig } from '@config/index.js';
 
 /**
@@ -45,6 +36,9 @@ import { getConfig } from '@config/index.js';
  */
 const CLOUDFLARE_API_BASE = 'https://api.cloudflare.com/client/v4';
 const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+
+/** A mutation must not report success when its invalidation was never durably queued. */
+export class PurgePersistenceError extends Error {}
 
 /**
  * CloudflareService class
@@ -92,8 +86,8 @@ export class CloudflareService extends BaseService {
       const targets = this.prefixTargets(urls);
       await this.purgeCache(targets, 'purgePrefixes', undefined, strict);
     } catch (error) {
-      this.logger.error('Prefix invalidation incomplete; retained for retry', error);
-      if (strict) {
+      this.logger.error('Prefix invalidation incomplete', error);
+      if (strict || error instanceof PurgePersistenceError) {
         throw error;
       }
     }
@@ -107,8 +101,8 @@ export class CloudflareService extends BaseService {
     try {
       await this.purgeCache(urls, 'purgeFiles', undefined, strict);
     } catch (error) {
-      this.logger.error('File invalidation incomplete; retained for retry', error);
-      if (strict) {
+      this.logger.error('File invalidation incomplete', error);
+      if (strict || error instanceof PurgePersistenceError) {
         throw error;
       }
     }
@@ -574,12 +568,7 @@ export class CloudflareService extends BaseService {
     }
   }
 
-  constructor(
-    logger: Logger,
-    _videosRepository:
-      | IVideosRepository<SQLiteVideo, SQLiteNewVideo>
-      | IVideosRepository<PostgresVideo, PostgresNewVideo>
-  ) {
+  constructor(logger: Logger) {
     super('CloudflareService', logger);
     this.initializeHttpClient();
   }
@@ -680,7 +669,7 @@ export class CloudflareService extends BaseService {
       );
     } catch (error) {
       this.logger.error('Failed to purge watch pages', error);
-      if (strict) {
+      if (strict || error instanceof PurgePersistenceError) {
         throw error;
       }
     }
@@ -705,6 +694,9 @@ export class CloudflareService extends BaseService {
       await this.purgeWatchPages(videoIds, true);
     } catch (error) {
       this.logger.error('Failed to purge embed pages', error);
+      if (error instanceof PurgePersistenceError) {
+        throw error;
+      }
     }
   }
 
@@ -741,7 +733,7 @@ export class CloudflareService extends BaseService {
       );
     } catch (error) {
       this.logger.error('Failed to purge homepage', error);
-      if (strict) {
+      if (strict || error instanceof PurgePersistenceError) {
         throw error;
       }
     }
@@ -768,6 +760,9 @@ export class CloudflareService extends BaseService {
       await this.purgeCache(this.prefixTargets(files), 'purgeNodeImages');
     } catch (error) {
       this.logger.error('Failed to purge node images', error);
+      if (error instanceof PurgePersistenceError) {
+        throw error;
+      }
     }
   }
 
@@ -856,7 +851,7 @@ export class CloudflareService extends BaseService {
       );
     } catch (error) {
       this.logger.error('Adaptive invalidation incomplete', error, { videoId });
-      if (strict) {
+      if (strict || error instanceof PurgePersistenceError) {
         throw error;
       }
     }
@@ -880,6 +875,9 @@ export class CloudflareService extends BaseService {
       );
     } catch (error) {
       this.logger.error('Failed to purge progressive videos', error, { videoId });
+      if (error instanceof PurgePersistenceError) {
+        throw error;
+      }
     }
   }
 
@@ -901,6 +899,9 @@ export class CloudflareService extends BaseService {
       await this.purgeCache(this.prefixTargets(files), 'purgeVideoPreviewImages');
     } catch (error) {
       this.logger.error('Failed to purge preview images', error, { videoIds });
+      if (error instanceof PurgePersistenceError) {
+        throw error;
+      }
     }
   }
 
@@ -922,6 +923,9 @@ export class CloudflareService extends BaseService {
       await this.purgeCache(this.prefixTargets(files), 'purgeVideoPosterImages');
     } catch (error) {
       this.logger.error('Failed to purge poster images', error, { videoIds });
+      if (error instanceof PurgePersistenceError) {
+        throw error;
+      }
     }
   }
 
@@ -943,6 +947,9 @@ export class CloudflareService extends BaseService {
       await this.purgeCache(this.prefixTargets(files), 'purgeVideoThumbnailImages');
     } catch (error) {
       this.logger.error('Failed to purge thumbnail images', error, { videoIds });
+      if (error instanceof PurgePersistenceError) {
+        throw error;
+      }
     }
   }
 
@@ -970,6 +977,9 @@ export class CloudflareService extends BaseService {
       this.logger.info('Entire cache purged');
     } catch (error) {
       this.logger.error('Failed to purge entire cache', error);
+      if (error instanceof PurgePersistenceError) {
+        throw error;
+      }
     }
   }
 
@@ -1553,17 +1563,21 @@ export class CloudflareService extends BaseService {
     // Conservatively share the Free allowance across every configured credential
     // and zone in this database; changing email/key must not refill the bucket.
     const account = 'cloudflare-free';
-    const outbox = this.outbox();
     let durable: PurgeEntry[];
     try {
-      await outbox?.enqueue(zoneId, files, {
-        zone: zoneId,
-        email,
-        key,
-      });
-      durable = (await outbox?.snapshot(zoneId)) ?? [];
-    } finally {
-      await outbox?.close();
+      const outbox = this.outbox();
+      try {
+        await outbox?.enqueue(zoneId, files, {
+          zone: zoneId,
+          email,
+          key,
+        });
+        durable = (await outbox?.snapshot(zoneId)) ?? [];
+      } finally {
+        await outbox?.close();
+      }
+    } catch (cause) {
+      throw new PurgePersistenceError('Cache invalidation could not be durably queued', { cause });
     }
     const versions = this.purgeVersions.get(zoneId) ?? new Map<string, number>();
     this.purgeVersions.set(zoneId, versions);
@@ -1727,7 +1741,7 @@ export class CloudflareService extends BaseService {
                 ? await client.post(`/zones/${zoneId}/purge_cache`, body, { signal })
                 : await client.post(`/zones/${zoneId}/purge_cache`, body);
               const result = response as { data?: { success?: boolean } } | undefined;
-              if (result?.data?.success === false) {
+              if (result?.data?.success !== true) {
                 throw new Error('Cloudflare rejected purge');
               }
               const completed = snapshot.filter((target) =>
