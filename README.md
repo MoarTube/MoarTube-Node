@@ -455,6 +455,8 @@ sudo systemctl restart moartube-node
 
 ### Unified local data directory
 
-All standalone Node launches use the per-user `MoarTube/node` directory: `%APPDATA%/MoarTube/node` on Windows, `~/Library/Application Support/MoarTube/node` on macOS, and `$XDG_DATA_HOME/MoarTube/node` (default `~/.local/share/MoarTube/node`) on Linux. Containers keep the existing `/data` volume and store Node data in `/data/MoarTube/node`. Bundled Client + Node uses `MoarTube/client_node/node` instead. `MOARTUBE_DATA_ROOT` selects a shared parent (or a directory named `MoarTube`); the existing `MOARTUBE_DATA_DIR` explicit component override remains supported.
+Source checkout runs (`npm run dev`, `npm start`, and VS Code launches) use the checkout's local `data` folder for settings, media, databases, and process locks. `--clean` also targets this local data folder without inspecting or modifying installed application data.
+
+Installed standalone Node deployments use the per-user `MoarTube/node` directory: `%APPDATA%/MoarTube/node` on Windows, `~/Library/Application Support/MoarTube/node` on macOS, and `$XDG_DATA_HOME/MoarTube/node` (default `~/.local/share/MoarTube/node`) on Linux. Containers keep the existing `/data` volume and store Node data in `/data/MoarTube/node`. Bundled Client + Node uses `MoarTube/client_node/node` instead. `MOARTUBE_DATA_ROOT` selects a shared parent (or a directory named `MoarTube`); the existing `MOARTUBE_DATA_DIR` explicit component override remains supported. Explicit overrides and Docker paths take precedence over checkout-local data.
 
 Startup uses only the selected data folder. Older folders are never searched or imported; a missing folder starts with fresh defaults.

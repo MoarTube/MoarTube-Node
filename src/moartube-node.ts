@@ -164,7 +164,9 @@ async function startWorker(): Promise<void> {
  */
 try {
   if (cluster.isPrimary) {
-    const releaseData = await prepareData('node');
+    const releaseData = await prepareData('node', {
+      projectRoot: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'),
+    });
     process.once('exit', releaseData);
   }
   loadConfig();

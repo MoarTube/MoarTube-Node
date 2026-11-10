@@ -34,11 +34,21 @@ function componentDirectory(component, options = {}) {
   if (!['client', 'node'].includes(component)) throw new Error('Unknown MoarTube component');
   const env = options.env ?? process.env;
   // Preserve explicit component-directory overrides used by existing deployments
-  // and isolated tests. Distributions themselves all use the common defaults.
+  // and isolated tests.
   if (env.MOARTUBE_DATA_DIR) {
     if (!path.isAbsolute(env.MOARTUBE_DATA_DIR))
       throw new Error('MOARTUBE_DATA_DIR must be an absolute writable directory');
     return env.MOARTUBE_DATA_DIR;
+  }
+  // Source and locally built CLI runs use the checkout, independent of cwd.
+  if (
+    component === 'node' &&
+    options.projectRoot &&
+    !env.MOARTUBE_DATA_ROOT &&
+    env.IS_DOCKER_ENVIRONMENT !== 'true' &&
+    fs.existsSync(path.join(options.projectRoot, 'src', 'moartube-node.ts'))
+  ) {
+    return path.resolve(options.projectRoot, 'data');
   }
   const paths =
     env.IS_DOCKER_ENVIRONMENT === 'true' && !env.MOARTUBE_DATA_ROOT
@@ -121,15 +131,22 @@ async function prepareData(component, options = {}) {
   return acquireDataLock(path.resolve(options.target ?? componentDirectory(component, options)));
 }
 
-function cleanData(component) {
-  const directory = path.resolve(componentDirectory(component));
+function cleanData(component, options = {}) {
+  const directory = path.resolve(componentDirectory(component, options));
   const canonical = (value) => {
     const resolved = fs.existsSync(value) ? fs.realpathSync(value) : path.resolve(value);
     return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
   };
   let sharedRoot;
+  let defaultDirectory;
   try {
-    sharedRoot = dataRoot();
+    defaultDirectory = path.resolve(
+      componentDirectory(component, {
+        ...options,
+        env: { ...(options.env ?? process.env), MOARTUBE_DATA_DIR: undefined },
+      })
+    );
+    sharedRoot = path.dirname(defaultDirectory);
   } catch {
     /* Explicit component paths need no default root. */
   }
@@ -143,7 +160,7 @@ function cleanData(component) {
   if (
     existed &&
     !fs.existsSync(path.join(directory, `_${component}_settings.json`)) &&
-    (!sharedRoot || canonical(directory) !== canonical(path.resolve(sharedRoot, component))) &&
+    (!defaultDirectory || canonical(directory) !== canonical(defaultDirectory)) &&
     fs.readdirSync(directory).length > 0
   ) {
     throw new Error(`Refusing to clean an unrecognized data directory: ${directory}`);

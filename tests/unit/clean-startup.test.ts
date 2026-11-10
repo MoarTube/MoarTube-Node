@@ -36,10 +36,14 @@ function builder(root: string, content: string): void {
   writeFileSync(path.join(dir, 'cli-default.js'), content);
 }
 
-function start(root: string, args: string[] = []): ReturnType<typeof spawnSync> {
+function start(
+  root: string,
+  args: string[] = [],
+  env: NodeJS.ProcessEnv = {}
+): ReturnType<typeof spawnSync> {
   return spawnSync(process.execPath, [path.join(root, 'bin/moartube-node-start'), ...args], {
     cwd: tmpdir(),
-    env: { ...process.env, MOARTUBE_DATA_ROOT: path.join(root, 'user-data') },
+    env: { ...process.env, MOARTUBE_DATA_ROOT: path.join(root, 'user-data'), ...env },
     encoding: 'utf8',
     timeout: 10_000,
   });
@@ -59,6 +63,30 @@ afterEach(() => {
 });
 
 describe('startup launcher', () => {
+  it('cleans checkout data from another working directory without touching installed data', () => {
+    const root = fixture();
+    const installedRoot = path.join(root, 'installed');
+    const installed = path.join(installedRoot, 'MoarTube', 'node');
+    mkdirSync(installed, { recursive: true });
+    writeFileSync(path.join(installed, '.moartube-process.lock'), 'invalid installed lock');
+    writeFileSync(path.join(installed, 'keep'), 'installed data');
+    builder(
+      root,
+      `const fs=require('node:fs');fs.mkdirSync('dist');fs.writeFileSync('dist/moartube-node.js', "console.log('started')");`
+    );
+    const result = start(root, ['--clean'], {
+      MOARTUBE_DATA_ROOT: '',
+      MOARTUBE_DATA_DIR: '',
+      IS_DOCKER_ENVIRONMENT: 'false',
+      APPDATA: installedRoot,
+      HOME: installedRoot,
+      XDG_DATA_HOME: installedRoot,
+    });
+    expect(result.status, String(result.stderr)).toBe(0);
+    expect(existsSync(path.join(root, 'data/old'))).toBe(false);
+    expect(existsSync(path.join(installed, 'keep'))).toBe(true);
+    expect(existsSync(path.join(installed, '.moartube-process.lock'))).toBe(true);
+  });
   it('does not repeat cleanup or building in cluster workers', () => {
     const root = fixture();
     const app = `

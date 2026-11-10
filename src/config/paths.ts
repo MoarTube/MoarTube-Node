@@ -68,8 +68,8 @@ class Paths implements PathConfig {
     // Data directory priority:
     // 1. MOARTUBE_DATA_DIR environment variable (explicit override)
     // 2. Docker environment (/data volume)
-    // 3. Development mode (local ./data directory)
-    // 4. Production (OS-specific user data directory)
+    // 3. Source checkout (local ./data directory)
+    // 4. Installed deployment (OS-specific user data directory)
     this.dataDirectoryPath = this.resolveDataDirectory(baseDir, isDevelopment, env);
 
     // Data subdirectories
@@ -91,15 +91,16 @@ class Paths implements PathConfig {
    * Resolve the data directory path based on priority order:
    * 1. MOARTUBE_DATA_DIR environment variable
    * 2. Docker environment
-   * 3. Development mode
+   * 3. Source checkout
    * 4. OS-specific user data directory
    */
   private resolveDataDirectory(
-    _baseDir: string,
+    baseDir: string,
     _isDevelopment: boolean,
     env: ReturnType<typeof getEnv>
   ): string {
     return componentDirectory('node', {
+      projectRoot: baseDir,
       env: {
         ...process.env,
         MOARTUBE_DATA_DIR: env.dataDirectory ?? '',

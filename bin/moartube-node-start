@@ -24,7 +24,7 @@ try {
     }
     const require = createRequire(import.meta.url);
     const builder = require.resolve("tsup/dist/cli-default.js");
-    require("../src/config/data-layout.cjs").cleanData("node");
+    require("../src/config/data-layout.cjs").cleanData("node", { projectRoot: root });
 
     for (const name of ["coverage", "data", "dist", "drizzle"]) {
       const target = path.resolve(root, name);
