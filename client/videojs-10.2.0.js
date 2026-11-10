@@ -78,7 +78,7 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
     </media-controls>
     <div id="mt-player-settings" class="mt-player-menu" role="menu" aria-label="Player settings" hidden data-interactive></div>
     <div class="mt-context-menu mt-player-menu" role="menu" aria-label="Video links" hidden data-interactive></div>
-    <div class="mt-buffering" role="status" hidden>Loadingâ€¦</div>
+    <div class="mt-buffering" role="status" hidden>Loading\u2026</div>
     <div class="mt-player-error" role="alert" hidden></div>
   </media-container>`;
   const surface = player.querySelector('media-container');
@@ -240,23 +240,23 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
     settings.setAttribute('aria-expanded', 'true');
     controls.setAttribute('visibility', 'always');
     if (page === 'main') {
-      menu.append(menuButton('Quality', () => showMenu('formats'), { detail: `${selected?.format ?? ''} ${selected?.resolution ?? ''} â€º` }),
-        menuButton('Playback speed', () => showMenu('speed'), { detail: `${media?.playbackRate ?? preferredRate}Ã— â€º` }));
+      menu.append(menuButton('Quality', () => showMenu('formats'), { detail: `${selected?.format ?? ''} ${selected?.resolution ?? ''} \u203a` }),
+        menuButton('Playback speed', () => showMenu('speed'), { detail: `${media?.playbackRate ?? preferredRate}\u00d7 \u203a` }));
     } else if (page === 'formats') {
-      menu.append(menuButton('â€¹ Quality', () => showMenu()));
+      menu.append(menuButton('\u2039 Quality', () => showMenu()));
       for (const format of [...new Set(sources.map(source => sourceSelection(source).format))]) {
-        menu.append(menuButton(format, () => showMenu('resolutions', format), { detail: 'â€º' }));
+        menu.append(menuButton(format, () => showMenu('resolutions', format), { detail: '\u203a' }));
       }
     } else if (page === 'resolutions') {
-      menu.append(menuButton(`â€¹ ${format}`, () => showMenu('formats')));
+      menu.append(menuButton(`\u2039 ${format}`, () => showMenu('formats')));
       for (const source of sources.filter(source => sourceSelection(source).format === format)) {
         const { resolution } = sourceSelection(source);
         menu.append(menuButton(resolution, () => { setSource(source); showMenu(page, format); }, { checked: selected?.format === format && selected.resolution === resolution }));
       }
     } else {
-      menu.append(menuButton('â€¹ Playback speed', () => showMenu()));
+      menu.append(menuButton('\u2039 Playback speed', () => showMenu()));
       for (const rate of [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]) {
-        menu.append(menuButton(`${rate}Ã—`, () => { preferredRate = rate; if (media) media.playbackRate = rate; showMenu('speed'); }, { checked: (media?.playbackRate ?? preferredRate) === rate }));
+        menu.append(menuButton(`${rate}\u00d7`, () => { preferredRate = rate; if (media) media.playbackRate = rate; showMenu('speed'); }, { checked: (media?.playbackRate ?? preferredRate) === rate }));
       }
     }
     menu.querySelector('button')?.focus();
