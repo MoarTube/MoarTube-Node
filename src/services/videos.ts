@@ -364,9 +364,7 @@ export class VideosService extends BaseService {
       const updatedVideo = await this.videoRepository.update(videoId, updates);
 
       try {
-        await this.cloudflareService.purgeEmbedVideoPages([videoId]);
-        await this.cloudflareService.purgeWatchPages([videoId]);
-        await this.cloudflareService.purgeHomePage();
+        await this.cloudflareService.purgeHomePage([videoId]);
       } catch (error) {
         this.logger.warn('Failed to purge Cloudflare cache after video update', {
           videoId,
@@ -396,9 +394,7 @@ export class VideosService extends BaseService {
       const updatedVideo = await this.videoRepository.update(videoId, { meta: metaString });
 
       try {
-        await this.cloudflareService.purgeEmbedVideoPages([videoId]);
-        await this.cloudflareService.purgeWatchPages([videoId]);
-        await this.cloudflareService.purgeHomePage();
+        await this.cloudflareService.purgeHomePage([videoId]);
       } catch (error) {
         this.logger.warn('Failed to purge Cloudflare cache after video meta update', {
           videoId,
@@ -421,7 +417,6 @@ export class VideosService extends BaseService {
       }
 
       this.logger.info('Deleting video', { videoId });
-      const cachedSegments = await this.cloudflareService.getAdaptiveVideoUrls(videoId);
 
       // Delete storage directories
       await this.deleteVideoStorageDirectories(videoId);
@@ -433,15 +428,9 @@ export class VideosService extends BaseService {
       const deleted = await this.videoRepository.delete(videoId);
 
       try {
-        await this.cloudflareService.purgeHomePage();
-        await this.cloudflareService.purgeEmbedVideoPages([videoId]);
-        await this.cloudflareService.purgeAdaptiveVideos(videoId, cachedSegments);
-        await this.cloudflareService.purgeProgressiveVideos(videoId);
-        await this.cloudflareService.purgeWatchPages([videoId]);
-        await this.cloudflareService.purgeAllWatchPages();
-        await this.cloudflareService.purgeVideoThumbnailImages([videoId]);
-        await this.cloudflareService.purgeVideoPreviewImages([videoId]);
-        await this.cloudflareService.purgeVideoPosterImages([videoId]);
+        await this.cloudflareService.purgeComments(videoId);
+        await this.cloudflareService.purgeHomePage([videoId]);
+        await this.cloudflareService.purgeVideo(videoId);
       } catch (error) {
         this.logger.warn('Failed to purge Cloudflare cache during video deletion', {
           videoId,
@@ -482,7 +471,7 @@ export class VideosService extends BaseService {
   async setPublishing(videoId: string, isPublishing: boolean): Promise<void> {
     if (!isPublishing) {
       await this.videoRepository.update(videoId, { is_publishing: false });
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([videoId]);
       return;
     }
     await withJobAdmission(async () => {
@@ -501,7 +490,7 @@ export class VideosService extends BaseService {
         is_publishing: true,
         meta: JSON.stringify(metadata),
       });
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([videoId]);
     });
   }
 
@@ -515,9 +504,8 @@ export class VideosService extends BaseService {
     });
 
     try {
-      await this.cloudflareService.purgeHomePage();
-      await this.cloudflareService.purgeWatchPages([videoId]);
-      await this.cloudflareService.purgeEmbedVideoPages([videoId]);
+      await this.cloudflareService.purgeHomePage([videoId]);
+      await this.cloudflareService.purgeVideo(videoId);
     } catch (error) {
       this.logger.warn('Failed to purge Cloudflare cache after publishing', { videoId, error });
     }
@@ -534,9 +522,7 @@ export class VideosService extends BaseService {
     });
 
     try {
-      await this.cloudflareService.purgeHomePage();
-      await this.cloudflareService.purgeAllEmbedVideoPages();
-      await this.cloudflareService.purgeAllWatchPages();
+      await this.cloudflareService.purgeHomePage([videoId]);
       await this.cloudflareService.purgeVideo(videoId);
     } catch (error) {
       this.logger.warn('Failed to purge Cloudflare cache after unpublishing', { videoId, error });
@@ -550,7 +536,7 @@ export class VideosService extends BaseService {
    */
   async incrementViews(videoId: string): Promise<void> {
     await this.videoRepository.incrementViews(videoId);
-    await this.cloudflareService.purgeHomePage();
+    // Engagement uses the bounded freshness TTL; revisioned bodies stay warm.
   }
 
   /**
@@ -579,7 +565,6 @@ export class VideosService extends BaseService {
   private async writeViews(videoId: string, count: number): Promise<void> {
     try {
       await this.videoRepository.incrementViewsBy(videoId, count);
-      await this.cloudflareService.purgeHomePage();
       this.logger.debug('Flushed pending views', { videoId, count });
     } catch (error) {
       this.logger.error('Failed to flush pending views', error, { videoId, count });
@@ -681,7 +666,7 @@ export class VideosService extends BaseService {
     };
 
     await this.videoRepository.update(videoId, updates);
-    await this.cloudflareService.purgeHomePage();
+    await this.cloudflareService.purgeHomePage([videoId]);
   }
 
   /**
@@ -691,7 +676,7 @@ export class VideosService extends BaseService {
     await this.videoRepository.update(videoId, {
       outputs: JSON.stringify(outputs),
     });
-    await this.cloudflareService.purgeHomePage();
+    await this.cloudflareService.purgeHomePage([videoId]);
   }
 
   /**
@@ -887,7 +872,7 @@ export class VideosService extends BaseService {
           await this.writeMasterManifest(videoId, type, master);
         }
         await this.cloudflareService.purgeVideo(videoId);
-        await this.cloudflareService.purgeHomePage();
+        await this.cloudflareService.purgeHomePage([videoId]);
         this.logger.debug('Format/resolution published', { videoId, format, resolution });
       });
     });
@@ -1229,15 +1214,15 @@ export class VideosService extends BaseService {
         // Remove resolution from format
         outputs[format] = outputs[format].filter((item: string) => item !== resolution);
 
-        // Capture cached segment identities before removing their origin files.
-        const cachedSegments = await this.cloudflareService.getAdaptiveVideoUrls(videoId);
         await this.deleteFormatResolutionFiles(videoId, format, resolution);
         await this.videoRepository.update(videoId, { outputs: JSON.stringify(outputs) });
 
-        await this.cloudflareService.purgeAdaptiveVideos(videoId, cachedSegments);
-        await this.cloudflareService.purgeProgressiveVideos(videoId);
-        await this.cloudflareService.purgeWatchPages([videoId]);
-        await this.cloudflareService.purgeHomePage();
+        if (format === 'm3u8') {
+          await this.cloudflareService.purgeAdaptiveVideos(videoId);
+        } else {
+          await this.cloudflareService.purgeProgressiveVideos(videoId);
+        }
+        await this.cloudflareService.purgeHomePage([videoId]);
 
         this.logger.info('Format/resolution unpublished', { videoId, format, resolution });
       });

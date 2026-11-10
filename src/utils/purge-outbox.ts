@@ -65,6 +65,70 @@ export function purgeOutbox(config: OperationalConfig) {
         [zone, until]
       );
     },
+    /** GCRA token bucket, atomically shared by all workers and zones using this account. */
+    async reserve(
+      scope: string,
+      cost: number,
+      interval: number,
+      capacity: number,
+      now = Date.now()
+    ): Promise<boolean> {
+      const key = 'purge-budget:' + scope;
+      const rows = await db.query(
+        `INSERT INTO node_operational_meta (key,value) VALUES (?,?)
+         ON CONFLICT(key) DO UPDATE SET value=CAST((CASE WHEN CAST(node_operational_meta.value AS DOUBLE PRECISION)>? THEN CAST(node_operational_meta.value AS DOUBLE PRECISION) ELSE ? END)+? AS TEXT)
+         WHERE CAST(node_operational_meta.value AS DOUBLE PRECISION)<=? RETURNING key`,
+        [
+          key,
+          String(now + cost * interval),
+          now,
+          now,
+          cost * interval,
+          now + (capacity - cost) * interval,
+        ]
+      );
+      return rows.length > 0;
+    },
+    /** A crashed dispatch owner releases automatically after the bounded HTTP deadline. */
+    async claim(
+      scope: string,
+      now = Date.now()
+    ): Promise<
+      | {
+          renew: () => Promise<boolean>;
+          release: () => Promise<void>;
+        }
+      | undefined
+    > {
+      const key = 'purge-dispatch:' + scope;
+      let until = String(now + 120_000);
+      const rows = await db.query(
+        'INSERT INTO node_operational_meta (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE CAST(node_operational_meta.value AS BIGINT)<=? RETURNING key',
+        [key, until, now]
+      );
+      return rows.length
+        ? {
+            async renew() {
+              const now = Date.now(),
+                next = String(now + 120_000);
+              const rows = await db.query(
+                'UPDATE node_operational_meta SET value=? WHERE key=? AND value=? AND CAST(value AS BIGINT)>? RETURNING key',
+                [next, key, until, now]
+              );
+              if (rows.length) {
+                until = next;
+              }
+              return rows.length > 0;
+            },
+            async release() {
+              await db.query('DELETE FROM node_operational_meta WHERE key=? AND value=?', [
+                key,
+                until,
+              ]);
+            },
+          }
+        : undefined;
+    },
     close: () => db.close(),
   };
 }

@@ -32,7 +32,7 @@ vi.mock('node:fs', () => ({
   default: {
     readFileSync: vi.fn(),
     existsSync: vi.fn(),
-    writeFileSync: vi.fn(),
+    writeFileSync: vi.fn(), createReadStream: vi.fn(),
   },
 }));
 
@@ -62,6 +62,8 @@ vi.mock('postgres', () => ({
 
 import { getConfig } from '@config/index.js';
 import fs from 'node:fs';
+import { writeUpload } from '@/utils/stream-files.js';
+vi.mock('@/utils/stream-files.js', () => ({ writeUpload: vi.fn().mockResolvedValue(undefined) }));
 import { createBackup, restoreBackup } from '@/database/backup.js';
 vi.mock('@/database/backup.js', () => ({
   createBackup: vi.fn().mockResolvedValue({ file: 'snapshot' }),
@@ -582,7 +584,7 @@ describe('SettingsService', () => {
 
       await service.updateAvatar('/tmp/icon.png', '/tmp/avatar.png');
 
-      expect(fsMock.default.copyFileSync).toHaveBeenCalledTimes(2);
+      expect(writeUpload).toHaveBeenCalledTimes(2);
       expect(mockLogger.info).toHaveBeenCalledWith('Avatar updated');
     });
 
@@ -632,7 +634,7 @@ describe('SettingsService', () => {
 
       await service.updateAvatar('/tmp/icon.png', '/tmp/avatar.png');
 
-      expect(fsMock.default.copyFileSync).not.toHaveBeenCalled();
+      expect(writeUpload).not.toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith('Avatar updated');
     });
   });
@@ -653,7 +655,7 @@ describe('SettingsService', () => {
 
       await service.updateBanner('/tmp/banner.png');
 
-      expect(fsMock.default.copyFileSync).toHaveBeenCalled();
+      expect(writeUpload).toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith('Banner updated');
     });
 
@@ -703,7 +705,7 @@ describe('SettingsService', () => {
 
       await service.updateBanner('/tmp/banner.png');
 
-      expect(fsMock.default.copyFileSync).not.toHaveBeenCalled();
+      expect(writeUpload).not.toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith('Banner updated');
     });
   });

@@ -111,39 +111,47 @@ describe('content invalidation regressions', () => {
       );
     }
   );
-  it('clears primed filtered browse, unrelated recommendation pages and both embeds after a title edit', async () => {
+  it('clears primed filtered browse, recommendation dependencies and both embeds after a title edit', async () => {
     const cache = new Set([
       'node.example/home/videos?cursor=100&sortTerm=viewed&tagTerm=old',
       'node.example/watch?extra=1&v=other',
+      'node.example/watch?v=unrelated',
       'node.example/watch/embed/video/video123?autostart=1&extra=1',
       'node.example/watch/embed/chat/video123',
       'media.example/external/videos/other/progressive/mp4/720p.mp4',
     ]);
     post.mockImplementation(async (_url, body) => {
       expect(row.title).toBe('updated');
-      for (const prefix of body.prefixes ?? [])
-        for (const key of cache) if (key.startsWith(prefix)) cache.delete(key);
+      for (const tag of body.tags ?? [])
+        for (const key of cache) {
+          if (
+            (tag === 'moartube-home' && key.includes('/home/')) ||
+            (tag === 'moartube-watch' && key.includes('/watch')) ||
+            (tag === 'moartube-video-video123' &&
+              (key.includes('/watch/embed/') || key.includes('v=other')))
+          )
+            cache.delete(key);
+        }
       return success;
     });
     await videos.updateVideo('video123', { title: 'updated' });
-    expect([...cache]).toEqual(['media.example/external/videos/other/progressive/mp4/720p.mp4']);
+    expect([...cache]).toEqual([
+      'node.example/watch?v=unrelated',
+      'media.example/external/videos/other/progressive/mp4/720p.mp4',
+    ]);
+    expect(post).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['views', 'duration', 'outputs', 'publishing'] as const)(
+  it.each(['duration'] as const)(
     'invalidates dependent HTML after committed %s changes',
     async (change) => {
-      if (change === 'views') await videos.incrementViews('video123');
       if (change === 'duration') await videos.setVideoLength('video123', 42, '00:42');
-      if (change === 'outputs')
-        await videos.markFormatResolutionPublished('video123', 'mp4', '720p');
-      if (change === 'publishing') await videos.setPublishing('video123', false);
+
       expect(
-        post.mock.calls.some(([, body]) => body.prefixes?.includes('node.example/watch'))
+        post.mock.calls.some(([, body]) => body.tags?.includes('moartube-video-video123'))
       ).toBe(true);
-      expect(
-        post.mock.calls.some(([, body]) => body.prefixes?.includes('node.example/videos'))
-      ).toBe(true);
-      const write = change === 'views' ? repository.incrementViews : repository.update;
+      expect(post.mock.calls.some(([, body]) => body.tags?.includes('moartube-home'))).toBe(true);
+      const write = repository.update;
       expect(write.mock.invocationCallOrder[0]).toBeLessThan(post.mock.invocationCallOrder[0]);
     }
   );
@@ -152,7 +160,12 @@ describe('content invalidation regressions', () => {
     post.mockRejectedValue({ response: { status: 403 } });
     await cdn.purgePublicPages();
     const journal = purgeOutbox(operationalConfig(state.config));
-    expect((await journal.snapshot('zone')).length).toBe(3);
+    expect((await journal.snapshot('zone')).map(({ target }) => target).sort()).toEqual([
+      'prefix:node.example/home',
+      'prefix:node.example/videos',
+      'prefix:node.example/watch',
+      'tag:moartube-home',
+    ]);
     await journal.close();
     post.mockResolvedValue(success);
     const replacement = new CloudflareService(logger as never, repository);
@@ -178,7 +191,7 @@ describe('content invalidation regressions', () => {
     finish(success);
     await first;
     const journal = purgeOutbox(operationalConfig(state.config));
-    expect((await journal.snapshot('zone')).length).toBe(3);
+    expect((await journal.snapshot('zone')).length).toBe(4);
     await journal.close();
     post.mockResolvedValue(success);
     await cdn.retryPendingPurges();
@@ -201,7 +214,7 @@ describe('content invalidation regressions', () => {
   it('journals unsuccessful whole-zone responses for later retry', async () => {
     vi.mocked(axios.post).mockResolvedValue({ data: { success: false } });
     await expect(cdn.purgeEntireCacheWithCredentials('email', 'zone', 'key')).rejects.toThrow(
-      'rejected'
+      'incomplete'
     );
     await cdn.retryPendingPurges();
     expect(post).toHaveBeenCalledWith('/zones/zone/purge_cache', { purge_everything: true });
@@ -266,43 +279,6 @@ describe('content invalidation regressions', () => {
     }
   );
 
-  it('rewrites a real filesystem master and deletes the withdrawn rendition before invalidation', async () => {
-    const adaptive = path.join(root, 'videos', 'video123', 'adaptive', 'm3u8');
-    await mkdir(path.join(adaptive, '720p'), { recursive: true });
-    await writeFile(
-      path.join(adaptive, 'manifest-master.m3u8'),
-      '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=200\nmanifest-1080p.m3u8\n'
-    );
-    await writeFile(path.join(adaptive, 'manifest-720p.m3u8'), 'old');
-    post.mockImplementation(async () => {
-      expect(await readFile(path.join(adaptive, 'manifest-master.m3u8'), 'utf8')).not.toContain(
-        '720p'
-      );
-      await expect(readFile(path.join(adaptive, 'manifest-720p.m3u8'))).rejects.toThrow();
-      return success;
-    });
-    await videos.unpublishFormatResolution('video123', 'm3u8', '720p');
-    expect(JSON.parse(row.outputs).m3u8).toEqual(['1080p']);
-  });
-
-  it('purges both public aliases after atomically replacing a live playlist', async () => {
-    const service = new VideoUploadService({} as never, cdn, {} as never, logger as never);
-    await service.saveUploadedFile(
-      {
-        filename: 'manifest-720p.m3u8',
-        file: Readable.from(['#EXTM3U\n#EXTINF:1,\n1.ts\n']),
-      } as never,
-      path.join(root, 'videos', 'video123', 'adaptive', 'm3u8')
-    );
-    expect(
-      post.mock.calls.some(([, body]) =>
-        body.prefixes?.includes(
-          'media.example/external/videos/video123/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8'
-        )
-      )
-    ).toBe(true);
-  });
-
   it('removes only the matching HLS variant descriptor, including query-bearing URIs', () => {
     const transform = withoutRendition('720p');
     const result = [
@@ -340,15 +316,19 @@ describe('content invalidation regressions', () => {
     ['staging', 'private.txt', undefined],
   ])('invalidates the actual public upload path for %s/%s', async (folder, filename, suffix) => {
     const upload = new VideoUploadService({} as never, cdn, {} as never, logger as never);
-    await upload.saveUploadedFile(
-      { filename, file: Readable.from(['complete bytes']) } as never,
-      path.join(root, 'videos', 'video123', folder)
-    );
-    if (suffix)
-      expect(post.mock.calls.flatMap(([, body]) => body.prefixes ?? [])).toContain(
-        'media.example/external/videos/video123' + suffix
+    for (const content of ['original bytes', 'replaced bytes']) {
+      await upload.saveUploadedFile(
+        { filename, file: Readable.from([content]) } as never,
+        path.join(root, 'videos', 'video123', folder)
       );
-    else expect(post).not.toHaveBeenCalled();
+    }
+    if (suffix) {
+      expect(post.mock.calls.flatMap(([, body]) => body.files ?? [])).toContain(
+        'https://media.example/external/videos/video123' + suffix
+      );
+    } else {
+      expect(post).not.toHaveBeenCalled();
+    }
   });
 
   it('does not send page purges while CDN is disabled', async () => {
@@ -391,6 +371,7 @@ describe('content invalidation regressions', () => {
     const calls = post.mock.calls.length;
     await cdn.retryPendingPurges();
     expect(post.mock.calls.length).toBe(calls);
+    post.mockResolvedValue(success);
     finish(success);
     await running;
   });

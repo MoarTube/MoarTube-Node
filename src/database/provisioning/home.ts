@@ -6,7 +6,7 @@ import type postgres from 'postgres';
 const tables = `
 CREATE TABLE IF NOT EXISTS home_state (id INTEGER PRIMARY KEY, epoch TEXT NOT NULL, catalog BIGINT NOT NULL DEFAULT 0, stats BIGINT NOT NULL DEFAULT 0, comments BIGINT NOT NULL DEFAULT 0, safety BIGINT NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS home_activity (video_id TEXT NOT NULL, hour BIGINT NOT NULL, views BIGINT NOT NULL DEFAULT 0, likes BIGINT NOT NULL DEFAULT 0, PRIMARY KEY(video_id,hour));
-CREATE TABLE IF NOT EXISTS home_snapshots (snapshot TEXT PRIMARY KEY, kind TEXT NOT NULL, revision TEXT NOT NULL, created BIGINT NOT NULL, safety BIGINT NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS home_snapshots (snapshot TEXT PRIMARY KEY, kind TEXT NOT NULL, revision TEXT NOT NULL, created BIGINT NOT NULL, safety BIGINT NOT NULL DEFAULT 0, row_count BIGINT NOT NULL DEFAULT 0, byte_count BIGINT NOT NULL DEFAULT 0, builder TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS home_snapshot_rows (snapshot TEXT NOT NULL, position BIGINT NOT NULL, video_id TEXT NOT NULL, comment_id BIGINT, body TEXT NOT NULL, PRIMARY KEY(snapshot,position));
 CREATE INDEX IF NOT EXISTS home_snapshot_video ON home_snapshot_rows(video_id);
 CREATE INDEX IF NOT EXISTS home_video_identity ON videos(video_id);
@@ -39,6 +39,15 @@ export function provisionSQLiteHome(client: SQLite.Database): void {
       const snapshotColumns = client.pragma('table_info(home_snapshots)') as { name: string }[];
       if (!snapshotColumns.some((column) => column.name === 'safety')) {
         client.exec('ALTER TABLE home_snapshots ADD COLUMN safety BIGINT NOT NULL DEFAULT 0');
+      }
+      for (const [column, declaration] of [
+        ['row_count', 'BIGINT NOT NULL DEFAULT 0'],
+        ['byte_count', 'BIGINT NOT NULL DEFAULT 0'],
+        ['builder', "TEXT NOT NULL DEFAULT ''"],
+      ] as const) {
+        if (!snapshotColumns.some((existing) => existing.name === column)) {
+          client.exec(`ALTER TABLE home_snapshots ADD COLUMN ${column} ${declaration}`);
+        }
       }
       client.prepare('INSERT OR IGNORE INTO home_state(id,epoch) VALUES(1,?)').run(randomUUID());
       const changed = catalogFields.map((field) => `NEW.${field} IS NOT OLD.${field}`).join(' OR ');
@@ -78,6 +87,9 @@ export async function provisionPostgresHome(client: postgres.Sql): Promise<void>
     );
     await tx.unsafe(
       'ALTER TABLE home_snapshots ADD COLUMN IF NOT EXISTS safety BIGINT NOT NULL DEFAULT 0'
+    );
+    await tx.unsafe(
+      "ALTER TABLE home_snapshots ADD COLUMN IF NOT EXISTS row_count BIGINT NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS byte_count BIGINT NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS builder TEXT NOT NULL DEFAULT ''"
     );
     await tx.unsafe('INSERT INTO home_state(id,epoch) VALUES(1,$1) ON CONFLICT DO NOTHING', [
       randomUUID(),

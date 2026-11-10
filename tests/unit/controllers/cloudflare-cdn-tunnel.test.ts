@@ -94,6 +94,7 @@ beforeEach(async () => {
   );
   cloudflare = {
     captureCdnSnapshot: vi.fn().mockResolvedValue({ rules: null, settings: [] }),
+    upgradeCdnSnapshot: vi.fn().mockResolvedValue(undefined),
     managedCdnSnapshot: vi.fn().mockReturnValue({ rules: [], settings: [] }),
     verifyCdnChange: vi.fn().mockResolvedValue(undefined),
     verifyCdnSnapshot: vi.fn().mockResolvedValue(undefined),
@@ -109,6 +110,8 @@ beforeEach(async () => {
     purgeAdaptiveVideos: vi.fn().mockResolvedValue(undefined),
     purgeWatchPages: vi.fn().mockResolvedValue(undefined),
     purgeVideo: vi.fn().mockResolvedValue(undefined),
+    purgePrefixes: vi.fn().mockResolvedValue(undefined),
+    purgeHomePage: vi.fn().mockResolvedValue(undefined),
   };
   const services: Record<string, object> = {
     settingsService: service,
@@ -257,7 +260,7 @@ describe('durable CDN lifecycle', () => {
       }
       if (stage === 'media') {
         videoRecords = [{ videoId: 'video', outputs: { m3u8: ['720p'] } }];
-        cloudflare.purgeAdaptiveVideos.mockRejectedValueOnce(
+        cloudflare.purgePrefixes.mockRejectedValueOnce(
           new Error('cache invalidation interrupted')
         );
       }
@@ -312,7 +315,7 @@ describe('durable CDN lifecycle', () => {
       }
       if (stage === 'media') {
         videoRecords = [{ videoId: 'video', outputs: { m3u8: ['720p'] } }];
-        cloudflare.purgeAdaptiveVideos.mockRejectedValueOnce(
+        cloudflare.purgePrefixes.mockRejectedValueOnce(
           new Error('cache invalidation interrupted')
         );
       }
@@ -342,7 +345,7 @@ describe('durable CDN lifecycle', () => {
   it('retains the final old-zone purge intent in the saved removal state before media migration finishes', async () => {
     await configure();
     videoRecords = [{ videoId: 'video', outputs: { m3u8: ['720p'] } }];
-    cloudflare.purgeAdaptiveVideos.mockRejectedValueOnce(
+    cloudflare.purgePrefixes.mockRejectedValueOnce(
       new Error('cache invalidation interrupted')
     );
     expect((await clear()).statusCode).toBe(502);
@@ -620,7 +623,7 @@ it('reports non-Error admission failures without releasing pending state', async
 });
 it('guards HTTP uploads and releases remote write activity only after successful invalidation', async () => {
   const controller = new VideosController(
-    { getVideo: vi.fn().mockResolvedValue({}) } as never,
+    { getVideo: vi.fn().mockResolvedValue({}), assertMediaWrite: async () => ({ is_streaming: false }) } as never,
     {} as never,
     {
       validateVideoUploadParams: () => true,
@@ -632,6 +635,7 @@ it('guards HTTP uploads and releases remote write activity only after successful
     {
       retryPendingPurges: vi.fn(),
       purgePrefixes: vi.fn(),
+      purgeFiles: vi.fn(),
       purgeVideo: vi.fn(),
       purgeWatchPages: vi.fn(),
       purgeHomePage: vi.fn(),
@@ -743,7 +747,7 @@ it('recovers the final old-zone purge after a real process dies at the post-medi
       _paths: { nodeSettingsPath: file, videosDirectoryPath: path.dirname(file), dataDirectoryPath: path.dirname(file) }
     });
     Config.instance = config;
-    const cloudflare = { purgeEntireCacheWithCredentials: async (email, zone, key) => {
+    const cloudflare = { purgePrefixes: async () => {}, purgeHomePage: async () => {}, purgeEntireCacheWithCredentials: async (email, zone, key) => {
       fs.writeFileSync(marker, JSON.stringify({ email, zone, key }));
       process.kill(process.pid, 'SIGTERM');
       await new Promise(() => {});

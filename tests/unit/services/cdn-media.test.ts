@@ -55,13 +55,9 @@ describe('media invalidation inventories', () => {
   });
   it("does not report another video's pending cleanup as this video's failure", async () => {
     state.read.mockResolvedValue([]);
-    vi.spyOn(service, 'purgeVideoThumbnailImages').mockImplementationOnce(async () => {
-      const internal = service as unknown as { pendingPurges: Map<string, Set<string>> };
-      internal.pendingPurges.set(
-        'zone',
-        new Set(['https://cdn.example.com/external/videos/another/images/thumbnail.jpg'])
-      );
-    });
+    const client = vi.mocked(axios.create).mock.results[0].value;
+    client.post.mockRejectedValueOnce({ response: { status: 403 } });
+    await expect(service.purgeVideo('another')).rejects.toThrow('incomplete');
     await expect(service.purgeVideo('video')).resolves.toBeUndefined();
   });
   it('captures valid filesystem segment names and tolerates missing resolutions', async () => {
@@ -119,13 +115,12 @@ describe('media invalidation inventories', () => {
     },
     20_000
   );
-  it('purges captured segment identities after their source files are gone', async () => {
-    await service.purgeAdaptiveVideos('video', ['https://cdn.example.com/removed.ts']);
+  it('purges all variants under the adaptive prefix after their source files are gone', async () => {
+    await service.purgeAdaptiveVideos('video');
     const client = vi.mocked(axios.create).mock.results[0].value;
-    expect(client.post.mock.calls.flatMap((call:unknown[]) => (call[1] as {files:string[]}).files)).toEqual(expect.arrayContaining([
-        'https://cdn.example.com/removed.ts',
-        'https://cdn.example.com/external/videos/video/adaptive/m3u8/static/manifests/manifest-720p.m3u8',
-      ]));
+    expect(client.post).toHaveBeenCalledExactlyOnceWith('/zones/zone/purge_cache', {
+      prefixes: ['cdn.example.com/external/videos/video/adaptive/'],
+    });
     expect(state.read).not.toHaveBeenCalled();
   });
 });

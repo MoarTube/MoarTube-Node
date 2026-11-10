@@ -196,7 +196,7 @@ export class StreamsController extends BaseController {
           throw error;
         }
       }
-      await this.streamService.invalidateStreamMedia(videoId);
+      await this.streamService.invalidateStreamMedia(videoId, { format, resolution, segmentName });
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Remove segment failed', error);

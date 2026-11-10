@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { expect, it } from 'vitest';
+import ejs from 'ejs';
 
 it.each([
   ['', true],
@@ -12,8 +13,8 @@ it.each([
   const template = readFileSync('public/views/watch.ejs', 'utf8');
   const start = template.indexOf('async initializeVideoPlayer(');
   const end = template.indexOf('connectWebsocket()', start);
-  const method = template.slice(start, end).replace(
-    "import(this.EXTERNAL_RESOURCES_BASE_URL + '/external/resources/javascript/videojs-10.2.0.js')",
+  const method = ejs.render(template.slice(start, end), { cachedAsset: (url: string) => url }).replace(
+    /import\(this\.EXTERNAL_RESOURCES_BASE_URL \+ ["'][^"']+["']\)/,
     'Promise.resolve(playerModule)'
   );
   const calls: Record<string, unknown>[] = [];

@@ -141,8 +141,10 @@ describe('SettingsController', () => {
     withConfigurationRollback: vi.fn(async (_email, _zone, _key, operation) => operation()),
     purgeAdaptiveVideos: vi.fn(),
     purgeVideo: vi.fn(),
+    purgePrefixes: vi.fn(),
     purgeWatchPages: vi.fn(),
     purgeHomePage: vi.fn(),
+    purgeComments: vi.fn().mockResolvedValue(undefined),
     purgeNodeImages: vi.fn(),
     resetCdn: vi.fn(),
     setCdnConfiguration: vi.fn(),
@@ -192,6 +194,8 @@ describe('SettingsController', () => {
     mockSettingsService.getVersion.mockReturnValue('1.0.0');
     mockSettingsService.isDockerEnvironment.mockReturnValue(false);
     mockVideosService.getAllVideosData.mockResolvedValue([]);
+    mockCloudflareService.purgeHomePage.mockResolvedValue(undefined);
+    mockCloudflareService.purgePrefixes.mockResolvedValue(undefined);
   });
 
   it('sends the server restart command through IPC after responding', async () => {
@@ -2137,7 +2141,7 @@ describe('SettingsController', () => {
         cloudflareTurnstileSiteKey: 'sitekey123',
         cloudflareTurnstileSecretKey: 'secret456',
       };
-      mockCloudflareService.purgeAllWatchPages.mockRejectedValue(new Error('Purge failed'));
+      mockCloudflareService.purgeHomePage.mockRejectedValue(new Error('Purge failed'));
 
       await controller.cloudflareTurnstileConfigure(
         mockRequest as FastifyRequest,
@@ -2148,7 +2152,7 @@ describe('SettingsController', () => {
     });
 
     it('should handle error in cloudflareTurnstileClear', async () => {
-      mockCloudflareService.purgeAllWatchPages.mockRejectedValue(new Error('Purge failed'));
+      mockCloudflareService.purgeHomePage.mockRejectedValue(new Error('Purge failed'));
 
       await controller.cloudflareTurnstileClear(
         mockRequest as FastifyRequest,
@@ -2203,16 +2207,10 @@ describe('SettingsController', () => {
     expect(mockReply.status).toHaveBeenCalledWith(400);
   });
   it('invalidates catalog pages without rewriting relative playlists', async () => {
-    mockVideosService.getAllVideosData
-      .mockResolvedValueOnce(
-        Array.from({ length: 100 }, () => ({ videoId: 'a', outputs: { m3u8: [] } }))
-      )
-      .mockResolvedValueOnce([]);
     await (controller as any).invalidateMediaCaches();
-    expect(mockVideosService.getAllVideosData).toHaveBeenLastCalledWith({
-      limit: 100,
-      offset: 100,
-    });
+    expect(mockVideosService.getAllVideosData).not.toHaveBeenCalled();
+    expect(mockCloudflareService.purgePrefixes).toHaveBeenCalledExactlyOnceWith(['https://example.com/external/videos/'], true);
+    expect(mockCloudflareService.purgeHomePage).toHaveBeenCalledExactlyOnceWith([], true, true);
     expect(rewriteManifestFile).not.toHaveBeenCalled();
   });
 
@@ -2395,14 +2393,15 @@ describe('SettingsController', () => {
     expect(mockReply.status).toHaveBeenLastCalledWith(500);
     expect(mockReply.send).toHaveBeenLastCalledWith({ isError: true, message: 'Migration failed. Destination data may be partially overwritten; source data was not deleted.' });
   });
-  it('skips S3 videos without HLS outputs when invalidating delivery caches', async () => {
+  it('invalidates every media format with one prefix and global HTML purge without enumerating S3 videos', async () => {
     const { getConfig } = await import('@/config/index.js');
     const config = getConfig();
     config.nodeSettings.storageConfig = { storageMode: 's3provider' } as never;
-    mockVideosService.getAllVideosData.mockResolvedValueOnce([{ videoId: 'none', outputs: { m3u8: [] } }, { videoId: 'hls', outputs: { m3u8: ['720p'] } }]).mockResolvedValueOnce([]);
     await (controller as any).invalidateMediaCaches(config);
-    expect(mockCloudflareService.purgeVideo).toHaveBeenCalledWith('hls');
-    expect(mockCloudflareService.purgeVideo).not.toHaveBeenCalledWith('none');
+    expect(mockCloudflareService.purgePrefixes).toHaveBeenCalledExactlyOnceWith(['https://example.com/external/videos/'], true);
+    expect(mockCloudflareService.purgeHomePage).toHaveBeenCalledExactlyOnceWith([], true, true);
+    expect(mockVideosService.getAllVideosData).not.toHaveBeenCalled();
+    expect(mockCloudflareService.purgeVideo).not.toHaveBeenCalled();
   });
   it('reports an incomplete cache recovery after a network change fails', async () => {
     mockRequest.body = { publicNodeProtocol: 'https', publicNodeAddress: 'node.test', publicNodePort: '443' };

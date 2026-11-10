@@ -435,26 +435,57 @@ export class VideosController extends BaseController {
     const body = request.body as { paths?: string[]; activityId?: string } | undefined;
     const paths = body?.paths;
     if (paths !== undefined) {
-      await this.cloudflareService.purgePrefixes(
-        paths.map(
-          (relative) =>
-            getConfig().getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/' + relative
-        ),
-        true
-      );
+      const base = getConfig().getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/';
+      const directories = paths.filter((relative) => relative.endsWith('/'));
+      const files = paths.filter((relative) => !relative.endsWith('/'));
+      // A directory is a prefix, never an exact cache identity. Attempt both
+      // groups so failures in one lane do not lose invalidation in the other.
+      const results = await Promise.allSettled([
+        ...(directories.length
+          ? [
+              this.cloudflareService.purgePrefixes(
+                directories.map((relative) => base + relative),
+                true
+              ),
+            ]
+          : []),
+        ...(files.length
+          ? [
+              this.cloudflareService.purgeFiles(
+                files.map((relative) => base + relative),
+                true
+              ),
+            ]
+          : []),
+      ]);
+      const failures = results.filter((result) => result.status === 'rejected');
+      if (failures.length) {
+        throw new AggregateError(
+          failures.map((result) => result.reason as unknown),
+          'Cache invalidation incomplete'
+        );
+      }
       if (body?.activityId !== undefined) {
         await finishRemoteWrite(videoId, body.activityId);
       }
       return this.sendSuccess(reply);
     }
-    const results = await Promise.allSettled([
-      this.cloudflareService.purgeVideo(videoId),
-      this.cloudflareService.purgeWatchPages([videoId], true),
-      this.cloudflareService.purgeHomePage(),
-    ]);
+    // Keep completion boundaries sequential: both operations share the broad lane.
+    const results = [];
+    for (const operation of [
+      () => this.cloudflareService.purgeVideo(videoId),
+      () => this.cloudflareService.purgeHomePage([videoId], false, true),
+    ]) {
+      try {
+        await operation();
+        results.push({ status: 'fulfilled' as const });
+      } catch (reason) {
+        results.push({ status: 'rejected' as const, reason });
+      }
+    }
     const failures = results
       .filter((result) => result.status === 'rejected')
-      .map((result) => result.reason as unknown);
+      .map((result) => result.reason);
     if (failures.length) {
       throw new AggregateError(
         failures,
@@ -814,7 +845,7 @@ export class VideosController extends BaseController {
       await this.videosService.incrementLikes(videoId);
 
       // Purge cache
-      await this.cloudflareService.purgeWatchPages([videoId]);
+      // Freshness state expires within 30 seconds; do not evict immutable reads.
 
       // Return updated counts
       const updatedVideo = await this.videosService.getVideo(videoId);
@@ -865,7 +896,7 @@ export class VideosController extends BaseController {
       await this.videosService.incrementDislikes(videoId);
 
       // Purge cache
-      await this.cloudflareService.purgeWatchPages([videoId]);
+      // Freshness state expires within 30 seconds; do not evict immutable reads.
 
       // Return updated counts
       const updatedVideo = await this.videosService.getVideo(videoId);
@@ -1119,12 +1150,7 @@ export class VideosController extends BaseController {
         }));
       }
 
-      // Purge Cloudflare cache
-      try {
-        await this.cloudflareService.purgeWatchPages([videoId]);
-      } catch (error) {
-        this.logger.warn('Comment saved; cache invalidation unavailable', { error });
-      }
+      // Versioned reads advance through the 30-second state marker without mass invalidation.
 
       return await this.sendSuccess(reply, {
         commentId: comment.comment_id,
@@ -1159,8 +1185,8 @@ export class VideosController extends BaseController {
         throw new NotFoundError(`Comment not found`);
       }
 
-      // Purge Cloudflare cache for watch page
-      await this.cloudflareService.purgeWatchPages([videoId]);
+      await this.cloudflareService.purgeComments(videoId);
+      await this.cloudflareService.purgeHomePage();
 
       return await this.sendSuccess(reply, { commentId });
     } catch (error) {

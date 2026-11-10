@@ -509,7 +509,7 @@ export function videosRoutes(
                   .string()
                   .max(512)
                   .regex(
-                    /^(?:images\/(?:thumbnail|preview|poster)\.jpg|adaptive\/m3u8\/|adaptive\/m3u8\/(?:static|dynamic)\/manifests\/manifest-(?:master|240p|360p|480p|720p|1080p|1440p|2160p)\.m3u8|adaptive\/m3u8\/(?:240p|360p|480p|720p|1080p|1440p|2160p)\/segments\/[A-Za-z0-9_-]+\.ts|progressive\/(?:mp4|webm|ogv)\/(?:240p|360p|480p|720p|1080p|1440p|2160p)\.(?:mp4|webm|ogv))$/
+                    /^(?:images\/|images\/(?:thumbnail|preview|poster)\.jpg|adaptive\/m3u8\/|adaptive\/m3u8\/(?:static|dynamic)\/manifests\/manifest-(?:master|240p|360p|480p|720p|1080p|1440p|2160p)\.m3u8|adaptive\/m3u8\/(?:240p|360p|480p|720p|1080p|1440p|2160p)\/segments\/[A-Za-z0-9_-]+\.ts|progressive\/(?:mp4|webm|ogv)\/(?:240p|360p|480p|720p|1080p|1440p|2160p)\.(?:mp4|webm|ogv))$/
                   )
               )
               .min(1)

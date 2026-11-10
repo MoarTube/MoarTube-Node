@@ -87,6 +87,7 @@ export class WatchEmbedController extends VideoControllerBase {
         const model = await this.buildPageData(video, request);
         if (request.headers.authorization === undefined) {
           reply.header('Cache-Control', COMMENT_STATE_CACHE_CONTROL);
+          reply.header('Cache-Tag', `moartube-watch,moartube-video-${videoId}`);
         }
         return await reply.view('embed-video.ejs', { model });
       }
@@ -151,6 +152,7 @@ export class WatchEmbedController extends VideoControllerBase {
 
       if (request.headers.authorization === undefined) {
         reply.header('Cache-Control', COMMENT_STATE_CACHE_CONTROL);
+        reply.header('Cache-Tag', `moartube-watch,moartube-video-${videoId}`);
       }
       return await replyWithView.view('embed-chat', { model });
     } catch (error) {

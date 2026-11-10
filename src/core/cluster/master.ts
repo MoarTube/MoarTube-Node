@@ -555,24 +555,5 @@ export class ClusterMaster {
         });
       }, 10_000)
     );
-
-    // Cloudflare purge task (every 10 minutes)
-    this.intervalHandles.push(
-      setInterval(() => {
-        void this.runCloudflarePurgeTask();
-      }, 60000 * 10)
-    );
-  }
-
-  /**
-   * Run Cloudflare purge task
-   */
-  private async runCloudflarePurgeTask(): Promise<void> {
-    try {
-      await this.cloudflare.purgeAllWatchPages();
-      await this.cloudflare.purgeHomePage();
-    } catch (error) {
-      this.logger.error('Cloudflare purge task failed', error);
-    }
   }
 }

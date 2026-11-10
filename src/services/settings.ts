@@ -12,6 +12,7 @@ import { nodeLinksSchema } from '@/config/node-links.js';
  * personalization, and system settings.
  */
 import fs from 'node:fs';
+import { writeUpload } from '@/utils/stream-files.js';
 import { createBackup, restoreBackup, type BackupConfig } from '@/database/backup.js';
 import path from 'node:path';
 
@@ -243,7 +244,7 @@ export class SettingsService extends BaseService {
 
     config.updateNodeSettings({ nodeName });
     if (this.cloudflareService.isEnabled()) {
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
     }
 
     this.logger.info('Node name updated', { nodeName });
@@ -257,7 +258,7 @@ export class SettingsService extends BaseService {
 
     config.updateNodeSettings({ nodeHeadline });
     if (this.cloudflareService.isEnabled()) {
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
     }
 
     this.logger.info('Node headline updated', { nodeHeadline });
@@ -267,7 +268,7 @@ export class SettingsService extends BaseService {
   updateNodeBulletin(nodeBulletin: string[]): string[] {
     const bulletin = nodeBulletinSchema.parse(nodeBulletin);
     getConfig().updateNodeSettings({ nodeBulletin: bulletin });
-    void this.cloudflareService.purgeHomePage().catch((error: unknown) => {
+    void this.cloudflareService.purgeHomePage([], true).catch((error: unknown) => {
       this.logger.warn('Homepage purge deferred', { error });
     });
     this.logger.info('Node bulletin updated', { itemCount: bulletin.length });
@@ -285,7 +286,7 @@ export class SettingsService extends BaseService {
   updateNodeLinks(nodeLinks: NodeLink[]): NodeLink[] {
     const links = nodeLinksSchema.parse(nodeLinks);
     getConfig().updateNodeSettings({ nodeLinks: links });
-    void this.cloudflareService.purgeHomePage().catch((error: unknown) => {
+    void this.cloudflareService.purgeHomePage([], true).catch((error: unknown) => {
       this.logger.warn('Homepage purge deferred', { error });
     });
     this.logger.info('Node links updated', { itemCount: links.length });
@@ -299,7 +300,7 @@ export class SettingsService extends BaseService {
     const config = getConfig();
     config.updateNodeSettings({ nodeAbout: about });
     if (this.cloudflareService.isEnabled()) {
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
     }
 
     this.logger.info('Node about updated');
@@ -419,21 +420,25 @@ export class SettingsService extends BaseService {
         fs.mkdirSync(imagesDir, { recursive: true });
       }
 
-      // Move/copy icon file
-      if (fs.existsSync(iconFile)) {
-        const destPath = path.join(imagesDir, 'icon.png');
-        fs.copyFileSync(iconFile, destPath);
-      }
-
-      // Move/copy avatar file
-      if (fs.existsSync(avatarFile)) {
-        const destPath = path.join(imagesDir, 'avatar.png');
-        fs.copyFileSync(avatarFile, destPath);
-      }
-
-      // Purge cache if Cloudflare enabled
-      if (this.cloudflareService.isEnabled()) {
-        await this.cloudflareService.purgeNodeImages();
+      let published = false;
+      try {
+        for (const [source, name] of [
+          [iconFile, 'icon.png'],
+          [avatarFile, 'avatar.png'],
+        ]) {
+          if (source !== undefined && fs.existsSync(source)) {
+            await writeUpload(
+              { file: fs.createReadStream(source) },
+              path.join(imagesDir, String(name)),
+              20 * 1024 ** 2
+            );
+            published = true;
+          }
+        }
+      } finally {
+        if (published && this.cloudflareService.isEnabled()) {
+          await this.cloudflareService.purgeNodeImages();
+        }
       }
 
       this.logger.info('Avatar updated');
@@ -478,7 +483,7 @@ export class SettingsService extends BaseService {
       // Move/copy banner file
       if (fs.existsSync(bannerFile)) {
         const destPath = path.join(imagesDir, 'banner.png');
-        fs.copyFileSync(bannerFile, destPath);
+        await writeUpload({ file: fs.createReadStream(bannerFile) }, destPath, 20 * 1024 ** 2);
       }
 
       // Purge cache if Cloudflare enabled

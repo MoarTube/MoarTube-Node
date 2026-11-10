@@ -95,8 +95,7 @@ export class MonetizationController extends BaseController {
       });
 
       // Purge Cloudflare cache for node page and watch pages
-      await this.cloudflareService.purgeAllWatchPages();
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
 
       return await this.sendSuccess(reply, { cryptoWalletAddress });
     } catch (error) {
@@ -123,8 +122,7 @@ export class MonetizationController extends BaseController {
       if (!deleted) {
         return await this.sendError(reply, 'wallet address not found', 404);
       } else {
-        await this.cloudflareService.purgeAllWatchPages();
-        await this.cloudflareService.purgeHomePage();
+        await this.cloudflareService.purgeHomePage([], true);
 
         return await this.sendSuccess(reply);
       }

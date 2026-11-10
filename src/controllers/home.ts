@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import type { HomeService } from '@/services/home.js';
-import { HomeResetError, type HomeQuery } from '@/database/repositories/home.js';
+import { HomeCapacityError, HomeResetError, type HomeQuery } from '@/database/repositories/home.js';
 import { COMMENT_STATE_CACHE_CONTROL, COMMENT_DATA_CACHE_CONTROL } from '@/utils/comment-cache.js';
 import { pageCanonicalOrigin } from '@/utils/viewer-urls.js';
 
@@ -27,6 +27,7 @@ export class HomeController {
         'Cache-Control',
         data ? COMMENT_DATA_CACHE_CONTROL : COMMENT_STATE_CACHE_CONTROL
       );
+      reply.header('Cache-Tag', 'moartube-home');
     }
   }
 
@@ -91,6 +92,12 @@ export class HomeController {
         return await reply.send(result);
       } catch (error) {
         reply.header('Cache-Control', 'no-store');
+        if (error instanceof HomeCapacityError) {
+          if (!error.oversized) {
+            reply.header('Retry-After', '30');
+          }
+          return reply.status(error.oversized ? 413 : 503).send({ message: error.message });
+        }
         if (error instanceof HomeResetError) {
           return reply.status(409).send({ reset: true, message: error.message });
         }

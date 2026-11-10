@@ -16,11 +16,14 @@ export const providerSnapshotSchema = z.object({
     })
   ),
   rules: z.array(z.record(z.string(), z.unknown())).nullable(),
+  // Optional only for journals written before response-policy management.
+  responseRules: z.array(z.record(z.string(), z.unknown())).nullable().optional(),
 });
 const original = z.object({
   credentials,
   before: providerSnapshotSchema,
   applied: providerSnapshotSchema,
+  previous: providerSnapshotSchema.optional(),
 });
 const transition = z.object({
   id: z.uuid(),

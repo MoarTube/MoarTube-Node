@@ -313,7 +313,7 @@ describe('Homepage real database and public routes', () => {
     ).rejects.toBeInstanceOf(HomeResetError);
   });
 
-  it('publishes concurrent snapshots atomically and evicts old cursor state within the shared bound', async () => {
+  it('publishes concurrent snapshots atomically and retains admitted cursors across unrelated searches', async () => {
     await videos.createMany(
       Array.from({ length: 60 }, (_, index) => ({ ...video('v' + index), is_published: true }))
     );
@@ -328,7 +328,8 @@ describe('Homepage real database and public routes', () => {
     const [count] = await repository.rows<{ count: number | string }>(
       sql`SELECT count(*) AS count FROM home_snapshots`
     );
-    expect(Number(count?.count)).toBeLessThanOrEqual(32);
+    expect(Number(count?.count)).toBe(36);
+    expect((await repository.page(pages[0]!.snapshot, 30, 30, 'videos')).items).toHaveLength(30);
     const orphans = await repository.rows(
       sql`SELECT snapshot FROM home_snapshot_rows WHERE snapshot NOT IN (SELECT snapshot FROM home_snapshots)`
     );

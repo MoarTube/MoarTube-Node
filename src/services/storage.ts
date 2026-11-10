@@ -6,11 +6,16 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, open, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import type { Readable } from 'node:stream';
 import { writeUpload } from '@/utils/stream-files.js';
 import { rewriteManifestFile } from '@/utils/manifest-transform.js';
+import {
+  isActiveLivePlaylist,
+  livePlaylistCacheHeaders,
+  livePlaylistMetadataKey,
+} from '@/utils/live-playlist-cache.js';
 import { distributionSignal } from '@/utils/cloudflare-http.js';
 
 import {
@@ -314,7 +319,9 @@ export class StorageService extends BaseService {
           Key: `external/videos/${videoId}/adaptive/m3u8/${type}/manifests/manifest-master.m3u8`,
           Body: Buffer.from(content),
           ContentType: 'application/vnd.apple.mpegurl',
-          CacheControl: `public, max-age=0, s-maxage=${type === 'dynamic' ? '1' : '30'}, must-revalidate`,
+          ...(type === 'dynamic'
+            ? livePlaylistCacheHeaders(isActiveLivePlaylist(content))
+            : { CacheControl: 'public, max-age=0, s-maxage=31536000, must-revalidate' }),
         })
       );
     });
@@ -332,10 +339,11 @@ export class StorageService extends BaseService {
             [
               {
                 key,
+                live: type === 'dynamic',
                 cache:
                   type === 'dynamic'
                     ? 'no-store'
-                    : 'public, max-age=0, s-maxage=30, must-revalidate',
+                    : 'public, max-age=0, s-maxage=31536000, must-revalidate',
               },
             ],
             withoutRendition(resolution)
@@ -378,7 +386,7 @@ export class StorageService extends BaseService {
           ? [
               {
                 key: prefix + vod + resolution + '.m3u8',
-                cache: 'public, max-age=0, s-maxage=30, must-revalidate',
+                cache: 'public, max-age=0, s-maxage=31536000, must-revalidate',
               },
               { key: prefix + live + resolution + '.m3u8', cache: 'no-store' },
             ]
@@ -399,7 +407,7 @@ export class StorageService extends BaseService {
           [
             {
               key: prefix + vod + 'master.m3u8',
-              cache: 'public, max-age=0, s-maxage=30, must-revalidate',
+              cache: 'public, max-age=0, s-maxage=31536000, must-revalidate',
             },
           ],
           (line) => (line.trim() === '#MOARTUBE-LIVE' ? '' : line)
@@ -442,7 +450,7 @@ export class StorageService extends BaseService {
   /** Stage a bounded manifest on disk; S3 publishes complete replacements, renditions before master. */
   private async replaceS3Manifest(
     key: string,
-    targets: Array<{ key: string; cache: string }>,
+    targets: Array<{ key: string; cache: string; live?: boolean }>,
     transform: (line: string) => string,
     finalize = false
   ): Promise<number> {
@@ -480,6 +488,24 @@ export class StorageService extends BaseService {
           finalize,
           signal
         );
+        let active = false;
+        if (
+          !finalize &&
+          targets.some((target) => target.live === true) &&
+          response.Metadata?.[livePlaylistMetadataKey] === 'active'
+        ) {
+          const handle = await open(file, 'r');
+          try {
+            const { size } = await handle.stat();
+            const head = Buffer.alloc(Math.min(size, 8192));
+            const tail = Buffer.alloc(Math.min(size, 4096));
+            await handle.read(head, 0, head.length, 0);
+            await handle.read(tail, 0, tail.length, Math.max(0, size - tail.length));
+            active = isActiveLivePlaylist(head.toString('utf8'), tail.toString('utf8'));
+          } finally {
+            await handle.close();
+          }
+        }
         for (const target of targets) {
           const source = fs.createReadStream(file);
           try {
@@ -490,7 +516,9 @@ export class StorageService extends BaseService {
                 Body: source,
                 ContentLength: fs.statSync(file).size,
                 ContentType: 'application/vnd.apple.mpegurl',
-                CacheControl: target.cache,
+                ...(target.live === true
+                  ? livePlaylistCacheHeaders(active)
+                  : { CacheControl: target.cache, Metadata: {} }),
               }),
               signal ? { abortSignal: signal } : {}
             );

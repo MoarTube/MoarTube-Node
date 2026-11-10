@@ -36,7 +36,7 @@ describe('CDN naming contract', () => {
     );
     const settings = { storageMode: 'filesystem' } as StorageConfig;
     expect(storageIdentity(settings)).toBe('filesystem');
-    expect(storageIdentity({ storageMode: 's3provider' })).toBe('[null,null,null]');
+    expect(storageIdentity({ storageMode: 's3provider' })).toBe('["aws-s3","aws",null]');
     expect(storageIdentity(s3())).toContain('externalvideos.example.com');
     expect(storageIdentity(s3({ endpoint: 'https://provider.example/' }))).toBe(
       storageIdentity(s3({ endpoint: 'https://provider.example' }))

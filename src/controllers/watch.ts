@@ -159,6 +159,16 @@ export class WatchController extends VideoControllerBase {
 
         if (request.headers.authorization === undefined) {
           reply.headers({ 'Cache-Control': COMMENT_STATE_CACHE_CONTROL });
+          const dependencies = [
+            videoId,
+            ...model.recommendedVideosData.recommendedVideos.map((v) => v.videoId),
+          ];
+          reply.header(
+            'Cache-Tag',
+            ['moartube-watch', ...new Set(dependencies.map((id) => `moartube-video-${id}`))].join(
+              ','
+            )
+          );
         }
         return await reply.view('watch.ejs', { model });
       }

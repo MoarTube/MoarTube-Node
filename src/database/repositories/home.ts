@@ -1,4 +1,5 @@
 import { sql, type SQL } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
 import type { DatabaseClient } from '@/database/connection.js';
 import type { DatabaseClient as SQLiteClient } from '@/database/sqlite-connection.js';
 import type { DatabaseClient as PostgresClient } from '@/database/postgres-connection.js';
@@ -33,12 +34,40 @@ export interface HomeComment {
   isStreaming: boolean;
 }
 export class HomeResetError extends Error {}
+export class HomeCapacityError extends Error {
+  constructor(readonly oversized: boolean) {
+    super(
+      oversized
+        ? 'This search has too many results. Add a search term or choose a tag to narrow it.'
+        : 'Search is busy. Please retry in a moment.'
+    );
+  }
+}
+
+/** Admission budgets preserve admitted cursors; pressure never evicts a live snapshot. */
+export interface HomeSnapshotLimits {
+  lifetimeMs: number;
+  rows: number;
+  bytes: number;
+  totalRows: number;
+  totalBytes: number;
+  snapshots: number;
+}
+export const HOME_SNAPSHOT_LIMITS: Readonly<HomeSnapshotLimits> = Object.freeze({
+  lifetimeMs: 3_660_000,
+  rows: 10_000,
+  bytes: 8 * 1024 * 1024,
+  totalRows: 250_000,
+  totalBytes: 128 * 1024 * 1024,
+  snapshots: 4096,
+});
 
 /** Public discovery queries only; legacy /videos discovery contracts stay unchanged. */
 export class HomeRepository {
   constructor(
     private readonly db: DatabaseClient,
-    private readonly dialect: 'sqlite' | 'postgres'
+    private readonly dialect: 'sqlite' | 'postgres',
+    private readonly snapshotLimits: Readonly<HomeSnapshotLimits> = HOME_SNAPSHOT_LIMITS
   ) {}
 
   async rows<T extends object>(query: SQL): Promise<T[]> {
@@ -130,6 +159,12 @@ export class HomeRepository {
     return sql`${sql.raw(this.dialect === 'sqlite' ? 'json_object' : 'json_build_object')}(${sql.join(pairs, sql`, `)})`;
   }
 
+  private byteLength(value: SQL): SQL {
+    return this.dialect === 'sqlite'
+      ? sql`length(CAST(${value} AS BLOB))`
+      : sql`octet_length(${value})`;
+  }
+
   async ensureSnapshot(
     id: string,
     revision: string,
@@ -145,13 +180,14 @@ export class HomeRepository {
       if (Number(existing[0]?.safety) !== safety) {
         throw new HomeResetError('Results changed. Refresh to continue.');
       }
-      if (Number(existing[0]?.created) < now - 3_660_000) {
-        await this.write(sql`UPDATE home_snapshots SET created=${now} WHERE snapshot=${id}`);
+      if (Number(existing[0]?.created) >= now - this.snapshotLimits.lifetimeMs) {
+        return;
       }
-      return;
     }
-    // Set-based materialization freezes sort tuples and counters without buffering the catalog in JS.
-    let select: SQL;
+    // Stop collecting matches before ranking or serializing a catalog of unbounded size.
+    // Search matching may still scan the catalog; ranking/body construction is bounded.
+    let candidates: SQL;
+    let ordered: SQL;
     if (kind === 'videos') {
       const hour = Math.floor(now / 3_600_000);
       const score = sql`COALESCE((SELECT SUM(a.views+3*a.likes) FROM home_activity a WHERE a.video_id=v.video_id AND a.hour>${hour - 24} AND a.hour<=${hour}),0)
@@ -182,7 +218,9 @@ export class HomeRepository {
             ? "json(CASE WHEN v.is_streaming THEN 'true' ELSE 'false' END)"
             : 'v.is_streaming',
       });
-      select = sql`SELECT ${id},ROW_NUMBER() OVER (ORDER BY ${sort} DESC,v.creation_timestamp DESC,v.video_id DESC),v.video_id,NULL,CAST(${body} AS TEXT) FROM videos v WHERE ${this.filters(query)}`;
+      candidates = sql`SELECT v.video_id,v.title,v.length_seconds,v.creation_timestamp,v.views,v.likes,v.dislikes,v.comments,v.is_live,v.is_streaming
+        FROM videos v WHERE ${this.filters(query)} LIMIT ${this.snapshotLimits.rows + 1}`;
+      ordered = sql`SELECT ${id},ROW_NUMBER() OVER (ORDER BY ${sort} DESC,v.creation_timestamp DESC,v.video_id DESC),v.video_id,CAST(NULL AS BIGINT),CAST(${body} AS TEXT) AS body FROM candidates v`;
     } else {
       const body = this.json({
         commentId: 'c.comment_id',
@@ -206,21 +244,58 @@ export class HomeRepository {
       const search = text
         ? sql` AND ${this.fold('c.comment_plain_text_sanitized')} LIKE ${pattern} ESCAPE '!'`
         : sql``;
-      select = sql`SELECT ${id},ROW_NUMBER() OVER (ORDER BY c.timestamp DESC,c.comment_id DESC),v.video_id,c.comment_id,CAST(${body} AS TEXT) FROM comments c JOIN videos v ON v.video_id=c.video_id WHERE ${this.filters({ ...query, searchTerm: '' })} AND v.is_comments_enabled=true ${search}`;
+      candidates = sql`SELECT c.comment_id,c.video_id,c.timestamp,c.comment_plain_text_sanitized FROM comments c JOIN videos v ON v.video_id=c.video_id WHERE ${this.filters({ ...query, searchTerm: '' })} AND v.is_comments_enabled=true ${search} LIMIT ${this.snapshotLimits.rows + 1}`;
+      ordered = sql`SELECT ${id},ROW_NUMBER() OVER (ORDER BY c.timestamp DESC,c.comment_id DESC),v.video_id,c.comment_id,CAST(${body} AS TEXT) AS body FROM candidates c JOIN videos v ON v.video_id=c.video_id`;
     }
-    // The entire publication and eviction step is atomic. A concurrent cleanup can
-    // never mistake another worker's half-built snapshot for orphaned rows.
+    // Serialize global admission across workers. SQLite's first DELETE takes its
+    // write lock; PostgreSQL needs a database-scoped transaction advisory lock.
+    const builder = randomUUID();
+    const bodyBytes = this.byteLength(sql`body`);
+    const stats = sql`WITH candidates AS MATERIALIZED (${candidates}), ranked AS MATERIALIZED (${ordered})
+      SELECT COUNT(*) AS rows,CASE WHEN COUNT(*)<=${this.snapshotLimits.rows}
+        THEN (SELECT COALESCE(SUM(${bodyBytes}),0) FROM ranked) ELSE 0 END AS bytes FROM candidates`;
+    const knownRows = sql`(SELECT COALESCE(SUM(row_count),0) FROM home_snapshots)`;
+    const knownBytes = sql`(SELECT COALESCE(SUM(byte_count),0) FROM home_snapshots)`;
     await this.atomic([
-      sql`INSERT INTO home_snapshot_rows(snapshot,position,video_id,comment_id,body) ${select} ON CONFLICT DO NOTHING`,
-      sql`INSERT INTO home_snapshots(snapshot,kind,revision,created,safety) VALUES(${id},${kind},${revision},${now},${safety}) ON CONFLICT DO NOTHING`,
-      sql`DELETE FROM home_snapshots WHERE created<${now - 3_660_000} OR snapshot NOT IN (SELECT snapshot FROM home_snapshots ORDER BY created DESC,snapshot DESC LIMIT 32)`,
+      ...(this.dialect === 'postgres' ? [sql`SELECT pg_advisory_xact_lock(618265623)`] : []),
+      sql`DELETE FROM home_snapshots WHERE created<${now - this.snapshotLimits.lifetimeMs} OR safety<>(SELECT safety FROM home_state WHERE id=1)`,
+      sql`DELETE FROM home_snapshot_rows WHERE snapshot NOT IN (SELECT snapshot FROM home_snapshots)`,
+      sql`INSERT INTO home_snapshots(snapshot,kind,revision,created,safety,row_count,byte_count,builder)
+        SELECT ${id},${kind},${revision},${now},${safety},budget.rows,budget.bytes,${builder}
+        FROM (${stats}) budget
+        WHERE budget.rows<=${this.snapshotLimits.rows} AND budget.bytes<=${this.snapshotLimits.bytes}
+          AND budget.rows+${knownRows}<=${this.snapshotLimits.totalRows}
+          AND budget.bytes+${knownBytes}<=${this.snapshotLimits.totalBytes}
+          AND (SELECT COUNT(*) FROM home_snapshots)<${this.snapshotLimits.snapshots}
+        ON CONFLICT DO NOTHING`,
+      sql`WITH candidates AS MATERIALIZED (${candidates})
+        INSERT INTO home_snapshot_rows(snapshot,position,video_id,comment_id,body)
+        SELECT * FROM (${ordered}) ranked
+        WHERE EXISTS(SELECT 1 FROM home_snapshots WHERE snapshot=${id} AND builder=${builder})
+        ON CONFLICT DO NOTHING`,
+      // Recheck actual size: PostgreSQL read-committed writers can change counters
+      // between admission and publication, even though builders are serialized.
+      sql`UPDATE home_snapshots SET
+        row_count=(SELECT COUNT(*) FROM home_snapshot_rows WHERE snapshot=${id}),
+        byte_count=(SELECT COALESCE(SUM(${bodyBytes}),0) FROM home_snapshot_rows WHERE snapshot=${id})
+        WHERE snapshot=${id} AND builder=${builder}`,
+      sql`DELETE FROM home_snapshots WHERE snapshot=${id} AND builder=${builder}
+        AND (row_count>${this.snapshotLimits.rows} OR byte_count>${this.snapshotLimits.bytes}
+          OR ${knownRows}>${this.snapshotLimits.totalRows} OR ${knownBytes}>${this.snapshotLimits.totalBytes})`,
       sql`DELETE FROM home_snapshot_rows WHERE snapshot NOT IN (SELECT snapshot FROM home_snapshots)`,
       sql`DELETE FROM home_activity WHERE hour<${Math.floor(now / 3_600_000) - 48}`,
     ]);
+    if (!(await this.rows(sql`SELECT snapshot FROM home_snapshots WHERE snapshot=${id}`)).length) {
+      const [budget] = await this.rows<{ rows: number | string; bytes: number | string }>(stats);
+      throw new HomeCapacityError(
+        Number(budget?.rows) > this.snapshotLimits.rows ||
+          Number(budget?.bytes) > this.snapshotLimits.bytes
+      );
+    }
   }
 
   async page(id: string, position: number, limit: number, kind: 'videos' | 'comments') {
-    const valid = sql`SELECT s.snapshot FROM home_snapshots s JOIN home_state h ON h.id=1 AND h.safety=s.safety WHERE s.snapshot=${id} AND s.created>=${Date.now() - 3_660_000}`;
+    const valid = sql`SELECT s.snapshot FROM home_snapshots s JOIN home_state h ON h.id=1 AND h.safety=s.safety WHERE s.snapshot=${id} AND s.created>=${Date.now() - this.snapshotLimits.lifetimeMs}`;
     const exists = await this.rows(valid);
     if (!exists.length) {
       throw new HomeResetError('This page expired. Refresh to load current results.');

@@ -418,6 +418,8 @@ export class SettingsController extends BaseController {
    * Expects multipart form with 'iconFile' and 'avatarFile' fields
    */
   uploadAvatar = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    let published = false;
+    let failed = false;
     try {
       const config = getConfig();
 
@@ -435,26 +437,29 @@ export class SettingsController extends BaseController {
         if (part.type === 'file') {
           if (part.fieldname === 'iconFile') {
             const iconPath = path.join(imagesDir, 'icon.png');
-            await pipeline(part.file, fs.createWriteStream(iconPath));
+            await writeUpload(part, iconPath, 20 * 1024 ** 2);
+            published = true;
           } else if (part.fieldname === 'avatarFile') {
             const avatarPath = path.join(imagesDir, 'avatar.png');
-            await pipeline(part.file, fs.createWriteStream(avatarPath));
+            await writeUpload(part, avatarPath, 20 * 1024 ** 2);
+            published = true;
           }
         }
       }
-
-      try {
-        await this.cloudflareService.purgeNodeImages();
-      } catch (error) {
-        this.logger.error('Failed to purge node images from Cloudflare', error);
-      }
-
-      return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('SettingsController.uploadAvatar failed', error);
-
-      return await this.sendError(reply, 'error communicating with the MoarTube node', 500);
+      failed = true;
+    } finally {
+      // An earlier part may have committed even if a later multipart part fails.
+      if (published) {
+        await this.cloudflareService.purgeNodeImages().catch((error: unknown) => {
+          this.logger.error('Failed to purge node images from Cloudflare', error);
+        });
+      }
     }
+    return failed
+      ? await this.sendError(reply, 'error communicating with the MoarTube node', 500)
+      : await this.sendSuccess(reply);
   };
 
   /**
@@ -484,7 +489,7 @@ export class SettingsController extends BaseController {
           bannerFile = part;
           // Save banner file
           const bannerPath = path.join(imagesDir, 'banner.png');
-          await pipeline(part.file, fs.createWriteStream(bannerPath));
+          await writeUpload(part, bannerPath, 20 * 1024 ** 2);
         }
       }
 
@@ -700,8 +705,7 @@ export class SettingsController extends BaseController {
     try {
       const { nodeIcons } = request.body as { nodeIcons: NodeIcon[] };
       const saved = this.settingsService.updateNodeIcons(nodeIcons);
-      await this.cloudflareService.purgeAllWatchPages();
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
       return await this.sendSuccess(reply, { nodeIcons: saved });
     } catch (error) {
       this.logger.error('Error updating node icons', error);
@@ -811,8 +815,7 @@ export class SettingsController extends BaseController {
           // Relative HLS references do not depend on the public Node address.
           await this.invalidateMediaCaches(config);
 
-          await this.cloudflareService.purgeHomePage();
-          await this.cloudflareService.purgeAllWatchPages();
+          await this.cloudflareService.purgeHomePage([], true);
         } catch (error) {
           config.updateNodeSettings({
             publicNodeProtocol: previous.publicNodeProtocol,
@@ -960,22 +963,11 @@ export class SettingsController extends BaseController {
    * Invalidate media and viewer pages after a distribution change
    */
   private async invalidateMediaCaches(config = getConfig()): Promise<void> {
-    for (let offset = 0; ; offset += 100) {
-      const videos = await this.videosService.getAllVideosData({ limit: 100, offset });
-      for (const video of videos) {
-        if (config.nodeSettings.storageConfig.storageMode === 'filesystem') {
-          await this.cloudflareService.purgeAdaptiveVideos(video.videoId, undefined, true);
-        } else if (video.outputs.m3u8.length > 0) {
-          await this.cloudflareService.purgeVideo(video.videoId);
-        } else {
-          continue;
-        }
-        await this.cloudflareService.purgeWatchPages([video.videoId], true);
-      }
-      if (videos.length < 100) {
-        break;
-      }
-    }
+    await this.cloudflareService.purgePrefixes(
+      [config.getExternalVideosBaseUrl() + '/external/videos/'],
+      true
+    );
+    await this.cloudflareService.purgeHomePage([], true, true);
   }
 
   /**
@@ -1150,6 +1142,11 @@ export class SettingsController extends BaseController {
                 const source = transition.source;
                 const target = transition.target;
                 if (target) {
+                  // Rules are installed before settings commit. Use the admitted
+                  // target address, not the old/local origin still in config.
+                  const publicOrigin = new URL(
+                    `https://${transition.publicAddress.publicNodeAddress}`
+                  ).origin;
                   let original = state.originals[target.zone];
                   if (!original) {
                     if (source?.zone === target.zone) {
@@ -1160,20 +1157,26 @@ export class SettingsController extends BaseController {
                     original = {
                       credentials: target,
                       before: await this.cloudflareService.captureCdnSnapshot(target),
-                      applied: this.cloudflareService.managedCdnSnapshot(),
+                      applied: this.cloudflareService.managedCdnSnapshot(publicOrigin),
                     };
                     state.originals[target.zone] = original;
                     await writeCdnJournal(config.paths.nodeSettingsPath, state);
                   }
+                  await this.cloudflareService.upgradeCdnSnapshot(target, original);
                   await this.cloudflareService.verifyCdnChange(
                     target,
                     original.before,
-                    original.applied
+                    original.applied,
+                    original.previous
                   );
+                  original.previous ??= original.applied;
+                  original.applied = this.cloudflareService.managedCdnSnapshot(publicOrigin);
+                  await writeCdnJournal(config.paths.nodeSettingsPath, state);
                   await this.cloudflareService.setCdnConfiguration(
                     target.email,
                     target.zone,
-                    target.key
+                    target.key,
+                    publicOrigin
                   );
                   await this.cloudflareService.addCdnDnsRecord(
                     target.email,
@@ -1183,6 +1186,7 @@ export class SettingsController extends BaseController {
                     transition.publicAddress.publicNodeAddress
                   );
                   await this.cloudflareService.verifyCdnSnapshot(target, original.applied);
+                  delete original.previous;
                 }
                 if (source && source.zone !== target?.zone) {
                   const original = state.originals[source.zone];
@@ -1380,8 +1384,7 @@ export class SettingsController extends BaseController {
         },
       });
 
-      await this.cloudflareService.purgeAllWatchPages();
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1418,8 +1421,7 @@ export class SettingsController extends BaseController {
       });
 
       // Purge all watch pages from Cloudflare cache
-      await this.cloudflareService.purgeAllWatchPages();
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1441,7 +1443,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isCommentsEnabled: isEnabled });
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1463,7 +1465,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isLikesEnabled: isEnabled });
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1485,7 +1487,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isDislikesEnabled: isEnabled });
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1507,7 +1509,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isReportsEnabled: isEnabled });
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1529,7 +1531,7 @@ export class SettingsController extends BaseController {
       const config = getConfig();
 
       config.updateNodeSettings({ isLiveChatEnabled: isEnabled });
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([], true);
 
       return await this.sendSuccess(reply);
     } catch (error) {
@@ -1578,7 +1580,24 @@ export class SettingsController extends BaseController {
       return this.sendError(reply, 'Invalid migration configuration.', 400);
     }
     try {
-      const filesCopied = await migrateStorage(parsed.data, getConfig().paths.videosDirectoryPath);
+      const filesCopied = await withDistributionTransition(async () => {
+        const config = getConfig();
+        const destination: StorageConfig =
+          parsed.data.direction === 's3-to-filesystem'
+            ? { storageMode: 'filesystem' }
+            : { storageMode: 's3provider', s3Config: parsed.data.destination };
+        if (storageIdentity(config.nodeSettings.storageConfig) === storageIdentity(destination)) {
+          return null;
+        }
+        return await migrateStorage(parsed.data, config.paths.videosDirectoryPath);
+      }, 'copying storage');
+      if (filesCopied === null) {
+        return await this.sendError(
+          reply,
+          'Migration destination is serving viewers. Choose an inactive destination, then activate it through storage settings.',
+          409
+        );
+      }
       return await this.sendSuccess(reply, { filesCopied });
     } catch {
       return this.sendError(
@@ -1713,7 +1732,8 @@ export class SettingsController extends BaseController {
         return await this.sendError(reply, 'database file is missing');
       }
       await this.settingsService.restoreDatabaseBackup(temporary);
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeComments();
+      await this.cloudflareService.purgeHomePage([], true);
       return await this.sendSuccess(reply);
     } catch (error) {
       this.logger.error('Database import error', error);

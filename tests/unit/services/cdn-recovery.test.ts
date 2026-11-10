@@ -45,7 +45,7 @@ describe('CDN failure recovery', () => {
         const internal = service as unknown as {
           purgeCache(files: string[], operation: string): Promise<void>;
         };
-        const files = Array.from({ length: 31 }, (_, index) => `https://example.com/${index}`);
+        const files = Array.from({ length: 101 }, (_, index) => `https://example.com/${index}`);
         await expect(internal.purgeCache(files, 'test')).rejects.toThrow('incomplete');
         expect(post).toHaveBeenCalledOnce();
         await expect(internal.purgeCache(['https://example.com/new'], 'test')).rejects.toThrow(
@@ -55,18 +55,17 @@ describe('CDN failure recovery', () => {
         vi.setSystemTime(220_000);
         await internal.purgeCache(['https://example.com/new'], 'test');
         expect(post).toHaveBeenCalledTimes(3);
-        expect(post.mock.calls[2][1].files).toContain('https://example.com/30');
+        expect(post.mock.calls[2][1].files).toEqual(['https://example.com/100', 'https://example.com/new']);
+        expect(post.mock.calls.slice(1).flatMap(([, body]) => body.files)).toEqual([...files, 'https://example.com/new']);
       } finally {
         vi.useRealTimers();
       }
     }
   );
-  it.each(['rejected-body', 'retry-after'])('retries transient purge failure: %s', async (mode) => {
+  it('retries a transient rejected-body purge response', async () => {
     vi.useFakeTimers();
     try {
-      if (mode === 'rejected-body') post.mockResolvedValueOnce({ data: { success: false } });
-      else
-        post.mockRejectedValueOnce({ response: { status: 429, headers: { 'retry-after': '0' } } });
+      post.mockResolvedValueOnce({ data: { success: false } });
       post.mockResolvedValue({ data: { success: true } });
       const internal = service as unknown as {
         purgeCache(files: string[], operation: string): Promise<void>;
@@ -78,6 +77,41 @@ describe('CDN failure recovery', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+  it.each([
+    ['https://example.com/changed', 1000],
+    ['prefix:example.com/changed', 12000],
+  ])('defers Retry-After zero for the minimum lane cooldown (%s)', async (target, cooldown) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(100_000);
+    try {
+      post.mockRejectedValueOnce({ response: { status: 429, headers: { 'retry-after': '0' } } });
+      post.mockResolvedValue({ data: { success: true } });
+      const internal = service as unknown as { purgeCache(files: string[], operation: string): Promise<void> };
+      await expect(internal.purgeCache([target as string], 'test')).rejects.toThrow('incomplete');
+      expect(post).toHaveBeenCalledOnce();
+      vi.setSystemTime(100_000 + Number(cooldown) - 1);
+      await expect(internal.purgeCache([], 'test')).rejects.toThrow('incomplete');
+      expect(post).toHaveBeenCalledOnce();
+      vi.setSystemTime(100_000 + Number(cooldown));
+      await internal.purgeCache([], 'test');
+      expect(post).toHaveBeenCalledTimes(2);
+    } finally { vi.useRealTimers(); }
+  });
+
+  it('coalesces non-strict notifications while one broad request is in flight', async () => {
+    let finish!: (value: unknown) => void;
+    post.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    post.mockResolvedValue({ data: { success: true } });
+    const first = service.purgeHomePage(['one']);
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
+    await service.purgeHomePage(['two']);
+    expect(post).toHaveBeenCalledOnce();
+    finish({ data: { success: true } });
+    await first;
+    await service.retryPendingPurges();
+    expect(post).toHaveBeenCalledTimes(2);
+    expect(post.mock.calls[1][1]).toEqual({ tags: ['moartube-home', 'moartube-video-two'] });
   });
   it.each([false, true])('rejects an unusable zone response (success=%s)', async (success) => {
     vi.mocked(axios.get).mockResolvedValue({ data: { success, result: { name: '' } } });
@@ -103,6 +137,7 @@ describe('CDN failure recovery', () => {
     async (mode) => {
       let entrypointReads = 0;
       vi.mocked(axios.get).mockImplementation(async (url) => {
+        if (url.includes('/http_response_cache_settings/')) throw { response: { status: 404 } };
         if (url.includes('/entrypoint')) {
           entrypointReads++;
           if (entrypointReads === 1 || mode === 'absent') throw { response: { status: 404 } };
@@ -135,6 +170,7 @@ describe('CDN failure recovery', () => {
   it('recreates a removed DNS record during recovery and reports restoration failures', async () => {
     let dnsReads = 0;
     vi.mocked(axios.get).mockImplementation(async (url) => {
+      if (url.includes('/http_response_cache_settings/')) throw { response: { status: 404 } };
       if (url.includes('/entrypoint')) return { data: { result: { id: 'rules', rules: [] } } };
       if (url.includes('/dns_records'))
         return {
@@ -185,6 +221,7 @@ describe('CDN failure recovery', () => {
     ];
     Object.assign(records[0], { created_on: 'read-only', ttl: 300 });
     vi.mocked(axios.get).mockImplementation(async (url) => {
+      if (url.includes('/http_response_cache_settings/')) throw { response: { status: 404 } };
       if (url.includes('/entrypoint'))
         return { data: { result: { id: 'rules', rules: structuredClone(rules) } } };
       if (url.includes('/dns_records'))
@@ -272,7 +309,7 @@ describe('CDN failure recovery', () => {
   });
 
   it('continues after a failed middle purge batch and retains its URLs for the next request', async () => {
-    const failed = Array.from({ length: 30 }, (_, index) => `https://example.com/failed-${index}`);
+    const failed = Array.from({ length: 100 }, (_, index) => `https://example.com/failed-${index}`);
     post.mockImplementation(async (_url, body) => {
       if (body.files.includes(failed[0])) throw { response: { status: 403 } };
       return { data: { success: true } };
@@ -283,7 +320,7 @@ describe('CDN failure recovery', () => {
     await expect(
       internal.purgeCache(
         [
-          ...Array.from({ length: 30 }, (_, index) => `https://example.com/first-${index}`),
+          ...Array.from({ length: 100 }, (_, index) => `https://example.com/first-${index}`),
           ...failed,
           'https://example.com/last',
         ],
@@ -294,6 +331,7 @@ describe('CDN failure recovery', () => {
     post.mockResolvedValue({ data: { success: true } });
     await internal.purgeCache(['https://example.com/new'], 'test');
     expect(post.mock.calls[3]![1].files).toEqual(failed);
+    expect(post.mock.calls[4]![1].files).toEqual(['https://example.com/new']);
     expect(logger.error).toHaveBeenCalled();
   });
 

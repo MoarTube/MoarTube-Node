@@ -1,3 +1,4 @@
+<% const cachedAsset = typeof assetUrl === 'function' ? assetUrl : (url) => url; %>
 <!doctype html>
 <html>
   <head>
@@ -29,30 +30,30 @@
       href="<%=model.externalResourcesBaseUrl%>/external/resources/images/favicon.ico"
     />
     <link
-      href="<%=model.externalResourcesBaseUrl%>/external/resources/css/keen-slider-6.8.5.min.css"
+      href="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/css/keen-slider-6.8.5.min.css')%>"
       rel="stylesheet"
       type="text/css"
     />
     <!--recommendations slider-->
     <link
-      href="<%=model.externalResourcesBaseUrl%>/external/resources/css/videojs-10.2.0.css"
+      href="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/css/videojs-10.2.0.css')%>"
       rel="stylesheet"
       type="text/css"
     />
     <link
-      href="<%=model.externalResourcesBaseUrl%>/external/resources/css/bootstrap.min-5.3.0.css"
+      href="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/css/bootstrap.min-5.3.0.css')%>"
       rel="stylesheet"
       type="text/css"
     />
     <link
-      href="<%=model.externalResourcesBaseUrl%>/external/resources/css/sweetalert2-11.0.11.min.css"
+      href="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/css/sweetalert2-11.0.11.min.css')%>"
       rel="stylesheet"
       type="text/css"
     />
-    <script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/jquery-3.6.4.min.js"></script>
-    <script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/popper-2.11.6.min.js"></script>
+    <script src="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/javascript/jquery-3.6.4.min.js')%>"></script>
+    <script src="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/javascript/popper-2.11.6.min.js')%>"></script>
     <!--popup menus, such as report buttons-->
-    <script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/bootstrap-5.3.0.min.js"></script>
+    <script src="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/javascript/bootstrap-5.3.0.min.js')%>"></script>
     <style>
       body {
         background: var(--watch-page);
@@ -704,6 +705,11 @@
         #video-title { font-size: 24px; }
         .watch-comments-heading { font-size: 18px; }
       }
+      #video-player-container:has(.mt-has-played),
+      #video-player-container .mt-has-played .mt-player-surface { background-color: var(--watch-page); }
+      #theater-container #video-player-container:has(.mt-has-played),
+      #theater-container .mt-has-played .mt-player-surface,
+      #video-player-container .mt-has-played .mt-player-surface:fullscreen { background-color: #000; }
       #video-comments-outer { color: var(--watch-text); }
       #video-player-information,
       #comments-container,
@@ -936,7 +942,7 @@ body {
         styleSheet.disabled = true;
       }
     </script>
-  <script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/memory-limits.js"></script>
+  <script src="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/javascript/memory-limits.js')%>"></script>
 </head>
 
   <body>
@@ -1438,8 +1444,8 @@ body {
     <div id="captcha-container"></div>
     <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>
-    <script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/sweetalert-11.0.11.min.js"></script>
-    <script src="<%=model.externalResourcesBaseUrl%>/external/resources/javascript/keen-slider-6.8.5.min.js"></script>
+    <script src="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/javascript/sweetalert-11.0.11.min.js')%>"></script>
+    <script src="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/javascript/keen-slider-6.8.5.min.js')%>"></script>
 
     <script>
       const INCOMING_PARAMETERS = <%- JSON.stringify(model).replace(/</g, '\\u003c') %>;
@@ -1872,7 +1878,7 @@ body {
 
         async initializeVideoPlayer(adaptiveSources, progressiveSources, isStreaming) {
           try {
-            const { createVideoPlayer } = await import(this.EXTERNAL_RESOURCES_BASE_URL + '/external/resources/javascript/videojs-10.2.0.js');
+            const { createVideoPlayer } = await import(this.EXTERNAL_RESOURCES_BASE_URL + <%- JSON.stringify(cachedAsset('/external/resources/javascript/videojs-10.2.0.js')) %>);
             this.WATCH_PLAYER = createVideoPlayer({
               placeholder: document.getElementById('video-player'),
               adaptiveSources,
@@ -2178,6 +2184,11 @@ body {
           this.COMMENT_STORE = new (class {
             constructor(video) {
               this.video = video;
+              // Each tab owns its durable metadata. A superseded tab falls back to memory.
+              this.owner = Date.now().toString(36) + Math.random().toString(36).slice(2);
+              this.owned = false;
+              this.generation = 0;
+              this.cacheGeneration = this.owner;
               this.memory = new Map();
               this.memoryRanges = [];
               this.memoryGeneration = 0;
@@ -2190,37 +2201,18 @@ body {
               this.ready = new Promise((resolve) => {
                 let request;
                 try {
-                  request = indexedDB.open('moartube-comments-v1', 2);
+                  request = indexedDB.open('moartube-comments-v2', 1);
                 } catch {
                   resolve(null);
                   return;
                 }
-                request.onupgradeneeded = (event) => {
+                request.onupgradeneeded = () => {
                   const db = request.result;
-                  const comments =
-                    event.oldVersion === 0
-                      ? db.createObjectStore('comments', { keyPath: ['video', 'commentId'] })
-                      : request.transaction.objectStore('comments');
-                  if (event.oldVersion === 0) {
-                    comments.createIndex('order', ['video', 'timestamp', 'commentId']);
-                    db.createObjectStore('state', { keyPath: 'video' });
-                    db.createObjectStore('replies', { keyPath: ['video', 'id', 'cursor'] });
-                  }
+                  const comments = db.createObjectStore('comments', { keyPath: ['video', 'commentId'] });
+                  comments.createIndex('order', ['video', 'timestamp', 'commentId']);
                   comments.createIndex('descending', ['video', 'sortTimestamp', 'sortId']);
-                  if (event.oldVersion > 0) {
-                    const cursor = comments.openCursor();
-                    cursor.onsuccess = () => {
-                      const c = cursor.result;
-                      if (c) {
-                        c.update({
-                          ...c.value,
-                          sortTimestamp: -c.value.timestamp,
-                          sortId: -c.value.commentId,
-                        });
-                        c.continue();
-                      }
-                    };
-                  }
+                  db.createObjectStore('state', { keyPath: 'video' });
+                  db.createObjectStore('replies', { keyPath: ['video', 'id', 'cursor'] });
                 };
                 request.onerror = request.onblocked = () => resolve(null);
                 request.onsuccess = () => {
@@ -2232,57 +2224,120 @@ body {
                 this.db = db;
                 if (db)
                   try {
-                    const states = await this.operation(['state'], 'readonly', (tx) =>
-                      tx.objectStore('state').getAll(),
-                    );
-                    const old = states
-                      .filter((s) => s.video !== video)
-                      .sort((a, b) => b.saved - a.saved)
-                      .filter((s, i) => i >= 19 || Date.now() - s.saved >= 7 * 86400000);
-                    if (old.length)
-                      await this.operation(['comments', 'state', 'replies'], 'readwrite', (tx) => {
-                        for (const state of old) {
-                          tx.objectStore('comments').delete(
-                            IDBKeyRange.bound([state.video, 0], [state.video, Number.MAX_SAFE_INTEGER]),
-                          );
-                          tx.objectStore('replies').delete(
-                            IDBKeyRange.bound(
-                              [state.video, 0, 0],
-                              [state.video, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
-                            ),
-                          );
-                          tx.objectStore('state').delete(state.video);
+                    // Read coverage and claim its bodies under one write lock. A different
+                    // tab cannot clear the bodies between initialization and ownership.
+                    await this.operation(['comments', 'state', 'replies'], 'readwrite', (tx) => {
+                      const request = tx.objectStore('state').get(video);
+                      request.onsuccess = () => {
+                        const state = request.result;
+                        if (state?.cacheGeneration && Date.now() - state.saved < 7 * 86400000) {
+                          this.cacheGeneration = state.cacheGeneration;
+                          this.ranges = state.ranges;
+                          this.version = state.version;
+                          this.epoch = state.epoch;
+                          this.closedHead = state.closedHead;
+                          this.hasIsolated = state.hasIsolated;
+                        } else {
+                          tx.objectStore('comments').delete(IDBKeyRange.bound([video, 0], [video, Number.MAX_SAFE_INTEGER]));
+                          tx.objectStore('replies').delete(IDBKeyRange.bound([video, 0, 0], [video, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]));
                         }
-                      });
-                    const state = await this.operation(['state'], 'readonly', (tx) =>
-                      tx.objectStore('state').get(video),
-                    );
-                    if (state && Date.now() - state.saved < 7 * 86400000) {
-                      this.ranges = state.ranges;
-                      this.version = state.version;
-                      this.epoch = state.epoch;
-                      this.closedHead = state.closedHead;
-                      this.hasIsolated = state.hasIsolated;
-                    } else {
-                      const fresh = new Map(this.memory);
-                      await this.clear();
-                      this.memory = fresh;
-                    }
+                        tx.objectStore('state').put({
+                          video, owner: this.owner, cacheGeneration: this.cacheGeneration,
+                          ranges: this.ranges, version: this.version, epoch: this.epoch,
+                          closedHead: this.closedHead, hasIsolated: this.hasIsolated, saved: Date.now(),
+                        });
+                      };
+                      return request;
+                    });
+                    this.owned = true;
                   } catch (error) {
                     this.storageError = String(error);
-                    this.db?.close();
-                    this.db = null;
+                    this.loseOwnership();
                   }
               });
             }
+            loseOwnership() {
+              this.db?.close();
+              this.db = null;
+              this.owned = false;
+              this.memory.clear();
+              this.memoryRanges = [];
+              this.memoryGeneration++;
+              this.generation++;
+              this.ranges = [];
+              this.version = this.epoch = this.closedHead = undefined;
+              this.hasIsolated = false;
+            }
+            async checkOwnership() {
+              await this.ready;
+              if (this.db && this.owned)
+                try {
+                  await this.operation(['state'], 'readonly', (tx) => tx.objectStore('state').get(this.video));
+                } catch (error) {
+                  this.storageError = String(error);
+                  if (this.db) this.loseOwnership();
+                }
+            }
             operation(stores, mode, action) {
               return new Promise((resolve, reject) => {
-                let tx, result;
+                let tx, result, evicted = false;
                 try {
-                  tx = this.db.transaction(stores, mode);
-                  tx.oncomplete = () => resolve(result?.result);
+                  const names = [...new Set([...stores, 'state', ...(mode === 'readwrite' ? ['comments', 'replies'] : [])])];
+                  tx = this.db.transaction(names, mode);
+                  tx.oncomplete = () => {
+                    if (evicted) {
+                      this.ranges = [];
+                      this.db?.close();
+                      this.db = null;
+                    }
+                    resolve(result?.result);
+                  };
                   tx.onerror = tx.onabort = () => reject(tx.error);
-                  result = action(tx);
+                  const run = () => {
+                    result = action(tx);
+                    if (mode !== 'readwrite') return;
+                    const states = tx.objectStore('state').getAll();
+                    states.onsuccess = () => {
+                      const old = states.result.filter(state => state.video !== this.video)
+                        .sort((a, b) => b.saved - a.saved)
+                        .filter((state, index) => index >= 19 || Date.now() - state.saved >= 7 * 86400000);
+                      for (const state of old) {
+                        tx.objectStore('comments').delete(IDBKeyRange.bound([state.video, 0], [state.video, Number.MAX_SAFE_INTEGER]));
+                        tx.objectStore('replies').delete(IDBKeyRange.bound([state.video, 0, 0], [state.video, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]));
+                        tx.objectStore('state').delete(state.video);
+                      }
+                    };
+                    // Bound disk bodies and replies together; evict coverage in the same commit.
+                    let bytes = 0, complete = 0, exceeded = false;
+                    for (const [name, limit] of [['comments', 2000], ['replies', 200]]) {
+                      const range = name === 'comments'
+                        ? IDBKeyRange.bound([this.video, 0], [this.video, Number.MAX_SAFE_INTEGER])
+                        : IDBKeyRange.bound([this.video, 0, 0], [this.video, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER]);
+                      const request = tx.objectStore(name).getAll(range, limit + 1);
+                      request.onsuccess = () => {
+                        exceeded ||= request.result.length > limit;
+                        bytes += request.result.reduce((sum, row) => sum + JSON.stringify(row).length * 2, 0);
+                        if (++complete === 2 && (exceeded || bytes > 4 * 1024 * 1024)) {
+                          for (const [store, bounds] of [
+                            ['comments', IDBKeyRange.bound([this.video, 0], [this.video, Number.MAX_SAFE_INTEGER])],
+                            ['replies', IDBKeyRange.bound([this.video, 0, 0], [this.video, Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER])],
+                          ]) tx.objectStore(store).delete(bounds);
+                          tx.objectStore('state').delete(this.video);
+                          evicted = true;
+                        }
+                      };
+                    }
+                  };
+                  if (this.owned) {
+                    const request = tx.objectStore('state').get(this.video);
+                    request.onsuccess = () => {
+                      if (request.result?.owner !== this.owner || request.result?.cacheGeneration !== this.cacheGeneration) {
+                        this.loseOwnership();
+                        tx.abort();
+                      }
+                      else run();
+                    };
+                  } else run();
                 } catch (error) {
                   try {
                     tx?.abort();
@@ -2316,7 +2371,9 @@ body {
               const changed = rows.filter((row) => this.memory.get(row.commentId) !== row);
               for (const row of rows) this.remember(row);
               const generation = this.memoryGeneration;
-              const prepared = this.ready.then(() => {
+              const prepared = this.ready.then(async () => {
+                await this.checkOwnership();
+                if (generation !== this.memoryGeneration) return null;
                 this.ranges = this.mergeRanges(this.ranges, range);
                 if (
                   (typeof memoryCoverage === 'function' ? memoryCoverage() : memoryCoverage) &&
@@ -2327,6 +2384,8 @@ body {
                 // records which have not committed yet.
                 return {
                   video: this.video,
+                  owner: this.owner,
+                  cacheGeneration: this.cacheGeneration,
                   ranges: this.ranges.map((r) => r.map((p) => [...p])),
                   version: this.version,
                   epoch: this.epoch,
@@ -2342,6 +2401,7 @@ body {
               this.serial = Promise.all([this.serial, completion]).then(() => {});
               for (const row of changed) this.pendingWrites.set(row.commentId, completion);
               prepared.then((state) => {
+                if (!state) { finish(); return; }
                 this.writeQueue.push({ state, rows: changed, finish });
                 void this.flushWrites();
               });
@@ -2358,8 +2418,10 @@ body {
               while (this.writeQueue.length) {
                 // Coalesce pending batches into one transaction and one durable commit.
                 await new Promise((resolve) => setTimeout(resolve, 0));
-                const batch = this.writeQueue.splice(0),
+                const pending = this.writeQueue.splice(0),
+                  batch = pending.filter(item => item.state.cacheGeneration === this.cacheGeneration),
                   rows = new Map();
+                if (!batch.length) { for (const item of pending) item.finish(); continue; }
                 for (const item of batch) for (const row of item.rows) rows.set(row.commentId, row);
                 if (this.db)
                   try {
@@ -2368,6 +2430,7 @@ body {
                         tx.objectStore('comments').put({
                           ...row,
                           video: this.video,
+                          cacheGeneration: this.cacheGeneration,
                           sortTimestamp: -row.timestamp,
                           sortId: -row.commentId,
                         });
@@ -2379,7 +2442,7 @@ body {
                     this.db = null;
                     this.ranges = [];
                   }
-                for (const item of batch) item.finish();
+                for (const item of pending) item.finish();
               }
               this.writing = false;
             }
@@ -2393,12 +2456,14 @@ body {
               this.memory.clear();
               this.memoryRanges = [];
               this.memoryGeneration++;
+              this.generation++;
               this.ranges = [];
               this.version = undefined;
               this.epoch = undefined;
               this.closedHead = undefined;
               if (this.db)
                 await this.operation(['comments', 'state', 'replies'], 'readwrite', (tx) => {
+                  this.cacheGeneration = this.owner + ':' + this.generation;
                   tx.objectStore('replies').delete(
                     IDBKeyRange.bound(
                       [this.video, 0, 0],
@@ -2408,10 +2473,12 @@ body {
                   tx.objectStore('comments').delete(
                     IDBKeyRange.bound([this.video, 0], [this.video, Number.MAX_SAFE_INTEGER]),
                   );
-                  tx.objectStore('state').delete(this.video);
+                  tx.objectStore('state').put({ video: this.video, owner: this.owner, cacheGeneration: this.cacheGeneration, ranges: [], saved: Date.now() });
                 });
+              else this.cacheGeneration = this.owner + ':' + this.generation;
             }
             async get(id) {
+              await this.checkOwnership();
               if (this.memory.has(id)) return this.memory.get(id);
               await this.ready;
               if (this.pendingWrites.has(id)) await this.pendingWrites.get(id);
@@ -2421,8 +2488,10 @@ body {
                   const row = await this.operation(['comments'], 'readonly', (tx) =>
                     tx.objectStore('comments').get([this.video, id]),
                   );
-                  if (row) this.remember(row);
-                  return row;
+                  if (row?.cacheGeneration === this.cacheGeneration) {
+                    this.remember(row);
+                    return row;
+                  }
                 } catch (error) {
                   this.storageError = String(error);
                   this.db = null;
@@ -2436,7 +2505,10 @@ body {
               if (this.db)
                 try {
                   await this.operation(['comments'], 'readwrite', (tx) => {
-                    for (const id of ids) tx.objectStore('comments').delete([this.video, id]);
+                    for (const id of ids) {
+                      tx.objectStore('comments').delete([this.video, id]);
+                      tx.objectStore('replies').delete(IDBKeyRange.bound([this.video, id, 0], [this.video, id, Number.MAX_SAFE_INTEGER]));
+                    }
                   });
                 } catch {
                   this.db = null;
@@ -2444,7 +2516,7 @@ body {
                 }
             }
             async knownIds(cursor) {
-              await this.ready;
+              await this.checkOwnership();
               const before = cursor.type === 'before',
                 point = [cursor.timestamp, cursor.beforeId ?? cursor.afterId ?? 0];
               let rows = [];
@@ -2470,7 +2542,7 @@ body {
                   this.db = null;
                   this.ranges = [];
                 }
-              const candidates = new Map(rows.map((row) => [row.commentId, row]));
+              const candidates = new Map(rows.filter(row => row.cacheGeneration === this.cacheGeneration).map((row) => [row.commentId, row]));
               for (const row of this.memory.values()) candidates.set(row.commentId, row);
               return [...candidates.values()]
                 .filter((row) => (before ? -1 : 1) * this.compare(this.point(row), point) > 0)
@@ -2480,7 +2552,7 @@ body {
             }
 
             async page(cursor) {
-              await this.ready;
+              await this.checkOwnership();
               const before = cursor.type === 'before',
                 point = [cursor.timestamp, cursor.beforeId ?? cursor.afterId ?? 0];
               const range = this.ranges.find(
@@ -2532,6 +2604,10 @@ body {
                         101,
                       ),
                   );
+                  if (rows.some(row => row.cacheGeneration !== this.cacheGeneration)) {
+                    this.loseOwnership();
+                    return null;
+                  }
                   for (const row of rows) this.remember(row);
                 } catch (error) {
                   this.storageError = String(error);
@@ -2603,7 +2679,7 @@ body {
               const page = await store.operation(['replies'], 'readonly', (tx) =>
                 tx.objectStore('replies').get(key),
               );
-              if (page) return page.response;
+              if (page?.cacheGeneration === store.cacheGeneration) return page.response;
             } catch (error) {
               store.storageError = String(error);
               store.db?.close();
@@ -2620,7 +2696,7 @@ body {
               await store.operation(['replies'], 'readwrite', (tx) =>
                 tx
                   .objectStore('replies')
-                  .put({ video: this.VIDEO_ID, id, cursor: beforeReplyId ?? 0, response }),
+                  .put({ video: this.VIDEO_ID, cacheGeneration: store.cacheGeneration, id, cursor: beforeReplyId ?? 0, response }),
               );
             } catch (error) {
               store.storageError = String(error);
@@ -2653,8 +2729,9 @@ body {
 
         async ensureCommentFreshness() {
           if (this.COMMENT_SYNC_TASK) await this.COMMENT_SYNC_TASK;
-          if (this.INCOMING_PARAMETERS.commentsData?.cdnEnabled &&
-              Date.now() - (this.COMMENT_STATE_CHECKED_AT ?? 0) >= 30000) {
+          const store = this.commentStore();
+          await store.checkOwnership();
+          if (store.version === undefined || Date.now() - (this.COMMENT_STATE_CHECKED_AT ?? 0) >= 30000) {
             const totalVersion = this.COMMENT_TOTAL_VERSION;
             const result = await this.syncCommentCache(false);
             this.updateCommentTotal(result?.totalCount, totalVersion);
@@ -2760,16 +2837,14 @@ body {
         async performCommentCacheSync(fresh = true) {
           const store = this.commentStore();
           await store.ready;
-          if (this.INCOMING_PARAMETERS.commentsData?.cdnEnabled) {
-            const state = await this.readCommentState(fresh);
-            if (store.version === undefined) {
-              store.epoch = state.epoch;
-              store.version = state.version;
-              await this.cacheComments([]);
-            }
-            if (store.epoch === state.epoch && store.version === state.version)
-              return { totalCount: state.totalCount };
+          const state = await this.readCommentState(fresh);
+          if (store.version === undefined) {
+            store.epoch = state.epoch;
+            store.version = state.version;
+            await this.cacheComments([]);
           }
+          if (store.epoch === state.epoch && store.version === state.version)
+            return { totalCount: state.totalCount };
           if (store.version === undefined) return;
           store.generation = (store.generation ?? 0) + 1;
           let result;
@@ -2862,6 +2937,14 @@ body {
           return Object.assign(result.promise(), { abort: () => result.reject({}, 'abort') });
         }
 
+        startCommentFreshnessTimer() {
+          if (this.COMMENT_FRESHNESS_TIMER) return;
+          this.COMMENT_FRESHNESS_TIMER = setInterval(() => {
+            if (!this.COMMENT_SUSPENDED && document.visibilityState !== 'hidden')
+              void this.ensureCommentFreshness().catch(() => {});
+          }, 15000);
+        }
+
         setupCommentScrolling() {
           const container = document.getElementById('comments-container');
           if (!container || this.COMMENT_OBSERVER) return;
@@ -2898,14 +2981,22 @@ body {
             this.COMMENT_POST_REQUEST?.abort();
             this.clearCommentPreview();
             clearTimeout(this.COMMENT_UPDATE_TIMER);
+            clearInterval(this.COMMENT_FRESHNESS_TIMER);
+            this.COMMENT_FRESHNESS_TIMER = null;
             $('.comment-input-form').each((_,form)=>this.enableFormInputs($(form),'submit'));
           });
           window.addEventListener('resize',()=>{this.clearCommentPreview();this.clearCommentCenter();});
           for(const event of ['wheel','touchstart','pointerdown','keydown'])window.addEventListener(event,()=>{this.clearCommentCenter();this.cancelCommentNavigation();},{passive:true});
-          window.addEventListener('pageshow', () => {
+          const resumeComments = () => {
+            if (document.visibilityState === 'hidden') return;
             this.COMMENT_SUSPENDED = false;
-            this.observeCommentSentinels();
-          });
+            this.COMMENT_STATE_CHECKED_AT = 0;
+            this.startCommentFreshnessTimer();
+            void this.ensureCommentFreshness().then(() => this.observeCommentSentinels()).catch(() => {});
+          };
+          window.addEventListener('pageshow', resumeComments);
+          document.addEventListener('visibilitychange', resumeComments);
+          this.startCommentFreshnessTimer();
         }
 
         observeCommentSentinels() {
@@ -3257,8 +3348,7 @@ body {
             if (!id) return;
             this.clearCommentPreview();
             this.QUOTE_LINK = link;
-            if (this.INCOMING_PARAMETERS.commentsData?.cdnEnabled &&
-                (this.COMMENT_SYNC_TASK || Date.now() - (this.COMMENT_STATE_CHECKED_AT ?? 0) >= 30000)) {
+            if (this.COMMENT_SYNC_TASK || Date.now() - (this.COMMENT_STATE_CHECKED_AT ?? 0) >= 30000) {
               try { await this.ensureCommentFreshness(); }
               catch { return; }
               if (this.QUOTE_LINK !== link || !link.isConnected || !link.matches(':hover')) return;
@@ -3655,10 +3745,8 @@ body {
           const active=()=>this.COMMENT_NAVIGATION===navigation && !this.COMMENT_SUSPENDED;
           const get=(url,data={})=>Object.keys(data).length?this.getCachedCommentPage(data):this.getCachedComment(commentId);
           try {
-            if (this.INCOMING_PARAMETERS.commentsData?.cdnEnabled) {
-              await this.ensureCommentFreshness();
-              if (!active()) return;
-            }
+            await this.ensureCommentFreshness();
+            if (!active()) return;
             let target=document.querySelector('#comments-container > #pc'+commentId);
             if(!target) {
               const response=await get('/videos/'+this.VIDEO_ID+'/comments/'+commentId);

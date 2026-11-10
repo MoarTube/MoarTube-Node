@@ -91,7 +91,9 @@ describe('WatchController', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockVideosService.getRecommendedVideos.mockImplementation(async () => (await mockVideosService.getVideos())?.data ?? []);
+    mockVideosService.getRecommendedVideos.mockImplementation(
+      async () => (await mockVideosService.getVideos())?.data ?? []
+    );
 
     controller = new WatchController(
       mockVideosService as any,
@@ -106,6 +108,7 @@ describe('WatchController', () => {
       status: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
       headers: vi.fn().mockReturnThis(),
+      header: vi.fn().mockReturnThis(),
       type: vi.fn().mockReturnThis(),
       view: vi.fn().mockReturnThis(),
     };
@@ -146,19 +149,49 @@ describe('WatchController', () => {
       });
     });
 
-    it('combines global and video permissions and exposes live/publishing state',async()=>{
-      const original=getConfig();
-      try{
-        for(const global of [false,true]){
-          vi.mocked(getConfig).mockReturnValue({...original,nodeSettings:{...original.nodeSettings,isLikesEnabled:global,isDislikesEnabled:global,isLiveChatEnabled:global,isCommentsEnabled:global,isReportsEnabled:global}} as any);
-          for(const local of [false,true]){
-            mockVideosService.getVideo.mockResolvedValue(createMockVideo({is_publishing:true,is_live:true,is_likes_enabled:local,is_dislikes_enabled:local,is_live_chat_enabled:local,is_comments_enabled:local,is_reports_enabled:local}));
-            await controller.getWatchPage(mockRequest as FastifyRequest,mockReply as any);
-            const model=mockReply.view.mock.calls.at(-1)?.[1].model;
-            expect(model.videoData.video).toMatchObject({isPublishing:true,isLive:true,isLikesEnabled:global&&local,isDislikesEnabled:global&&local,isLiveChatEnabled:global&&local,isCommentsEnabled:global&&local,isReportsEnabled:global&&local});
+    it('combines global and video permissions and exposes live/publishing state', async () => {
+      const original = getConfig();
+      try {
+        for (const global of [false, true]) {
+          vi.mocked(getConfig).mockReturnValue({
+            ...original,
+            nodeSettings: {
+              ...original.nodeSettings,
+              isLikesEnabled: global,
+              isDislikesEnabled: global,
+              isLiveChatEnabled: global,
+              isCommentsEnabled: global,
+              isReportsEnabled: global,
+            },
+          } as any);
+          for (const local of [false, true]) {
+            mockVideosService.getVideo.mockResolvedValue(
+              createMockVideo({
+                is_publishing: true,
+                is_live: true,
+                is_likes_enabled: local,
+                is_dislikes_enabled: local,
+                is_live_chat_enabled: local,
+                is_comments_enabled: local,
+                is_reports_enabled: local,
+              })
+            );
+            await controller.getWatchPage(mockRequest as FastifyRequest, mockReply as any);
+            const model = mockReply.view.mock.calls.at(-1)?.[1].model;
+            expect(model.videoData.video).toMatchObject({
+              isPublishing: true,
+              isLive: true,
+              isLikesEnabled: global && local,
+              isDislikesEnabled: global && local,
+              isLiveChatEnabled: global && local,
+              isCommentsEnabled: global && local,
+              isReportsEnabled: global && local,
+            });
           }
         }
-      }finally{vi.mocked(getConfig).mockImplementation(()=>original);}
+      } finally {
+        vi.mocked(getConfig).mockImplementation(() => original);
+      }
     });
 
     it('should render watch page when video is found', async () => {
@@ -265,7 +298,7 @@ describe('WatchController', () => {
       expect(mockLinksService.getAllLinks).toHaveBeenCalled();
       expect(mockMonetizationService.getWalletAddresses).toHaveBeenCalled();
       expect(mockCommentsService.getCacheVersion).toHaveBeenCalledWith('video123');
-      expect(mockVideosService.getRecommendedVideos).toHaveBeenCalledWith({limit:10});
+      expect(mockVideosService.getRecommendedVideos).toHaveBeenCalledWith({ limit: 10 });
     });
 
     it('should include recommended videos in page data', async () => {

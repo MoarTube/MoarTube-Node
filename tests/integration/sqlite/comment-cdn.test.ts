@@ -42,7 +42,7 @@ describe('comment HTTP CDN contract with a real database', () => {
       videosService: { getVideo: async () => ({ is_comments_enabled: true }) },
       videoUploadService: {},
       reportsService: {},
-      cloudflareService: { purgeWatchPages: purge },
+      cloudflareService: { purgeWatchPages: purge, purgeHomePage: purge, purgeComments: purge },
     };
     await app.register(
       async (scoped) => {
@@ -100,7 +100,7 @@ describe('comment HTTP CDN contract with a real database', () => {
     });
     expect(created.statusCode, created.body).toBe(200);
     expect(created.headers['cache-control']).toBe('no-store');
-    expect(purge).toHaveBeenCalledWith([id]);
+    expect(purge).not.toHaveBeenCalled();
     const next = (await app.inject(base + '/state?fresh=1')).json();
     expect(next.version).toBeGreaterThan(state.version);
     const oldKey = await app.inject(`${base}/${parent}?${key(state)}`);

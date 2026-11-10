@@ -147,7 +147,7 @@ export class StreamsService extends BaseService {
 
         this.logger.info('Stream started', { videoId, isRecordedRemotely, isRecordedLocally });
         await this.invalidateStreamMedia(videoId);
-        await this.cloudflareService.purgeHomePage();
+        await this.cloudflareService.purgeHomePage([videoId]);
 
         // Broadcast stream start
         this.broadcastStreamEvent('stream_started', {
@@ -206,8 +206,7 @@ export class StreamsService extends BaseService {
         this.logger.debug('Deleted live chat messages on stream stop', { videoId, deletedCount });
 
         // Purge Cloudflare cache
-        await this.cloudflareService.purgeAllWatchPages();
-        await this.cloudflareService.purgeHomePage();
+        await this.cloudflareService.purgeHomePage([videoId]);
 
         this.broadcastStreamEvent('stream_stopped', {
           videoId,
@@ -407,8 +406,7 @@ export class StreamsService extends BaseService {
 
         // Purge Cloudflare cache
         await this.invalidateStreamMedia(videoId);
-        await this.cloudflareService.purgeAllWatchPages();
-        await this.cloudflareService.purgeHomePage();
+        await this.cloudflareService.purgeHomePage([videoId]);
 
         return { videoId };
       })
@@ -656,14 +654,31 @@ export class StreamsService extends BaseService {
         meta: JSON.stringify(metadata),
       });
       await this.invalidateStreamMedia(job.videoId);
-      await this.cloudflareService.purgeHomePage();
+      await this.cloudflareService.purgeHomePage([job.videoId]);
     });
   }
 
   async recoverStreamCleanup(): Promise<void> {
     await this.cleanupQueue().recover();
   }
-  async invalidateStreamMedia(videoId: string): Promise<void> {
+  async invalidateStreamMedia(
+    videoId: string,
+    segment?: { format: string; resolution: string; segmentName: string }
+  ): Promise<void> {
+    if (segment) {
+      await this.cloudflareService.purgeFiles([
+        getConfig().getExternalVideosBaseUrl() +
+          '/external/videos/' +
+          videoId +
+          '/adaptive/' +
+          segment.format +
+          '/' +
+          segment.resolution +
+          '/segments/' +
+          segment.segmentName,
+      ]);
+      return;
+    }
     await this.cloudflareService.purgeAdaptiveVideos(videoId);
   }
   close(): void {

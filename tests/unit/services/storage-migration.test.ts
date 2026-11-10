@@ -61,6 +61,7 @@ it('uploads every local video file, including multipart and empty files, overwri
         Key: 'external/videos/video/large.mp4',
       })
     );
+    expect(object.CacheControl).toBe('public, max-age=0, s-maxage=31536000, must-revalidate');
     expect(
       createHash('sha256')
         .update(await object.Body!.transformToByteArray())
@@ -94,6 +95,7 @@ it('copies S3 video objects across stores with pagination and retains source and
     new GetObjectCommand({ Bucket: destination.config.bucketName, Key: keys[0]! })
   );
   expect(object.ContentType).toBe('video/mp2t');
+  expect(object.CacheControl).toBe('public, max-age=0, s-maxage=31536000, must-revalidate');
   await object.Body!.transformToByteArray();
   const unrelated = await destination.client.send(
     new ListObjectsV2Command({ Bucket: destination.config.bucketName, Prefix: 'unrelated/' })

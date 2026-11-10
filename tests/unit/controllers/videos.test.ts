@@ -1,4 +1,7 @@
-vi.mock('@/utils/distribution-admission.js', () => ({ withMediaWrite: (operation: () => Promise<unknown>) => operation() }));
+vi.mock('@/utils/distribution-admission.js', () => ({
+  withMediaWrite: (operation: () => Promise<unknown>) => operation(),
+  finishRemoteWrite: vi.fn().mockResolvedValue(undefined),
+}));
 /**
  * Unit tests for VideosController
  *
@@ -118,17 +121,17 @@ describe('VideosController', () => {
       mockReply
     );
     expect(mockCloudflareService.purgeVideo).toHaveBeenCalledWith('video');
-    expect(mockCloudflareService.purgeWatchPages).toHaveBeenCalledWith(['video'], true);
+    expect(mockCloudflareService.purgeHomePage).toHaveBeenCalledWith(['video'], false, true);
     expect(mockReply.status).toHaveBeenCalledWith(200);
   });
 
   it('invalidates only the supplied media paths after direct Client writes', async () => {
-    mockCloudflareService.purgePrefixes = vi.fn().mockResolvedValue(undefined);
+    mockCloudflareService.purgeFiles = vi.fn().mockResolvedValue(undefined);
     await controller.invalidateCache(
       createMockRequest({ params: { videoId: 'video' }, body: { paths: ['images/preview.jpg'] } }),
       mockReply
     );
-    expect(mockCloudflareService.purgePrefixes).toHaveBeenCalledWith(
+    expect(mockCloudflareService.purgeFiles).toHaveBeenCalledWith(
       [expect.stringContaining('/external/videos/video/images/preview.jpg')],
       true
     );
@@ -226,6 +229,8 @@ describe('VideosController', () => {
     };
 
     mockCloudflareService = {
+      purgeFiles: vi.fn(),
+      purgeComments: vi.fn(),
       purgeHomePage: vi.fn().mockResolvedValue(undefined),
       purgeVideo: vi.fn().mockResolvedValue(undefined),
       verifyTurnstileToken: vi.fn(),
@@ -3225,4 +3230,17 @@ describe('VideosController', () => {
       })
     );
   });
+  it('retains failed exact-path invalidations and attempts both completion purges', async () => {
+    mockCloudflareService.purgeFiles.mockRejectedValueOnce(new Error('provider failure'));
+    await expect(controller.invalidateCache(createMockRequest({ params: { videoId: 'video' }, body: { paths: ['progressive/mp4/video.mp4'] } }), mockReply)).rejects.toThrow('Cache invalidation incomplete');
+    mockCloudflareService.purgeVideo.mockRejectedValueOnce(new Error('prefix failure'));
+    await expect(controller.invalidateCache(createMockRequest({ params: { videoId: 'video' } }), mockReply)).rejects.toThrow('Cache invalidation incomplete');
+    expect(mockCloudflareService.purgeHomePage).toHaveBeenCalledWith(['video'], false, true);
+  });
+  it('finishes remote activity only after pending invalidations are retried', async () => {
+    mockCloudflareService.retryPendingPurges = vi.fn().mockResolvedValue(undefined);
+    await controller.invalidateCache(createMockRequest({ params: { videoId: 'video' }, body: { activityId: 'write' } }), mockReply);
+    expect(mockCloudflareService.retryPendingPurges).toHaveBeenCalledOnce();
+  });
+
 });

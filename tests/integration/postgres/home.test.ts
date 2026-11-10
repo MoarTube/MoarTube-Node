@@ -8,6 +8,7 @@ import { sql } from 'drizzle-orm';
 import {
   HomeRepository,
   HomeResetError,
+  HOME_SNAPSHOT_LIMITS,
   type HomeQuery,
   type HomeVideo,
   type HomeComment,
@@ -273,7 +274,7 @@ describe('Homepage real database and public routes', () => {
     ).rejects.toBeInstanceOf(HomeResetError);
   });
 
-  it('publishes concurrent snapshots atomically and evicts old cursor state within the shared bound', async () => {
+  it('publishes concurrent snapshots atomically and retains admitted cursors across unrelated searches', async () => {
     await videos.createMany(
       Array.from({ length: 60 }, (_, index) => ({ ...video('v' + index), is_published: true }))
     );
@@ -288,11 +289,40 @@ describe('Homepage real database and public routes', () => {
     const [count] = await repository.rows<{ count: number | string }>(
       sql`SELECT count(*) AS count FROM home_snapshots`
     );
-    expect(Number(count?.count)).toBeLessThanOrEqual(32);
+    expect(Number(count?.count)).toBe(36);
+    expect((await repository.page(pages[0]!.snapshot, 30, 30, 'videos')).items).toHaveLength(30);
     const orphans = await repository.rows(
       sql`SELECT snapshot FROM home_snapshot_rows WHERE snapshot NOT IN (SELECT snapshot FROM home_snapshots)`
     );
     expect(orphans).toEqual([]);
+  });
+
+  it('serializes capacity admission across PostgreSQL workers without evicting the winning cursor', async () => {
+    await videos.createMany(
+      Array.from({ length: 35 }, (_, index) => ({
+        ...video('capacity-' + index),
+        is_published: true,
+      }))
+    );
+    const limits = { ...HOME_SNAPSHOT_LIMITS, totalRows: 35 };
+    const a = new HomeService(new HomeRepository(database.db, 'postgres', limits));
+    const b = new HomeService(new HomeRepository(database.db, 'postgres', limits));
+    const results = await Promise.allSettled([
+      a.page('videos', empty, input()),
+      b.page('videos', { ...empty, sortTerm: 'viewed' }, input()),
+    ]);
+    const retained = results.find((result) => result.status === 'fulfilled');
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.find((result) => result.status === 'rejected')).toMatchObject({
+      reason: { oversized: false },
+    });
+    expect((await repository.page(retained!.value.snapshot, 30, 30, 'videos')).items).toHaveLength(
+      5
+    );
+    const [budget] = await repository.rows<{ rows: number | string }>(
+      sql`SELECT SUM(row_count) AS rows FROM home_snapshots`
+    );
+    expect(Number(budget!.rows)).toBe(35);
   });
 
   it('filters community comments by exact video tag, preserves pagination, and restores all comments', async () => {

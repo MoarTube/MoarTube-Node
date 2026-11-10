@@ -116,6 +116,42 @@ describe('public file HTTP boundaries and delivery', () => {
     expect(response.headers['content-encoding']).toBe('gzip');
     expect(response.rawPayload.length).toBeLessThan(500);
   });
+  it('keeps existing video URLs fresh at the CDN for a year while browsers revalidate', async () => {
+    writeFileSync(
+      path.join(root, `videos/${video}/adaptive/m3u8/720p/segment-1.ts`),
+      'segment bytes'
+    );
+    writeFileSync(
+      path.join(root, `videos/${video}/adaptive/m3u8/manifest-720p.m3u8`),
+      '#EXTM3U\n#EXT-X-TARGETDURATION:6\n#EXTINF:6,\nsegment-1.ts\n#EXT-X-ENDLIST\n'
+    );
+    for (const suffix of [
+      '/progressive/mp4/720p.mp4',
+      '/adaptive/m3u8/720p/segments/segment-1.ts',
+      '/adaptive/m3u8/static/manifests/manifest-720p.m3u8',
+    ]) {
+      const url = media + suffix;
+      const first = await app.inject(url);
+      expect(first.statusCode).toBe(200);
+      expect(first.headers['cache-control']).toBe(
+        'public, max-age=0, s-maxage=31536000, must-revalidate'
+      );
+      const unchanged = await app.inject({
+        url,
+        headers: { 'if-none-match': String(first.headers.etag) },
+      });
+      expect(unchanged.statusCode).toBe(304);
+      expect(unchanged.headers['cache-control']).toBe(first.headers['cache-control']);
+    }
+    const partial = await app.inject({
+      url: media + '/progressive/mp4/720p.mp4',
+      headers: { range: 'bytes=0-15' },
+    });
+    expect(partial.statusCode).toBe(206);
+    expect(partial.headers['cache-control']).toBe(
+      'public, max-age=0, s-maxage=31536000, must-revalidate'
+    );
+  });
   it.each([
     ['bytes=0-15', 0, 15, 16],
     ['bytes=-16', 984, 999, 16],
@@ -197,7 +233,7 @@ describe('public file HTTP boundaries and delivery', () => {
     expect(head.body).toBe('');
     expect(head.headers['content-length']).toBe('1000');
     expect((await app.inject({ url, headers: { 'if-modified-since': modified } })).statusCode).toBe(
-      304
+      200
     );
     expect(
       (
@@ -214,7 +250,7 @@ describe('public file HTTP boundaries and delivery', () => {
       ).toBe(200);
     expect(
       (await app.inject({ url, headers: { range: 'bytes=0-15', 'if-range': modified } })).statusCode
-    ).toBe(206);
+    ).toBe(200);
     const js = '/external/resources/javascript/app.js',
       asset = await app.inject(js);
     const unchanged = await app.inject({
@@ -273,7 +309,7 @@ describe('public file HTTP boundaries and delivery', () => {
       (await app.inject(`${media}/adaptive/m3u8/static/manifests/manifest-720p.m3u8`)).headers[
         'cache-control'
       ]
-    ).toContain('s-maxage=30');
+    ).toContain('s-maxage=31536000');
   });
   it('microcaches GET and HEAD snapshots but never revalidates live files using static validators', async () => {
     const file = path.join(root, `videos/${video}/adaptive/m3u8/manifest-720p.m3u8`);
@@ -317,7 +353,7 @@ describe('public file HTTP boundaries and delivery', () => {
     );
     expect(terminal.headers['cache-control']).toBe('no-store');
     const vod = await app.inject(`${media}/adaptive/m3u8/static/manifests/manifest-master.m3u8`);
-    expect(vod.headers['cache-control']).toContain('s-maxage=30');
+    expect(vod.headers['cache-control']).toContain('s-maxage=31536000');
   });
   it('microcaches recorded Client playlists with fixed-width target durations', async () => {
     const file = path.join(root, `videos/${video}/adaptive/m3u8/manifest-720p.m3u8`);
@@ -418,7 +454,7 @@ describe('public file HTTP boundaries and delivery', () => {
           headers: { 'if-modified-since': new Date(Date.now() + 60000).toUTCString() },
         })
       ).statusCode
-    ).toBe(304);
+    ).toBe(200);
     expect(
       (await app.inject({ url, headers: { 'if-none-match': String(response.headers.etag) } }))
         .statusCode

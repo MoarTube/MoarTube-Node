@@ -1,3 +1,4 @@
+import { mediaObjectCacheControl } from '@/utils/media-cache.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Readable } from 'node:stream';
@@ -40,6 +41,7 @@ function contentType(key: string): string {
     '.m4s': 'video/iso.segment',
     '.mpd': 'application/dash+xml',
     '.webm': 'video/webm',
+    '.ogv': 'video/ogg',
     '.jpg': 'image/jpeg',
     '.jpeg': 'image/jpeg',
     '.png': 'image/png',
@@ -69,9 +71,7 @@ async function upload(
           Bucket: target.bucket,
           Key: key,
           ContentType: type,
-          CacheControl: key.includes('/dynamic/manifests/')
-            ? 'no-store'
-            : 'public, max-age=0, s-maxage=30, must-revalidate',
+          CacheControl: mediaObjectCacheControl(key),
         })
       );
       uploadId = result.UploadId;
@@ -117,9 +117,7 @@ async function upload(
           Key: key,
           Body: buffer.subarray(0, used),
           ContentType: type,
-          CacheControl: key.includes('/dynamic/manifests/')
-            ? 'no-store'
-            : 'public, max-age=0, s-maxage=30, must-revalidate',
+          CacheControl: mediaObjectCacheControl(key),
         })
       );
     } else {

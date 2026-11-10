@@ -1,4 +1,6 @@
-vi.mock('@/utils/distribution-admission.js', () => ({ withJobAdmission: (operation: () => Promise<unknown>) => operation() }));
+vi.mock('@/utils/distribution-admission.js', () => ({
+  withJobAdmission: (operation: () => Promise<unknown>) => operation(),
+}));
 vi.mock('@/utils/settings-change.js', () => ({
   withSettingsChange: vi.fn(async (_path, operation) => operation()),
 }));
@@ -139,6 +141,7 @@ const mockWebSocketService = {
 };
 
 const mockCloudflareService = {
+  purgeComments: vi.fn(),
   purgeWatchPages: vi.fn(),
   purgeEmbedVideoPages: vi.fn(),
   purgeHomePage: vi.fn(),
@@ -174,25 +177,24 @@ describe('VideosService', () => {
     vi.useRealTimers();
   });
 
-  it('captures segment URLs before deletion and purges watch HTML only after record deletion', async () => {
-    mockVideosRepository.findById.mockResolvedValue({ video_id: 'id' });
-    const segments = [
-      'https://cdn.example.com/external/videos/id/adaptive/m3u8/720p/segments/old.ts',
-    ];
-    mockCloudflareService.getAdaptiveVideoUrls.mockResolvedValueOnce(segments);
+  it('purges the whole media prefix and dependent HTML only after record deletion without inventorying segments', async () => {
+    mockVideosRepository.findById.mockResolvedValue({ video_id: 'id', meta: '{}' });
     let deleted = false;
     mockVideosRepository.delete.mockImplementationOnce(async () => {
       deleted = true;
       return true;
     });
-    mockCloudflareService.purgeAllWatchPages.mockImplementationOnce(async () => {
+    mockCloudflareService.purgeVideo.mockImplementationOnce(async () => {
+      expect(deleted).toBe(true);
+    });
+    mockCloudflareService.purgeHomePage.mockImplementationOnce(async () => {
       expect(deleted).toBe(true);
     });
     await service.deleteVideo('id');
-    expect(mockCloudflareService.getAdaptiveVideoUrls.mock.invocationCallOrder[0]).toBeLessThan(
-      mockVideosRepository.delete.mock.invocationCallOrder[0]
-    );
-    expect(mockCloudflareService.purgeAdaptiveVideos).toHaveBeenCalledWith('id', segments);
+    expect(mockCloudflareService.getAdaptiveVideoUrls).not.toHaveBeenCalled();
+    expect(mockCloudflareService.purgeVideo).toHaveBeenCalledExactlyOnceWith('id');
+    expect(mockCloudflareService.purgeHomePage).toHaveBeenCalledExactlyOnceWith(['id']);
+    expect(mockCloudflareService.purgeAdaptiveVideos).not.toHaveBeenCalled();
   });
 
   it('invalidates the catalog when a video is unpublished', async () => {
@@ -202,13 +204,27 @@ describe('VideosService', () => {
   });
 
   describe('video sources and concurrent output updates', () => {
-    it('keeps external S3 media origins in both source and watch-data responses',async()=>{
-      const {getConfig}=await import('@config/index.js');const config=getConfig();
-      vi.mocked(getConfig).mockReturnValueOnce({...config,nodeSettings:{...config.nodeSettings,storageConfig:{storageMode:'s3provider'}},getExternalVideosBaseUrl:()=> 'https://media.example/bucket'} as never);
-      mockVideosRepository.findById.mockResolvedValue({video_id:'v',outputs:JSON.stringify({m3u8:['720p'],mp4:[],webm:[],ogv:[]})});
-      const sources=await service.getVideoSources('v');expect(sources?.adaptiveSources[0]?.src).toContain('https://media.example/bucket/');
-      vi.mocked(getConfig).mockReturnValueOnce({...config,nodeSettings:{...config.nodeSettings,storageConfig:{storageMode:'s3provider'}},getExternalVideosBaseUrl:()=> 'https://media.example/bucket'} as never);
-      const watch=await service.getWatchData('v');expect(watch?.adaptiveSources[0]?.src).toContain('https://media.example/bucket/');
+    it('keeps external S3 media origins in both source and watch-data responses', async () => {
+      const { getConfig } = await import('@config/index.js');
+      const config = getConfig();
+      vi.mocked(getConfig).mockReturnValueOnce({
+        ...config,
+        nodeSettings: { ...config.nodeSettings, storageConfig: { storageMode: 's3provider' } },
+        getExternalVideosBaseUrl: () => 'https://media.example/bucket',
+      } as never);
+      mockVideosRepository.findById.mockResolvedValue({
+        video_id: 'v',
+        outputs: JSON.stringify({ m3u8: ['720p'], mp4: [], webm: [], ogv: [] }),
+      });
+      const sources = await service.getVideoSources('v');
+      expect(sources?.adaptiveSources[0]?.src).toContain('https://media.example/bucket/');
+      vi.mocked(getConfig).mockReturnValueOnce({
+        ...config,
+        nodeSettings: { ...config.nodeSettings, storageConfig: { storageMode: 's3provider' } },
+        getExternalVideosBaseUrl: () => 'https://media.example/bucket',
+      } as never);
+      const watch = await service.getWatchData('v');
+      expect(watch?.adaptiveSources[0]?.src).toContain('https://media.example/bucket/');
     });
     it.each([true, false])('builds sources for streaming=%s', async (isStreaming) => {
       mockVideosRepository.findById.mockResolvedValue({
@@ -556,7 +572,7 @@ describe('VideosService', () => {
         },
         urls: {},
         getNodeBaseUrl: vi.fn(() => 'https://test.example.com'),
-    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
+        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
     });
   });
@@ -574,7 +590,7 @@ describe('VideosService', () => {
 
       expect(result).toBeTruthy();
       expect(mockVideosRepository.update).toHaveBeenCalled();
-      expect(mockCloudflareService.purgeWatchPages).toHaveBeenCalledWith(['video123']);
+      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalledWith(['video123']);
     });
 
     it('should return null when video not found', async () => {
@@ -591,9 +607,7 @@ describe('VideosService', () => {
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
-      mockCloudflareService.purgeEmbedVideoPages.mockRejectedValueOnce(
-        new Error('Cloudflare error')
-      );
+      mockCloudflareService.purgeHomePage.mockRejectedValueOnce(new Error('Cloudflare error'));
 
       const result = await service.updateVideo('video123', { title: 'Updated' });
 
@@ -828,9 +842,7 @@ describe('VideosService', () => {
       const mockVideo = { video_id: 'video123' };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
       mockVideosRepository.update.mockResolvedValue(mockVideo);
-      mockCloudflareService.purgeEmbedVideoPages.mockRejectedValueOnce(
-        new Error('Cloudflare error')
-      );
+      mockCloudflareService.purgeHomePage.mockRejectedValueOnce(new Error('Cloudflare error'));
 
       const result = await service.updateVideoMeta('video123', { field: 'value' });
 
@@ -853,7 +865,7 @@ describe('VideosService', () => {
       expect(result).toBe(true);
       expect(mockCommentsRepository.deleteByVideoId).toHaveBeenCalledWith('video123');
       expect(mockCloudflareService.purgeHomePage).toHaveBeenCalled();
-      expect(mockCloudflareService.purgeEmbedVideoPages).toHaveBeenCalledWith(['video123']);
+      expect(mockCloudflareService.purgeVideo).toHaveBeenCalledWith('video123');
     });
 
     it('should continue when Cloudflare purge fails during deletion', async () => {
@@ -908,7 +920,7 @@ describe('VideosService', () => {
         },
         urls: {},
         getNodeBaseUrl: vi.fn(() => 'https://test.example.com'),
-    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
+        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
 
       const result = await service.deleteVideo('video123');
@@ -1019,14 +1031,12 @@ describe('VideosService', () => {
       expect(mockVideosRepository.update).toHaveBeenCalledWith('video123', {
         is_published: false,
       });
-      expect(mockCloudflareService.purgeAllWatchPages).toHaveBeenCalled();
+      expect(mockCloudflareService.purgeVideo).toHaveBeenCalled();
     });
 
     it('should continue when Cloudflare purge fails during unpublish', async () => {
       mockVideosRepository.update.mockResolvedValue(undefined);
-      mockCloudflareService.purgeAllEmbedVideoPages.mockRejectedValueOnce(
-        new Error('Cloudflare error')
-      );
+      mockCloudflareService.purgeHomePage.mockRejectedValueOnce(new Error('Cloudflare error'));
 
       await service.unpublishVideo('video123');
 
@@ -1366,6 +1376,7 @@ describe('VideosService', () => {
     it('should add resolution to format outputs', async () => {
       const mockVideo = {
         video_id: 'video123',
+        is_streaming: true,
         outputs: JSON.stringify({ m3u8: [], mp4: [], webm: [], ogv: [] }),
       };
       mockVideosRepository.findById.mockResolvedValue(mockVideo);
@@ -2141,7 +2152,7 @@ describe('VideosService', () => {
         },
         urls: {},
         getNodeBaseUrl: vi.fn(() => 'https://test.example.com'),
-    getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
+        getExternalVideosBaseUrl: vi.fn().mockReturnValue('https://cdn.example.com'),
       } as any);
 
       await service.writeMasterManifest('video123', 'static', content);
@@ -2258,4 +2269,11 @@ describe('VideosService', () => {
       expect.objectContaining({ visibleOnly: true })
     );
   });
+  it('records a progressive output without generating an HLS master', async () => {
+    mockVideosRepository.findById.mockResolvedValue({ video_id: 'video123', outputs: { m3u8: [], mp4: [], webm: [], ogv: [] } });
+    mockVideosRepository.update.mockResolvedValue(undefined);
+    await service.markFormatResolutionPublished('video123', 'mp4', '720p');
+    expect(JSON.parse(mockVideosRepository.update.mock.calls[0][1].outputs).mp4).toEqual(['720p']);
+  });
+
 });

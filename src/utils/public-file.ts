@@ -1,10 +1,14 @@
 import type fs from 'node:fs';
+import { fstatSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { open, type FileHandle } from 'node:fs/promises';
 import { createGzip } from 'node:zlib';
 import type { FastifyRequest, FastifyReply } from 'fastify';
 import { publicFilePath, isPathSegment } from './public-path.js';
 import { acceptsGzip, varyEncoding } from './http-compression.js';
+import { retainAsset, retainedAssetPath } from './asset-url.js';
+import { isActiveLivePlaylist, livePlaylistCacheControl } from './live-playlist-cache.js';
 
 export interface ByteRange {
   start: number;
@@ -52,9 +56,35 @@ export async function servePublicFile(
   }
   let handle: FileHandle | undefined;
   let info: fs.Stats;
+  let file: string;
+  const packaged = ['javascript', 'css', 'fonts'].includes(parts[0] ?? '') && parts.length === 2;
+  const version = (request.query as { v?: string } | undefined)?.v;
+  const uncached = packaged && (request.query as { cache?: string } | undefined)?.cache === 'off';
+  const immutableAsset =
+    !uncached && packaged && typeof version === 'string' && /^[a-f0-9]{64}$/.test(version);
   try {
-    const file = await publicFilePath(root, parts);
-    handle = await open(file, 'r');
+    if (immutableAsset) {
+      file = retainedAssetPath(parts, version);
+      try {
+        handle = await open(file, 'r');
+      } catch {
+        const current = await publicFilePath(root, parts);
+        handle = await open(current, 'r');
+        if (retainAsset(current, parts, handle.fd) !== version) {
+          await handle.close();
+          handle = undefined;
+          return await reply
+            .type('application/json')
+            .status(404)
+            .send({ isError: true, message: 'Asset version not found' });
+        }
+        await handle.close();
+        handle = await open(file, 'r');
+      }
+    } else {
+      file = await publicFilePath(root, parts);
+      handle = await open(file, 'r');
+    }
     info = await handle.stat();
   } catch {
     await handle?.close();
@@ -75,34 +105,39 @@ export async function servePublicFile(
       await handle.read(tail, 0, tail.length, Math.max(0, info.size - tail.length));
       const ended = tail.toString('utf8').split(/\r?\n/).includes('#EXT-X-ENDLIST');
       const header = head.toString('utf8');
-      // Both URL aliases resolve to this file; its lifecycle determines cache safety.
+      // Inspect bytes as well as route type so active playlists cannot acquire VOD freshness.
       options = {
         ...options,
         live: options.live === true || (master ? liveMaster : !ended),
       };
       // Microcache complete live snapshots, never an empty startup file or terminal response.
       // Browsers revalidate every reload; shared caches may reuse a snapshot for one second.
-      if (
-        options.live &&
-        !ended &&
-        /^#EXTM3U\r?\n/.test(header) &&
-        (master
-          ? liveMaster
-          : header.includes('#EXTINF:') && /^#EXT-X-TARGETDURATION:0*[1-9]\d*\r?$/m.test(header))
-      ) {
-        reply.header('Cache-Control', 'public, max-age=0, s-maxage=1, must-revalidate');
+      if (options.live && isActiveLivePlaylist(header, tail.toString('utf8'))) {
+        reply.header('Cache-Control', livePlaylistCacheControl);
       }
     }
-    const etag = `W/"${info.size.toString(16)}-${info.mtimeMs.toString(16)}"`;
+    // Nanosecond inode/publication metadata changes on atomic replacement even
+    // when a copier preserves size and mtime. Mutable identities remain weak:
+    // they must never authorize joining bytes from separate representations.
+    const identity = fstatSync(handle.fd, { bigint: true });
+    const immutable = immutableAsset;
+    const etag = immutable
+      ? `${/^(?:text\/|application\/javascript|image\/svg)/.test(contentType) ? 'W/' : ''}"${version}"`
+      : `W/"${createHash('sha256').update([identity.dev, identity.ino, identity.size, identity.mtimeNs, identity.ctimeNs, identity.birthtimeNs].join(':')).digest('hex')}"`;
     const modified = info.mtime.toUTCString();
     reply.header('Content-Type', contentType).header('X-Content-Type-Options', 'nosniff');
     const text = /^(?:text\/|application\/javascript|image\/svg)/.test(contentType);
     if (text && info.size >= 1024) {
       varyEncoding(reply);
     }
-    if (!options.live) {
+    if (!options.live && !uncached) {
       reply
-        .header('Cache-Control', 'public, max-age=0, s-maxage=30, must-revalidate')
+        .header(
+          'Cache-Control',
+          immutable
+            ? 'public, max-age=31536000, s-maxage=31536000, immutable'
+            : `public, max-age=0, s-maxage=${contentType.startsWith('video/') || contentType === 'application/vnd.apple.mpegurl' ? '31536000' : packaged ? '3600' : '30'}, must-revalidate`
+        )
         .header('ETag', etag)
         .header('Last-Modified', modified);
       const tag = request.headers['if-none-match'];
@@ -115,7 +150,8 @@ export async function servePublicFile(
                   value.trim() === '*' ||
                   value.trim().replace(/^W\//, '') === etag.replace(/^W\//, '')
               )
-          : request.headers['if-modified-since'] !== undefined &&
+          : immutable &&
+            request.headers['if-modified-since'] !== undefined &&
             Math.floor(info.mtimeMs / 1000) * 1000 <=
               Date.parse(request.headers['if-modified-since']);
       if (unchanged) {
@@ -129,9 +165,8 @@ export async function servePublicFile(
       const ifRange = typeof header === 'string' ? header : undefined;
       const useRange =
         ifRange === undefined ||
-        (!ifRange.startsWith('W/') &&
-          !ifRange.startsWith('"') &&
-          Date.parse(ifRange) >= Math.floor(info.mtimeMs / 1000) * 1000);
+        (!etag.startsWith('W/') && ifRange === etag) ||
+        (immutable && Date.parse(ifRange) === Math.floor(info.mtimeMs / 1000) * 1000);
       if (request.method === 'GET' && useRange) {
         range = byteRange(request.headers.range, info.size);
       }

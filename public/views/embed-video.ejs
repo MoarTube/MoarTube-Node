@@ -1,3 +1,4 @@
+<% const cachedAsset = typeof assetUrl === 'function' ? assetUrl : (url) => url; %>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -9,12 +10,12 @@
       href="<%=model.externalResourcesBaseUrl%>/external/resources/images/favicon.ico"
     />
     <link
-      href="<%=model.externalResourcesBaseUrl%>/external/resources/css/videojs-10.2.0.css"
+      href="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/css/videojs-10.2.0.css')%>"
       rel="stylesheet"
       type="text/css"
     />
     <link
-      href="<%=model.externalResourcesBaseUrl%>/external/resources/css/bootstrap.min-5.3.0.css"
+      href="<%=model.externalResourcesBaseUrl%><%=cachedAsset('/external/resources/css/bootstrap.min-5.3.0.css')%>"
       rel="stylesheet"
       type="text/css"
     />
@@ -182,7 +183,7 @@
           return;
         }
         try {
-          const { createVideoPlayer } = await import(INCOMING_PARAMETERS.externalResourcesBaseUrl + '/external/resources/javascript/videojs-10.2.0.js');
+          const { createVideoPlayer } = await import(INCOMING_PARAMETERS.externalResourcesBaseUrl + <%- JSON.stringify(cachedAsset('/external/resources/javascript/videojs-10.2.0.js')) %>);
           createVideoPlayer({
             placeholder: document.getElementById('video-player'),
             adaptiveSources: video.adaptiveSources,

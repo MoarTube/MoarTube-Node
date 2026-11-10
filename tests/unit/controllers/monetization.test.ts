@@ -126,8 +126,8 @@ describe('MonetizationController', () => {
         chainId: '0x1',
         currency: 'USDC',
       });
-      expect(mockCloudflareService.purgeAllWatchPages).toHaveBeenCalled();
-      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalled();
+      expect(mockCloudflareService.purgeAllWatchPages).not.toHaveBeenCalled();
+      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalledWith([], true);
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 
@@ -211,8 +211,8 @@ describe('MonetizationController', () => {
       await controller.deleteWalletAddress(mockRequest as FastifyRequest, mockReply as unknown as FastifyReply);
 
       expect(mockMonetizationService.deleteWalletAddress).toHaveBeenCalledWith(1);
-      expect(mockCloudflareService.purgeAllWatchPages).toHaveBeenCalled();
-      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalled();
+      expect(mockCloudflareService.purgeAllWatchPages).not.toHaveBeenCalled();
+      expect(mockCloudflareService.purgeHomePage).toHaveBeenCalledWith([], true);
       expect(mockReply.status).toHaveBeenCalledWith(200);
     });
 

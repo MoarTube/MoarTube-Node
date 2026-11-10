@@ -7,11 +7,37 @@ export function storageIdentity(storage: StorageConfig): string {
     return 'filesystem';
   }
   const provider = storage.s3Config?.s3ProviderClientConfig;
-  return JSON.stringify([
-    storage.s3Config?.bucketName,
-    provider?.endpoint?.replace(/\/$/, ''),
-    provider?.region,
-  ]);
+  const bucket = storage.s3Config?.bucketName;
+  const region = provider?.region.trim().toLowerCase();
+  const partition = (value: string | undefined): string =>
+    value?.startsWith('cn-') === true
+      ? 'aws-cn'
+      : value?.startsWith('us-gov-') === true
+        ? 'aws-us-gov'
+        : 'aws';
+  if (!provider?.endpoint) {
+    return JSON.stringify(['aws-s3', partition(region), bucket]);
+  }
+  const endpoint = new URL(provider.endpoint);
+  const hostname = endpoint.hostname.toLowerCase().replace(/\.$/, '');
+  // SDK defaults, regional, dualstack, FIPS and accelerated AWS endpoints address
+  // the same bucket. Transport, signing region and path style do not change data.
+  const aws =
+    /^(?:s3(?:[.-](?:dualstack|fips))*(?:[.-]([a-z]{2}(?:-gov)?-[a-z]+-\d))?|s3-accelerate(?:\.dualstack)?)\.amazonaws\.com(?:\.cn)?$/.exec(
+      hostname
+    );
+  if (aws && (endpoint.pathname === '/' || endpoint.pathname === '')) {
+    return JSON.stringify([
+      'aws-s3',
+      hostname.endsWith('.com.cn') ? 'aws-cn' : partition(aws[1] ?? region),
+      bucket,
+    ]);
+  }
+  endpoint.hostname = hostname;
+  endpoint.pathname = endpoint.pathname.replace(/\/+$/, '') || '/';
+  // Custom providers can use the region solely for request signing. Do not let
+  // changing it bypass the active-destination guard for an unchanged endpoint.
+  return JSON.stringify(['s3', bucket, endpoint.host, endpoint.pathname, endpoint.search]);
 }
 
 export function mediaHostname(address: string): string {

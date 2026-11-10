@@ -208,8 +208,7 @@ export class VideoUploadService {
       this.uploadTrackerService.stopTracking(videoId);
 
       // Purge Cloudflare cache
-      await this.cloudflareService.purgeHomePage();
-      await this.cloudflareService.purgeWatchPages([videoId]);
+      await this.cloudflareService.purgeHomePage([videoId]);
 
       // Format-specific purge
       if (format === 'm3u8') {
@@ -308,7 +307,7 @@ export class VideoUploadService {
     }
     const filePath = path.join(destinationPath, file.filename);
     const maxBytes = 10 * 1024 ** 3;
-    await writeUpload(file, filePath, maxBytes);
+    const replacing = await writeUpload(file, filePath, maxBytes);
     this.logger.debug('Saved uploaded file', { filename: file.filename, path: filePath });
     if (!this.cloudflareService.isEnabled()) {
       return;
@@ -336,8 +335,8 @@ export class VideoUploadService {
         : progressive
           ? [`${base}/external/videos/${relative}`]
           : [];
-    if (urls.length) {
-      await this.cloudflareService.purgePrefixes(urls);
+    if (urls.length && (!segment || replacing)) {
+      await this.cloudflareService.purgeFiles(urls);
     }
   }
 

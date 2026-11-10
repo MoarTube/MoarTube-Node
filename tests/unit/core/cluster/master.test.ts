@@ -573,7 +573,7 @@ describe('ClusterMaster', () => {
       });
     });
 
-    it('should run cloudflare purge task when cloudflare is configured', async () => {
+    it('retries pending work without periodically evicting warm pages', async () => {
       const testCloudflare = {
         retryPendingPurges: vi.fn().mockResolvedValue(undefined),
         purgeAllWatchPages: vi.fn().mockResolvedValue(undefined),
@@ -586,8 +586,9 @@ describe('ClusterMaster', () => {
       // Advance timers by 10 minutes
       await vi.advanceTimersByTimeAsync(60000 * 10);
 
-      expect(testCloudflare.purgeAllWatchPages).toHaveBeenCalled();
-      expect(testCloudflare.purgeHomePage).toHaveBeenCalled();
+      expect(testCloudflare.purgeAllWatchPages).not.toHaveBeenCalled();
+      expect(testCloudflare.retryPendingPurges).toHaveBeenCalled();
+      expect(testCloudflare.purgeHomePage).not.toHaveBeenCalled();
     });
 
     it('should handle cloudflare purge errors', async () => {
@@ -603,10 +604,6 @@ describe('ClusterMaster', () => {
       // Advance timers by 10 minutes
       await vi.advanceTimersByTimeAsync(60000 * 10);
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Cloudflare purge task failed',
-        expect.any(Error)
-      );
       expect(mockLogger.error).toHaveBeenCalledWith(
         'Pending Cloudflare invalidation failed',
         expect.any(Error)

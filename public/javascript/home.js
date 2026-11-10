@@ -163,6 +163,7 @@
     memory = new Map();
     pending = new Map();
     db = null;
+    generation = 0;
     constructor() {
       this.ready = new Promise((resolve) => {
         let request;
@@ -187,6 +188,7 @@
       });
     }
     async get(key) {
+      const generation = this.generation;
       await this.ready;
       let entry = this.memory.get(key);
       if (!entry && this.db)
@@ -199,7 +201,7 @@
         } catch {
           this.disable();
         }
-      if (entry && entry.expires > Date.now()) {
+      if (generation === this.generation && entry && entry.expires > Date.now()) {
         this.remember(key, entry);
         return entry.data;
       }
@@ -214,10 +216,23 @@
       this.db?.close();
       this.db = null;
     }
-    async put(key, data) {
-      const entry = { key, data, expires: Date.now() + 3600000 };
+    async clear() {
+      this.generation++;
+      this.memory.clear();
+      await this.ready;
+      if (this.db) await new Promise((resolve, reject) => {
+        const tx = this.db.transaction('pages', 'readwrite');
+        tx.objectStore('pages').clear();
+        tx.oncomplete = resolve;
+        tx.onerror = tx.onabort = reject;
+      }).catch(() => this.disable());
+    }
+    async put(key, data, age = 0) {
+      const generation = this.generation;
+      const entry = { key, data, expires: Date.now() + Math.max(0, 3600000 - age * 1000) };
       this.remember(key, entry);
       await this.ready;
+      if (generation !== this.generation) return;
       if (this.db)
         try {
           await new Promise((resolve, reject) => {
@@ -240,6 +255,7 @@
         }
     }
     async read(path, params, cached = true) {
+      const generation = this.generation;
       const search = new URLSearchParams(
         Object.entries(params)
           .filter(([, value]) => value !== undefined && value !== '')
@@ -258,12 +274,15 @@
           credentials: 'same-origin',
         });
         const data = await response.json();
+        const age = Math.max(0, Number(response.headers.get('Age')) || 0);
+        if (path === '/home/state') data.cacheAge = age;
         if (!response.ok)
           throw Object.assign(new Error(data.message || 'Unable to load. Please retry.'), {
             reset: data.reset,
           });
+        if (generation !== this.generation) throw Object.assign(new Error('Results changed.'), { reset: true });
         if (cached && response.headers.get('Cache-Control')?.includes('s-maxage=3600'))
-          await this.put(key, data);
+          await this.put(key, data, age);
         return data;
       })().finally(() => this.pending.delete(key));
       this.pending.set(key, request);
@@ -294,7 +313,14 @@
     tagMore = false;
   let commentsSearchOpen = Boolean(query.commentSearch);
   const scrollPositions = { videos: 0, about: 0, community: 0 };
-  const read = (kind, params = {}, cached = true) => cache.read('/home/' + kind, params, cached);
+  const read = async (kind, params = {}, cached = true) => {
+    if (initialized && !['state', 'settings'].includes(kind)) {
+      const generation = cache.generation;
+      await ensureHomeFreshness();
+      if (generation !== cache.generation) throw Object.assign(new Error('Results changed.'), { reset: true });
+    }
+    return cache.read('/home/' + kind, params, cached);
+  };
   function params(revision, extra = {}) {
     return { epoch: state.epoch, revision, ...extra };
   }
@@ -448,6 +474,7 @@
       videoRevision = data.revision;
       videoCursor = data.nextCursor;
       videosMore = data.hasMore;
+      Object.assign(input, { epoch: data.epoch, revision: data.revision, snapshot: data.snapshot });
       mountPage(
         $('video-grid'),
         data.videos,
@@ -611,6 +638,7 @@
       clearRetry('comment-status');
       commentRevision = data.revision;
       commentSnapshot = data.snapshot;
+      Object.assign(input, { epoch: data.epoch, revision: data.revision, snapshot: data.snapshot });
       commentPages[index] = { ...data, input };
       commentIndex = index;
       if (mobile.matches && index > 0) {
@@ -719,6 +747,10 @@
     $('links-empty').hidden = !!data.nodeLinks.length;
   }
   let stateTask;
+  let stateCheckedAt = 0;
+  let freshnessTask;
+  let appliedSafety = { epoch: state.epoch, safetyRevision: state.safetyRevision };
+  let appliedSettings = state.settingsRevision;
   async function freshState(force = true) {
     if (stateTask) return stateTask;
     stateTask = (async () => {
@@ -735,12 +767,55 @@
         incoming = await read('state', { fresh: '1' }, false);
       await cache.put('home:state', incoming);
       state = incoming;
+      stateCheckedAt = Date.now() - Math.min(30000, (incoming.cacheAge || 0) * 1000);
       return state;
     })().finally(() => {
       stateTask = undefined;
     });
     return stateTask;
   }
+  function ensureHomeFreshness(force = false) {
+    if (freshnessTask) return freshnessTask;
+    if (!force && Date.now() - stateCheckedAt < 30000 &&
+        appliedSafety.epoch === state.epoch && appliedSafety.safetyRevision === state.safetyRevision &&
+        appliedSettings === state.settingsRevision) return Promise.resolve();
+    freshnessTask = (async () => {
+      const previous = { ...appliedSafety, settingsRevision: appliedSettings, tagsRevision: state.tagsRevision };
+      await freshState(force);
+      const changed = previous.epoch !== state.epoch || previous.safetyRevision !== state.safetyRevision;
+      if (previous.settingsRevision !== state.settingsRevision) {
+        settings((await read('settings', params(state.settingsRevision))).settings);
+        appliedSettings = state.settingsRevision;
+      }
+      if (changed) {
+        await cache.clear();
+        resetVideos();
+        commentGeneration++;
+        commentsLoading = false;
+        commentIndex = 0;
+        commentPages = [];
+        commentSnapshot = undefined;
+        commentRevision = state.commentsRevision;
+        $('comment-list').replaceChildren();
+        void loadComments();
+        void loadTags();
+      } else if (previous.tagsRevision !== state.tagsRevision) {
+        // New catalog entries can change the tag rail without revoking the
+        // reader's admitted video/comment paging snapshots.
+        void loadTags();
+      }
+      appliedSafety = { epoch: state.epoch, safetyRevision: state.safetyRevision };
+    })().finally(() => { freshnessTask = undefined; });
+    return freshnessTask;
+  }
+  const resume = () => {
+    if (initialized && !document.hidden) void ensureHomeFreshness(true).catch(() => {});
+  };
+  addEventListener('pageshow', resume);
+  document.addEventListener('visibilitychange', resume);
+  setInterval(() => {
+    if (initialized && !document.hidden) void ensureHomeFreshness().catch(() => {});
+  }, 15000);
   function changeView(view, history = true) {
     scrollPositions[query.view] = scrollY;
     query.view = view;

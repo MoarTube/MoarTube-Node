@@ -76,6 +76,7 @@ beforeEach(async () => {
     },
     reloadNodeSettings: vi.fn(),
     getExternalVideosBaseUrl: () => state.base,
+    getNodeBaseUrl: () => 'https://example.com',
   };
   state.config.nodeSettings.cloudflareEmailAddress = 'email';
   video = {
@@ -101,6 +102,8 @@ beforeEach(async () => {
     }),
   };
   cloudflare = {
+    purgePrefixes: vi.fn(),
+    purgeComments: vi.fn(),
     purgeAdaptiveVideos: vi.fn(),
     purgeVideo: vi.fn(),
     purgeWatchPages: vi.fn(),
@@ -180,6 +183,72 @@ async function expireJournal(): Promise<void> {
 }
 
 describe('follow-up storage fixes against real Silo', () => {
+  it('marks validated S3 live masters, withdraws the marker on empty replacements, and preserves it only on active rewrites', async () => {
+    const key = prefix + 'dynamic/manifests/manifest-master.m3u8';
+    const head = () =>
+      a.client.send(new HeadObjectCommand({ Bucket: a.config.bucketName, Key: key }));
+    const master =
+      '#EXTM3U\n#MOARTUBE-LIVE\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=200\nmanifest-1080p.m3u8\n';
+    await storage.writeS3MasterManifest('video123', 'dynamic', master);
+    expect((await head()).CacheControl).toBe('public, max-age=0, s-maxage=1, must-revalidate');
+    expect((await head()).Metadata?.['moartube-live-playlist']).toBe('active');
+    await storage.removeS3Resolution('video123', 'm3u8', '720p');
+    expect((await head()).Metadata?.['moartube-live-playlist']).toBe('active');
+    await storage.removeS3Resolution('video123', 'm3u8', '1080p');
+    expect((await head()).CacheControl).toBe('no-store');
+    expect((await head()).Metadata?.['moartube-live-playlist']).toBeUndefined();
+    await storage.writeS3MasterManifest('video123', 'dynamic', master);
+    await storage.writeS3MasterManifest('video123', 'dynamic', '#EXTM3U\n#MOARTUBE-LIVE\n');
+    expect((await head()).CacheControl).toBe('no-store');
+    expect((await head()).Metadata?.['moartube-live-playlist']).toBeUndefined();
+    // Rewriting an unmarked legacy object must not promote unknown lifecycle state.
+    await a.put(key, master);
+    await storage.removeS3Resolution('video123', 'm3u8', '720p');
+    expect((await head()).CacheControl).toBe('no-store');
+    expect((await head()).Metadata?.['moartube-live-playlist']).toBeUndefined();
+  });
+  it.each([true, false])(
+    'withdraws active S3 metadata before completing a stream stop (recorded=%s)',
+    async (recorded) => {
+      await seed(recorded);
+      const master =
+        '#EXTM3U\n#MOARTUBE-LIVE\n#EXT-X-STREAM-INF:BANDWIDTH=100\nmanifest-720p.m3u8\n';
+      await storage.writeS3MasterManifest('video123', 'dynamic', master);
+      const rendition = prefix + 'dynamic/manifests/manifest-720p.m3u8';
+      await a.client.send(
+        new PutObjectCommand({
+          Bucket: a.config.bucketName,
+          Key: rendition,
+          Body: await a.text(rendition),
+          ContentType: 'application/vnd.apple.mpegurl',
+          CacheControl: 'public, max-age=0, s-maxage=1, must-revalidate',
+          Metadata: { 'moartube-live-playlist': 'active' },
+        })
+      );
+      await streams.stopStream('video123');
+      for (const name of ['720p', 'master']) {
+        const object = await a.client.send(
+          new HeadObjectCommand({
+            Bucket: a.config.bucketName,
+            Key: prefix + 'dynamic/manifests/manifest-' + name + '.m3u8',
+          })
+        );
+        expect(object.CacheControl).toBe('no-store');
+        expect(object.Metadata?.['moartube-live-playlist']).toBeUndefined();
+      }
+      expect(cloudflare.purgeAdaptiveVideos).toHaveBeenCalledWith('video123');
+      if (recorded) {
+        const vod = await a.client.send(
+          new HeadObjectCommand({
+            Bucket: a.config.bucketName,
+            Key: prefix + 'static/manifests/manifest-720p.m3u8',
+          })
+        );
+        expect(vod.CacheControl).toContain('s-maxage=31536000');
+        expect(vod.Metadata?.['moartube-live-playlist']).toBeUndefined();
+      }
+    }
+  );
   it.each([false, true])(
     'commits a regenerated S3 master before output confirmation purges its public cache (streaming=%s)',
     async (streaming) => {
@@ -512,42 +581,33 @@ describe('follow-up storage fixes against real Silo', () => {
     }
     expect(reply.status).toHaveBeenLastCalledWith(200);
   });
-  it('provides fallback freshness for actual legacy media without changing new upload metadata or playlist policy', async () => {
-    const legacy = prefix + '720p/segments/legacy.ts',
-      fresh = prefix + '720p/segments/fresh.ts';
-    await a.put(legacy, 'legacy');
+  it('respects the new upload metadata and origin-controlled caching on Free', async () => {
+    const fresh = prefix + '720p/segments/fresh.ts';
     await a.client.send(
       new PutObjectCommand({
         Bucket: a.config.bucketName,
         Key: fresh,
         Body: 'fresh',
-        CacheControl: 'public, max-age=0, s-maxage=30, must-revalidate',
+        CacheControl: 'public, max-age=31536000, s-maxage=31536000, immutable',
       })
     );
     expect(
-      (await a.client.send(new HeadObjectCommand({ Bucket: a.config.bucketName, Key: legacy })))
-        .CacheControl
-    ).toBeUndefined();
-    expect(
       (await a.client.send(new HeadObjectCommand({ Bucket: a.config.bucketName, Key: fresh })))
         .CacheControl
-    ).toContain('s-maxage=30');
+    ).toContain('s-maxage=31536000');
     vi.mocked(axios.put).mockResolvedValue({ data: { success: true } });
     vi.mocked(axios.patch).mockResolvedValue({ data: { success: true } });
     const cdn = new CloudflareService(logger as never, repository);
     await cdn.setCdnConfiguration('email', 'zone', 'key');
-    const rules = (vi.mocked(axios.put).mock.calls.at(-1)![1] as any).rules;
-    expect(rules[0].expression).toContain('"ts"');
-    expect(rules[0].expression).not.toContain('"m3u8"');
-    expect(rules[0].action_parameters.edge_ttl.default).toBe(30);
-    expect(rules[0].action_parameters.edge_ttl.status_code_ttl).toContainEqual({
-      status_code_range: { from: 201, to: 599 },
-      value: -1,
-    });
-    expect(
-      (await a.client.send(new HeadObjectCommand({ Bucket: a.config.bucketName, Key: legacy })))
-        .CacheControl
-    ).toBeUndefined();
+    const rules = (
+      vi
+        .mocked(axios.put)
+        .mock.calls.find(([url]) =>
+          String(url).includes('/http_request_cache_settings/')
+        )![1] as any
+    ).rules;
+    expect(rules[0].expression).toContain('"/external/videos/"');
+    expect(rules[0].action_parameters.edge_ttl).toEqual({ mode: 'bypass_by_default' });
   });
   it('keeps an older viewer snapshot playable after the HTTP stop contract ends a non-recorded stream', async () => {
     await seed(false);
@@ -578,7 +638,7 @@ describe('follow-up storage fixes against real Silo', () => {
       await app.close();
     }
   });
-  it('purges exact deleted watch/state URLs after the row is removed', async () => {
+  it('purges deleted video HTML tags after the row is removed', async () => {
     state.config.nodeSettings.isCloudflareCdnEnabled = true;
     state.config.nodeSettings.cloudflareGlobalApiKey = 'key';
     state.config.nodeSettings.cloudflareZoneId = 'zone';
@@ -587,7 +647,7 @@ describe('follow-up storage fixes against real Silo', () => {
     const statuses: boolean[] = [];
     vi.mocked(axios.create).mockReturnValue({
       post: vi.fn(async (_url, body) => {
-        sent.push(...(body.files ?? []));
+        sent.push(...(body.tags ?? []));
         statuses.push(video === undefined);
         return { data: { success: true } };
       }),
@@ -603,15 +663,10 @@ describe('follow-up storage fixes against real Silo', () => {
     );
     await a.put('external/videos/video123/data', 'bytes');
     await videos.deleteVideo('video123');
-    expect(sent).toEqual(
-      expect.arrayContaining([
-        'https://node.example.com/watch?v=video123',
-        'https://node.example.com/videos/video123/comments/state',
-      ])
-    );
+    expect(sent).toEqual(expect.arrayContaining(['moartube-video-video123', 'moartube-home']));
     expect(statuses.every(Boolean)).toBe(true);
   });
-  it('returns failure through the invalidation endpoint on a real second-page S3 listing denial, then recovers', async () => {
+  it('invalidates through one covering prefix independently of real S3 listing failures', async () => {
     state.config.nodeSettings.isCloudflareCdnEnabled = true;
     state.config.nodeSettings.cloudflareGlobalApiKey = 'key';
     state.config.nodeSettings.cloudflareZoneId = 'zone';
@@ -640,7 +695,7 @@ describe('follow-up storage fixes against real Silo', () => {
     const sent: string[] = [];
     vi.mocked(axios.create).mockReturnValue({
       post: vi.fn(async (_url, body) => {
-        sent.push(...(body.files ?? []));
+        sent.push(...(body.prefixes ?? []));
         return { data: { success: true } };
       }),
     } as never);
@@ -655,17 +710,24 @@ describe('follow-up storage fixes against real Silo', () => {
     const app = Fastify();
     app.post('/videos/:videoId/cache/invalidate', controller.invalidateCache);
     try {
-      const failed = await app.inject({ method: 'POST', url: '/videos/video123/cache/invalidate' });
-      expect(failed.statusCode).toBe(500);
+      await expect(cdn.getAdaptiveVideoUrls('video123')).rejects.toThrow();
       expect(secondPages).toBe(1);
-      expect(sent).toContain(state.base + '/' + prefix + 'dynamic/manifests/manifest-master.m3u8');
+      const invalidated = await app.inject({
+        method: 'POST',
+        url: '/videos/video123/cache/invalidate',
+      });
+      expect(invalidated.statusCode).toBe(200);
+      expect(secondPages).toBe(1);
+      expect(sent).toEqual([new URL(state.base).host + '/external/videos/video123/']);
       deny = false;
       const retried = await app.inject({
         method: 'POST',
         url: '/videos/video123/cache/invalidate',
       });
       expect(retried.statusCode).toBe(200);
-      expect(sent).toEqual(expect.arrayContaining(keys.map((key) => state.base + '/' + key)));
+      expect((await cdn.getAdaptiveVideoUrls('video123')).sort()).toEqual(
+        keys.map((key) => state.base + '/' + key).sort()
+      );
       for (const fault of ['missing', 'empty', 'repeated']) {
         const damaged = await siloProxy(
           a.config.s3ProviderClientConfig.endpoint,
@@ -707,7 +769,7 @@ describe('follow-up storage fixes against real Silo', () => {
           expect(
             (await app.inject({ method: 'POST', url: '/videos/video123/cache/invalidate' }))
               .statusCode
-          ).toBe(500);
+          ).toBe(200);
         } finally {
           await damaged.close();
         }
@@ -868,9 +930,9 @@ describe('follow-up storage fixes against real Silo', () => {
     expect(comments.deleteByVideoId).not.toHaveBeenCalled();
     state.config.nodeSettings.storageConfig = { storageMode: 's3provider', s3Config: a.config };
     expect(await videos.deleteVideo('video123')).toBe(true);
-    expect(cloudflare.purgeWatchPages).toHaveBeenCalledWith(['video123']);
+    expect(cloudflare.purgeHomePage).toHaveBeenCalledWith(['video123']);
     expect(repository.delete.mock.invocationCallOrder[0]).toBeLessThan(
-      cloudflare.purgeWatchPages.mock.invocationCallOrder[0]
+      cloudflare.purgeHomePage.mock.invocationCallOrder.at(-1)!
     );
   });
   it('invalidates viewer caches inside the settings/admission lock without rewriting playlists', async () => {
@@ -888,7 +950,7 @@ describe('follow-up storage fixes against real Silo', () => {
         await gate;
       }
     });
-    cloudflare.purgeVideo.mockImplementationOnce(async () => {
+    cloudflare.purgePrefixes.mockImplementationOnce(async () => {
       entered = true;
       await gate;
     });
@@ -939,7 +1001,9 @@ describe('follow-up storage fixes against real Silo', () => {
         expect.objectContaining({ isError: true, message: expect.stringContaining('in progress') })
       );
       await expect(videos.setPublishing('video123', true)).rejects.toThrow('in progress');
-      await expect(streams.startStream('video123')).rejects.toThrow('in progress');
+      await expect(
+        streams.startNewStream({ existingVideoId: 'video123' } as never)
+      ).rejects.toThrow('in progress');
       await expect(
         streams.startNewStream({
           title: 'x',
@@ -961,7 +1025,11 @@ describe('follow-up storage fixes against real Silo', () => {
       expect(await a.text(prefix + 'static/manifests/manifest-master.m3u8')).toContain(
         'manifest-720p.m3u8'
       );
-      expect(cloudflare.purgeWatchPages).toHaveBeenCalledWith(['video123'], true);
+      expect(cloudflare.purgePrefixes).toHaveBeenCalledWith(
+        [state.base + '/external/videos/'],
+        true
+      );
+      expect(cloudflare.purgeHomePage).toHaveBeenCalledWith([], true, true);
       await expect(
         withSettingsChange(state.config.paths.nodeSettingsPath, async () => true)
       ).resolves.toBe(true);
@@ -986,7 +1054,7 @@ describe('follow-up storage fixes against real Silo', () => {
         await gate;
       }
     });
-    cloudflare.purgeVideo.mockImplementationOnce(async () => {
+    cloudflare.purgePrefixes.mockImplementationOnce(async () => {
       entered = true;
       await gate;
     });
@@ -1076,7 +1144,7 @@ describe('follow-up storage fixes against real Silo', () => {
       status: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis(),
     };
-    cloudflare.purgeVideo.mockRejectedValueOnce(new Error('purge failed'));
+    cloudflare.purgePrefixes.mockRejectedValueOnce(new Error('purge failed'));
     const request = { body: { storageConfig: state.config.nodeSettings.storageConfig } } as never;
     await controller.storageConfigToggle(request, reply as never);
     expect(reply.send).toHaveBeenLastCalledWith(

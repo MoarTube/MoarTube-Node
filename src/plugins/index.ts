@@ -22,6 +22,8 @@ import { getDatabase } from '@database/index.js';
 import { registerRoutes } from '@routes/index.js';
 import { nodeTlsOptions } from '@/utils/node-tls.js';
 import { compressTextResponse } from '@/utils/http-compression.js';
+import { assetUrl, pruneRetainedAssets } from '@/utils/asset-url.js';
+import { installCachePolicy } from '@/plugins/cache-policy.js';
 import authenticationPlugin from '@plugins/authentication.js';
 import swaggerPlugin from '@plugins/swagger.js';
 
@@ -61,6 +63,25 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
     trustProxy: 'loopback',
   });
 
+  installCachePolicy(app);
+  const cleanAssets = (): void => {
+    try {
+      app.log.info(pruneRetainedAssets(), 'Retained asset cache usage');
+    } catch (error) {
+      app.log.warn({ error }, 'Retained asset cleanup deferred');
+    }
+  };
+  let assetCleanup: ReturnType<typeof setInterval> | undefined;
+  app.addHook('onReady', () => {
+    cleanAssets();
+    assetCleanup = setInterval(cleanAssets, 3600000);
+    assetCleanup.unref();
+    return Promise.resolve();
+  });
+  app.addHook('onClose', () => {
+    clearInterval(assetCleanup);
+    return Promise.resolve();
+  });
   app.addHook('onRequest', () =>
     Promise.resolve().then(() => {
       void getConfig().nodeSettings;
@@ -100,6 +121,7 @@ export async function createFastifyApp(): Promise<FastifyInstance> {
     },
     root: viewsRoot,
     viewExt: 'ejs',
+    defaultContext: { assetUrl },
   });
 
   // Register authentication plugin

@@ -11,6 +11,7 @@ export default defineConfig({
     // Homepage SQL, service, and route coverage uses the real database contract suites.
     include: [
       'tests/unit/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      'tests/cache/**/*.test.ts',
       'tests/integration/sqlite/home.test.ts',
       'tests/integration/postgres/home.test.ts',
     ],

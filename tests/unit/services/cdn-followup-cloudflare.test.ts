@@ -59,8 +59,9 @@ describe('follow-up Cloudflare correctness', () => {
       );
     });
   });
-  it('surfaces an EACCES inventory error through the invalidation endpoint while purging known playlists', async () => {
-    vi.spyOn(service, 'getAdaptiveVideoUrls')
+  it('invalidates a video without depending on successful storage inventory', async () => {
+    const inventory = vi
+      .spyOn(service, 'getAdaptiveVideoUrls')
       .mockRejectedValueOnce(Object.assign(new Error('Permission denied'), { code: 'EACCES' }))
       .mockResolvedValue([]);
     const app = Fastify();
@@ -75,10 +76,11 @@ describe('follow-up Cloudflare correctness', () => {
     try {
       expect(
         (await app.inject({ method: 'POST', url: '/videos/video/cache/invalidate' })).statusCode
-      ).toBe(500);
-      expect(post.mock.calls.flatMap((call) => call[1].files)).toContain(
-        'https://externalvideos.node.example.com/external/videos/video/adaptive/m3u8/dynamic/manifests/manifest-master.m3u8'
+      ).toBe(200);
+      expect(post.mock.calls.flatMap((call) => call[1].prefixes ?? [])).toContain(
+        'externalvideos.node.example.com/external/videos/video/'
       );
+      expect(inventory).not.toHaveBeenCalled();
       expect(
         (await app.inject({ method: 'POST', url: '/videos/video/cache/invalidate' })).statusCode
       ).toBe(200);
@@ -94,7 +96,8 @@ describe('follow-up Cloudflare correctness', () => {
     vi.mocked(axios.get).mockImplementation(async (url) => {
       if (url.endsWith('/zones/zone'))
         return { data: { success: true, result: { name: 'example.com' } } };
-      if (url.includes('entrypoint')) return { data: { result: { id: 'previous', rules: [] } } };
+      if (url.includes('entrypoint'))
+        return { data: { success: true, result: { id: 'previous', rules: [] } } };
       if (url.includes('/dns_records')) return { data: { success: true, result: [] } };
       return { data: { result: { value: 'off' } } };
     });
@@ -149,87 +152,71 @@ describe('follow-up Cloudflare correctness', () => {
       await rm(root, { recursive: true, force: true });
     }
   });
-  it('keeps the legacy-media fallback narrow, ordered and limited to successful responses', async () => {
+  it('respects origin freshness on Free without a sub-minimum TTL override', async () => {
     vi.mocked(axios.put).mockResolvedValue(success);
     vi.mocked(axios.patch).mockResolvedValue(success);
     await service.setCdnConfiguration('email', 'zone', 'key');
     const rules = (vi.mocked(axios.put).mock.calls[0][1] as any).rules;
-    const legacy = rules[0],
-      broad = rules[1],
-      hls = rules.find((rule: any) => rule.description.includes('HLS'));
-    expect(legacy.description).toContain('Legacy');
-    expect(legacy.expression).toContain('"/external/videos/"');
-    for (const extension of ['ts', 'mp4', 'webm', 'ogv', 'jpg']) {
-      expect(legacy.expression).toContain('"' + extension + '"');
-      expect(broad.expression).toContain('"' + extension + '"');
-    }
-    expect(broad.expression).toContain('not http.request.uri.path.extension');
-    expect(legacy.action_parameters.edge_ttl).toEqual({
-      mode: 'override_origin',
-      default: 30,
-      status_code_ttl: [
-        { status_code_range: { to: 199 }, value: -1 },
-        { status_code_range: { from: 201, to: 599 }, value: -1 },
-      ],
-    });
+    const media = rules.find((rule: any) => rule.description === 'Node External - Video');
+    const hls = rules.find((rule: any) => rule.description.includes('HLS'));
+    expect(media.expression).toContain('"/external/videos/"');
+    expect(media.action_parameters.edge_ttl).toEqual({ mode: 'bypass_by_default' });
     expect(hls.action_parameters.edge_ttl.mode).toBe('bypass_by_default');
-    expect(legacy.expression).not.toContain('"m3u8"');
+    expect(
+      rules.some((rule: any) => rule.action_parameters.edge_ttl?.mode === 'override_origin')
+    ).toBe(false);
     expect(rules.at(-1).action_parameters.cache).toBe(false);
     expect(rules.length).toBeLessThanOrEqual(10);
   });
   it.each([false, true])(
     'an older completion cannot acknowledge a newer purge generation (reversed=%s)',
     async (reversed) => {
-      let finish!: (value: unknown) => void, fail!: (error: unknown) => void;
-      post
-        .mockImplementationOnce(
-          () =>
-            new Promise((resolve) => {
-              finish = resolve;
-            })
-        )
-        .mockImplementationOnce(
-          () =>
-            new Promise((_resolve, reject) => {
-              fail = reject;
-            })
-        );
+      let finish!: (value: unknown) => void;
+      post.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          })
+      );
       const purge = (files: string[]) => (service as any).purgeCache(files, 'regression');
       const first = purge(['https://node.example.com/old']);
+      const firstRejected = expect(first).rejects.toThrow('incomplete');
       await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
       const second = purge(['https://node.example.com/old']);
       const rejected = expect(second).rejects.toThrow('incomplete');
-      await vi.waitFor(() => expect(fail).toBeTypeOf('function'));
+      await vi.waitFor(() => expect((service as any).purgeGeneration).toBe(2));
       if (reversed) {
-        fail({ response: { status: 403 } });
         await rejected;
         finish(success);
-        await first;
+        await firstRejected;
       } else {
         finish(success);
-        await first;
-        fail({ response: { status: 403 } });
+        await firstRejected;
         await rejected;
       }
       await purge(['https://node.example.com/new']);
-      expect(post.mock.calls[2][1].files).toEqual(
+      expect(post).toHaveBeenCalledTimes(2);
+      expect(post.mock.calls[1][1].files).toEqual(
         expect.arrayContaining(['https://node.example.com/old', 'https://node.example.com/new'])
       );
       expect((service as any).pendingPurges.get('zone').size).toBe(0);
     }
   );
-  it('submits known playlists before inventory failure, reports strict failure and retries inventory', async () => {
+  it('retries one covering adaptive prefix after strict failure without inventory dependencies', async () => {
     const inventory = vi
       .spyOn(service, 'getAdaptiveVideoUrls')
       .mockRejectedValueOnce(new Error('EACCES'))
       .mockResolvedValue(['https://node.example.com/segment.ts']);
-    await expect(service.purgeAdaptiveVideos('video', undefined, true)).rejects.toThrow();
-    expect(post.mock.calls.flatMap((call) => call[1].files)).toContain(
-      'https://externalvideos.node.example.com/external/videos/video/adaptive/m3u8/dynamic/manifests/manifest-master.m3u8'
+    post.mockRejectedValueOnce({ response: { status: 403 } });
+    await expect(service.purgeAdaptiveVideos('video', undefined, true)).rejects.toThrow(
+      'incomplete'
     );
+    expect(post.mock.calls[0][1]).toEqual({
+      prefixes: ['externalvideos.node.example.com/external/videos/video/adaptive/'],
+    });
     await expect(service.purgeAdaptiveVideos('video', undefined, true)).resolves.toBeUndefined();
-    expect(inventory).toHaveBeenCalledTimes(2);
-    expect((service as any).pendingAdaptiveInventories.get('zone').size).toBe(0);
+    expect(inventory).not.toHaveBeenCalled();
+    expect((service as any).pendingPurges.get('zone').size).toBe(0);
   });
   it.each(['filesystem', 's3provider'] as const)(
     'rejects nested CDN hostnames for %s before querying certificate exceptions',
@@ -313,13 +300,9 @@ describe('follow-up Cloudflare correctness', () => {
       'Invalid URL'
     );
     state.config.getExternalVideosBaseUrl = () => 'https://externalvideos.node.example.com';
-    post.mockResolvedValueOnce(success).mockRejectedValueOnce({ response: { status: 403 } });
+    post.mockRejectedValueOnce({ response: { status: 403 } });
     await expect(
-      service.purgeAdaptiveVideos(
-        'video',
-        ['https://externalvideos.node.example.com/segment.ts'],
-        true
-      )
+      service.purgeAdaptiveVideos('video', '11111111-1111-4111-8111-111111111111', true)
     ).rejects.toThrow('incomplete');
     await withCloudflareDeadline(() => service.purgeWatchPages(['video'], true));
     expect(post.mock.calls.at(-1)![2]).toEqual({ signal: expect.any(AbortSignal) });

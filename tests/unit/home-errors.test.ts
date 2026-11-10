@@ -17,9 +17,9 @@ it('rejects missing state, unsafe snapshots, and results invalidated during a pa
   await expect(
     repository.ensureSnapshot('id', 'rev', 'videos', query, Date.now(), 1)
   ).rejects.toBeInstanceOf(HomeResetError);
-  db.all.mockReturnValueOnce([{ created: 0, safety: 1 }]);
+  db.all.mockReturnValueOnce([{ created: Date.now(), safety: 1 }]);
   await repository.ensureSnapshot('id', 'rev', 'videos', query, Date.now(), 1);
-  expect(db.run).toHaveBeenCalledOnce();
+  expect(db.run).not.toHaveBeenCalled();
   db.all
     .mockReturnValueOnce([{ snapshot: 'id' }])
     .mockReturnValueOnce([])
