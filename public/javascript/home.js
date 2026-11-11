@@ -313,14 +313,8 @@
     tagMore = false;
   let commentsSearchOpen = Boolean(query.commentSearch);
   const scrollPositions = { videos: 0, about: 0, community: 0 };
-  const read = async (kind, params = {}, cached = true) => {
-    if (initialized && !['state', 'settings'].includes(kind)) {
-      const generation = cache.generation;
-      await ensureHomeFreshness();
-      if (generation !== cache.generation) throw Object.assign(new Error('Results changed.'), { reset: true });
-    }
-    return cache.read('/home/' + kind, params, cached);
-  };
+  const read = (kind, params = {}, cached = true) =>
+    cache.read('/home/' + kind, params, cached);
   function params(revision, extra = {}) {
     return { epoch: state.epoch, revision, ...extra };
   }
@@ -747,10 +741,6 @@
     $('links-empty').hidden = !!data.nodeLinks.length;
   }
   let stateTask;
-  let stateCheckedAt = 0;
-  let freshnessTask;
-  let appliedSafety = { epoch: state.epoch, safetyRevision: state.safetyRevision };
-  let appliedSettings = state.settingsRevision;
   async function freshState(force = true) {
     if (stateTask) return stateTask;
     stateTask = (async () => {
@@ -767,55 +757,12 @@
         incoming = await read('state', { fresh: '1' }, false);
       await cache.put('home:state', incoming);
       state = incoming;
-      stateCheckedAt = Date.now() - Math.min(30000, (incoming.cacheAge || 0) * 1000);
       return state;
     })().finally(() => {
       stateTask = undefined;
     });
     return stateTask;
   }
-  function ensureHomeFreshness(force = false) {
-    if (freshnessTask) return freshnessTask;
-    if (!force && Date.now() - stateCheckedAt < 30000 &&
-        appliedSafety.epoch === state.epoch && appliedSafety.safetyRevision === state.safetyRevision &&
-        appliedSettings === state.settingsRevision) return Promise.resolve();
-    freshnessTask = (async () => {
-      const previous = { ...appliedSafety, settingsRevision: appliedSettings, tagsRevision: state.tagsRevision };
-      await freshState(force);
-      const changed = previous.epoch !== state.epoch || previous.safetyRevision !== state.safetyRevision;
-      if (previous.settingsRevision !== state.settingsRevision) {
-        settings((await read('settings', params(state.settingsRevision))).settings);
-        appliedSettings = state.settingsRevision;
-      }
-      if (changed) {
-        await cache.clear();
-        resetVideos();
-        commentGeneration++;
-        commentsLoading = false;
-        commentIndex = 0;
-        commentPages = [];
-        commentSnapshot = undefined;
-        commentRevision = state.commentsRevision;
-        $('comment-list').replaceChildren();
-        void loadComments();
-        void loadTags();
-      } else if (previous.tagsRevision !== state.tagsRevision) {
-        // New catalog entries can change the tag rail without revoking the
-        // reader's admitted video/comment paging snapshots.
-        void loadTags();
-      }
-      appliedSafety = { epoch: state.epoch, safetyRevision: state.safetyRevision };
-    })().finally(() => { freshnessTask = undefined; });
-    return freshnessTask;
-  }
-  const resume = () => {
-    if (initialized && !document.hidden) void ensureHomeFreshness(true).catch(() => {});
-  };
-  addEventListener('pageshow', resume);
-  document.addEventListener('visibilitychange', resume);
-  setInterval(() => {
-    if (initialized && !document.hidden) void ensureHomeFreshness().catch(() => {});
-  }, 15000);
   function changeView(view, history = true) {
     scrollPositions[query.view] = scrollY;
     query.view = view;

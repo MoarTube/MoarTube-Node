@@ -168,95 +168,42 @@ describe('homepage cache', () => {
     finish({ ok: true, headers: new Headers(), json: async () => ({ videos: [] }) });
     await expect(pending).rejects.toMatchObject({ reset: true });
   });
-  it('checks freshness before a body hit and refuses an input from a revoked generation', async () => {
-    const c = { generation: 0, read: vi.fn() };
-    const context = vm.createContext({
-      initialized: true,
-      cache: c,
-      ensureHomeFreshness: vi.fn(async () => {
-        c.generation++;
-      }),
-    });
-    const start = source.indexOf('  const read = async (kind');
+  it('loads paged content directly without a preliminary state check', async () => {
+    const result = { videos: [{ videoId: 'next' }] };
+    const c = { read: vi.fn(async () => result) };
+    const context = vm.createContext({ cache: c });
+    const start = source.indexOf('  const read = (kind');
     const end = source.indexOf('  function params(', start);
     const read = vm.runInContext(source.slice(start, end) + '\nread;', context);
-    await expect(read('videos', { revision: 'obsolete' })).rejects.toMatchObject({ reset: true });
-    expect(c.read).not.toHaveBeenCalled();
+    const input = { revision: 'current', cursor: 30, snapshot: 'snapshot' };
+    await expect(read('videos', input)).resolves.toBe(result);
+    expect(c.read).toHaveBeenCalledExactlyOnceWith('/home/videos', input, true);
   });
-  it('clears cached/rendered pages on safety changes and applies changed settings', async () => {
-    const previous = { epoch: 'one', safetyRevision: 1, settingsRevision: 'old' };
-    const clear = vi.fn(async () => {});
-    const settings = vi.fn();
-    const replaceChildren = vi.fn();
+  it('keeps scroll loading for videos and mobile community comments', () => {
+    const loadVideos = vi.fn(), loadComments = vi.fn();
     const context = vm.createContext({
-      state: previous,
-      appliedSafety: previous,
-      appliedSettings: 'old',
-      stateCheckedAt: 0,
-      freshnessTask: undefined,
-      Date,
-      freshState: async () => {
-        context.state = {
-          ...previous,
-          safetyRevision: 2,
-          settingsRevision: 'new',
-          commentsRevision: 'new-comments',
-        };
-      },
-      read: async () => ({ settings: { nodeName: 'updated' } }),
-      params: () => ({}),
-      settings,
-      cache: { clear },
-      resetVideos: vi.fn(),
-      commentGeneration: 0,
-      commentsLoading: false,
-      commentIndex: 1,
-      commentPages: ['old'],
-      commentSnapshot: 'old',
-      commentRevision: 'old',
-      $: () => ({ replaceChildren }),
-      loadComments: vi.fn(),
-      loadTags: vi.fn(),
+      requestAnimationFrame: (callback: () => void) => callback(),
+      visible: () => true,
+      retryPending: () => false,
+      mobile: { matches: false },
+      query: { view: 'videos' },
+      commentPages: [{ hasMore: true }],
+      commentIndex: 0,
+      loadVideos,
+      loadComments,
     });
-    const start = source.indexOf('  function ensureHomeFreshness(');
-    const end = source.indexOf('  const resume =', start);
-    const ensure = vm.runInContext(source.slice(start, end) + '\nensureHomeFreshness;', context);
-    await ensure();
-    expect(clear).toHaveBeenCalledOnce();
-    expect(replaceChildren).toHaveBeenCalledOnce();
-    expect(context.commentPages).toHaveLength(0);
-    expect(settings).toHaveBeenCalledWith({ nodeName: 'updated' });
-    expect(context.appliedSafety.safetyRevision).toBe(2);
-  });
-  it('refreshes tags after a catalog insert without invalidating admitted paging snapshots', async () => {
-    const state = {
-      epoch: 'one',
-      safetyRevision: 1,
-      settingsRevision: 'same',
-      tagsRevision: 'old',
-    };
-    const clear = vi.fn(),
-      resetVideos = vi.fn(),
-      loadTags = vi.fn();
-    const context = vm.createContext({
-      state,
-      appliedSafety: state,
-      appliedSettings: 'same',
-      stateCheckedAt: 0,
-      freshnessTask: undefined,
-      Date,
-      freshState: async () => {
-        context.state = { ...state, tagsRevision: 'new' };
-      },
-      cache: { clear },
-      resetVideos,
-      loadTags,
-    });
-    const start = source.indexOf('  function ensureHomeFreshness(');
-    const end = source.indexOf('  const resume =', start);
-    await vm.runInContext(source.slice(start, end) + '\nensureHomeFreshness;', context)();
-    expect(loadTags).toHaveBeenCalledOnce();
-    expect(clear).not.toHaveBeenCalled();
-    expect(resetVideos).not.toHaveBeenCalled();
+    const start = source.indexOf('  function maybeLoad()');
+    const end = source.indexOf('  const observer =', start);
+    const maybeLoad = vm.runInContext(source.slice(start, end) + '\nmaybeLoad;', context);
+    maybeLoad();
+    expect(loadVideos).toHaveBeenCalledOnce();
+    expect(loadComments).not.toHaveBeenCalled();
+    context.mobile.matches = true;
+    context.query.view = 'community';
+    maybeLoad();
+    expect(loadComments).toHaveBeenCalledExactlyOnceWith(1);
+    context.commentPages[0].hasMore = false;
+    maybeLoad();
+    expect(loadComments).toHaveBeenCalledOnce();
   });
 });
