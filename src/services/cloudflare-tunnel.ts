@@ -9,7 +9,7 @@ import type {
   TunnelSettings,
   TunnelSnapshot,
 } from '@/types/cloudflare-tunnel.js';
-import { TunnelRecoveryRequiredError } from '@/utils/tunnel-errors.js';
+import { TunnelRecoveryRequiredError, TunnelRateLimitError } from '@/utils/tunnel-errors.js';
 
 export interface TunnelDependencies {
   withAdmission?(operation: () => Promise<void>): Promise<void>;
@@ -191,8 +191,8 @@ export class CloudflareTunnelManager {
     this.retry = undefined;
   }
 
-  private fail(message: string): void {
-    this.state = { ...this.state, status: 'error', message };
+  private fail(message: string, failureReason?: 'rate-limited'): void {
+    this.state = { ...this.state, status: 'error', message, failureReason };
     this.dependencies.report(message);
   }
 
@@ -355,11 +355,18 @@ export class CloudflareTunnelManager {
         return;
       }
       this.fail(
-        error instanceof TunnelRecoveryRequiredError
-          ? 'Cloudflare Tunnel ownership could not be recorded or cleaned up. Repair storage and inspect the Cloudflare account before retrying.'
-          : 'Cloudflare Tunnel could not start. Check cloudflared installation, network access, and saved CDN configuration.'
+        error instanceof TunnelRateLimitError
+          ? 'Cloudflare is rate-limiting Quick Tunnel creation (HTTP 429). Wait before trying again.'
+          : error instanceof TunnelRecoveryRequiredError
+            ? 'Cloudflare Tunnel ownership could not be recorded or cleaned up. Repair storage and inspect the Cloudflare account before retrying.'
+            : 'Cloudflare Tunnel could not start. Check cloudflared installation, network access, and saved CDN configuration.',
+        error instanceof TunnelRateLimitError ? 'rate-limited' : undefined
       );
-      if (!controller.signal.aborted && !(error instanceof TunnelRecoveryRequiredError)) {
+      if (
+        !controller.signal.aborted &&
+        !(error instanceof TunnelRecoveryRequiredError) &&
+        !(error instanceof TunnelRateLimitError)
+      ) {
         this.scheduleRetry();
       }
     } finally {

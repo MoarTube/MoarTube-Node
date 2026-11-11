@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { afterAll, beforeAll, describe, it, expect } from 'vitest';
 import {
   mkdtempSync,
@@ -247,7 +248,9 @@ describe('reproducible comment provisioning (sqlite)', () => {
       );
       expect(clean.status, clean.stdout + clean.stderr).toBe(0);
       expect(existsSync(join(workspace, 'data/db/node_db.sqlite'))).toBe(true);
-      const baseline = JSON.parse(clean.stdout.split('CLEAN_BASELINE ')[1].trim());
+      const baselineOutput = clean.stdout.split('CLEAN_BASELINE ')[1];
+      assert.ok(baselineOutput, 'Clean startup must emit baseline data');
+      const baseline = JSON.parse(baselineOutput.trim());
       expect(baseline).toEqual({
         triggers: { n: 3 },
         comments: { n: 0 },

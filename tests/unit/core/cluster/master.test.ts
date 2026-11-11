@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 /**
  * Cluster Master Tests
  *
@@ -274,15 +275,27 @@ describe('ClusterMaster', () => {
       expect(clearIntervalSpy).toHaveBeenCalled();
     });
 
-    it('should kill all workers on stop', async () => {
-      const mockWorker = { id: 1, kill: vi.fn() };
-      mockIpcGetWorkers.mockReturnValue([mockWorker]);
-
+    it('waits for worker exit before completing shutdown and skips dead workers', async () => {
+      const mockWorker = Object.assign(new EventEmitter(), {
+        id: 1,
+        isDead: () => false,
+        kill: vi.fn(),
+      });
+      const deadWorker = { id: 2, isDead: () => true, kill: vi.fn() };
+      mockIpcGetWorkers.mockReturnValue([mockWorker, deadWorker]);
       const master = new ClusterMaster(mockLogger as any, mockCloudflare as any);
       await master.start();
-      await master.stop();
-
+      let stopped = false;
+      const stopping = master.stop().then(() => {
+        stopped = true;
+      });
+      await Promise.resolve();
       expect(mockWorker.kill).toHaveBeenCalledWith('SIGTERM');
+      expect(deadWorker.kill).not.toHaveBeenCalled();
+      expect(stopped).toBe(false);
+      mockWorker.emit('exit', 0, null);
+      await stopping;
+      expect(stopped).toBe(true);
     });
   });
 

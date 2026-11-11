@@ -6,6 +6,7 @@ export interface TunnelSnapshot {
   name: string;
   publicUrl?: string | undefined;
   message?: string;
+  failureReason?: 'rate-limited' | undefined;
 }
 
 export interface TunnelSettings {

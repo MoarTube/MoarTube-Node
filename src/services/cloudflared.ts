@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { TunnelRateLimitError } from '@/utils/tunnel-errors.js';
 import type { TunnelConnector, TunnelDriver } from '@/types/cloudflare-tunnel.js';
 
 const execute = promisify(execFile);
@@ -111,10 +112,17 @@ export class CloudflaredDriver implements TunnelDriver {
     });
     // stop() can abort before the manager has attached to readiness.
     void ready.catch(() => {});
+    let rateLimited = false;
     const fail = (): void => {
       if (!complete) {
         complete = true;
-        rejectReady(new Error('cloudflared did not become ready'));
+        rejectReady(
+          rateLimited
+            ? new TunnelRateLimitError(
+                'Cloudflare is rate-limiting Quick Tunnel creation (HTTP 429).'
+              )
+            : new Error('cloudflared did not become ready')
+        );
       }
     };
     const timer = setTimeout(() => {
@@ -125,6 +133,12 @@ export class CloudflaredDriver implements TunnelDriver {
     const buffers = { stdout: '', stderr: '' };
     const output = (kind: keyof typeof buffers, chunk: Buffer): void => {
       buffers[kind] = (buffers[kind] + chunk.toString()).slice(-32768);
+      if (
+        options.mode === 'quick' &&
+        /quick tunnel provisioning failed with status 429\b/i.test(buffers[kind])
+      ) {
+        rateLimited = true;
+      }
       const lines = buffers[kind].split(/\r?\n/);
       // split() always returns at least one element, including for an empty buffer.
       buffers[kind] = lines.pop() as string;

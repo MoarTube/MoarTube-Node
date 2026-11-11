@@ -304,11 +304,18 @@ describe('BaseService', () => {
     });
 
     it('should handle zero delay', async () => {
-      const start = Date.now();
-      await service.testDelay(0);
-      const elapsed = Date.now() - start;
-
-      expect(elapsed).toBeLessThan(50);
+      vi.useFakeTimers();
+      try {
+        const resolved = vi.fn();
+        const pending = service.testDelay(0).then(resolved);
+        await Promise.resolve();
+        expect(resolved).not.toHaveBeenCalled();
+        await vi.runAllTimersAsync();
+        await pending;
+        expect(resolved).toHaveBeenCalledOnce();
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

@@ -73,7 +73,7 @@ describe('atomic comment counts (postgres)', () => {
     expect(await comments.getCacheEpoch()).toBe(repaired);
     await expect(
       database.client.begin(async (tx) => {
-        await tx`DELETE FROM comments`;
+        await tx.unsafe('DELETE FROM comments');
         throw new Error('rollback');
       })
     ).rejects.toThrow('rollback');

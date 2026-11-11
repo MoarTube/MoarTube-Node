@@ -271,9 +271,21 @@ export class ClusterMaster {
       try {
         await this.tunnel?.shutdown();
       } finally {
-        for (const worker of this.ipc.getWorkers()) {
-          worker.kill('SIGTERM');
-        }
+        await Promise.all(
+          this.ipc.getWorkers().map(
+            (worker) =>
+              new Promise<void>((resolve) => {
+                if (worker.isDead()) {
+                  resolve();
+                  return;
+                }
+                worker.once('exit', () => {
+                  resolve();
+                });
+                worker.kill('SIGTERM');
+              })
+          )
+        );
       }
     })();
     return this.stopping;

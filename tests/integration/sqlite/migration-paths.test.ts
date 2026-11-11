@@ -58,19 +58,19 @@ it.each(['source', 'directory', 'root', 'url', 'dotenv', 'installed'] as const)(
     };
     let expected = path.join(checkout, 'data/db/node_db.sqlite');
     if (mode === 'directory') {
-      env.MOARTUBE_DATA_DIR = path.join(root, 'explicit-node');
-      expected = path.join(env.MOARTUBE_DATA_DIR, 'db/node_db.sqlite');
+      env['MOARTUBE_DATA_DIR'] = path.join(root, 'explicit-node');
+      expected = path.join(env['MOARTUBE_DATA_DIR'], 'db/node_db.sqlite');
     } else if (mode === 'root') {
-      env.MOARTUBE_DATA_ROOT = path.join(root, 'shared');
-      expected = path.join(env.MOARTUBE_DATA_ROOT, 'MoarTube/node/db/node_db.sqlite');
+      env['MOARTUBE_DATA_ROOT'] = path.join(root, 'shared');
+      expected = path.join(env['MOARTUBE_DATA_ROOT'], 'MoarTube/node/db/node_db.sqlite');
     } else if (mode === 'url') {
-      env.DATABASE_URL = path.join(root, 'database-url/explicit.sqlite');
-      env.MOARTUBE_DATA_DIR = path.join(root, 'unused-directory');
-      expected = env.DATABASE_URL;
+      env['DATABASE_URL'] = path.join(root, 'database-url/explicit.sqlite');
+      env['MOARTUBE_DATA_DIR'] = path.join(root, 'unused-directory');
+      expected = env['DATABASE_URL'];
     } else if (mode === 'dotenv') {
       expected = path.join(root, 'dotenv-node/db/node_db.sqlite');
       writeFileSync(
-        env.DOTENV_CONFIG_PATH!,
+        env['DOTENV_CONFIG_PATH']!,
         'MOARTUBE_DATA_DIR=' + JSON.stringify(path.dirname(path.dirname(expected)))
       );
     } else if (mode === 'installed') {

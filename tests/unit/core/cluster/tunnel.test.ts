@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -28,7 +29,14 @@ vi.mock('@/core/cluster/ipc-channel.js', () => ({
     startListening() {}
     broadcast() {}
     getWorkers() {
-      return [{ kill: mocks.kill }];
+      const worker = Object.assign(new EventEmitter(), {
+        isDead: () => false,
+        kill(signal: string) {
+          mocks.kill(signal);
+          worker.emit('exit', 0, signal);
+        },
+      });
+      return [worker];
     }
     sendToWorker(...args: unknown[]) {
       mocks.send(...args);

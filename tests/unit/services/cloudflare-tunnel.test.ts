@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { TunnelRateLimitError } from '@/utils/tunnel-errors.js';
 import { CloudflareTunnelManager, type TunnelDependencies } from '@/services/cloudflare-tunnel.js';
 import type { TunnelSettings, TunnelConnector } from '@/types/cloudflare-tunnel.js';
 
@@ -51,6 +52,22 @@ function setup(overrides: Partial<TunnelDependencies> = {}) {
 afterEach(() => vi.useRealTimers());
 
 describe('primary Cloudflare Tunnel manager', () => {
+  it('reports provisioning rate limits safely and suspends automatic retries', async () => {
+    vi.useFakeTimers();
+    const test = setup({ retryDelays: [1, 5, 15] });
+    vi.mocked(test.dependencies.driver.launch).mockReturnValue({
+      ready: Promise.reject(new TunnelRateLimitError('private-provider-output')),
+      stop: vi.fn(async () => {}),
+    });
+    expect(await test.manager.start()).toMatchObject({
+      status: 'error', failureReason: 'rate-limited',
+      message: 'Cloudflare is rate-limiting Quick Tunnel creation (HTTP 429). Wait before trying again.',
+    });
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(test.dependencies.driver.launch).toHaveBeenCalledOnce();
+    expect(JSON.stringify(test.manager.snapshot())).not.toContain('private-provider-output');
+    await test.manager.shutdown();
+  });
   it('reports shutdown failure instead of claiming successful termination', async () => {
     const test = setup();
     await test.manager.start();

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ spawn: vi.fn(), execFile: vi.fn() }));
 vi.mock('node:child_process', () => mocks);
+import { TunnelRateLimitError } from '@/utils/tunnel-errors.js';
 import { CloudflaredDriver } from '@/services/cloudflared.js';
 
 let child: EventEmitter & {
@@ -46,6 +47,17 @@ function launch(mode: 'quick' | 'named' = 'quick') {
 }
 
 describe('cloudflared process driver', () => {
+  it.each(['quick', 'named'] as const)('classifies quick provisioning rate limits without leaking output (%s)', async (mode) => {
+    const test = launch(mode);
+    child.stderr.write('quick tunnel provisioning failed with stat');
+    child.stderr.write('us 429');
+    child.emit('close', 1);
+    const error = await test.connector.ready.catch((error: unknown) => error);
+    expect(error instanceof TunnelRateLimitError).toBe(mode === 'quick');
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).not.toContain('private-token');
+    await test.connector.stop();
+  });
   it('handles a rejected termination caused by abort without an unhandled rejection',async()=>{
     vi.useFakeTimers();const test=launch();child.kill.mockReturnValue(true);test.controller.abort();
     const rejected=expect(test.connector.ready).rejects.toThrow();await vi.advanceTimersByTimeAsync(10000);await rejected;

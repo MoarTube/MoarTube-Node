@@ -1,11 +1,21 @@
 import { createHash } from 'node:crypto';
 import { getConfig } from '@/config/index.js';
 import { viewerMediaBase } from '@/utils/viewer-urls.js';
-import type { HomeRepository } from '@/database/repositories/home.js';
+import type { HomeRepository, HomeVideo, HomeComment } from '@/database/repositories/home.js';
 import { HomeResetError, type HomeQuery } from '@/database/repositories/home.js';
 
 export const homeHash = (value: unknown): string =>
   createHash('sha256').update(JSON.stringify(value)).digest('hex');
+type HomePage<Kind extends 'videos' | 'comments'> = Omit<
+  Awaited<ReturnType<HomeRepository['page']>>,
+  'items'
+> & {
+  items: undefined;
+  snapshot: string;
+  epoch: string;
+  revision: string;
+} & (Kind extends 'videos' ? { videos: HomeVideo[] } : { comments: HomeComment[] });
+
 export class HomeService {
   constructor(private readonly repository: HomeRepository) {}
 
@@ -39,11 +49,16 @@ export class HomeService {
     };
   }
 
+  async page<Kind extends 'videos' | 'comments'>(
+    kind: Kind,
+    query: HomeQuery,
+    input: { epoch?: string; revision?: string; snapshot?: string; cursor: number }
+  ): Promise<HomePage<Kind>>;
   async page(
     kind: 'videos' | 'comments',
     query: HomeQuery,
     input: { epoch?: string; revision?: string; snapshot?: string; cursor: number }
-  ) {
+  ): Promise<HomePage<'videos' | 'comments'>> {
     const state = await this.state();
     const revision = kind === 'comments' ? state.commentsRevision : state.revision;
     if (input.epoch !== undefined && input.epoch !== state.epoch) {
@@ -87,7 +102,9 @@ export class HomeService {
     );
     return {
       ...page,
-      [kind]: page.items,
+      ...(kind === 'videos'
+        ? { videos: page.items as HomeVideo[] }
+        : { comments: page.items as HomeComment[] }),
       items: undefined,
       snapshot,
       epoch: state.epoch,

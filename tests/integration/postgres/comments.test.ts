@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createCommentsRepository } from '@database/repositories/comments/index.js';
 import { CommentsService } from '@/services/comments.js';
@@ -144,17 +145,22 @@ describe('PostgreSQL comments (real SQL)', () => {
     await expect(repository.create(comment())).rejects.toThrow('Failed to create comment record');
   });
   it('keeps tied-timestamp comment refreshes and pages complete', async () => {
-    const rows = await repository.createMany([comment('cursor', 1000), comment('cursor', 1000)]);
+    const [first, second] = await repository.createMany([
+      comment('cursor', 1000),
+      comment('cursor', 1000),
+    ]);
+    assert.ok(first, 'Expected the first inserted comment');
+    assert.ok(second, 'Expected the second inserted comment');
     expect(
       await repository.findByVideoIdWithTimestampFilter(
         'cursor',
         'after',
         'ascending',
         1000,
-        rows[0].comment_id
+        first.comment_id
       )
-    ).toEqual([rows[1]]);
-    expect(await repository.findByVideoId('cursor', { limit: 1, offset: 1 })).toEqual([rows[0]]);
+    ).toEqual([second]);
+    expect(await repository.findByVideoId('cursor', { limit: 1, offset: 1 })).toEqual([first]);
   });
   it('loads older comments by timestamp and ID with a bounded lookahead', async () => {
     const rows = await repository.createMany(
