@@ -70,17 +70,20 @@
           ':' +
           String(seconds % 60).padStart(2, '0');
   }
-  function videoCard(video) {
-    const card = node('article', 'video-card');
-    card.dataset.video = video.videoId;
-    const image = preview(video.videoId, 'video-preview');
-    image.append(node('span', 'duration', durationLabel(video.lengthSeconds, false)));
+  function appendStreamBadge(image, video) {
     if (video.isLive) {
       const badge = node('span', 'stream-badge');
       if (video.isStreaming) badge.append(icon('broadcast'));
       badge.append(node('span', '', video.isStreaming ? 'LIVE' : 'STREAMED'));
       image.append(badge);
     }
+  }
+  function videoCard(video) {
+    const card = node('article', 'video-card');
+    card.dataset.video = video.videoId;
+    const image = preview(video.videoId, 'video-preview');
+    image.append(node('span', 'duration', durationLabel(video.lengthSeconds, false)));
+    appendStreamBadge(image, video);
     const heading = node('h3', 'video-title');
     const title = node('a', '', video.title);
     title.href = watch(video.videoId);
@@ -140,8 +143,9 @@
     card.dataset.comment = comment.commentId;
     const image = preview(comment.videoId, 'comment-preview');
     image.append(
-      node('span', 'duration', durationLabel(comment.lengthSeconds, comment.isStreaming))
+      node('span', 'duration', durationLabel(comment.lengthSeconds, false))
     );
+    appendStreamBadge(image, comment);
     const copy = node('div', 'comment-copy');
     const title = node('a', 'comment-title', comment.videoTitle);
     title.href = watch(comment.videoId);

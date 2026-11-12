@@ -248,6 +248,23 @@ describe('Homepage real database and public routes', () => {
     expect(expired.videos![0]).toMatchObject({ videoId: 'old' });
   });
 
+  it('includes stream badge metadata in comment pages for uploads, live streams and past streams', async () => {
+    await videos.createMany([
+      { ...video('upload'), is_published: true },
+      { ...video('live'), is_live: true, is_streaming: true },
+      { ...video('streamed'), is_live: true, is_streaming: false },
+    ]);
+    await comments.createMany(['upload', 'live', 'streamed'].map((id) => comment(id)));
+    const page = await service.page('comments', empty, input());
+    expect(page.comments).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ videoId: 'upload', isLive: false, isStreaming: false }),
+        expect.objectContaining({ videoId: 'live', isLive: true, isStreaming: true }),
+        expect.objectContaining({ videoId: 'streamed', isLive: true, isStreaming: false }),
+      ])
+    );
+  });
+
   it('pages every global comment in groups of ten with stable timestamp ties and a partial final page', async () => {
     await videos.createMany([
       { ...video('a'), is_published: true },

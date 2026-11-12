@@ -38,7 +38,14 @@ export class HomeService {
     return {
       epoch: state.epoch,
       revision: homeHash([state.epoch, state.catalog, state.comments, settingsRevision, window]),
-      commentsRevision: homeHash([state.epoch, state.catalog, state.comments, settingsRevision]),
+      // Refresh cached comment pages and snapshots that predate stream metadata.
+      commentsRevision: homeHash([
+        'stream-badges-v1',
+        state.epoch,
+        state.catalog,
+        state.comments,
+        settingsRevision,
+      ]),
       tagsRevision: homeHash([state.epoch, state.catalog]),
       commentsVersion: state.comments,
       settingsRevision,

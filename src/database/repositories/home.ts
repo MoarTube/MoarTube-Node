@@ -31,6 +31,7 @@ export interface HomeComment {
   videoTitle: string;
   videoCommentCount: number;
   lengthSeconds: number;
+  isLive: boolean;
   isStreaming: boolean;
 }
 export class HomeResetError extends Error {}
@@ -230,6 +231,10 @@ export class HomeRepository {
         videoTitle: 'v.title',
         videoCommentCount: 'v.comments',
         lengthSeconds: 'v.length_seconds',
+        isLive:
+          this.dialect === 'sqlite'
+            ? "json(CASE WHEN v.is_live THEN 'true' ELSE 'false' END)"
+            : 'v.is_live',
         isStreaming:
           this.dialect === 'sqlite'
             ? "json(CASE WHEN v.is_streaming THEN 'true' ELSE 'false' END)"
