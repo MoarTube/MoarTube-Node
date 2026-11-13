@@ -21,6 +21,10 @@ export interface ICommentsRepository<CommentType, NewCommentType> {
     since: number
   ): Promise<{ version: number; comment_id: number; deleted: number }[]>;
   countByVideoId(videoId: string): Promise<number>;
+  getNewCommentSummary(
+    videoId: string,
+    afterId: number
+  ): Promise<{ newCommentCount: number; latestCommentId: number }>;
   findAll(): Promise<CommentType[]>;
   create(data: NewCommentType): Promise<CommentType>;
   update(id: number, data: Partial<NewCommentType>): Promise<CommentType | null>;

@@ -147,6 +147,24 @@ export class CommentsRepositoryPostgres implements ICommentsRepository<
     }));
   }
 
+  async getNewCommentSummary(
+    videoId: string,
+    afterId: number
+  ): Promise<{ newCommentCount: number; latestCommentId: number }> {
+    const result = await this.db
+      .select({
+        newCommentCount: count(),
+        latestCommentId: sql<number | string>`COALESCE(MAX(${comments.comment_id}),${afterId})`,
+      })
+      .from(comments)
+      .where(and(eq(comments.video_id, videoId), gt(comments.comment_id, afterId)));
+    const row = (result as [{ newCommentCount: number; latestCommentId: number | string }])[0];
+    return {
+      newCommentCount: row.newCommentCount,
+      latestCommentId: Number(row.latestCommentId),
+    };
+  }
+
   async countByVideoId(videoId: string): Promise<number> {
     const result = await this.db
       .select({ count: count() })

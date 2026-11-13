@@ -40,6 +40,7 @@ describe('CommentsService', () => {
       getBacklinksForComments: vi.fn().mockResolvedValue([]),
       getCacheEpoch: vi.fn().mockResolvedValue('11111111-1111-4111-8111-111111111111'),
       getCacheVersion: vi.fn().mockResolvedValue(100),
+      getNewCommentSummary: vi.fn().mockResolvedValue({ newCommentCount: 2, latestCommentId: 9 }),
       getCacheChanges: vi.fn().mockResolvedValue([]),
       findByVideoIdWithTimestampFilter: vi.fn(),
       create: vi.fn(),
@@ -54,6 +55,11 @@ describe('CommentsService', () => {
   });
 
   describe('constructor', () => {
+    it('reads only summary metadata for the new-comment indicator', async () => {
+      expect(await service.getNewCommentSummary('video123', 5)).toEqual({ newCommentCount: 2, latestCommentId: 9 });
+      expect(mockCommentsRepository.getNewCommentSummary).toHaveBeenCalledWith('video123', 5);
+      expect(mockCommentsRepository.findByIds).not.toHaveBeenCalled();
+    });
     it('should create a CommentsService instance', () => {
       expect(service).toBeInstanceOf(CommentsService);
     });

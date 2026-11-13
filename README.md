@@ -328,6 +328,10 @@ By default, MoarTube Node listens on port 9090, including with the Docker exampl
 
 ## Cloudflare
 
+In development mode (`NODE_ENV=development`), Node skips automatic Cloudflare
+Tunnel startup. Switching Cloudflare Tunnels ON in Client settings still starts
+the tunnel; the saved preference is preserved for production startup.
+
 Cloudflare Tunnels can be switched on or off in Client settings. With CDN disabled,
 Node uses a quick tunnel and saves Cloudflare's randomly generated name in
 `cloudflareTunnelName` in the Node settings JSON. Enabling CDN requires only

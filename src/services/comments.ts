@@ -112,6 +112,13 @@ export class CommentsService extends BaseService {
     return this.commentsRepository.getCacheVersion(videoId);
   }
 
+  async getNewCommentSummary(
+    videoId: string,
+    afterId: number
+  ): Promise<{ newCommentCount: number; latestCommentId: number }> {
+    return this.commentsRepository.getNewCommentSummary(videoId, afterId);
+  }
+
   async getCacheChanges(
     videoId: string,
     since: number,

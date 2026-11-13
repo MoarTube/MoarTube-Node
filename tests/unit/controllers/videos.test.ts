@@ -189,6 +189,7 @@ describe('VideosController', () => {
     mockCommentsService = {
       getCacheEpoch: vi.fn().mockResolvedValue('11111111-1111-4111-8111-111111111111'),
       getCacheVersion: vi.fn().mockResolvedValue(7),
+      getNewCommentSummary: vi.fn().mockResolvedValue({ newCommentCount: 2, latestCommentId: 9 }),
       getVideoComments: vi.fn(),
       getCommentsForVideo: vi.fn(),
       getCacheChanges: vi
@@ -267,6 +268,17 @@ describe('VideosController', () => {
   });
 
   describe('CDN comment state and revisioned reads', () => {
+    it('returns a body-free count of comments newer than the caller has loaded', async () => {
+      await controller.getCommentState(
+        createMockRequest({ params: { videoId: 'video' }, query: { afterId: 5 } }), mockReply
+      );
+      expect(mockCommentsService.getNewCommentSummary).toHaveBeenCalledWith('video', 5);
+      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({
+        newCommentCount: 2, latestCommentId: 9,
+      }));
+      expect(mockCommentsService.getVideoComments).not.toHaveBeenCalled();
+      expect(mockCommentsService.getCacheChanges).not.toHaveBeenCalled();
+    });
     it.each([{}, { fresh: '1' }])(
       'serves the state marker with the appropriate freshness policy %j',
       async (query) => {

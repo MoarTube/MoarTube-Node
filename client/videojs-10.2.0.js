@@ -1,4 +1,4 @@
-import { createPlayer, orientationLockFeature } from '@videojs/html';
+import { createPlayer, liveFeature, orientationLockFeature } from '@videojs/html';
 import { videoFeatures } from '@videojs/html/video';
 import '@videojs/html/ui/container';
 import '@videojs/html/ui/controls';
@@ -7,7 +7,6 @@ import '@videojs/html/ui/controls-group';
 import '@videojs/html/ui/play-button';
 import '@videojs/html/ui/mute-button';
 import '@videojs/html/ui/fullscreen-button';
-import '@videojs/html/ui/live-button';
 import '@videojs/html/ui/time';
 import '@videojs/html/ui/time-slider';
 import '@videojs/html/ui/volume-slider';
@@ -21,8 +20,11 @@ import '@videojs/html/ui/hotkey';
 import '@videojs/html/media/hlsjs-video';
 import { restoredTime, sourceSelection, supportedSources } from './videojs-10.2.0-sources.js';
 import { initializeWatchModes } from './videojs-10.2.0-modes.js';
+import { initializeLiveTimeline } from './videojs-10.2.0-live.js';
+import { initializePlayerBackground } from './videojs-10.2.0-background.js';
+import { initializePlayerLayout } from './videojs-10.2.0-layout.js';
 
-const { PlayerElement } = createPlayer({ features: [...videoFeatures, orientationLockFeature] });
+const { PlayerElement } = createPlayer({ features: [...videoFeatures, liveFeature, orientationLockFeature] });
 customElements.define('moartube-video-player', PlayerElement);
 
 const icon = path => `<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="${path}"/></svg>`;
@@ -59,15 +61,19 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
     <media-controls>
       <media-controls-content class="mt-controls">
         <media-controls-group class="mt-control-bar" aria-label="Playback controls">
-          <media-time-slider class="mt-timeline">
+          ${isStreaming ? `<div class="mt-timeline mt-live-timeline" data-interactive>
+            <media-slider-track><media-slider-buffer></media-slider-buffer><media-slider-fill></media-slider-fill></media-slider-track>
+            <input class="mt-live-range" type="range" min="0" max="0" step="any" disabled aria-label="Seek live stream">
+            <span class="mt-live-time-value" aria-hidden="true"></span>
+          </div>` : `<media-time-slider class="mt-timeline">
             <media-slider-track><media-slider-buffer></media-slider-buffer><media-slider-fill></media-slider-fill></media-slider-track>
             <media-slider-thumb></media-slider-thumb><media-slider-value type="pointer"></media-slider-value>
-          </media-time-slider>
+          </media-time-slider>`}
           <media-play-button class="mt-icon-button" title="Play / pause"><span class="mt-play">${icons.play}</span><span class="mt-pause">${icons.pause}</span></media-play-button>
           <media-mute-button class="mt-icon-button" title="Mute / unmute"><span class="mt-sound">${icons.sound}</span><span class="mt-muted">${icons.muted}</span></media-mute-button>
           <media-volume-slider class="mt-volume"><media-slider-track><media-slider-fill></media-slider-fill></media-slider-track><media-slider-thumb></media-slider-thumb></media-volume-slider>
           <span class="mt-times"><media-time type="current"></media-time><span> / </span><media-time type="duration"></media-time></span>
-          <media-live-button class="mt-live">LIVE</media-live-button>
+          <button type="button" class="mt-live" disabled>LIVE</button>
           <span class="mt-spacer"></span>
           <a class="mt-watch-link mt-icon-button" aria-label="Watch on MoarTube" title="Watch on MoarTube" target="_blank" rel="noopener">${icons.brand}</a>
           <media-fullscreen-button class="mt-icon-button" title="Fullscreen"><span class="mt-enter">${icons.fullscreen}</span><span class="mt-exit">${icons.exit}</span></media-fullscreen-button>
@@ -109,6 +115,10 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
   let media, mediaLifetime, currentSource, pendingRestore, selected, sourceIndex = 0, initialSeekDone = false, hasPlayed = false;
   let playbackRequested = autoStart, preferredRate = 1;
   player.classList.toggle('mt-is-live', isStreaming);
+  if (isStreaming) initializeLiveTimeline({
+    timeline: player.querySelector('.mt-live-timeline'), liveButton: player.querySelector('.mt-live'),
+    store: player.store, play, signal: lifetime.signal,
+  });
 
   function setMenusClosed(focus = false) {
     menu.hidden = context.hidden = true;
@@ -176,6 +186,8 @@ export function createVideoPlayer({ placeholder, adaptiveSources, progressiveSou
     media.volume = snapshot.volume;
     media.muted = snapshot.muted;
     const on = (event, callback) => media.addEventListener(event, callback, { signal: mediaLifetime.signal });
+    initializePlayerBackground({ player, media, signal: mediaLifetime.signal });
+    if (!embedded) initializePlayerLayout({ wrapper, media, signal: mediaLifetime.signal });
     on('loadedmetadata', () => {
       initialSeekDone = true;
       media.playbackRate = snapshot.rate;

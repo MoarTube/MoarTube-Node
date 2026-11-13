@@ -114,8 +114,8 @@ function scrolling(mobile = false, view = 'videos') {
 }
 
 describe('homepage scroll loading', () => {
-  it('fills the viewport, continues the video cursor with filters, and stops at the end', async () => {
-    const app = scrolling();
+  it.each([false, true])('preserves video order across scroll pages (mobile: %s)', async (mobile) => {
+    const app = scrolling(mobile);
     expect(app.observed.map((element) => element.id)).toEqual(['video-sentinel', 'comment-sentinel']);
     await app.approach('video-sentinel', 0);
     expect(app.$('video-grid').children.map((page) => page.childElementCount)).toEqual([30, 30]);
@@ -135,6 +135,8 @@ describe('homepage scroll loading', () => {
     await app.approach('video-sentinel');
     expect(app.$('video-grid').children.map((page) => page.childElementCount)).toEqual([30, 30, 5]);
     expect(new URL(app.fetch.mock.calls[2][0], 'http://localhost').searchParams.get('cursor')).toBe('60');
+    expect(app.$('video-grid').children.flatMap((page) => page.children.map((item) => item.id)))
+      .toEqual(Array.from({ length: 65 }, (_, index) => index));
     await app.approach('video-sentinel');
     expect(app.fetch).toHaveBeenCalledTimes(3);
   });

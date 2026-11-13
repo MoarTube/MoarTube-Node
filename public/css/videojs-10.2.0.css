@@ -26,10 +26,11 @@ media-play-button:not([data-paused]) .mt-play, media-mute-button[data-muted] .mt
 media-play-button:not([data-paused]) .mt-pause, media-mute-button[data-muted] .mt-muted, media-mute-button[data-volume-level="off"] .mt-muted, media-fullscreen-button[data-fullscreen] .mt-exit { display: inline; }
 .mt-times { display: inline-flex; gap: 4px; padding: 0 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .mt-spacer { flex: 1; }
-.mt-live { display: none; padding: 6px; color: #fff; cursor: pointer; font-weight: bold; }
+.mt-live { display: none; padding: 6px; border: 0; background: transparent; color: #fff; cursor: pointer; font: inherit; font-weight: 700; }
 .mt-is-live .mt-live { display: inline-block; }
 .mt-is-live .mt-times { display: none; }
-.mt-live[data-at-live-edge] { color: #ff4b59; }
+.mt-live[data-live-edge] { color: #cb0c9f; }
+.mt-live:disabled { cursor: default; }
 .mt-timeline, .mt-volume { display: block; position: relative; cursor: pointer; touch-action: none; }
 .mt-timeline { position: absolute; bottom: 36px; left: 10px; right: 10px; height: 20px; }
 .mt-volume { width: 64px; height: 24px; margin-right: 8px; }
@@ -40,6 +41,15 @@ media-play-button:not([data-paused]) .mt-pause, media-mute-button[data-muted] .m
 .mt-player-surface media-slider-thumb { position: absolute; left: var(--media-slider-fill); top: 50%; width: 10px; height: 10px; background: #fff; border-radius: 50%; transform: translate(-50%, -50%); }
 .mt-player-surface media-slider-value { display: none; position: absolute; bottom: 22px; left: clamp(20px, var(--media-slider-pointer), calc(100% - 20px)); transform: translateX(-50%); background: #1c1c1c; color: white; padding: 3px 6px; }
 .mt-timeline:hover media-slider-value, .mt-timeline:focus-within media-slider-value { display: block; }
+.mt-live-range { appearance: none; -webkit-appearance: none; position: absolute; inset: 0 auto 0 -5px; width: calc(100% + 10px); height: 20px; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.mt-live-range::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+.mt-live-range::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 10px; height: 10px; margin-top: -3px; border: 0; border-radius: 50%; background: #fff; }
+.mt-live-range::-moz-range-track { height: 4px; background: transparent; }
+.mt-live-range::-moz-range-progress { background: transparent; }
+.mt-live-range::-moz-range-thumb { width: 10px; height: 10px; border: 0; border-radius: 50%; background: #fff; }
+.mt-live-range:disabled { cursor: default; opacity: .5; }
+.mt-live-time-value { display: none; position: absolute; bottom: 22px; left: clamp(20px, var(--media-slider-pointer, var(--media-slider-fill)), calc(100% - 20px)); transform: translateX(-50%); background: #1c1c1c; color: white; padding: 3px 6px; pointer-events: none; }
+.mt-live-timeline:hover .mt-live-time-value, .mt-live-timeline:focus-within .mt-live-time-value { display: block; }
 .mt-player-menu { position: absolute; right: 10px; bottom: 60px; z-index: 12; display: flex; flex-direction: column; min-width: 200px; max-width: calc(100% - 20px); max-height: calc(100% - 65px); overflow-y: auto; padding: 4px 0; background: rgba(28,28,28,.95); color: #eee; border-radius: 2px; box-shadow: 0 1px 9px rgba(0,0,0,.4); font-size: 13px; }
 .mt-player-menu button { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; min-height: 36px; gap: 20px; padding: 6px 14px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
 .mt-player-menu button:hover, .mt-player-menu button:focus-visible { background: rgba(255,255,255,.12); }

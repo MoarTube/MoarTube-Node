@@ -177,22 +177,29 @@ describe('comment freshness without a CDN', () => {
     expect(receiver.ensureCommentFreshness).toHaveBeenCalledOnce();
   });
   it.each([false, true])(
-    'checks overdue state and respects the deadline with CDN %s',
+    'checks overdue metadata without fetching comments and respects the deadline with CDN %s',
     async (cdnEnabled) => {
-      const methods = watchMethod('async ensureCommentFreshness()', 'commentRequest(');
+      const methods = watchMethod('async ensureCommentFreshness()', 'renderNewCommentIndicator()');
       const receiver: any = {
         INCOMING_PARAMETERS: { commentsData: { cdnEnabled } },
         COMMENT_STATE_CHECKED_AT: 1,
+        COMMENT_SEEN_ID: 5,
+        COMMENT_SEEN_EPOCH: 'epoch',
         commentStore: () => ({ version: 1, checkOwnership: async () => {} }),
         updateCommentTotal: vi.fn(),
-        syncCommentCache: vi.fn(async () => {
+        syncCommentCache: vi.fn(),
+        renderNewCommentIndicator: vi.fn(),
+        readCommentState: vi.fn(async () => {
           receiver.COMMENT_STATE_CHECKED_AT = Date.now();
-          return {};
+          return { epoch: 'epoch', version: 2, afterId: 5, newCommentCount: 3, totalCount: 8 };
         }),
       };
       await methods.ensureCommentFreshness.call(receiver);
       await methods.ensureCommentFreshness.call(receiver);
-      expect(receiver.syncCommentCache).toHaveBeenCalledOnce();
+      expect(receiver.readCommentState).toHaveBeenCalledOnce();
+      expect(receiver.syncCommentCache).not.toHaveBeenCalled();
+      expect(receiver.updateCommentTotal).not.toHaveBeenCalled();
+      expect(receiver.COMMENT_NEW_COUNT).toBe(3);
     }
   );
 

@@ -98,6 +98,66 @@ describe('Homepage real database and public routes', () => {
     expect(JSON.stringify(filtered)).not.toContain('secret');
   });
 
+  it.each(['hot', 'new', 'recently-discussed', 'discussed', 'viewed'] as const)(
+    'keeps %s descending across all video pages with stable ties',
+    async (sortTerm) => {
+      const now = Date.now();
+      const records = Array.from({ length: 65 }, (_, index) => ({
+        ...video('order-' + String(index).padStart(2, '0')),
+        is_published: true,
+        creation_timestamp: now - Math.floor(((index * 17) % 65) / 3) * 1000,
+        views: Math.floor(((index * 7) % 65) / 3),
+        comments: Math.floor(((index * 11) % 65) / 3),
+        recent: now - Math.floor(((index * 13) % 65) / 3) * 1000,
+        hot: Math.floor(((index * 19) % 65) / 3),
+      }));
+      await videos.createMany(records.map(({ recent: _recent, hot: _hot, ...record }) => record));
+      await comments.createMany(records.map((record) => comment(record.video_id, record.recent)));
+      await repository.write(
+        sql`INSERT INTO home_activity(video_id,hour,views,likes) VALUES ${sql.join(
+          records.map(
+            (record) => sql`(${record.video_id},${Math.floor(now / 3_600_000)},${record.hot},0)`
+          ),
+          sql`, `
+        )}`
+      );
+      const field = {
+        hot: 'hot',
+        new: 'creation_timestamp',
+        'recently-discussed': 'recent',
+        discussed: 'comments',
+        viewed: 'views',
+      } as const;
+      const expected = [...records]
+        .sort(
+          (a, b) =>
+            b[field[sortTerm]] - a[field[sortTerm]] ||
+            b.creation_timestamp - a.creation_timestamp ||
+            b.video_id.localeCompare(a.video_id)
+        )
+        .map((record) => record.video_id);
+      const query = { ...empty, sortTerm };
+      const first = await service.page('videos', query, input());
+      const second = await service.page('videos', query, {
+        cursor: first.nextCursor!,
+        snapshot: first.snapshot,
+        revision: first.revision,
+      });
+      const third = await service.page('videos', query, {
+        cursor: second.nextCursor!,
+        snapshot: second.snapshot,
+        revision: second.revision,
+      });
+      expect([first.videos!.length, second.videos!.length, third.videos!.length]).toEqual([
+        30, 30, 5,
+      ]);
+      expect(
+        [...first.videos!, ...second.videos!, ...third.videos!].map((row) => row.videoId)
+      ).toEqual(expected);
+      expect(third.hasMore).toBe(false);
+    }
+  );
+
   it('orders recently discussed videos by newest comment with stable ties and unmentioned videos last', async () => {
     await videos.createMany([
       { ...video('old-active'), is_published: true, creation_timestamp: 1, comments: 100 },

@@ -61,6 +61,25 @@ describe('comment HTTP CDN contract with a real database', () => {
     database?.close();
     vi.clearAllMocks();
   });
+
+  it('exposes only the number and latest ID of unseen comments in state polls', async () => {
+    const baseline = await app.inject(base + '/state?afterId=0');
+    expect(baseline.statusCode).toBe(200);
+    expect(baseline.json()).toMatchObject({ newCommentCount: 1, latestCommentId: parent });
+    const added = await comments.create(comment(id, 100));
+    const deleted = await comments.create(comment(id, 200));
+    await comments.delete(id, deleted.comment_id, 200);
+    await comments.update(parent, { comment_plain_text_sanitized: 'Edited parent' });
+    const result = await app.inject(base + '/state?afterId=' + parent);
+    expect(result.statusCode).toBe(200);
+    expect(result.json()).toMatchObject({ newCommentCount: 1, latestCommentId: added.comment_id });
+    expect(result.json()).not.toHaveProperty('comments');
+    const refreshed = await app.inject(base + '/state?afterId=' + added.comment_id);
+    expect(refreshed.json().newCommentCount).toBe(0);
+    for (const afterId of ['-1', '1.5', 'NaN', '9007199254740992']) {
+      expect((await app.inject(base + '/state?afterId=' + afterId)).statusCode).toBe(400);
+    }
+  });
   const key = (value: { epoch: string; version: number }) =>
     new URLSearchParams({ epoch: value.epoch, revision: String(value.version) }).toString();
 

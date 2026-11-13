@@ -986,13 +986,17 @@ export class VideosController extends BaseController {
       const { videoId } = request.params as VideoIdParams;
       const state = await this.commentCacheState(videoId);
       const totalCount = await this.commentsService.countCommentsForVideo(videoId);
+      const { afterId } = request.query as { afterId?: number };
+      const summary = await (afterId === undefined
+        ? {}
+        : this.commentsService.getNewCommentSummary(videoId, afterId));
       if (
         (request.query as { fresh?: string }).fresh !== '1' &&
         request.headers.authorization === undefined
       ) {
         reply.header('Cache-Control', COMMENT_STATE_CACHE_CONTROL);
       }
-      return await this.sendSuccess(reply, { ...state, totalCount });
+      return await this.sendSuccess(reply, { ...state, totalCount, ...summary });
     } catch (error) {
       this.logger.error('Comment state failed', error);
       return await this.sendError(reply, 'Unable to load comment state', 500);

@@ -32,6 +32,18 @@ describe('SQLite comments (real SQL)', () => {
     ).toEqual([]);
   });
 
+  it('counts new comments by video and ID without counting edits or deleted comments', async () => {
+    const previous = await repository.create(comment('a', 100));
+    const added = await repository.create(comment('a', 100));
+    await repository.create(comment('b', 200));
+    const deleted = await repository.create(comment('a', 300));
+    await repository.update(previous.comment_id, { comment_plain_text_sanitized: 'Edited' });
+    await repository.delete('a', deleted.comment_id, 300);
+    expect(await repository.getNewCommentSummary('a', previous.comment_id)).toEqual({ newCommentCount: 1, latestCommentId: added.comment_id });
+    expect(await repository.getNewCommentSummary('a', added.comment_id)).toEqual({ newCommentCount: 0, latestCommentId: added.comment_id });
+    expect(await repository.getNewCommentSummary('missing', 0)).toEqual({ newCommentCount: 0, latestCommentId: 0 });
+  });
+
   it('batches authoritative backlinks and synchronizes insert, edit, and deletion metadata', async () => {
     const first = await repository.create(comment('a', 100));
     const start = await repository.getCacheVersion('a');

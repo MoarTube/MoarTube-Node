@@ -421,6 +421,12 @@ describe('database/repositories/comments.ts', () => {
   });
 
   describe('countNewerThan', () => {
+    it.each(['sqlite', 'postgres'])('reads numeric new-comment counts without comment bodies (%s)', async (dialect) => {
+      mockDb.where.mockResolvedValue([{ newCommentCount: 2, latestCommentId: '9' }]);
+      const repository = dialect === 'sqlite' ? sqliteRepository : postgresRepository;
+      expect(await repository.getNewCommentSummary('video', 5)).toEqual({ newCommentCount: 2, latestCommentId: 9 });
+      expect(mockDb.select).toHaveBeenCalledWith(expect.objectContaining({ newCommentCount: expect.anything(), latestCommentId: expect.anything() }));
+    });
     const testCases = [
       { name: 'SQLite', repository: () => sqliteRepository, table: mockSQLiteCommentsTable },
       { name: 'Postgres', repository: () => postgresRepository, table: mockPostgresCommentsTable },

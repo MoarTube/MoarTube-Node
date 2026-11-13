@@ -78,7 +78,10 @@ const commentCacheKey = {
   revision: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
 };
 
-export const videoCommentStateQuerySchema = z.object({ fresh: z.literal('1').optional() });
+export const videoCommentStateQuerySchema = z.object({
+  fresh: z.literal('1').optional(),
+  afterId: z.coerce.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
+});
 export const videoCommentQuerySchema = z.object(commentCacheKey);
 
 export const videoCommentCacheQuerySchema = z.object({

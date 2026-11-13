@@ -386,6 +386,10 @@ export class ClusterMaster {
         return;
       }
       this.originPort = port;
+      if (getConfig().runtime.isDevelopment) {
+        this.logger.info('Skipping automatic Cloudflare Tunnel startup in development mode');
+        return;
+      }
       this.tunnel ??= primaryTunnelManager();
       // Tunnel failures are isolated from worker HTTP availability.
       void this.tunnel.reconcile().catch(() => {

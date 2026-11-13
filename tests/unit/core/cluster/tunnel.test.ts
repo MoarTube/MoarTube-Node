@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  runtime: { isDevelopment: false },
   handlers: new Map<string, (...args: any[]) => any>(),
   manager: {
     reconcile: vi.fn(),
@@ -44,7 +45,7 @@ vi.mock('@/core/cluster/ipc-channel.js', () => ({
   },
 }));
 vi.mock('@/config/index.js', () => ({
-  getConfig: () => ({ runtime: { isDevelopment: false }, paths: { dataDirectoryPath: '/test' }, nodeSettings: { workerCount: 4 }, cleanup:vi.fn() }),
+  getConfig: () => ({ runtime: mocks.runtime, paths: { dataDirectoryPath: '/test' }, nodeSettings: { workerCount: 4 }, cleanup:vi.fn() }),
 }));
 vi.mock('@/database/index.js', () => ({
   createDatabase: vi.fn(),
@@ -54,6 +55,7 @@ import { ClusterMaster } from '@/core/cluster/master.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.runtime.isDevelopment = false;
   mocks.handlers.clear();
   vi.useFakeTimers();
   vi.spyOn(process, 'once').mockReturnValue(process);
@@ -75,6 +77,59 @@ function master() {
 }
 
 describe('primary tunnel cluster integration', () => {
+  it('skips automatic development startup across worker readiness and port changes', async () => {
+    mocks.runtime.isDevelopment = true;
+    const instance = master();
+    mocks.handlers.get('worker_http_ready')!({ port: 9090 });
+    mocks.handlers.get('worker_http_ready')!({ port: 9090 });
+    mocks.handlers.get('worker_http_ready')!({ port: 9091 });
+    expect(mocks.manager.reconcile).not.toHaveBeenCalled();
+    expect(mocks.manager.restart).not.toHaveBeenCalled();
+    await instance.stop();
+    expect(mocks.manager.shutdown).not.toHaveBeenCalled();
+  });
+
+  it('allows an explicit ON request in development after HTTP is ready', async () => {
+    mocks.runtime.isDevelopment = true;
+    const instance = master();
+    const worker = {};
+    // A settings status read before readiness must not enable automatic startup.
+    await mocks.handlers.get('cloudflare_tunnel_request')!(
+      { requestId: 'status', operation: 'snapshot' }, worker
+    );
+    mocks.handlers.get('worker_http_ready')!({ port: 9090 });
+    expect(mocks.manager.reconcile).not.toHaveBeenCalled();
+    await mocks.handlers.get('cloudflare_tunnel_request')!(
+      { requestId: 'enable', operation: 'reconcile' }, worker
+    );
+    expect(mocks.manager.reconcile).toHaveBeenCalledOnce();
+    expect(mocks.send).toHaveBeenLastCalledWith(
+      worker, expect.objectContaining({ requestId: 'enable', tunnel: { status: 'running' } })
+    );
+    await instance.stop();
+    expect(mocks.manager.shutdown).toHaveBeenCalledOnce();
+  });
+
+  it('continues to accept explicit development restarts and OFF requests', async () => {
+    mocks.runtime.isDevelopment = true;
+    const instance = master();
+    const worker = {};
+    mocks.handlers.get('worker_http_ready')!({ port: 9090 });
+    mocks.manager.restart.mockResolvedValue({ mode: 'quick', status: 'running', name: 'manual' });
+    await mocks.handlers.get('cloudflare_tunnel_request')!(
+      { requestId: 'restart', operation: 'restart' }, worker
+    );
+    expect(mocks.manager.restart).toHaveBeenCalledOnce();
+    mocks.manager.reconcile.mockResolvedValue({ mode: 'none', status: 'stopped', name: '' });
+    await mocks.handlers.get('cloudflare_tunnel_request')!(
+      { requestId: 'disable', operation: 'reconcile' }, worker
+    );
+    expect(mocks.send).toHaveBeenLastCalledWith(
+      worker, expect.objectContaining({ requestId: 'disable', tunnel: { mode: 'none', status: 'stopped', name: '' } })
+    );
+    await instance.stop();
+  });
+
   it.each([false,true])('runs graceful signal cleanup and reports a rejected shutdown (failure=%s)',async failure=>{
     const exit=vi.spyOn(process,'exit').mockImplementation(()=>undefined as never);
     const instance=master();mocks.handlers.get('worker_http_ready')!({port:9090});
