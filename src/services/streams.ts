@@ -70,6 +70,7 @@ export interface StartStreamOptions {
   isRecordingStreamLocally: boolean;
   /** Existing video ID to resume stream (optional) */
   existingVideoId?: string;
+  resume?: boolean;
 }
 
 /**
@@ -241,6 +242,9 @@ export class StreamsService extends BaseService {
     return withJobAdmission(() =>
       this.withErrorLogging('startNewStream', async () => {
         getConfig().reloadNodeSettings();
+        if (options.resume === true) {
+          return this.resumeStoppedStream(options);
+        }
         let videoId = options.existingVideoId;
 
         const isResumingStream = videoId !== undefined;
@@ -404,11 +408,13 @@ export class StreamsService extends BaseService {
           isFinalized: 0,
         });
 
-        // Restreaming resets the whole video tree and deletes its comments.
+        // Restart replaces recorded playlists, images and comments; new segments use new URLs.
         if (isResumingStream) {
           const config = getConfig();
+          await this.cloudflareService.purgeRecordedManifests(videoId);
           await this.cloudflareService.purgePrefixes([
-            config.getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/',
+            config.getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/progressive/',
+            config.getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/images/',
             config.getNodeBaseUrl() + '/videos/' + videoId + '/comments',
           ]);
         } else {
@@ -422,8 +428,79 @@ export class StreamsService extends BaseService {
   }
 
   /**
-   * Update stream metadata
+   * Resume a stopped stream while preserving its media and counters
    */
+  private async resumeStoppedStream(options: StartStreamOptions): Promise<{ videoId: string }> {
+    // startNewStream already holds the settings and distribution admission locks.
+    const videoId = options.existingVideoId;
+    if (videoId === undefined || videoId === '') {
+      throw new Error('Resume requires an existing video');
+    }
+    const video = await this.videoRepository.findById(videoId);
+    if (
+      !video ||
+      !video.is_live ||
+      !video.is_streamed ||
+      video.is_streaming ||
+      video.is_finalized ||
+      video.is_publishing
+    ) {
+      throw new Error('Only a stopped, unfinalized live stream can be resumed');
+    }
+    const meta = this.safeJsonParse<StreamMeta>(video.meta, {});
+    if (
+      meta.resolution !== options.resolution ||
+      meta.isRecordingStreamRemotely !== options.isRecordingStreamRemotely ||
+      meta.isRecordingStreamLocally !== options.isRecordingStreamLocally
+    ) {
+      throw new Error('Resume requires the original resolution and recording settings');
+    }
+    // A new cleanup generation cancels any queued deletion from the stopped session.
+    meta.streamGeneration = randomUUID();
+    delete meta.streamCleanupAt;
+    meta.rtmpPort = options.rtmpPort;
+    meta.networkAddress = options.networkAddress;
+    const tags = this.sanitizeWhitespace(options.tags);
+    await this.videoRepository.update(videoId, {
+      title: options.title,
+      description: options.description,
+      tags,
+      is_streaming: true,
+      is_streamed: false,
+      is_error: false,
+      meta: JSON.stringify(meta),
+    });
+    this.broadcastStreamEvent('video_data', {
+      videoId,
+      thumbnail: '',
+      title: options.title,
+      description: options.description,
+      tags,
+      lengthSeconds: video.length_seconds,
+      lengthTimestamp: video.length_timestamp,
+      views: video.views,
+      comments: video.comments,
+      likes: video.likes,
+      dislikes: video.dislikes,
+      bandwidth: video.bandwidth,
+      isImporting: video.is_importing,
+      isImported: video.is_imported,
+      isPublishing: video.is_publishing,
+      isPublished: video.is_published,
+      isLive: true,
+      isStreaming: true,
+      isStreamed: false,
+      isStreamRecordedRemotely: video.is_stream_recorded_remotely,
+      isStreamRecordedLocally: video.is_stream_recorded_locally,
+      isError: false,
+      isFinalized: video.is_finalized,
+    });
+    // Live playlists expire after one second; resuming does not replace any segments.
+    await this.cloudflareService.purgeHomePage([videoId]);
+    this.logger.info('Stream resumed', { videoId });
+    return { videoId };
+  }
+
   async updateStreamMeta(videoId: string, meta: Partial<StreamMeta>): Promise<void> {
     const video = await this.videoRepository.findById(videoId);
     if (!video) {
@@ -460,7 +537,9 @@ export class StreamsService extends BaseService {
         path.join(config.paths.videosDirectoryPath, videoId, 'adaptive', 'm3u8')
       );
       this.logger.info('Stream manifests finalized', { videoId });
-      await this.invalidateStreamMedia(videoId);
+      if (duration !== undefined) {
+        await this.cloudflareService.purgeRecordedManifests(videoId);
+      }
       return duration;
     }
     const video = await this.videoRepository.findById(videoId);
@@ -473,7 +552,9 @@ export class StreamsService extends BaseService {
       outputs.m3u8 ?? [],
       video.is_stream_recorded_remotely
     );
-    await this.invalidateStreamMedia(videoId);
+    if (duration !== undefined && video.is_stream_recorded_remotely) {
+      await this.cloudflareService.purgeRecordedManifests(videoId, outputs.m3u8 ?? []);
+    }
     return duration;
   }
 

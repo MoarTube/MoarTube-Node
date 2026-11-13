@@ -125,6 +125,25 @@ describe('VideosController', () => {
     expect(mockReply.status).toHaveBeenCalledWith(200);
   });
 
+  it('acknowledges live-only writes without purging short-lived playlists or segments', async () => {
+    const { finishRemoteWrite } = await import('@/utils/distribution-admission.js');
+    mockCloudflareService.purgeFiles = vi.fn();
+    mockCloudflareService.purgePrefixes = vi.fn();
+    await controller.invalidateCache(
+      createMockRequest({
+        params: { videoId: 'video' },
+        body: {
+          paths: ['adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8'],
+          activityId: 'write',
+        },
+      }),
+      mockReply
+    );
+    expect(mockCloudflareService.purgeFiles).not.toHaveBeenCalled();
+    expect(mockCloudflareService.purgePrefixes).not.toHaveBeenCalled();
+    expect(finishRemoteWrite).toHaveBeenCalledWith('video', 'write');
+  });
+
   it('invalidates only the supplied media paths after direct Client writes', async () => {
     mockCloudflareService.purgeFiles = vi.fn().mockResolvedValue(undefined);
     await controller.invalidateCache(
@@ -270,12 +289,16 @@ describe('VideosController', () => {
   describe('CDN comment state and revisioned reads', () => {
     it('returns a body-free count of comments newer than the caller has loaded', async () => {
       await controller.getCommentState(
-        createMockRequest({ params: { videoId: 'video' }, query: { afterId: 5 } }), mockReply
+        createMockRequest({ params: { videoId: 'video' }, query: { afterId: 5 } }),
+        mockReply
       );
       expect(mockCommentsService.getNewCommentSummary).toHaveBeenCalledWith('video', 5);
-      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({
-        newCommentCount: 2, latestCommentId: 9,
-      }));
+      expect(mockReply.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newCommentCount: 2,
+          latestCommentId: 9,
+        })
+      );
       expect(mockCommentsService.getVideoComments).not.toHaveBeenCalled();
       expect(mockCommentsService.getCacheChanges).not.toHaveBeenCalled();
     });
@@ -3244,15 +3267,27 @@ describe('VideosController', () => {
   });
   it('retains failed exact-path invalidations and attempts both completion purges', async () => {
     mockCloudflareService.purgeFiles.mockRejectedValueOnce(new Error('provider failure'));
-    await expect(controller.invalidateCache(createMockRequest({ params: { videoId: 'video' }, body: { paths: ['progressive/mp4/video.mp4'] } }), mockReply)).rejects.toThrow('Cache invalidation incomplete');
+    await expect(
+      controller.invalidateCache(
+        createMockRequest({
+          params: { videoId: 'video' },
+          body: { paths: ['progressive/mp4/video.mp4'] },
+        }),
+        mockReply
+      )
+    ).rejects.toThrow('Cache invalidation incomplete');
     mockCloudflareService.purgeVideo.mockRejectedValueOnce(new Error('prefix failure'));
-    await expect(controller.invalidateCache(createMockRequest({ params: { videoId: 'video' } }), mockReply)).rejects.toThrow('Cache invalidation incomplete');
+    await expect(
+      controller.invalidateCache(createMockRequest({ params: { videoId: 'video' } }), mockReply)
+    ).rejects.toThrow('Cache invalidation incomplete');
     expect(mockCloudflareService.purgeHomePage).toHaveBeenCalledWith(['video'], false, true);
   });
   it('finishes remote activity only after pending invalidations are retried', async () => {
     mockCloudflareService.retryPendingPurges = vi.fn().mockResolvedValue(undefined);
-    await controller.invalidateCache(createMockRequest({ params: { videoId: 'video' }, body: { activityId: 'write' } }), mockReply);
+    await controller.invalidateCache(
+      createMockRequest({ params: { videoId: 'video' }, body: { activityId: 'write' } }),
+      mockReply
+    );
     expect(mockCloudflareService.retryPendingPurges).toHaveBeenCalledOnce();
   });
-
 });

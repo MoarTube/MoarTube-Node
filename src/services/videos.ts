@@ -1113,6 +1113,8 @@ export class VideosService extends BaseService {
       description: video.description,
       tags: video.tags,
       views: video.views,
+      lengthSeconds: video.length_seconds,
+      lengthTimestamp: video.length_timestamp ?? '',
       isPublished: video.is_published,
       isLive: video.is_live,
       isStreaming: video.is_streaming,
@@ -1432,7 +1434,8 @@ export class VideosService extends BaseService {
 
         const manifestPath = path.join(manifestDir, `manifest-master.m3u8`);
         await writeUpload({ file: Readable.from([content]) }, manifestPath, 128 * 1024);
-        await this.cloudflareService.purgeAdaptiveVideos(videoId);
+        // Both route types share this file; its static URL may hold a finalized recording.
+        await this.cloudflareService.purgeRecordedManifests(videoId, []);
 
         this.logger.debug('Wrote HLS master manifest', {
           videoId,
@@ -1441,7 +1444,9 @@ export class VideosService extends BaseService {
         });
       } else {
         await this.storageService.writeS3MasterManifest(videoId, manifestType, content);
-        await this.cloudflareService.purgeAdaptiveVideos(videoId);
+        if (manifestType === 'static') {
+          await this.cloudflareService.purgeRecordedManifests(videoId, []);
+        }
       }
     });
   }

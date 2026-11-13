@@ -48,6 +48,15 @@ export function streamsRoutes(
     controller.startStream.bind(controller)
   );
 
+  fastify.post(
+    '/resume',
+    {
+      preHandler: [fastify.authenticate],
+      schema: { tags: ['Streams'], body: streamStartBodySchema },
+    },
+    controller.resumeStream.bind(controller)
+  );
+
   // Stop a stream
   fastify.post(
     '/:videoId/stop',

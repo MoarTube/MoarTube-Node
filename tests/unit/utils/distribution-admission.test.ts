@@ -29,7 +29,7 @@ beforeEach(() => {
   };
   fs.writeFileSync(file, JSON.stringify(stored));
   const config = {
-    paths: { nodeSettingsPath: file },
+    paths: { nodeSettingsPath: file, videosDirectoryPath: path.join(directory, 'videos') },
     nodeSettings: NodeSettingsSchema.parse(stored),
     reloadNodeSettings() {
       config.nodeSettings = NodeSettingsSchema.parse(JSON.parse(fs.readFileSync(file, 'utf8')));
@@ -96,3 +96,88 @@ it('releases admission after a job fails and accepts older configuration without
   ).rejects.toThrow('Job failed');
   await expect(withJobAdmission(async () => 'ready')).resolves.toBe('ready');
 });
+
+// Use the real admission and settings locks: mocking them hides duplicate acquisition.
+it.each([true, false])(
+  'resumes a stopped stream under real admission with remote recording=%s',
+  async (recording) => {
+    const logger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() };
+    const options = {
+      title: 'Live',
+      description: 'Description',
+      tags: 'test',
+      rtmpPort: 1935,
+      networkAddress: '127.0.0.1',
+      resolution: '720p',
+      isRecordingStreamRemotely: recording,
+      isRecordingStreamLocally: true,
+      existingVideoId: 'video123',
+      resume: true,
+    };
+    let video = {
+      video_id: 'video123',
+      is_live: true,
+      is_streaming: true,
+      is_streamed: false,
+      is_finalized: false,
+      is_publishing: false,
+      is_stream_recorded_remotely: recording,
+      is_stream_recorded_locally: true,
+      is_published: false,
+      length_seconds: 24,
+      length_timestamp: '00:00:24.00',
+      views: 8,
+      comments: 7,
+      creation_timestamp: 12345,
+      meta: JSON.stringify({
+        streamGeneration: 'initial-session',
+        resolution: '720p',
+        isRecordingStreamRemotely: recording,
+        isRecordingStreamLocally: true,
+      }),
+    };
+    const repository = {
+      findById: vi.fn(() => Promise.resolve(video)),
+      update: vi.fn((_id: string, changes: Partial<typeof video>) => {
+        video = { ...video, ...changes };
+        return Promise.resolve();
+      }),
+    };
+    const service = new StreamsService(
+      logger as never,
+      repository as never,
+      { deleteByVideoId: vi.fn().mockResolvedValue(0) } as never,
+      {} as never,
+      { broadcastToNodes: vi.fn() } as never,
+      {
+        purgeHomePage: vi.fn().mockResolvedValue(undefined),
+        purgeAdaptiveVideos: vi.fn().mockResolvedValue(undefined),
+      } as never,
+      {} as never
+    );
+    vi.spyOn(service, 'finalizeStreamManifests').mockResolvedValue(6000);
+    try {
+      for (let session = 0; session < 2; session++) {
+        await service.stopStream('video123', 6);
+        expect(video.is_streaming).toBe(false);
+        expect(video.is_streamed).toBe(true);
+        await withDistributionTransition(async () => {
+          await expect(service.startNewStream(options)).rejects.toThrow(/admission is in progress/);
+        });
+        await expect(service.startNewStream(options)).resolves.toEqual({ videoId: 'video123' });
+        expect(video).toMatchObject({
+          is_streaming: true,
+          is_streamed: false,
+          length_seconds: 24,
+          length_timestamp: '00:00:24.00',
+          views: 8,
+          comments: 7,
+          creation_timestamp: 12345,
+        });
+        expect(JSON.parse(video.meta)).not.toHaveProperty('streamCleanupAt');
+      }
+    } finally {
+      service.close();
+    }
+  }
+);

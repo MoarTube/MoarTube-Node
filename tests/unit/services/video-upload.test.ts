@@ -688,23 +688,35 @@ describe('VideoUploadService', () => {
   );
   it('invalidates a replaced progressive upload by its exact public path', async () => {
     const { getConfig } = await import('@config/index.js');
-    vi.mocked(getConfig).mockReturnValueOnce({ paths: { videosDirectoryPath: '/data/videos' }, getExternalVideosBaseUrl: () => 'https://media.example' } as never);
+    vi.mocked(getConfig).mockReturnValueOnce({
+      paths: { videosDirectoryPath: '/data/videos' },
+      getExternalVideosBaseUrl: () => 'https://media.example',
+    } as never);
     vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(true);
     mockCloudflareService.purgeFiles = vi.fn();
-    await service.saveUploadedFile({ filename: 'video.mp4' } as never, '/data/videos/video/progressive/mp4');
-    expect(mockCloudflareService.purgeFiles).toHaveBeenCalledWith(['https://media.example/external/videos/video/progressive/mp4/video.mp4']);
-  });
-
-  it('invalidates both static and dynamic manifest aliases after replacement', async () => {
-    const { getConfig } = await import('@config/index.js');
-    vi.mocked(getConfig).mockReturnValueOnce({ paths: { videosDirectoryPath: '/data/videos' }, getExternalVideosBaseUrl: () => 'https://media.example' } as never);
-    vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(true);
-    mockCloudflareService.purgeFiles = vi.fn();
-    await service.saveUploadedFile({ filename: 'manifest-720p.m3u8' } as never, '/data/videos/video/adaptive/m3u8');
+    await service.saveUploadedFile(
+      { filename: 'video.mp4' } as never,
+      '/data/videos/video/progressive/mp4'
+    );
     expect(mockCloudflareService.purgeFiles).toHaveBeenCalledWith([
-      'https://media.example/external/videos/video/adaptive/m3u8/static/manifests/manifest-720p.m3u8',
-      'https://media.example/external/videos/video/adaptive/m3u8/dynamic/manifests/manifest-720p.m3u8',
+      'https://media.example/external/videos/video/progressive/mp4/video.mp4',
     ]);
   });
 
+  it('invalidates only the potentially long-lived static manifest alias after replacement', async () => {
+    const { getConfig } = await import('@config/index.js');
+    vi.mocked(getConfig).mockReturnValueOnce({
+      paths: { videosDirectoryPath: '/data/videos' },
+      getExternalVideosBaseUrl: () => 'https://media.example',
+    } as never);
+    vi.mocked(mockCloudflareService.isEnabled).mockReturnValue(true);
+    mockCloudflareService.purgeFiles = vi.fn();
+    await service.saveUploadedFile(
+      { filename: 'manifest-720p.m3u8' } as never,
+      '/data/videos/video/adaptive/m3u8'
+    );
+    expect(mockCloudflareService.purgeFiles).toHaveBeenCalledWith([
+      'https://media.example/external/videos/video/adaptive/m3u8/static/manifests/manifest-720p.m3u8',
+    ]);
+  });
 });

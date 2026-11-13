@@ -22,6 +22,21 @@ afterEach(async () => {
   }
 });
 describe('atomic streaming uploads', () => {
+  it('retains the previous representation and releases publication after inspection fails', async () => {
+    const file = await target();
+    await writeFile(file, 'old');
+    await expect(
+      writeUpload({ file: Readable.from(['new']) }, file, 1024, undefined, async (previous) => {
+        expect(await readFile(previous, 'utf8')).toBe('old');
+        throw new Error('Cannot classify previous playlist');
+      })
+    ).rejects.toThrow('Cannot classify previous playlist');
+    expect(await readFile(file, 'utf8')).toBe('old');
+    expect(await readdir(path.dirname(file))).toEqual(['segment.ts']);
+    await writeUpload({ file: Readable.from(['replacement']) }, file, 1024);
+    expect(await readFile(file, 'utf8')).toBe('replacement');
+  });
+
   it('writes exact content from many chunks without calling toBuffer', async () => {
     const file = await target();
     const chunks = Array.from({ length: 100 }, (_, i) => Buffer.alloc(1024, i));

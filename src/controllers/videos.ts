@@ -437,7 +437,12 @@ export class VideosController extends BaseController {
     if (paths !== undefined) {
       const base = getConfig().getExternalVideosBaseUrl() + '/external/videos/' + videoId + '/';
       const directories = paths.filter((relative) => relative.endsWith('/'));
-      const files = paths.filter((relative) => !relative.endsWith('/'));
+      // Dynamic playlists are short-lived (or no-store when stopped), so let them expire.
+      // Still acknowledge the storage activity after a dynamic-only write.
+      const files = paths.filter(
+        (relative) =>
+          !relative.endsWith('/') && !relative.startsWith('adaptive/m3u8/dynamic/manifests/')
+      );
       // A directory is a prefix, never an exact cache identity. Attempt both
       // groups so failures in one lane do not lose invalidation in the other.
       const results = await Promise.allSettled([

@@ -137,6 +137,8 @@ describe('StreamsService', () => {
 
     mockCloudflareService = {
       purgeAdaptiveVideos: vi.fn().mockResolvedValue(undefined),
+      purgeRecordedManifests: vi.fn().mockResolvedValue(undefined),
+      purgeFiles: vi.fn().mockResolvedValue(undefined),
       purgePrefixes: vi.fn().mockResolvedValue(undefined),
       purgeAllWatchPages: vi.fn(),
       purgeHomePage: vi.fn(),
@@ -155,6 +157,120 @@ describe('StreamsService', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  describe('resume without resetting the stopped video', () => {
+    const options = {
+      existingVideoId: 'video123',
+      resume: true,
+      title: 'Test Stream',
+      description: 'Test Description',
+      tags: 'test,stream',
+      rtmpPort: 1935,
+      networkAddress: '127.0.0.1',
+      resolution: '720p',
+      isRecordingStreamRemotely: true,
+      isRecordingStreamLocally: true,
+    };
+    const meta = {
+      resolution: '720p',
+      isRecordingStreamRemotely: true,
+      isRecordingStreamLocally: true,
+      streamGeneration: 'stopped-generation',
+      streamCleanupAt: 12345,
+      chatSettings: { isChatHistoryEnabled: true, chatHistoryLimit: 100 },
+    };
+    it.each([undefined, ''])('rejects resume without a video ID (%s)', async (existingVideoId) => {
+      await expect(service.startNewStream({ ...options, existingVideoId })).rejects.toThrow(
+        'Resume requires an existing video'
+      );
+      expect(mockVideosRepository.findById).not.toHaveBeenCalled();
+      expect(mockVideosRepository.update).not.toHaveBeenCalled();
+    });
+    it('preserves counters, publication, files, comments and recording metadata', async () => {
+      const video = {
+        ...mockVideo,
+        is_streamed: true,
+        is_finalized: false,
+        is_publishing: false,
+        is_published: true,
+        length_seconds: 125,
+        length_timestamp: '00:02:05.00',
+        creation_timestamp: 1000,
+        views: 45,
+        comments: 12,
+        likes: 8,
+        dislikes: 2,
+        bandwidth: 9876,
+        meta: JSON.stringify(meta),
+      };
+      vi.mocked(mockVideosRepository.findById).mockResolvedValue(video as never);
+      const fs = (await import('node:fs')).default;
+      await expect(service.startNewStream(options)).resolves.toEqual({ videoId: 'video123' });
+      const update = vi.mocked(mockVideosRepository.update).mock.calls[0]?.[1] as Record<
+        string,
+        unknown
+      >;
+      expect(update).toMatchObject({ is_streaming: true, is_streamed: false });
+      expect(mockCloudflareService.purgeAdaptiveVideos).not.toHaveBeenCalled();
+      expect(mockCloudflareService.purgeRecordedManifests).not.toHaveBeenCalled();
+      expect(mockCloudflareService.purgePrefixes).not.toHaveBeenCalled();
+      expect(mockCloudflareService.purgeFiles).not.toHaveBeenCalled();
+      for (const key of [
+        'length_seconds',
+        'length_timestamp',
+        'creation_timestamp',
+        'views',
+        'comments',
+        'likes',
+        'dislikes',
+        'bandwidth',
+        'outputs',
+        'is_published',
+      ]) {
+        expect(update).not.toHaveProperty(key);
+      }
+      const updatedMeta = JSON.parse(String(update['meta']));
+      expect(updatedMeta.chatSettings).toEqual(meta.chatSettings);
+      expect(updatedMeta.streamGeneration).not.toBe(meta.streamGeneration);
+      expect(updatedMeta).not.toHaveProperty('streamCleanupAt');
+      expect(fs.mkdirSync).not.toHaveBeenCalled();
+      expect(fs.rmSync).not.toHaveBeenCalled();
+      expect(fs.copyFileSync).not.toHaveBeenCalled();
+      expect(mockCommentsRepository.deleteByVideoId).not.toHaveBeenCalled();
+      expect(mockLiveChatMessagesRepository.deleteByVideoId).not.toHaveBeenCalled();
+      expect(mockWebSocketService.broadcastToNodes).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            payload: expect.objectContaining({
+              lengthSeconds: 125,
+              views: 45,
+              comments: 12,
+              bandwidth: 9876,
+              isPublished: true,
+            }),
+          }),
+        })
+      );
+    });
+    it.each([
+      { is_streaming: true },
+      { is_finalized: true },
+      { is_live: false },
+      { is_streamed: false },
+      { is_publishing: true },
+      { meta: JSON.stringify({ ...meta, resolution: '1080p' }) },
+      { meta: JSON.stringify({ ...meta, isRecordingStreamRemotely: false }) },
+    ])('rejects incompatible or active streams before mutation: %j', async (changes) => {
+      vi.mocked(mockVideosRepository.findById).mockResolvedValue({
+        ...mockVideo,
+        is_streamed: true,
+        meta: JSON.stringify(meta),
+        ...changes,
+      } as never);
+      await expect(service.startNewStream(options)).rejects.toThrow();
+      expect(mockVideosRepository.update).not.toHaveBeenCalled();
+    });
   });
 
   describe('stream recovery and manifest handling', () => {
@@ -514,7 +630,8 @@ describe('StreamsService', () => {
 
       expect(result.videoId).toBe('video123');
       expect(mockCloudflareService.purgePrefixes).toHaveBeenCalledWith([
-        'https://media.example/external/videos/video123/',
+        'https://media.example/external/videos/video123/progressive/',
+        'https://media.example/external/videos/video123/images/',
         'https://node.example/videos/video123/comments',
       ]);
       expect(mockVideosRepository.update).toHaveBeenCalledWith(
@@ -526,6 +643,8 @@ describe('StreamsService', () => {
       );
       expect(mockCommentsRepository.deleteByVideoId).toHaveBeenCalledWith('video123');
       expect(mockLiveChatMessagesRepository.deleteByVideoId).toHaveBeenCalledWith('video123');
+      expect(mockCloudflareService.purgeRecordedManifests).toHaveBeenCalledWith('video123');
+      expect(mockCloudflareService.purgeAdaptiveVideos).not.toHaveBeenCalled();
       expect(mockLogger.info).toHaveBeenCalledWith('Stream resumed', { videoId: 'video123' });
     });
 
@@ -657,6 +776,51 @@ describe('StreamsService', () => {
   });
 
   describe('finalizeStreamManifests', () => {
+    it.each([true, false])(
+      'invalidates only finalized S3 recording playlists (recorded=%s)',
+      async (recorded) => {
+        const { getConfig } = await import('@config/index.js');
+        vi.mocked(getConfig).mockReturnValueOnce({
+          nodeSettings: { storageConfig: { storageMode: 's3provider' } },
+        } as never);
+        vi.mocked(mockVideosRepository.findById).mockResolvedValue({
+          ...mockVideo,
+          outputs: JSON.stringify({ m3u8: ['720p'] }),
+          is_stream_recorded_remotely: recorded,
+        } as never);
+        const storage = { finalizeS3Stream: vi.fn().mockResolvedValue(6000) };
+        const streams = new StreamsService(
+          mockLogger,
+          mockVideosRepository,
+          mockLiveChatMessagesRepository,
+          mockCommentsRepository,
+          mockWebSocketService,
+          mockCloudflareService,
+          storage as never
+        );
+        await expect(streams.finalizeStreamManifests('video123')).resolves.toBe(6000);
+        expect(mockCloudflareService.purgeAdaptiveVideos).not.toHaveBeenCalled();
+        if (recorded) {
+          expect(mockCloudflareService.purgeRecordedManifests).toHaveBeenCalledExactlyOnceWith(
+            'video123',
+            ['720p']
+          );
+        } else {
+          expect(mockCloudflareService.purgeRecordedManifests).not.toHaveBeenCalled();
+        }
+      }
+    );
+    it('invalidates static playlist identities when filesystem playlists are finalized', async () => {
+      const fs = (await import('node:fs')).default;
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readdirSync).mockReturnValue(['manifest-720p.m3u8'] as never);
+      await service.finalizeStreamManifests('video123');
+      expect(mockCloudflareService.purgeRecordedManifests).toHaveBeenCalledExactlyOnceWith(
+        'video123'
+      );
+      expect(mockCloudflareService.purgeAdaptiveVideos).not.toHaveBeenCalled();
+    });
+
     it('should finalize stream manifests for filesystem storage', async () => {
       const fs = await import('node:fs');
       vi.mocked(fs.default.existsSync).mockReturnValue(false);

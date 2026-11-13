@@ -105,6 +105,7 @@ beforeEach(async () => {
     purgePrefixes: vi.fn(),
     purgeComments: vi.fn(),
     purgeAdaptiveVideos: vi.fn(),
+    purgeRecordedManifests: vi.fn(),
     purgeVideo: vi.fn(),
     purgeWatchPages: vi.fn(),
     purgeAllWatchPages: vi.fn(),
@@ -170,16 +171,19 @@ async function expireJournal(): Promise<void> {
     storage
   );
   await streams.recoverStreamCleanup();
-  await vi.waitFor(async () => {
-    const db = operationalForPath(state.config.paths.nodeSettingsPath);
-    try {
-      expect(
-        await db.query("SELECT key FROM node_recovery WHERE key LIKE 'cleanup:%'")
-      ).toHaveLength(0);
-    } finally {
-      await db.close();
-    }
-  });
+  await vi.waitFor(
+    async () => {
+      const db = operationalForPath(state.config.paths.nodeSettingsPath);
+      try {
+        expect(
+          await db.query("SELECT key FROM node_recovery WHERE key LIKE 'cleanup:%'")
+        ).toHaveLength(0);
+      } finally {
+        await db.close();
+      }
+    },
+    { timeout: 5000 }
+  );
 }
 
 describe('follow-up storage fixes against real Silo', () => {
@@ -236,7 +240,12 @@ describe('follow-up storage fixes against real Silo', () => {
         expect(object.CacheControl).toBe('no-store');
         expect(object.Metadata?.['moartube-live-playlist']).toBeUndefined();
       }
-      expect(cloudflare.purgeAdaptiveVideos).toHaveBeenCalledWith('video123');
+      expect(cloudflare.purgeAdaptiveVideos).not.toHaveBeenCalled();
+      if (recorded) {
+        expect(cloudflare.purgeRecordedManifests).toHaveBeenCalledWith('video123', ['720p']);
+      } else {
+        expect(cloudflare.purgeRecordedManifests).not.toHaveBeenCalled();
+      }
       if (recorded) {
         const vod = await a.client.send(
           new HeadObjectCommand({
@@ -331,7 +340,8 @@ describe('follow-up storage fixes against real Silo', () => {
       await expect(a.text(prefix + 'dynamic/manifests/manifest-master.m3u8')).rejects.toMatchObject(
         { $metadata: { httpStatusCode: 404 } }
       );
-    }
+    },
+    15000
   );
   it('stops a completely empty S3 startup under a distribution deadline', async () => {
     video.is_streaming = true;

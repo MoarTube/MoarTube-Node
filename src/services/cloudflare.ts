@@ -836,6 +836,24 @@ export class CloudflareService extends BaseService {
     return urls;
   }
 
+  /** Only recorded playlists reuse long-lived cache identities; segment URLs are immutable. */
+  async purgeRecordedManifests(
+    videoId: string,
+    resolutions = ['240p', '360p', '480p', '720p', '1080p', '1440p', '2160p']
+  ): Promise<void> {
+    if (!this.isEnabled() || !this.httpClient) {
+      return;
+    }
+    const base =
+      getConfig().getExternalVideosBaseUrl() +
+      '/external/videos/' +
+      videoId +
+      '/adaptive/m3u8/static/manifests/manifest-';
+    await this.purgeFiles(
+      [...new Set(['master', ...resolutions])].map((name) => base + name + '.m3u8')
+    );
+  }
+
   async purgeAdaptiveVideos(
     videoId: string,
     _capturedUrls?: string[],

@@ -133,6 +133,8 @@ export interface VideoPermissions {
  * Video data with formatted fields for API responses
  */
 export interface VideoData {
+  lengthSeconds: number;
+  lengthTimestamp: string;
   isImporting?: boolean;
   isPublishing?: boolean;
   videoId: string;

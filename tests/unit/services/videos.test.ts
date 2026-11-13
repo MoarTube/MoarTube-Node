@@ -148,6 +148,7 @@ const mockCloudflareService = {
   purgeAllWatchPages: vi.fn(),
   purgeAllEmbedVideoPages: vi.fn(),
   purgeAdaptiveVideos: vi.fn(),
+  purgeRecordedManifests: vi.fn(),
   getAdaptiveVideoUrls: vi.fn().mockResolvedValue([]),
   purgeProgressiveVideos: vi.fn(),
   purgeVideo: vi.fn(),
@@ -2103,6 +2104,21 @@ describe('VideosService', () => {
   });
 
   describe('writeMasterManifest', () => {
+    it('lets an S3 live master expire naturally without purging media', async () => {
+      const { getConfig } = await import('@config/index.js');
+      vi.mocked(getConfig).mockReturnValueOnce({
+        nodeSettings: { storageConfig: { storageMode: 's3provider' } },
+      } as never);
+      await service.writeMasterManifest('video123', 'dynamic', '#EXTM3U\n#EXT-X-VERSION:3');
+      expect(mockStorageService.writeS3MasterManifest).toHaveBeenCalledWith(
+        'video123',
+        'dynamic',
+        expect.stringContaining('#MOARTUBE-LIVE')
+      );
+      expect(mockCloudflareService.purgeAdaptiveVideos).not.toHaveBeenCalled();
+      expect(mockCloudflareService.purgeRecordedManifests).not.toHaveBeenCalled();
+    });
+
     it('should write manifest to filesystem', async () => {
       const fs = await import('node:fs');
       const content = '#EXTM3U\n#EXT-X-VERSION:3';
@@ -2125,7 +2141,7 @@ describe('VideosService', () => {
       );
     });
 
-    it('delegates S3 master writes to storage and purges the adaptive cache', async () => {
+    it('delegates S3 master writes to storage and invalidates only the recorded master', async () => {
       const content = '#EXTM3U\n#EXT-X-VERSION:3';
 
       // Mock S3 storage mode
@@ -2162,6 +2178,11 @@ describe('VideosService', () => {
         content
       );
       expect(mockStorageService.saveFile).not.toHaveBeenCalled();
+      expect(mockCloudflareService.purgeRecordedManifests).toHaveBeenCalledExactlyOnceWith(
+        'video123',
+        []
+      );
+      expect(mockCloudflareService.purgeAdaptiveVideos).not.toHaveBeenCalled();
     });
   });
 
@@ -2270,10 +2291,12 @@ describe('VideosService', () => {
     );
   });
   it('records a progressive output without generating an HLS master', async () => {
-    mockVideosRepository.findById.mockResolvedValue({ video_id: 'video123', outputs: { m3u8: [], mp4: [], webm: [], ogv: [] } });
+    mockVideosRepository.findById.mockResolvedValue({
+      video_id: 'video123',
+      outputs: { m3u8: [], mp4: [], webm: [], ogv: [] },
+    });
     mockVideosRepository.update.mockResolvedValue(undefined);
     await service.markFormatResolutionPublished('video123', 'mp4', '720p');
     expect(JSON.parse(mockVideosRepository.update.mock.calls[0][1].outputs).mp4).toEqual(['720p']);
   });
-
 });

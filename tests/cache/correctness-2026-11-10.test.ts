@@ -410,7 +410,7 @@ it('purges every replaced media namespace and historical comments when restreami
   expect(cache.size).toBe(0);
   expect(
     post.mock.calls.some(([, body]) =>
-      body.prefixes?.includes('media.example/external/videos/' + videoId + '/')
+      body.prefixes?.includes('media.example/external/videos/' + videoId + '/progressive/')
     )
   ).toBe(true);
 });

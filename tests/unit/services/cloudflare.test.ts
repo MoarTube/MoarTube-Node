@@ -76,6 +76,12 @@ describe('CloudflareService', () => {
     vi.restoreAllMocks();
   });
 
+  it('skips recorded-manifest purges when the CDN is disabled', async () => {
+    const purge = vi.spyOn(service, 'purgeFiles');
+    await service.purgeRecordedManifests('video123');
+    expect(purge).not.toHaveBeenCalled();
+  });
+
   describe('constructor', () => {
     it('resolves through classic dependency injection with only a logger', () => {
       const container = createContainer({ injectionMode: InjectionMode.CLASSIC, strict: true });
@@ -481,6 +487,24 @@ describe('CloudflareService', () => {
           ]),
         })
       );
+    });
+
+    it('invalidates only exact recorded playlist URLs without evicting cached segments', async () => {
+      await service.purgeRecordedManifests('video123', ['720p']);
+      expect(mockHttpClient.post).toHaveBeenCalledWith(
+        '/zones/zone123/purge_cache',
+        expect.objectContaining({
+          files: expect.arrayContaining([
+            'https://example.com/external/videos/video123/adaptive/m3u8/static/manifests/manifest-master.m3u8',
+            'https://example.com/external/videos/video123/adaptive/m3u8/static/manifests/manifest-720p.m3u8',
+          ]),
+        })
+      );
+      const requests = JSON.stringify(mockHttpClient.post.mock.calls);
+      expect(requests).not.toContain('/segments/');
+      expect(requests).not.toContain('/dynamic/');
+      expect(requests).not.toContain('prefixes');
+      expect(requests).not.toContain('purge_everything');
     });
 
     it('should purge adaptive videos', async () => {

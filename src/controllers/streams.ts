@@ -25,6 +25,7 @@ export interface StartStreamBody {
   networkAddress: string;
   resolution: string;
   videoId?: string;
+  resume?: boolean;
 }
 
 /**
@@ -80,8 +81,13 @@ export class StreamsController extends BaseController {
   /**
    * POST /streams/start
    *
-   * Start a new stream or resume an existing one
+   * Resume a stopped stream without resetting its state
    */
+  resumeStream = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
+    request.body = { ...(request.body as StartStreamBody), resume: true };
+    return this.startStream(request, reply);
+  };
+
   startStream = async (request: FastifyRequest, reply: FastifyReply): Promise<FastifyReply> => {
     try {
       const {
@@ -94,6 +100,7 @@ export class StreamsController extends BaseController {
         networkAddress,
         resolution,
         videoId,
+        resume = false,
       } = request.body as StartStreamBody;
 
       const options: {
@@ -106,10 +113,12 @@ export class StreamsController extends BaseController {
         networkAddress: string;
         resolution: string;
         existingVideoId?: string;
+        resume?: boolean;
       } = {
         title,
         description,
         tags,
+        ...(resume ? { resume: true } : {}),
         rtmpPort: rtmpPort,
         isRecordingStreamRemotely,
         isRecordingStreamLocally,

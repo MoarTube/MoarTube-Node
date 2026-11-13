@@ -167,6 +167,38 @@ it('does not purge views or new segments, but purges replacements', async () => 
   ]);
 });
 
+it('expires live uploads naturally after invalidating a finalized recording once', async () => {
+  const cdn = { purgeFiles: vi.fn(), isEnabled: () => true };
+  const upload = new VideoUploadService({} as never, cdn as never, {} as never, logger as never);
+  const folder = path.join(root, 'videos', 'one', 'adaptive', 'm3u8');
+  await mkdir(folder, { recursive: true });
+  const header = '#EXTM3U\n#EXT-X-TARGETDURATION:2\n#EXT-X-MEDIA-SEQUENCE:0\n';
+  const segment = '#EXTINF:2,\n../../720p/segments/generation-0.ts\n';
+  const live = header + '#EXT-X-PLAYLIST-TYPE:EVENT\n' + segment;
+  await writeFile(
+    path.join(folder, 'manifest-720p.m3u8'),
+    header + '#EXT-X-PLAYLIST-TYPE:VOD\n' + segment + '#EXT-X-ENDLIST\n'
+  );
+  const app = Fastify();
+  app.get('/playlist', (req, reply) =>
+    servePublicFile(req, reply, folder, ['manifest-720p.m3u8'], 'application/vnd.apple.mpegurl')
+  );
+  try {
+    expect((await app.inject('/playlist')).headers['cache-control']).toContain('s-maxage=31536000');
+    const file = () => ({ filename: 'manifest-720p.m3u8', file: Readable.from([live]) });
+    await upload.saveUploadedFile(file() as never, folder);
+    expect(cdn.purgeFiles).toHaveBeenCalledExactlyOnceWith([
+      'https://media.example/external/videos/one/adaptive/m3u8/static/manifests/manifest-720p.m3u8',
+    ]);
+    expect((await app.inject('/playlist')).headers['cache-control']).toContain('s-maxage=1,');
+    cdn.purgeFiles.mockClear();
+    await upload.saveUploadedFile(file() as never, folder);
+    expect(cdn.purgeFiles).not.toHaveBeenCalled();
+  } finally {
+    await app.close();
+  }
+});
+
 it('deleting one segment does not inventory or purge the entire stream', async () => {
   const cdn = { purgeFiles: vi.fn(), purgeAdaptiveVideos: vi.fn() };
   await StreamsService.prototype.invalidateStreamMedia.call(

@@ -87,8 +87,17 @@ describe('Streams Routes', () => {
     expect(mockFastify.get).toHaveBeenCalledTimes(2);
   });
 
-  it('should register exactly 4 POST routes', () => {
+  it('registers the authenticated resume route', () => {
     streamsRoutes(mockFastify as any, mockContainer);
-    expect(mockFastify.post).toHaveBeenCalledTimes(4);
+    expect(mockFastify.post).toHaveBeenCalledWith(
+      '/resume',
+      expect.objectContaining({ preHandler: [mockFastify.authenticate] }),
+      expect.any(Function)
+    );
+  });
+
+  it('should register exactly 5 POST routes', () => {
+    streamsRoutes(mockFastify as any, mockContainer);
+    expect(mockFastify.post).toHaveBeenCalledTimes(5);
   });
 });

@@ -5,6 +5,7 @@
  * progress tracking, and WebSocket broadcasting.
  */
 
+import { isActiveLivePlaylistFile } from '@/utils/live-playlist-cache.js';
 import { writeUpload } from '@/utils/stream-files.js';
 import * as path from 'node:path';
 import type { MultipartFile } from '@fastify/multipart';
@@ -307,7 +308,13 @@ export class VideoUploadService {
     }
     const filePath = path.join(destinationPath, file.filename);
     const maxBytes = 10 * 1024 ** 3;
-    const replacing = await writeUpload(file, filePath, maxBytes);
+    const previous = { live: false };
+    const replacing =
+      file.filename.endsWith('.m3u8') && this.cloudflareService.isEnabled()
+        ? await writeUpload(file, filePath, maxBytes, undefined, async (file) => {
+            previous.live = await isActiveLivePlaylistFile(file);
+          })
+        : await writeUpload(file, filePath, maxBytes);
     this.logger.debug('Saved uploaded file', { filename: file.filename, path: filePath });
     if (!this.cloudflareService.isEnabled()) {
       return;
@@ -324,7 +331,7 @@ export class VideoUploadService {
     const base = config.getExternalVideosBaseUrl();
     const group = (match: RegExpExecArray, index: number): string => String(match[index]);
     const urls = manifest
-      ? ['static', 'dynamic'].map(
+      ? ['static'].map(
           (type) =>
             `${base}/external/videos/${group(manifest, 1)}/adaptive/m3u8/${type}/manifests/${group(manifest, 2)}`
         )
@@ -335,7 +342,8 @@ export class VideoUploadService {
         : progressive
           ? [`${base}/external/videos/${relative}`]
           : [];
-    if (urls.length && (!segment || replacing)) {
+    // A previous live snapshot expires naturally; a replaced VOD alias does not.
+    if (urls.length && (!segment || replacing) && !(manifest && previous.live)) {
       await this.cloudflareService.purgeFiles(urls);
     }
   }

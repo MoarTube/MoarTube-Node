@@ -1,3 +1,5 @@
+import { open } from 'node:fs/promises';
+
 export const livePlaylistCacheControl = 'public, max-age=0, s-maxage=1, must-revalidate';
 export const livePlaylistMetadataKey = 'moartube-live-playlist';
 
@@ -38,4 +40,19 @@ export function livePlaylistCacheHeaders(active: boolean): {
     CacheControl: active ? livePlaylistCacheControl : 'no-store',
     Metadata: active ? { [livePlaylistMetadataKey]: 'active' } : {},
   };
+}
+
+/** Read a bounded snapshot, including the terminal marker on large recorded playlists. */
+export async function isActiveLivePlaylistFile(file: string): Promise<boolean> {
+  const handle = await open(file, 'r');
+  try {
+    const { size } = await handle.stat();
+    const head = Buffer.alloc(Math.min(size, 8192));
+    const tail = Buffer.alloc(Math.min(size, 4096));
+    await handle.read(head, 0, head.length, 0);
+    await handle.read(tail, 0, tail.length, Math.max(0, size - tail.length));
+    return isActiveLivePlaylist(head.toString('utf8'), tail.toString('utf8'));
+  } finally {
+    await handle.close();
+  }
 }

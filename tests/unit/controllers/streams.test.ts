@@ -187,6 +187,30 @@ describe('StreamsController', () => {
       );
     });
 
+    it('forwards the Resume action explicitly without changing the existing video ID', async () => {
+      const mockRequest = createMockRequest({
+        body: {
+          title: 'live',
+          description: 'description',
+          tags: 'test',
+          videoId: 'video123',
+          rtmpPort: 1935,
+          resolution: '720p',
+          networkAddress: '127.0.0.1',
+          isRecordingStreamRemotely: true,
+          isRecordingStreamLocally: true,
+        },
+      });
+      vi.mocked(mockStreamService.startNewStream).mockResolvedValue({ videoId: 'video123' });
+      await controller.resumeStream(mockRequest, mockReply);
+      expect(mockStreamService.startNewStream).toHaveBeenCalledWith(
+        expect.objectContaining({
+          existingVideoId: 'video123',
+          resume: true,
+        })
+      );
+    });
+
     it('should return 500 on error', async () => {
       mockStreamService.startNewStream.mockRejectedValue(new Error('Stream error'));
 

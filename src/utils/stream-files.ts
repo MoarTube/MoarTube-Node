@@ -13,7 +13,8 @@ export async function writeUpload(
   upload: { file: Readable & { truncated?: boolean } },
   destination: string,
   maxBytes: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  beforeReplace?: (destination: string) => Promise<void>
 ): Promise<boolean> {
   // A disk stream can fail before directory preparation completes. Its iterator/pipeline
   // still observes the error; this listener prevents an early unhandled event.
@@ -60,6 +61,10 @@ export async function writeUpload(
     }
     try {
       const replacing = existsSync(destination);
+      // Inspect the previous representation under the same lock as publication.
+      if (replacing) {
+        await beforeReplace?.(destination);
+      }
       renameSync(temporary, destination);
       return replacing;
     } finally {
